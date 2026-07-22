@@ -12,6 +12,7 @@ export function PageRenderer({
   onResizeObject,
   onTextEditStart,
   onTextCommit,
+  exportMode = false,
 }) {
   if (!page) return null;
   const selectedIds = selection?.selectedObjectIds || [];
@@ -27,7 +28,7 @@ export function PageRenderer({
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
-        boxShadow: "0 12px 32px rgba(15, 23, 42, 0.18)",
+        boxShadow: exportMode ? "none" : "0 12px 32px rgba(15, 23, 42, 0.18)",
         overflow: "hidden",
       }}
     >

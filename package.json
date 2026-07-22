@@ -14,12 +14,19 @@
     "start": "node scripts/run-next-clean.mjs start",
     "start:fresh": "node scripts/run-next-clean.mjs start --clean",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:freedom-paper": "node --test test/freedom-paper-trading.test.js",
     "autoresponder:cron": "node scripts/local-autoresponder-cron.js",
     "sms:flush": "node scripts/flush-sms-queue.js",
     "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs",
     "test:wb-typography": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-typography-persistence.mjs",
+    "test:wb-persistence": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-save-publish-persistence-regression.mjs",
     "test:standard-inclusions-management": "node scripts/test-standard-inclusions-management-regression.mjs",
-    "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs"
+    "test:standard-inclusions-onlyoffice": "node scripts/test-standard-inclusions-onlyoffice-contract.mjs",
+    "standard-inclusions:upload-master": "node scripts/upload-standard-inclusions-master.mjs",
+    "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs",
+    "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs",
+    "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs"
   },
   "dependencies": {
     "@chaibuilder/sdk": "^4.0.0-beta.51",
@@ -76,6 +83,7 @@
     "openseadragon": "^6.0.2",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.1.200",
     "puppeteer": "^24.29.1",
     "puppeteer-core": "^24.27.0",
     "react": "^18.3.1",

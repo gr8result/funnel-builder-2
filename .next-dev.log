@@ -1,0 +1,2735 @@
+
+> funnel-builder@1.0.0 dev:fresh
+> node scripts/run-next-clean.mjs dev --clean
+
+Removed D:\dev\funnel-builder-clean\.next-dev
+   ▲ Next.js 15.5.12
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.109:3000
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     · middlewareClientMaxBodySize: "80mb"
+
+ ✓ Starting...
+ ✓ Ready in 5.8s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 2.1s (116 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /api/standard-inclusions/import-powerpoint in 57.6s (1269 modules)
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_START {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-011083328611',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 0,
+  reportedBrowserFileSize: 0
+}
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-011083328611',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 0,
+  bufferBytes: 11470735
+}
+[standard-inclusions/import-powerpoint] MULTIPART_PARSE_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-011083328611',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374
+}
+[standard-inclusions/import-powerpoint] PPTX_BUFFER_READY {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-011083328611',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374
+}
+ GET /modules/estimate-builder 200 in 32965ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 2716ms
+ ○ Compiling /qa/project-estimate-visual-editor ...
+ GET /freedom-trader/settings 200 in 5584ms
+ ✓ Compiled /qa/project-estimate-visual-editor in 5.4s (1157 modules)
+ ○ Compiling /api/workspaces/activate-invite ...
+ GET /qa/project-estimate-visual-editor 200 in 10270ms
+ GET /modules/estimate-builder 200 in 3037ms
+ GET /freedom-trader/settings 200 in 2772ms
+ ✓ Compiled /api/workspaces/activate-invite in 6.2s (1162 modules)
+[standard-inclusions/import-powerpoint] POWERPOINT_IMPORT_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-011083328611',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374,
+  pageCount: 10,
+  editableTextCount: 91
+}
+ GET /freedom-trader/settings 200 in 5312ms
+ POST /api/workspaces/activate-invite 200 in 8302ms
+ POST /api/standard-inclusions/import-powerpoint 200 in 42235ms
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_START {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-094871456527',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 0,
+  reportedBrowserFileSize: 0
+}
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-094871456527',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 0,
+  bufferBytes: 11470735
+}
+[standard-inclusions/import-powerpoint] MULTIPART_PARSE_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-094871456527',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374
+}
+[standard-inclusions/import-powerpoint] PPTX_BUFFER_READY {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-094871456527',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374
+}
+ ○ Compiling /[slug] ...
+ ✓ Compiled /[slug] in 5.6s (1175 modules)
+ GET /qa/project-estimate-visual-editor 200 in 8316ms
+ GET /favicon.ico 200 in 8591ms
+ ✓ Compiled in 1593ms (1177 modules)
+[standard-inclusions/import-powerpoint] POWERPOINT_IMPORT_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-094871456527',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374,
+  pageCount: 10,
+  editableTextCount: 91
+}
+ POST /api/standard-inclusions/import-powerpoint 200 in 12741ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 532ms (390 modules)
+ GET /favicon.ico 404 in 1388ms
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_START {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-097071321961',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 0,
+  reportedBrowserFileSize: 0
+}
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-097071321961',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 0,
+  bufferBytes: 11470735
+}
+[standard-inclusions/import-powerpoint] MULTIPART_PARSE_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-097071321961',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374
+}
+[standard-inclusions/import-powerpoint] PPTX_BUFFER_READY {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-097071321961',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374
+}
+ GET /api/workspaces 304 in 1331ms
+ GET /api/workspaces 304 in 493ms
+ GET /api/workspaces 304 in 340ms
+ GET /modules/estimate-builder 200 in 1872ms
+[standard-inclusions/import-powerpoint] POWERPOINT_IMPORT_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----formdata-undici-097071321961',
+  contentLength: 11470735,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470735,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374,
+  pageCount: 10,
+  editableTextCount: 91
+}
+ POST /api/standard-inclusions/import-powerpoint 200 in 6510ms
+ GET /api/workspaces 304 in 397ms
+ GET /api/workspaces 304 in 239ms
+ GET /api/workspaces 304 in 232ms
+ GET /qa/project-estimate-visual-editor 200 in 1089ms
+ ✓ Compiled in 931ms (789 modules)
+ ✓ Compiled /api/usage/check-limits in 494ms (394 modules)
+ GET /api/usage/check-limits 401 in 843ms
+ ✓ Compiled in 1142ms (789 modules)
+ ✓ Compiled /api/project-estimate/instances in 250ms (397 modules)
+ GET /api/project-estimate/instances?workspace_id=846885cd-25b9-4eca-b9f9-3fd02f5882d8 500 in 1310ms
+ GET /qa/project-estimate-visual-editor 200 in 1414ms
+ ✓ Compiled in 666ms (776 modules)
+ ○ Compiling /modules/website-builder/visual-builder ...
+ ✓ Compiled /modules/website-builder/visual-builder in 1110ms (1167 modules)
+ GET /freedom-trader/settings 200 in 2254ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 2256ms
+ ✓ Compiled /api/workspaces/activate-invite in 312ms (380 modules)
+ POST /api/workspaces/activate-invite 200 in 828ms
+ POST /api/workspaces/activate-invite 200 in 780ms
+ GET /api/workspaces 304 in 303ms
+ GET /api/workspaces 304 in 236ms
+ ✓ Compiled in 8s (1164 modules)
+ GET /qa/project-estimate-visual-editor 200 in 1551ms
+ ○ Compiling /[slug] ...
+ ✓ Compiled /[slug] in 918ms (1177 modules)
+ GET /qa/project-estimate-visual-editor 200 in 2263ms
+ GET /favicon.ico 404 in 2652ms
+ GET /favicon.ico 404 in 554ms
+ GET /qa/project-estimate-visual-editor 200 in 267ms
+ GET /qa/project-estimate-visual-editor 200 in 257ms
+ ✓ Compiled in 918ms (776 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 2.8s (1142 modules)
+ GET /freedom-trader/settings 200 in 7938ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 8033ms
+ ○ Compiling /api/workspaces/activate-invite ...
+ ✓ Compiled /api/workspaces/activate-invite in 740ms (379 modules)
+ GET /qa/project-estimate-visual-editor 200 in 1388ms
+ POST /api/workspaces/activate-invite 200 in 2757ms
+ POST /api/workspaces/activate-invite 200 in 2897ms
+ ✓ Compiled in 2.8s (1160 modules)
+ ✓ Compiled /api/workspaces in 182ms (373 modules)
+ GET /api/workspaces 304 in 743ms
+ GET /api/workspaces 304 in 249ms
+ ○ Compiling /[slug] ...
+ ✓ Compiled /[slug] in 841ms (1170 modules)
+ GET /favicon.ico 404 in 2190ms
+ ✓ Compiled in 1241ms (789 modules)
+ POST /api/workspaces/activate-invite 200 in 521ms
+ GET /api/workspaces 304 in 310ms
+ ✓ Compiled in 917ms (770 modules)
+ ○ Compiling /modules/website-builder/visual-builder ...
+ ✓ Compiled /modules/website-builder/visual-builder in 1116ms (1157 modules)
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 1790ms
+ GET /freedom-trader/settings 200 in 1818ms
+ POST /api/workspaces/activate-invite 200 in 567ms
+ POST /api/workspaces/activate-invite 200 in 622ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 8.1s (1157 modules)
+ GET /api/workspaces 500 in 9872ms
+ GET /api/workspaces 200 in 560ms
+ POST /api/workspaces/activate-invite 200 in 458ms
+ GET /api/workspaces 304 in 248ms
+ GET /api/workspaces 304 in 443ms
+ GET /api/workspaces 304 in 267ms
+ GET /api/workspaces 304 in 297ms
+ GET /api/workspaces 304 in 384ms
+ ○ Compiling /api/assets/list-library ...
+ ✓ Compiled /api/assets/list-library in 761ms (366 modules)
+ ✓ Compiled (399 modules)
+ GET /api/website-builder/defaults 401 in 3089ms
+ GET /api/website-builder/defaults 401 in 3097ms
+ GET /api/website-builder/defaults 200 in 2959ms
+ GET /api/usage/check-limits 401 in 3079ms
+ GET /api/workspaces 304 in 401ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 200 in 4030ms
+ ✓ Compiled /api/website-builder/emergency-page-draft in 175ms (401 modules)
+ GET /api/website-builder/emergency-page-draft?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&pageName=Email 200 in 223ms
+ ✓ Compiled /api/website-builder/local-project-repair in 135ms (403 modules)
+ GET /api/website-builder/local-project-repair?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 199ms
+ GET /api/website-builder/defaults 200 in 157ms
+ GET /api/assets/list-library 304 in 60749ms
+ GET /modules/estimate-builder 200 in 2002ms
+ ✓ Compiled /api/workspaces/activate-invite in 508ms (358 modules)
+ POST /api/workspaces/activate-invite 200 in 1056ms
+ POST /api/workspaces/activate-invite 200 in 1059ms
+ ✓ Compiled /api/workspaces in 133ms (360 modules)
+ GET /api/workspaces 304 in 392ms
+ GET /api/workspaces 304 in 266ms
+ GET /api/workspaces 304 in 253ms
+ GET /api/workspaces 304 in 274ms
+ GET /api/workspaces 304 in 300ms
+ ✓ Compiled /api/usage/check-limits in 94ms (364 modules)
+ GET /api/usage/check-limits 401 in 416ms
+ GET /modules/estimate-builder 200 in 1113ms
+ POST /api/workspaces/activate-invite 200 in 443ms
+ POST /api/workspaces/activate-invite 200 in 445ms
+ GET /api/workspaces 304 in 391ms
+ ○ Compiling /[slug] ...
+ GET /api/workspaces 304 in 439ms
+ ✓ Compiled /freedom-trader/settings in 3.6s (1167 modules)
+ GET /api/workspaces 304 in 2987ms
+ GET /freedom-trader/settings 200 in 2950ms
+ GET /api/workspaces 304 in 513ms
+ GET /favicon.ico 404 in 4785ms
+ GET /api/workspaces 304 in 238ms
+ POST /api/workspaces/activate-invite 200 in 246ms
+ POST /api/workspaces/activate-invite 200 in 279ms
+ GET /favicon.ico 404 in 367ms
+ GET /api/workspaces 304 in 249ms
+ GET /api/workspaces 304 in 241ms
+ POST /api/workspaces/activate-invite 200 in 225ms
+ GET /api/workspaces 304 in 253ms
+ GET /api/usage/check-limits 401 in 136ms
+ ✓ Compiled /api/standard-inclusions/import-powerpoint in 164ms (387 modules)
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_START {
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarySUX7jWp58JwcYk1v',
+  contentLength: 11470753,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 0,
+  reportedBrowserFileSize: 0
+}
+[standard-inclusions/import-powerpoint] REQUEST_BODY_READ_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarySUX7jWp58JwcYk1v',
+  contentLength: 11470753,
+  aborted: false,
+  parserCompleted: false,
+  tempFilePath: '(memory)',
+  originalFilename: '',
+  receivedBytes: 0,
+  receivedBodyBytes: 11470753,
+  reportedBrowserFileSize: 0,
+  bufferBytes: 11470753
+}
+[standard-inclusions/import-powerpoint] MULTIPART_PARSE_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarySUX7jWp58JwcYk1v',
+  contentLength: 11470753,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470753,
+  reportedBrowserFileSize: 11470374
+}
+[standard-inclusions/import-powerpoint] PPTX_BUFFER_READY {
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarySUX7jWp58JwcYk1v',
+  contentLength: 11470753,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470753,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374
+}
+[standard-inclusions/import-powerpoint] POWERPOINT_IMPORT_COMPLETE {
+  contentType: 'multipart/form-data; boundary=----WebKitFormBoundarySUX7jWp58JwcYk1v',
+  contentLength: 11470753,
+  aborted: false,
+  parserCompleted: true,
+  tempFilePath: '(memory)',
+  originalFilename: 'Premier Inclusions Schedule.pptx',
+  receivedBytes: 11470374,
+  receivedBodyBytes: 11470753,
+  reportedBrowserFileSize: 11470374,
+  bufferBytes: 11470374,
+  pageCount: 10,
+  editableTextCount: 91
+}
+ POST /api/standard-inclusions/import-powerpoint 200 in 2324ms
+ ○ Compiling / ...
+ ✓ Compiled /freedom-trader/settings in 3.7s (1137 modules)
+ GET / 200 in 4506ms
+ GET /freedom-trader/settings 200 in 2533ms
+ ✓ Compiled /freedom-investment in 430ms (1147 modules)
+ GET /freedom-investment 200 in 930ms
+ ✓ Compiled /api/workspaces/activate-invite in 407ms (1175 modules)
+ GET /freedom 200 in 973ms
+ POST /api/workspaces/activate-invite 200 in 996ms
+ POST /api/workspaces/activate-invite 200 in 1000ms
+ POST /api/workspaces/activate-invite 200 in 1007ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 1256ms (1181 modules)
+ GET /api/workspaces 304 in 1734ms
+ GET /freedom-trader 200 in 1895ms
+ GET /api/workspaces 304 in 270ms
+ ○ Compiling /freedom-trader/company/[symbol] ...
+ GET /api/workspaces 304 in 540ms
+ ✓ Compiled /freedom-trader/company/[symbol] in 2.9s (1784 modules)
+ GET /freedom-trader/company/AVGO 200 in 3332ms
+ ✓ Compiled /freedom-trader/portfolio in 407ms (1788 modules)
+ GET /freedom-trader/portfolio 200 in 795ms
+ ✓ Compiled /freedom-trader/trades in 333ms (1792 modules)
+ GET /freedom-trader/trades 200 in 744ms
+ GET /freedom-trader/settings 200 in 241ms
+ ✓ Compiled /freedom-trader/alerts in 343ms (1796 modules)
+ GET /freedom-trader/alerts 200 in 717ms
+ ✓ Compiled /freedom-trader/market-opportunities in 334ms (1800 modules)
+ GET /freedom-trader/market-opportunities 200 in 707ms
+ ✓ Compiled /freedom-trader/positions in 365ms (1804 modules)
+ GET /freedom-trader/positions 200 in 761ms
+ ○ Compiling /freedom/company/[symbol] ...
+ ✓ Compiled /freedom/company/[symbol] in 592ms (1808 modules)
+ GET /freedom/company/MSFT 200 in 1025ms
+ ✓ Compiled /freedom/score-calibration in 333ms (1812 modules)
+ GET /freedom/score-calibration 200 in 722ms
+ GET /api/workspaces 304 in 455ms
+ GET /api/workspaces 304 in 237ms
+ GET /api/workspaces 304 in 262ms
+ POST /api/workspaces/activate-invite 200 in 422ms
+ POST /api/workspaces/activate-invite 200 in 431ms
+ GET /api/workspaces 304 in 252ms
+ POST /api/workspaces/activate-invite 200 in 776ms
+ GET /api/workspaces 304 in 249ms
+ POST /api/workspaces/activate-invite 200 in 254ms
+ GET /api/workspaces 304 in 216ms
+ GET /api/workspaces 304 in 232ms
+ ○ Compiling /api/usage/check-limits ...
+ ✓ Compiled /api/usage/check-limits in 832ms (364 modules)
+ GET /api/usage/check-limits 401 in 1198ms
+ POST /api/workspaces/activate-invite 200 in 244ms
+ POST /api/workspaces/activate-invite 200 in 392ms
+ POST /api/workspaces/activate-invite 200 in 413ms
+ POST /api/workspaces/activate-invite 200 in 396ms
+ GET /api/workspaces 304 in 248ms
+ GET /api/workspaces 304 in 243ms
+ GET /api/workspaces 304 in 232ms
+ GET /api/workspaces 304 in 235ms
+ POST /api/workspaces/activate-invite 200 in 703ms
+ POST /api/workspaces/activate-invite 200 in 712ms
+ POST /api/workspaces/activate-invite 200 in 714ms
+ POST /api/workspaces/activate-invite 200 in 754ms
+ GET /api/workspaces 304 in 259ms
+ GET /api/workspaces 304 in 236ms
+ GET /api/workspaces 304 in 242ms
+ GET /api/workspaces 304 in 247ms
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 8.6s (1121 modules)
+ GET /freedom-trader/settings 200 in 4726ms
+ ✓ Compiled /api/workspaces/activate-invite in 293ms (363 modules)
+ POST /api/workspaces/activate-invite 200 in 926ms
+ ✓ Compiled /api/workspaces in 97ms (365 modules)
+ GET /api/workspaces 304 in 389ms
+ POST /api/workspaces/activate-invite 200 in 294ms
+ GET /api/workspaces 304 in 281ms
+ POST /api/workspaces/activate-invite 200 in 409ms
+ GET /api/workspaces 304 in 263ms
+ POST /api/workspaces/activate-invite 200 in 319ms
+ GET /api/workspaces 304 in 277ms
+ ✓ Compiled in 1191ms (365 modules)
+ GET /_next/data/development/modules/estimate-builder.json 200 in 1308ms
+ ✓ Compiled in 1839ms (784 modules)
+ GET /_next/data/development/modules/estimate-builder.json 200 in 273ms
+ GET /_next/data/development/modules/estimate-builder.json 200 in 238ms
+ ✓ Compiled /api/usage/check-limits in 136ms (369 modules)
+ GET /api/usage/check-limits 401 in 451ms
+ GET /api/usage/check-limits 401 in 289ms
+ ✓ Compiled /api/project-estimate/instances in 145ms (372 modules)
+ GET /api/usage/check-limits 401 in 295ms
+ GET /api/project-estimate/instances?workspace_id=846885cd-25b9-4eca-b9f9-3fd02f5882d8&projectId=Johnson+123.gr8job 500 in 960ms
+ ✓ Compiled in 7.6s (1151 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 7.7s (1152 modules)
+ GET /freedom-trader/settings 200 in 3313ms
+ ✓ Compiled /api/workspaces/activate-invite in 216ms (370 modules)
+ POST /api/workspaces/activate-invite 200 in 653ms
+ ✓ Compiled /api/workspaces in 159ms (372 modules)
+ GET /api/workspaces 304 in 431ms
+ POST /api/workspaces/activate-invite 200 in 253ms
+ GET /api/workspaces 304 in 258ms
+ POST /api/workspaces/activate-invite 200 in 318ms
+ GET /api/workspaces 304 in 268ms
+ POST /api/workspaces/activate-invite 200 in 405ms
+ GET /api/workspaces 304 in 243ms
+ ✓ Compiled in 10.4s (1149 modules)
+ ✓ Compiled in 9.8s (1149 modules)
+ ✓ Compiled in 43.4s (1149 modules)
+ ✓ Compiled in 9.2s (1145 modules)
+ POST /api/workspaces/activate-invite 200 in 873ms
+ POST /api/workspaces/activate-invite 200 in 894ms
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 627ms (1149 modules)
+ ✓ Compiled in 524ms (1149 modules)
+ POST /api/workspaces/activate-invite 200 in 266ms
+ GET /freedom-trader/settings 200 in 2059ms
+ GET /api/workspaces 304 in 1611ms
+ GET /api/workspaces 304 in 254ms
+ POST /api/workspaces/activate-invite 200 in 247ms
+ GET /api/workspaces 304 in 241ms
+ POST /api/workspaces/activate-invite 200 in 496ms
+ GET /api/workspaces 304 in 682ms
+ POST /api/workspaces/activate-invite 200 in 297ms
+ GET /api/workspaces 304 in 916ms
+ POST /api/workspaces/activate-invite 200 in 1096ms
+ GET /api/workspaces 304 in 510ms
+ POST /api/workspaces/activate-invite 200 in 257ms
+ ✓ Compiled in 7s (1149 modules)
+ GET /api/workspaces 304 in 7135ms
+ GET /api/workspaces 304 in 268ms
+ ✓ Compiled in 6s (1149 modules)
+ ✓ Compiled in 4.4s (1140 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 568ms (1149 modules)
+ GET /freedom-trader/settings 200 in 1390ms
+ POST /api/workspaces/activate-invite 200 in 455ms
+ GET /api/workspaces 304 in 276ms
+ ✓ Compiled in 7.9s (1149 modules)
+ POST /api/workspaces/activate-invite 200 in 1703ms
+ POST /api/workspaces/activate-invite 200 in 1722ms
+ GET /api/workspaces 304 in 291ms
+ POST /api/workspaces/activate-invite 200 in 253ms
+ GET /api/workspaces 304 in 275ms
+ GET /api/workspaces 304 in 427ms
+ ✓ Compiled in 7s (1149 modules)
+ GET /qa/project-estimate-visual-editor 200 in 1483ms
+ ○ Compiling /[slug] ...
+ GET /qa/project-estimate-visual-editor 200 in 843ms
+ ✓ Compiled /freedom-trader/settings in 9s (1135 modules)
+ GET /freedom-trader/settings 200 in 7234ms
+ ○ Compiling /api/workspaces/activate-invite ...
+ ✓ Compiled /api/workspaces/activate-invite in 892ms (1161 modules)
+ POST /api/workspaces/activate-invite 200 in 1807ms
+ POST /api/workspaces/activate-invite 200 in 1965ms
+ POST /api/workspaces/activate-invite 200 in 1997ms
+ POST /api/workspaces/activate-invite 200 in 2018ms
+ ✓ Compiled /api/workspaces in 252ms (374 modules)
+ GET /favicon.ico 404 in 2185ms
+ GET /api/workspaces 304 in 590ms
+ GET /api/workspaces 304 in 231ms
+ GET /api/workspaces 304 in 240ms
+ GET /api/workspaces 304 in 234ms
+ GET /qa/project-estimate-visual-editor 200 in 1071ms
+ GET /qa/project-estimate-visual-editor 200 in 250ms
+ GET /qa/project-estimate-visual-editor 200 in 264ms
+ GET /favicon.ico 404 in 561ms
+ GET /favicon.ico 404 in 515ms
+ GET /qa/project-estimate-visual-editor 200 in 260ms
+ GET /qa/project-estimate-visual-editor 200 in 234ms
+ GET /qa/project-estimate-visual-editor 200 in 258ms
+ GET /favicon.ico 404 in 547ms
+ GET /favicon.ico 404 in 533ms
+ GET /qa/project-estimate-visual-editor 200 in 239ms
+ ✓ Compiled in 5.4s (1127 modules)
+ ✓ Compiled /freedom-trader/settings in 372ms (1135 modules)
+ GET /freedom-trader/settings 200 in 1039ms
+ ✓ Compiled /api/workspaces/activate-invite in 321ms (372 modules)
+ POST /api/workspaces/activate-invite 200 in 835ms
+ ✓ Compiled /api/workspaces in 112ms (374 modules)
+ GET /api/workspaces 304 in 386ms
+ GET /qa/project-estimate-visual-editor 200 in 1384ms
+ POST /api/workspaces/activate-invite 200 in 426ms
+ POST /api/workspaces/activate-invite 200 in 427ms
+ GET /api/workspaces 304 in 344ms
+ GET /api/workspaces 304 in 300ms
+ POST /api/workspaces/activate-invite 200 in 233ms
+ GET /api/workspaces 304 in 258ms
+ GET /qa/project-estimate-visual-editor 200 in 304ms
+ GET /favicon.ico 404 in 444ms
+ GET /favicon.ico 404 in 524ms
+ GET /qa/project-estimate-visual-editor 200 in 265ms
+ ✓ Compiled in 5.6s (1159 modules)
+ ✓ Compiled /freedom-trader/settings in 317ms (1163 modules)
+ GET /freedom-trader/settings 200 in 904ms
+ POST /api/workspaces/activate-invite 200 in 527ms
+ GET /api/workspaces 304 in 310ms
+ ✓ Compiled in 4.8s (1163 modules)
+ POST /api/workspaces/activate-invite 200 in 439ms
+ POST /api/workspaces/activate-invite 200 in 410ms
+ GET /api/workspaces 304 in 274ms
+ GET /api/workspaces 304 in 449ms
+ GET /qa/project-estimate-visual-editor 200 in 1503ms
+ POST /api/workspaces/activate-invite 200 in 272ms
+ GET /api/workspaces 304 in 244ms
+ GET /qa/project-estimate-visual-editor 200 in 350ms
+ GET /favicon.ico 404 in 756ms
+ GET /favicon.ico 404 in 531ms
+ GET /qa/project-estimate-visual-editor 200 in 255ms
+ GET /qa/project-estimate-visual-editor 200 in 252ms
+ GET /qa/project-estimate-visual-editor 200 in 243ms
+ GET /favicon.ico 404 in 555ms
+ GET /favicon.ico 404 in 621ms
+ GET /qa/project-estimate-visual-editor 200 in 267ms
+ ✓ Compiled /freedom-trader/settings in 5.6s (1135 modules)
+ GET /freedom-trader/settings 200 in 1778ms
+ GET /qa/project-estimate-visual-editor 200 in 3841ms
+ ✓ Compiled /api/workspaces/activate-invite in 167ms (372 modules)
+ POST /api/workspaces/activate-invite 200 in 660ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 528ms (374 modules)
+ GET /api/workspaces 304 in 783ms
+ GET /qa/project-estimate-visual-editor 200 in 1172ms
+ POST /api/workspaces/activate-invite 200 in 1214ms
+ POST /api/workspaces/activate-invite 200 in 1225ms
+ GET /favicon.ico 404 in 1865ms
+ GET /api/workspaces 304 in 291ms
+ POST /api/workspaces/activate-invite 200 in 270ms
+ GET /api/workspaces 304 in 250ms
+ GET /api/workspaces 304 in 275ms
+ GET /favicon.ico 404 in 426ms
+ GET /qa/project-estimate-visual-editor 200 in 261ms
+ GET /qa/project-estimate-visual-editor 200 in 243ms
+ GET /qa/project-estimate-visual-editor 200 in 247ms
+ GET /favicon.ico 404 in 577ms
+ GET /favicon.ico 404 in 542ms
+ GET /qa/project-estimate-visual-editor 200 in 275ms
+ GET /qa/project-estimate-visual-editor 200 in 255ms
+ GET /favicon.ico 404 in 633ms
+ ○ Compiling /api/website-builder/defaults ...
+ GET /api/workspaces 304 in 779ms
+ ✓ Compiled /api/website-builder/defaults in 2.7s (381 modules)
+ ✓ Compiled (384 modules)
+ GET /api/website-builder/defaults 200 in 3346ms
+ GET /api/workspaces 304 in 2588ms
+ GET /api/workspaces 304 in 245ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 200 in 3783ms
+ GET /api/workspaces 304 in 249ms
+ ✓ Compiled /api/website-builder/emergency-page-draft in 121ms (386 modules)
+ GET /api/website-builder/emergency-page-draft?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&pageName=Email 200 in 165ms
+ ✓ Compiled /api/website-builder/local-project-repair in 111ms (388 modules)
+ GET /api/website-builder/local-project-repair?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 331ms
+ ○ Compiling /api/workspaces/activate-invite ...
+ ✓ Compiled /api/workspaces/activate-invite in 1271ms (390 modules)
+ POST /api/workspaces/activate-invite 200 in 1713ms
+ POST /api/workspaces/activate-invite 200 in 1729ms
+ POST /api/workspaces/activate-invite 200 in 1735ms
+ POST /api/workspaces/activate-invite 200 in 1744ms
+ GET /api/workspaces 304 in 303ms
+ GET /api/workspaces 304 in 244ms
+ GET /api/workspaces 304 in 328ms
+ GET /api/workspaces 304 in 259ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: '',
+  saveSource: 'manual-save',
+  siteOnly: true,
+  pageVersion: 'pv_20260721235936417_0b28bfd64c7e',
+  baseUpdatedAt: '2026-07-22T10:13:33.433167+10:00',
+  requestId: 'wb-publish-preflight-1784663294971-9a37f570-d13d-4c54-8e93-413712e68c4d',
+  savedAt: '2026-07-22T01:33:31.017Z',
+  deletedBlockIds: [],
+  page: { count: 0, blockIds: [], listBlocks: [], accordionImages: [] }
+}
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: '',
+  saveSource: 'manual-save',
+  siteOnly: true,
+  expected: {
+    pageCount: 12,
+    blockCount: 0,
+    contentHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 0,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+    storedHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    diffs: [
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'home',
+      pageSlug: 'home',
+      draftRevision: 'pv_20260722013331017_d0958091d509',
+      publishedRevision: '',
+      blockCount: 0,
+      blockIds: [],
+      blockTypes: [],
+      nestedChildCount: 0,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+      structuralHash: '4330f4e4bab0646ab56172db258af0dea68df62193b65d6e70874fd4806a0c1c'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'home',
+      pageSlug: 'home',
+      draftRevision: 'pv_20260722013331017_d0958091d509',
+      publishedRevision: '',
+      blockCount: 23,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 0,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      structuralHash: 'ed883f850323a6552ecbb0f0865fc90371b923f67fdeb72c7f578b345a1a48c4'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+      actualHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 409 in 2317ms
+ POST /api/website-builder/emergency-page-draft 200 in 35ms
+ POST /api/website-builder/emergency-page-draft 200 in 52ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'manual-save',
+  siteOnly: false,
+  pageVersion: 'pv_20260721235936417_0b28bfd64c7e',
+  baseUpdatedAt: '2026-07-22T01:33:30.584Z',
+  requestId: 'wb-manual-save-1784684016081-9e3e8196-023b-4193-8b4f-3dc548c8ad23',
+  savedAt: '2026-07-22T01:33:36.493Z',
+  deletedBlockIds: [],
+  page: {
+    count: 7,
+    blockIds: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    listBlocks: [],
+    accordionImages: [ [Object] ]
+  }
+}
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'manual-save',
+  siteOnly: false,
+  expected: {
+    pageCount: 12,
+    blockCount: 7,
+    contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 15,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    storedHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    diffs: [
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013336493_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013336493_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      actualHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 409 in 3139ms
+ POST /api/website-builder/emergency-page-draft 200 in 21ms
+ POST /api/website-builder/emergency-page-draft 200 in 25ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'publish-preflight',
+  siteOnly: false,
+  pageVersion: 'pv_20260721235936417_0b28bfd64c7e',
+  baseUpdatedAt: '2026-07-22T01:33:39.381Z',
+  requestId: 'wb-publish-preflight-1784684035479-a2b4fc93-55f8-4879-8bed-ad0ceba2ca05',
+  savedAt: '2026-07-22T01:33:56.009Z',
+  deletedBlockIds: [],
+  page: {
+    count: 7,
+    blockIds: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    listBlocks: [],
+    accordionImages: [ [Object] ]
+  }
+}
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'publish-preflight',
+  siteOnly: false,
+  expected: {
+    pageCount: 12,
+    blockCount: 7,
+    contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 15,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    storedHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    diffs: [
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013356009_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013356009_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      actualHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 409 in 3564ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 827ms
+ ✓ Compiled /api/websites/publish in 245ms (388 modules)
+ POST /api/websites/publish 409 in 1135ms
+ POST /api/workspaces/activate-invite 200 in 403ms
+ POST /api/workspaces/activate-invite 200 in 400ms
+ POST /api/workspaces/activate-invite 200 in 421ms
+ POST /api/workspaces/activate-invite 200 in 442ms
+ GET /api/workspaces 304 in 241ms
+ GET /api/workspaces 304 in 252ms
+ GET /api/workspaces 304 in 776ms
+ GET /api/workspaces 304 in 243ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: '',
+  saveSource: 'manual-save',
+  siteOnly: true,
+  pageVersion: 'pv_20260722013356009_265450502675',
+  baseUpdatedAt: '2026-07-22T11:33:55.372561+10:00',
+  requestId: 'wb-publish-preflight-1784684035479-a2b4fc93-55f8-4879-8bed-ad0ceba2ca05',
+  savedAt: '2026-07-22T01:34:16.111Z',
+  deletedBlockIds: [],
+  page: { count: 0, blockIds: [], listBlocks: [], accordionImages: [] }
+}
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: '',
+  saveSource: 'manual-save',
+  siteOnly: true,
+  expected: {
+    pageCount: 12,
+    blockCount: 0,
+    contentHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 0,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+    storedHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    diffs: [
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object],
+      [Object], [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'home',
+      pageSlug: 'home',
+      draftRevision: 'pv_20260722013416111_d0958091d509',
+      publishedRevision: '',
+      blockCount: 0,
+      blockIds: [],
+      blockTypes: [],
+      nestedChildCount: 0,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+      structuralHash: '4330f4e4bab0646ab56172db258af0dea68df62193b65d6e70874fd4806a0c1c'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'home',
+      pageSlug: 'home',
+      draftRevision: 'pv_20260722013416111_d0958091d509',
+      publishedRevision: '',
+      blockCount: 23,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 0,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      structuralHash: 'ed883f850323a6552ecbb0f0865fc90371b923f67fdeb72c7f578b345a1a48c4'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: 'd0958091d509e3309e0790cd7a9d3e2e1081b3e7c7aaee8d740518baed23920b',
+      actualHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 409 in 2323ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: '',
+  saveSource: 'manual-save',
+  siteOnly: true,
+  pageVersion: 'pv_20260722013356009_265450502675',
+  baseUpdatedAt: '2026-07-22T11:33:55.372561+10:00',
+  requestId: 'wb-publish-preflight-1784684035479-a2b4fc93-55f8-4879-8bed-ad0ceba2ca05',
+  savedAt: '2026-07-22T01:34:21.169Z',
+  deletedBlockIds: [],
+  page: { count: 0, blockIds: [], listBlocks: [], accordionImages: [] }
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 409 in 763ms
+ POST /api/website-builder/emergency-page-draft 200 in 33ms
+ POST /api/website-builder/emergency-page-draft 200 in 30ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'manual-save',
+  siteOnly: false,
+  pageVersion: 'pv_20260722013356009_265450502675',
+  baseUpdatedAt: '2026-07-22T01:34:15.829Z',
+  requestId: 'wb-manual-save-1784684064502-ffc693bb-70e4-4b7f-9589-c2abb5dcea11',
+  savedAt: '2026-07-22T01:34:24.892Z',
+  deletedBlockIds: [],
+  page: {
+    count: 7,
+    blockIds: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    listBlocks: [],
+    accordionImages: [ [Object] ]
+  }
+}
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'manual-save',
+  siteOnly: false,
+  expected: {
+    pageCount: 12,
+    blockCount: 7,
+    contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 15,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+    storedHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+    diffs: [
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013424892_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013424892_265450502675',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      structuralHash: '440930f85b7e2871987f2bcab29b33dac7d94fe240cba7834f43acb78dfdcbb9'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: '2654505026757c3f1acc9714449faa04b33e44f15aab049cc56cc931369c9abd',
+      actualHash: '46a8441e8c0b4d634c1987bffbbec626120f6c3778058d178f0c557c8e497428',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 409 in 2747ms
+ ✓ Compiled in 5.4s (1165 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 880ms (1173 modules)
+ GET /freedom-trader/settings 200 in 1625ms
+ POST /api/workspaces/activate-invite 200 in 522ms
+ GET /api/workspaces 304 in 265ms
+ ✓ Compiled in 5.6s (1173 modules)
+ POST /api/workspaces/activate-invite 200 in 441ms
+ GET /api/workspaces 304 in 276ms
+ POST /api/workspaces/activate-invite 200 in 447ms
+ GET /api/workspaces 304 in 280ms
+ POST /api/workspaces/activate-invite 200 in 240ms
+ GET /api/workspaces 304 in 225ms
+ POST /api/workspaces/activate-invite 200 in 224ms
+ GET /api/workspaces 304 in 251ms
+ POST /api/workspaces/activate-invite 200 in 297ms
+ GET /api/workspaces 304 in 231ms
+ POST /api/website-builder/emergency-page-draft 200 in 35ms
+[website-builder save] incoming payload {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  draftProjectId: 'draft:2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'preview-autosave',
+  siteOnly: false,
+  pageVersion: 'pv_20260722013356009_265450502675',
+  baseUpdatedAt: '2026-07-22T01:34:27.399Z',
+  requestId: 'wb-preview-autosave-1784684129285-b1bc0751-10c6-462c-b83e-7a98d2fad651',
+  savedAt: '2026-07-22T01:35:29.661Z',
+  deletedBlockIds: [],
+  page: {
+    count: 7,
+    blockIds: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ],
+    listBlocks: [],
+    accordionImages: [ [Object] ]
+  }
+}
+ POST /api/website-builder/emergency-page-draft 200 in 24ms
+[website-builder save] verified split-storage source of truth {
+  projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+  pageName: 'Email',
+  saveSource: 'preview-autosave',
+  siteOnly: false,
+  expected: {
+    pageCount: 12,
+    blockCount: 7,
+    contentHash: '9c8f16e4e8689e16522bc0f2be91d8df5ffdc2f35ea9edf6d3f64f80d73aa99e',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [],
+    imageCount: 15,
+    marqueeIconCount: 0
+  },
+  splitStorage: {
+    pageCount: 12,
+    blockCount: 127,
+    contentHash: 'b321ad93e153a07ec77c9079b55a62743943780bd88f9ddd89f726e7e5512270',
+    footerNavigationCount: 12,
+    customDomain: 'gr8result.solutions',
+    primaryDomain: 'gr8result.solutions',
+    slug: 'gr8-result-digital-solutions',
+    videos: [ [Object], [Object] ],
+    imageCount: 163,
+    marqueeIconCount: 5
+  },
+  persistenceAudit: {
+    ok: false,
+    expectedHash: '9c8f16e4e8689e16522bc0f2be91d8df5ffdc2f35ea9edf6d3f64f80d73aa99e',
+    storedHash: 'b321ad93e153a07ec77c9079b55a62743943780bd88f9ddd89f726e7e5512270',
+    diffs: [
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object],
+      [Object], [Object], [Object]
+    ],
+    expected: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013529661_9c8f16e4e868',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: '9c8f16e4e8689e16522bc0f2be91d8df5ffdc2f35ea9edf6d3f64f80d73aa99e',
+      structuralHash: '46c55d5cbc8c650fa3abd2030f3a15cc759af6ee2e8c67c29f227b18ef7a5839'
+    },
+    stored: {
+      websiteId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      projectId: '2208a52a-8175-477e-823c-fc6de7fe4afe',
+      pageId: 'email',
+      pageSlug: 'email',
+      draftRevision: 'pv_20260722013529661_9c8f16e4e868',
+      publishedRevision: '',
+      blockCount: 7,
+      blockIds: [Array],
+      blockTypes: [Array],
+      nestedChildCount: 4,
+      topNavigationSettings: [Object],
+      footerSettings: [Object],
+      footerColumnCount: 3,
+      footerChildBlockIds: [Array],
+      contentHash: 'b321ad93e153a07ec77c9079b55a62743943780bd88f9ddd89f726e7e5512270',
+      structuralHash: '46c55d5cbc8c650fa3abd2030f3a15cc759af6ee2e8c67c29f227b18ef7a5839'
+    }
+  },
+  extraReadBackIds: [],
+  missingReadBackIds: [],
+  issues: [
+    {
+      type: 'structural-hash-mismatch',
+      expectedHash: '9c8f16e4e8689e16522bc0f2be91d8df5ffdc2f35ea9edf6d3f64f80d73aa99e',
+      actualHash: 'b321ad93e153a07ec77c9079b55a62743943780bd88f9ddd89f726e7e5512270',
+      diffs: [Array]
+    }
+  ]
+}
+ POST /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 409 in 3271ms
+ ○ Compiling /modules/website-builder/project/[id]/preview ...
+ POST /api/workspaces/activate-invite 200 in 328ms
+ POST /api/workspaces/activate-invite 200 in 330ms
+ GET /api/workspaces 304 in 251ms
+ ✓ Compiled /modules/website-builder/project/[id]/preview in 6.2s (1184 modules)
+ GET /api/workspaces 304 in 1315ms
+ GET /modules/website-builder/project/2208a52a-8175-477e-823c-fc6de7fe4afe/preview?page=email&viewport=desktop&previewToken=064d9274-2424-4749-adea-8234b10f548a 200 in 7434ms
+ POST /api/workspaces/activate-invite 200 in 308ms
+ ○ Compiling /api/assets/list-library ...
+ GET /api/workspaces 304 in 1730ms
+ ✓ Compiled /api/assets/list-library in 2.4s (404 modules)
+ GET /api/workspaces 304 in 1246ms
+ POST /api/workspaces/activate-invite 200 in 1248ms
+ GET /api/workspaces 304 in 242ms
+ GET /api/workspaces 304 in 231ms
+ GET /api/workspaces 304 in 239ms
+ POST /api/workspaces/activate-invite 200 in 218ms
+ GET /api/workspaces 304 in 298ms
+ POST /api/workspaces/activate-invite 200 in 428ms
+ GET /api/workspaces 304 in 302ms
+ ✓ Compiled in 4.2s (1189 modules)
+ ✓ Compiled in 4s (1189 modules)
+ ✓ Compiled in 5.2s (1181 modules)
+ ○ Compiling /freedom-trader/settings ...
+ ✓ Compiled /freedom-trader/settings in 529ms (1189 modules)
+ GET /freedom-trader/settings 200 in 1424ms
+ POST /api/workspaces/activate-invite 200 in 469ms
+ POST /api/workspaces/activate-invite 200 in 472ms
+ GET /api/workspaces 304 in 360ms
+ GET /api/workspaces 304 in 258ms
+ ✓ Compiled in 3.8s (1165 modules)
+ POST /api/workspaces/activate-invite 200 in 916ms
+ POST /api/workspaces/activate-invite 200 in 251ms
+ GET /api/workspaces 304 in 336ms
+ POST /api/workspaces/activate-invite 200 in 239ms
+ GET /api/workspaces 304 in 249ms
+ GET /api/workspaces 304 in 784ms
+ ✓ Compiled in 3.6s (1165 modules)
+ GET /api/assets/list-library 304 in 83891ms
+ GET /api/assets/list-library 200 in 122209ms
+ POST /api/workspaces/activate-invite 200 in 868ms
+ POST /api/workspaces/activate-invite 200 in 616ms
+ POST /api/workspaces/activate-invite 200 in 627ms
+ POST /api/workspaces/activate-invite 200 in 653ms
+ POST /api/workspaces/activate-invite 200 in 708ms
+ GET /api/workspaces 304 in 258ms
+ GET /api/workspaces 304 in 229ms
+ GET /api/workspaces 304 in 263ms
+ GET /api/workspaces 304 in 244ms
+ GET /api/workspaces 304 in 231ms
+ GET /modules/estimate-builder 200 in 1670ms
+ GET /modules/estimate-builder 200 in 241ms
+ POST /api/workspaces/activate-invite 200 in 445ms
+ POST /api/workspaces/activate-invite 200 in 447ms
+ POST /api/workspaces/activate-invite 200 in 473ms
+ POST /api/workspaces/activate-invite 200 in 479ms
+ ○ Compiling /[slug] ...
+ GET /api/workspaces 304 in 1159ms
+ GET /api/workspaces 304 in 968ms
+ ✓ Compiled /freedom-trader/settings in 9.8s (1166 modules)
+ GET /freedom-trader/settings 200 in 7513ms
+ GET /api/workspaces 304 in 7636ms
+ GET /favicon.ico 404 in 10208ms
+ GET /api/workspaces 304 in 251ms
+ GET /api/workspaces 304 in 250ms
+ GET /api/workspaces 304 in 214ms
+ GET /api/workspaces 304 in 235ms
+ GET /favicon.ico 404 in 366ms
+ ○ Compiling /api/usage/check-limits ...
+ ✓ Compiled /api/usage/check-limits in 969ms (380 modules)
+ POST /api/workspaces/activate-invite 200 in 1442ms
+ POST /api/workspaces/activate-invite 200 in 1457ms
+ POST /api/workspaces/activate-invite 200 in 1465ms
+ GET /api/usage/check-limits 401 in 1514ms
+ POST /api/workspaces/activate-invite 200 in 810ms
+ POST /api/workspaces/activate-invite 200 in 1623ms
+ GET /api/workspaces 304 in 276ms
+ GET /api/workspaces 304 in 269ms
+ GET /api/workspaces 304 in 280ms
+ GET /api/workspaces 304 in 251ms
+ GET /api/workspaces 304 in 340ms
+ ○ Compiling /api/freedom-trader/paper-account ...
+ POST /api/workspaces/activate-invite 200 in 941ms
+ POST /api/workspaces/activate-invite 200 in 1038ms
+ POST /api/workspaces/activate-invite 200 in 1133ms
+ POST /api/workspaces/activate-invite 200 in 1216ms
+ POST /api/workspaces/activate-invite 200 in 1281ms
+ ✓ Compiled /api/freedom-trader/paper-account in 1366ms (370 modules)
+ ✓ Compiled /api/workspaces in 297ms (372 modules)
+ GET /api/freedom-trader/paper-account 304 in 2022ms
+ GET /api/workspaces 304 in 964ms
+ GET /api/freedom-trader/paper-account 304 in 275ms
+ GET /api/workspaces 304 in 249ms
+ GET /api/workspaces 304 in 234ms
+ GET /api/workspaces 304 in 231ms
+ GET /api/workspaces 304 in 238ms
+ GET /api/workspaces 304 in 260ms
+ GET /api/workspaces 304 in 243ms
+ GET /api/workspaces 304 in 260ms
+ POST /api/workspaces/activate-invite 200 in 417ms
+ POST /api/workspaces/activate-invite 200 in 590ms
+ POST /api/workspaces/activate-invite 200 in 610ms
+ POST /api/workspaces/activate-invite 200 in 621ms
+ POST /api/workspaces/activate-invite 200 in 691ms
+ POST /api/workspaces/activate-invite 200 in 698ms
+ GET /api/workspaces 304 in 239ms
+ GET /api/workspaces 304 in 262ms
+ GET /api/workspaces 304 in 310ms
+ GET /api/workspaces 304 in 213ms
+ GET /api/workspaces 304 in 355ms
+ GET /api/workspaces 304 in 261ms
+ ○ Compiling /freedom-investment ...
+ ✓ Compiled /freedom-investment in 9.8s (1171 modules)
+ GET /_next/data/development/freedom-investment.json 200 in 10666ms
+ ✓ Compiled /api/freedom/quotes in 273ms (381 modules)
+Finnhub symbol: AVGO
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: COST
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: TSM
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: NVDA
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: ASML
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: MA
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: GOOGL
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: V
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+Finnhub symbol: AMZN
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbols=MSFT,NVDA,V,AMZN,COST,GOOGL,AVGO,MA,ASML,TSM 200 in 1807ms
+ ○ Compiling /freedom/company/[symbol] ...
+ ✓ Compiled /freedom/company/[symbol] in 6.1s (1373 modules)
+ ○ Compiling /modules/website-builder/visual-builder ...
+ ✓ Compiled /modules/website-builder/visual-builder in 2.2s (1781 modules)
+ GET /_next/data/development/freedom/company/MSFT.json?symbol=MSFT 200 in 10705ms
+ GET /modules/estimate-builder 200 in 4687ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 4688ms
+ GET /modules/estimate-builder 200 in 389ms
+ GET /modules/estimate-builder 200 in 325ms
+ ✓ Compiled /api/freedom/research in 272ms (396 modules)
+ ✓ Compiled (400 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:43:25.138Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbol=MSFT 200 in 994ms
+ GET /api/freedom/research?symbol=MSFT 200 in 1230ms
+ POST /api/workspaces/activate-invite 200 in 407ms
+ POST /api/workspaces/activate-invite 200 in 375ms
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 1953ms
+ GET /api/workspaces 304 in 282ms
+ POST /api/workspaces/activate-invite 200 in 266ms
+ POST /api/workspaces/activate-invite 200 in 311ms
+ ✓ Compiled /api/freedom/committee in 339ms (402 modules)
+ ✓ Compiled (404 modules)
+ GET /api/workspaces 304 in 570ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 200 in 859ms
+ POST /api/workspaces/activate-invite 200 in 733ms
+ GET /api/freedom/committee?symbol=MSFT 200 in 828ms
+ ✓ Compiled /api/freedom/score-history in 225ms (407 modules)
+ POST /api/freedom/score-history 200 in 543ms
+ POST /api/workspaces/activate-invite 200 in 402ms
+ POST /api/workspaces/activate-invite 200 in 405ms
+ POST /api/workspaces/activate-invite 200 in 649ms
+ POST /api/freedom/score-history 200 in 130ms
+ GET /api/workspaces 304 in 250ms
+ POST /api/freedom/score-history 200 in 137ms
+ GET /api/workspaces 304 in 293ms
+ GET /api/workspaces 304 in 292ms
+ GET /api/workspaces 304 in 220ms
+ GET /api/workspaces 304 in 219ms
+ GET /api/workspaces 304 in 231ms
+ ✓ Compiled in 262ms (1085 modules)
+ ○ Compiling /modules/website-builder/visual-builder ...
+ ✓ Compiled /modules/website-builder/visual-builder in 1691ms (1737 modules)
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 3430ms
+ GET /modules/estimate-builder 200 in 3474ms
+ GET /modules/estimate-builder 200 in 289ms
+ GET /modules/estimate-builder 200 in 340ms
+ ✓ Compiled /api/workspaces/activate-invite in 342ms (380 modules)
+ POST /api/workspaces/activate-invite 200 in 873ms
+ POST /api/workspaces/activate-invite 200 in 550ms
+ POST /api/workspaces/activate-invite 200 in 509ms
+ POST /api/workspaces/activate-invite 200 in 413ms
+ POST /api/workspaces/activate-invite 200 in 315ms
+ POST /api/workspaces/activate-invite 200 in 397ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 677ms (1765 modules)
+ POST /api/workspaces/activate-invite 200 in 696ms
+ POST /api/workspaces/activate-invite 200 in 967ms
+ GET /api/workspaces 304 in 992ms
+ GET /api/workspaces 304 in 266ms
+ GET /api/workspaces 304 in 238ms
+ GET /api/workspaces 304 in 247ms
+ GET /api/workspaces 304 in 240ms
+ GET /api/workspaces 304 in 246ms
+ GET /api/workspaces 304 in 230ms
+ GET /api/workspaces 304 in 527ms
+ ✓ Compiled in 2.4s (1085 modules)
+ ○ Compiling /modules/estimate-builder ...
+ POST /api/workspaces/activate-invite 200 in 840ms
+ POST /api/workspaces/activate-invite 200 in 919ms
+ GET /api/workspaces 304 in 952ms
+ ✓ Compiled /modules/estimate-builder in 1528ms (1765 modules)
+ ✓ Compiled in 659ms (1765 modules)
+ ✓ Compiled in 1299ms (1383 modules)
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 3946ms
+ GET /modules/estimate-builder 200 in 3947ms
+ GET /api/workspaces 304 in 2950ms
+ GET /modules/estimate-builder 200 in 258ms
+ GET /api/workspaces 304 in 300ms
+ GET /api/workspaces 304 in 271ms
+ GET /api/workspaces 304 in 281ms
+ GET /modules/estimate-builder 200 in 347ms
+ POST /api/workspaces/activate-invite 200 in 309ms
+ POST /api/workspaces/activate-invite 200 in 453ms
+ POST /api/workspaces/activate-invite 200 in 449ms
+ POST /api/workspaces/activate-invite 200 in 473ms
+ POST /api/workspaces/activate-invite 200 in 272ms
+ GET /api/workspaces 304 in 320ms
+ POST /api/workspaces/activate-invite 200 in 457ms
+ GET /api/workspaces 304 in 364ms
+ POST /api/workspaces/activate-invite 200 in 257ms
+ POST /api/workspaces/activate-invite 200 in 264ms
+ GET /api/workspaces 304 in 273ms
+ GET /api/workspaces 304 in 272ms
+ GET /api/workspaces 304 in 255ms
+ GET /api/workspaces 304 in 295ms
+ GET /api/workspaces 304 in 223ms
+ GET /api/workspaces 304 in 233ms
+ GET /api/workspaces 304 in 226ms
+ GET /api/workspaces 304 in 225ms
+ GET /api/workspaces 304 in 242ms
+ ○ Compiling /api/usage/check-limits ...
+ ✓ Compiled /api/freedom/research in 3.5s (1766 modules)
+ ✓ Compiled (1776 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:50:51.408Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+ GET /api/usage/check-limits 401 in 3085ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1348ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1602ms
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 1931ms
+ ○ Compiling /api/freedom/committee ...
+ ✓ Compiled /api/freedom/committee in 974ms (395 modules)
+ ✓ Compiled (397 modules)
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 1611ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 1624ms
+ ✓ Compiled /api/project-estimate/instances in 184ms (392 modules)
+ GET /api/project-estimate/instances?workspace_id=846885cd-25b9-4eca-b9f9-3fd02f5882d8 500 in 1015ms
+ ✓ Compiled in 954ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:51:13.796Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 204ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1073ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1395ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 430ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 484ms
+ ✓ Compiled in 923ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:51:23.688Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 64ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1067ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1621ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 425ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 464ms
+ ✓ Compiled in 999ms (1374 modules)
+ ○ Compiling /modules/website-builder/visual-builder ...
+ ✓ Compiled /modules/website-builder/visual-builder in 15.4s (1771 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:51:59.362Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 16738ms
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 16464ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:52:00.881Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 76ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 16721ms
+ GET /api/freedom/research?symbol=MSFT 304 in 16794ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 486ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 689ms
+ ✓ Compiled /api/workspaces/activate-invite in 194ms (390 modules)
+ GET /api/freedom/quotes?symbol=MSFT 200 in 851ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 660ms
+ POST /api/workspaces/activate-invite 200 in 553ms
+ POST /api/workspaces/activate-invite 200 in 606ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 312ms
+ POST /api/workspaces/activate-invite 200 in 330ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 489ms
+ ✓ Compiled /api/workspaces in 341ms (392 modules)
+ GET /api/workspaces 304 in 677ms
+ GET /api/workspaces 304 in 220ms
+ GET /api/workspaces 304 in 230ms
+ ✓ Compiled in 1174ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:52:14.292Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 133ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 738ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1063ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 427ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 509ms
+ ✓ Compiled in 793ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:52:38.928Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 49ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 591ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 823ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 404ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 460ms
+ ✓ Compiled in 607ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:52:48.899Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 48ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 576ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 830ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 255ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 409ms
+ ✓ Compiled in 627ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:52:58.886Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 51ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 602ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 844ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 373ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 395ms
+ ✓ Compiled in 953ms (1374 modules)
+ ✓ Compiled /modules/website-builder/visual-builder in 342ms (1763 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:53:30.989Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 953ms
+ GET /api/freedom/research?symbol=MSFT 304 in 886ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ ✓ Compiled /api/workspaces/activate-invite in 124ms (383 modules)
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1298ms
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 1396ms
+ POST /api/workspaces/activate-invite 200 in 395ms
+ POST /api/workspaces/activate-invite 200 in 397ms
+ ✓ Compiled /api/workspaces in 132ms (385 modules)
+ GET /api/freedom/committee?symbol=MSFT 304 in 474ms
+ GET /api/workspaces 304 in 549ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 666ms
+ GET /api/workspaces 304 in 230ms
+ POST /api/workspaces/activate-invite 200 in 239ms
+ GET /api/workspaces 304 in 249ms
+ ✓ Compiled in 608ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:53:45.352Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=5y&interval=1d 200 in 45ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 577ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 827ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 400ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 441ms
+ ✓ Compiled in 690ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:54:00.387Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 562ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 822ms
+ GET /api/freedom/history?symbol=MSFT&range=1y&interval=1d 200 in 1003ms
+ ○ Compiling /api/freedom/score-history ...
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 1394ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 1783ms
+ ✓ Compiled /api/freedom/score-history in 2.7s (388 modules)
+ POST /api/freedom/score-history 200 in 176ms
+ POST /api/freedom/score-history 200 in 2888ms
+ POST /api/freedom/score-history 200 in 158ms
+ ✓ Compiled in 735ms (1383 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:54:30.588Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1y&interval=1d 200 in 30ms
+ GET /api/freedom/research?symbol=MSFT 304 in 761ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbol=MSFT 200 in 2020ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 498ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 1558ms
+ ✓ Compiled in 640ms (1374 modules)
+ ✓ Compiled /modules/website-builder/visual-builder in 388ms (1766 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:54:46.111Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1y&interval=1d 200 in 253ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 1045ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 927ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1112ms
+ ✓ Compiled /api/workspaces/activate-invite in 135ms (386 modules)
+ POST /api/workspaces/activate-invite 200 in 548ms
+ POST /api/workspaces/activate-invite 200 in 555ms
+ ✓ Compiled /api/workspaces in 137ms (388 modules)
+ GET /api/freedom/committee?symbol=MSFT 304 in 734ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 739ms
+ GET /api/workspaces 304 in 400ms
+ GET /api/workspaces 304 in 232ms
+ POST /api/workspaces/activate-invite 200 in 323ms
+ GET /api/workspaces 304 in 256ms
+ POST /api/workspaces/activate-invite 200 in 470ms
+ GET /api/workspaces 304 in 412ms
+ POST /api/workspaces/activate-invite 200 in 478ms
+ POST /api/workspaces/activate-invite 200 in 483ms
+ GET /api/workspaces 304 in 255ms
+ GET /api/workspaces 304 in 277ms
+ ○ Compiling /api/website-builder/defaults ...
+ GET /api/workspaces 304 in 1055ms
+ ✓ Compiled /api/assets/list-library in 2s (367 modules)
+ ✓ Compiled (401 modules)
+ GET /api/website-builder/defaults 401 in 7575ms
+ GET /api/website-builder/defaults 401 in 7590ms
+ GET /api/usage/check-limits 401 in 6759ms
+ GET /api/website-builder/defaults 200 in 6813ms
+ GET /api/workspaces 304 in 451ms
+ POST /api/workspaces/activate-invite 200 in 479ms
+ POST /api/workspaces/activate-invite 200 in 249ms
+ POST /api/workspaces/activate-invite 200 in 270ms
+ POST /api/workspaces/activate-invite 200 in 270ms
+ GET /api/workspaces 304 in 250ms
+ GET /api/workspaces 304 in 257ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 200 in 7636ms
+ GET /api/workspaces 304 in 333ms
+ ✓ Compiled /api/website-builder/emergency-page-draft in 181ms (403 modules)
+ GET /api/website-builder/emergency-page-draft?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&pageName=Email 200 in 233ms
+ ✓ Compiled /api/website-builder/local-project-repair in 158ms (405 modules)
+ GET /api/workspaces 304 in 340ms
+ GET /api/website-builder/local-project-repair?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 392ms
+ GET /api/workspaces 304 in 284ms
+ GET /api/website-builder/defaults 200 in 156ms
+ ✓ Compiled /api/freedom/history in 118ms (409 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:58:05.477Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1mo&interval=1d 200 in 1244ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:58:06.860Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 856ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:58:07.874Z',
+  ticker: 'BHP.AX',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+ GET /api/freedom/history?symbol=BHP.AX&range=1mo&interval=1d 200 in 333ms
+ ✓ Compiled in 154ms (409 modules)
+ ✓ Compiled in 1149ms (1383 modules)
+ ✓ Compiled /api/freedom/quotes in 176ms (413 modules)
+ ✓ Compiled (415 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:58:39.757Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 4
+}
+ GET /api/freedom/research?symbol=MSFT 304 in 889ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/history?symbol=MSFT&range=1y&interval=1d 200 in 1388ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1424ms
+ ✓ Compiled /api/freedom/committee in 130ms (417 modules)
+ ✓ Compiled (419 modules)
+ GET /api/freedom/committee?symbol=MSFT 304 in 695ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 699ms
+ GET /api/assets/list-library 304 in 71190ms
+ GET /api/workspaces 304 in 421ms
+ GET /api/workspaces 304 in 227ms
+ GET /api/workspaces 304 in 243ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:59:54.022Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1mo&interval=1d 200 in 1072ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:59:55.197Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 763ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T01:59:56.018Z',
+  ticker: 'BHP.AX',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+ GET /api/freedom/history?symbol=BHP.AX&range=1mo&interval=1d 200 in 346ms
+ GET /api/usage/check-limits 401 in 279ms
+ ✓ Compiled in 156ms (370 modules)
+ ✓ Compiled in 768ms (1378 modules)
+ ✓ Compiled /api/workspaces/activate-invite in 271ms (362 modules)
+ POST /api/workspaces/activate-invite 200 in 823ms
+ POST /api/workspaces/activate-invite 200 in 896ms
+ POST /api/workspaces/activate-invite 200 in 922ms
+ POST /api/workspaces/activate-invite 200 in 1024ms
+ ✓ Compiled /api/workspaces in 181ms (364 modules)
+ GET /api/workspaces 304 in 509ms
+ GET /api/workspaces 304 in 283ms
+ GET /api/workspaces 304 in 280ms
+ GET /api/workspaces 304 in 279ms
+ ✓ Compiled /api/freedom/research in 129ms (368 modules)
+ ✓ Compiled (374 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:01:38.392Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1837ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 2129ms
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 2824ms
+ ○ Compiling /api/freedom/committee ...
+ ✓ Compiled /api/freedom/score-history in 1556ms (376 modules)
+ ✓ Compiled (381 modules)
+ POST /api/freedom/score-history 200 in 922ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 2264ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 2284ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:01:47.258Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5d',
+  interval: '15min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 589ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 920ms
+ GET /api/freedom/history?symbol=MSFT&range=5d&interval=15m 200 in 1259ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 440ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 480ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:02:03.911Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '3mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 611ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 864ms
+ GET /api/freedom/history?symbol=MSFT&range=3mo&interval=1d 200 in 1351ms
+ POST /api/freedom/score-history 200 in 174ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 440ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 450ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:02:29.782Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 100ms
+ GET /api/freedom/research?symbol=MSFT 304 in 593ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1325ms
+ POST /api/freedom/score-history 200 in 203ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 441ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 504ms
+ ✓ Compiled in 5.4s (1378 modules)
+ ✓ Compiled in 1255ms (1378 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:03:21.996Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '3mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:03:50.683Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:03:50.736Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5d',
+  interval: '15min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:03:50.796Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '3y',
+  interval: '1week',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 4
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ ✓ Compiled in 1260ms (1378 modules)
+ GET /api/freedom/research?symbol=MSFT 304 in 29490ms
+ GET /api/freedom/history?symbol=MSFT&range=3mo&interval=1d 200 in 29521ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 29797ms
+ GET /api/freedom/research?symbol=MSFT 304 in 343ms
+ GET /api/freedom/history?symbol=MSFT&range=5d&interval=15m 200 in 1624ms
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 1762ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ POST /api/freedom/score-history 200 in 1827ms
+ GET /api/freedom/history?symbol=MSFT&range=3y&interval=1w 200 in 3602ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 2071ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 2262ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 2283ms
+ GET /api/freedom/research?symbol=MSFT 304 in 424ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 256ms
+ POST /api/freedom/score-history 200 in 277ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 636ms
+ GET /api/freedom/research?symbol=MSFT 304 in 646ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1004ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 271ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 332ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1178ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 244ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 359ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:01.733Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1381ms
+ GET /api/freedom/history?symbol=MSFT&range=1y&interval=1d 200 in 1458ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1693ms
+ POST /api/freedom/score-history 200 in 438ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 590ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 10399ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:14.543Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '6mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+ ✓ Compiled in 4.3s (1378 modules)
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 4751ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 5017ms
+ GET /api/freedom/history?symbol=MSFT&range=6mo&interval=1d 200 in 5152ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 415ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 475ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:21.347Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '3mo',
+  interval: '1day',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 2
+}
+ GET /api/freedom/history?symbol=MSFT&range=3mo&interval=1d 200 in 77ms
+ GET /api/freedom/research?symbol=MSFT 304 in 266ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/quotes?symbol=MSFT 200 in 777ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 242ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 299ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:32.080Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1h',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 995ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1215ms
+ GET /api/freedom/history?symbol=MSFT&range=1mo&interval=1h 200 in 1286ms
+ POST /api/freedom/score-history 200 in 170ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 454ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 537ms
+ ✓ Compiled in 1173ms (1378 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:41.353Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '5d',
+  interval: '15min',
+  cache: 'hit',
+  creditsEstimated: 0,
+  creditsUsedThisMinute: 3
+}
+ GET /api/freedom/history?symbol=MSFT&range=5d&interval=15m 200 in 142ms
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/research?symbol=MSFT 304 in 1274ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1467ms
+ POST /api/freedom/score-history 200 in 196ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 478ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 558ms
+ ✓ Compiled in 826ms (1378 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:04:58.527Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 4
+}
+Finnhub symbol: MSFT
+Finnhub key exists: true
+Finnhub key length: 40
+Finnhub key starts: d97e
+Finnhub key ends: d960
+Finnhub response status: 200
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 1595ms
+ GET /api/freedom/research?symbol=MSFT 304 in 1729ms
+ GET /api/freedom/quotes?symbol=MSFT 200 in 1897ms
+ GET /api/freedom/valuation?symbol=MSFT&currentEPS=&expectedEPSGrowth=&terminalPE=&requiredReturn=10&marginOfSafetyTarget=15 304 in 412ms
+ GET /api/freedom/committee?symbol=MSFT 304 in 522ms
+ ✓ Compiled in 1154ms (1378 modules)
+ ✓ Compiled in 690ms (1378 modules)
+ ✓ Compiled in 968ms (1378 modules)
+ ✓ Compiled in 787ms (1378 modules)
+ ○ Compiling /freedom-trader ...
+ ✓ Compiled /freedom-trader in 30s (1722 modules)
+ GET /_next/data/development/freedom-trader.json 200 in 31053ms
+ ○ Compiling /api/freedom-trader/alerts ...
+ ✓ Compiled /api/freedom-trader/alerts in 1118ms (372 modules)
+ ✓ Compiled (379 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.898Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.917Z',
+  ticker: 'AVGO',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.948Z',
+  ticker: 'NVDA',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.954Z',
+  ticker: 'AMD',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 4
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.990Z',
+  ticker: 'TSLA',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 5
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:37.993Z',
+  ticker: 'AMZN',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 6
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:38.000Z',
+  ticker: 'META',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 7
+}
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:07:38.008Z',
+  ticker: 'PLTR',
+  endpoint: 'time_series',
+  range: '1y',
+  interval: '1day',
+  cache: 'rate-limited-before-request',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 7
+}
+ GET /api/freedom-trader/alerts 200 in 2409ms
+ GET /api/freedom-trader/paper-account 304 in 2508ms
+ GET /api/freedom-trader/paper-account 304 in 458ms
+ GET /api/freedom-trader/analysis?symbols=MSFT,AVGO,NVDA,AMD,TSLA,AMZN,META,PLTR 200 in 3254ms
+ GET /api/freedom-trader/paper-account 304 in 219ms
+ ✓ Compiled /api/workspaces/activate-invite in 273ms (361 modules)
+ POST /api/workspaces/activate-invite 200 in 886ms
+ POST /api/workspaces/activate-invite 200 in 888ms
+ POST /api/workspaces/activate-invite 200 in 892ms
+ POST /api/workspaces/activate-invite 200 in 908ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 2.5s (363 modules)
+ GET /api/workspaces 304 in 2740ms
+ GET /api/workspaces 304 in 232ms
+ GET /api/workspaces 304 in 226ms
+ GET /api/workspaces 304 in 220ms
+ ○ Compiling /modules/takeoff-v2 ...
+ GET /modules/estimate-builder 500 in 3966ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 500 in 4052ms
+ GET /modules/estimate-builder 500 in 54ms
+ ✓ Compiled / in 6.6s (1140 modules)
+ GET / 200 in 12811ms
+ GET /modules/estimate-builder 200 in 6459ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 6484ms
+ ○ Compiling /modules/takeoff-v2 ...
+ GET /modules/estimate-builder 200 in 6995ms
+ GET /modules/takeoff-v2 500 in 10426ms
+ GET /modules/estimate-builder 200 in 205ms
+ POST /api/workspaces/activate-invite 500 in 3010ms
+ POST /api/workspaces/activate-invite 500 in 2940ms
+ POST /api/workspaces/activate-invite 500 in 2976ms
+ POST /api/workspaces/activate-invite 500 in 3131ms
+ GET /modules/estimate-builder 500 in 284ms
+ GET /api/workspaces 500 in 957ms
+ GET /api/workspaces 500 in 37ms
+ GET /api/workspaces 500 in 38ms
+ GET /api/workspaces 500 in 34ms
+ GET /modules/takeoff-v2 500 in 47ms
+ GET /modules/estimate-builder 500 in 3976ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 500 in 4015ms
+ GET /modules/estimate-builder 500 in 75ms
+ ✓ Compiled /api/workspaces in 6.5s (1147 modules)
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 2012ms
+ GET /modules/estimate-builder 200 in 2596ms
+ ✓ Compiled in 523ms (1147 modules)
+ GET /modules/estimate-builder 200 in 726ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 835ms
+ ✓ Compiled in 2s (1147 modules)
+ GET /modules/estimate-builder 200 in 840ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 1564ms
+ GET /modules/estimate-builder 200 in 1506ms
+ ○ Compiling /api/workspaces/activate-invite ...
+ ✓ Compiled /api/workspaces/activate-invite in 5.6s (1173 modules)
+ GET /modules/estimate-builder 200 in 347ms
+ POST /api/workspaces/activate-invite 200 in 1609ms
+ POST /api/workspaces/activate-invite 200 in 1507ms
+ GET /modules/estimate-builder 200 in 1720ms
+ POST /api/workspaces/activate-invite 200 in 1959ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 1460ms (1171 modules)
+ POST /api/workspaces/activate-invite 200 in 1994ms
+ GET /api/workspaces 200 in 2010ms
+ GET /modules/takeoff-v2 200 in 1952ms
+ GET /modules/estimate-builder 200 in 1928ms
+ GET /modules/website-builder/visual-builder?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email&name=Gr8+Result+Digital+Solutions 200 in 1114ms
+ GET /api/workspaces 304 in 605ms
+ ○ Compiling /freedom-trader ...
+ ✓ Compiled /freedom-trader in 2.2s (1175 modules)
+ GET /modules/estimate-builder 200 in 2843ms
+ GET /freedom-trader 200 in 3610ms
+ GET /api/workspaces 304 in 433ms
+ GET /api/workspaces 304 in 241ms
+ GET /api/workspaces 304 in 238ms
+ ○ Compiling /api/website-builder/defaults ...
+ ✓ Compiled /api/assets/list-library in 1498ms (385 modules)
+ ✓ Compiled (418 modules)
+ GET /api/website-builder/defaults 401 in 4376ms
+ GET /api/website-builder/defaults 401 in 4377ms
+ GET /api/usage/check-limits 401 in 3319ms
+ GET /api/website-builder/defaults 200 in 3395ms
+ GET /api/workspaces 304 in 431ms
+ POST /api/workspaces/activate-invite 200 in 454ms
+ POST /api/workspaces/activate-invite 200 in 263ms
+ POST /api/workspaces/activate-invite 200 in 274ms
+ POST /api/workspaces/activate-invite 200 in 280ms
+ GET /api/workspaces 304 in 272ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 200 in 4051ms
+ ✓ Compiled /api/website-builder/emergency-page-draft in 220ms (420 modules)
+ GET /api/website-builder/emergency-page-draft?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&pageName=Email 200 in 270ms
+ ✓ Compiled /api/website-builder/local-project-repair in 219ms (422 modules)
+ GET /api/website-builder/local-project-repair?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 719ms
+ GET /api/website-builder/defaults 200 in 189ms
+ GET /api/workspaces 304 in 456ms
+ GET /api/workspaces 304 in 253ms
+ GET /api/workspaces 304 in 306ms
+ GET /api/workspaces 304 in 221ms
+ GET /api/assets/list-library 304 in 62389ms
+ ○ Compiling /api/freedom/history ...
+ ✓ Compiled /api/freedom/history in 5.2s (363 modules)
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:21:53.683Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 1
+}
+ GET /api/freedom/history?symbol=MSFT&range=1mo&interval=1d 200 in 6438ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:21:54.883Z',
+  ticker: 'MSFT',
+  endpoint: 'time_series',
+  range: '1d',
+  interval: '5min',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 2
+}
+ GET /api/freedom/history?symbol=MSFT&range=1d&interval=5m 200 in 818ms
+Freedom Trader Twelve Data request {
+  timestamp: '2026-07-22T02:21:55.739Z',
+  ticker: 'BHP.AX',
+  endpoint: 'time_series',
+  range: '1mo',
+  interval: '1day',
+  cache: 'miss',
+  creditsEstimated: 1,
+  creditsUsedThisMinute: 3
+}
+ GET /api/freedom/history?symbol=BHP.AX&range=1mo&interval=1d 200 in 366ms
+ ○ Compiling /freedom/company/[symbol] ...
+ ✓ Compiled /freedom-trader in 7s (1755 modules)
+ GET /freedom/company/MSFT 200 in 7640ms
+ GET /freedom-trader 200 in 2939ms
+ ✓ Compiled /api/workspaces/activate-invite in 144ms (379 modules)
+ POST /api/workspaces/activate-invite 200 in 613ms
+ POST /api/workspaces/activate-invite 200 in 623ms
+ ○ Compiling /api/workspaces ...
+ ✓ Compiled /api/workspaces in 871ms (381 modules)
+ GET /api/workspaces 304 in 1120ms
+ GET /api/workspaces 304 in 232ms
+ ○ Compiling /api/website-builder/defaults ...
+ GET /api/workspaces 304 in 1549ms
+ ✓ Compiled /api/website-builder/defaults in 3.2s (387 modules)
+ ✓ Compiled (390 modules)
+ GET /api/workspaces 304 in 2331ms
+ GET /api/website-builder/defaults 200 in 4324ms
+ GET /api/website-builder/projects?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&page=Email 200 in 4972ms
+ ✓ Compiled /api/website-builder/emergency-page-draft in 117ms (392 modules)
+ GET /api/website-builder/emergency-page-draft?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe&pageName=Email 200 in 163ms
+ ✓ Compiled /api/website-builder/local-project-repair in 111ms (394 modules)
+ GET /api/website-builder/local-project-repair?projectId=2208a52a-8175-477e-823c-fc6de7fe4afe 200 in 163ms

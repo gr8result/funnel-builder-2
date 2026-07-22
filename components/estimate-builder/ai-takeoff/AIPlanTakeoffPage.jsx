@@ -33,7 +33,8 @@ function normalizePageShape(page = {}) {
   const metadataRotation = normalizePlanRotation(page.metadataRotation ?? page.pdfMetadataRotation ?? 0);
   const detectedRotation = normalizePlanRotation(page.detectedRotation ?? 0);
   const userRotation = normalizePlanRotation(page.userRotation ?? page.planRotation ?? 0);
-  const finalRotation = getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation });
+  const rotation = normalizePlanRotation(page.rotation ?? page.finalRotation ?? page.planRotation ?? getFinalPlanRotation({ metadataRotation, detectedRotation, userRotation }));
+  const finalRotation = rotation;
   const normalizedWidth = Number(page.normalizedWidth || page.naturalWidth || page.originalWidth || 0);
   const normalizedHeight = Number(page.normalizedHeight || page.naturalHeight || page.originalHeight || 0);
   return {
@@ -46,6 +47,7 @@ function normalizePageShape(page = {}) {
     detectedRotation,
     userRotation,
     finalRotation,
+    rotation,
     imageWidth: Number(page.imageWidth || page.normalizedWidth || page.naturalWidth || 0),
     imageHeight: Number(page.imageHeight || page.normalizedHeight || page.naturalHeight || 0),
     renderScale: Number(page.renderScale || (DEFAULT_PDF_TARGET_DPI / 72)),
@@ -93,7 +95,7 @@ function logTakeoffPersistence(event, details = {}) {
 }
 
 function getPageRotation(page) {
-  return getFinalPlanRotation(page);
+  return normalizePlanRotation(page?.rotation ?? getFinalPlanRotation(page));
 }
 
 function reducer(state, action) {
@@ -169,6 +171,13 @@ export default function AIPlanTakeoffPage({ sheet }) {
   const [aiMessage,  setAiMessage]  = useState("");
 
   const [zoom,     setZoom]     = useState(1);
+  const [manualRotationDiagnostics, setManualRotationDiagnostics] = useState({
+    clickCount: 0,
+    before: 0,
+    after: 0,
+    selectedPageId: "",
+    stateUpdateResult: "No manual rotation click yet",
+  });
   const selectedPage = pages.find(p=>p.id===selectedPageId) || pages[0] || null;
   const rawPpm       = getPixelsPerUnit(selectedPage?.scale);
   const overlays     = selectedPage?.overlays || [];
@@ -374,20 +383,26 @@ export default function AIPlanTakeoffPage({ sheet }) {
     });
   }, [selectedPageId]);
 
-  const renderSelectedPageRotation = useCallback(async (page, nextUserRotation) => {
-    const userRotation = normalizePlanRotation(nextUserRotation);
+  const renderSelectedPageRotation = useCallback(async (page, nextRotation) => {
+    const rotation = normalizePlanRotation(nextRotation);
     const rotationState = {
       metadataRotation: page?.metadataRotation || 0,
       detectedRotation: page?.detectedRotation || 0,
-      userRotation,
+      userRotation: rotation,
+      rotation,
       orientationMethod: page?.orientationMethod,
       orientationConfidence: page?.orientationConfidence,
       orientationScores: page?.orientationScores,
+      orientationConfirmed: false,
     };
-    const finalRotation = getFinalPlanRotation(rotationState);
-    if (page?.imageDataUrl) {
-      const delta = normalizePlanRotation(userRotation - normalizePlanRotation(page.userRotation || 0));
-      const rotated = delta ? await rotateRasterImageDataUrl(page.imageDataUrl, delta) : { dataUrl: page.imageDataUrl, width: page.normalizedWidth || page.naturalWidth || 0, height: page.normalizedHeight || page.naturalHeight || 0 };
+    const finalRotation = rotation;
+    const fileName = `${page?.originalFileName || page?.planFileName || ""}`.toLowerCase();
+    const isPdf = Boolean(page?.originalFileUrl && fileName.endsWith(".pdf"));
+    if (!isPdf) {
+      const delta = normalizePlanRotation(rotation - getPageRotation(page));
+      const rotated = page?.imageDataUrl && delta
+        ? await rotateRasterImageDataUrl(page.imageDataUrl, delta)
+        : { dataUrl: page?.imageDataUrl, width: page?.normalizedWidth || page?.naturalWidth || 0, height: page?.normalizedHeight || page?.naturalHeight || 0 };
       return {
         imageDataUrl: rotated.dataUrl,
         naturalWidth: rotated.width,
@@ -396,8 +411,9 @@ export default function AIPlanTakeoffPage({ sheet }) {
         normalizedHeight: rotated.height,
         imageWidth: rotated.width,
         imageHeight: rotated.height,
-        userRotation,
+        userRotation: rotation,
         finalRotation,
+        rotation,
         planRotation: finalRotation,
         renderScale: page?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
         dpi: page?.dpi || DEFAULT_PDF_TARGET_DPI,
@@ -407,21 +423,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
         orientationConfirmed: false,
         scale: null,
         overlays: [],
-        rotationResetWarning: ROTATION_RESET_WARNING,
-      };
-    }
-    const fileName = `${page?.originalFileName || page?.planFileName || ""}`.toLowerCase();
-    const isPdf = Boolean(page?.originalFileUrl && fileName.endsWith(".pdf"));
-    if (!isPdf) {
-      return {
-        userRotation,
-        finalRotation,
-        planRotation: finalRotation,
-        renderScale: page?.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
-        dpi: page?.dpi || DEFAULT_PDF_TARGET_DPI,
-        format: page?.format || "PNG",
-        scale: null,
-        overlays: [],
+        viewState: null,
         rotationResetWarning: ROTATION_RESET_WARNING,
       };
     }
@@ -435,45 +437,97 @@ export default function AIPlanTakeoffPage({ sheet }) {
       originalHeight: rendered.originalHeight,
       metadataRotation: rendered.metadataRotation,
       detectedRotation: rendered.detectedRotation,
-      userRotation: rendered.userRotation,
-      finalRotation: rendered.finalRotation,
+      userRotation: rendered.rotation,
+      finalRotation: rendered.rotation,
+      rotation: rendered.rotation,
       renderScale: rendered.renderScale,
       dpi: rendered.dpi,
-      orientationMethod: rendered.orientationMethod,
-      orientationConfidence: rendered.orientationConfidence,
+      orientationMethod: "manual",
+      orientationConfidence: "manual",
       orientationScores: rendered.orientationScores,
       normalizedWidth: rendered.normalizedWidth,
       normalizedHeight: rendered.normalizedHeight,
       imageWidth: rendered.imageWidth,
       imageHeight: rendered.imageHeight,
+      viewportWidth: rendered.viewportWidth,
+      viewportHeight: rendered.viewportHeight,
+      canvasPixelWidth: rendered.canvasPixelWidth,
+      canvasPixelHeight: rendered.canvasPixelHeight,
+      canvasCssWidth: rendered.canvasCssWidth,
+      canvasCssHeight: rendered.canvasCssHeight,
       normalisedImageData: rendered.dataUrl,
       normalisedImageUrl: rendered.dataUrl,
-      planRotation: rendered.finalRotation,
+      planRotation: rendered.rotation,
       format: rendered.format,
       sourcePdfPageNumber: rendered.sourcePdfPageNumber,
       detectedScaleText: rendered.detectedScaleText,
+      orientationConfirmed: false,
       scale: null,
       overlays: [],
+      viewState: null,
       rotationResetWarning: ROTATION_RESET_WARNING,
     };
   }, []);
 
-  const rotateSelectedPage = useCallback(async (deltaDegrees) => {
-    if (!selectedPageId) return;
-    const currentPage = pages.find((page) => page.id === selectedPageId);
+  useEffect(() => {
+    if (!manualRotationDiagnostics.expectedPageId) return;
+    const current = pages.find((page) => page.id === manualRotationDiagnostics.expectedPageId);
+    const currentRotation = getPageRotation(current);
+    const expectedRotation = normalizePlanRotation(manualRotationDiagnostics.after);
+    const nextResult = current && currentRotation === expectedRotation
+      ? `pages[] updated: ${current.id} rotation ${currentRotation}`
+      : `pages[] not updated yet: current ${currentRotation}, expected ${expectedRotation}`;
+    setManualRotationDiagnostics((previous) => (
+      previous.stateUpdateResult === nextResult
+        ? previous
+        : { ...previous, stateUpdateResult: nextResult }
+    ));
+  }, [manualRotationDiagnostics.after, manualRotationDiagnostics.expectedPageId, pages]);
+
+  const rotateSelectedPage = useCallback(async (deltaDegrees, sourcePlanId = "") => {
+    const targetPage = (sourcePlanId
+      ? pages.find((page) => page.id === selectedPageId && page.planId === sourcePlanId)
+        || pages.find((page) => page.planId === sourcePlanId)
+      : null)
+      || pages.find((page) => page.id === selectedPageId)
+      || pages[0];
+    if (!targetPage) return;
+    const currentPage = targetPage;
     if (!currentPage) return;
-    const nextUserRotation = normalizePlanRotation((currentPage.userRotation || 0) + deltaDegrees);
-    const patch = await renderSelectedPageRotation(currentPage, nextUserRotation);
-    dispatch({ type:"PATCH_PAGE", pageId:selectedPageId, fn:pg=>({...pg,...patch}) });
+    const nextRotation = normalizePlanRotation(getPageRotation(currentPage) + deltaDegrees);
+    const beforeRotation = getPageRotation(currentPage);
+    console.log("MANUAL ROTATE CLICKED", {
+      pageId: currentPage.id,
+      before: beforeRotation,
+      requested: `+${normalizePlanRotation(deltaDegrees)}`,
+      after: nextRotation,
+      orientationConfirmed: Boolean(currentPage.orientationConfirmed),
+    });
+    setSelectedPageId(currentPage.id);
+    setManualRotationDiagnostics((previous) => ({
+      clickCount: Number(previous.clickCount || 0) + 1,
+      before: beforeRotation,
+      after: nextRotation,
+      selectedPageId: currentPage.id,
+      expectedPageId: currentPage.id,
+      stateUpdateResult: "Rendering rotation patch...",
+    }));
+    const patch = await renderSelectedPageRotation(currentPage, nextRotation);
+    dispatch({ type:"PATCH_PAGE", pageId:currentPage.id, fn:pg=>({...pg,...patch}) });
+    setManualRotationDiagnostics((previous) => ({
+      ...previous,
+      stateUpdateResult: `PATCH_PAGE dispatched: ${currentPage.id} rotation ${normalizePlanRotation(patch.rotation ?? patch.finalRotation ?? patch.planRotation ?? 0)}`,
+    }));
 
     if (currentPage.planId) {
       const nextPlans = plans.map((plan) => plan.id === currentPage.planId ? {
         ...plan,
         metadataRotation: normalizePlanRotation(patch.metadataRotation || 0),
         detectedRotation: normalizePlanRotation(patch.detectedRotation || 0),
-        userRotation: normalizePlanRotation(patch.userRotation || 0),
-        finalRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
-        planRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        userRotation: normalizePlanRotation(patch.rotation || 0),
+        finalRotation: normalizePlanRotation(patch.rotation || 0),
+        rotation: normalizePlanRotation(patch.rotation || 0),
+        planRotation: normalizePlanRotation(patch.rotation || 0),
         imageWidth: patch.imageWidth || patch.normalizedWidth || plan.imageWidth,
         imageHeight: patch.imageHeight || patch.normalizedHeight || plan.imageHeight,
         renderScale: patch.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
@@ -482,7 +536,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
         sourcePdfPageNumber: patch.sourcePdfPageNumber || plan.sourcePdfPageNumber,
         orientationMethod: patch.orientationMethod || plan.orientationMethod,
         orientationConfidence: patch.orientationConfidence || plan.orientationConfidence,
-        orientationConfirmed: Boolean(patch.orientationConfirmed),
+        orientationConfirmed: false,
         detectedScaleText: patch.detectedScaleText || plan.detectedScaleText,
         fileUrl: patch.imageDataUrl || plan.fileUrl,
         normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
@@ -513,8 +567,9 @@ export default function AIPlanTakeoffPage({ sheet }) {
         metadataRotation: normalizePlanRotation(patch.metadataRotation || 0),
         detectedRotation: normalizePlanRotation(patch.detectedRotation || 0),
         userRotation: 0,
-        finalRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
-        planRotation: normalizePlanRotation(patch.finalRotation ?? patch.planRotation ?? 0),
+        finalRotation: normalizePlanRotation(patch.rotation ?? patch.finalRotation ?? patch.planRotation ?? 0),
+        rotation: normalizePlanRotation(patch.rotation ?? patch.finalRotation ?? patch.planRotation ?? 0),
+        planRotation: normalizePlanRotation(patch.rotation ?? patch.finalRotation ?? patch.planRotation ?? 0),
         imageWidth: patch.imageWidth || patch.normalizedWidth || plan.imageWidth,
         imageHeight: patch.imageHeight || patch.normalizedHeight || plan.imageHeight,
         renderScale: patch.renderScale || plan.renderScale || (DEFAULT_PDF_TARGET_DPI / 72),
@@ -523,7 +578,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
         sourcePdfPageNumber: patch.sourcePdfPageNumber || plan.sourcePdfPageNumber,
         orientationMethod: patch.orientationMethod || plan.orientationMethod,
         orientationConfidence: patch.orientationConfidence || plan.orientationConfidence,
-        orientationConfirmed: Boolean(patch.orientationConfirmed),
+        orientationConfirmed: false,
         detectedScaleText: patch.detectedScaleText || plan.detectedScaleText,
         fileUrl: patch.imageDataUrl || plan.fileUrl,
         normalisedImageData: patch.normalisedImageData || plan.normalisedImageData,
@@ -667,6 +722,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
 
   return (
     <div style={S.root}>
+      <div style={S.buildMarker}>ACTIVE TAKEOFF COMPONENT - BUILD TEST 001</div>
       {/* Toolbar */}
       <TakeoffToolbar
         activeTool={activeTool}     onToolChange={handleToolChange}
@@ -701,6 +757,7 @@ export default function AIPlanTakeoffPage({ sheet }) {
             onTakeoffDataChange={handleTakeoffDataChange}
             onSelectPage={id=>{setSelectedPageId(id);setSelectedId(null);}}
             selectedPageId={selectedPageId}
+            onRotateSelectedPage={rotateSelectedPage}
           />
 
           {selectedPage && (
@@ -728,7 +785,9 @@ export default function AIPlanTakeoffPage({ sheet }) {
 
         {/* Centre: canvas */}
         <div style={S.centre}>
+          <ManualRotationDiagnostics diagnostics={manualRotationDiagnostics} />
           <PlanCanvas
+            key={`${selectedPage?.id || "no-page"}-${selectedPage?.rotation ?? selectedPage?.finalRotation ?? selectedPage?.planRotation ?? 0}-${selectedPage?.imageDataUrl?.length || 0}`}
             page={selectedPage}
             tool={activeTool}
             overlays={overlays}
@@ -874,6 +933,18 @@ function SRow({label,value}) {
   );
 }
 
+function ManualRotationDiagnostics({ diagnostics }) {
+  return (
+    <div style={S.manualRotationDiagnostics}>
+      <div>CLICK COUNT: {diagnostics?.clickCount || 0}</div>
+      <div>ROTATION BEFORE: {diagnostics?.before ?? 0}</div>
+      <div>ROTATION AFTER: {diagnostics?.after ?? 0}</div>
+      <div>SELECTED PAGE ID: {diagnostics?.selectedPageId || ""}</div>
+      <div>STATE UPDATE RESULT: {diagnostics?.stateUpdateResult || ""}</div>
+    </div>
+  );
+}
+
 const SS = {
   wrap:    {display:"flex",flexDirection:"column",gap:3,padding:"8px 10px",background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0"},
   title:   {fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:2},
@@ -882,12 +953,14 @@ const SS = {
 
 const S = {
   root:          {display:"flex",flexDirection:"column",height:"calc(100vh - 96px)",minHeight:680,background:"#f8fafc",fontFamily:"'Manrope','Segoe UI',system-ui,sans-serif"},
+  buildMarker:   {padding:"10px 14px",background:"#fff200",color:"#111827",border:"4px solid #ff00ff",fontSize:18,fontWeight:900,textAlign:"center",letterSpacing:0},
   aiBanner:      {display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"#faf5ff",borderBottom:"1.5px solid #e9d5ff",fontSize:12,color:"#6d28d9",flexShrink:0},
   aiBannerClose: {marginLeft:"auto",background:"none",border:"none",cursor:"pointer",fontSize:14,color:"#9333ea"},
   body:          {display:"flex",flex:1,overflow:"hidden",minHeight:0},
   left:          {width:230,flexShrink:0,display:"flex",flexDirection:"column",gap:10,padding:12,background:"#fff",borderRight:"1.5px solid #e2e8f0",overflowY:"auto"},
   divider:       {height:1,background:"#e2e8f0"},
   centre:        {flex:1,overflow:"hidden",position:"relative",minWidth:0},
+  manualRotationDiagnostics: {position:"absolute",top:78,left:12,zIndex:95,display:"grid",gap:4,maxWidth:520,padding:"10px 12px",background:"#111827",color:"#f8fafc",border:"4px solid #fff200",borderRadius:4,fontSize:14,fontWeight:950,lineHeight:1.25,pointerEvents:"none",boxShadow:"0 10px 22px rgba(15,23,42,0.28)"},
   right:         {width:270,flexShrink:0,display:"flex",flexDirection:"column",background:"#fff",borderLeft:"1.5px solid #e2e8f0",overflow:"hidden"},
   rightTabs:     {display:"flex",borderBottom:"1.5px solid #e2e8f0",flexShrink:0},
   tab:           {flex:1,padding:"8px 3px",border:"none",background:"#f8fafc",color:"#64748b",fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:3},

@@ -1,3 +1,5 @@
+import { fetchTraderHistory } from "../freedom-trader/history.js";
+
 function round(value, decimals = 2) {
   const number = Number(value);
   return Number.isFinite(number) ? Number(number.toFixed(decimals)) : null;
@@ -32,7 +34,48 @@ function normalizeRange(value) {
 
 function normalizeInterval(value) {
   const interval = String(value || "1d").trim().toLowerCase();
-  return interval === "1d" ? "1d" : "1d";
+  const aliases = {
+    "1m": "1m",
+    "1min": "1m",
+    "5m": "5m",
+    "5min": "5m",
+    "15m": "15m",
+    "15min": "15m",
+    "30m": "30m",
+    "30min": "30m",
+    "1h": "1h",
+    "60min": "1h",
+    "4h": "4h",
+    "1d": "1d",
+    "1day": "1d",
+    "1w": "1w",
+    "1wk": "1w",
+    "1week": "1w",
+  };
+  return aliases[interval] || "1d";
+}
+
+function historyWithYearRange(result) {
+  const candles = Array.isArray(result?.candles) ? result.candles : [];
+  const newest = candles[candles.length - 1]?.timestamp
+    || (candles[candles.length - 1]?.date ? Date.parse(candles[candles.length - 1].date) / 1000 : null);
+  const oneYearCutoff = newest ? newest - 370 * 24 * 60 * 60 : null;
+  const yearCandles = oneYearCutoff
+    ? candles.filter((candle) => {
+        const timestamp = candle.timestamp || (candle.date ? Date.parse(candle.date) / 1000 : null);
+        return Number.isFinite(timestamp) && timestamp >= oneYearCutoff;
+      })
+    : candles;
+  const highs = yearCandles.map((candle) => candle.high).filter(Number.isFinite);
+  const lows = yearCandles.map((candle) => candle.low).filter(Number.isFinite);
+  return {
+    ...result,
+    candles,
+    prices: candles,
+    candleCount: result?.candleCount ?? candles.length,
+    yearHigh: highs.length ? round(Math.max(...highs)) : null,
+    yearLow: lows.length ? round(Math.min(...lows)) : null,
+  };
 }
 
 function emptyHistory({ symbol, range, interval, error }) {
@@ -155,7 +198,7 @@ async function fetchYahooHistory(symbol, range, interval) {
 
 export async function getDailyHistory(symbol) {
   const normalizedSymbol = normalizeSymbol(symbol);
-  const result = await fetchYahooHistory(normalizedSymbol, "1y", "1d");
+  const result = historyWithYearRange(await fetchTraderHistory(normalizedSymbol, "1y", "1d"));
   return result.ok ? result.candles : [];
 }
 
@@ -183,7 +226,7 @@ export default async function handler(req, res) {
     }));
   }
 
-  const result = await fetchYahooHistory(symbol, range, interval);
+  const result = historyWithYearRange(await fetchTraderHistory(symbol, range, interval));
 
   return res.status(200).json({
     ...result,

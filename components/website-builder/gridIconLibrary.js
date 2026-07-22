@@ -629,6 +629,14 @@ export const GRID_ICON_LIBRARY_MAP = GRID_ICON_LIBRARY.reduce((acc, item) => {
   return acc;
 }, {});
 
+function resolveGridIconAssetSrc(src = "") {
+  const raw = String(src || "").trim();
+  if (!raw) return raw;
+  if (!/^\/(?:email-assets|imported)\//i.test(raw)) return raw;
+  const platformBase = String(process.env.NEXT_PUBLIC_PLATFORM_APP_URL || "https://app.gr8result.digital").replace(/\/$/, "");
+  return `${platformBase}${raw}`;
+}
+
 const SOCIAL_ICON_COMPONENTS = {
   facebook: FacebookIcon,
   instagram: InstagramIcon,
@@ -709,7 +717,7 @@ export function renderGridLibraryIcon(iconName, props = {}) {
   }
   if (entry.src) {
     const size = props.size || 24;
-    return <img src={entry.src} alt={entry.label || "Icon"} style={{ width: size, height: size, objectFit: "contain", display: "block", pointerEvents: "none" }} />;
+    return <img src={resolveGridIconAssetSrc(entry.src)} alt={entry.label || "Icon"} style={{ width: size, height: size, objectFit: "contain", display: "block", pointerEvents: "none" }} />;
   }
   return null;
 }

@@ -10,9 +10,11 @@ import { useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import BackToTopButton from "../../components/website-builder/website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../../components/website-builder/WebsiteBlockRenderer";
+import { websiteContentHash } from "../../lib/website-builder/documentVersion";
 import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAssets";
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
-import { buildWebsitePath, getPlatformAppUrl, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
+import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
+import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -324,10 +326,32 @@ export async function getServerSideProps(ctx) {
     : await getPublishedWebsiteBySlug(slugArr[0] || "");
 
   if (publication) {
+    const siteData = publication.site_data && typeof publication.site_data === "object" ? publication.site_data : {};
+    const siteDataHash = websiteContentHash(siteData);
+    const footerRoles = Array.isArray(siteData.globalFooterBlock?.props?.footerCardOrder)
+      ? siteData.globalFooterBlock.props.footerCardOrder.filter(Boolean)
+      : [];
+    const mediaBlockCount = Object.values(siteData.pageBlocks || {}).reduce((count, blocks) => (
+      count + (Array.isArray(blocks)
+        ? blocks.filter((block) => block?.type === "video-hero" || block?.type === "image-hero" || block?.props?.imageUrl || block?.props?.videoSrc).length
+        : 0)
+    ), 0);
+    ctx.res?.setHeader("X-GR8-Published-Row-Id", publication.id || "");
+    ctx.res?.setHeader("X-GR8-Published-Project-Id", publication.project_id || siteData.id || "");
+    ctx.res?.setHeader("X-GR8-Site-Data-Updated-At", siteData.updatedAt || "");
+    ctx.res?.setHeader("X-GR8-Site-Data-Hash", siteDataHash);
+    ctx.res?.setHeader("X-GR8-Published-Revision", siteData.publishedVersion || siteData.publication?.publishedVersion || "");
+    ctx.res?.setHeader("X-GR8-Published-Timestamp", publication.published_at || siteData.publishedAt || siteData.publication?.publishedAt || "");
+    ctx.res?.setHeader("X-GR8-Snapshot-Hash", siteDataHash);
+    ctx.res?.setHeader("X-GR8-Requested-Page-Slug", slugArr.slice(1).join("/") || "home");
+    ctx.res?.setHeader("X-GR8-Footer-Roles", footerRoles.join(","));
+    ctx.res?.setHeader("X-GR8-Nav-Sticky-Mode", siteData.globalNavBlock?.props?.stickyMode || "");
+    ctx.res?.setHeader("X-GR8-Media-Block-Count", String(mediaBlockCount));
     return {
       props: {
         mode: "published-website",
         publication,
+        siteDataHash,
         requestedPath: slugArr.slice(1),
         isDomainRequest: isHostLookup,
       },
@@ -356,20 +380,27 @@ export async function getServerSideProps(ctx) {
   };
 }
 
-export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainRequest }) {
+export function PublishedWebsiteRenderer({ publication, siteDataHash = "", requestedPath, isDomainRequest }) {
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
 
   const project = publication?.site_data || {};
-  const normalizedPageBlocks = normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}));
-  const normalizedGlobalNavBlock = project?.globalNavBlock?.type === "video-hero"
-    ? normalizeVideoHeroBlocks([project.globalNavBlock])[0]
-    : normalizePublishedWebsiteBlocks([project?.globalNavBlock])[0];
-  const normalizedGlobalFooterBlock = project?.globalFooterBlock?.type === "video-hero"
-    ? normalizeVideoHeroBlocks([project.globalFooterBlock])[0]
-    : normalizePublishedWebsiteBlocks([project?.globalFooterBlock])[0];
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
+  const footerContext = { pages, logInvalid: true };
+  const rawGlobalFooterBlock = project?.globalFooterBlock || globalFooterToFooterBlock(project?.globalFooter, null);
+  const usesVerifiedSnapshot = project?.publication?.verified === true;
+  const normalizedPageBlocks = usesVerifiedSnapshot
+    ? (project?.pageBlocks || {})
+    : normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}, publishedAssets), footerContext, publishedAssets);
+  const normalizedGlobalNavBlock = usesVerifiedSnapshot
+    ? project?.globalNavBlock
+    : (project?.globalNavBlock?.type === "video-hero"
+      ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
+      : normalizePublishedWebsiteBlocks([project?.globalNavBlock], footerContext, publishedAssets)[0]);
+  const normalizedGlobalFooterBlock = usesVerifiedSnapshot && rawGlobalFooterBlock?.type === "footer"
+    ? rawGlobalFooterBlock
+    : normalizePublishedGlobalFooterBlock(rawGlobalFooterBlock, project, footerContext, publishedAssets);
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
   const requestedAliases = publishedPageAliases(requested || "home");
   const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
@@ -416,27 +447,105 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
     projectId: publication?.project_id || project?.id || "",
     publishedVersion: project?.publishedVersion || project?.publication?.publishedVersion || "",
     publishedAt: publication?.published_at || project?.publishedAt || project?.publication?.publishedAt || "",
+    siteDataHash,
     pageName: activePage?.name || "",
     blockCount: Array.isArray(pageBlocks) ? pageBlocks.length : 0,
+    footerCardCount: Array.isArray(globalFooterBlock?.props?.footerCardOrder) ? globalFooterBlock.props.footerCardOrder.length : 0,
+    footerRoles: Array.isArray(globalFooterBlock?.props?.footerCardOrder) ? globalFooterBlock.props.footerCardOrder : [],
+    navStickyMode: globalNavBlock?.props?.stickyMode || "",
+    mediaBlockCount: Object.values(project?.pageBlocks || {}).reduce((count, blocks) => count + (Array.isArray(blocks) ? blocks.filter((block) => block?.type === "video-hero" || block?.type === "image-hero" || block?.props?.imageUrl || block?.props?.videoSrc).length : 0), 0),
+    usesVerifiedSnapshot,
   };
 
   useEffect(() => {
     console.info("[website-live-debug]", liveDebugInfo);
   }, [liveDebugInfo.publicationRowId, liveDebugInfo.publishedVersion, liveDebugInfo.publishedAt, liveDebugInfo.pageName, liveDebugInfo.blockCount]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const reportOverflow = () => {
+      const viewportWidth = document.documentElement.clientWidth || window.innerWidth || 0;
+      const rows = Array.from(document.querySelectorAll("body *"))
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const computed = window.getComputedStyle(element);
+          const overflowing = element.scrollWidth > element.clientWidth || rect.right > viewportWidth || rect.left < -1;
+          if (!overflowing) return null;
+          const block = element.closest?.("[data-published-block]");
+          const image = element.tagName === "IMG" ? element : element.querySelector?.("img");
+          return {
+            blockId: block?.getAttribute?.("data-published-block-id") || "",
+            blockType: block?.getAttribute?.("data-published-block-type") || "",
+            tag: element.tagName,
+            className: typeof element.className === "string" ? element.className : "",
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+            rectWidth: Math.round(rect.width),
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            computedWidth: computed.width,
+            maxWidth: computed.maxWidth,
+            minWidth: computed.minWidth,
+            position: computed.position,
+            transform: computed.transform,
+            display: computed.display,
+            gridTemplateColumns: computed.gridTemplateColumns,
+            flexDirection: computed.flexDirection,
+            imageNaturalWidth: image?.naturalWidth || 0,
+            imageNaturalHeight: image?.naturalHeight || 0,
+          };
+        })
+        .filter(Boolean);
+      if (rows.length) console.warn("[website-overflow-debug]", { viewportWidth, documentScrollWidth: document.documentElement.scrollWidth, rows });
+    };
+    const timer = window.setTimeout(reportOverflow, 600);
+    window.addEventListener("resize", reportOverflow);
+    window.addEventListener("load", reportOverflow);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", reportOverflow);
+      window.removeEventListener("load", reportOverflow);
+    };
+  }, [liveDebugInfo.publicationRowId, liveDebugInfo.pageName]);
+
   return (
     <>
       <Head>
         <title>{publication?.name || project?.name || "Website"}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="website-publication-debug" content={`row=${liveDebugInfo.publicationRowId}; version=${liveDebugInfo.publishedVersion}; published_at=${liveDebugInfo.publishedAt}; page=${liveDebugInfo.pageName}; blocks=${liveDebugInfo.blockCount}`} />
+        <meta name="website-publication-debug" content={`row=${liveDebugInfo.publicationRowId}; hash=${liveDebugInfo.siteDataHash}; version=${liveDebugInfo.publishedVersion}; published_at=${liveDebugInfo.publishedAt}; page=${liveDebugInfo.pageName}; blocks=${liveDebugInfo.blockCount}`} />
         <style>{`
+          html,
+          body,
+          #__next,
+          [data-published-website-root="true"] {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: clip;
+          }
+          @supports not (overflow-x: clip) {
+            html,
+            body,
+            #__next,
+            [data-published-website-root="true"] {
+              overflow-x: hidden;
+            }
+          }
+          *,
+          *::before,
+          *::after {
+            box-sizing: border-box;
+          }
           [data-published-block] {
             border: none !important;
             border-top: none !important;
             border-bottom: none !important;
             outline: none !important;
             box-shadow: none !important;
+            box-sizing: border-box;
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: clip;
           }
           [data-published-block-type="trust-badges"] > section,
           [data-published-block-type="marquee-strip"] > section,
@@ -486,7 +595,7 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
           ${websiteBlockKeyframes()}
         `}</style>
       </Head>
-      <main style={{ minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
+      <main data-published-website-root="true" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
             {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
@@ -541,9 +650,9 @@ export function PublishedWebsiteRenderer({ publication, requestedPath, isDomainR
   );
 }
 
-export default function SitePage({ mode, title, sections, publication, requestedPath, isDomainRequest }) {
+export default function SitePage({ mode, title, sections, publication, siteDataHash, requestedPath, isDomainRequest }) {
   if (mode === "published-website") {
-    return <PublishedWebsiteRenderer publication={publication} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
+    return <PublishedWebsiteRenderer publication={publication} siteDataHash={siteDataHash || ""} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
   }
 
   return (

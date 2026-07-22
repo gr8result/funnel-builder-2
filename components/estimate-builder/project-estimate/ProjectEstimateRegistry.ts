@@ -105,6 +105,7 @@ function projectEstimateContentKeyForBlock(definition: ProjectEstimatePageDefini
     intro: "introText",
     eyebrow: "eyebrow",
     heading: "mainHeading",
+    subhead: "subhead",
     "notice-heading": "noticeHeading",
     "notice-body": "noticeBody",
     "about-copy": "aboutText",

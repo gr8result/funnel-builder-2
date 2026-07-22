@@ -1,0 +1,26 @@
+{
+  "id": "premier-inclusions-page-07",
+  "name": "Page 07",
+  "width": 794,
+  "height": 1123,
+  "unit": "px",
+  "background": {
+    "color": "#ffffff",
+    "imageRef": "/standard-inclusions/assets/slide-07-exact.png"
+  },
+  "objects": [],
+  "importResult": {
+    "mode": "exact-layout",
+    "label": "Exact layout — page artwork is fixed, overlays remain editable.",
+    "sourceSlide": 7,
+    "sourceFileName": "Premier Inclusions Schedule.pptx",
+    "sourceRenderer": "Microsoft PowerPoint COM Slide.Export",
+    "artwork": "/standard-inclusions/assets/slide-07-exact.png",
+    "editableObjectConversion": "blocked-visual-diff-failed",
+    "visualDiff": {
+      "previousChangedPercent": 58.8848,
+      "tolerancePercent": 1,
+      "passed": true
+    }
+  }
+}

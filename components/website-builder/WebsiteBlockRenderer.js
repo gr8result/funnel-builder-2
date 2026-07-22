@@ -138,6 +138,23 @@ function FooterNewsletterSignupForm({ editor, props, patchFt, footerPanelBorder,
   );
 }
 
+function resolvePageAwareCta(props = {}, navigationContext = null) {
+  const cta = props.cta && typeof props.cta === "object" ? props.cta : {};
+  const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
+  const linkType = String(cta.linkType || "").trim();
+  const rawHref = String(cta.href || props.ctaLink || props.buttonLink || props.link || props.href || "").trim();
+  if (!text) return { text: "", href: "" };
+  if (linkType === "none") return { text, href: "" };
+  if (linkType === "page" || cta.pageId) {
+    const pageMap = navigationContext?.pageMap;
+    const key = String(cta.pageId || "").trim();
+    const match = pageMap instanceof Map ? pageMap.get(key) : pageMap?.[key];
+    const href = match && typeof match === "object" ? match.href : match;
+    return { text, href: href || rawHref || "#" };
+  }
+  return { text, href: rawHref || "#" };
+}
+
 function getHeroVideoDebugState(video) {
   if (!video) return {};
   return {
@@ -1134,6 +1151,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const heroCtaAnimation = String(props.ctaAnimation || "fade-up");
       const heroCtaDelay = Number(props.ctaAnimationDelay ?? 0.18) || 0.18;
       const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
+      const primaryCta = resolvePageAwareCta(props, navigationContext);
       const rawHeroMarginTop = Math.max(0, Number(props.marginTop || 0));
       const heroMarginTop = editor ? Math.min(rawHeroMarginTop, 24) : rawHeroMarginTop;
       const headlineBlock = props.headlineBlock && typeof props.headlineBlock === "object" ? props.headlineBlock : {};
@@ -1783,7 +1801,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   dangerouslySetInnerHTML={{ __html: asRichHtml(stripPlaceholder(bodyBlock.content ?? props.subheadline) || (editor ? "Add supporting text here" : "")) }}
                     />
                   ) : null}
-                  {props.ctaText ? (
+                  {primaryCta.text ? (
                     <div
                       style={{
                         display: "flex",
@@ -1795,7 +1813,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                       }}
                     >
                       <a
-                        href={editor ? "#" : (props.ctaLink || "#")}
+                        href={editor ? "#" : (primaryCta.href || "#")}
                         onClick={(event) => {
                           if (editor) event.preventDefault();
                         }}
@@ -1817,7 +1835,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                           alignSelf: headingAlign === "center" ? "center" : headingAlign === "right" ? "flex-end" : "flex-start",
                         }}
                       >
-                        {props.ctaText}
+                        {primaryCta.text}
                       </a>
                       {props.secondaryCtaText ? (
                         <a
@@ -4193,11 +4211,15 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 const norm = item && typeof item === "object" ? item : { text: String(item || "") };
                 const itemText = norm.text || "";
                 const itemIconKey = norm.iconName || norm.iconKey || null;
+                const itemIconImage = String(norm.iconUrl || norm.iconImage || "").trim();
                 const iconSize = Math.round(marqueeFontSize * 1.35);
                 const isOriginal = idx < items.length;
-                const itemKey = `${itemIconKey || ""}:${itemText}-${idx}`;
+                const itemKey = `${itemIconImage || itemIconKey || ""}:${itemText}-${idx}`;
                 const textContent = itemText ? asRichHtml(itemText) : null;
                 const socialIconNode = renderSocialPlatformIcon({ ...norm, iconName: itemIconKey }, { size: iconSize });
+                const imageIconNode = itemIconImage && !/^(blob:|file:)/i.test(itemIconImage)
+                  ? <img src={itemIconImage} alt={norm.alt || norm.label || itemText || "Icon"} style={{ width: iconSize, height: iconSize, objectFit: "contain", display: "block" }} />
+                  : null;
                 return (
                 <div
                   key={itemKey}
@@ -4219,9 +4241,9 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   }}
                 >
                   <span style={{ color: accent, fontSize: dividerSize, lineHeight: 1, display: "inline-flex", alignItems: "center" }}>{dividerText}</span>
-                  {itemIconKey && (
+                  {(itemIconKey || imageIconNode) && (
                     <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0, color: fill }}>
-                      {socialIconNode || renderGridLibraryIcon(itemIconKey, { size: iconSize })}
+                      {imageIconNode || socialIconNode || renderGridLibraryIcon(itemIconKey, { size: iconSize })}
                     </span>
                   )}
                   {textContent && (
@@ -4517,33 +4539,46 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const ftBtnText = props.newsletterButtonTextColor || "#ffffff";
       const footerLogoSrc = brandLogoSrc;
       const footerMarkSize = Number(props.logoWidth) || 48;
-      const navLinks = Array.isArray(footerProps.navLinks) ? footerProps.navLinks : [];
+      const navLinks = Array.isArray(footerProps.navigationLinks) ? footerProps.navigationLinks : [];
       const extraLinks = Array.isArray(footerProps.extraLinks) ? footerProps.extraLinks : [];
-      if (process.env.NODE_ENV !== "production" && Array.isArray(props.navLinks) && props.navLinks.length > 3 && navLinks.length < 2) {
+      const rawNavigationLinks = props.navigationLinks || props.navLinks;
+      if (process.env.NODE_ENV !== "production" && Array.isArray(rawNavigationLinks) && rawNavigationLinks.length > 3 && navLinks.length < 2) {
         console.warn("[website-builder footer nav] renderer resolved too few links", {
-          rawCount: props.navLinks.length,
+          rawCount: rawNavigationLinks.length,
           validCount: navLinks.length,
-          rejectedCount: props.navLinks.length - navLinks.length,
-          rawLinks: props.navLinks,
+          rejectedCount: rawNavigationLinks.length - navLinks.length,
+          rawLinks: rawNavigationLinks,
           normalizedLinks: navLinks,
         });
-      } else if (process.env.NODE_ENV !== "production" && Array.isArray(props.navLinks)) {
+      } else if (process.env.NODE_ENV !== "production" && Array.isArray(rawNavigationLinks)) {
         console.info("[website-builder footer nav] renderer link count", {
           validCount: navLinks.length,
-          rejectedCount: Math.max(0, props.navLinks.length - navLinks.length),
+          rejectedCount: Math.max(0, rawNavigationLinks.length - navLinks.length),
         });
       }
       const footerEmailHref = resolveFooterEmailHref(props.contactEmail);
       const footerPhoneHref = resolveFooterPhoneHref(props.contactPhone);
       const footerVariant = String(props.footerVariant || "service-grid");
       const contactItems = [props.contactEmail, props.contactPhone, props.contactAddress].filter(Boolean);
+      const explicitLinkGroups = Array.isArray(footerProps.linkGroups)
+        ? footerProps.linkGroups
+          .map((group) => ({
+            ...group,
+            type: group?.type || "",
+            id: group?.id || "",
+            heading: group?.heading || group?.title || group?.label || "Links",
+            links: Array.isArray(group?.links) ? group.links : [],
+          }))
+          .filter((group) => group.type === "australian-company-panel" || group.links.length)
+        : [];
       const derivedLinkGroups = [
         { heading: props.navHeading || "Navigate", links: navLinks },
         { heading: props.extraHeading || "Legal", links: extraLinks },
       ].filter((group) => Array.isArray(group.links) && group.links.length);
-      const linkGroups = (navLinks.length || extraLinks.length ? derivedLinkGroups : (Array.isArray(footerProps.linkGroups) && footerProps.linkGroups.length ? footerProps.linkGroups : derivedLinkGroups))
-        .map((group) => ({ heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
-        .filter((group) => group.links.length);
+      const linkGroupsSource = explicitLinkGroups.length ? explicitLinkGroups : derivedLinkGroups;
+      const linkGroups = linkGroupsSource
+        .map((group) => ({ ...group, heading: group?.heading || "Links", links: Array.isArray(group?.links) ? group.links : [] }))
+        .filter((group) => group.type === "australian-company-panel" || group.links.length);
       const spotlightItems = Array.isArray(props.spotlightItems) ? props.spotlightItems.filter(Boolean) : [];
       const footerPanelBackground = footerVariant === "editorial"
         ? "rgba(255,255,255,0.04)"
@@ -4553,9 +4588,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const footerPanelBorder = `1px solid ${ftBorder}`;
       const topGridColumns = compact
         ? "1fr"
-        : props.showNewsletter !== false
-          ? "1.15fr 0.95fr 1fr 1.05fr"
-          : "1.2fr 1fr 1fr";
+        : `1.15fr ${linkGroups.map(() => "minmax(0, 1fr)").join(" ")}${props.showNewsletter !== false ? " 1.05fr" : ""}`;
       const panelStyle = {
         borderRadius: compact ? 18 : 24,
         padding: compact ? "18px" : "22px",
@@ -4577,11 +4610,27 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         padding: editor ? "2px 4px" : 0,
       });
 
+      const patchFooterGroup = (groupIndex, patch) => {
+        if (!editor || typeof onChangeBlock !== "function") return;
+        const currentGroups = Array.isArray(footerProps.linkGroups) ? footerProps.linkGroups : [];
+        const nextGroups = currentGroups.map((group, index) => index === groupIndex ? { ...group, ...patch } : group);
+        onChangeBlock({ ...props, linkGroups: nextGroups });
+      };
+      const openFooterFlagPicker = (groupIndex) => {
+        if (!editor) return;
+        openSharedMediaPicker({
+          onPick: (asset) => {
+            if (!asset?.src) return;
+            patchFooterGroup(groupIndex, { flagImageUrl: asset.src });
+          },
+        });
+      };
+
       return (
         <ScrollReveal as="footer" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ background: ftBg, color: ftText, padding: compact ? "32px 20px 16px" : "48px 32px 20px", boxSizing: "border-box", width: "100%", ...fullWidthStyle({ ...props, fullWidthBackground: props.fullWidthBackground !== false }, compact, editor) }}>
           <div style={sectionContentStyle(props, compact)}>
             <div style={{ display: "grid", gap: compact ? 18 : 24, marginBottom: compact ? 24 : 34 }}>
-              {(props.brand || props.tagline || props.spotlightHeading || props.spotlightText) ? (
+              {(props.brand || props.tagline) ? (
                 <div style={{ display: "flex", flexDirection: compact ? "column" : "row", gap: compact ? 10 : 18, alignItems: compact ? "flex-start" : "end", justifyContent: "space-between" }}>
                   <div style={{ display: "grid", gap: 8, maxWidth: 720 }}>
                     <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.18em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.9) }}>{props.footerEyebrow || "Closing note"}</span>
@@ -4601,7 +4650,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               ) : null}
 
               <div style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
-                <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
+                <div data-footer-card-role="contact" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
                   <BrandMark brand={props.brand} logoSrc={footerLogoSrc} size={footerMarkSize} background={ftBtnBg} color={ftBtnText} borderColor={ftBorder} borderRadius={10} />
                   {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}
                   {contactItems.length > 0 ? (
@@ -4613,25 +4662,65 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                   ) : null}
                 </div>
 
-                {linkGroups.map((group, groupIndex) => (
-                  <div key={`footer-group-${groupIndex}`} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
-                    <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      {group.links.map((link, i) => (
-                        <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
-                      ))}
-                    </div>
-                    {groupIndex === 0 && (props.spotlightHeading || props.spotlightText || editor) ? (
-                      <div style={{ display: "grid", gap: 6, marginTop: 8, paddingTop: 12, borderTop: footerPanelBorder }}>
-                        {(props.spotlightHeading || editor) ? <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.88) }}>{props.spotlightHeading || "Highlights"}</span> : null}
-                        {(props.spotlightText || editor) ? <span style={{ fontSize: 16, lineHeight: 1.55, color: ftLink }}>{props.spotlightText || "Add a stronger closing note here."}</span> : null}
+                {linkGroups.map((group, groupIndex) => {
+                  if (group.type === "australian-company-panel") {
+                    return (
+                      <div key={`footer-group-${group.id || groupIndex}`} data-footer-card-role="australian-company" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 12, background: `linear-gradient(180deg, ${colorWithAlpha("#f8d15c", 0.08)} 0%, ${footerPanelBackground} 100%)` }}>
+                        {group.flagImageUrl ? (
+                          <img
+                            src={group.flagImageUrl}
+                            alt="Australian flag"
+                            onClick={() => openFooterFlagPicker(groupIndex)}
+                            title={editor ? "Replace Australian flag image" : undefined}
+                            style={{ width: 72, height: 48, objectFit: "cover", borderRadius: 8, border: `1px solid ${colorWithAlpha("#f8d15c", 0.38)}`, boxShadow: "0 10px 22px rgba(0,0,0,0.22)" }}
+                          />
+                        ) : null}
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => patchFooterGroup(groupIndex, { heading: e.currentTarget.textContent })}
+                          style={inlineStyle({ fontSize: 16, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colorWithAlpha("#f8d15c", 0.96) })}
+                        >
+                          {group.heading || "Proudly Australian"}
+                        </span>
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => patchFooterGroup(groupIndex, { body: e.currentTarget.textContent })}
+                          style={inlineStyle({ fontSize: 16, color: ftText, lineHeight: 1.58 })}
+                        >
+                          {group.body || ""}
+                        </span>
+                        <span
+                          contentEditable={editor}
+                          suppressContentEditableWarning
+                          onBlur={(e) => {
+                            const text = e.currentTarget.textContent || "";
+                            const [location, timezone] = text.split(/\s+—\s+|\s+-\s+/);
+                            patchFooterGroup(groupIndex, { location: location || "", timezone: timezone || group.timezone || "" });
+                          }}
+                          style={inlineStyle({ fontSize: 15, color: ftLink, lineHeight: 1.45, fontWeight: 600 })}
+                        >
+                          {`${group.location || "Sunshine Coast, Queensland"} — ${group.timezone || "UTC+10"}`}
+                        </span>
                       </div>
-                    ) : null}
-                  </div>
-                ))}
+                    );
+                  }
+
+                  return (
+                    <div key={`footer-group-${groupIndex}`} data-footer-card-role={group.role || "links"} style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10 }}>
+                      <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) }}>{group.heading || "Links"}</span>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {group.links.map((link, i) => (
+                          <a key={`${groupIndex}-${i}`} href={editor ? undefined : resolvePublishedNavHref(link, navigationContext)} style={{ color: ftText, fontSize: 16, textDecoration: "none", lineHeight: 1.45 }}>{link.label || "Link"}</a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 {props.showNewsletter !== false ? (
-                  <div style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
+                  <div data-footer-card-role="newsletter" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 10, background: footerVariant === "split-newsletter" ? `linear-gradient(180deg, ${colorWithAlpha(ftBtnBg, 0.22)} 0%, ${footerPanelBackground} 100%)` : panelStyle.background }}>
                     <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: compact ? 16 : 18, fontWeight: 600, color: ftText })}>{props.newsletterHeading || "Stay Updated"}</span>
                     {(props.newsletterSubtitle || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ newsletterSubtitle: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, color: ftLink, lineHeight: 1.55 })}>{props.newsletterSubtitle || "Get the latest news."}</span> : null}
                     <FooterNewsletterSignupForm editor={editor} props={props} patchFt={patchFt} footerPanelBorder={footerPanelBorder} ftLink={ftLink} ftBtnBg={ftBtnBg} ftBtnText={ftBtnText} siteId={siteId} />

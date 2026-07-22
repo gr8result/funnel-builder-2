@@ -10,30 +10,49 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
+            "href": "/",
             "label": "Home",
             "children": [],
-            "highlighted": true
+            "highlighted": true,
+            "id": "nav-item-0-0-home",
+            "linkType": "page",
+            "pageId": "home",
+            "slug": "home"
           },
           {
-            "href": "#about",
-            "label": "About"
+            "href": "/about-us",
+            "label": "About Us",
+            "id": "nav-item-1-0-about",
+            "linkType": "page",
+            "slug": "about-us",
+            "children": [],
+            "pageId": "about-us"
           },
           {
             "href": "#services",
-            "label": "Services"
+            "label": "Services",
+            "id": "nav-item-2-0-services",
+            "linkType": "anchor",
+            "slug": "services",
+            "children": []
           },
           {
-            "href": "#contact",
-            "label": "Contact"
+            "href": "/contact-us",
+            "label": "Contact Us",
+            "id": "nav-item-3-0-contact",
+            "linkType": "page",
+            "slug": "contact-us",
+            "children": [],
+            "pageId": "contact-us"
           },
           {
-            "href": "#modules",
-            "label": "Modules"
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us"
+            "href": "/modules",
+            "label": "Modules",
+            "id": "nav-item-4-0-modules",
+            "linkType": "page",
+            "pageId": "modules",
+            "slug": "modules",
+            "children": []
           }
         ],
         "ctaLink": "#contact",
@@ -63,8 +82,6 @@
       "id": 1781468862706,
       "type": "video-hero",
       "props": {
-        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
-        "posterSrc": "",
         "heightMode": "full",
         "minHeight": 620,
         "objectFit": "cover",
@@ -81,7 +98,13 @@
         "accentColor": "#6366f1",
         "baseLayoutWidth": 1500,
         "unmuteOnScroll": true,
-        "marginTop": 140
+        "muted": false,
+        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784700804161-modules.mp4",
+        "loop": false,
+        "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784700804161-modules.mp4",
+        "videoMimeType": "video/mp4",
+        "videoFileName": "modules.mp4",
+        "videoUpdatedAt": "2026-07-22T06:14:07.088Z"
       }
     },
     {
@@ -263,7 +286,7 @@
         "baseLayoutWidth": 1500,
         "buttonTextColor": "#0f172a",
         "dotsActiveColor": "#0f172a",
-        "autoPlayInterval": 1500,
+        "autoPlayInterval": 6000,
         "headlineFontSize": 52,
         "sectionTitleSize": 48,
         "headlineAlignment": "center",
@@ -309,30 +332,49 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
+              "href": "/",
               "label": "Home",
               "children": [],
-              "highlighted": true
+              "highlighted": true,
+              "id": "nav-item-0-0-home",
+              "linkType": "page",
+              "pageId": "home",
+              "slug": "home"
             },
             {
-              "href": "#about",
-              "label": "About"
+              "href": "/about-us",
+              "label": "About Us",
+              "id": "nav-item-1-0-about",
+              "linkType": "page",
+              "slug": "about-us",
+              "children": [],
+              "pageId": "about-us"
             },
             {
               "href": "#services",
-              "label": "Services"
+              "label": "Services",
+              "id": "nav-item-2-0-services",
+              "linkType": "anchor",
+              "slug": "services",
+              "children": []
             },
             {
-              "href": "#contact",
-              "label": "Contact"
+              "href": "/contact-us",
+              "label": "Contact Us",
+              "id": "nav-item-3-0-contact",
+              "linkType": "page",
+              "slug": "contact-us",
+              "children": [],
+              "pageId": "contact-us"
             },
             {
-              "href": "#modules",
-              "label": "Modules"
-            },
-            {
-              "href": "#about-us",
-              "label": "About Us"
+              "href": "/modules",
+              "label": "Modules",
+              "id": "nav-item-4-0-modules",
+              "linkType": "page",
+              "pageId": "modules",
+              "slug": "modules",
+              "children": []
             }
           ],
           "ctaLink": "#contact",
@@ -362,8 +404,6 @@
         "id": 1781468862706,
         "type": "video-hero",
         "props": {
-          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469561736-gr8-result-digital-solutions-modules1.mp4",
-          "posterSrc": "",
           "heightMode": "full",
           "minHeight": 620,
           "objectFit": "cover",
@@ -380,7 +420,13 @@
           "accentColor": "#6366f1",
           "baseLayoutWidth": 1500,
           "unmuteOnScroll": true,
-          "marginTop": 140
+          "muted": false,
+          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784700804161-modules.mp4",
+          "loop": false,
+          "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784700804161-modules.mp4",
+          "videoMimeType": "video/mp4",
+          "videoFileName": "modules.mp4",
+          "videoUpdatedAt": "2026-07-22T06:14:07.088Z"
         }
       },
       {
@@ -562,7 +608,7 @@
           "baseLayoutWidth": 1500,
           "buttonTextColor": "#0f172a",
           "dotsActiveColor": "#0f172a",
-          "autoPlayInterval": 1500,
+          "autoPlayInterval": 6000,
           "headlineFontSize": 52,
           "sectionTitleSize": 48,
           "headlineAlignment": "center",
@@ -602,6 +648,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-06-22T21:33:23.741Z",
+  "savedAt": "2026-07-22T06:17:10.860Z",
   "source": "autosave"
 }

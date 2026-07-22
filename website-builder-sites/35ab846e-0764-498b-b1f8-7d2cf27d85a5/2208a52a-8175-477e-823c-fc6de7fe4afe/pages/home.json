@@ -88,8 +88,8 @@
       "id": 1781385365287,
       "type": "video-hero",
       "props": {
-        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469496342-opening-block-video1.mp4",
-        "posterSrc": "",
+        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469496342-opening-block-video1.mp4",
+        "posterUrl": "",
         "heightMode": "full",
         "minHeight": 620,
         "objectFit": "contain",
@@ -1841,8 +1841,8 @@
         "id": 1781385365287,
         "type": "video-hero",
         "props": {
-          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469496342-opening-block-video1.mp4",
-          "posterSrc": "",
+          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781469496342-opening-block-video1.mp4",
+          "posterUrl": "",
           "heightMode": "full",
           "minHeight": 620,
           "objectFit": "contain",

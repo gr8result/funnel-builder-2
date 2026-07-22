@@ -32,6 +32,23 @@ import {
 
 const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
 
+function resolvePageAwareCta(props = {}, navigationContext = null) {
+  const cta = props.cta && typeof props.cta === "object" ? props.cta : {};
+  const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
+  const linkType = String(cta.linkType || "").trim();
+  const rawHref = String(cta.href || props.ctaLink || props.buttonLink || props.link || props.href || "").trim();
+  if (!text) return { text: "", href: "" };
+  if (linkType === "none") return { text, href: "" };
+  if (linkType === "page" || cta.pageId) {
+    const pageMap = navigationContext?.pageMap;
+    const key = String(cta.pageId || "").trim();
+    const match = pageMap instanceof Map ? pageMap.get(key) : pageMap?.[key];
+    const href = match && typeof match === "object" ? match.href : match;
+    return { text, href: href || rawHref || "#" };
+  }
+  return { text, href: rawHref || "#" };
+}
+
 function getVideoDebugState(video) {
   if (!video) return {};
   return {
@@ -492,11 +509,14 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
         })}
       </div>
 
-      {blockProps.ctaText ? (
-        <a href={editor ? (blockProps.ctaLink || "#contact") : resolvePublishedNavHref({ href: blockProps.ctaLink || "#contact" }, navigationContext)} style={asStyleObject(navTheme.cta)}>
-          {blockProps.ctaText}
+      {(() => {
+        const navCta = resolvePageAwareCta(blockProps, navigationContext);
+        return navCta.text ? (
+        <a href={editor ? (navCta.href || "#") : resolvePublishedNavHref({ pageId: blockProps.cta?.pageId, href: navCta.href || "#" }, navigationContext)} style={asStyleObject(navTheme.cta)}>
+          {navCta.text}
         </a>
-      ) : null}
+        ) : null;
+      })()}
     </section>
   );
 
@@ -2953,6 +2973,25 @@ function renderGridSectionIcon(item, color, size) {
 const resolveAccordionPanelImage = resolveAccordionPanelImageUrl;
 const isUnsafeAccordionImageUrl = isUnsafeAccordionPanelImageUrl;
 
+function normaliseAccordionImageObjectPosition(value = "center center") {
+  const position = String(value || "center center").toLowerCase().replace(/\s+/g, " ").trim();
+  const map = {
+    centre: "center center",
+    center: "center center",
+    "centre centre": "center center",
+    "center center": "center center",
+    top: "center top",
+    bottom: "center bottom",
+    left: "left center",
+    right: "right center",
+    "top left": "left top",
+    "top right": "right top",
+    "bottom left": "left bottom",
+    "bottom right": "right bottom",
+  };
+  return map[position] || "center center";
+}
+
 function renderAccordionImageFallback(label = "Image") {
   return (
     <div style={{ width: "100%", height: "100%", minHeight: 260, display: "grid", placeItems: "center", background: "linear-gradient(135deg, rgba(14,165,233,0.18), rgba(15,23,42,0.42))", color: "rgba(226,232,240,0.82)", textAlign: "center", padding: 24, boxSizing: "border-box" }}>
@@ -5063,6 +5102,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     image: resolveAccordionPanelImage(item),
     imageUrl: resolveAccordionPanelImage(item),
     imageAlt: htmlToPlainText(item?.imageAlt || ""),
+    imageFit: item?.imageFit || props.imageFit || "contain",
+    imageObjectPosition: item?.imageObjectPosition || props.imageObjectPosition || props.imagePositionValue || "center center",
+    imageScale: item?.imageScale || props.imageScale || 100,
     accentColor: item?.accentColor || null,   // null ? falls back to global accent
     panelBg: item?.panelBg || null,           // null ? falls back to global bg/accent gradient
     contentBlocks: asArray(item?.contentBlocks).map((cb, cbIdx) => ({
@@ -5449,6 +5491,13 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   // -- image slot -------------------------------------------------------------
   function renderImageSlot(item, idx, forEditor = false) {
     const imageSrc = resolveAccordionPanelImage(item);
+    const fit = String(item.imageFit || "contain").toLowerCase() === "cover"
+      ? "cover"
+      : String(item.imageFit || "contain").toLowerCase() === "fill"
+        ? "fill"
+        : "contain";
+    const pos = normaliseAccordionImageObjectPosition(item.imageObjectPosition || "center center");
+    const scale = Math.max(50, Math.min(150, Number(item.imageScale || 100) || 100)) / 100;
     const failedKey = item.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
     const showImage = !!imageSrc && !imageFailed;
@@ -5461,7 +5510,18 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
           <img
             src={imageSrc}
             alt={item.imageAlt || item.label}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            style={{ width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, objectFit: fit, objectPosition: pos, transform: `scale(${scale})`, transformOrigin: pos, display: "block" }}
+            onLoad={(event) => {
+              if (shouldLogHeroVideoDebug()) console.info("[accordion image] loaded", {
+                panelId: item.id,
+                index: idx,
+                imageSrc,
+                naturalWidth: event.currentTarget.naturalWidth,
+                naturalHeight: event.currentTarget.naturalHeight,
+                renderedWidth: event.currentTarget.getBoundingClientRect?.().width || 0,
+                renderedHeight: event.currentTarget.getBoundingClientRect?.().height || 0,
+              });
+            }}
             onError={() => {
               if (shouldLogHeroVideoDebug()) console.warn("[accordion image] failed to load", { panelId: item.id, index: idx, imageSrc });
               setFailedImages((prev) => ({ ...prev, [failedKey]: true }));
@@ -5541,7 +5601,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
                     ))}
                   </div>
                 </div>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", position: "relative", overflow: "hidden", minHeight: 320 }}>
+                <div style={{ flex: "0 0 50%", maxWidth: "50%", minWidth: 0, position: "relative", overflow: "hidden", minHeight: 320 }}>
                   {renderImageSlot(item, idx, true)}
                 </div>
               </div>
@@ -5577,7 +5637,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               </div>
               <div style={{ display: "grid", gridTemplateRows: isOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1)" }}>
                 <div style={{ overflow: "hidden", minHeight: 0 }}>
-                  {item.image ? <img src={item.image} alt={item.imageAlt || item.label} style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} /> : null}
+                  {item.image ? <img src={item.image} alt={item.imageAlt || item.label} style={{ width: "100%", maxWidth: "100%", minWidth: 0, maxHeight: 260, objectFit: item.imageFit || "contain", objectPosition: normaliseAccordionImageObjectPosition(item.imageObjectPosition || "center center"), display: "block" }} /> : null}
                   <div style={{ padding: "16px 24px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
                     {item.contentBlocks.map((block, cbIdx) => renderCb(item, idx, block, cbIdx, item.accentColor || accent))}
                   </div>
@@ -5749,7 +5809,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
 // imageStyle "bleed" = full-bleed image fills the entire half
 
 function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUploadImage }) {
-  const panels = asArray(props.panels).map((p, idx) => ({
+  const panelSourceKey = Array.isArray(props.panels) ? "panels" : "items";
+  const panels = asArray(Array.isArray(props.panels) ? props.panels : props.items).map((p, idx) => ({
     id: p?.id || `ss-panel-${idx}`,
     eyebrow: p?.eyebrow ?? "",
     eyebrowDot: p?.eyebrowDot !== false,
@@ -5766,6 +5827,15 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     imageStyle: p?.imageStyle ?? "bleed",
     imageCardBg: p?.imageCardBg ?? (p?.accentColor ?? "#0ea5e9"),
     imagePosition: p?.imagePosition ?? "right",
+    useBlockImageSettings: p?.useBlockImageSettings !== false,
+    imageFit: p?.imageFit ?? "",
+    imageObjectPosition: p?.imageObjectPosition ?? "",
+    imageScale: p?.imageScale ?? "",
+    imageMaxHeightMode: p?.imageMaxHeightMode ?? "",
+    imageMaxHeightCustom: p?.imageMaxHeightCustom ?? "",
+    imagePadding: p?.imagePadding ?? "",
+    panelImageHeightMode: p?.panelImageHeightMode ?? "",
+    panelImageFixedHeight: p?.panelImageFixedHeight ?? "",
     backgroundColor: p?.backgroundColor ?? "#0f172a",
     textColor: p?.textColor ?? "#ffffff",
     accentColor: p?.accentColor ?? "#0ea5e9",
@@ -5828,7 +5898,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   function patchPanels(newPanels) {
     if (!editor || typeof onChangeBlock !== "function") return;
-    onChangeBlock({ ...props, panels: newPanels });
+    onChangeBlock({ ...props, [panelSourceKey]: newPanels });
   }
 
   function patchPanel(idx, patch) {
@@ -5890,9 +5960,101 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   // -- Image rendering --------------------------------------------------------
   // "bleed" = raw image fills entire half
   // "card"  = inset rounded card with imageCardBg behind image
+  function imageSetting(panel, key, fallback) {
+    return panel.useBlockImageSettings === false && panel[key] !== "" && panel[key] != null
+      ? panel[key]
+      : props[key] ?? fallback;
+  }
+
+  function normaliseImageFit(value) {
+    const fit = String(value || "contain").toLowerCase();
+    if (fit === "cover" || fit === "fill" || fit === "natural" || fit === "none") return fit === "natural" ? "none" : fit;
+    return "contain";
+  }
+
+  function normaliseImagePosition(value) {
+    const position = String(value || "center center").toLowerCase().replace(/\s+/g, " ").trim();
+    const map = {
+      centre: "center center",
+      center: "center center",
+      "centre centre": "center center",
+      "center center": "center center",
+      top: "center top",
+      bottom: "center bottom",
+      left: "left center",
+      right: "right center",
+      "top left": "left top",
+      "top right": "right top",
+      "bottom left": "left bottom",
+      "bottom right": "right bottom",
+    };
+    return map[position] || "center center";
+  }
+
+  function normaliseImageScale(value) {
+    const scale = Number(value || 100);
+    return Math.max(50, Math.min(150, Number.isFinite(scale) ? scale : 100));
+  }
+
+  function imageMaxHeightValue(panel) {
+    const legacyMaxHeight = Number(imageSetting(panel, "imageMaxHeight", 0));
+    const mode = String(imageSetting(panel, "imageMaxHeightMode", legacyMaxHeight > 0 ? "custom" : "auto")).toLowerCase();
+    if (mode === "auto") return "";
+    const preset = Number(mode);
+    if ([300, 400, 500, 600, 700].includes(preset)) return `${preset}px`;
+    const custom = Number(imageSetting(panel, "imageMaxHeightCustom", legacyMaxHeight || 500));
+    return `${Math.max(300, Math.min(900, Number.isFinite(custom) ? custom : 500))}px`;
+  }
+
+  function panelImageHeightValue(panel, fallbackHeight) {
+    const mode = String(imageSetting(panel, "panelImageHeightMode", "match")).toLowerCase();
+    if (mode === "fixed") {
+      const fixed = Number(imageSetting(panel, "panelImageFixedHeight", 500));
+      return `${Math.max(300, Math.min(900, Number.isFinite(fixed) ? fixed : 500))}px`;
+    }
+    if (mode === "auto") return "auto";
+    return fallbackHeight;
+  }
+
+  const twoColumnGrid = (imageRight) => ({
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(320px, 1fr)",
+    gridTemplateAreas: imageRight ? '"text image"' : '"image text"',
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0,
+    overflow: "hidden",
+    boxSizing: "border-box",
+  });
+
+  const imageColumnStyle = {
+    gridArea: "image",
+    minWidth: 0,
+    maxWidth: "100%",
+    overflow: "hidden",
+    position: "relative",
+    boxSizing: "border-box",
+  };
+
+  const textColumnStyle = {
+    gridArea: "text",
+    minWidth: 0,
+    maxWidth: "100%",
+    display: "flex",
+    alignItems: "center",
+    overflow: "hidden",
+    boxSizing: "border-box",
+  };
+
   function renderImageHalf(panel, idx, forEditor = false, halfHeight = "100%") {
     const isCard = panel.imageStyle === "card";
     const imageSrc = resolveAccordionPanelImage(panel);
+    const objectFit = normaliseImageFit(imageSetting(panel, "imageFit", "contain"));
+    const objectPosition = normaliseImagePosition(imageSetting(panel, "imageObjectPosition", "center center"));
+    const imageScale = normaliseImageScale(imageSetting(panel, "imageScale", 100)) / 100;
+    const imagePadding = Math.max(0, Math.min(80, Number(imageSetting(panel, "imagePadding", 0)) || 0));
+    const resolvedMaxHeight = imageMaxHeightValue(panel);
+    const resolvedHalfHeight = panelImageHeightValue(panel, halfHeight);
     const failedKey = panel.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
     const showImage = !!imageSrc && !imageFailed;
@@ -5903,7 +6065,20 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       <img
         src={imageSrc}
         alt={panel.imageAlt || panel.heading}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", borderRadius: isCard ? 16 : 0 }}
+        style={{
+          width: "100%",
+          height: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          objectFit,
+          objectPosition,
+          display: "block",
+          borderRadius: isCard ? 16 : 0,
+          transform: `scale(${imageScale})`,
+          transformOrigin: objectPosition,
+          backgroundPosition: objectFit === "contain" ? "center center" : undefined,
+          backgroundRepeat: objectFit === "contain" ? "no-repeat" : undefined,
+        }}
         onLoad={() => {
           if (typeof window !== "undefined") window.dispatchEvent(new Event("resize"));
         }}
@@ -5915,6 +6090,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     ) : (
       <div style={{
         width: "100%", height: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
         background: isCard ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.04)",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
         color: isCard ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.35)",
@@ -5953,8 +6130,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     if (isCard) {
       // Card-style: colored background with inset padded rounded card
       return (
-        <div style={{ width: "100%", height: halfHeight, background: panel.imageCardBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
-          <div style={{ position: "relative", width: "calc(100% - 48px)", height: "calc(100% - 48px)", borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.2)" }}>
+        <div style={{ width: "100%", height: resolvedHalfHeight, maxHeight: resolvedMaxHeight || undefined, maxWidth: "100%", minWidth: 0, background: panel.imageCardBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxSizing: "border-box", padding: imagePadding }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.2)" }}>
             {imageEl}
             {replaceControls}
             {libraryControls}
@@ -5965,8 +6142,10 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
     // Bleed-style: full-bleed image
     return (
-      <div style={{ width: "100%", height: halfHeight, position: "relative", overflow: "hidden" }}>
-        {imageEl}
+      <div style={{ width: "100%", height: resolvedHalfHeight, maxHeight: resolvedMaxHeight || undefined, maxWidth: "100%", minWidth: 0, position: "relative", overflow: "hidden", boxSizing: "border-box", padding: imagePadding }}>
+        <div style={{ width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, overflow: "hidden" }}>
+          {imageEl}
+        </div>
         {replaceControls}
         {libraryControls}
       </div>
@@ -6117,11 +6296,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                 <span style={{ background: "rgba(14,165,233,0.8)", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 16, fontWeight: 600 }}>Panel {idx + 1}</span>
                 <button type="button" onClick={(e) => { e.stopPropagation(); removePanel(idx); }} style={{ background: "rgba(239,68,68,0.15)", border: "none", color: "#f87171", borderRadius: 6, padding: "4px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove</button>
               </div>
-              <div style={{ display: "flex", flexDirection: imageRight ? "row" : "row-reverse", minHeight: 520 }}>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
+              <div style={{ ...twoColumnGrid(imageRight), minHeight: 520 }}>
+                <div style={imageColumnStyle}>
                   {renderImageHalf(panel, idx, true, "100%")}
                 </div>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center" }}>
+                <div style={textColumnStyle}>
                   {renderPanelContent(panel, idx)}
                 </div>
               </div>
@@ -6204,9 +6383,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     const SIDE_PEEK = Math.max(58, Math.min(170, Number(props.peekWidth ?? props.cardPeekWidth ?? props.sidePeekWidth ?? PEEK)));
     const stackSide = String(props.stackSide || props.sideStackSide || props.stackEdge || "left").toLowerCase() === "right" ? "right" : "left";
     const openPanelWidth = Math.min(vw, Math.max(Math.min(720, vw), vw - Math.max(0, n - 1) * SIDE_PEEK));
-    const contentColumns = openPanelWidth - SIDE_PEEK < 760
-      ? "minmax(280px, 0.95fr) minmax(320px, 1.05fr)"
-      : "minmax(340px, 1fr) minmax(380px, 1fr)";
+    const activeContentWidth = Math.max(0, openPanelWidth - SIDE_PEEK);
+    const sideStackNarrow = activeContentWidth < 760;
+    const contentColumns = sideStackNarrow
+      ? "minmax(0, 1fr)"
+      : "minmax(0, 1fr) minmax(0, 1fr)";
     return (
       <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative", background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f" }}>
         <div ref={stickyRef} style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
@@ -6288,11 +6469,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
                   </div>
                 </div>
 
-                <div style={{ marginLeft: stackSide === "left" ? SIDE_PEEK : 0, marginRight: stackSide === "right" ? SIDE_PEEK : 0, width: `calc(100% - ${SIDE_PEEK}px)`, minWidth: 0, height: "100%", display: "grid", gridTemplateColumns: contentGridColumns, direction: imageRight ? "ltr" : "rtl", overflow: "hidden" }}>
-                  <div style={{ minWidth: 320, overflow: "hidden", direction: "ltr" }}>
+                <div style={{ marginLeft: stackSide === "left" ? SIDE_PEEK : 0, marginRight: stackSide === "right" ? SIDE_PEEK : 0, width: `calc(100% - ${SIDE_PEEK}px)`, maxWidth: `calc(100% - ${SIDE_PEEK}px)`, minWidth: 0, height: "100%", display: "grid", gridTemplateColumns: contentGridColumns, gridTemplateRows: sideStackNarrow ? "minmax(0, 45%) minmax(0, 55%)" : undefined, gridTemplateAreas: sideStackNarrow ? '"image" "text"' : (imageRight ? '"text image"' : '"image text"'), overflow: "hidden", boxSizing: "border-box" }}>
+                  <div style={{ ...imageColumnStyle, minWidth: 0 }}>
                     {renderImageHalf(panel, idx, false, "100%")}
                   </div>
-                  <div style={{ minWidth: 320, display: "flex", alignItems: "center", overflow: "hidden", direction: "ltr" }}>
+                  <div style={{ ...textColumnStyle, minWidth: 0 }}>
                     {renderPanelContent(panel, idx)}
                   </div>
                 </div>
@@ -6378,11 +6559,11 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               </div>
 
               {/* -- Full card content: image split + text panel -- */}
-              <div style={{ height: `calc(100vh - ${PEEK}px)`, display: "flex", flexDirection: imageRight ? "row" : "row-reverse", overflow: "hidden" }}>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", overflow: "hidden" }}>
+              <div style={{ ...twoColumnGrid(imageRight), height: `calc(100vh - ${PEEK}px)` }}>
+                <div style={imageColumnStyle}>
                   {renderImageHalf(panel, idx, false, "100%")}
                 </div>
-                <div style={{ flex: "0 0 50%", maxWidth: "50%", display: "flex", alignItems: "center", overflow: "hidden" }}>
+                <div style={textColumnStyle}>
                   {renderPanelContent(panel, idx)}
                 </div>
               </div>
@@ -6871,36 +7052,30 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   async function handleVideoUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
     const previousVideoSrc = videoSrc;
-    // Show local blob URL immediately so the preview updates before the upload finishes.
-    const blobUrl = URL.createObjectURL(file);
-    onChangeBlock?.({ ...props, videoUrl: blobUrl, videoSrc: blobUrl });
     try {
       const asset = await Promise.resolve(onUploadImage("__video_hero_src__", file));
       if (asset?.src) {
         onChangeBlock?.({
           ...props,
           videoUrl: asset.src,
-          videoSrc: asset.src,
           videoStoragePath: asset.storagePath || props.videoStoragePath || "",
           videoMimeType: asset.type || file.type || props.videoMimeType || "",
           videoFileName: asset.name || file.name || props.videoFileName || "",
-          uploadedAt: new Date().toISOString(),
+          videoUpdatedAt: new Date().toISOString(),
         });
       }
     } catch (error) {
-      onChangeBlock?.({ ...props, videoUrl: previousVideoSrc || "", videoSrc: previousVideoSrc || "" });
+      onChangeBlock?.({ ...props, videoUrl: previousVideoSrc || "" });
       if (typeof window !== "undefined") {
         window.alert(error?.message || "Video upload failed. Please try again.");
       }
-    } finally {
-      URL.revokeObjectURL(blobUrl);
     }
   }
 
   async function handlePosterUpload(file) {
     if (!file || typeof onUploadImage !== "function") return;
     const asset = await Promise.resolve(onUploadImage("__video_hero_poster__", file));
-    if (asset?.src) onChangeBlock?.({ ...props, posterUrl: asset.src, posterSrc: asset.src });
+    if (asset?.src) onChangeBlock?.({ ...props, posterUrl: asset.src });
   }
 
   // -- Shared overlay style --------------------------------------------------
@@ -7000,7 +7175,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               <input type="file" accept="video/mp4,video/webm,video/ogg,video/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handleVideoUpload(f); }} />
             </label>
             {videoSrc ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoUrl: "", videoSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove video</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, videoUrl: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove video</button>
             ) : null}
           </div>
 
@@ -7012,7 +7187,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; handlePosterUpload(f); }} />
             </label>
             {posterSrc ? (
-              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, posterSrc: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove poster</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChangeBlock?.({ ...props, posterUrl: "" }); }} style={{ marginTop: 5, background: "none", border: "none", color: "rgba(239,68,68,0.7)", fontSize: 12, cursor: "pointer", padding: 0 }}>? Remove poster</button>
             ) : null}
           </div>
         </div>

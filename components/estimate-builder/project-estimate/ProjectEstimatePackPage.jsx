@@ -1,16 +1,17 @@
 import { selectedEstimateInclusionsPackage } from "../../../lib/builders/estimateInclusions";
 import { defaultLuxuryProposalTheme, hasProjectInfoValue } from "./theme";
-import AcceptancePage from "./pages/AcceptancePage";
+import AcceptancePage from "./pages/AcceptancePage.tsx";
 import AboutBuilderPage from "./pages/AboutBuilderPage";
-import CoverPage from "./pages/CoverPage";
-import EstimateSummaryPage from "./pages/EstimateSummaryPage";
+import CoverPage from "./pages/CoverPage.tsx";
+import EstimateSummaryPage from "./pages/EstimateSummaryPage.tsx";
 import PricedPlansPage from "./pages/PricedPlansPage";
 import PricingSummaryPage from "./pages/PricingSummaryPage";
-import StandardInclusionsPage from "./pages/StandardInclusionsPage";
+import StandardInclusionsPage from "./pages/StandardInclusionsPage.tsx";
 import ImportantEstimateNoticePage from "./pages/ImportantEstimateNoticePage";
-import { projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
+import { defaultProjectEstimateBlocks, projectEstimateContentFromBlocks } from "./ProjectEstimateRegistry";
+import { styles } from "./ProjectEstimateShared";
 
-export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, ProgressDiagnostic, editing = false, selectedBlockId = "", onSelectBlock }) {
+export default function ProjectEstimatePackPage({ page, theme, linkedFields, Brochure, editing = false, selectedBlockId = "", editingBlockId = "", onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, onPreserveSelection, hiddenBlockIds = [] }) {
   const resolvedTheme = { ...defaultLuxuryProposalTheme({}), ...(theme || {}) };
   const accent = resolvedTheme.accentColor || "#c89d4a";
   const pageType = page.page_type || page.id;
@@ -57,62 +58,24 @@ export default function ProjectEstimatePackPage({ page, theme, linkedFields, Bro
   const pricingGroups = (linkedFields.pricingGroups?.value || []).slice(0, 7);
   const inclusionPackage = linkedFields.standardInclusionsPackage?.value || linkedFields.estimateInclusionsPackage?.value || selectedEstimateInclusionsPackage();
   const pricedUsing = inclusionPackage?.package?.name || "Mid Range Standard Inclusions";
-  const showProgressDiagnostics = process.env.NODE_ENV !== "production";
+  const blockById = Object.fromEntries([
+    ...defaultProjectEstimateBlocks(pageType),
+    ...(Array.isArray(page?.blocks) ? page.blocks : []),
+  ].map((block) => [block.id, block]));
+  const editorBridge = { editMode: editing, pageId: page?.id || pageType, selectedBlockId, editingBlockId, onSelectBlock, onEditBlock, onTextCommit, onStartDrag, onReplaceImage, onPreserveSelection, blockById };
   const common = { resolvedTheme, accent, logo, builderName };
-  const wrap = (node) => {
-    if (!editing || !onSelectBlock || !Array.isArray(page?.blocks)) return node;
-    return (
-      <div style={{ position: "relative" }}>
-        {node}
-        <div style={{
-          position: "absolute",
-          top: 14,
-          left: 14,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 6,
-          maxWidth: "calc(100% - 28px)",
-          pointerEvents: "auto",
-          zIndex: 20,
-        }}>
-          {page.blocks.map((block) => (
-            <button
-              key={block.id}
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onSelectBlock(block.id);
-              }}
-              style={{
-                border: selectedBlockId === block.id ? "2px solid #0ea5e9" : "1px solid rgba(15, 23, 42, 0.18)",
-                background: selectedBlockId === block.id ? "#e0f2fe" : "rgba(255,255,255,0.92)",
-                color: "#0f172a",
-                borderRadius: 6,
-                padding: "5px 8px",
-                fontSize: 11,
-                fontWeight: 800,
-                boxShadow: "0 8px 20px rgba(15,23,42,0.12)",
-              }}
-              title={`Select ${block.content?.editorLabel || block.type}`}
-            >
-              {block.content?.editorLabel || block.type}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  const wrap = (node) => node;
 
   if (pageType === "cover") {
-    return wrap(<CoverPage {...common} content={content} projectName={projectName} clientName={clientName} projectAddress={projectAddress} quoteNumber={quoteNumber} quoteDate={quoteDate} />);
+    return wrap(<CoverPage {...common} content={content} projectName={projectName} clientName={clientName} projectAddress={projectAddress} quoteNumber={quoteNumber} quoteDate={quoteDate} hiddenBlockIds={hiddenBlockIds} editorBridge={editorBridge} />);
   }
 
   if (pageType === "estimateSummary" || pageType === "projectInfo") {
-    return wrap(<EstimateSummaryPage {...common} content={content} pageType={pageType} visibleProjectInfoRows={visibleProjectInfoRows} />);
+    return wrap(<EstimateSummaryPage {...common} content={content} pageType={pageType} visibleProjectInfoRows={visibleProjectInfoRows} editorBridge={editorBridge} />);
   }
 
   if (pageType === "about") {
-    return wrap(<AboutBuilderPage {...common} content={content} whyStats={whyStats} />);
+    return wrap(<AboutBuilderPage {...common} content={content} whyStats={whyStats} editorBridge={editorBridge} />);
   }
 
   if (pageType === "standardInclusions" || pageType === "inclusions") {
@@ -120,7 +83,7 @@ export default function ProjectEstimatePackPage({ page, theme, linkedFields, Bro
   }
 
   if (pageType === "pricing") {
-    return wrap(<PricingSummaryPage {...common} content={content} quoteTotal={quoteTotal} pricingGroups={pricingGroups} showProgressDiagnostics={showProgressDiagnostics} ProgressDiagnostic={ProgressDiagnostic} />);
+    return wrap(<PricingSummaryPage {...common} content={content} quoteTotal={quoteTotal} pricingGroups={pricingGroups} editorBridge={editorBridge} />);
   }
 
   if (pageType === "pricedPlans") {
@@ -128,11 +91,15 @@ export default function ProjectEstimatePackPage({ page, theme, linkedFields, Bro
   }
 
   if (pageType === "termsNotes") {
-    return wrap(<ImportantEstimateNoticePage {...common} content={content} linkedFields={linkedFields} />);
+    return wrap(<ImportantEstimateNoticePage {...common} content={content} linkedFields={linkedFields} editorBridge={editorBridge} />);
   }
 
   if (pageType === "acceptance") {
-    return wrap(<AcceptancePage {...common} content={content} />);
+    return wrap(<AcceptancePage {...common} content={content} editorBridge={editorBridge} />);
+  }
+
+  if (page?.source === "builder-created") {
+    return wrap(<section className="proposal-builder-page" style={{ ...styles.luxuryPage, background: page.design?.backgroundColor || "#ffffff" }} />);
   }
 
   if (process.env.NODE_ENV !== "production") {

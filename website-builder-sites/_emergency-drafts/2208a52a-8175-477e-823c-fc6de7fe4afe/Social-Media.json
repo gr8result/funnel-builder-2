@@ -10,52 +10,95 @@
         "brand": "Gr8 Result Digital Solutions",
         "links": [
           {
-            "href": "#home",
-            "label": "Home"
+            "href": "/",
+            "label": "Home",
+            "id": "nav-item-0-0-home",
+            "linkType": "page",
+            "pageId": "home",
+            "slug": "home",
+            "children": []
           },
           {
             "id": "nav-modules-sm",
-            "href": "#modules",
+            "href": "/modules",
             "label": "Modules",
             "children": [
               {
                 "id": "nav-child-email-sm",
-                "href": "#email",
-                "label": "Email Marketing"
+                "href": "/email",
+                "label": "Email",
+                "linkType": "page",
+                "slug": "email",
+                "children": [],
+                "pageId": "email"
               },
               {
                 "id": "nav-child-sms-sm",
-                "href": "#sms",
-                "label": "SMS Marketing"
+                "href": "/sms",
+                "label": "SMS",
+                "linkType": "page",
+                "slug": "sms",
+                "children": [],
+                "pageId": "sms"
               },
               {
                 "id": "nav-child-crm-sm",
-                "href": "#crm",
-                "label": "CRM Management"
+                "href": "/crm",
+                "label": "CRM",
+                "linkType": "page",
+                "slug": "crm",
+                "children": [],
+                "pageId": "crm"
               },
               {
                 "id": "nav-child-funnels-sm",
-                "href": "#funnels",
-                "label": "Funnels"
+                "href": "/funnels",
+                "label": "Funnels",
+                "linkType": "page",
+                "pageId": "funnels",
+                "slug": "funnels",
+                "children": []
               },
               {
                 "id": "nav-child-wb-sm",
-                "href": "#website-builder",
-                "label": "Website Builder"
+                "href": "/website-builder",
+                "label": "Website Builder",
+                "linkType": "page",
+                "pageId": "website-builder",
+                "slug": "website-builder",
+                "children": []
               }
-            ]
+            ],
+            "linkType": "page",
+            "pageId": "modules",
+            "slug": "modules"
           },
           {
-            "href": "#about-us",
-            "label": "About Us"
+            "href": "/about-us",
+            "label": "About Us",
+            "id": "nav-item-2-0-about-us",
+            "linkType": "page",
+            "pageId": "about-us",
+            "slug": "about-us",
+            "children": []
           },
           {
-            "href": "#pricing",
-            "label": "Pricing"
+            "href": "/pricing",
+            "label": "Pricing",
+            "id": "nav-item-3-0-pricing",
+            "linkType": "page",
+            "pageId": "pricing",
+            "slug": "pricing",
+            "children": []
           },
           {
-            "href": "#contact-us",
-            "label": "Contact Us"
+            "href": "/contact-us",
+            "label": "Contact Us",
+            "id": "nav-item-4-0-contact-us",
+            "linkType": "page",
+            "pageId": "contact-us",
+            "slug": "contact-us",
+            "children": []
           }
         ],
         "ctaLink": "#contact-us",
@@ -216,7 +259,8 @@
         "headlineAlign": "center",
         "headlineAlignment": "center",
         "headlineColor": "#00b0f0",
-        "headingColor": "#00b0f0"
+        "headingColor": "#00b0f0",
+        "cardsPerRowDesktop": 4
       }
     },
     {
@@ -292,7 +336,12 @@
             "imagePosition": "right",
             "backgroundColor": "#0070c0",
             "textColor": "#ffffff",
-            "accentColor": "#0ea5e9"
+            "accentColor": "#0ea5e9",
+            "imageUrl": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1400&q=80",
+            "useBlockImageSettings": true,
+            "imageFit": "",
+            "imageObjectPosition": "",
+            "imageScale": ""
           },
           {
             "id": "ss-sm-2",
@@ -312,7 +361,12 @@
             "imagePosition": "right",
             "backgroundColor": "#0c733b",
             "textColor": "#ffc000",
-            "accentColor": "#0ea5e9"
+            "accentColor": "#0ea5e9",
+            "imageUrl": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1400&q=80",
+            "useBlockImageSettings": true,
+            "imageFit": "",
+            "imageObjectPosition": "",
+            "imageScale": ""
           },
           {
             "id": "ss-sm-3",
@@ -332,7 +386,12 @@
             "imagePosition": "right",
             "backgroundColor": "#ec4899",
             "textColor": "#ffffff",
-            "accentColor": "#0ea5e9"
+            "accentColor": "#0ea5e9",
+            "imageUrl": "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=1400&q=80",
+            "useBlockImageSettings": true,
+            "imageFit": "",
+            "imageObjectPosition": "",
+            "imageScale": ""
           },
           {
             "id": "ss-sm-4",
@@ -352,7 +411,12 @@
             "imagePosition": "right",
             "backgroundColor": "#0f172a",
             "textColor": "#ffffff",
-            "accentColor": "#0ea5e9"
+            "accentColor": "#0ea5e9",
+            "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=80",
+            "useBlockImageSettings": true,
+            "imageFit": "",
+            "imageObjectPosition": "",
+            "imageScale": ""
           },
           {
             "id": "ss-sm-5",
@@ -372,11 +436,24 @@
             "imagePosition": "right",
             "backgroundColor": "#b01c1c",
             "textColor": "#ffffff",
-            "accentColor": "#0ea5e9"
+            "accentColor": "#0ea5e9",
+            "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=80",
+            "useBlockImageSettings": true,
+            "imageFit": "",
+            "imageObjectPosition": "",
+            "imageScale": ""
           }
         ],
         "cardBorderColor": "#c00000",
-        "contentVerticalAlign": "top"
+        "contentVerticalAlign": "top",
+        "imageFit": "contain",
+        "imageObjectPosition": "center center",
+        "imageScale": 100,
+        "imageMaxHeightMode": "auto",
+        "imageMaxHeightCustom": 500,
+        "imagePadding": 0,
+        "panelImageHeightMode": "match",
+        "panelImageFixedHeight": 500
       }
     },
     {
@@ -727,7 +804,8 @@
         "headlineAlign": "center",
         "headlineAlignment": "center",
         "headlineColor": "#00b0f0",
-        "headingColor": "#00b0f0"
+        "headingColor": "#00b0f0",
+        "cardsPerRowDesktop": 4
       }
     },
     {
@@ -889,37 +967,18 @@
         "headlineFontSize": 48,
         "headingFontSize": 48,
         "headlineColor": "#00b0f0",
-        "headingColor": "#00b0f0"
+        "headingColor": "#00b0f0",
+        "cardsPerRowDesktop": 2
       }
     },
     {
-      "id": "sm-cta",
-      "type": "cta-button",
-      "props": {
-        "style": "stacked-card",
-        "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\">Your Social Media Can Run Itself</span></span>",
-        "eyebrow": "Ready to automate your content?",
-        "description": "<span style=\"font-size: 22px;\">Generate, schedule and publish your entire social media presence weeks in advance using one powerful AI platform. Start your 14-day free trial today — no credit card required.</span>",
-        "text": "Start Your Free Trial",
-        "link": "#contact-us",
-        "note": "Book a Demo",
-        "size": "large",
-        "alignment": "center",
-        "textColor": "#ffffff",
-        "backgroundColor": "#121c26",
-        "borderColor": "rgba(139,92,246,0.3)",
-        "buttonColor": "#a855f7",
-        "buttonTextColor": "#ffffff",
-        "fullWidthBackground": true,
-        "baseLayoutWidth": 1500
-      }
-    },
-    {
-      "id": "365030cf-5983-4af4-8e2c-6a67f47c6d6e",
+      "id": "ac648c9d-69b2-45c0-afdc-9d5d282e5dc7",
       "type": "space",
       "props": {
         "height": "42px",
-        "fullWidthBackground": false
+        "fullWidthBackground": true,
+        "backgroundStyle": "color",
+        "backgroundColor": "#121c26"
       }
     },
     {
@@ -941,7 +1000,9 @@
         "buttonTextColor": "#1f2937",
         "borderColor": "rgba(255,255,255,0.18)",
         "fullWidthBackground": true,
-        "baseLayoutWidth": 1500
+        "baseLayoutWidth": 1500,
+        "__blockId": 1782429345601,
+        "__blockType": "cta-button"
       }
     }
   ],
@@ -956,52 +1017,95 @@
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
-              "href": "#home",
-              "label": "Home"
+              "href": "/",
+              "label": "Home",
+              "id": "nav-item-0-0-home",
+              "linkType": "page",
+              "pageId": "home",
+              "slug": "home",
+              "children": []
             },
             {
               "id": "nav-modules-sm",
-              "href": "#modules",
+              "href": "/modules",
               "label": "Modules",
               "children": [
                 {
                   "id": "nav-child-email-sm",
-                  "href": "#email",
-                  "label": "Email Marketing"
+                  "href": "/email",
+                  "label": "Email",
+                  "linkType": "page",
+                  "slug": "email",
+                  "children": [],
+                  "pageId": "email"
                 },
                 {
                   "id": "nav-child-sms-sm",
-                  "href": "#sms",
-                  "label": "SMS Marketing"
+                  "href": "/sms",
+                  "label": "SMS",
+                  "linkType": "page",
+                  "slug": "sms",
+                  "children": [],
+                  "pageId": "sms"
                 },
                 {
                   "id": "nav-child-crm-sm",
-                  "href": "#crm",
-                  "label": "CRM Management"
+                  "href": "/crm",
+                  "label": "CRM",
+                  "linkType": "page",
+                  "slug": "crm",
+                  "children": [],
+                  "pageId": "crm"
                 },
                 {
                   "id": "nav-child-funnels-sm",
-                  "href": "#funnels",
-                  "label": "Funnels"
+                  "href": "/funnels",
+                  "label": "Funnels",
+                  "linkType": "page",
+                  "pageId": "funnels",
+                  "slug": "funnels",
+                  "children": []
                 },
                 {
                   "id": "nav-child-wb-sm",
-                  "href": "#website-builder",
-                  "label": "Website Builder"
+                  "href": "/website-builder",
+                  "label": "Website Builder",
+                  "linkType": "page",
+                  "pageId": "website-builder",
+                  "slug": "website-builder",
+                  "children": []
                 }
-              ]
+              ],
+              "linkType": "page",
+              "pageId": "modules",
+              "slug": "modules"
             },
             {
-              "href": "#about-us",
-              "label": "About Us"
+              "href": "/about-us",
+              "label": "About Us",
+              "id": "nav-item-2-0-about-us",
+              "linkType": "page",
+              "pageId": "about-us",
+              "slug": "about-us",
+              "children": []
             },
             {
-              "href": "#pricing",
-              "label": "Pricing"
+              "href": "/pricing",
+              "label": "Pricing",
+              "id": "nav-item-3-0-pricing",
+              "linkType": "page",
+              "pageId": "pricing",
+              "slug": "pricing",
+              "children": []
             },
             {
-              "href": "#contact-us",
-              "label": "Contact Us"
+              "href": "/contact-us",
+              "label": "Contact Us",
+              "id": "nav-item-4-0-contact-us",
+              "linkType": "page",
+              "pageId": "contact-us",
+              "slug": "contact-us",
+              "children": []
             }
           ],
           "ctaLink": "#contact-us",
@@ -1162,7 +1266,8 @@
           "headlineAlign": "center",
           "headlineAlignment": "center",
           "headlineColor": "#00b0f0",
-          "headingColor": "#00b0f0"
+          "headingColor": "#00b0f0",
+          "cardsPerRowDesktop": 4
         }
       },
       {
@@ -1238,7 +1343,12 @@
               "imagePosition": "right",
               "backgroundColor": "#0070c0",
               "textColor": "#ffffff",
-              "accentColor": "#0ea5e9"
+              "accentColor": "#0ea5e9",
+              "imageUrl": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1400&q=80",
+              "useBlockImageSettings": true,
+              "imageFit": "",
+              "imageObjectPosition": "",
+              "imageScale": ""
             },
             {
               "id": "ss-sm-2",
@@ -1258,7 +1368,12 @@
               "imagePosition": "right",
               "backgroundColor": "#0c733b",
               "textColor": "#ffc000",
-              "accentColor": "#0ea5e9"
+              "accentColor": "#0ea5e9",
+              "imageUrl": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1400&q=80",
+              "useBlockImageSettings": true,
+              "imageFit": "",
+              "imageObjectPosition": "",
+              "imageScale": ""
             },
             {
               "id": "ss-sm-3",
@@ -1278,7 +1393,12 @@
               "imagePosition": "right",
               "backgroundColor": "#ec4899",
               "textColor": "#ffffff",
-              "accentColor": "#0ea5e9"
+              "accentColor": "#0ea5e9",
+              "imageUrl": "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?auto=format&fit=crop&w=1400&q=80",
+              "useBlockImageSettings": true,
+              "imageFit": "",
+              "imageObjectPosition": "",
+              "imageScale": ""
             },
             {
               "id": "ss-sm-4",
@@ -1298,7 +1418,12 @@
               "imagePosition": "right",
               "backgroundColor": "#0f172a",
               "textColor": "#ffffff",
-              "accentColor": "#0ea5e9"
+              "accentColor": "#0ea5e9",
+              "imageUrl": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=80",
+              "useBlockImageSettings": true,
+              "imageFit": "",
+              "imageObjectPosition": "",
+              "imageScale": ""
             },
             {
               "id": "ss-sm-5",
@@ -1318,11 +1443,24 @@
               "imagePosition": "right",
               "backgroundColor": "#b01c1c",
               "textColor": "#ffffff",
-              "accentColor": "#0ea5e9"
+              "accentColor": "#0ea5e9",
+              "imageUrl": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=80",
+              "useBlockImageSettings": true,
+              "imageFit": "",
+              "imageObjectPosition": "",
+              "imageScale": ""
             }
           ],
           "cardBorderColor": "#c00000",
-          "contentVerticalAlign": "top"
+          "contentVerticalAlign": "top",
+          "imageFit": "contain",
+          "imageObjectPosition": "center center",
+          "imageScale": 100,
+          "imageMaxHeightMode": "auto",
+          "imageMaxHeightCustom": 500,
+          "imagePadding": 0,
+          "panelImageHeightMode": "match",
+          "panelImageFixedHeight": 500
         }
       },
       {
@@ -1673,7 +1811,8 @@
           "headlineAlign": "center",
           "headlineAlignment": "center",
           "headlineColor": "#00b0f0",
-          "headingColor": "#00b0f0"
+          "headingColor": "#00b0f0",
+          "cardsPerRowDesktop": 4
         }
       },
       {
@@ -1835,37 +1974,18 @@
           "headlineFontSize": 48,
           "headingFontSize": 48,
           "headlineColor": "#00b0f0",
-          "headingColor": "#00b0f0"
+          "headingColor": "#00b0f0",
+          "cardsPerRowDesktop": 2
         }
       },
       {
-        "id": "sm-cta",
-        "type": "cta-button",
-        "props": {
-          "style": "stacked-card",
-          "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px;\">Your Social Media Can Run Itself</span></span>",
-          "eyebrow": "Ready to automate your content?",
-          "description": "<span style=\"font-size: 22px;\">Generate, schedule and publish your entire social media presence weeks in advance using one powerful AI platform. Start your 14-day free trial today — no credit card required.</span>",
-          "text": "Start Your Free Trial",
-          "link": "#contact-us",
-          "note": "Book a Demo",
-          "size": "large",
-          "alignment": "center",
-          "textColor": "#ffffff",
-          "backgroundColor": "#121c26",
-          "borderColor": "rgba(139,92,246,0.3)",
-          "buttonColor": "#a855f7",
-          "buttonTextColor": "#ffffff",
-          "fullWidthBackground": true,
-          "baseLayoutWidth": 1500
-        }
-      },
-      {
-        "id": "365030cf-5983-4af4-8e2c-6a67f47c6d6e",
+        "id": "ac648c9d-69b2-45c0-afdc-9d5d282e5dc7",
         "type": "space",
         "props": {
           "height": "42px",
-          "fullWidthBackground": false
+          "fullWidthBackground": true,
+          "backgroundStyle": "color",
+          "backgroundColor": "#121c26"
         }
       },
       {
@@ -1887,7 +2007,9 @@
           "buttonTextColor": "#1f2937",
           "borderColor": "rgba(255,255,255,0.18)",
           "fullWidthBackground": true,
-          "baseLayoutWidth": 1500
+          "baseLayoutWidth": 1500,
+          "__blockId": 1782429345601,
+          "__blockType": "cta-button"
         }
       }
     ],
@@ -1896,6 +2018,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-03T05:23:04.531Z",
+  "savedAt": "2026-07-19T02:13:32.227Z",
   "source": "autosave"
 }

@@ -3,6 +3,8 @@ import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
+import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
+import { mergeVideoHeroProps } from "../../lib/website-builder/videoHero";
 import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
@@ -76,6 +78,23 @@ const INLINE_EDITOR_PLACEHOLDERS = new Set([
   "Column title",
   "Column content",
 ]);
+
+function stableCanvasJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableCanvasJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableCanvasJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function canvasBlocksHash(blocks) {
+  const text = stableCanvasJson(Array.isArray(blocks) ? blocks : []);
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+  }
+  return `blocks_${Math.abs(hash).toString(16)}`;
+}
 
 const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
 
@@ -354,6 +373,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const saveNoticeTimerRef = useRef(null);
   const autosaveTimerRef = useRef(null);
   const skipNextAutosaveRef = useRef(true);
+  const lastHydratedBlocksHashRef = useRef(canvasBlocksHash(Array.isArray(pageBlocks) ? pageBlocks : []));
+  const lastSavedBlocksHashRef = useRef(canvasBlocksHash(Array.isArray(pageBlocks) ? pageBlocks : []));
   const handleSaveRef = useRef(null);
   const pendingLocalBlocksRef = useRef(false);
   const onSaveRef = useRef(onSave);
@@ -374,7 +395,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const [canvasScale, setCanvasScale] = useState(1);
   const [blocksNaturalHeight, setBlocksNaturalHeight] = useState(0);
   const globalNavBlock = project?.globalNavBlock?.type === BlockTypes.NAV_BAR ? project.globalNavBlock : null;
-  const globalFooterBlock = project?.globalFooterBlock?.type === BlockTypes.FOOTER ? project.globalFooterBlock : null;
+  const rawGlobalFooterBlock = project?.globalFooterBlock || globalFooterToFooterBlock(project?.globalFooter, null);
+  const globalFooterBlock = rawGlobalFooterBlock?.type === BlockTypes.FOOTER ? rawGlobalFooterBlock : null;
 
   const selectedBlock = typeof selectedIndex === "number" ? blocks[selectedIndex] || null : null;
   const selectedGlobalBlock = selectedGlobalRole === "nav"
@@ -390,6 +412,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   selectedGlobalRoleRef.current = selectedGlobalRole;
   onSaveRef.current = onSave;
   onForceSaveRef.current = onForceSave;
+
+  const normalizeCanvasBlockUpdate = (previousBlock, nextBlock) => {
+    if (String(previousBlock?.type || nextBlock?.type || "") !== BlockTypes.VIDEO_HERO) return nextBlock;
+    return {
+      ...nextBlock,
+      props: mergeVideoHeroProps(previousBlock?.props || {}, nextBlock?.props || {}, {
+        removeVideo: Object.prototype.hasOwnProperty.call(nextBlock?.props || {}, "videoUrl") && String(nextBlock?.props?.videoUrl || "").trim() === "",
+      }),
+    };
+  };
+
+  const commitBlocks = (nextBlocks, { history = true, render = true } = {}) => {
+    const safeBlocks = Array.isArray(nextBlocks) ? nextBlocks : [];
+    if (history) pushHistory(latestBlocksRef.current.slice());
+    pendingLocalBlocksRef.current = true;
+    latestBlocksRef.current = safeBlocks;
+    if (render) flushSync(() => setBlocks(safeBlocks));
+  };
 
   // Dev helper: allows external code (e.g. Playwright) to inject a block into the canvas
   React.useEffect(() => {
@@ -443,12 +483,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       // truth. Background refreshes/server responses can be older than the
       // user's current tab, and accepting them here rolls the canvas backward.
       if (pendingLocalBlocksRef.current) {
-        Promise.resolve(onSaveRef.current(localBlocks)).catch(() => {});
+        const localHash = canvasBlocksHash(localBlocks);
+        Promise.resolve(onSaveRef.current(localBlocks)).then((saved) => {
+          if (saved && !saved?._saveError) {
+            lastSavedBlocksHashRef.current = localHash;
+            pendingLocalBlocksRef.current = false;
+            setLastSavedAt(Date.now());
+          }
+        }).catch(() => {});
       }
       return;
     }
 
     if (pageChanged) pendingLocalBlocksRef.current = false;
+    if (blocksMatch) {
+      lastHydratedBlocksHashRef.current = canvasBlocksHash(nextBlocks);
+      if (!pendingLocalBlocksRef.current) lastSavedBlocksHashRef.current = lastHydratedBlocksHashRef.current;
+    }
 
     const previousSelectedIndex = selectedIndexRef.current;
     const previousSelectedGlobalRole = selectedGlobalRoleRef.current;
@@ -457,6 +508,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       : null;
 
     latestBlocksRef.current = nextBlocks;
+    const nextHash = canvasBlocksHash(nextBlocks);
+    lastHydratedBlocksHashRef.current = nextHash;
+    if (!pendingLocalBlocksRef.current) lastSavedBlocksHashRef.current = nextHash;
     setBlocks(nextBlocks);
     skipNextAutosaveRef.current = true;
 
@@ -484,6 +538,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return undefined;
     }
     if (typeof onSaveRef.current !== "function") return undefined;
+    const currentHash = canvasBlocksHash(latestBlocksRef.current);
+    if (!pendingLocalBlocksRef.current && (currentHash === lastSavedBlocksHashRef.current || currentHash === lastHydratedBlocksHashRef.current)) {
+      return undefined;
+    }
 
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -492,9 +550,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
       const currentBlocks = latestBlocksRef.current;
+      const currentHashAtSave = canvasBlocksHash(currentBlocks);
+      if (!pendingLocalBlocksRef.current && currentHashAtSave === lastSavedBlocksHashRef.current) return;
       // Use onSaveRef so the timer always calls the latest save function at fire-time
       Promise.resolve(onSaveRef.current(currentBlocks)).then((saved) => {
-        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
+        if (saved && !saved?._saveError) {
+          lastSavedBlocksHashRef.current = currentHashAtSave;
+          pendingLocalBlocksRef.current = false;
+          setLastSavedAt(Date.now());
+        }
       }).catch(() => {});
     }, 1500);
 
@@ -516,7 +580,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         autosaveTimerRef.current = null;
       }
       if (typeof onSaveRef.current === "function") {
-        onSaveRef.current(latestBlocksRef.current);
+        const currentHash = canvasBlocksHash(latestBlocksRef.current);
+        if (pendingLocalBlocksRef.current || currentHash !== lastSavedBlocksHashRef.current) {
+          onSaveRef.current(latestBlocksRef.current);
+        }
       }
       // Best-effort server sync: use force-save if available so the 5s throttle is bypassed.
       // The browser may not complete async work on pagehide, but desktop browsers typically do.
@@ -581,8 +648,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     autosaveTimerRef.current = setTimeout(() => {
       autosaveTimerRef.current = null;
+      const currentHash = canvasBlocksHash(latestBlocksRef.current);
+      if (!pendingLocalBlocksRef.current && currentHash === lastSavedBlocksHashRef.current) return;
       Promise.resolve(onSaveRef.current(latestBlocksRef.current)).then((saved) => {
-        if (saved && !saved?._saveError) setLastSavedAt(Date.now());
+        if (saved && !saved?._saveError) {
+          lastSavedBlocksHashRef.current = currentHash;
+          pendingLocalBlocksRef.current = false;
+          setLastSavedAt(Date.now());
+        }
       }).catch(() => {});
     }, 1500);
   };
@@ -1137,7 +1210,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleDelete = (index) => {
-    const updated = blocks.filter((_, i) => i !== index);
+    const blockToDelete = latestBlocksRef.current[index] || blocks[index] || null;
+    const beforeBlocks = Array.isArray(latestBlocksRef.current) ? latestBlocksRef.current : blocks;
+    const updated = (Array.isArray(beforeBlocks) ? beforeBlocks : []).filter((_, i) => i !== index);
+    console.info("[website-builder delete] block removed from editor state", {
+      projectId: project?.id || "",
+      pageId: activePage || "",
+      pageName: activePage || "",
+      blockId: blockToDelete?.id || "",
+      blockType: blockToDelete?.type || "",
+      blockIndex: index,
+      beforeCount: Array.isArray(beforeBlocks) ? beforeBlocks.length : 0,
+      afterCount: updated.length,
+      beforeBlockIds: (Array.isArray(beforeBlocks) ? beforeBlocks : []).map((block, blockIndex) => ({
+        index: blockIndex,
+        id: block?.id || "",
+        type: block?.type || "",
+      })),
+      afterBlockIds: updated.map((block, blockIndex) => ({
+        index: blockIndex,
+        id: block?.id || "",
+        type: block?.type || "",
+      })),
+    });
     pushHistory(latestBlocksRef.current.slice());
     pendingLocalBlocksRef.current = true;
     latestBlocksRef.current = updated;
@@ -1225,11 +1320,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     if (propEditTimerRef.current) clearTimeout(propEditTimerRef.current);
     propEditTimerRef.current = setTimeout(() => { propEditSessionRef.current = false; }, 1200);
-    const updated = [...blocks];
-    updated[index] = { ...blocks[index], props: newProps };
-    pendingLocalBlocksRef.current = true;
-    latestBlocksRef.current = updated;
-    setBlocks(updated);
+    const updated = [...latestBlocksRef.current];
+    const previousBlock = updated[index];
+    if (!previousBlock) return;
+    updated[index] = normalizeCanvasBlockUpdate(previousBlock, { ...previousBlock, props: newProps });
+    commitBlocks(updated, { history: false });
   };
 
   const handleResizeBlockHeight = (index, nextHeight) => {
@@ -1244,21 +1339,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const applyAssetToCanvasBlock = (index, key, asset) => {
     const normalizedAsset = normalizeSelectedAsset(asset);
     if (!normalizedAsset?.src || typeof index !== "number") return null;
-    const updated = [...blocks];
+    const updated = [...latestBlocksRef.current];
     const target = updated[index];
     if (!target) return null;
 
     const nextProps = applyAssetToProps(target.props || {}, key, normalizedAsset);
-    nextProps[key] = normalizedAsset.src || "";
+    if (String(target.type || "") === BlockTypes.VIDEO_HERO && ["__video_hero_src__", "videoUrl", "videoSrc", "mediaUrl", "src", "url"].includes(String(key || ""))) {
+      Object.assign(nextProps, mergeVideoHeroProps(target.props || {}, {
+        videoUrl: normalizedAsset.src || "",
+        videoStoragePath: normalizedAsset.storagePath || target.props?.videoStoragePath || "",
+        videoMimeType: normalizedAsset.type || target.props?.videoMimeType || "",
+        videoFileName: normalizedAsset.name || target.props?.videoFileName || "",
+        videoUpdatedAt: new Date().toISOString(),
+      }));
+    } else {
+      nextProps[key] = normalizedAsset.src || "";
+    }
 
-    updated[index] = {
+    updated[index] = normalizeCanvasBlockUpdate(target, {
       ...target,
       props: nextProps,
-    };
+    });
 
-    pendingLocalBlocksRef.current = true;
-    latestBlocksRef.current = updated;
-    setBlocks(updated);
+    commitBlocks(updated);
     return updated;
   };
 
@@ -3095,6 +3198,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         showSavePopup(saved?._saveErrorMessage || "Could not save page", "error");
         return;
       }
+      lastSavedBlocksHashRef.current = canvasBlocksHash(committedBlocks);
+      pendingLocalBlocksRef.current = false;
       setLastSavedAt(Date.now());
       showSavePopup("Saved ✓");
     } catch (err) {

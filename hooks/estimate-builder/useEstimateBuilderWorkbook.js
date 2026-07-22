@@ -878,15 +878,27 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     });
   }
 
-  function updateStandardInclusions(nextInclusions) {
-    setWorkbook((current) => {
-      const standardInclusions = normaliseStandardInclusions(nextInclusions, current.builderId || "local-builder");
-      return {
-        ...current,
-        standardInclusions,
-        selected_standard_inclusions_package_id: standardInclusions.selectedPackageId,
-      };
-    });
+  async function updateStandardInclusions(nextInclusions, options = {}) {
+    const currentWorkbook = workbookRef.current || workbook;
+    const standardInclusions = normaliseStandardInclusions(nextInclusions, currentWorkbook.builderId || "local-builder");
+    const nextWorkbook = {
+      ...currentWorkbook,
+      standardInclusions,
+      selected_standard_inclusions_package_id: standardInclusions.selectedPackageId,
+    };
+    workbookRef.current = nextWorkbook;
+    setWorkbook(nextWorkbook);
+    if (!options.persist) return standardInclusions;
+
+    const savedAt = new Date().toISOString();
+    const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
+    saveLocalDraftMetadata(draft, savedAt);
+    await saveStoredJob(draft, savedAt);
+    rememberRecentJob(draft, savedAt);
+    setRecentJobs(loadRecentEstimateJobs());
+    setLastSavedAt(savedAt);
+    const savedRecord = await loadStoredJob(workbookJobKey(draft));
+    return normaliseStandardInclusions(savedRecord?.workbook?.standardInclusions || standardInclusions, currentWorkbook.builderId || "local-builder");
   }
 
   function updateStandardInclusionPackage(packageId, key, value) {

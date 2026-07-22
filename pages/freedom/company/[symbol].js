@@ -1,14 +1,56 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
+import { buildHeikinAshiCandles, chartTypeLabel, FreedomChartTypeSelector, FREEDOM_CHART_MODE_LABELS, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
+import { calculateAdaptiveScores } from "../../../lib/freedom-terminal/adaptiveBuyScore";
+import { calculateInvestmentSignal } from "../../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
 const CHART_MODE_STORAGE_KEY = "freedom-terminal-chart-mode";
 const CHART_RANGE_STORAGE_KEY = "freedom-terminal-chart-range";
 const CHART_MA_STORAGE_KEY = "freedom-terminal-chart-ma";
-const CHART_MODES = ["Candles", "Line", "Area"];
-const CHART_RANGES = ["1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
+const COMPANY_TAB_STORAGE_KEY = "freedom-terminal-company-tabs";
+const COMPANY_CHART_STATE_KEY = "freedom-terminal-company-chart-state";
+const CHART_INTERVAL_STORAGE_KEY = "freedom-terminal-chart-interval";
+const CHART_PANEL_LAYOUT_STORAGE_KEY = "freedom-terminal-chart-panel-layout";
+const CHART_MODES = FREEDOM_CHART_MODE_LABELS;
+const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
+const CHART_INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
+const DEFAULT_INTERVAL_BY_RANGE = {
+  "1D": "5m",
+  "5D": "15m",
+  "1M": "1h",
+  "3M": "1D",
+  "6M": "1D",
+  "1Y": "1D",
+  "3Y": "1W",
+  "5Y": "1W",
+  "MAX": "1W",
+};
+const API_RANGE_BY_LABEL = {
+  "1D": "1d",
+  "5D": "5d",
+  "1M": "1mo",
+  "3M": "3mo",
+  "6M": "6mo",
+  "1Y": "1y",
+  "3Y": "3y",
+  "5Y": "5y",
+  "MAX": "max",
+};
+const API_INTERVAL_BY_LABEL = {
+  "1m": "1m",
+  "5m": "5m",
+  "15m": "15m",
+  "30m": "30m",
+  "1h": "1h",
+  "4h": "4h",
+  "1D": "1d",
+  "1W": "1w",
+};
+const COMPANY_TABS = ["Overview", "Business Quality", "Valuation", "Analyst Review", "Price Trend", "Trade Setup", "Charts"];
 
 const COMPANY_STYLES = {
   MSFT: { companyName: "Microsoft", logoText: "MS", primaryColor: "#00A4EF", secondaryColor: "#7FBA00", accentColor: "#FFB900" },
@@ -132,6 +174,10 @@ function round(value, decimals = 2) {
   return Number.isFinite(number) ? Number(number.toFixed(decimals)) : null;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function average(values) {
   const clean = values.filter(Number.isFinite);
   if (!clean.length) return null;
@@ -162,6 +208,90 @@ function formatPercent(value, signed = false) {
 
 function formatVolume(value) {
   return Number.isFinite(value) ? compactNumber.format(value) : "--";
+}
+
+function formatChartCurrency(value, currency = "USD") {
+  return Number.isFinite(value)
+    ? new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", {
+        style: "currency",
+        currency: currency || "USD",
+        maximumFractionDigits: value >= 100 ? 2 : 4,
+      }).format(value)
+    : "--";
+}
+
+function formatChartTimestamp(value, timeZone = "America/New_York") {
+  const timestamp = typeof value === "number" ? value * 1000 : Date.parse(String(value || "").replace(" ", "T"));
+  if (!Number.isFinite(timestamp)) return "--";
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+    timeZoneName: "short",
+  }).format(new Date(timestamp));
+}
+
+function intervalIsIntraday(interval) {
+  return ["1m", "5m", "15m", "30m", "1h", "4h"].includes(interval);
+}
+
+function supportedIntervalsForRange(range) {
+  if (range === "1D") return ["1m", "5m", "15m", "30m", "1h"];
+  if (range === "5D") return ["5m", "15m", "30m", "1h"];
+  if (range === "1M") return ["30m", "1h", "1D"];
+  if (["3M", "6M", "1Y"].includes(range)) return ["1D"];
+  return ["1D", "1W"];
+}
+
+function normalizeStoredInterval(value, range) {
+  const interval = CHART_INTERVALS.includes(value) ? value : DEFAULT_INTERVAL_BY_RANGE[range] || "1D";
+  const supported = supportedIntervalsForRange(range);
+  return supported.includes(interval) ? interval : DEFAULT_INTERVAL_BY_RANGE[range] || supported[0] || "1D";
+}
+
+function labelForAxisDate(value, range, interval, timeZone = "America/New_York") {
+  const timestamp = Date.parse(String(value || "").replace(" ", "T"));
+  if (!Number.isFinite(timestamp)) return value;
+  if (intervalIsIntraday(interval) || range === "1D" || range === "5D") {
+    return new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone }).format(new Date(timestamp));
+  }
+  if (["1M", "3M", "6M", "1Y"].includes(range)) {
+    return new Intl.DateTimeFormat("en-AU", { day: "2-digit", month: "short", timeZone }).format(new Date(timestamp));
+  }
+  return new Intl.DateTimeFormat("en-AU", { month: "short", year: "2-digit", timeZone }).format(new Date(timestamp));
+}
+
+function buildDataQuality({ symbol, candles, range, interval, metadata }) {
+  const first = metadata?.firstTimestamp || candles[0]?.date || candles[0]?.timestamp;
+  const latest = metadata?.latestTimestamp || candles[candles.length - 1]?.date || candles[candles.length - 1]?.timestamp;
+  return {
+    symbol,
+    exchange: metadata?.exchange || "--",
+    currency: metadata?.currency || "USD",
+    provider: metadata?.provider || metadata?.source || "Twelve Data",
+    range,
+    interval,
+    first,
+    latest,
+    candleCount: metadata?.candleCount ?? candles.length,
+    dataLabel: metadata?.dataLabel || (intervalIsIntraday(interval) ? "Delayed 15 minutes" : "End-of-day"),
+    timezone: metadata?.exchangeTimezone || "America/New_York",
+    error: metadata?.error || "",
+  };
+}
+
+function priceScaleFromCandles(candles) {
+  const highs = candles.map((candle) => candle.high).filter(Number.isFinite);
+  const lows = candles.map((candle) => candle.low).filter(Number.isFinite);
+  if (!highs.length || !lows.length) return null;
+  const high = Math.max(...highs);
+  const low = Math.min(...lows);
+  const span = Math.max(0.01, high - low);
+  const padding = span * 0.1;
+  return { min: round(low - padding, 4), max: round(high + padding, 4), low, high };
 }
 
 function formatVsAverage(price, averageValue) {
@@ -622,6 +752,124 @@ function movingAverageValues(candles, days) {
   return candles.map((_, index) => simpleMovingAverage(candles, days, index));
 }
 
+function exponentialMovingAverage(values, period) {
+  const multiplier = 2 / (period + 1);
+  let previous = null;
+  return values.map((value) => {
+    if (!Number.isFinite(value)) return previous;
+    if (previous === null) {
+      previous = value;
+      return value;
+    }
+    previous = value * multiplier + previous * (1 - multiplier);
+    return previous;
+  });
+}
+
+function rsiSeriesFromCloses(closes, period = 14) {
+  return closes.map((_, index) => {
+    if (index < period) return null;
+    let gains = 0;
+    let losses = 0;
+    for (let cursor = index - period + 1; cursor <= index; cursor += 1) {
+      const change = closes[cursor] - closes[cursor - 1];
+      if (change >= 0) gains += change;
+      else losses += Math.abs(change);
+    }
+    if (!losses) return 100;
+    const relativeStrength = gains / period / (losses / period);
+    return round(100 - 100 / (1 + relativeStrength));
+  });
+}
+
+function macdHistogramSeries(closes) {
+  if (closes.length < 35) return closes.map(() => null);
+  const ema12 = exponentialMovingAverage(closes, 12);
+  const ema26 = exponentialMovingAverage(closes, 26);
+  const macdLine = closes.map((_, index) => (Number.isFinite(ema12[index]) && Number.isFinite(ema26[index]) ? ema12[index] - ema26[index] : null));
+  const signalLine = exponentialMovingAverage(macdLine, 9);
+  return macdLine.map((value, index) => (Number.isFinite(value) && Number.isFinite(signalLine[index]) ? round(value - signalLine[index], 4) : null));
+}
+
+function detectFibAnchors(candles) {
+  const clean = candles.filter((candle) => Number.isFinite(candle.low) && Number.isFinite(candle.high));
+  if (clean.length < 12) return null;
+  const recent = clean.slice(-100);
+  const lowIndex = recent.reduce((best, candle, index) => (candle.low < recent[best].low ? index : best), 0);
+  const afterLow = recent.slice(lowIndex);
+  const highIndex = lowIndex + afterLow.reduce((best, candle, index) => (candle.high > afterLow[best].high ? index : best), 0);
+  if (highIndex > lowIndex && recent[highIndex].high > recent[lowIndex].low) {
+    return {
+      low: { date: recent[lowIndex].date, price: round(recent[lowIndex].low) },
+      high: { date: recent[highIndex].date, price: round(recent[highIndex].high) },
+    };
+  }
+  const highFirstIndex = recent.reduce((best, candle, index) => (candle.high > recent[best].high ? index : best), 0);
+  const afterHigh = recent.slice(highFirstIndex);
+  const lowAfterHighIndex = highFirstIndex + afterHigh.reduce((best, candle, index) => (candle.low < afterHigh[best].low ? index : best), 0);
+  if (lowAfterHighIndex > highFirstIndex && recent[highFirstIndex].high > recent[lowAfterHighIndex].low) {
+    return {
+      low: { date: recent[lowAfterHighIndex].date, price: round(recent[lowAfterHighIndex].low) },
+      high: { date: recent[highFirstIndex].date, price: round(recent[highFirstIndex].high) },
+    };
+  }
+  return null;
+}
+
+function fibLevelsForAnchors(anchors) {
+  if (!Number.isFinite(anchors?.low?.price) || !Number.isFinite(anchors?.high?.price)) return [];
+  const low = Math.min(anchors.low.price, anchors.high.price);
+  const high = Math.max(anchors.low.price, anchors.high.price);
+  const range = high - low;
+  if (range <= 0) return [];
+  return [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map((ratio) => ({
+    ratio,
+    label: `${Math.round(ratio * 1000) / 10}%`,
+    price: round(high - range * ratio),
+  }));
+}
+
+function confluenceLabels(level, overlayLevels, tradeLevels) {
+  if (!Number.isFinite(level?.price)) return [];
+  return [
+    { label: "support", value: overlayLevels?.support },
+    { label: "resistance", value: overlayLevels?.resistance },
+    { label: "entry", value: tradeLevels?.entry },
+    { label: "target", value: tradeLevels?.target },
+    { label: "stop", value: tradeLevels?.stop },
+  ].filter((item) => Number.isFinite(item.value) && Math.abs(item.value - level.price) / level.price <= 0.006).map((item) => item.label);
+}
+
+function recommendedTradeLevels({ quote, valuation, research, overlayLevels }) {
+  const currentPrice = Number(quote?.currentPrice);
+  const researchBuyBelow = Number(research?.buyBelow);
+  const entry = Number.isFinite(valuation?.buyBelow) ? valuation.buyBelow : Number.isFinite(researchBuyBelow) ? researchBuyBelow : currentPrice;
+  const fairValue = Number(valuation?.fairValue);
+  const target = Number.isFinite(fairValue) && fairValue > entry ? fairValue : Number.isFinite(entry) ? entry * 1.18 : null;
+  const supportStop = Number.isFinite(overlayLevels?.support) && Number.isFinite(entry) && overlayLevels.support < entry ? overlayLevels.support * 0.985 : null;
+  const stop = Number.isFinite(supportStop) ? supportStop : Number.isFinite(entry) ? entry * 0.92 : null;
+  return { entry: round(entry), target: round(target), stop: round(stop) };
+}
+
+function tradeMetrics(levels) {
+  const portfolio = 100000;
+  const maxRiskBudget = portfolio * 0.01;
+  if (![levels?.entry, levels?.target, levels?.stop].every(Number.isFinite)) {
+    return { percentageGain: null, maximumLoss: null, dollarProfit: null, dollarRisk: null, riskReward: null, positionSize: 0 };
+  }
+  const risk = levels.entry - levels.stop;
+  const reward = levels.target - levels.entry;
+  const positionSize = risk > 0 ? Math.max(0, Math.floor(maxRiskBudget / risk)) : 0;
+  return {
+    percentageGain: levels.entry > 0 ? (reward / levels.entry) * 100 : null,
+    maximumLoss: positionSize * risk,
+    dollarProfit: positionSize * reward,
+    dollarRisk: positionSize * risk,
+    riskReward: risk > 0 ? reward / risk : null,
+    positionSize,
+  };
+}
+
 function mapDailyAverageToDisplayCandles(displayCandles, dailyAverages) {
   return displayCandles.map((candle) => {
     const sourceIndex = Number.isInteger(candle.sourceEndIndex) ? candle.sourceEndIndex : null;
@@ -655,26 +903,95 @@ function buildTrendLineData(candles) {
 }
 
 function loadStoredChartMode() {
-  if (typeof window === "undefined") return "Candles";
+  if (typeof window === "undefined") return "Standard candlesticks";
   const stored = window.localStorage.getItem(CHART_MODE_STORAGE_KEY);
-  return CHART_MODES.includes(stored) ? stored : "Candles";
+  if (stored === "Candles") return "Standard candlesticks";
+  if (stored === "Area") return "Area/fill";
+  return CHART_MODES.includes(stored) ? stored : "Standard candlesticks";
 }
 
 function loadStoredChartRange() {
-  return "1Y";
+  if (typeof window === "undefined") return "1Y";
+  const stored = window.localStorage.getItem(CHART_RANGE_STORAGE_KEY);
+  return CHART_RANGES.includes(stored) ? stored : "1Y";
+}
+
+function loadStoredChartInterval(range = "1Y") {
+  if (typeof window === "undefined") return DEFAULT_INTERVAL_BY_RANGE[range] || "1D";
+  return normalizeStoredInterval(window.localStorage.getItem(CHART_INTERVAL_STORAGE_KEY), range);
+}
+
+function loadStoredPanelLayout() {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(CHART_PANEL_LAYOUT_STORAGE_KEY) || "null");
+    if (!parsed) return null;
+    return {
+      price: Number.isFinite(parsed.price) ? parsed.price : 68,
+      volume: Number.isFinite(parsed.volume) ? parsed.volume : 12,
+      rsi: Number.isFinite(parsed.rsi) ? parsed.rsi : 10,
+      macd: Number.isFinite(parsed.macd) ? parsed.macd : 10,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistPanelLayout(layout) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CHART_PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  } catch {}
+}
+
+function readCompanyChartState(symbol) {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMPANY_CHART_STATE_KEY) || "{}");
+    return parsed?.[symbol] || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCompanyChartState(symbol, patch) {
+  if (typeof window === "undefined" || !symbol) return;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMPANY_CHART_STATE_KEY) || "{}");
+    const next = { ...parsed, [symbol]: { ...(parsed?.[symbol] || {}), ...patch } };
+    window.localStorage.setItem(COMPANY_CHART_STATE_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+function readCompanyTab(symbol) {
+  if (typeof window === "undefined") return "Overview";
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMPANY_TAB_STORAGE_KEY) || "{}");
+    return COMPANY_TABS.includes(parsed?.[symbol]) ? parsed[symbol] : "Overview";
+  } catch {
+    return "Overview";
+  }
+}
+
+function writeCompanyTab(symbol, tab) {
+  if (typeof window === "undefined" || !symbol || !COMPANY_TABS.includes(tab)) return;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(COMPANY_TAB_STORAGE_KEY) || "{}");
+    window.localStorage.setItem(COMPANY_TAB_STORAGE_KEY, JSON.stringify({ ...parsed, [symbol]: tab }));
+  } catch {}
 }
 
 function loadStoredMaVisibility() {
-  if (typeof window === "undefined") return { ma20: true, ma50: true, ma200: true };
+  if (typeof window === "undefined") return { ma20: false, ma50: false, ma200: false };
   try {
     const parsed = JSON.parse(window.localStorage.getItem(CHART_MA_STORAGE_KEY) || "{}");
     return {
-      ma20: typeof parsed.ma20 === "boolean" ? parsed.ma20 : true,
-      ma50: typeof parsed.ma50 === "boolean" ? parsed.ma50 : true,
-      ma200: typeof parsed.ma200 === "boolean" ? parsed.ma200 : true,
+      ma20: typeof parsed.ma20 === "boolean" ? parsed.ma20 : false,
+      ma50: typeof parsed.ma50 === "boolean" ? parsed.ma50 : false,
+      ma200: typeof parsed.ma200 === "boolean" ? parsed.ma200 : false,
     };
   } catch {
-    return { ma20: true, ma50: true, ma200: true };
+    return { ma20: false, ma50: false, ma200: false };
   }
 }
 
@@ -699,12 +1016,39 @@ function chartTooltipFormatter(params, candles, ma20, ma50, ma200) {
   ].join("");
 }
 
-function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibility, setMaVisibility }) {
+function MarketChart({ candles, range, setRange, interval, setInterval, metadata, mode, setMode, notice, maVisibility, setMaVisibility, symbol, quote, valuation, research, tradeMode = false, onBackToResearch = null }) {
   const chartNodeRef = useRef(null);
   const chartRef = useRef(null);
+  const initializedSymbolRef = useRef("");
+  const zoomRef = useRef({ start: 45, end: 100 });
+  const drawingModeRef = useRef("pan");
+  const drawingFibRef = useRef(false);
+  const refreshOverlayPixelsRef = useRef(() => {});
+  const recommendedLevelsRef = useRef({ entry: null, target: null, stop: null });
   const [echartsReady, setEchartsReady] = useState(false);
   const [showVolume, setShowVolume] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showRsi, setShowRsi] = useState(false);
+  const [showMacd, setShowMacd] = useState(false);
+  const [zoomState, setZoomState] = useState({ start: 45, end: 100 });
+  const [drawingMode, setDrawingMode] = useState("pan");
+  const [tradeLevels, setTradeLevels] = useState({ entry: null, target: null, stop: null });
+  const [linePixels, setLinePixels] = useState({ entry: null, target: null, stop: null });
+  const [currentPricePixel, setCurrentPricePixel] = useState(null);
+  const [draggingTradeLine, setDraggingTradeLine] = useState(null);
+  const [fibAnchors, setFibAnchors] = useState(null);
+  const [fibVisible, setFibVisible] = useState(true);
+  const [fibPixels, setFibPixels] = useState({ levels: [], low: null, high: null });
+  const [draggingFibAnchor, setDraggingFibAnchor] = useState(null);
+  const [movingFib, setMovingFib] = useState(null);
+  const [drawingFib, setDrawingFib] = useState(false);
+  const [priceScale, setPriceScale] = useState(null);
+  const [draggingPriceScale, setDraggingPriceScale] = useState(null);
+  const [includeOverlaysInScale, setIncludeOverlaysInScale] = useState(false);
+  const [panelLayout, setPanelLayout] = useState(() => loadStoredPanelLayout() || { price: 68, volume: 12, rsi: 10, macd: 10 });
+  const [draggingPanel, setDraggingPanel] = useState(null);
+  const [tradeMessage, setTradeMessage] = useState("");
+  const [tradeActionSaving, setTradeActionSaving] = useState(false);
   const dailyVisible = useMemo(() => visibleCandlesForRange(candles, range), [candles, range]);
   const visible = dailyVisible;
   const dailyMa20 = useMemo(() => movingAverageValues(candles, 20), [candles]);
@@ -716,28 +1060,319 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   const hasMa200 = candles.length >= 200 && ma200.some(Number.isFinite);
   const overlayLevels = useMemo(() => getOverlayLevels(candles, dailyVisible), [candles, dailyVisible]);
   const trendLineData = useMemo(() => buildTrendLineData(visible), [visible]);
+  const closeValues = useMemo(() => visible.map((candle) => candle.close), [visible]);
+  const rsiValues = useMemo(() => rsiSeriesFromCloses(closeValues), [closeValues]);
+  const macdValues = useMemo(() => macdHistogramSeries(closeValues), [closeValues]);
+  const recommendedLevels = useMemo(() => recommendedTradeLevels({ quote, valuation, research, overlayLevels }), [overlayLevels, quote, research, valuation]);
+  const plannerMetrics = useMemo(() => tradeMetrics(tradeLevels), [tradeLevels]);
+  const effectiveMode = tradeMode ? "Standard candlesticks" : mode;
+  const effectiveShowVolume = tradeMode || showVolume;
+  const effectiveShowRsi = !tradeMode && showRsi;
+  const effectiveShowMacd = !tradeMode && showMacd;
+  const effectiveMaVisibility = useMemo(
+    () => (tradeMode ? { ma20: false, ma50: false, ma200: false } : maVisibility),
+    [maVisibility, tradeMode]
+  );
   const startPrice = dailyVisible[0]?.close;
   const endPrice = dailyVisible[dailyVisible.length - 1]?.close;
-  const canMountChart = visible.length > 0;
+  const tradeOverlayReady = tradeMode && [linePixels.entry, linePixels.target, linePixels.stop].every(Number.isFinite);
+  const dataQuality = useMemo(() => buildDataQuality({ symbol, candles: visible, range, interval, metadata }), [interval, metadata, range, symbol, visible]);
+  const activePanelLayout = useMemo(() => {
+    const visiblePanels = ["price"];
+    if (effectiveShowVolume) visiblePanels.push("volume");
+    if (effectiveShowRsi) visiblePanels.push("rsi");
+    if (effectiveShowMacd) visiblePanels.push("macd");
+    const base = { price: panelLayout.price, volume: panelLayout.volume, rsi: panelLayout.rsi, macd: panelLayout.macd };
+    const hiddenSpace = ["volume", "rsi", "macd"].filter((key) => !visiblePanels.includes(key)).reduce((total, key) => total + base[key], 0);
+    base.price += hiddenSpace;
+    const total = visiblePanels.reduce((sum, key) => sum + base[key], 0) || 100;
+    return visiblePanels.reduce((next, key) => ({ ...next, [key]: (base[key] / total) * 100 }), {});
+  }, [effectiveShowMacd, effectiveShowRsi, effectiveShowVolume, panelLayout]);
+
+  useEffect(() => {
+    recommendedLevelsRef.current = recommendedLevels;
+    writeCompanyChartState(symbol, { recommendedLevels });
+  }, [recommendedLevels, symbol]);
+
+  useEffect(() => {
+    const stored = readCompanyChartState(symbol);
+    if (CHART_RANGES.includes(stored.range)) setRange(stored.range);
+    if (stored.zoom && Number.isFinite(stored.zoom.start) && Number.isFinite(stored.zoom.end)) {
+      zoomRef.current = stored.zoom;
+      setZoomState(stored.zoom);
+    }
+    if (stored.tradeLevels && [stored.tradeLevels.entry, stored.tradeLevels.target, stored.tradeLevels.stop].every(Number.isFinite)) {
+      setTradeLevels(stored.tradeLevels);
+    } else {
+      setTradeLevels(recommendedLevelsRef.current);
+    }
+    if (stored.fibAnchors) setFibAnchors(stored.fibAnchors);
+    if (typeof stored.fibVisible === "boolean") setFibVisible(stored.fibVisible);
+    initializedSymbolRef.current = symbol;
+  }, [setRange, symbol]);
+
+  useEffect(() => {
+    drawingModeRef.current = drawingMode;
+    if (drawingMode !== "fib") {
+      drawingFibRef.current = false;
+      setDrawingFib(false);
+    }
+  }, [drawingMode]);
+
+  useEffect(() => {
+    writeCompanyChartState(symbol, { range });
+  }, [range, symbol]);
+
+  const saveTradeLevels = useCallback((next) => {
+    setTradeLevels(next);
+    writeCompanyChartState(symbol, { tradeLevels: next });
+  }, [symbol]);
+
+  const updateTradeLine = useCallback((key, value) => {
+    const nextValue = round(value);
+    if (!Number.isFinite(nextValue)) return;
+    setTradeLevels((current) => {
+      const next = { ...current, [key]: nextValue };
+      writeCompanyChartState(symbol, { tradeLevels: next });
+      return next;
+    });
+  }, [symbol]);
+
+  const saveFib = useCallback((next, visibleState = fibVisible) => {
+    setFibAnchors(next);
+    setFibVisible(visibleState);
+    writeCompanyChartState(symbol, { fibAnchors: next, fibVisible: visibleState });
+  }, [fibVisible, symbol]);
+
+  function autoFib() {
+    const detected = detectFibAnchors(visible);
+    if (detected) saveFib(detected, true);
+  }
+
+  function resetPlanner() {
+    saveTradeLevels(recommendedLevels);
+  }
+
+  function selectRange(nextRange) {
+    const nextInterval = normalizeStoredInterval(DEFAULT_INTERVAL_BY_RANGE[nextRange], nextRange);
+    setRange(nextRange);
+    setInterval(nextInterval);
+    setPriceScale(null);
+    resetZoomState();
+    writeCompanyChartState(symbol, { range: nextRange, interval: nextInterval, zoom: { start: 0, end: 100 } });
+  }
+
+  function selectInterval(nextInterval) {
+    const normalized = normalizeStoredInterval(nextInterval, range);
+    setInterval(normalized);
+    setPriceScale(null);
+    resetZoomState();
+    writeCompanyChartState(symbol, { interval: normalized, zoom: { start: 0, end: 100 } });
+  }
+
+  function resetZoomState() {
+    const nextZoom = { start: 0, end: 100 };
+    zoomRef.current = nextZoom;
+    setZoomState(nextZoom);
+    chartRef.current?.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
+  }
+
+  async function createTradeAlert(alertType, triggerPrice, direction) {
+    if (!Number.isFinite(triggerPrice)) throw new Error(`${alertType} price is not available.`);
+    const response = await fetch("/api/freedom-trader/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol,
+        alertType,
+        triggerPrice,
+        direction,
+        priority: alertType.includes("STOP") ? "high" : "normal",
+        message: `${alertType} alert for ${symbol} at ${formatCurrency(triggerPrice)}. Alert only; no trade is placed automatically.`,
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.ok === false) throw new Error(data?.error || `Unable to create ${alertType} alert.`);
+    return data;
+  }
+
+  async function runTradeAction(action) {
+    try {
+      setTradeActionSaving(true);
+      setTradeMessage("");
+      if (action === "entry") {
+        await createTradeAlert("ENTRY", tradeLevels.entry, "below");
+        setTradeMessage(`Entry alert created at ${formatCurrency(tradeLevels.entry)}.`);
+      }
+      if (action === "all") {
+        await Promise.all([
+          createTradeAlert("ENTRY", tradeLevels.entry, "below"),
+          createTradeAlert("STOP LOSS", tradeLevels.stop, "below"),
+          createTradeAlert("TARGET", tradeLevels.target, "above"),
+        ]);
+        setTradeMessage("Entry, stop loss and target alerts created.");
+      }
+      if (action === "activate") {
+        saveTradeLevels(tradeLevels);
+        await createTradeAlert("ACTIVE TRADE SETUP", tradeLevels.entry, "below");
+        setTradeMessage("Trade setup activated for monitoring. No trade was placed.");
+      }
+    } catch (error) {
+      setTradeMessage(error.message || "Unable to create alert.");
+    } finally {
+      setTradeActionSaving(false);
+    }
+  }
+
+  const dateIndex = useCallback((date) => {
+    return visible.findIndex((candle) => candle.date === date);
+  }, [visible]);
+
+  const shiftedDate = useCallback((date, deltaIndex) => {
+    const index = dateIndex(date);
+    if (index < 0) return date;
+    return visible[clamp(index + deltaIndex, 0, visible.length - 1)]?.date || date;
+  }, [dateIndex, visible]);
+
+  function selectDrawingMode(modeName) {
+    setDrawingMode(modeName);
+    setDraggingTradeLine(null);
+    setDraggingFibAnchor(null);
+    setMovingFib(null);
+    setDrawingFib(false);
+  }
+
+  const currentPriceScale = useCallback(() => {
+    if (Number.isFinite(priceScale?.min) && Number.isFinite(priceScale?.max)) return priceScale;
+    const scaleCandles = normalizeChartType(effectiveMode) === "heikin" ? buildHeikinAshiCandles(visible) : visible;
+    const base = priceScaleFromCandles(scaleCandles);
+    if (!base) return null;
+    if (!includeOverlaysInScale) return base;
+    const overlayPrices = [quote?.currentPrice, tradeLevels.entry, tradeLevels.target, tradeLevels.stop]
+      .concat(fibVisible && fibAnchors ? [fibAnchors.low?.price, fibAnchors.high?.price] : [])
+      .filter(Number.isFinite);
+    if (!overlayPrices.length) return base;
+    const min = Math.min(base.low, ...overlayPrices);
+    const max = Math.max(base.high, ...overlayPrices);
+    const padding = Math.max(0.01, max - min) * 0.1;
+    return { min: round(min - padding, 4), max: round(max + padding, 4), low: min, high: max };
+  }, [effectiveMode, fibAnchors, fibVisible, includeOverlaysInScale, priceScale, quote?.currentPrice, tradeLevels.entry, tradeLevels.stop, tradeLevels.target, visible]);
+
+  const chartPointFromPointer = useCallback((event) => {
+    const node = chartNodeRef.current;
+    if (!node || !visible.length) return null;
+    const rect = node.getBoundingClientRect();
+    const plotLeft = 64;
+    const plotRight = 72;
+    const plotTop = 42;
+    const plotHeight = effectiveShowVolume ? rect.height * (tradeMode ? 0.7 : 0.48) : rect.height * 0.78;
+    const plotWidth = Math.max(1, rect.width - plotLeft - plotRight);
+    const xRatio = clamp((event.clientX - rect.left - plotLeft) / plotWidth, 0, 1);
+    const yRatio = clamp((event.clientY - rect.top - plotTop) / Math.max(1, plotHeight), 0, 1);
+    const zoom = zoomRef.current || { start: 0, end: 100 };
+    const startIndex = Math.floor(((zoom.start ?? 0) / 100) * Math.max(visible.length - 1, 0));
+    const endIndex = Math.ceil(((zoom.end ?? 100) / 100) * Math.max(visible.length - 1, 0));
+    const index = clamp(Math.round(startIndex + xRatio * Math.max(1, endIndex - startIndex)), 0, visible.length - 1);
+    const scale = currentPriceScale();
+    if (!scale) return null;
+    const price = scale.max - yRatio * (scale.max - scale.min);
+    const date = visible[index]?.date;
+    return date && Number.isFinite(price) && price > 0 ? { date, price: round(price) } : null;
+  }, [currentPriceScale, effectiveShowVolume, tradeMode, visible]);
+
+  useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+      setTimeout(() => chartRef.current?.resize(), 80);
+    }
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  const refreshOverlayPixels = useCallback(() => {
+    const chart = chartRef.current;
+    const node = chartNodeRef.current;
+    if (!visible.length || !node) return;
+    const fallbackDate = visible[visible.length - 1]?.date;
+    const rect = node.getBoundingClientRect();
+    const plotLeft = 64;
+    const plotRight = 72;
+    const plotTop = 42;
+    const plotHeight = effectiveShowVolume ? rect.height * (tradeMode ? 0.7 : 0.48) : rect.height * 0.78;
+    const plotWidth = Math.max(1, rect.width - plotLeft - plotRight);
+    const visibleScale = currentPriceScale();
+    const fallbackPointToPixel = (date, price) => {
+      if (!visibleScale || !Number.isFinite(price)) return null;
+      const zoom = zoomRef.current || { start: 0, end: 100 };
+      const startIndex = Math.floor(((zoom.start ?? 0) / 100) * Math.max(visible.length - 1, 0));
+      const endIndex = Math.ceil(((zoom.end ?? 100) / 100) * Math.max(visible.length - 1, 0));
+      const index = Math.max(startIndex, visible.findIndex((candle) => candle.date === date));
+      const span = Math.max(1, endIndex - startIndex);
+      const x = plotLeft + clamp((index - startIndex) / span, 0, 1) * plotWidth;
+      const y = plotTop + clamp((visibleScale.max - price) / Math.max(0.0001, visibleScale.max - visibleScale.min), 0, 1) * plotHeight;
+      return { x, y };
+    };
+    const pointToPixel = (date, price) => {
+      if (chart) {
+        try {
+          const point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [date || fallbackDate, price]);
+          if (Array.isArray(point) && point.every(Number.isFinite)) return { x: point[0], y: point[1] };
+          if (Number.isFinite(point)) return { x: plotLeft + plotWidth, y: point };
+        } catch {}
+      }
+      return fallbackPointToPixel(date || fallbackDate, price);
+    };
+    if ([tradeLevels.entry, tradeLevels.target, tradeLevels.stop].every(Number.isFinite)) {
+      const next = {
+        entry: pointToPixel(fallbackDate, tradeLevels.entry)?.y,
+        target: pointToPixel(fallbackDate, tradeLevels.target)?.y,
+        stop: pointToPixel(fallbackDate, tradeLevels.stop)?.y,
+      };
+      if (Object.values(next).every(Number.isFinite)) setLinePixels(next);
+    }
+    if (Number.isFinite(quote?.currentPrice)) {
+      const currentPriceY = pointToPixel(fallbackDate, quote.currentPrice)?.y;
+      setCurrentPricePixel(Number.isFinite(currentPriceY) ? currentPriceY : null);
+    } else {
+      setCurrentPricePixel(null);
+    }
+    if (fibVisible && fibAnchors) {
+      setFibPixels({
+        levels: fibLevelsForAnchors(fibAnchors).map((level) => {
+          const point = pointToPixel(fallbackDate, level.price);
+          return point ? { ...level, y: point.y, confluence: confluenceLabels(level, overlayLevels, tradeLevels) } : null;
+        }).filter(Boolean),
+        low: pointToPixel(fibAnchors.low?.date, fibAnchors.low?.price),
+        high: pointToPixel(fibAnchors.high?.date, fibAnchors.high?.price),
+      });
+    } else {
+      setFibPixels({ levels: [], low: null, high: null });
+    }
+  }, [currentPriceScale, effectiveShowVolume, fibAnchors, fibVisible, overlayLevels, quote?.currentPrice, tradeLevels, tradeMode, visible]);
+
+  useEffect(() => {
+    refreshOverlayPixelsRef.current = refreshOverlayPixels;
+  }, [refreshOverlayPixels]);
 
   useEffect(() => {
     let cancelled = false;
     let resizeObserver = null;
     let resizeHandler = null;
+    let chartInstance = null;
 
     async function mountChart() {
-      if (!chartNodeRef.current || !canMountChart) return;
+      if (!chartNodeRef.current) return;
       const echarts = await import("echarts");
       if (cancelled || !chartNodeRef.current) return;
-      chartRef.current?.dispose();
-      chartRef.current = null;
-      chartRef.current = echarts.init(chartNodeRef.current, null, { renderer: "canvas" });
+      chartInstance = echarts.init(chartNodeRef.current, null, { renderer: "canvas" });
+      chartRef.current = chartInstance;
       setEchartsReady(true);
 
-      function updateSize() {
-        if (!chartNodeRef.current) return;
-        chartRef.current?.resize();
-      }
+      const updateSize = () => {
+        chartInstance?.resize();
+        window.requestAnimationFrame(() => refreshOverlayPixelsRef.current());
+      };
 
       resizeHandler = updateSize;
       window.addEventListener("resize", resizeHandler);
@@ -752,28 +1387,120 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
       cancelled = true;
       if (resizeHandler) window.removeEventListener("resize", resizeHandler);
       resizeObserver?.disconnect();
-      chartRef.current?.dispose();
-      chartRef.current = null;
+      chartInstance?.dispose();
+      if (chartRef.current === chartInstance) chartRef.current = null;
       setEchartsReady(false);
     };
-  }, [canMountChart]);
+  }, []);
 
   useEffect(() => {
-    function onFullscreenChange() {
-      setIsFullscreen(Boolean(document.fullscreenElement));
-      setTimeout(() => chartRef.current?.resize(), 80);
-    }
+    refreshOverlayPixels();
+  }, [refreshOverlayPixels]);
 
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
+  useEffect(() => {
+    const activeDrag = draggingTradeLine || draggingFibAnchor || movingFib || drawingFib;
+    if (!activeDrag) return undefined;
+    const handleMove = (event) => {
+      const point = chartPointFromPointer(event);
+      if (!point) return;
+      if (draggingTradeLine) updateTradeLine(draggingTradeLine, point.price);
+      if (draggingFibAnchor && fibAnchors) saveFib({ ...fibAnchors, [draggingFibAnchor]: point }, true);
+      if (movingFib?.anchors && movingFib?.startPoint) {
+        const deltaIndex = dateIndex(point.date) - dateIndex(movingFib.startPoint.date);
+        const deltaPrice = point.price - movingFib.startPoint.price;
+        saveFib({
+          low: {
+            date: shiftedDate(movingFib.anchors.low.date, deltaIndex),
+            price: round(movingFib.anchors.low.price + deltaPrice),
+          },
+          high: {
+            date: shiftedDate(movingFib.anchors.high.date, deltaIndex),
+            price: round(movingFib.anchors.high.price + deltaPrice),
+          },
+        }, true);
+      }
+      if (drawingFib || drawingFibRef.current) {
+        setFibAnchors((current) => {
+          const base = current?.low ? current : { low: point, high: point };
+          return { ...base, high: point };
+        });
+      }
+    };
+    const handleUp = (event) => {
+      const point = chartPointFromPointer(event);
+      if ((drawingFib || drawingFibRef.current) && point) {
+        setFibAnchors((current) => {
+          const next = { low: current?.low || point, high: point };
+          writeCompanyChartState(symbol, { fibAnchors: next, fibVisible: true });
+          return next;
+        });
+        setFibVisible(true);
+      }
+      setDraggingTradeLine(null);
+      setDraggingFibAnchor(null);
+      setMovingFib(null);
+      drawingFibRef.current = false;
+      setDrawingFib(false);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [chartPointFromPointer, dateIndex, drawingFib, draggingFibAnchor, draggingTradeLine, fibAnchors, movingFib, saveFib, shiftedDate, symbol, updateTradeLine]);
+
+  useEffect(() => {
+    if (!draggingPriceScale) return undefined;
+    const handleMove = (event) => {
+      const deltaY = event.clientY - draggingPriceScale.startY;
+      const span = draggingPriceScale.max - draggingPriceScale.min;
+      const factor = Math.max(0.25, Math.min(4, 1 + deltaY / 260));
+      const mid = (draggingPriceScale.max + draggingPriceScale.min) / 2;
+      const nextSpan = span * factor;
+      setPriceScale({ min: round(mid - nextSpan / 2), max: round(mid + nextSpan / 2) });
+    };
+    const handleUp = () => setDraggingPriceScale(null);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [draggingPriceScale]);
+
+  useEffect(() => {
+    if (!draggingPanel) return undefined;
+    const handleMove = (event) => {
+      const delta = ((event.clientY - draggingPanel.startY) / Math.max(1, draggingPanel.height)) * 100;
+      setPanelLayout(() => {
+        const next = { ...draggingPanel.layout };
+        const topKey = draggingPanel.topKey;
+        const bottomKey = draggingPanel.bottomKey;
+        const top = clamp(draggingPanel.layout[topKey] + delta, topKey === "price" ? 45 : 6, 82);
+        const bottom = clamp(draggingPanel.layout[bottomKey] - delta, 6, 35);
+        next[topKey] = top;
+        next[bottomKey] = bottom;
+        persistPanelLayout(next);
+        return next;
+      });
+    };
+    const handleUp = () => setDraggingPanel(null);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [draggingPanel]);
 
   useEffect(() => {
     if (!chartRef.current || !chartNodeRef.current || !echartsReady || !visible.length) return;
 
-    const dates = visible.map((candle) => candle.date);
-    const candleValues = visible.map((candle) => [candle.open, candle.close, candle.low, candle.high]);
-    const closeValues = visible.map((candle) => candle.close);
+    const chartVisible = normalizeChartType(effectiveMode) === "heikin" ? buildHeikinAshiCandles(visible) : visible;
+    const dates = chartVisible.map((candle) => candle.date);
+    const candleValues = chartVisible.map((candle) => [candle.open, candle.close, candle.low, candle.high]);
+    const closeValues = chartVisible.map((candle) => candle.close);
     const chartStyles = getComputedStyle(chartNodeRef.current);
     const accentColor = chartStyles.getPropertyValue("--company-accent").trim() || "#E4B85D";
     const volumeValues = visible.map((candle) => ({
@@ -782,52 +1509,46 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
     }));
     const upColor = "#2BD89F";
     const downColor = "#FF5F57";
+    const activePriceScale = currentPriceScale();
+    const panelKeys = ["price"]
+      .concat(effectiveShowVolume ? ["volume"] : [])
+      .concat(effectiveShowRsi ? ["rsi"] : [])
+      .concat(effectiveShowMacd ? ["macd"] : []);
+    const panelGap = panelKeys.length > 1 ? 2 : 0;
+    const usableHeight = 80 - panelGap * (panelKeys.length - 1);
+    let panelCursor = 8;
+    const panelGrids = {};
+    panelKeys.forEach((key) => {
+      const height = Math.max(key === "price" ? 45 : 6, (activePanelLayout[key] || 0) * usableHeight / 100);
+      panelGrids[key] = { top: `${panelCursor}%`, height: `${height}%` };
+      panelCursor += height + panelGap;
+    });
     const priceSeries =
-      mode === "Candles"
+      ["candles", "hollow", "ohlc", "heikin"].includes(normalizeChartType(effectiveMode))
         ? {
             type: "candlestick",
             name: "OHLC",
             data: candleValues,
-            barMaxWidth: range === "1M" || range === "3M" ? 18 : 14,
-            barMinWidth: 4,
+            barMaxWidth: normalizeChartType(effectiveMode) === "ohlc" ? 8 : range === "1M" || range === "3M" ? 18 : 14,
+            barMinWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 4,
             itemStyle: {
-              color: upColor,
+              color: normalizeChartType(effectiveMode) === "hollow" ? "transparent" : upColor,
               color0: downColor,
               borderColor: upColor,
               borderColor0: downColor,
-              borderWidth: 1.6,
-            },
-            markLine: {
-              animation: false,
-              symbol: ["none", "none"],
-              label: { color: "#DDE8EC", fontWeight: 800, formatter: "{b}" },
-              lineStyle: { type: "dashed", width: 1.4 },
-              data: [
-                Number.isFinite(overlayLevels.resistance)
-                  ? { name: "Resistance", yAxis: overlayLevels.resistance, lineStyle: { color: "#F97316" } }
-                  : null,
-                Number.isFinite(overlayLevels.support)
-                  ? { name: "Support", yAxis: overlayLevels.support, lineStyle: { color: "#22C55E" } }
-                  : null,
-                Number.isFinite(overlayLevels.yearHigh)
-                  ? { name: "52W High", yAxis: overlayLevels.yearHigh, lineStyle: { color: "#60A5FA" } }
-                  : null,
-                Number.isFinite(overlayLevels.yearLow)
-                  ? { name: "52W Low", yAxis: overlayLevels.yearLow, lineStyle: { color: "#A78BFA" } }
-                  : null,
-              ].filter(Boolean),
+              borderWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 1.6,
             },
           }
         : {
             type: "line",
-            name: mode,
+            name: effectiveMode,
             data: closeValues,
             showSymbol: false,
             smooth: true,
             sampling: "lttb",
             lineStyle: { color: accentColor, width: 2.6 },
             areaStyle:
-              mode === "Area"
+              normalizeChartType(effectiveMode) === "area"
                 ? {
                     color: {
                       type: "linear",
@@ -863,24 +1584,37 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
         formatter: (params) => chartTooltipFormatter(params, visible, ma20, ma50, ma200),
       },
       legend: {
+        show: false,
         top: 3,
         right: 16,
         textStyle: { color: "#C9D5DB", fontWeight: 800 },
         inactiveColor: "#53636B",
-        data: ["OHLC", "MA20", "MA50", "MA200", "Trend Line", "Volume"],
+        data: ["OHLC", "MA20", "MA50", "MA200", "Trend Line", "Volume", "RSI", "MACD"],
       },
       grid: [
         {
           left: 64,
           right: 72,
-          top: 42,
-          height: showVolume ? "62%" : "76%",
+          top: panelGrids.price?.top || "8%",
+          height: panelGrids.price?.height || "72%",
         },
         {
           left: 64,
           right: 72,
-          bottom: 52,
-          height: showVolume ? 90 : 0,
+          top: panelGrids.volume?.top || "86%",
+          height: effectiveShowVolume ? panelGrids.volume?.height || "10%" : 0,
+        },
+        {
+          left: 64,
+          right: 72,
+          top: panelGrids.rsi?.top || "86%",
+          height: effectiveShowRsi ? panelGrids.rsi?.height || "12%" : 0,
+        },
+        {
+          left: 64,
+          right: 72,
+          top: panelGrids.macd?.top || "86%",
+          height: effectiveShowMacd ? panelGrids.macd?.height || "15%" : 0,
         },
       ],
       xAxis: [
@@ -889,7 +1623,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           data: dates,
           boundaryGap: true,
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.14)" } },
-          axisLabel: { color: "#AEBCC4", hideOverlap: true },
+          axisLabel: { color: "#AEBCC4", hideOverlap: true, formatter: (value) => labelForAxisDate(value, range, interval, dataQuality.timezone) },
           axisTick: { show: false },
           splitLine: { show: false },
         },
@@ -903,37 +1637,81 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
           axisTick: { show: false },
           splitLine: { show: false },
         },
+        {
+          type: "category",
+          gridIndex: 2,
+          data: dates,
+          boundaryGap: true,
+          axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false },
+        },
+        {
+          type: "category",
+          gridIndex: 3,
+          data: dates,
+          boundaryGap: true,
+          axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
+          axisLabel: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false },
+        },
       ],
       yAxis: [
         {
           scale: true,
           position: "right",
           axisLine: { show: false },
-          axisLabel: { color: "#AEBCC4", formatter: (value) => `$${Number(value).toFixed(0)}` },
-          splitLine: { lineStyle: { color: "rgba(255,255,255,0.075)" } },
+          axisLabel: { color: "#AEBCC4", formatter: (value) => formatChartCurrency(Number(value), dataQuality.currency) },
+          min: Number.isFinite(activePriceScale?.min) ? activePriceScale.min : undefined,
+          max: Number.isFinite(activePriceScale?.max) ? activePriceScale.max : undefined,
+          splitLine: { lineStyle: { color: "rgba(255,255,255,0.045)" } },
         },
         {
           scale: true,
           gridIndex: 1,
           position: "right",
           axisLine: { show: false },
-          axisLabel: { color: "#71818A", formatter: (value) => compactNumber.format(value) },
+          axisLabel: { color: "#71818A", formatter: (value) => formatVolume(Number(value)) },
+          splitLine: { show: false },
+        },
+        {
+          min: 0,
+          max: 100,
+          gridIndex: 2,
+          position: "right",
+          axisLine: { show: false },
+          axisLabel: { color: "#71818A" },
+          splitLine: { show: false },
+          markLine: undefined,
+        },
+        {
+          scale: true,
+          gridIndex: 3,
+          position: "right",
+          axisLine: { show: false },
+          axisLabel: { color: "#71818A" },
           splitLine: { show: false },
         },
       ],
       dataZoom: [
         {
           type: "inside",
-          xAxisIndex: [0, 1],
+          xAxisIndex: [0, 1, 2, 3],
+          start: zoomRef.current.start,
+          end: zoomRef.current.end,
           zoomOnMouseWheel: true,
           moveOnMouseWheel: false,
-          moveOnMouseMove: true,
+          moveOnMouseMove: drawingModeRef.current === "pan",
           preventDefaultMouseMove: true,
           throttle: 30,
         },
         {
           type: "slider",
-          xAxisIndex: [0, 1],
+          xAxisIndex: [0, 1, 2, 3],
+          start: zoomRef.current.start,
+          end: zoomRef.current.end,
           bottom: 12,
           height: 22,
           borderColor: "rgba(255,255,255,0.12)",
@@ -945,7 +1723,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
       ],
       series: [
         priceSeries,
-        maVisibility.ma20
+        effectiveMaVisibility.ma20
           ? {
               name: "MA20",
               type: "line",
@@ -958,7 +1736,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
               connectNulls: false,
             }
           : null,
-        maVisibility.ma50
+        effectiveMaVisibility.ma50
           ? {
               name: "MA50",
               type: "line",
@@ -971,7 +1749,7 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
               connectNulls: false,
             }
           : null,
-        maVisibility.ma200 && hasMa200
+        effectiveMaVisibility.ma200 && hasMa200
           ? {
               name: "MA200",
               type: "line",
@@ -984,15 +1762,17 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
               connectNulls: false,
             }
           : null,
-        {
+        !tradeMode
+          ? {
           name: "Trend Line",
           type: "line",
           data: trendLineData,
           showSymbol: false,
           silent: true,
           lineStyle: { color: "rgba(255,255,255,0.58)", width: 1.6, type: "dotted" },
-        },
-        showVolume
+        }
+          : null,
+          effectiveShowVolume
           ? {
               name: "Volume",
               type: "bar",
@@ -1003,15 +1783,84 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
               large: true,
             }
           : null,
+        effectiveShowRsi
+          ? {
+              name: "RSI",
+              type: "line",
+              xAxisIndex: 2,
+              yAxisIndex: 2,
+              data: rsiValues,
+              smooth: true,
+              showSymbol: false,
+              lineStyle: { color: "#60A5FA", width: 1.8 },
+              markLine: {
+                symbol: "none",
+                label: { color: "#AEBCC4" },
+                lineStyle: { color: "rgba(228,184,93,0.6)", type: "dashed" },
+                data: [{ yAxis: 70, name: "70" }, { yAxis: 30, name: "30" }],
+              },
+            }
+          : null,
+        effectiveShowMacd
+          ? {
+              name: "MACD",
+              type: "bar",
+              xAxisIndex: 3,
+              yAxisIndex: 3,
+              data: macdValues,
+              itemStyle: { color: (params) => (params.value >= 0 ? "rgba(43,216,159,0.72)" : "rgba(255,95,87,0.72)") },
+              barMaxWidth: 10,
+            }
+          : null,
       ].filter(Boolean),
     };
 
-    chartRef.current.setOption(option, true);
+    chartRef.current.setOption(option, {
+      lazyUpdate: true,
+      notMerge: false,
+      replaceMerge: ["series", "xAxis", "yAxis", "grid"],
+    });
     chartRef.current.resize();
-  }, [echartsReady, visible, ma20, ma50, ma200, maVisibility, mode, overlayLevels, range, showVolume, trendLineData, hasMa200]);
+    window.requestAnimationFrame(refreshOverlayPixels);
+    const handleZoom = (event) => {
+      const batch = event?.batch?.[0] || event;
+      if (Number.isFinite(batch?.start) && Number.isFinite(batch?.end)) {
+        const nextZoom = { start: batch.start, end: batch.end };
+        zoomRef.current = nextZoom;
+        setZoomState(nextZoom);
+        writeCompanyChartState(symbol, { zoom: nextZoom });
+      }
+      window.requestAnimationFrame(refreshOverlayPixels);
+    };
+    chartRef.current.off?.("datazoom");
+    chartRef.current.on?.("datazoom", handleZoom);
+  }, [activePanelLayout, currentPriceScale, dataQuality.currency, dataQuality.timezone, drawingMode, echartsReady, interval, visible, ma20, ma50, ma200, effectiveMaVisibility, effectiveMode, range, effectiveShowVolume, effectiveShowRsi, effectiveShowMacd, rsiValues, macdValues, trendLineData, hasMa200, priceScale, refreshOverlayPixels, symbol, tradeMode]);
 
   function resetZoom() {
-    chartRef.current?.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
+    setPriceScale(null);
+    resetZoomState();
+    writeCompanyChartState(symbol, { zoom: { start: 0, end: 100 } });
+  }
+
+  function fitData() {
+    setPriceScale(null);
+    resetZoomState();
+    chartRef.current?.resize();
+    window.requestAnimationFrame(refreshOverlayPixels);
+  }
+
+  function resetPanelLayout() {
+    const next = { price: 68, volume: 12, rsi: 10, macd: 10 };
+    setPanelLayout(next);
+    persistPanelLayout(next);
+    setTimeout(() => chartRef.current?.resize(), 40);
+  }
+
+  function startPanelDrag(event, topKey, bottomKey) {
+    const rect = event.currentTarget.closest(".chartShell")?.getBoundingClientRect();
+    if (!rect) return;
+    event.preventDefault();
+    setDraggingPanel({ startY: event.clientY, height: rect.height, topKey, bottomKey, layout: panelLayout });
   }
 
   async function toggleFullscreen() {
@@ -1026,32 +1875,53 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
   }
 
   return (
-    <section className="chartCard">
+    <section className={`chartCard ${tradeMode ? "tradeModeChart" : ""}`}>
       <div className="chartHeader">
         <div>
-          <span>Historical data: Yahoo Finance</span>
-          <strong>Live quote: Finnhub</strong>
-          <small>Selected range: {range}</small>
+          <span>{tradeMode ? "Trade Mode" : "Historical chart"}</span>
+          <strong>{symbol} {dataQuality.exchange !== "--" ? `· ${dataQuality.exchange}` : ""} · {dataQuality.currency}</strong>
+          <small>Range: {range} · Interval: {interval} · {dataQuality.provider}</small>
         </div>
         <div className="chartControls">
-          <div className="segmented wide">
+          <div className="segmented wide" aria-label="Visible range">
             {CHART_RANGES.map((item) => (
-              <button className={range === item ? "active" : ""} key={item} onClick={() => setRange(item)} type="button">
+              <button className={range === item ? "active" : ""} key={item} onClick={() => selectRange(item)} type="button">
                 {item}
               </button>
             ))}
           </div>
-          <div className="segmented">
-            {CHART_MODES.map((item) => (
-              <button className={mode === item ? "active" : ""} key={item} onClick={() => setMode(item)} type="button">
-                {item}
-              </button>
-            ))}
-          </div>
-          <div className="maToggles">
+          <label className="chartTypeSelect">
+            Candle Interval
+            <select value={interval} onChange={(event) => selectInterval(event.target.value)}>
+              {CHART_INTERVALS.map((item) => (
+                <option disabled={!supportedIntervalsForRange(range).includes(item)} key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!tradeMode ? (
+            <FreedomChartTypeSelector
+              value={normalizeChartType(mode)}
+              onChange={(value) => setMode(chartTypeLabel(value))}
+            />
+          ) : null}
+          {!tradeMode ? <div className="maToggles">
             <label>
               <input checked={showVolume} onChange={(event) => setShowVolume(event.target.checked)} type="checkbox" />
               Volume
+            </label>
+            <label>
+              <input checked={showRsi} onChange={(event) => setShowRsi(event.target.checked)} type="checkbox" />
+              RSI
+            </label>
+            <label>
+              <input checked={showMacd} onChange={(event) => setShowMacd(event.target.checked)} type="checkbox" />
+              MACD
+            </label>
+            <label>
+              <input checked={includeOverlaysInScale} onChange={(event) => setIncludeOverlaysInScale(event.target.checked)} type="checkbox" />
+              Include overlays in price scale
             </label>
             {[
               ["ma20", "MA20", false],
@@ -1068,26 +1938,241 @@ function MarketChart({ candles, range, setRange, mode, setMode, notice, maVisibi
                 {label}
               </label>
             ))}
-          </div>
+          </div> : null}
           <div className="segmented">
+            <button onClick={fitData} type="button">Fit Data</button>
             <button onClick={resetZoom} type="button">Reset Zoom</button>
+            <button onClick={resetPanelLayout} type="button">Reset Panel Layout</button>
             <button className={isFullscreen ? "active" : ""} onClick={toggleFullscreen} type="button">Fullscreen</button>
           </div>
+          {tradeMode ? <div className="segmented drawingToolbar">
+            {[
+              ["cursor", "Cursor"],
+              ["pan", "Pan"],
+              ["fib", "Fib Retracement"],
+              ["trade", "Entry / Target / Stop"],
+              ["delete", "Delete Drawing"],
+            ].map(([modeKey, label]) => (
+              <button className={drawingMode === modeKey ? "active" : ""} key={modeKey} onClick={() => selectDrawingMode(modeKey)} type="button">
+                {label}
+              </button>
+            ))}
+          </div> : null}
+          {tradeMode ? <div className="segmented">
+            <button onClick={autoFib} type="button">Auto Fib</button>
+            <button onClick={() => {
+              setFibVisible((current) => {
+                writeCompanyChartState(symbol, { fibVisible: !current });
+                return !current;
+              });
+            }} type="button">{fibVisible ? "Hide Fib" : "Show Fib"}</button>
+            <button onClick={() => {
+              const detected = detectFibAnchors(visible);
+              if (detected) saveFib(detected, true);
+            }} type="button">Reset Fib</button>
+          </div> : null}
+          {tradeMode && onBackToResearch ? <button className="backResearchButton" type="button" onClick={onBackToResearch}>Back to Research</button> : null}
         </div>
       </div>
 
       {notice ? <div className="chartNotice">{notice}</div> : null}
+      {range === "1D" && intervalIsIntraday(interval) && !metadata?.ok ? (
+        <div className="chartNotice warning">INTRADAY DATA UNAVAILABLE FROM CURRENT PROVIDER. {metadata?.error || "The provider did not return intraday candles."}</div>
+      ) : null}
+      {visible.length && ((range === "1D" && visible.length < 20) || (range === "1M" && visible.length < 20)) ? (
+        <div className="chartNotice warning">Only {visible.length} candles were returned for the selected {range} range and {interval} interval.</div>
+      ) : null}
 
       {visible.length ? (
         <>
-          <div className="chartShell">
+          <div
+            className="chartShell"
+            onDoubleClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (event.clientX >= rect.right - 84) setPriceScale(null);
+            }}
+            onPointerDownCapture={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (event.clientX >= rect.right - 84) {
+                const scale = currentPriceScale();
+                if (!scale) return;
+                event.preventDefault();
+                setDraggingPriceScale({ startY: event.clientY, ...scale });
+                return;
+              }
+              if (tradeMode && drawingMode === "fib") {
+                const point = chartPointFromPointer(event);
+                if (point) {
+                  event.preventDefault();
+                  setFibAnchors({ low: point, high: point });
+                  setFibVisible(true);
+                  drawingFibRef.current = true;
+                  setDrawingFib(true);
+                }
+              }
+            }}
+            onMouseDownCapture={(event) => {
+              if (!tradeMode || drawingMode !== "fib") return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              if (event.clientX >= rect.right - 84) return;
+              const point = chartPointFromPointer(event);
+              if (point) {
+                event.preventDefault();
+                setFibAnchors({ low: point, high: point });
+                setFibVisible(true);
+                drawingFibRef.current = true;
+                setDrawingFib(true);
+              }
+            }}
+          >
             <div
               ref={chartNodeRef}
               className="echartsCanvas"
               aria-label="Interactive professional OHLC chart"
-              style={{ width: "100%", height: 560, minHeight: 560, position: "relative", display: "block" }}
+              style={{ width: "100%", height: "100%", minHeight: 720, position: "relative", display: "block" }}
             />
+            <div className="dataQualityBadge">
+              <strong>{dataQuality.symbol} · {dataQuality.exchange} · {dataQuality.currency}</strong>
+              <span>Range: {dataQuality.range} · Interval: {dataQuality.interval}</span>
+              <span>{dataQuality.candleCount} candles · {dataQuality.dataLabel}</span>
+              <span>Provider: {dataQuality.provider}</span>
+              <span>{formatChartTimestamp(dataQuality.first, dataQuality.timezone)} - {formatChartTimestamp(dataQuality.latest, dataQuality.timezone)}</span>
+            </div>
+            {effectiveShowVolume ? (
+              <button
+                aria-label="Resize price and volume panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "price", "volume")}
+                style={{ top: `${8 + (activePanelLayout.price || 68) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
+            {effectiveShowVolume && effectiveShowRsi ? (
+              <button
+                aria-label="Resize volume and RSI panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "volume", "rsi")}
+                style={{ top: `${8 + ((activePanelLayout.price || 68) + (activePanelLayout.volume || 12)) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
+            {effectiveShowRsi && effectiveShowMacd ? (
+              <button
+                aria-label="Resize RSI and MACD panels"
+                className="panelDivider"
+                onPointerDown={(event) => startPanelDrag(event, "rsi", "macd")}
+                style={{ top: `${8 + ((activePanelLayout.price || 68) + (activePanelLayout.volume || 0) + (activePanelLayout.rsi || 10)) * 0.8}%` }}
+                type="button"
+              />
+            ) : null}
+            {tradeOverlayReady ? <div className="rewardZone" style={{ top: Math.min(linePixels.target, linePixels.entry), height: Math.abs(linePixels.entry - linePixels.target) }} /> : null}
+            {tradeOverlayReady ? <div className="riskZone" style={{ top: Math.min(linePixels.entry, linePixels.stop), height: Math.abs(linePixels.stop - linePixels.entry) }} /> : null}
+            {Number.isFinite(currentPricePixel) ? (
+              <div className="currentPriceLine" style={{ top: currentPricePixel }}>
+                <span>Current</span>
+                <strong>{formatCurrency(quote?.currentPrice)}</strong>
+              </div>
+            ) : null}
+            {tradeMode && fibVisible && fibPixels.levels.map((level) => (
+              <div
+                className={`fibLevel ${level.confluence.length ? "confluence" : ""} ${drawingMode === "fib" || drawingMode === "delete" ? "movable" : ""}`}
+                key={level.ratio}
+                onPointerDown={(event) => {
+                  if (drawingMode === "delete") {
+                    event.preventDefault();
+                    saveFib(null, false);
+                    return;
+                  }
+                  if (drawingMode !== "fib" || !fibAnchors) return;
+                  const point = chartPointFromPointer(event);
+                  if (!point) return;
+                  event.preventDefault();
+                  setMovingFib({ startPoint: point, anchors: fibAnchors });
+                }}
+                style={{ top: level.y }}
+              >
+                <span>{level.label}</span>
+                <strong>{formatCurrency(level.price)}</strong>
+                {level.confluence.length ? <em>{level.confluence.join(" / ")}</em> : null}
+              </div>
+            ))}
+            {tradeMode && fibVisible && fibPixels.low && fibPixels.high ? [
+              { key: "low", label: "Swing Low", point: fibPixels.low, value: fibAnchors?.low?.price },
+              { key: "high", label: "Swing High", point: fibPixels.high, value: fibAnchors?.high?.price },
+            ].map((anchor) => (
+              <button
+                className={`fibAnchor ${drawingMode === "fib" || drawingMode === "delete" ? "interactive" : ""} ${draggingFibAnchor === anchor.key ? "dragging" : ""}`}
+                key={anchor.key}
+                onPointerDown={(event) => {
+                  if (drawingMode === "delete") {
+                    event.preventDefault();
+                    saveFib(null, false);
+                    return;
+                  }
+                  if (drawingMode !== "fib") return;
+                  event.preventDefault();
+                  setDraggingFibAnchor(anchor.key);
+                }}
+                style={{ left: anchor.point.x, top: anchor.point.y }}
+                type="button"
+              >
+                <span>{anchor.label}</span>
+                <strong>{formatCurrency(anchor.value)}</strong>
+              </button>
+            )) : null}
+            {tradeMode && [
+              { key: "target", label: "Target", value: tradeLevels.target, y: linePixels.target, className: "targetLine" },
+              { key: "entry", label: "Entry", value: tradeLevels.entry, y: linePixels.entry, className: "entryLine" },
+              { key: "stop", label: "Stop", value: tradeLevels.stop, y: linePixels.stop, className: "stopLine" },
+            ].filter((line) => Number.isFinite(line.y)).map((line) => (
+              <button
+                className={`tradeLine ${line.className} ${drawingMode === "trade" || drawingMode === "delete" ? "interactive" : ""} ${draggingTradeLine === line.key ? "dragging" : ""}`}
+                key={line.key}
+                onPointerDown={(event) => {
+                  if (drawingMode === "delete") {
+                    event.preventDefault();
+                    saveTradeLevels({ entry: null, target: null, stop: null });
+                    return;
+                  }
+                  if (drawingMode !== "trade") return;
+                  event.preventDefault();
+                  setDraggingTradeLine(line.key);
+                }}
+                style={{ top: line.y }}
+                type="button"
+              >
+                <span>{line.label}</span>
+                <strong>{formatCurrency(line.value)}</strong>
+              </button>
+            ))}
           </div>
+          {tradeMode ? <div className="plannerStrip tradePlannerLive">
+            <article><span>Percentage Return</span><strong>{formatPercent(plannerMetrics.percentageGain, true)}</strong></article>
+            <article><span>Maximum Loss</span><strong>{formatCurrency(plannerMetrics.maximumLoss)}</strong></article>
+            <article><span>Dollar Profit</span><strong>{formatCurrency(plannerMetrics.dollarProfit)}</strong></article>
+            <article><span>Dollar Risk</span><strong>{formatCurrency(plannerMetrics.dollarRisk)}</strong></article>
+            <article><span>Risk/Reward</span><strong>{Number.isFinite(plannerMetrics.riskReward) ? plannerMetrics.riskReward.toFixed(2) : "--"}</strong></article>
+            <article><span>Position Size</span><strong>{plannerMetrics.positionSize} shares</strong></article>
+          </div> : null}
+          {tradeMode ? (
+            <>
+              <div className="tradeSummary">
+                <article><span>BUY / ENTRY</span><strong>{formatCurrency(tradeLevels.entry)}</strong></article>
+                <article><span>STOP LOSS</span><strong>{formatCurrency(tradeLevels.stop)}</strong></article>
+                <article><span>TARGET</span><strong>{formatCurrency(tradeLevels.target)}</strong></article>
+                <article><span>RISK/REWARD</span><strong>{Number.isFinite(plannerMetrics.riskReward) ? plannerMetrics.riskReward.toFixed(2) : "--"}</strong></article>
+                <article><span>EXPECTED PROFIT</span><strong>{formatCurrency(plannerMetrics.dollarProfit)}</strong></article>
+              </div>
+              <div className="tradeActions">
+                <button type="button" onClick={resetPlanner}>Reset to Recommended Levels</button>
+                <button type="button" disabled={tradeActionSaving} onClick={() => runTradeAction("entry")}>Alert Me at Entry</button>
+                <button type="button" disabled={tradeActionSaving} onClick={() => runTradeAction("all")}>Create All Alerts</button>
+                <button type="button" disabled={tradeActionSaving} onClick={() => runTradeAction("activate")}>Activate Trade Setup</button>
+                {onBackToResearch ? <button type="button" onClick={onBackToResearch}>Back to Research</button> : null}
+              </div>
+              {tradeMessage ? <div className="tradeMessage">{tradeMessage}</div> : null}
+            </>
+          ) : null}
           <div className="chartFooter">
             <span>Start: {formatCurrency(startPrice)}</span>
             <span>End: {formatCurrency(endPrice)}</span>
@@ -1131,9 +2216,16 @@ const chartStyles = `
     border-radius: 8px;
     box-shadow: 0 24px 90px color-mix(in srgb, var(--company-primary) 10%, transparent);
     margin: 18px auto 0;
-    max-width: 1760px;
+    max-width: none;
     padding: 18px;
     width: 100%;
+  }
+  .tradeModeChart {
+    background: rgba(5, 9, 13, 0.98);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    margin-top: 0;
+    padding: 14px;
   }
   .chartHeader {
     align-items: flex-start;
@@ -1198,6 +2290,24 @@ const chartStyles = `
     max-width: 100%;
     overflow-x: auto;
   }
+  .chartTypeSelect {
+    align-items: center;
+    color: #c9d5db;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 900;
+    gap: 8px;
+    text-transform: none;
+  }
+  .chartTypeSelect select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 7px;
+    color: #fff;
+    font-weight: 900;
+    height: 38px;
+    padding: 0 10px;
+  }
   .maToggles {
     gap: 8px;
     padding: 5px 8px;
@@ -1229,18 +2339,74 @@ const chartStyles = `
     margin-bottom: 12px;
     padding: 10px 12px;
   }
+  .chartNotice.warning {
+    background: rgba(255, 153, 0, 0.12);
+    border-color: rgba(255, 153, 0, 0.34);
+    color: #ffd7a1;
+    font-weight: 850;
+  }
   .chartShell {
-    background:
-      radial-gradient(circle at 12% 10%, color-mix(in srgb, var(--company-primary) 12%, transparent), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
+    background: #05090d;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     display: block;
-    height: 560px;
-    min-height: 560px;
+    height: min(78vh, 840px);
+    min-height: 720px;
     overflow: hidden;
     position: relative;
     width: 100%;
+  }
+  .dataQualityBadge {
+    background: rgba(5, 8, 11, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    display: grid;
+    gap: 3px;
+    left: 74px;
+    max-width: min(420px, calc(100% - 160px));
+    padding: 9px 11px;
+    pointer-events: none;
+    position: absolute;
+    top: 14px;
+    z-index: 7;
+  }
+  .dataQualityBadge strong,
+  .dataQualityBadge span {
+    display: block;
+  }
+  .dataQualityBadge strong {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 950;
+  }
+  .dataQualityBadge span {
+    color: #c9d5db;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .panelDivider {
+    background: rgba(255, 255, 255, 0.08);
+    border: 0;
+    border-radius: 0;
+    cursor: ns-resize;
+    height: 6px;
+    left: 64px;
+    margin: 0;
+    min-height: 6px;
+    padding: 0;
+    position: absolute;
+    right: 72px;
+    transform: translateY(-50%);
+    z-index: 6;
+  }
+  .panelDivider:hover,
+  .panelDivider:focus-visible {
+    background: var(--company-accent);
+    outline: none;
+  }
+  .tradeModeChart .chartShell {
+    height: min(80vh, 900px);
+    min-height: 760px;
   }
   .chartShell:fullscreen {
     background: #05090d;
@@ -1249,13 +2415,274 @@ const chartStyles = `
   .echartsCanvas,
   .emptyChart {
     display: block;
-    height: 560px;
-    min-height: 560px;
+    height: 100%;
+    min-height: 720px;
     position: relative;
     width: 100%;
   }
   .chartShell:fullscreen .echartsCanvas {
     height: calc(100vh - 36px);
+  }
+  .rewardZone,
+  .riskZone {
+    left: 64px;
+    pointer-events: none;
+    position: absolute;
+    right: 72px;
+    z-index: 2;
+  }
+  .rewardZone {
+    background: linear-gradient(180deg, rgba(43, 216, 159, 0.18), rgba(43, 216, 159, 0.04));
+    border-bottom: 1px solid rgba(43, 216, 159, 0.16);
+    border-top: 1px solid rgba(43, 216, 159, 0.24);
+  }
+  .riskZone {
+    background: linear-gradient(180deg, rgba(255, 95, 87, 0.05), rgba(255, 95, 87, 0.18));
+    border-bottom: 1px solid rgba(255, 95, 87, 0.28);
+    border-top: 1px solid rgba(255, 95, 87, 0.16);
+  }
+  .tradeLine {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: #fff;
+    cursor: ns-resize;
+    display: flex;
+    font-size: 12px;
+    font-weight: 950;
+    height: 28px;
+    justify-content: space-between;
+    left: 64px;
+    margin: 0;
+    min-height: 28px;
+    padding: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 72px;
+    transform: translateY(-50%);
+    width: auto;
+    z-index: 8;
+  }
+  .tradeLine:before {
+    content: "";
+    height: 3px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 13px;
+  }
+  .tradeLine span,
+  .tradeLine strong {
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+    padding: 7px 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .targetLine:before,
+  .targetLine span,
+  .targetLine strong {
+    background: rgba(43, 216, 159, 0.94);
+    color: #03130d;
+  }
+  .entryLine:before,
+  .entryLine span,
+  .entryLine strong {
+    background: rgba(96, 165, 250, 0.96);
+    color: #06111f;
+  }
+  .stopLine:before,
+  .stopLine span,
+  .stopLine strong {
+    background: rgba(255, 95, 87, 0.95);
+    color: #210606;
+  }
+  .tradeLine.dragging span,
+  .tradeLine.dragging strong {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18), 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+  .tradeLine.interactive {
+    pointer-events: auto;
+  }
+  .fibLevel {
+    align-items: center;
+    border-top: 1px dashed rgba(228, 184, 93, 0.34);
+    color: #d8e5ea;
+    display: flex;
+    gap: 8px;
+    left: 64px;
+    min-height: 20px;
+    pointer-events: none;
+    position: absolute;
+    right: 72px;
+    transform: translateY(-50%);
+    opacity: 0.72;
+    z-index: 3;
+  }
+  .fibLevel.movable {
+    cursor: move;
+    pointer-events: auto;
+  }
+  .fibLevel span,
+  .fibLevel strong,
+  .fibLevel em {
+    background: rgba(5, 8, 11, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 950;
+    padding: 4px 7px;
+  }
+  .fibLevel.confluence {
+    border-top-color: rgba(228, 184, 93, 0.86);
+    opacity: 0.95;
+  }
+  .fibLevel.confluence em {
+    background: rgba(228, 184, 93, 0.92);
+    color: #1f1200;
+  }
+  .fibAnchor {
+    background: rgba(228, 184, 93, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+    color: #1f1200;
+    cursor: grab;
+    display: grid;
+    font-size: 11px;
+    font-weight: 950;
+    gap: 1px;
+    line-height: 1.1;
+    margin: 0;
+    min-height: 0;
+    min-width: 84px;
+    padding: 6px 8px;
+    pointer-events: none;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 6;
+  }
+  .fibAnchor.dragging {
+    cursor: grabbing;
+    box-shadow: 0 0 0 3px rgba(228, 184, 93, 0.25), 0 12px 30px rgba(0, 0, 0, 0.42);
+  }
+  .fibAnchor.interactive {
+    pointer-events: auto;
+  }
+  .currentPriceLine {
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.68);
+    color: #fff;
+    display: flex;
+    gap: 8px;
+    left: 64px;
+    pointer-events: none;
+    position: absolute;
+    right: 72px;
+    transform: translateY(-50%);
+    z-index: 7;
+  }
+  .currentPriceLine span,
+  .currentPriceLine strong {
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 999px;
+    color: #071014;
+    font-size: 11px;
+    font-weight: 950;
+    padding: 5px 8px;
+  }
+  .plannerStrip {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) minmax(180px, 0.8fr);
+    margin-top: 12px;
+  }
+  .plannerStrip article {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .plannerStrip span {
+    color: #aebdc4;
+    display: block;
+    font-size: 11px;
+    font-weight: 900;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .plannerStrip strong {
+    color: #fff;
+    font-size: 17px;
+    font-weight: 950;
+  }
+  .tradePlannerLive {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .tradeSummary {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin-top: 12px;
+  }
+  .tradeSummary article {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .tradeSummary span {
+    color: #aebdc4;
+    display: block;
+    font-size: 11px;
+    font-weight: 950;
+    margin-bottom: 7px;
+  }
+  .tradeSummary strong {
+    color: #fff;
+    display: block;
+    font-size: 20px;
+    font-weight: 950;
+  }
+  .tradeActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .tradeActions button,
+  .backResearchButton {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 7px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 950;
+    min-height: 38px;
+    padding: 0 14px;
+  }
+  .tradeActions button:first-child,
+  .tradeActions button:nth-child(4) {
+    background: linear-gradient(135deg, #2bd89f, #e4b85d);
+    border-color: transparent;
+    color: #061014;
+  }
+  .tradeActions button:disabled {
+    cursor: wait;
+    opacity: 0.56;
+  }
+  .tradeMessage {
+    background: rgba(43, 216, 159, 0.1);
+    border: 1px solid rgba(43, 216, 159, 0.22);
+    border-radius: 8px;
+    color: #dffbf1;
+    font-size: 13px;
+    font-weight: 850;
+    margin-top: 12px;
+    padding: 12px;
   }
   .emptyChart {
     align-items: center;
@@ -1285,6 +2712,11 @@ const chartStyles = `
     .chartFooter {
       flex-direction: column;
       gap: 6px;
+    }
+    .plannerStrip,
+    .tradePlannerLive,
+    .tradeSummary {
+      grid-template-columns: 1fr;
     }
   }
 `;
@@ -1316,20 +2748,20 @@ function PasswordGate({ passwordHash, onUnlock }) {
   return (
     <div className="gateScreen">
       <Head>
-        <title>Freedom Terminal</title>
+        <title>Freedom Investment</title>
       </Head>
       <form className="gate" onSubmit={unlock}>
         <span>Private Research</span>
-        <h1>Freedom Terminal</h1>
+        <h1>Freedom Investment</h1>
         <p>Enter the temporary password to open the company research page.</p>
         <input onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" value={password} />
         {passwordError ? <small>{passwordError}</small> : null}
-        <button type="submit">Unlock Terminal</button>
+        <button type="submit">Unlock Investment</button>
       </form>
       <style jsx>{`
         .gateScreen {
           align-items: center;
-          background: radial-gradient(circle at 18% 8%, rgba(0, 164, 239, 0.22), transparent 34rem), #05080b;
+          background: #06110d;
           color: #f6f8f9;
           display: flex;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -1383,7 +2815,7 @@ function PasswordGate({ passwordHash, onUnlock }) {
           margin-top: 10px;
         }
         button {
-          background: linear-gradient(135deg, #00a4ef, #ffb900);
+          background: #d4af37;
           border: 0;
           border-radius: 7px;
           color: #061014;
@@ -1409,8 +2841,12 @@ function FreedomCompany({ passwordHash, symbol }) {
   const [checkingStorage, setCheckingStorage] = useState(true);
   const [quote, setQuote] = useState({ ...fallback, rating: getRating(fallback.qualityScore, null) });
   const [candles, setCandles] = useState([]);
+  const [historyMetadata, setHistoryMetadata] = useState(null);
+  const [experienceMode, setExperienceMode] = useState("research");
+  const [activeTab, setActiveTab] = useState("Overview");
   const [chartRange, setChartRange] = useState("1Y");
-  const [chartMode, setChartMode] = useState("Candles");
+  const [chartInterval, setChartInterval] = useState("1D");
+  const [chartMode, setChartMode] = useState("Standard candlesticks");
   const [maVisibility, setMaVisibility] = useState({ ma20: true, ma50: true, ma200: true });
   const [historyNotice, setHistoryNotice] = useState("");
   const [research, setResearch] = useState(() => normalizeLoadedNote(symbol, null));
@@ -1428,19 +2864,39 @@ function FreedomCompany({ passwordHash, symbol }) {
   const [researchStatus, setResearchStatus] = useState("");
   const [valuationError, setValuationError] = useState("");
   const [committeeError, setCommitteeError] = useState("");
+  const storedScoreKeyRef = useRef("");
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
-    setChartRange(loadStoredChartRange());
+    setActiveTab(readCompanyTab(symbol));
+    const storedRange = loadStoredChartRange();
+    setChartRange(storedRange);
+    setChartInterval(loadStoredChartInterval(storedRange));
     setChartMode(loadStoredChartMode());
     setMaVisibility(loadStoredMaVisibility());
+    setExperienceMode("research");
     setCheckingStorage(false);
-  }, []);
+  }, [symbol]);
+
+  function selectTab(tab) {
+    setActiveTab(tab);
+    writeCompanyTab(symbol, tab);
+  }
 
   useEffect(() => {
     if (checkingStorage) return;
     window.localStorage.setItem(CHART_RANGE_STORAGE_KEY, chartRange);
   }, [chartRange, checkingStorage]);
+
+  useEffect(() => {
+    if (checkingStorage) return;
+    const normalized = normalizeStoredInterval(chartInterval, chartRange);
+    if (normalized !== chartInterval) {
+      setChartInterval(normalized);
+      return;
+    }
+    window.localStorage.setItem(CHART_INTERVAL_STORAGE_KEY, normalized);
+  }, [chartInterval, chartRange, checkingStorage]);
 
   useEffect(() => {
     if (checkingStorage) return;
@@ -1541,7 +2997,7 @@ function FreedomCompany({ passwordHash, symbol }) {
 
       const [quoteResponse, historyResponse, researchResponse] = await Promise.allSettled([
         fetch(`/api/freedom/quotes?symbol=${symbol}`),
-        fetch(`/api/freedom/history?symbol=${symbol}&range=5y&interval=1d`),
+        fetch(`/api/freedom/history?symbol=${symbol}&range=${API_RANGE_BY_LABEL[chartRange] || "1y"}&interval=${API_INTERVAL_BY_LABEL[chartInterval] || "1d"}`),
         fetch(`/api/freedom/research?symbol=${symbol}`),
       ]);
 
@@ -1553,9 +3009,24 @@ function FreedomCompany({ passwordHash, symbol }) {
         researchResponse.status === "fulfilled" ? await researchResponse.value.json().catch(() => null) : null;
 
       const historyCandles = historyData?.ok ? historyData.candles || [] : [];
-      setCandles(historyCandles);
-
       const nextQuote = quoteData?.quotes?.[0] || fallback;
+      setCandles(historyCandles);
+      setHistoryMetadata({
+        ok: Boolean(historyData?.ok),
+        provider: historyData?.provider || historyData?.source || "Twelve Data",
+        source: historyData?.source || historyData?.provider || "Twelve Data",
+        dataLabel: historyData?.dataLabel || null,
+        exchange: historyData?.exchange || null,
+        currency: historyData?.currency || nextQuote?.currency || "USD",
+        exchangeTimezone: historyData?.exchangeTimezone || null,
+        candleCount: historyData?.candleCount ?? historyCandles.length,
+        firstTimestamp: historyData?.firstTimestamp || historyCandles[0]?.date || null,
+        latestTimestamp: historyData?.latestTimestamp || historyCandles[historyCandles.length - 1]?.date || null,
+        interval: historyData?.interval || chartInterval,
+        range: historyData?.range || chartRange,
+        error: historyData?.error || null,
+      });
+
       const historyHigh = Number.isFinite(historyData?.yearHigh) ? historyData.yearHigh : null;
       const historyLow = Number.isFinite(historyData?.yearLow) ? historyData.yearLow : null;
       const percentOffHigh =
@@ -1595,7 +3066,7 @@ function FreedomCompany({ passwordHash, symbol }) {
         });
       }
       if (!quoteData?.ok) setError(quoteData?.error || "Live market data unavailable. Showing fallback data where available.");
-      if (!historyData?.ok) setHistoryNotice("Historical candlestick data unavailable.");
+      if (!historyData?.ok) setHistoryNotice(historyData?.error || "Historical candlestick data unavailable.");
 
       await Promise.all([loadValuation(DEFAULT_ASSUMPTIONS), loadCommittee()]);
     } catch (err) {
@@ -1604,7 +3075,7 @@ function FreedomCompany({ passwordHash, symbol }) {
     } finally {
       setLoading(false);
     }
-  }, [fallback, loadCommittee, loadValuation, symbol]);
+  }, [chartInterval, chartRange, fallback, loadCommittee, loadValuation, symbol]);
 
   useEffect(() => {
     if (unlocked) loadCompany();
@@ -1650,6 +3121,24 @@ function FreedomCompany({ passwordHash, symbol }) {
   const healthScore = getHealthScore(symbol, committee);
   const selectedCandles = useMemo(() => visibleCandlesForRange(candles, chartRange), [candles, chartRange]);
   const trendAnalysis = useMemo(() => buildTrendAnalysis(selectedCandles, chartRange), [selectedCandles, chartRange]);
+  const adaptiveScore = useMemo(
+    () => calculateAdaptiveScores({ symbol, quote, valuation, committee, history: candles }),
+    [candles, committee, quote, symbol, valuation]
+  );
+  const investmentSignal = useMemo(
+    () => calculateInvestmentSignal({
+      ticker: symbol,
+      exchange: quote.exchange || "NASDAQ",
+      currency: quote.currency || "USD",
+      timeframe: "1D",
+      decision: adaptiveScore.decision,
+      confidence: adaptiveScore.confidence,
+      buyScore: adaptiveScore.buyScore,
+      quote,
+      valuation,
+    }),
+    [adaptiveScore, quote, symbol, valuation]
+  );
   const companyName = quote.companyName || companyStyle.companyName || symbol;
   const cards = [
     ["Current Price", formatCurrency(quote.currentPrice)],
@@ -1657,8 +3146,8 @@ function FreedomCompany({ passwordHash, symbol }) {
     ["52W High", formatCurrency(quote.yearHigh)],
     ["52W Low", formatCurrency(quote.yearLow)],
     ["% Off High", formatPercent(quote.percentOffHigh)],
-    ["Quality Score", quote.qualityScore ?? "--"],
-    ["Rating", ratingLabel(quote.rating)],
+    ["Buy Score", adaptiveScore.buyScore ?? "--"],
+    ["Decision", `${investmentSignal.overallSignal} (${investmentSignal.timeframe})`],
   ];
   const valuationCards = [
     ["Fair Value", formatCurrency(valuation?.fairValue)],
@@ -1669,6 +3158,31 @@ function FreedomCompany({ passwordHash, symbol }) {
     ["Expected 5-Year Return", formatPercent(valuation?.expectedFiveYearReturn)],
     ["Valuation Rating", valuation?.valuationRating || "--"],
   ];
+
+  useEffect(() => {
+    if (!unlocked || !Number.isFinite(Number(quote.currentPrice)) || !Number.isFinite(Number(adaptiveScore.buyScore))) return;
+    const storeKey = `${symbol}:${adaptiveScore.buyScore}:${adaptiveScore.convictionScore}:${adaptiveScore.decision}:${round(quote.currentPrice, 2)}:${round(valuation?.fairValue, 2)}`;
+    if (storedScoreKeyRef.current === storeKey) return;
+    storedScoreKeyRef.current = storeKey;
+
+    fetch("/api/freedom/score-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol,
+        company: companyName,
+        buyScore: adaptiveScore.buyScore,
+        convictionScore: adaptiveScore.convictionScore,
+        decision: adaptiveScore.decision,
+        currentPrice: quote.currentPrice,
+        fairValue: valuation?.fairValue,
+        reason: adaptiveScore.reason,
+        scoreDetails: adaptiveScore,
+      }),
+    }).catch((err) => {
+      console.error("Freedom score history save skipped:", err);
+    });
+  }, [adaptiveScore, companyName, quote.currentPrice, symbol, unlocked, valuation?.fairValue]);
 
   if (checkingStorage) {
     return (
@@ -1695,13 +3209,15 @@ function FreedomCompany({ passwordHash, symbol }) {
   return (
     <div className="page" style={styleVars(companyStyle)}>
       <Head>
-        <title>{companyName} | Freedom Terminal</title>
+        <title>{companyName} | Freedom Investment</title>
       </Head>
 
+      <section className="platformBanner" aria-label="Current Freedom workspace">
+        <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
+      </section>
+      <FreedomModuleNav module="investment" />
+
       <header className="companyBanner">
-        <Link className="back" href="/freedom">
-          Back to Freedom Terminal
-        </Link>
         <div className="bannerMain">
           <div className="logoBadge">{companyStyle.logoText}</div>
           <div className="bannerCopy">
@@ -1714,10 +3230,196 @@ function FreedomCompany({ passwordHash, symbol }) {
               </span>
             </p>
           </div>
-          <span className={`rating statusPill large ${ratingClass(quote.rating)}`}>{ratingLabel(quote.rating)}</span>
+          <div className="bannerActions">
+            <span className={`rating statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
+              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            </span>
+            <button className="headerTradeButton" type="button" onClick={() => setExperienceMode("trade")}>
+              Create Trade Setup
+            </button>
+            <Link className="headerTraderLink" href={`/freedom-trader/company/${encodeURIComponent(symbol)}`}>
+              Open in Freedom Trader
+            </Link>
+          </div>
         </div>
       </header>
 
+      {experienceMode === "trade" ? (
+        <main className="tradeModeWorkspace">
+          <section className="tradeModeIntro">
+            <div>
+              <span>Trade Mode</span>
+              <h2>{companyName} Visual Trade Planner</h2>
+              <p>Entry, stop loss and target are the primary controls. Fibonacci remains secondary for confluence.</p>
+            </div>
+            <button type="button" onClick={() => setExperienceMode("research")}>Back to Research</button>
+          </section>
+          <MarketChart
+            candles={candles}
+            maVisibility={maVisibility}
+            metadata={historyMetadata}
+            mode={chartMode}
+            notice={historyNotice}
+            onBackToResearch={() => setExperienceMode("research")}
+            quote={quote}
+            range={chartRange}
+            interval={chartInterval}
+            research={research}
+            setMaVisibility={setMaVisibility}
+            setInterval={setChartInterval}
+            setMode={setChartMode}
+            setRange={setChartRange}
+            symbol={symbol}
+            tradeMode
+            valuation={valuation}
+          />
+        </main>
+      ) : (
+      <>
+      <nav className="companyTabs" aria-label="Company analysis tabs">
+        {COMPANY_TABS.map((tab) => (
+          <button className={activeTab === tab ? "active" : ""} key={tab} onClick={() => selectTab(tab)} type="button">
+            {tab}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "Overview" ? (
+        <section className="overviewTab">
+          <article className="overviewHero">
+            <span>Main Recommendation</span>
+            <strong className={`statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
+              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            </strong>
+            <p>{adaptiveScore.reason}</p>
+            <button type="button" onClick={() => setExperienceMode("trade")}>Create Trade Setup</button>
+          </article>
+          <div className="overviewMetrics">
+            <article><span>Overall Score</span><strong>{adaptiveScore.buyScore ?? "--"}/100</strong></article>
+            <article><span>Confidence</span><strong>{adaptiveScore.confidence ?? "--"}%</strong></article>
+            <article><span>Current Price</span><strong>{formatCurrency(quote.currentPrice)}</strong></article>
+            <article><span>Fair Value</span><strong>{formatCurrency(valuation?.fairValue)}</strong></article>
+          </div>
+          <div className="overviewLists">
+            <article>
+              <h2>Top Reasons</h2>
+              {(adaptiveScore.topPositives || []).map((item) => <p key={item}>{item}</p>)}
+            </article>
+            <article>
+              <h2>Key Risks</h2>
+              {(adaptiveScore.topNegatives || []).map((item) => <p key={item}>{item}</p>)}
+            </article>
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "Business Quality" ? (
+      <>
+      <section className="adaptiveScoreSection">
+        <div className="scoreGaugePanel">
+          <article className="scoreGaugeCard">
+            <div className={`scoreGauge ${buyScoreClass(adaptiveScore.buyScore)}`} style={{ "--score": adaptiveScore.buyScore }}>
+              <div>
+                <strong>{adaptiveScore.buyScore}</strong>
+                <span>/100</span>
+              </div>
+            </div>
+            <span>Buy Score</span>
+            <p>{adaptiveScore.whyBuyScore}</p>
+          </article>
+          <article className="scoreGaugeCard conviction">
+            <div className={`scoreGauge ${buyScoreClass(adaptiveScore.convictionScore)}`} style={{ "--score": adaptiveScore.convictionScore }}>
+              <div>
+                <strong>{adaptiveScore.convictionScore}</strong>
+                <span>/100</span>
+              </div>
+            </div>
+            <span>Conviction Score</span>
+            <p>{adaptiveScore.whyConviction}</p>
+          </article>
+        </div>
+
+        <div className="decisionMatrix">
+          <div className="sectionHeader">
+            <div>
+              <span>Adaptive Buy Score Engine</span>
+              <h2>Decision Matrix</h2>
+            </div>
+            <span className={`rating statusPill large ${ratingClass(adaptiveScore.decision)}`}>{ratingLabel(adaptiveScore.decision)}</span>
+          </div>
+          <div className="decisionGrid">
+            <article>
+              <span>Decision</span>
+              <strong>{ratingLabel(adaptiveScore.decision)}</strong>
+            </article>
+            <article>
+              <span>Confidence</span>
+              <strong>{adaptiveScore.confidence}%</strong>
+            </article>
+            <article>
+              <span>Conviction</span>
+              <strong>{adaptiveScore.convictionLabel}</strong>
+            </article>
+            <article>
+              <span>Largest Contributor</span>
+              <strong>{adaptiveScore.largestContributor?.label || "--"}</strong>
+            </article>
+            <article>
+              <span>Largest Deduction</span>
+              <strong>{adaptiveScore.largestDeduction?.label || "--"}</strong>
+            </article>
+          </div>
+          <p className="scoreReason">{adaptiveScore.reason}</p>
+          <div className="scoreLists">
+            <div>
+              <h3>Top Positives</h3>
+              {adaptiveScore.topPositives.map((item) => <p key={item}>{item}</p>)}
+            </div>
+            <div>
+              <h3>Top Risks</h3>
+              {adaptiveScore.topNegatives.map((item) => <p key={item}>{item}</p>)}
+            </div>
+          </div>
+        </div>
+
+        <div className="scoreBreakdown">
+          <div className="sectionHeader">
+            <div>
+              <span>Every Point Explained</span>
+              <h2>Buy Score Breakdown</h2>
+            </div>
+          </div>
+          <div className="breakdownGrid">
+            {adaptiveScore.components.map((component) => (
+              <article key={component.key}>
+                <div className="breakdownTop">
+                  <strong>{component.label}</strong>
+                  <span>{component.points}/{component.max}</span>
+                </div>
+                <div className="healthBar">
+                  <i style={{ width: `${Math.max(0, Math.min((component.points / component.max) * 100, 100))}%` }} />
+                </div>
+                <p>{component.why}</p>
+                <small>Deduction: {component.deduction} points</small>
+              </article>
+            ))}
+          </div>
+          <div className="convictionGrid">
+            {adaptiveScore.convictionFactors.map((factor) => (
+              <article key={factor.label}>
+                <strong>{factor.label}</strong>
+                <span>{factor.score}/100</span>
+                <p>{factor.why}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+      </>
+      ) : null}
+
+      {activeTab === "Analyst Review" ? (
+      <>
       <section className="analysisBar">
         <div>
           <span>Analysis Status</span>
@@ -1774,7 +3476,11 @@ function FreedomCompany({ passwordHash, symbol }) {
           <strong>Friendly error:</strong> {diagnostics?.quote?.friendlyErrorMessage || "none"}
         </div>
       </section>
+      </>
+      ) : null}
 
+      {activeTab === "Price Trend" ? (
+      <>
       <section className="stats">
         {cards.map(([label, value]) => (
           <article key={label}>
@@ -1783,7 +3489,10 @@ function FreedomCompany({ passwordHash, symbol }) {
           </article>
         ))}
       </section>
+      </>
+      ) : null}
 
+      {activeTab === "Business Quality" ? (
       <section className="healthSection">
         <div className="sectionHeader">
           <div>
@@ -1812,7 +3521,9 @@ function FreedomCompany({ passwordHash, symbol }) {
           </div>
         ) : <div className="sourceNotice">Health scores unavailable until the analysis source has completed successfully.</div>}
       </section>
+      ) : null}
 
+      {activeTab === "Valuation" ? (
       <section className="valuationEngine">
         <div className="sectionHeader">
           <div>
@@ -1863,7 +3574,9 @@ function FreedomCompany({ passwordHash, symbol }) {
             </form>
         </>
       </section>
+      ) : null}
 
+      {activeTab === "Analyst Review" ? (
       <section className="committeeSection">
         <div className="sectionHeader">
           <div>
@@ -1904,11 +3617,18 @@ function FreedomCompany({ passwordHash, symbol }) {
           ))}
         </div>
       </section>
+      ) : null}
 
-      <section className="mainGrid">
+      {activeTab === "Price Trend" ? (
+      <section className="mainGrid singlePanel">
         <div className="chartStack">
           <PriceTrendAnalysis analysis={trendAnalysis} />
         </div>
+      </section>
+      ) : null}
+
+      {activeTab === "Trade Setup" ? (
+      <section className="mainGrid singlePanel">
         <form className="researchEditor" onSubmit={saveResearch}>
           <div className="sectionHeader">
             <div>
@@ -1952,33 +3672,46 @@ function FreedomCompany({ passwordHash, symbol }) {
           </label>
         </form>
       </section>
+      ) : null}
 
+      {activeTab === "Charts" ? (
       <MarketChart
         candles={candles}
         maVisibility={maVisibility}
+        metadata={historyMetadata}
         mode={chartMode}
         notice={historyNotice}
+        quote={quote}
         range={chartRange}
+        interval={chartInterval}
+        research={research}
         setMaVisibility={setMaVisibility}
+        setInterval={setChartInterval}
         setMode={setChartMode}
         setRange={setChartRange}
+        symbol={symbol}
+        valuation={valuation}
       />
+      ) : null}
 
       <footer>Private research tool. Not financial advice.</footer>
+      </>
+      )}
 
       <style jsx>{`
         .page {
-          background:
-            radial-gradient(circle at 14% 0%, color-mix(in srgb, var(--company-primary) 20%, transparent), transparent 34rem),
-            radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--company-accent) 12%, transparent), transparent 30rem),
-            #05080b;
+          background: #06110d;
           color: #f5f7f8;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           min-height: 100vh;
-          padding: 28px;
+          padding: 96px 28px 28px;
         }
         .companyBanner,
+        .companyTabs,
+        .tradeModeWorkspace,
+        .overviewTab,
         .alert,
+        .adaptiveScoreSection,
         .analysisBar,
         .diagnostics,
         .stats,
@@ -1991,11 +3724,66 @@ function FreedomCompany({ passwordHash, symbol }) {
           margin-right: auto;
           max-width: 1760px;
         }
+        .platformBanner {
+          align-items: center;
+          background: #00843d;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+          display: flex;
+          gap: 14px;
+          justify-content: space-between;
+          left: 0;
+          padding: 14px 28px;
+          position: fixed;
+          right: 0;
+          top: 0;
+          z-index: 100;
+        }
+        .platformBanner strong {
+          align-items: center;
+          color: #fff;
+          display: inline-flex;
+          gap: 10px;
+          font-size: clamp(24px, 2.6vw, 34px);
+          font-weight: 950;
+        }
+        .platformBanner span {
+          color: #fff;
+          font-size: clamp(14px, 1.4vw, 18px);
+          font-weight: 900;
+        }
+        .platformBanner .platformIcon {
+          color: #d4af37;
+          font-size: 0.9em;
+          line-height: 1;
+        }
+        .platformSwitch {
+          display: inline-flex;
+          gap: 8px;
+        }
+        .platformSwitch a {
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          border-radius: 999px;
+          color: #fff;
+          font-size: 14px;
+          font-weight: 950;
+          padding: 10px 14px;
+          text-decoration: none;
+        }
+        .platformSwitch a.active {
+          background: #00843d;
+          border-color: rgba(255, 255, 255, 0.36);
+        }
+        .platformSwitch a:not(.active) {
+          background: #0057d9;
+          border-color: #0057d9;
+        }
+        .tradeModeWorkspace {
+          margin-top: 18px;
+        }
         .companyBanner {
-          background:
-            linear-gradient(135deg, color-mix(in srgb, var(--company-primary) 36%, #05080b), color-mix(in srgb, var(--company-secondary) 32%, #05080b) 54%, color-mix(in srgb, var(--company-accent) 24%, #05080b)),
-            rgba(8, 14, 17, 0.96);
-          border: 1px solid color-mix(in srgb, var(--company-primary) 48%, rgba(255, 255, 255, 0.12));
+          background: #082118;
+          border: 1px solid rgba(16, 185, 129, 0.34);
           border-radius: 8px;
           box-shadow: 0 28px 100px color-mix(in srgb, var(--company-primary) 18%, transparent);
           overflow: hidden;
@@ -2003,8 +3791,8 @@ function FreedomCompany({ passwordHash, symbol }) {
           position: relative;
         }
         .companyBanner:after {
-          background: radial-gradient(circle, color-mix(in srgb, var(--company-accent) 26%, transparent), transparent 62%);
           content: "";
+          display: none;
           height: 280px;
           position: absolute;
           right: -80px;
@@ -2020,6 +3808,150 @@ function FreedomCompany({ passwordHash, symbol }) {
           position: relative;
           text-decoration: none;
           z-index: 1;
+        }
+        .bannerActions {
+          align-items: center;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: flex-end;
+          position: relative;
+          z-index: 1;
+        }
+        .headerTradeButton,
+        .tradeModeIntro button {
+          background: #d4af37;
+          border: 0;
+          border-radius: 7px;
+          color: #061014;
+          cursor: pointer;
+          font-size: 14px;
+          font-weight: 950;
+          min-height: 44px;
+          padding: 0 18px;
+        }
+        .headerTraderLink {
+          align-items: center;
+          background: #0057d9;
+          border: 1px solid #0057d9;
+          border-radius: 7px;
+          color: #fff;
+          display: inline-flex;
+          font-size: 14px;
+          font-weight: 950;
+          min-height: 44px;
+          padding: 0 18px;
+          text-decoration: none;
+        }
+        .tradeModeIntro {
+          align-items: center;
+          background: rgba(8, 14, 17, 0.9);
+          border: 1px solid rgba(179, 199, 207, 0.13);
+          border-radius: 8px;
+          display: flex;
+          gap: 18px;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding: 16px 18px;
+        }
+        .tradeModeIntro span {
+          color: #79d9c5;
+          display: block;
+          font-size: 12px;
+          font-weight: 950;
+          margin-bottom: 6px;
+          text-transform: uppercase;
+        }
+        .tradeModeIntro h2,
+        .tradeModeIntro p {
+          margin: 0;
+        }
+        .tradeModeIntro h2 {
+          color: #fff;
+          font-size: 24px;
+        }
+        .tradeModeIntro p {
+          color: #cbd7dc;
+          line-height: 1.45;
+          margin-top: 5px;
+        }
+        .companyTabs {
+          background: rgba(8, 14, 17, 0.92);
+          border: 1px solid rgba(179, 199, 207, 0.13);
+          border-radius: 8px;
+          display: flex;
+          gap: 6px;
+          margin-top: 18px;
+          overflow-x: auto;
+          padding: 8px;
+        }
+        .companyTabs button {
+          background: transparent;
+          border: 1px solid transparent;
+          color: #cbd7dc;
+          flex: 0 0 auto;
+          min-height: 40px;
+          padding: 0 14px;
+        }
+        .companyTabs button.active {
+          background: #0b8f55;
+          border-color: rgba(255, 255, 255, 0.16);
+          color: #061014;
+        }
+        .overviewTab {
+          display: grid;
+          gap: 18px;
+          grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+          margin-top: 18px;
+        }
+        .overviewHero,
+        .overviewMetrics article,
+        .overviewLists article {
+          background: rgba(8, 14, 17, 0.92);
+          border: 1px solid rgba(179, 199, 207, 0.13);
+          border-radius: 8px;
+          padding: 18px;
+        }
+        .overviewHero {
+          display: grid;
+          gap: 14px;
+        }
+        .overviewHero > span,
+        .overviewMetrics span {
+          color: #aebdc4;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .overviewHero p,
+        .overviewLists p {
+          color: #dfe7eb;
+          line-height: 1.55;
+        }
+        .overviewMetrics {
+          display: grid;
+          gap: 14px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .overviewMetrics strong {
+          color: #fff;
+          display: block;
+          font-size: 28px;
+          font-weight: 950;
+          margin-top: 8px;
+        }
+        .overviewLists {
+          display: grid;
+          gap: 14px;
+          grid-column: 1 / -1;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .overviewLists p {
+          background: rgba(255, 255, 255, 0.045);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          margin-top: 10px;
+          padding: 12px;
         }
         .bannerMain {
           align-items: center;
@@ -2203,6 +4135,177 @@ function FreedomCompany({ passwordHash, symbol }) {
         .committeeSection {
           margin-top: 18px;
         }
+        .adaptiveScoreSection {
+          display: grid;
+          gap: 18px;
+          grid-template-columns: 420px minmax(0, 1fr);
+          margin-top: 18px;
+        }
+        .scoreGaugePanel,
+        .decisionMatrix,
+        .scoreBreakdown {
+          background: rgba(8, 14, 17, 0.94);
+          border: 1px solid color-mix(in srgb, var(--company-primary) 24%, rgba(179, 199, 207, 0.13));
+          border-radius: 8px;
+          box-shadow: 0 20px 70px color-mix(in srgb, var(--company-primary) 10%, transparent);
+          padding: 18px;
+        }
+        .scoreGaugePanel {
+          display: grid;
+          gap: 14px;
+          grid-row: span 2;
+        }
+        .scoreGaugeCard {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.055), color-mix(in srgb, var(--company-primary) 8%, transparent));
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          display: grid;
+          gap: 12px;
+          justify-items: center;
+          padding: 18px;
+          text-align: center;
+        }
+        .scoreGaugeCard.conviction {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.055), color-mix(in srgb, var(--company-accent) 8%, transparent));
+        }
+        .scoreGaugeCard > span {
+          color: #fff;
+          font-size: 16px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+        .scoreGaugeCard p,
+        .scoreReason,
+        .scoreLists p,
+        .breakdownGrid p,
+        .convictionGrid p {
+          color: #dfe7eb;
+          line-height: 1.55;
+          margin: 0;
+        }
+        .scoreGauge {
+          --score: 0;
+          align-items: center;
+          background:
+            radial-gradient(circle at center, #081014 0 56%, transparent 57%),
+            conic-gradient(var(--company-primary) calc(var(--score) * 1%), rgba(255, 255, 255, 0.1) 0);
+          border-radius: 999px;
+          display: flex;
+          height: 154px;
+          justify-content: center;
+          width: 154px;
+        }
+        .scoreGauge.buy,
+        .scoreGauge.strongBuy {
+          background:
+            radial-gradient(circle at center, #081014 0 56%, transparent 57%),
+            conic-gradient(#79d9c5 calc(var(--score) * 1%), rgba(255, 255, 255, 0.1) 0);
+        }
+        .scoreGauge.watch {
+          background:
+            radial-gradient(circle at center, #081014 0 56%, transparent 57%),
+            conic-gradient(#e4b85d calc(var(--score) * 1%), rgba(255, 255, 255, 0.1) 0);
+        }
+        .scoreGauge.holdOff,
+        .scoreGauge.avoid {
+          background:
+            radial-gradient(circle at center, #081014 0 56%, transparent 57%),
+            conic-gradient(#ff8a62 calc(var(--score) * 1%), rgba(255, 255, 255, 0.1) 0);
+        }
+        .scoreGauge div {
+          align-items: baseline;
+          display: flex;
+          gap: 4px;
+        }
+        .scoreGauge strong {
+          color: #fff;
+          font-size: 42px;
+          font-weight: 950;
+        }
+        .scoreGauge span {
+          color: #aebdc4;
+          font-size: 15px;
+          font-weight: 900;
+        }
+        .decisionGrid,
+        .breakdownGrid,
+        .convictionGrid,
+        .scoreLists {
+          display: grid;
+          gap: 14px;
+          margin-top: 18px;
+        }
+        .decisionGrid {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+        .decisionGrid article,
+        .breakdownGrid article,
+        .convictionGrid article,
+        .scoreLists > div {
+          background: rgba(255, 255, 255, 0.045);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .decisionGrid span,
+        .breakdownGrid small {
+          color: #aebdc4;
+          display: block;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+        }
+        .decisionGrid strong {
+          color: #fff;
+          display: block;
+          font-size: 22px;
+          font-weight: 950;
+          overflow-wrap: anywhere;
+        }
+        .scoreReason {
+          background: color-mix(in srgb, var(--company-primary) 10%, transparent);
+          border: 1px solid color-mix(in srgb, var(--company-primary) 24%, transparent);
+          border-radius: 8px;
+          margin-top: 18px;
+          padding: 14px 16px;
+        }
+        .scoreLists {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        h3 {
+          color: #fff;
+          font-size: 15px;
+          margin: 0 0 12px;
+          text-transform: uppercase;
+        }
+        .breakdownGrid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .convictionGrid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+        .breakdownTop {
+          align-items: center;
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .breakdownTop strong,
+        .convictionGrid strong {
+          color: #fff;
+          font-size: 15px;
+          font-weight: 950;
+        }
+        .breakdownTop span,
+        .convictionGrid span {
+          color: var(--company-accent);
+          font-size: 18px;
+          font-weight: 950;
+        }
+        .convictionGrid p {
+          margin-top: 10px;
+        }
         .healthSection {
           background: linear-gradient(135deg, rgba(8, 17, 21, 0.96), color-mix(in srgb, var(--company-primary) 10%, rgba(10, 22, 22, 0.94)));
           border-color: color-mix(in srgb, var(--company-primary) 26%, rgba(179, 199, 207, 0.13));
@@ -2356,6 +4459,9 @@ function FreedomCompany({ passwordHash, symbol }) {
           grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.8fr);
           margin-top: 18px;
         }
+        .mainGrid.singlePanel {
+          display: block;
+        }
         .chartStack {
           display: grid;
           gap: 18px;
@@ -2468,8 +4574,14 @@ function FreedomCompany({ passwordHash, symbol }) {
           .valuationCards,
           .diagnostics,
           .analystGrid,
-          .healthGrid {
+          .healthGrid,
+          .breakdownGrid,
+          .convictionGrid,
+          .decisionGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+          .adaptiveScoreSection {
+            grid-template-columns: 1fr;
           }
           .committeeSummary {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2483,13 +4595,15 @@ function FreedomCompany({ passwordHash, symbol }) {
         }
         @media (max-width: 720px) {
           .page {
-            padding: 16px;
+            padding: 88px 16px 16px;
           }
           .companyBanner {
             padding: 22px;
           }
           .bannerMain,
+          .bannerActions,
           .analysisBar,
+          .tradeModeIntro,
           .sectionHeader {
             align-items: flex-start;
             display: flex;
@@ -2503,10 +4617,17 @@ function FreedomCompany({ passwordHash, symbol }) {
             font-size: 42px;
           }
           .stats,
+          .overviewTab,
+          .overviewLists,
           .healthGrid,
           .valuationCards,
           .committeeSummary,
           .analystGrid,
+          .adaptiveScoreSection,
+          .decisionGrid,
+          .breakdownGrid,
+          .convictionGrid,
+          .scoreLists,
           .assumptionGrid,
           .numberGrid,
           .analysisBadges,

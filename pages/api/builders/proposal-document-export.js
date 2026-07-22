@@ -3,7 +3,9 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: "5mb",
+    },
   },
 };
 
@@ -39,6 +41,18 @@ async function parseJsonRequestBody(req) {
     hasRequestJson: typeof req.json === "function",
   });
 
+  if (req.body !== undefined) {
+    if (req.body && typeof req.body === "object" && !Array.isArray(req.body)) {
+      return { ok: true, body: req.body, rawBody: "", source: "req.body" };
+    }
+    return {
+      ok: false,
+      statusCode: 400,
+      error: "Request body must be a JSON object.",
+      field: "request body",
+    };
+  }
+
   if (typeof req.json === "function") {
     try {
       console.info("[proposal-document-export] request.json() start");
@@ -72,7 +86,7 @@ async function parseJsonRequestBody(req) {
       ok: false,
       statusCode: 400,
       error: "Request body is empty.",
-      details: "Expected a JSON object containing renderedPages, fileName/name, importedDocuments, workspaceId, projectId, and estimateId.",
+      details: "Expected a JSON object containing documentType, estimateId, jobId, templateId, templateVersion, pageOrder, pageOverrides, linkedFieldOverrides, and importedDocumentReferences.",
       field: "request body",
       rawBodyPreview: rawBody,
     };
@@ -229,58 +243,45 @@ function validateExportPayload(body = {}) {
       field: "body",
     };
   }
-  if (!Array.isArray(body.renderedPages)) {
+  const bodyJson = JSON.stringify(body);
+  if (/data:(image|application)\//i.test(bodyJson) || /;base64,/i.test(bodyJson) || body.renderedPages) {
     return {
       ok: false,
       statusCode: 400,
-      error: "Invalid export payload field: renderedPages must be an array.",
-      details: `renderedPages was ${typeof body.renderedPages}.`,
+      error: "Export payload must not include rendered pages, embedded images, PDFs, or Base64 data.",
+      details: "Send only template/page metadata and stable document references.",
       field: "renderedPages",
     };
   }
-  if (!body.renderedPages.length) {
+  if (body.documentType !== "project-estimate") {
     return {
       ok: false,
       statusCode: 400,
-      error: "Rendered document pages are required for Project Estimate PDF export. The obsolete placeholder export path has been removed.",
-      details: "The frontend sent renderedPages as an empty array.",
-      field: "renderedPages",
+      error: "Invalid export payload field: documentType must be project-estimate.",
+      field: "documentType",
     };
   }
-  for (const [index, page] of body.renderedPages.entries()) {
-    if (!page || typeof page !== "object") {
-      return {
-        ok: false,
-        statusCode: 400,
-        error: `Invalid export payload field: renderedPages[${index}] must be an object.`,
-        details: `renderedPages[${index}] was ${typeof page}.`,
-        field: `renderedPages[${index}]`,
-      };
-    }
-    if (typeof page.imageData !== "string" || !page.imageData.startsWith("data:image/")) {
-      return {
-        ok: false,
-        statusCode: 400,
-        error: `Invalid export payload field: renderedPages[${index}].imageData must be a data:image URL.`,
-        details: `Page ${index + 1} imageData was ${typeof page.imageData} with length ${String(page.imageData || "").length}.`,
-        field: `renderedPages[${index}].imageData`,
-      };
-    }
-  }
-  if (body.importedDocuments !== undefined && (body.importedDocuments === null || typeof body.importedDocuments !== "object" || Array.isArray(body.importedDocuments))) {
+  if (!Array.isArray(body.pageOrder)) {
     return {
       ok: false,
       statusCode: 400,
-      error: "Invalid export payload field: importedDocuments must be an object when provided.",
-      details: `importedDocuments was ${Array.isArray(body.importedDocuments) ? "array" : typeof body.importedDocuments}.`,
-      field: "importedDocuments",
+      error: "Invalid export payload field: pageOrder must be an array.",
+      field: "pageOrder",
+    };
+  }
+  if (body.importedDocumentReferences !== undefined && (body.importedDocumentReferences === null || typeof body.importedDocumentReferences !== "object" || Array.isArray(body.importedDocumentReferences))) {
+    return {
+      ok: false,
+      statusCode: 400,
+      error: "Invalid export payload field: importedDocumentReferences must be an object when provided.",
+      field: "importedDocumentReferences",
     };
   }
   return { ok: true };
 }
 
 function requestDiagnostics(req, body = {}) {
-  const importedDocuments = body?.importedDocuments && typeof body.importedDocuments === "object" ? body.importedDocuments : {};
+  const importedDocuments = body?.importedDocumentReferences && typeof body.importedDocumentReferences === "object" ? body.importedDocumentReferences : {};
   return {
     method: req.method,
     url: req.url,
@@ -290,7 +291,7 @@ function requestDiagnostics(req, body = {}) {
     uploadedInclusionsSchedule: importedDocuments.inclusions || null,
     uploadedPlans: importedDocuments.pricedPlans || null,
     uploadedPdfPaths: collectImportedPdfDiagnostics(importedDocuments),
-    pageCount: Array.isArray(body?.renderedPages) ? body.renderedPages.length : 0,
+    pageCount: Array.isArray(body?.pageOrder) ? body.pageOrder.length : 0,
   };
 }
 
@@ -344,8 +345,8 @@ export default async function handler(req, res) {
       workspaceId: body?.workspaceId || "",
       projectId: body?.projectId || "",
       estimateId: body?.estimateId || "",
-      renderedPageCount: Array.isArray(body?.renderedPages) ? body.renderedPages.length : 0,
-      importedDocumentKeys: body?.importedDocuments && typeof body.importedDocuments === "object" ? Object.keys(body.importedDocuments) : [],
+      pageCount: Array.isArray(body?.pageOrder) ? body.pageOrder.length : 0,
+      importedDocumentKeys: body?.importedDocumentReferences && typeof body.importedDocumentReferences === "object" ? Object.keys(body.importedDocumentReferences) : [],
     });
 
     const validation = validateExportPayload(body);
@@ -357,21 +358,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const renderedPages = Array.isArray(body.renderedPages) ? body.renderedPages : [];
-    const importedDocuments = body.importedDocuments || {};
+    const importedDocuments = body.importedDocumentReferences || {};
     const workspaceId = String(body.workspaceId || "").trim();
     const projectId = String(body.projectId || "").trim();
     const uploadedPdfPaths = collectImportedPdfDiagnostics(importedDocuments);
-    const requestedFilename = safePdfFilename(body.fileName || body.name || "estimate-pack.pdf");
-    const outputPath = `download:${requestedFilename}`;
     console.info("[proposal-document-export] export request", {
       workspaceId,
       projectId,
       estimateId: body.estimateId || "",
-      renderedPageCount: renderedPages.length,
+      pageOrder: body.pageOrder || [],
       uploadedPdfPaths,
-      pageCount: renderedPages.length,
-      outputPath,
+      pageCount: Array.isArray(body.pageOrder) ? body.pageOrder.length : 0,
     });
 
     const token = bearerToken(req);
@@ -387,49 +384,19 @@ export default async function handler(req, res) {
     }
 
     await verifyActiveInclusionsForExport({ importedDocuments, workspaceId, projectId });
-    const outputPdf = await PDFDocument.create();
-
-    for (const [index, renderedPage] of renderedPages.entries()) {
-      try {
-        await appendRenderedPageImage({ outputPdf, renderedPage });
-      } catch (error) {
-        const serialized = serializeError(error);
-        const mergeError = `Failed to merge rendered PDF page ${index + 1} (${pageFailureLabel(renderedPage, index)}): ${serialized.message}`;
-        console.error("[proposal-document-export] pdf-lib error", {
-          pdfLibError: serialized,
-          mergeError,
-          pageIndex: index + 1,
-          file: renderedPage.sourceFile || "",
-          sourcePath: renderedPage.sourcePath || "",
-          sourcePageNumber: renderedPage.sourcePageNumber || "",
-          uploadedPdfPaths,
-          pageCount: renderedPages.length,
-          outputPath,
-        });
-        const wrapped = new Error(mergeError);
-        wrapped.cause = error;
-        wrapped.pdfLibError = serialized;
-        wrapped.mergeError = mergeError;
-        wrapped.mergePage = {
-          pageIndex: index + 1,
-          file: renderedPage.sourceFile || "",
-          sourcePath: renderedPage.sourcePath || "",
-          sourcePageNumber: renderedPage.sourcePageNumber || "",
-        };
-        throw wrapped;
-      }
-    }
-
-    const bytes = await outputPdf.save();
-    console.info("[proposal-document-export] PDF generated", {
-      byteLength: bytes.length,
-      pageCount: renderedPages.length,
-      outputPath,
-      contentType: "application/pdf",
+    console.info("[proposal-document-export] small metadata payload accepted", {
+      documentType: body.documentType,
+      templateId: body.templateId,
+      templateVersion: body.templateVersion,
+      pageCount: body.pageOrder?.length || 0,
     });
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${requestedFilename}"`);
-    return res.status(200).send(Buffer.from(bytes));
+    return sendJson(res, 200, {
+      success: true,
+      ok: true,
+      accepted: true,
+      documentType: body.documentType,
+      pageCount: body.pageOrder?.length || 0,
+    });
   } catch (error) {
     const serialized = serializeError(error);
     const body = parsedBody && typeof parsedBody === "object" ? parsedBody : {};
@@ -439,12 +406,7 @@ export default async function handler(req, res) {
     const outputPath = `download:${safePdfFilename(body.fileName || body.name || "estimate-pack.pdf")}`;
     const responseBody = {
       ok: false,
-      error: serialized.message,
-      exception: `${serialized.name}: ${serialized.message}`,
-      stack: serialized.stack,
-      pdfLibError: error?.pdfLibError || (/(pdf|png|jpg|jpeg|image)/i.test(serialized.stack + serialized.message) ? serialized : null),
-      mergeError: error?.mergeError || serialized.message,
-      mergePage: error?.mergePage || null,
+      error: "PDF export could not be completed.",
       uploadedPdfPaths,
       pageCount: renderedPages.length,
       outputPath,

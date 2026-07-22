@@ -30,9 +30,9 @@ import {
   readCustomStatsPreset, writeCustomStatsPreset, matchesCustomStatsPreset,
 } from "./pbEditorUtils";
 import {
+  buildFooterLinksFromMainNavigation,
   buildFooterLinksFromPages,
   buildFooterNavigationContext,
-  matchFooterLinksToMainNavigationOrder,
   normalizeFooterNavItems,
 } from "../../../lib/website-builder/footerNavigation";
 
@@ -81,16 +81,19 @@ function NavbarPresetPicker({ value, onApply }) {
 
 const CANONICAL_MENU_URLS = {
   home: "/",
-  "about-us": "/about",
-  about: "/about",
+  "about-us": "/about-us",
+  about: "/about-us",
   modules: "/modules",
-  "contact-us": "/contact",
-  contact: "/contact",
+  "contact-us": "/contact-us",
+  contact: "/contact-us",
   email: "/email",
   pricing: "/pricing",
   crm: "/crm",
   sms: "/sms",
   funnels: "/funnels",
+  "website-builder": "/website-builder",
+  "social-media": "/social-media",
+  "project-hub": "/project-hub",
 };
 
 function slugifyNavValue(value) {
@@ -121,260 +124,264 @@ function normalizeNavHref(href, label = "", pageSlug = "") {
   return raw.startsWith("/") ? raw : `/${slugifyNavValue(raw) || raw}`;
 }
 
-function normalizeNavMenuItems(links, { removeDuplicates = false } = {}) {
-  const seenIds = new Set();
-  const seenKeys = new Set();
-  const duplicates = [];
+const DEFAULT_MAIN_NAV_LINKS = Object.freeze([
+  { label: "Home", href: "/", placement: "top" },
+  { label: "Modules", href: "/modules", placement: "top" },
+  { label: "Email", href: "/email", placement: "modules" },
+  { label: "SMS", href: "/sms", placement: "modules" },
+  { label: "CRM", href: "/crm", placement: "modules" },
+  { label: "Funnels", href: "/funnels", placement: "modules" },
+  { label: "Website Builder", href: "/website-builder", placement: "modules" },
+  { label: "Social Media", href: "/social-media", placement: "modules" },
+  { label: "Project Hub", href: "/project-hub", placement: "modules" },
+  { label: "About Us", href: "/about-us", placement: "top" },
+  { label: "Pricing", href: "/pricing", placement: "top" },
+  { label: "Contact Us", href: "/contact-us", placement: "top" },
+]);
 
-  const normalizeItem = (item, index, childIndex = null) => {
-    const label = String(item?.label || "").trim();
-    const pageId = String(item?.pageId || item?.page_id || "").trim();
-    const pageSlug = slugifyNavValue(item?.slug || item?.pageSlug || label || item?.href || "");
-    const href = normalizeNavHref(item?.href, label, pageSlug);
-    if (!label && !href) return null;
+function getMainNavKey(item = {}) {
+  return slugifyNavValue(item.label || item.name || item.title || item.href || item.url || item.path || "");
+}
 
-    const baseId = String(item?.id || "").trim();
-    const id = baseId && !seenIds.has(baseId)
-      ? baseId
-      : `nav-${childIndex === null ? "item" : "child"}-${Date.now()}-${index}-${childIndex ?? 0}`;
-    seenIds.add(id);
-
-    const duplicateKey = [pageId || "", pageSlug || slugifyNavValue(href), slugifyNavValue(label)].join("|");
-    const isDuplicate = seenKeys.has(duplicateKey);
-    if (isDuplicate) duplicates.push({ label: label || href, href });
-    if (removeDuplicates && isDuplicate) return null;
-    seenKeys.add(duplicateKey);
-
-    const children = (Array.isArray(item?.children) ? item.children : [])
-      .map((child, idx) => normalizeItem(child, idx, idx))
-      .filter(Boolean)
-      .map((child) => ({ ...child, href: child.href || "/" }));
-
-    return {
+function flattenMainNavLinks(links = []) {
+  const rows = [];
+  (Array.isArray(links) ? links : []).forEach((item) => {
+    const label = String(item?.label || item?.name || item?.title || "Link").trim();
+    rows.push({
       ...item,
-      id,
-      label: label || "Link",
-      href: href || "/",
-      ...(pageId ? { pageId } : {}),
-      ...(pageSlug ? { slug: pageSlug } : {}),
-      ...(children.length ? { children } : { children: [] }),
-    };
-  };
-
-  const normalized = (Array.isArray(links) ? links : []).map((item, index) => normalizeItem(item, index)).filter(Boolean);
-  return { links: normalized, duplicates };
-}
-
-function buildNavLinkFromPage(page) {
-  const label = String(page?.name || page?.title || "").trim() || "Page";
-  const slug = slugifyNavValue(page?.slug || label);
-  return {
-    id: `nav-page-${slug || Date.now()}`,
-    pageId: String(page?.id || slug || ""),
-    slug,
-    label,
-    href: normalizeNavHref("", label, slug),
-    children: [],
-  };
-}
-
-function NavbarLinksEditor({ links, onChange, pages = [] }) {
-  const { links: safeLinks, duplicates } = normalizeNavMenuItems(links);
-  const duplicatePageSlugs = useMemo(() => {
-    const counts = new Map();
-    (Array.isArray(pages) ? pages : []).forEach((page) => {
-      const slug = slugifyNavValue(page?.slug || page?.name || "");
-      if (!slug) return;
-      counts.set(slug, (counts.get(slug) || 0) + 1);
+      label,
+      href: normalizeNavHref(item?.href || item?.url || item?.path || "", label),
+      placement: "top",
+      children: [],
     });
-    return Array.from(counts.entries()).filter(([, count]) => count > 1).map(([slug]) => slug);
-  }, [pages]);
-  const makeLinkId = () => `nav-link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const makeChildLinkId = () => `nav-child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const emitChange = (nextLinks, options = {}) => {
-    onChange(normalizeNavMenuItems(nextLinks, options).links);
-  };
+    (Array.isArray(item?.children) ? item.children : []).forEach((child) => {
+      const childLabel = String(child?.label || child?.name || child?.title || "Link").trim();
+      rows.push({
+        ...child,
+        label: childLabel,
+        href: normalizeNavHref(child?.href || child?.url || child?.path || "", childLabel),
+        placement: getMainNavKey(item) === "modules" ? "modules" : "top",
+        children: [],
+      });
+    });
+  });
+  return rows;
+}
+
+function normalizeSimpleMainNavRows(links = []) {
+  const existingRows = flattenMainNavLinks(links);
+  const byKey = new Map();
+  existingRows.forEach((row) => {
+    const key = getMainNavKey(row);
+    if (!key || byKey.has(key)) return;
+    byKey.set(key, row);
+  });
+
+  const rows = DEFAULT_MAIN_NAV_LINKS.map((fallback) => {
+    const key = slugifyNavValue(fallback.label);
+    const existing = byKey.get(key) || {};
+    return {
+      ...existing,
+      id: existing.id || `nav-${key}`,
+      label: fallback.label,
+      href: normalizeNavHref(existing.href || fallback.href, fallback.label),
+      placement: existing.placement === "modules" || fallback.placement === "modules" ? "modules" : "top",
+      children: [],
+    };
+  });
+
+  existingRows.forEach((row) => {
+    const key = getMainNavKey(row);
+    if (!key || DEFAULT_MAIN_NAV_LINKS.some((fallback) => slugifyNavValue(fallback.label) === key)) return;
+    rows.push({
+      ...row,
+      id: row.id || `nav-${key}`,
+      label: row.label || "Link",
+      href: normalizeNavHref(row.href, row.label),
+      placement: row.placement === "modules" ? "modules" : "top",
+      children: [],
+    });
+  });
+
+  return rows;
+}
+
+function buildMainNavTree(rows = []) {
+  const normalizedRows = rows.map((row) => ({
+    ...row,
+    label: String(row?.label || "Link").trim() || "Link",
+    href: normalizeNavHref(row?.href || "", row?.label || ""),
+    placement: row?.placement === "modules" ? "modules" : "top",
+    children: [],
+  }));
+  const moduleChildren = normalizedRows
+    .filter((row) => row.placement === "modules" && getMainNavKey(row) !== "modules")
+    .map(({ placement, children, ...row }) => ({ ...row, children: [] }));
+  const topLevel = normalizedRows
+    .filter((row) => row.placement === "top" || getMainNavKey(row) === "modules")
+    .map(({ placement, children, ...row }) => (
+      getMainNavKey(row) === "modules" ? { ...row, children: moduleChildren } : { ...row, children: [] }
+    ));
+
+  if (!topLevel.some((row) => getMainNavKey(row) === "modules")) {
+    topLevel.splice(1, 0, { id: "nav-modules", label: "Modules", href: "/modules", children: moduleChildren });
+  }
+
+  return topLevel;
+}
+
+function NavbarLinksEditor({ links, onChange }) {
+  const safeRows = useMemo(() => normalizeSimpleMainNavRows(links), [links]);
+
+  useEffect(() => {
+    const nextTree = buildMainNavTree(safeRows);
+    if (JSON.stringify(Array.isArray(links) ? links : []) !== JSON.stringify(nextTree)) {
+      onChange(nextTree);
+    }
+  }, [links, onChange, safeRows]);
+
+  function emitRows(nextRows) {
+    onChange(buildMainNavTree(nextRows));
+  }
 
   function updateLink(idx, patch) {
-    const next = safeLinks.map((item, currentIdx) => (
+    emitRows(safeRows.map((item, currentIdx) => (
       currentIdx === idx ? { ...item, ...patch } : item
-    ));
-    emitChange(next);
+    )));
   }
 
   function removeLink(idx) {
-    emitChange(safeLinks.filter((_, currentIdx) => currentIdx !== idx));
-  }
-
-  function addLink() {
-    emitChange([...safeLinks, { id: makeLinkId(), label: "New Link", href: "/" }]);
-  }
-
-  function addPageLink(page) {
-    emitChange([...safeLinks, buildNavLinkFromPage(page)]);
-  }
-
-  function removeDuplicateLinks() {
-    emitChange(safeLinks, { removeDuplicates: true });
+    emitRows(safeRows.filter((_, currentIdx) => currentIdx !== idx));
   }
 
   function moveLink(idx, direction) {
     const nextIndex = idx + direction;
-    if (nextIndex < 0 || nextIndex >= safeLinks.length) return;
-    const next = [...safeLinks];
+    if (nextIndex < 0 || nextIndex >= safeRows.length) return;
+    const next = [...safeRows];
     const [moved] = next.splice(idx, 1);
     next.splice(nextIndex, 0, moved);
-    emitChange(next);
-  }
-
-  function updateChildLink(parentIdx, childIdx, patch) {
-    const next = safeLinks.map((item, currentIdx) => {
-      if (currentIdx !== parentIdx) return item;
-      const children = Array.isArray(item.children) ? item.children : [];
-      return {
-        ...item,
-        children: children.map((child, currentChildIdx) => (
-          currentChildIdx === childIdx ? { ...child, ...patch } : child
-        )),
-      };
-    });
-    emitChange(next);
-  }
-
-  function removeChildLink(parentIdx, childIdx) {
-    const next = safeLinks.map((item, currentIdx) => {
-      if (currentIdx !== parentIdx) return item;
-      return {
-        ...item,
-        children: (Array.isArray(item.children) ? item.children : []).filter((_, currentChildIdx) => currentChildIdx !== childIdx),
-      };
-    });
-    emitChange(next);
-  }
-
-  function nestUnder(fromIdx, parentIdx) {
-    if (fromIdx === parentIdx) return;
-    const link = safeLinks[fromIdx];
-    if (!link) return;
-    const asChild = { id: link.id || makeChildLinkId(), label: link.label || "Link", href: link.href || "#" };
-    const next = safeLinks
-      .filter((_, i) => i !== fromIdx)
-      .map((item, currentIdx) => {
-        // parentIdx shifts down by 1 if fromIdx < parentIdx
-        const adjustedParentIdx = fromIdx < parentIdx ? parentIdx - 1 : parentIdx;
-        if (currentIdx !== adjustedParentIdx) return item;
-        return { ...item, children: [...(Array.isArray(item.children) ? item.children : []), asChild] };
-      });
-    emitChange(next);
+    emitRows(next);
   }
 
   return (
-    <div style={styles.stackSm}>
-      {duplicatePageSlugs.length ? (
-        <div style={{ color: "#fbbf24", fontSize: 14, lineHeight: 1.45 }}>
-          Warning: duplicate page slugs found: {duplicatePageSlugs.join(", ")}
-        </div>
-      ) : null}
-      {duplicates.length ? (
-        <button type="button" style={{ ...styles.secondaryBtn, borderColor: "#f59e0b", color: "#fbbf24" }} onClick={removeDuplicateLinks}>
-          Remove Duplicate Menu Items
-        </button>
-      ) : null}
-      {Array.isArray(pages) && pages.length ? (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {pages.map((page) => (
-            <button key={page?.id || page?.slug || page?.name} type="button" style={styles.assetChip} onClick={() => addPageLink(page)}>
-              + {page?.name || page?.slug || "Page"}
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {safeLinks.map((item, idx) => (
-        <div key={item?.id || `link-${idx}`} style={styles.linkRowCard}>
-          <div style={styles.linkRowHeader}>
-            <span style={styles.linkRowTitle}>Link {idx + 1}</span>
-            <div style={styles.linkActions}>
-              <button type="button" style={styles.linkMoveBtn} onClick={() => moveLink(idx, -1)} title="Move up">↑</button>
-              <button type="button" style={styles.linkMoveBtn} onClick={() => moveLink(idx, 1)} title="Move down">↓</button>
-              <button type="button" style={styles.linkRowDelete} onClick={() => removeLink(idx)}>
-                Remove
-              </button>
-            </div>
-          </div>
-          <input
-            type="text"
-            value={item?.label || ""}
-            onChange={(e) => updateLink(idx, { label: e.target.value })}
-            style={styles.propertyInput}
-            placeholder="Label"
-          />
-          <input
-            type="text"
-            value={item?.href || ""}
-            onChange={(e) => updateLink(idx, { href: normalizeNavHref(e.target.value, item?.label, item?.slug) })}
-            style={styles.propertyInput}
-            placeholder="#section or /page"
-          />
-          <label style={styles.inlineToggle}>
+    <div style={navEditorStyles.wrap}>
+      {safeRows.map((item, idx) => (
+        <div key={item?.id || `link-${idx}`} style={navEditorStyles.row}>
+          <label style={navEditorStyles.field}>
+            <span style={navEditorStyles.label}>Page name</span>
             <input
-              type="checkbox"
-              checked={!!item?.highlighted}
-              onChange={(e) => updateLink(idx, { highlighted: e.target.checked })}
-              style={styles.checkboxInput}
+              type="text"
+              value={item?.label || ""}
+              onChange={(e) => updateLink(idx, { label: e.target.value })}
+              style={navEditorStyles.input}
+              placeholder="Page name"
             />
-            Highlight this link
           </label>
-          {safeLinks.length > 1 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 16, color: "#94a3b8", whiteSpace: "nowrap" }}>Nest under →</span>
-              <select
-                style={{ ...styles.propertyInput, flex: 1, padding: "4px 8px", fontSize: 16 }}
-                value=""
-                onChange={(e) => { if (e.target.value !== "") nestUnder(idx, Number(e.target.value)); }}
-              >
-                <option value="">Move under a parent…</option>
-                {safeLinks.map((other, otherIdx) => otherIdx !== idx ? (
-                  <option key={otherIdx} value={otherIdx}>{other?.label || `Link ${otherIdx + 1}`}</option>
-                ) : null)}
-              </select>
-            </div>
-          )}
-          <div style={styles.subLinkList}>
-            {(Array.isArray(item.children) ? item.children : []).map((child, childIdx) => (
-              <div key={child?.id || `child-${idx}-${childIdx}`} style={styles.subLinkCard}>
-                <div style={styles.linkRowHeader}>
-                  <span style={styles.subLinkTitle}>Dropdown {childIdx + 1}</span>
-                  <button type="button" style={styles.linkRowDelete} onClick={() => removeChildLink(idx, childIdx)}>
-                    Remove
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={child?.label || ""}
-                  onChange={(e) => updateChildLink(idx, childIdx, { label: e.target.value })}
-                  style={styles.propertyInput}
-                  placeholder="Dropdown label"
-                />
-                <input
-                  type="text"
-                  value={child?.href || ""}
-                  onChange={(e) => updateChildLink(idx, childIdx, { href: normalizeNavHref(e.target.value, child?.label, child?.slug) })}
-                  style={styles.propertyInput}
-                  placeholder="Dropdown href"
-                />
-              </div>
-            ))}
-
+          <label style={navEditorStyles.field}>
+            <span style={navEditorStyles.label}>Link</span>
+            <input
+              type="text"
+              value={item?.href || ""}
+              onChange={(e) => updateLink(idx, { href: normalizeNavHref(e.target.value, item?.label) })}
+              style={navEditorStyles.input}
+              placeholder="/page"
+            />
+          </label>
+          <label style={navEditorStyles.field}>
+            <span style={navEditorStyles.label}>Dropdown</span>
+            <select
+              value={item?.placement === "modules" ? "modules" : "top"}
+              onChange={(e) => updateLink(idx, { placement: e.target.value })}
+              style={navEditorStyles.input}
+              disabled={getMainNavKey(item) === "modules"}
+            >
+              <option value="top">Top level</option>
+              <option value="modules">Under Modules</option>
+            </select>
+          </label>
+          <div style={navEditorStyles.actions}>
+            <button type="button" style={navEditorStyles.moveButton} onClick={() => moveLink(idx, -1)}>Up</button>
+            <button type="button" style={navEditorStyles.moveButton} onClick={() => moveLink(idx, 1)}>Down</button>
+            <button type="button" style={navEditorStyles.removeButton} onClick={() => removeLink(idx)}>Remove</button>
           </div>
         </div>
       ))}
-      <button type="button" style={styles.secondaryBtn} onClick={addLink}>
-        + Add Link
-      </button>
     </div>
   );
 }
 
+const navEditorStyles = {
+  wrap: {
+    display: "grid",
+    gap: 14,
+    width: "100%",
+    minWidth: 0,
+    overflowY: "auto",
+    paddingRight: 2,
+  },
+  row: {
+    display: "grid",
+    gap: 10,
+    width: "100%",
+    minWidth: 0,
+    padding: 12,
+    borderRadius: 10,
+    border: "1px solid #2b3650",
+    background: "#111827",
+    boxSizing: "border-box",
+  },
+  field: {
+    display: "grid",
+    gap: 5,
+    minWidth: 0,
+  },
+  label: {
+    color: "#9db3c2",
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  input: {
+    width: "100%",
+    minWidth: 0,
+    minHeight: 38,
+    boxSizing: "border-box",
+    border: "1px solid #2b3650",
+    borderRadius: 6,
+    background: "#0d1522",
+    color: "#e6eef5",
+    padding: "8px 10px",
+    fontSize: 14,
+    fontFamily: "inherit",
+  },
+  actions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  moveButton: {
+    minHeight: 36,
+    border: "1px solid #2d6cdf",
+    borderRadius: 8,
+    background: "#173459",
+    color: "#dbeafe",
+    padding: "7px 12px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  removeButton: {
+    minHeight: 36,
+    border: "1px solid #7f1d1d",
+    borderRadius: 8,
+    background: "transparent",
+    color: "#fca5a5",
+    padding: "7px 12px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+};
 function normalizeFeatureListItem(item, index) {
   if (item && typeof item === "object" && !Array.isArray(item)) {
     const rawTextBlocks = Array.isArray(item.textBlocks) && item.textBlocks.length
@@ -1388,7 +1395,8 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
 function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor, project }) {
   const props = block?.props || {};
   const update = (patch) => {
-    if (Array.isArray(props.navLinks) && props.navLinks.length > 3 && Array.isArray(patch?.navLinks) && patch.navLinks.length <= 1) {
+    const currentNavigationLinks = props.navigationLinks || props.navLinks;
+    if (Array.isArray(currentNavigationLinks) && currentNavigationLinks.length > 3 && Array.isArray(patch?.navigationLinks) && patch.navigationLinks.length <= 1) {
       if (typeof window !== "undefined") {
         window.alert("Footer navigation update blocked because it would remove almost all existing links.");
       }
@@ -1397,13 +1405,8 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
     onChange(index, { ...props, ...patch });
   };
   const footerContext = buildFooterNavigationContext({ pages: project?.pages, logInvalid: true });
-  const navLinks = normalizeFooterNavItems(props.navLinks, footerContext, { source: "footer.editor.navLinks" });
-  const extraLinks = normalizeFooterNavItems(props.extraLinks, footerContext, { source: "footer.editor.extraLinks" });
-
-  const focusFooterLink = (collection, i) => {
-    if (typeof document === "undefined") return;
-    document.querySelector(`[data-footer-link-input="${collection}-${i}"]`)?.focus?.();
-  };
+  const navLinks = normalizeFooterNavItems(props.navigationLinks || props.navLinks, footerContext, { source: "footer.editor.navigationLinks" });
+  const extraLinks = normalizeFooterNavItems(props.companyLinks || props.extraLinks, footerContext, { source: "footer.editor.companyLinks" });
 
   const moveFooterLink = (collection, i, direction) => {
     const links = collection === "extraLinks" ? [...extraLinks] : [...navLinks];
@@ -1412,24 +1415,26 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
     const temp = links[i];
     links[i] = links[nextIndex];
     links[nextIndex] = temp;
-    update({ [collection]: links, footerNavManual: true });
+    update(collection === "extraLinks"
+      ? { companyLinks: links, extraLinks: links, footerNavManual: true }
+      : { navigationLinks: links, footerNavManual: true });
   };
 
   const matchMainNavigationOrder = () => {
     const mainLinks = Array.isArray(project?.globalNavBlock?.props?.links) && project.globalNavBlock.props.links.length
       ? project.globalNavBlock.props.links
       : buildFooterLinksFromPages(project?.pages || []);
-    const orderedLinks = matchFooterLinksToMainNavigationOrder(navLinks, mainLinks, footerContext);
+    const orderedLinks = buildFooterLinksFromMainNavigation(mainLinks, project?.pages || [], footerContext);
     if (navLinks.length > 3 && orderedLinks.length <= 1) {
       if (typeof window !== "undefined") {
         window.alert("Match Main Navigation Order was blocked because it would reduce the footer to one link.");
       }
       return;
     }
-    const preview = orderedLinks.map((link) => link.label || link.href).filter(Boolean).join(" -> ");
+    const preview = orderedLinks.map((link) => `${link.label}  ${link.href}`).filter(Boolean).join("\n");
     if (typeof window !== "undefined" && !window.confirm(`Apply this footer order?\n\n${preview}`)) return;
     update({
-      navLinks: orderedLinks,
+      navigationLinks: orderedLinks,
       footerNavManual: true,
     });
   };
@@ -1437,18 +1442,52 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
   const updateNavLink = (i, field, value) => {
     const links = [...navLinks];
     links[i] = { ...links[i], [field]: value };
-    update({ navLinks: links, footerNavManual: true });
+    update({ navigationLinks: links, footerNavManual: true });
   };
-  const addNavLink = () => update({ navLinks: [...navLinks, { label: "New Link", href: "#" }], footerNavManual: true });
-  const removeNavLink = (i) => update({ navLinks: navLinks.filter((_, idx) => idx !== i), footerNavManual: true });
+  const addNavLink = () => {
+    update({
+      navigationLinks: [...navLinks, { id: `footer-link-${Date.now()}`, label: "New Link", href: "/" }],
+      footerNavManual: true,
+    });
+  };
+  const removeNavLink = (i) => update({ navigationLinks: navLinks.filter((_, idx) => idx !== i), footerNavManual: true });
 
   const updateExtraLink = (i, field, value) => {
     const links = [...extraLinks];
     links[i] = { ...links[i], [field]: value };
-    update({ extraLinks: links, footerNavManual: true });
+    update({ companyLinks: links, extraLinks: links, footerNavManual: true });
   };
-  const addExtraLink = () => update({ extraLinks: [...extraLinks, { label: "New Link", href: "#" }], footerNavManual: true });
-  const removeExtraLink = (i) => update({ extraLinks: extraLinks.filter((_, idx) => idx !== i), footerNavManual: true });
+  const addExtraLink = () => {
+    const links = [...extraLinks, { id: `footer-extra-${Date.now()}`, linkType: "external", label: "New Link", href: "https://" }];
+    update({ companyLinks: links, extraLinks: links, footerNavManual: true });
+  };
+  const removeExtraLink = (i) => {
+    const links = extraLinks.filter((_, idx) => idx !== i);
+    update({ companyLinks: links, extraLinks: links, footerNavManual: true });
+  };
+
+  const footerEditorRow = {
+    display: "grid",
+    gap: 8,
+    marginTop: 10,
+    padding: 10,
+    border: "1px solid rgba(148,163,184,0.24)",
+    borderRadius: 10,
+    background: "rgba(15,23,42,0.36)",
+  };
+  const footerEditorActions = {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    flexWrap: "wrap",
+  };
+  const footerInputStyle = {
+    ...styles.propertyInput,
+    minHeight: 36,
+    fontSize: 14,
+    width: "100%",
+    boxSizing: "border-box",
+  };
 
   return (
     <div style={styles.properties}>
@@ -1539,16 +1578,19 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Nav Links</label>
           <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6, width: "100%" }} onClick={matchMainNavigationOrder}>Match Main Navigation Order</button>
           {navLinks.map((link, i) => (
-            <div key={link.id || i} style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr 1fr auto", gap: 4, marginTop: 6, alignItems: "center" }}>
-              <button type="button" title="Move up" disabled={i === 0} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, -1)}>↑</button>
-              <button type="button" title="Move down" disabled={i === navLinks.length - 1} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === navLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, 1)}>↓</button>
-              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px" }} onClick={() => focusFooterLink("navLinks", i)}>Edit</button>
-              <input data-footer-link-input={`navLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
-              <input type="text" value={link.href || ""} onChange={(e) => updateNavLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
-              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeNavLink(i)}>✕</button>
+            <div key={link.id || i} style={footerEditorRow}>
+              <label style={styles.propertyLabel}>Name</label>
+              <input data-footer-link-input={`navLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateNavLink(i, "label", e.target.value)} style={footerInputStyle} placeholder="Social Media" />
+              <label style={styles.propertyLabel}>URL</label>
+              <input type="text" value={link.href || ""} onChange={(e) => updateNavLink(i, "href", e.target.value)} style={footerInputStyle} placeholder="/social-media" />
+              <div style={footerEditorActions}>
+                <button type="button" disabled={i === 0} style={{ ...styles.secondaryBtn, minHeight: 34, opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, -1)}>Up</button>
+                <button type="button" disabled={i === navLinks.length - 1} style={{ ...styles.secondaryBtn, minHeight: 34, opacity: i === navLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("navLinks", i, 1)}>Down</button>
+                <button type="button" style={{ ...styles.secondaryBtn, minHeight: 34, color: "#ef4444" }} onClick={() => removeNavLink(i)}>Delete</button>
+              </div>
             </div>
           ))}
-          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addNavLink}>+ Add Nav Link</button>
+          <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addNavLink}>+ Add Navigation Link</button>
         </div>
 
         {/* Extra links */}
@@ -1557,13 +1599,16 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
           <input type="text" value={String(props.extraHeading || "")} onChange={(e) => update({ extraHeading: e.target.value })} style={styles.propertyInput} placeholder="Company" />
           <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Extra Links</label>
           {extraLinks.map((link, i) => (
-            <div key={link.id || i} style={{ display: "grid", gridTemplateColumns: "auto auto auto 1fr 1fr auto", gap: 4, marginTop: 6, alignItems: "center" }}>
-              <button type="button" title="Move up" disabled={i === 0} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, -1)}>↑</button>
-              <button type="button" title="Move down" disabled={i === extraLinks.length - 1} style={{ ...styles.secondaryBtn, padding: "0 8px", opacity: i === extraLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, 1)}>↓</button>
-              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px" }} onClick={() => focusFooterLink("extraLinks", i)}>Edit</button>
-              <input data-footer-link-input={`extraLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={styles.propertyInput} placeholder="Label" />
-              <input type="text" value={link.href || ""} onChange={(e) => updateExtraLink(i, "href", e.target.value)} style={styles.propertyInput} placeholder="#url" />
-              <button type="button" style={{ ...styles.secondaryBtn, padding: "0 8px", color: "#ef4444" }} onClick={() => removeExtraLink(i)}>✕</button>
+            <div key={link.id || i} style={footerEditorRow}>
+              <label style={styles.propertyLabel}>Name</label>
+              <input data-footer-link-input={`extraLinks-${i}`} type="text" value={link.label || ""} onChange={(e) => updateExtraLink(i, "label", e.target.value)} style={footerInputStyle} placeholder="Privacy Policy" />
+              <label style={styles.propertyLabel}>URL</label>
+              <input type="text" value={link.href || ""} onChange={(e) => updateExtraLink(i, "href", e.target.value)} style={footerInputStyle} placeholder="/privacy-policy" />
+              <div style={footerEditorActions}>
+                <button type="button" disabled={i === 0} style={{ ...styles.secondaryBtn, minHeight: 34, opacity: i === 0 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, -1)}>Up</button>
+                <button type="button" disabled={i === extraLinks.length - 1} style={{ ...styles.secondaryBtn, minHeight: 34, opacity: i === extraLinks.length - 1 ? 0.45 : 1 }} onClick={() => moveFooterLink("extraLinks", i, 1)}>Down</button>
+                <button type="button" style={{ ...styles.secondaryBtn, minHeight: 34, color: "#ef4444" }} onClick={() => removeExtraLink(i)}>Delete</button>
+              </div>
             </div>
           ))}
           <button type="button" style={{ ...styles.secondaryBtn, marginTop: 8, width: "100%" }} onClick={addExtraLink}>+ Add Link</button>
@@ -6299,10 +6344,23 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
             </div>
             <div style={styles.propertyField}>
               <label style={styles.propertyLabel}>Image Fit</label>
-              <select value="contain" onChange={() => update({ imageFit: "contain" })} style={styles.propertyInput}>
+              <select value={String(props.imageFit || "contain")} onChange={(e) => update({ imageFit: e.target.value })} style={styles.propertyInput}>
                 <option value="contain">Contain</option>
+                <option value="cover">Cover</option>
+                <option value="fill">Fill</option>
               </select>
             </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Position</label>
+              <select value={String(props.imageObjectPosition || "center center")} onChange={(e) => update({ imageObjectPosition: e.target.value })} style={styles.propertyInput}>
+                <option value="center center">Centre</option>
+                <option value="center top">Top</option>
+                <option value="center bottom">Bottom</option>
+                <option value="left center">Left</option>
+                <option value="right center">Right</option>
+              </select>
+            </div>
+            <NumberField label="Image Scale (%)" value={Number(props.imageScale || 100)} min={50} max={150} onChange={(v) => update({ imageScale: v })} />
             <NumberField label="Sticky Top Offset (px)" value={Number(props.accordionStickyTopOffset ?? props.stickyTopOffset ?? 110)} min={0} max={260} onChange={(v) => update({ accordionStickyTopOffset: v, stickyTopOffset: v })} />
             <NumberField label="Card Header Visible Height (px)" value={Number(props.accordionHeaderHeight ?? 58)} min={40} max={96} onChange={(v) => update({ accordionHeaderHeight: v })} />
             <NumberField label="Card Stack Gap (px)" value={Number(props.accordionStackGap ?? 8)} min={0} max={32} onChange={(v) => update({ accordionStackGap: v })} />
@@ -6417,6 +6475,62 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
           </label>
           <ColorSelector label="Card Border Colour" value={props.cardBorderColor || "#3b82f6"} fallback="#3b82f6" onChange={(v) => update({ cardBorderColor: v })} />
         </div>
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Image Settings</label>
+          <div style={styles.colorGrid}>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Fit</label>
+              <select value={String(props.imageFit || "contain")} onChange={(e) => update({ imageFit: e.target.value })} style={styles.propertyInput}>
+                <option value="contain">Contain</option>
+                <option value="cover">Cover</option>
+                <option value="fill">Fill</option>
+                <option value="none">Natural Size</option>
+              </select>
+            </div>
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Position</label>
+              <select value={String(props.imageObjectPosition || "center center")} onChange={(e) => update({ imageObjectPosition: e.target.value })} style={styles.propertyInput}>
+                <option value="center center">Centre</option>
+                <option value="center top">Top</option>
+                <option value="center bottom">Bottom</option>
+                <option value="left center">Left</option>
+                <option value="right center">Right</option>
+                <option value="left top">Top Left</option>
+                <option value="right top">Top Right</option>
+                <option value="left bottom">Bottom Left</option>
+                <option value="right bottom">Bottom Right</option>
+              </select>
+            </div>
+            <NumberField label="Image Scale (%)" value={Number(props.imageScale || 100)} min={50} max={150} onChange={(v) => update({ imageScale: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Image Max Height</label>
+              <select value={String(props.imageMaxHeightMode || "auto")} onChange={(e) => update({ imageMaxHeightMode: e.target.value })} style={styles.propertyInput}>
+                <option value="auto">Auto</option>
+                <option value="300">300px</option>
+                <option value="400">400px</option>
+                <option value="500">500px</option>
+                <option value="600">600px</option>
+                <option value="700">700px</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+            {String(props.imageMaxHeightMode || "auto") === "custom" ? (
+              <NumberField label="Custom Max Height (px)" value={Number(props.imageMaxHeightCustom || 500)} min={300} max={900} onChange={(v) => update({ imageMaxHeightCustom: v })} />
+            ) : null}
+            <NumberField label="Image Padding (px)" value={Number(props.imagePadding || 0)} min={0} max={80} onChange={(v) => update({ imagePadding: v })} />
+            <div style={styles.propertyField}>
+              <label style={styles.propertyLabel}>Panel Image Height</label>
+              <select value={String(props.panelImageHeightMode || "match")} onChange={(e) => update({ panelImageHeightMode: e.target.value })} style={styles.propertyInput}>
+                <option value="match">Match Panel</option>
+                <option value="auto">Auto From Image</option>
+                <option value="fixed">Fixed Height</option>
+              </select>
+            </div>
+            {String(props.panelImageHeightMode || "match") === "fixed" ? (
+              <NumberField label="Fixed Image Height (px)" value={Number(props.panelImageFixedHeight || 500)} min={300} max={900} onChange={(v) => update({ panelImageFixedHeight: v })} />
+            ) : null}
+          </div>
+        </div>
         {panels.map((panel, panelIdx) => {
           const expanded = expandedIdx === panelIdx;
           const showPanelCta = panel.showCta !== false;
@@ -6498,6 +6612,43 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                   </div>
                   {(panel.imageStyle || "bleed") === "card" ? (
                     <ColorSelector label="Card Background" value={panel.imageCardBg || panel.accentColor || "#0ea5e9"} fallback="#0ea5e9" onChange={(v) => updatePanel(panelIdx, { imageCardBg: v })} />
+                  ) : null}
+                  <label style={{ ...styles.inlineToggle, marginTop: 4 }}>
+                    <input
+                      type="checkbox"
+                      checked={panel.useBlockImageSettings !== false}
+                      onChange={(e) => updatePanel(panelIdx, { useBlockImageSettings: e.target.checked })}
+                      style={styles.checkboxInput}
+                    />
+                    Use block image settings
+                  </label>
+                  {panel.useBlockImageSettings === false ? (
+                    <div style={styles.colorGrid}>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>Panel Image Fit</label>
+                        <select value={String(panel.imageFit || "contain")} onChange={(e) => updatePanel(panelIdx, { imageFit: e.target.value })} style={styles.propertyInput}>
+                          <option value="contain">Contain</option>
+                          <option value="cover">Cover</option>
+                          <option value="fill">Fill</option>
+                          <option value="none">Natural Size</option>
+                        </select>
+                      </div>
+                      <div style={styles.propertyField}>
+                        <label style={styles.propertyLabel}>Panel Image Position</label>
+                        <select value={String(panel.imageObjectPosition || "center center")} onChange={(e) => updatePanel(panelIdx, { imageObjectPosition: e.target.value })} style={styles.propertyInput}>
+                          <option value="center center">Centre</option>
+                          <option value="center top">Top</option>
+                          <option value="center bottom">Bottom</option>
+                          <option value="left center">Left</option>
+                          <option value="right center">Right</option>
+                          <option value="left top">Top Left</option>
+                          <option value="right top">Top Right</option>
+                          <option value="left bottom">Bottom Left</option>
+                          <option value="right bottom">Bottom Right</option>
+                        </select>
+                      </div>
+                      <NumberField label="Panel Image Scale (%)" value={Number(panel.imageScale || 100)} min={50} max={150} onChange={(v) => updatePanel(panelIdx, { imageScale: v })} />
+                    </div>
                   ) : null}
                   {showPanelCta ? (
                     <div style={styles.propertyField}>

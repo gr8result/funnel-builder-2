@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "funnel-builder-clean",
+			"path": "."
+		}
+	],
+	"settings": {
+		"deno.enable": false,
+		"typescript.validate.enable": false,
+		"javascript.validate.enable": true,
+		"files.associations": {
+			"tsconfig.json": "jsonc",
+			"**/pages/modules/billing/email-plans2": "javascriptreact"
+		}
+	}
+}

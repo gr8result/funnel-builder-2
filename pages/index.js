@@ -5,6 +5,7 @@ import { PublishedWebsiteRenderer } from "./sites/[...slug]";
 import Welcome from "./welcome";
 import { getPlatformAppHost, normalizeDomain } from "../lib/website-builder/publishConfig";
 import { getPrimaryPublishedWebsite } from "../lib/website-builder/publicationStore";
+import { websiteContentHash } from "../lib/website-builder/documentVersion";
 
 function shouldLogRootResolution() {
   return process.env.WEBSITE_PUBLISH_DEBUG === "1" || process.env.NEXT_PUBLIC_WEBSITE_PUBLISH_DEBUG === "1";
@@ -29,9 +30,9 @@ function PlatformAppRoot() {
   return <Welcome />;
 }
 
-export default function Index({ mode, publication }) {
+export default function Index({ mode, publication, siteDataHash }) {
   if (mode === "published-website" && publication) {
-    return <PublishedWebsiteRenderer publication={publication} requestedPath={[]} isDomainRequest />;
+    return <PublishedWebsiteRenderer publication={publication} siteDataHash={siteDataHash || ""} requestedPath={[]} isDomainRequest />;
   }
 
   if (mode === "published-not-found") {
@@ -91,10 +92,21 @@ export async function getServerSideProps(ctx) {
     }
 
     if (publication) {
+      const siteData = publication.site_data && typeof publication.site_data === "object" ? publication.site_data : {};
+      const siteDataHash = websiteContentHash(siteData);
+      ctx.res?.setHeader("X-GR8-Published-Row-Id", publication.id || "");
+      ctx.res?.setHeader("X-GR8-Published-Project-Id", publication.project_id || siteData.id || "");
+      ctx.res?.setHeader("X-GR8-Site-Data-Updated-At", siteData.updatedAt || "");
+      ctx.res?.setHeader("X-GR8-Site-Data-Hash", siteDataHash);
+      ctx.res?.setHeader("X-GR8-Published-Revision", siteData.publishedVersion || siteData.publication?.publishedVersion || "");
+      ctx.res?.setHeader("X-GR8-Published-Timestamp", publication.published_at || siteData.publishedAt || siteData.publication?.publishedAt || "");
+      ctx.res?.setHeader("X-GR8-Snapshot-Hash", siteDataHash);
+      ctx.res?.setHeader("X-GR8-Requested-Page-Slug", "home");
       return {
         props: {
           mode: "published-website",
           publication,
+          siteDataHash,
         },
       };
     }
@@ -103,6 +115,7 @@ export async function getServerSideProps(ctx) {
       props: {
         mode: "published-not-found",
         publication: null,
+        siteDataHash: "",
       },
     };
   }
@@ -111,6 +124,7 @@ export async function getServerSideProps(ctx) {
     props: {
       mode: "platform-app-root",
       publication: null,
+      siteDataHash: "",
     },
   };
 }

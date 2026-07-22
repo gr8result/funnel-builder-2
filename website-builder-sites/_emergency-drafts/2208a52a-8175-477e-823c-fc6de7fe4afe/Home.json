@@ -14,70 +14,85 @@
             "href": "/",
             "slug": "home",
             "label": "Home",
-            "children": []
+            "pageId": "home",
+            "children": [],
+            "linkType": "page"
           },
           {
             "id": "nav-item-1-0-features",
             "href": "#features",
             "slug": "features",
             "label": "Features",
-            "children": []
+            "children": [],
+            "linkType": "anchor"
           },
           {
             "id": "nav-item-2-0-crm",
             "href": "/crm",
             "slug": "crm",
             "label": "CRM",
-            "children": []
+            "pageId": "crm",
+            "children": [],
+            "linkType": "page"
           },
           {
             "id": "nav-item-3-0-automation",
             "href": "#automation",
             "slug": "automation",
             "label": "Automation",
-            "children": []
+            "children": [],
+            "linkType": "anchor"
           },
           {
             "id": "nav-item-4-0-funnel-builder",
             "href": "#funnel-builder",
             "slug": "funnel-builder",
             "label": "Funnel Builder",
-            "children": []
+            "children": [],
+            "linkType": "anchor"
           },
           {
             "id": "nav-item-5-0-pricing",
             "href": "/pricing",
             "slug": "pricing",
             "label": "Pricing",
-            "children": []
+            "pageId": "pricing",
+            "children": [],
+            "linkType": "page"
           },
           {
             "id": "nav-item-6-0-about-us",
-            "href": "/about",
+            "href": "/about-us",
             "slug": "about-us",
             "label": "About Us",
-            "children": []
+            "pageId": "about-us",
+            "children": [],
+            "linkType": "page"
           },
           {
             "id": "nav-item-7-0-demo-request",
             "href": "#demo-request",
             "slug": "demo-request",
             "label": "Demo Request",
-            "children": []
+            "children": [],
+            "linkType": "anchor"
           },
           {
             "id": "nav-item-8-0-other-modules",
             "href": "#other-modules",
             "slug": "other-modules",
             "label": "Other Modules",
-            "children": []
+            "children": [],
+            "linkType": "anchor"
           },
           {
             "id": "nav-item-9-0-contact",
-            "href": "/contact",
-            "slug": "contact",
-            "label": "CONtact",
-            "children": []
+            "href": "/contact-us",
+            "slug": "contact-us",
+            "label": "Contact Us",
+            "pageId": "contact-us",
+            "children": [],
+            "linkType": "page"
           }
         ],
         "ctaLink": "#contact",
@@ -111,30 +126,34 @@
       "id": 1781385365287,
       "type": "video-hero",
       "props": {
+        "loop": false,
+        "muted": false,
         "title": "",
         "ctaUrl": "#",
         "ctaText": "",
         "eyebrow": "",
+        "autoplay": true,
         "showText": true,
         "subtitle": "",
-        "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782946451657-opening-block-video3.mp4",
-        "marginTop": 130,
-        "minHeight": 1650,
+        "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
+        "marginTop": 0,
+        "minHeight": 1500,
         "objectFit": "cover",
-        "posterSrc": "",
         "textColor": "#ffffff",
         "heightMode": "fixed",
         "accentColor": "#6366f1",
         "overlayColor": "#000000",
-        "paddingBottom": 0,
+        "paddingBottom": 200,
+        "videoFileName": "Opening Block Video(3).mp4",
+        "videoMimeType": "video/mp4",
         "objectPosition": "top center",
         "overlayOpacity": 0,
+        "startWithAudio": true,
         "unmuteOnScroll": true,
+        "videoUpdatedAt": "2026-07-19T23:53:10.518Z",
         "baseLayoutWidth": 1500,
-        "fullWidthBackground": true,
-        "showControls": false,
-        "controls": false,
-        "muted": false
+        "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
+        "playAudioOnInteraction": true
       }
     },
     {
@@ -144,6 +163,7 @@
         "contentX": 31,
         "contentY": 52,
         "headline": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>",
+        "__blockId": "wb_1778363723821_ec25ea",
         "alignment": "center",
         "floatingX": 78,
         "floatingY": 52,
@@ -166,6 +186,7 @@
         ],
         "minHeight": "1880px",
         "lineHeight": 1.4,
+        "__blockType": "hero",
         "heroCounter": "6581",
         "heroVariant": "split",
         "subheadline": "Add supporting text here",
@@ -879,17 +900,16 @@
           {
             "icon": "",
             "link": "https://gr8result.com/graphic-design/",
-            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-2064204950-16eb13d3db53c980546f.png",
+            "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
             "title": "Funnel Builder & Lead Capture",
             "content": "",
             "eyebrow": "Landing Pages and Sales Tools",
             "iconName": "",
-            "imageAlt": "2064204950",
+            "imageAlt": "web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
             "iconGlyph": "",
             "iconImage": "",
             "iconAssetId": "",
             "imageHeight": 150,
-            "imageAssetId": "asset:generic/library-2064204950-16eb13d3db53c980546f.png",
             "iconFontFamily": "dticon"
           },
           {
@@ -1458,7 +1478,7 @@
         "link": "support@gr8result.com",
         "note": "No card required",
         "size": "large",
-        "text": "Book Demo Now!",
+        "text": "Book your FREE No Obligations Demo Now!",
         "style": "stacked-card",
         "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free Demo of our platform and see how well it can integrate into your business</span></li></ol>",
         "eyebrow": "GR8 RESULT DIGITAL SOLUTIONS",
@@ -1709,24 +1729,6 @@
         "logo": "",
         "brand": "Your Brand",
         "tagline": "Building something amazing.",
-        "navLinks": [
-          {
-            "href": "#home",
-            "label": "Home"
-          },
-          {
-            "href": "#about",
-            "label": "About"
-          },
-          {
-            "href": "#services",
-            "label": "Services"
-          },
-          {
-            "href": "#contact",
-            "label": "Contact"
-          }
-        ],
         "linkColor": "#94a3b8",
         "logoWidth": 48,
         "textColor": "#e2e8f0",
@@ -1746,6 +1748,20 @@
         ],
         "navHeading": "Navigation",
         "borderColor": "rgba(148,163,184,0.2)",
+        "companyLinks": [
+          {
+            "href": "#blog",
+            "label": "Blog"
+          },
+          {
+            "href": "#privacy",
+            "label": "Privacy Policy"
+          },
+          {
+            "href": "#terms",
+            "label": "Terms"
+          }
+        ],
         "contactEmail": "hello@yourbrand.com",
         "contactPhone": "(555) 010-2026",
         "extraHeading": "Company",
@@ -1753,8 +1769,27 @@
         "contactAddress": "Your city, state",
         "contactHeading": "Contact",
         "showNewsletter": true,
+        "spotlightItems": [],
         "backgroundColor": "#0f172a",
         "baseLayoutWidth": 1500,
+        "navigationLinks": [
+          {
+            "href": "#home",
+            "label": "Home"
+          },
+          {
+            "href": "#about",
+            "label": "About"
+          },
+          {
+            "href": "#services",
+            "label": "Services"
+          },
+          {
+            "href": "#contact",
+            "label": "Contact"
+          }
+        ],
         "newsletterHeading": "Stay Updated",
         "newsletterSubtitle": "Get the latest news delivered to your inbox.",
         "newsletterActionUrl": "",
@@ -1769,7 +1804,7 @@
       "id": 1781393291494,
       "type": "cta-button",
       "props": {
-        "link": "https://app.gr8result.digital/login",
+        "link": "https://gr8result.digital/login.",
         "note": "<br>",
         "size": "large",
         "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
@@ -1803,70 +1838,85 @@
               "href": "/",
               "slug": "home",
               "label": "Home",
-              "children": []
+              "pageId": "home",
+              "children": [],
+              "linkType": "page"
             },
             {
               "id": "nav-item-1-0-features",
               "href": "#features",
               "slug": "features",
               "label": "Features",
-              "children": []
+              "children": [],
+              "linkType": "anchor"
             },
             {
               "id": "nav-item-2-0-crm",
               "href": "/crm",
               "slug": "crm",
               "label": "CRM",
-              "children": []
+              "pageId": "crm",
+              "children": [],
+              "linkType": "page"
             },
             {
               "id": "nav-item-3-0-automation",
               "href": "#automation",
               "slug": "automation",
               "label": "Automation",
-              "children": []
+              "children": [],
+              "linkType": "anchor"
             },
             {
               "id": "nav-item-4-0-funnel-builder",
               "href": "#funnel-builder",
               "slug": "funnel-builder",
               "label": "Funnel Builder",
-              "children": []
+              "children": [],
+              "linkType": "anchor"
             },
             {
               "id": "nav-item-5-0-pricing",
               "href": "/pricing",
               "slug": "pricing",
               "label": "Pricing",
-              "children": []
+              "pageId": "pricing",
+              "children": [],
+              "linkType": "page"
             },
             {
               "id": "nav-item-6-0-about-us",
-              "href": "/about",
+              "href": "/about-us",
               "slug": "about-us",
               "label": "About Us",
-              "children": []
+              "pageId": "about-us",
+              "children": [],
+              "linkType": "page"
             },
             {
               "id": "nav-item-7-0-demo-request",
               "href": "#demo-request",
               "slug": "demo-request",
               "label": "Demo Request",
-              "children": []
+              "children": [],
+              "linkType": "anchor"
             },
             {
               "id": "nav-item-8-0-other-modules",
               "href": "#other-modules",
               "slug": "other-modules",
               "label": "Other Modules",
-              "children": []
+              "children": [],
+              "linkType": "anchor"
             },
             {
               "id": "nav-item-9-0-contact",
-              "href": "/contact",
-              "slug": "contact",
-              "label": "CONtact",
-              "children": []
+              "href": "/contact-us",
+              "slug": "contact-us",
+              "label": "Contact Us",
+              "pageId": "contact-us",
+              "children": [],
+              "linkType": "page"
             }
           ],
           "ctaLink": "#contact",
@@ -1900,30 +1950,34 @@
         "id": 1781385365287,
         "type": "video-hero",
         "props": {
+          "loop": false,
+          "muted": false,
           "title": "",
           "ctaUrl": "#",
           "ctaText": "",
           "eyebrow": "",
+          "autoplay": true,
           "showText": true,
           "subtitle": "",
-          "videoSrc": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782946451657-opening-block-video3.mp4",
-          "marginTop": 130,
-          "minHeight": 1650,
+          "videoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
+          "marginTop": 0,
+          "minHeight": 1500,
           "objectFit": "cover",
-          "posterSrc": "",
           "textColor": "#ffffff",
           "heightMode": "fixed",
           "accentColor": "#6366f1",
           "overlayColor": "#000000",
-          "paddingBottom": 0,
+          "paddingBottom": 200,
+          "videoFileName": "Opening Block Video(3).mp4",
+          "videoMimeType": "video/mp4",
           "objectPosition": "top center",
           "overlayOpacity": 0,
+          "startWithAudio": true,
           "unmuteOnScroll": true,
+          "videoUpdatedAt": "2026-07-19T23:53:10.518Z",
           "baseLayoutWidth": 1500,
-          "fullWidthBackground": true,
-          "showControls": false,
-          "controls": false,
-          "muted": false
+          "videoStoragePath": "35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784505136307-opening-block-video3.mp4",
+          "playAudioOnInteraction": true
         }
       },
       {
@@ -1933,6 +1987,7 @@
           "contentX": 31,
           "contentY": 52,
           "headline": "<span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 68px; background-color: transparent;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">Our Gr8 Result </span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">Business &amp; Marketing Platform</span><div style=\"--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\"><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial; color: rgb(0, 176, 80);\">replaces ALL your current tools and we can save you over&nbsp;</span><span style=\"font-size: 84px; --tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246/0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; border-image: initial;\">$10,000 per year.</span></div></span></span>",
+          "__blockId": "wb_1778363723821_ec25ea",
           "alignment": "center",
           "floatingX": 78,
           "floatingY": 52,
@@ -1955,6 +2010,7 @@
           ],
           "minHeight": "1880px",
           "lineHeight": 1.4,
+          "__blockType": "hero",
           "heroCounter": "6581",
           "heroVariant": "split",
           "subheadline": "Add supporting text here",
@@ -2668,17 +2724,16 @@
             {
               "icon": "",
               "link": "https://gr8result.com/graphic-design/",
-              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/generic/library-2064204950-16eb13d3db53c980546f.png",
+              "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
               "title": "Funnel Builder & Lead Capture",
               "content": "",
               "eyebrow": "Landing Pages and Sales Tools",
               "iconName": "",
-              "imageAlt": "2064204950",
+              "imageAlt": "web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
               "iconGlyph": "",
               "iconImage": "",
               "iconAssetId": "",
               "imageHeight": 150,
-              "imageAssetId": "asset:generic/library-2064204950-16eb13d3db53c980546f.png",
               "iconFontFamily": "dticon"
             },
             {
@@ -3247,7 +3302,7 @@
           "link": "support@gr8result.com",
           "note": "No card required",
           "size": "large",
-          "text": "Book Demo Now!",
+          "text": "Book your FREE No Obligations Demo Now!",
           "style": "stacked-card",
           "title": "<ol><li><span style=\"background-color: initial; color: rgb(255, 192, 0); font-size: 72px;\">Book a Free Demo of our platform and see how well it can integrate into your business</span></li></ol>",
           "eyebrow": "GR8 RESULT DIGITAL SOLUTIONS",
@@ -3498,24 +3553,6 @@
           "logo": "",
           "brand": "Your Brand",
           "tagline": "Building something amazing.",
-          "navLinks": [
-            {
-              "href": "#home",
-              "label": "Home"
-            },
-            {
-              "href": "#about",
-              "label": "About"
-            },
-            {
-              "href": "#services",
-              "label": "Services"
-            },
-            {
-              "href": "#contact",
-              "label": "Contact"
-            }
-          ],
           "linkColor": "#94a3b8",
           "logoWidth": 48,
           "textColor": "#e2e8f0",
@@ -3535,6 +3572,20 @@
           ],
           "navHeading": "Navigation",
           "borderColor": "rgba(148,163,184,0.2)",
+          "companyLinks": [
+            {
+              "href": "#blog",
+              "label": "Blog"
+            },
+            {
+              "href": "#privacy",
+              "label": "Privacy Policy"
+            },
+            {
+              "href": "#terms",
+              "label": "Terms"
+            }
+          ],
           "contactEmail": "hello@yourbrand.com",
           "contactPhone": "(555) 010-2026",
           "extraHeading": "Company",
@@ -3542,8 +3593,27 @@
           "contactAddress": "Your city, state",
           "contactHeading": "Contact",
           "showNewsletter": true,
+          "spotlightItems": [],
           "backgroundColor": "#0f172a",
           "baseLayoutWidth": 1500,
+          "navigationLinks": [
+            {
+              "href": "#home",
+              "label": "Home"
+            },
+            {
+              "href": "#about",
+              "label": "About"
+            },
+            {
+              "href": "#services",
+              "label": "Services"
+            },
+            {
+              "href": "#contact",
+              "label": "Contact"
+            }
+          ],
           "newsletterHeading": "Stay Updated",
           "newsletterSubtitle": "Get the latest news delivered to your inbox.",
           "newsletterActionUrl": "",
@@ -3558,7 +3628,7 @@
         "id": 1781393291494,
         "type": "cta-button",
         "props": {
-          "link": "https://app.gr8result.digital/login",
+          "link": "https://gr8result.digital/login.",
           "note": "<br>",
           "size": "large",
           "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
@@ -3582,6 +3652,6 @@
     },
     "designTokens": {}
   },
-  "savedAt": "2026-07-13T23:25:03.147Z",
-  "source": "autosave"
+  "savedAt": "2026-07-22T05:28:14.447Z",
+  "source": "manual-save"
 }

@@ -35,6 +35,7 @@ import {
   planToScreenPoint,
   pxToMillimetres,
   pxToMetres,
+  normalizeRotation,
   screenPointFromEvent,
   screenToPlanPoint,
   zoomViewportToPoint,
@@ -214,6 +215,8 @@ export default function PlanCanvas({
 
   const width = page?.normalizedWidth || page?.naturalWidth || 1200;
   const height = page?.normalizedHeight || page?.naturalHeight || 900;
+  const livePageRotation = normalizeRotation(page?.rotation ?? page?.finalRotation ?? page?.planRotation ?? 0);
+  const rendererKey = `${page?.id || "no-page"}-${livePageRotation}-${page?.imageDataUrl?.length || 0}-${width}x${height}`;
   const ppm = getPixelsPerUnit(page?.scale);
   const hasScale = ppm > 0 && page?.scale?.accepted !== false;
   const needsScale = !hasScale && ![TOOLS.POINTER, TOOLS.PAN, TOOLS.DOOR, TOOLS.WINDOW, TOOLS.COLUMN, TOOLS.DELETE].includes(tool);
@@ -410,6 +413,10 @@ export default function PlanCanvas({
     setCursorWorld(snap.point);
     onUpdateOverlay?.(overlayId, { points });
   }, [onUpdateOverlay, overlays, resolveSnap]);
+
+  useEffect(() => {
+    console.log("ACTIVE PLAN RENDERER BUILD TEST 001");
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -746,30 +753,23 @@ export default function PlanCanvas({
     cancelDraw();
     cancelEdit();
     setViewInitializedPageId(null);
-    if (viewState?.zoom && viewState?.pan) {
-      const savedPan = viewState.pan || {};
-      const savedZoom = Number(viewState.zoom ?? externalZoom);
-      setViewport({
-        zoom: Number.isFinite(savedZoom) && savedZoom > 0 ? savedZoom : 1,
-        pan: {
-          x: Number.isFinite(Number(savedPan.x)) ? Number(savedPan.x) : 32,
-          y: Number.isFinite(Number(savedPan.y)) ? Number(savedPan.y) : 32,
-        },
-      });
-      setViewInitializedPageId(page?.id || null);
-    }
-  }, [page?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [height, livePageRotation, page?.id, width, cancelDraw, cancelEdit]);
 
   useEffect(() => {
-    if (!page?.id || viewInitializedPageId === page.id || viewState?.zoom) return;
+    console.log("RENDER EFFECT FIRED", {
+      pageId: page?.id || "",
+      rotation: livePageRotation,
+    });
+    const fitKey = `${page?.id || ""}-${livePageRotation}-${width}x${height}`;
+    if (!page?.id || viewInitializedPageId === fitKey) return;
     const frame = window.requestAnimationFrame(() => {
       const rect = rootRef.current?.getBoundingClientRect();
       if (!rect?.width || !rect?.height) return;
       setViewport(calculateFitView(rect.width, rect.height, width, height));
-      setViewInitializedPageId(page.id);
+      setViewInitializedPageId(fitKey);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [height, page?.id, setViewport, viewInitializedPageId, viewState?.zoom, width]);
+  }, [height, livePageRotation, page?.id, setViewport, viewInitializedPageId, width]);
 
   useEffect(() => {
     if (!page?.id || !onViewStateChange) return;
@@ -829,9 +829,10 @@ export default function PlanCanvas({
       onAuxClick={(event) => event.preventDefault()}
       onContextMenu={(event) => event.preventDefault()}
     >
+      <div style={S.liveRotationLabel}>LIVE PAGE ROTATION: {livePageRotation}</div>
       <div style={S.viewport}>
-        <div style={surfaceStyle}>
-          <img src={page.imageDataUrl} alt="Plan page" style={S.image} draggable={false} />
+        <div key={rendererKey} style={surfaceStyle}>
+          <img key={rendererKey} src={page.imageDataUrl} alt="Plan page" style={S.image} draggable={false} />
         </div>
         <svg
           width="100%"
@@ -1210,11 +1211,22 @@ function DebugPanel({ page, tool, zoom, pan, mouseDebug, selectedVertex, scale }
   return (
     <div style={S.debugPanel}>
       <div><strong>original</strong> {Math.round(page?.originalWidth || 0)}, {Math.round(page?.originalHeight || 0)}</div>
+      <div><strong>originalPageWidth</strong> {Math.round(page?.originalWidth || 0)}</div>
+      <div><strong>originalPageHeight</strong> {Math.round(page?.originalHeight || 0)}</div>
       <div><strong>metadataRotation</strong> {page?.metadataRotation ?? 0}</div>
-      <div><strong>detectedRotation</strong> {page?.detectedRotation ?? 0}</div>
+      <div><strong>detectedRotationSuggestion</strong> {page?.detectedRotation ?? 0}</div>
       <div><strong>userRotation</strong> {page?.userRotation ?? 0}</div>
       <div><strong>finalRotation</strong> {page?.finalRotation ?? page?.planRotation ?? 0}</div>
+      <div><strong>page.rotation</strong> {page?.rotation ?? page?.planRotation ?? page?.finalRotation ?? 0}</div>
+      <div><strong>orientationConfirmed</strong> {String(Boolean(page?.orientationConfirmed))}</div>
       <div><strong>normalized</strong> {Math.round(page?.normalizedWidth || page?.naturalWidth || 0)}, {Math.round(page?.normalizedHeight || page?.naturalHeight || 0)}</div>
+      <div><strong>viewportWidth</strong> {Math.round(page?.viewportWidth || page?.normalizedWidth || page?.naturalWidth || 0)}</div>
+      <div><strong>viewportHeight</strong> {Math.round(page?.viewportHeight || page?.normalizedHeight || page?.naturalHeight || 0)}</div>
+      <div><strong>canvasPixelWidth</strong> {Math.round(page?.canvasPixelWidth || page?.imageWidth || page?.normalizedWidth || 0)}</div>
+      <div><strong>canvasPixelHeight</strong> {Math.round(page?.canvasPixelHeight || page?.imageHeight || page?.normalizedHeight || 0)}</div>
+      <div><strong>canvasCssWidth</strong> {Math.round(page?.canvasCssWidth || page?.normalizedWidth || page?.naturalWidth || 0)}</div>
+      <div><strong>canvasCssHeight</strong> {Math.round(page?.canvasCssHeight || page?.normalizedHeight || page?.naturalHeight || 0)}</div>
+      <div><strong>renderScale</strong> {Number(page?.renderScale || 0).toFixed(4)}</div>
       <div><strong>zoom</strong> {(zoom * 100).toFixed(1)}%</div>
       <div><strong>panX</strong> {pan.x.toFixed(1)}</div>
       <div><strong>panY</strong> {pan.y.toFixed(1)}</div>
@@ -1248,7 +1260,8 @@ function ViewButton({ onClick, title, children }) {
 
 const S = {
   root: { position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#e5e7eb", userSelect: "none", overscrollBehavior: "contain", touchAction: "none" },
-  viewport: { position: "absolute", inset: 0, overflow: "hidden", touchAction: "none" },
+  liveRotationLabel: { position: "absolute", top: 12, left: 12, zIndex: 90, background: "#fff200", color: "#111827", border: "4px solid #111827", padding: "10px 14px", borderRadius: 4, fontSize: 24, fontWeight: 1000, lineHeight: 1, pointerEvents: "none", boxShadow: "0 8px 18px rgba(15,23,42,0.24)" },
+  viewport: { position: "absolute", inset: 0, overflow: "hidden", touchAction: "none", border: "8px solid #ff00ff", boxSizing: "border-box" },
   surface: { position: "absolute", left: 0, top: 0, background: "#fff", boxShadow: "0 10px 35px rgba(15,23,42,0.18)", transformOrigin: "0 0", willChange: "transform", contain: "layout paint style" },
   image: { position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", objectFit: "fill", pointerEvents: "none", backfaceVisibility: "hidden", imageRendering: "auto" },
   overlay: { position: "absolute", inset: 0, display: "block" },

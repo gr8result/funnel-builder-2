@@ -1,6 +1,9 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import { calculateAdaptiveScores } from "../../lib/freedom-terminal/adaptiveBuyScore";
+import { calculateInvestmentSignal } from "../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
@@ -102,15 +105,6 @@ function ratingClass(rating) {
   return investmentStatus(rating);
 }
 
-function getBuyMeter(rating) {
-  const status = investmentStatus(rating);
-  if (status === "strongBuy") return 96;
-  if (status === "buy") return 88;
-  if (status === "watch") return 76;
-  if (status === "holdOff") return 64;
-  return 45;
-}
-
 function buyScoreClass(score) {
   if (score >= 95) return "strongBuy";
   if (score >= 85) return "buy";
@@ -141,18 +135,48 @@ async function browserHashPassword(password) {
     .join("");
 }
 
+function withAdaptiveScore(row) {
+  const adaptive = calculateAdaptiveScores({ symbol: row.symbol, quote: row });
+  const signalResult = calculateInvestmentSignal({
+    ticker: row.symbol,
+    exchange: row.exchange || "NASDAQ",
+    currency: row.currency || "USD",
+    timeframe: "1D",
+    decision: adaptive.decision,
+    confidence: adaptive.confidence,
+    buyScore: adaptive.buyScore,
+    quote: row,
+  });
+  return {
+    ...row,
+    adaptiveScore: adaptive,
+    buyScore: adaptive.buyScore,
+    convictionScore: adaptive.convictionScore,
+    decision: adaptive.decision,
+    confidence: adaptive.confidence,
+    estimatedUpside: adaptive.estimatedUpside,
+    discountToFairValue: adaptive.discountToFairValue,
+    rating: adaptive.decision,
+    signalResult,
+  };
+}
+
+function formatNullablePercent(value) {
+  return Number.isFinite(value) ? formatPercent(value, true) : "--";
+}
+
 function buildSummary(rows) {
   const priced = rows.filter((row) => Number.isFinite(row.percentOffHigh));
   const bestBuy =
     priced
       .slice()
       .sort((a, b) => {
-        const ratingGap = (["STRONG BUY", "BUY"].includes(ratingLabel(b.rating)) ? 1 : 0) - (["STRONG BUY", "BUY"].includes(ratingLabel(a.rating)) ? 1 : 0);
-        return ratingGap || b.qualityScore - a.qualityScore || a.percentOffHigh - b.percentOffHigh;
+        const ratingGap = (["STRONG BUY", "BUY"].includes(ratingLabel(b.decision || b.rating)) ? 1 : 0) - (["STRONG BUY", "BUY"].includes(ratingLabel(a.decision || a.rating)) ? 1 : 0);
+        return ratingGap || (b.buyScore || 0) - (a.buyScore || 0) || a.percentOffHigh - b.percentOffHigh;
       })[0] || null;
   const biggestDrop = priced.slice().sort((a, b) => a.percentOffHigh - b.percentOffHigh)[0] || null;
   const averageScore = rows.length
-    ? rows.reduce((total, row) => total + (row.qualityScore || 0), 0) / rows.length
+    ? rows.reduce((total, row) => total + (row.buyScore || 0), 0) / rows.length
     : 0;
 
   return {
@@ -202,20 +226,20 @@ function PasswordGate({ passwordHash, onUnlock }) {
   return (
     <div className="gateScreen">
       <Head>
-        <title>Freedom Terminal</title>
+        <title>Freedom Investment</title>
       </Head>
       <form className="gate" onSubmit={unlock}>
         <span>Private Research</span>
-        <h1>Freedom Terminal</h1>
+        <h1>Freedom Investment</h1>
         <p>Enter the temporary password to open the standalone investment terminal.</p>
         <input onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" value={password} />
         {passwordError ? <small>{passwordError}</small> : null}
-        <button type="submit">Unlock Terminal</button>
+        <button type="submit">Unlock Investment</button>
       </form>
       <style jsx>{`
         .gateScreen {
           align-items: center;
-          background: radial-gradient(circle at 18% 8%, rgba(0, 164, 239, 0.22), transparent 34rem), #05080b;
+          background: #06110d;
           color: #f6f8f9;
           display: flex;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -271,7 +295,7 @@ function PasswordGate({ passwordHash, onUnlock }) {
           margin-top: 10px;
         }
         button {
-          background: linear-gradient(135deg, #00a4ef, #ffb900);
+          background: #d4af37;
           border: 0;
           border-radius: 7px;
           color: #061014;
@@ -291,7 +315,7 @@ function FreedomTerminal({ passwordHash }) {
   const [unlocked, setUnlocked] = useState(false);
   const [checkingStorage, setCheckingStorage] = useState(true);
   const [rows, setRows] = useState(
-    STARTING_ROWS.map((row) => ({ ...row, rating: getRating(row.qualityScore, null) }))
+    STARTING_ROWS.map((row) => withAdaptiveScore({ ...row, rating: getRating(row.qualityScore, null) }))
   );
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -325,10 +349,9 @@ function FreedomTerminal({ passwordHash }) {
 
       setRows(
         (data.quotes || []).map((row) => ({
-          ...row,
+          ...withAdaptiveScore(row),
           error: dashboardRowError(row.error),
           healthScore: getHealthScore(row),
-          rating: row.rating || getRating(row.qualityScore, row.percentOffHigh),
         }))
       );
       setUpdatedAt(data.updatedAt || "");
@@ -425,7 +448,7 @@ function FreedomTerminal({ passwordHash }) {
   if (checkingStorage) {
     return (
       <div className="center">
-        Opening Freedom Terminal...
+        Opening Freedom Investment...
         <style jsx>{`
           .center {
             align-items: center;
@@ -447,14 +470,20 @@ function FreedomTerminal({ passwordHash }) {
   return (
     <div className="page">
       <Head>
-        <title>Freedom Terminal</title>
+        <title>Freedom Investment</title>
       </Head>
+
+      <section className="platformBanner" aria-label="Current Freedom workspace">
+        <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
+        <span>Long-Term Investing & Wealth Building</span>
+      </section>
+      <FreedomModuleNav module="investment" />
 
       <header className="hero">
         <div>
           <span className="eyebrow">Private Terminal</span>
-          <h1>Freedom Terminal</h1>
-          <p>Private investment research dashboard</p>
+          <h1>Freedom Investment</h1>
+          <p>Long-Term Wealth & Portfolio Management</p>
         </div>
         <div className="heroActions">
           <span>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : "Waiting for live market data"}</span>
@@ -492,21 +521,21 @@ function FreedomTerminal({ passwordHash }) {
         </section>
       ) : null}
 
-      <section className="summary">
+      <section className="summary" id="portfolio">
         <article className="summaryCard blue">
           <span>Watchlist Count</span>
           <strong>{summary.watchlistCount}</strong>
           <small>Core quality watchlist</small>
         </article>
         <article className="summaryCard green">
-          <span>Average Score</span>
+          <span>Average Buy Score</span>
           <strong>{summary.averageScore}</strong>
-          <small>Internal quality score</small>
+          <small>Evidence-based scoring model</small>
         </article>
         <article className="summaryCard gold">
           <span>Best Buy Opportunity</span>
           <strong>{summary.bestBuy?.symbol || "--"}</strong>
-          <small>{summary.bestBuy ? `${ratingLabel(summary.bestBuy.rating)} at ${formatPercent(summary.bestBuy.percentOffHigh)}` : "No quote data yet"}</small>
+          <small>{summary.bestBuy ? `${ratingLabel(summary.bestBuy.decision || summary.bestBuy.rating)} at ${summary.bestBuy.buyScore}/100` : "No quote data yet"}</small>
         </article>
         <article className="summaryCard red">
           <span>Biggest Drop From High</span>
@@ -515,11 +544,11 @@ function FreedomTerminal({ passwordHash }) {
         </article>
       </section>
 
-      <main className="panel">
+      <main className="panel" id="watchlist">
         <div className="panelHeader">
           <div>
-            <h2>Watchlist</h2>
-            <p>Live quotes, 52-week range, private quality scoring, and research readiness.</p>
+            <h2>Long-Term Watchlist</h2>
+            <p>Live quotes, adaptive buy scoring, conviction, fair-value gap, and research readiness.</p>
           </div>
           <span className="pill">{loading ? "Loading quotes..." : `${rows.length} Symbols`}</span>
         </div>
@@ -536,18 +565,19 @@ function FreedomTerminal({ passwordHash }) {
                 <th>52W High</th>
                 <th>52W Low</th>
                 <th>% Off High</th>
-                <th>Quality Score</th>
-                <th>Health Score</th>
-                <th>Buy Meter</th>
-                <th>Rating</th>
+                <th>Buy Score</th>
+                <th>Conviction</th>
+                <th>Decision</th>
+                <th>Estimated Upside</th>
+                <th>Discount To Fair Value</th>
+                <th>Confidence</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => {
-                const healthScore = getHealthScore(row);
-                const buyMeter = getBuyMeter(row.rating);
                 const companyStyle = getCompanyStyle(row.symbol);
+                const decision = row.decision || row.rating;
 
                 return (
                   <tr key={row.symbol} style={styleVars(companyStyle)}>
@@ -577,30 +607,42 @@ function FreedomTerminal({ passwordHash }) {
                     </td>
                     <td>
                       <div className="meterCell">
-                        <span>{row.qualityScore ?? "--"}</span>
-                        <div className="miniBar">
-                          <i style={{ width: `${Math.max(0, Math.min(row.qualityScore || 0, 100))}%` }} />
+                        <span>{row.buyScore ?? "--"}</span>
+                        <div className={`miniBar buy ${buyScoreClass(row.buyScore || 0)}`}>
+                          <i style={{ width: `${Math.max(0, Math.min(row.buyScore || 0, 100))}%` }} />
                         </div>
                       </div>
                     </td>
                     <td>
                       <div className="meterCell">
-                        <span>{Number.isFinite(healthScore) ? healthScore : "--"}</span>
+                        <span>{row.convictionScore ?? "--"}</span>
                         <div className="miniBar health">
-                          <i style={{ width: `${Number.isFinite(healthScore) ? Math.max(0, Math.min(healthScore, 100)) : 0}%` }} />
+                          <i style={{ width: `${Math.max(0, Math.min(row.convictionScore || 0, 100))}%` }} />
                         </div>
                       </div>
+                    </td>
+                    <td>
+                      <span className={`rating statusPill ${ratingClass(decision)}`}>
+                        {row.signalResult?.overallSignal || ratingLabel(decision)} ({row.signalResult?.timeframe || "1D"})
+                      </span>
+                    </td>
+                    <td>
+                      <span className={Number.isFinite(row.estimatedUpside) && row.estimatedUpside >= 0 ? "up" : "down"}>
+                        {formatNullablePercent(row.estimatedUpside)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={Number.isFinite(row.discountToFairValue) && row.discountToFairValue >= 0 ? "up" : "down"}>
+                        {formatNullablePercent(row.discountToFairValue)}
+                      </span>
                     </td>
                     <td>
                       <div className="meterCell">
-                        <span>{buyMeter}</span>
-                        <div className={`miniBar buy ${buyScoreClass(buyMeter)}`}>
-                          <i style={{ width: `${buyMeter}%` }} />
+                        <span>{row.confidence ?? "--"}</span>
+                        <div className="miniBar">
+                          <i style={{ width: `${Math.max(0, Math.min(row.confidence || 0, 100))}%` }} />
                         </div>
                       </div>
-                    </td>
-                    <td>
-                      <span className={`rating statusPill ${ratingClass(row.rating)}`}>{ratingLabel(row.rating)}</span>
                     </td>
                     <td>
                       <Link className="action" href={`/freedom/company/${row.symbol}`}>
@@ -671,14 +713,11 @@ function FreedomTerminal({ passwordHash }) {
 
       <style jsx>{`
         .page {
-          background:
-            radial-gradient(circle at 12% 0%, rgba(0, 164, 239, 0.22), transparent 34rem),
-            radial-gradient(circle at 86% 8%, rgba(255, 185, 0, 0.12), transparent 30rem),
-            #05080b;
+          background: #06110d;
           color: #f5f7f8;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           min-height: 100vh;
-          padding: 28px;
+          padding: 96px 28px 28px;
         }
         .hero,
         .alert,
@@ -689,21 +728,71 @@ function FreedomTerminal({ passwordHash }) {
           margin-right: auto;
           max-width: 1760px;
         }
+        .platformBanner {
+          align-items: center;
+          background: #0b8f55;
+          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+          display: flex;
+          gap: 14px;
+          justify-content: space-between;
+          left: 0;
+          padding: 14px 28px;
+          position: fixed;
+          right: 0;
+          top: 0;
+          z-index: 100;
+        }
+        .platformBanner strong {
+          align-items: center;
+          color: #fff;
+          display: inline-flex;
+          gap: 10px;
+          font-size: clamp(24px, 2.6vw, 34px);
+          font-weight: 950;
+        }
+        .platformBanner span {
+          color: #fff;
+          font-size: clamp(14px, 1.4vw, 18px);
+          font-weight: 900;
+        }
+        .platformBanner .platformIcon {
+          color: #d4af37;
+          font-size: 0.9em;
+          line-height: 1;
+        }
         .hero {
           align-items: flex-end;
-          background:
-            linear-gradient(135deg, rgba(0, 164, 239, 0.2), rgba(127, 186, 0, 0.12) 46%, rgba(255, 185, 0, 0.16)),
-            rgba(8, 14, 17, 0.96);
-          border: 1px solid rgba(0, 164, 239, 0.26);
+          background: #082118;
+          border: 1px solid rgba(16, 185, 129, 0.34);
           border-radius: 8px;
-          box-shadow: 0 24px 90px rgba(0, 164, 239, 0.12);
+          box-shadow: 0 24px 90px rgba(16, 185, 129, 0.14);
           display: flex;
           justify-content: space-between;
           min-height: 210px;
           padding: 34px;
         }
+        .platformSwitch {
+          display: inline-flex;
+          gap: 8px;
+          margin-bottom: 20px;
+        }
+        .platformSwitch a {
+          background: #0057d9;
+          border: 1px solid #0057d9;
+          border-radius: 999px;
+          color: #fff;
+          font-size: 14px;
+          font-weight: 950;
+          padding: 10px 14px;
+          text-decoration: none;
+        }
+        .platformSwitch a.active {
+          background: #0b8f55;
+          border-color: #0b8f55;
+          color: #fff;
+        }
         .eyebrow {
-          color: #ffdf7a;
+          color: #f4d675;
           display: block;
           font-size: 12px;
           font-weight: 900;
@@ -720,7 +809,7 @@ function FreedomTerminal({ passwordHash }) {
           font-size: clamp(44px, 5vw, 78px);
           letter-spacing: 0;
           line-height: 0.95;
-          text-shadow: 0 0 28px rgba(0, 164, 239, 0.22);
+          text-shadow: 0 0 28px rgba(16, 185, 129, 0.22);
         }
         .hero p {
           color: #d8e5ea;
@@ -740,7 +829,7 @@ function FreedomTerminal({ passwordHash }) {
           font-size: 13px;
         }
         button {
-          background: linear-gradient(135deg, #00a4ef, #7fba00 50%, #ffb900);
+          background: #d4af37;
           border: 0;
           border-radius: 7px;
           color: #051014;
@@ -754,7 +843,7 @@ function FreedomTerminal({ passwordHash }) {
           opacity: 0.55;
         }
         .legendButton {
-          background: #2471a3;
+          background: #047857;
           color: #fff;
         }
         .legendPanel {
@@ -882,8 +971,8 @@ function FreedomTerminal({ passwordHash }) {
         }
         .summaryCard,
         .panel {
-          background: rgba(8, 14, 17, 0.92);
-          border: 1px solid rgba(179, 199, 207, 0.13);
+          background: rgba(6, 17, 13, 0.92);
+          border: 1px solid rgba(16, 185, 129, 0.16);
           border-radius: 8px;
         }
         .summaryCard {
@@ -899,13 +988,13 @@ function FreedomTerminal({ passwordHash }) {
           position: absolute;
         }
         .summaryCard.blue:before {
-          background: linear-gradient(135deg, #00a4ef, transparent 70%);
+          background: linear-gradient(135deg, #10b981, transparent 70%);
         }
         .summaryCard.green:before {
-          background: linear-gradient(135deg, #76b900, transparent 70%);
+          background: linear-gradient(135deg, #047857, transparent 70%);
         }
         .summaryCard.gold:before {
-          background: linear-gradient(135deg, #ffb900, transparent 70%);
+          background: linear-gradient(135deg, #d4af37, transparent 70%);
         }
         .summaryCard.red:before {
           background: linear-gradient(135deg, #e31837, transparent 70%);
@@ -945,8 +1034,8 @@ function FreedomTerminal({ passwordHash }) {
           margin-top: 5px;
         }
         .pill {
-          background: rgba(121, 217, 197, 0.11);
-          border: 1px solid rgba(121, 217, 197, 0.22);
+          background: rgba(16, 185, 129, 0.12);
+          border: 1px solid rgba(16, 185, 129, 0.26);
           border-radius: 999px;
           color: #b8f4e6;
           font-size: 13px;
@@ -1045,7 +1134,7 @@ function FreedomTerminal({ passwordHash }) {
           font-weight: 950;
         }
         .up {
-          color: #87dfc2;
+          color: #7dffca;
           font-weight: 850;
         }
         .down,
@@ -1070,13 +1159,13 @@ function FreedomTerminal({ passwordHash }) {
           width: 100%;
         }
         .miniBar i {
-          background: linear-gradient(90deg, var(--company-primary), var(--company-accent));
+          background: linear-gradient(90deg, #047857, #d4af37);
           border-radius: inherit;
           display: block;
           height: 100%;
         }
         .miniBar.health i {
-          background: linear-gradient(90deg, var(--company-secondary), var(--company-primary));
+          background: linear-gradient(90deg, #065f46, #10b981);
         }
         .miniBar.buy.strongBuy i {
           background: #0f8f4e;
@@ -1159,7 +1248,7 @@ function FreedomTerminal({ passwordHash }) {
         }
         @media (max-width: 720px) {
           .page {
-            padding: 16px;
+            padding: 88px 16px 16px;
           }
           .summary {
             grid-template-columns: 1fr;
