@@ -34,6 +34,7 @@ import {
   findScrollParent, getBrandInitials, BrandMark, sharedStyles,
 } from "./website-renderer/wbVariantStyles";
 import { normalizeFooterNavigationProps } from "../../lib/website-builder/footerNavigation";
+import { listItemAltText, resolveListItemImage } from "../../lib/website-builder/listBlockItems";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -2246,7 +2247,16 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                     { id: `feature-${idx}-headline`, type: "headline", text: item.title },
                     ...(item.body ? [{ id: `feature-${idx}-text`, type: "text", text: item.body }] : []),
                   ];
-              const itemImage = item.image || `https://placehold.co/960x720/e2e8f0/0f172a?text=${encodeURIComponent(item.title || `Feature ${idx + 1}`)}`;
+              const itemImage = resolveListItemImage(rawItem, { normalizedItem: item, assets, appBaseUrl: navigationContext?.appBaseUrl || "", editor });
+              const itemAlt = listItemAltText(rawItem, { normalizedItem: item, fallback: `Feature ${idx + 1}` });
+              if (!itemImage && shouldLogHeroVideoDebug()) {
+                console.warn("[list-block image] could not resolve image", {
+                  itemId: rawItem?.id || item?.id || "",
+                  image: rawItem?.image || "",
+                  imageUrl: rawItem?.imageUrl || "",
+                  imageAssetId: rawItem?.imageAssetId || rawItem?.assetId || "",
+                });
+              }
               const patchFeatureTextBlock = (textIndex, patch) => {
                 if (!editor || typeof onChangeBlock !== "function") return;
                 const nextItems = asArray(props.items).map((entry, entryIdx) => {
@@ -2276,7 +2286,13 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               return (
                 <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, ...featureCardHeightStyle, width: "100%", maxWidth: "none", alignItems: "stretch", background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
                   <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
-                    <img src={itemImage} alt={item.title || `Feature ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
+                    {itemImage ? (
+                      <img src={itemImage} alt={itemAlt} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
+                    ) : (
+                      <div aria-label={itemAlt} style={{ width: "100%", minHeight: 96, height: "100%", display: "grid", placeItems: "center", padding: 16, boxSizing: "border-box", color: colorWithAlpha(props.textColor || "#0f172a", 0.64), background: "rgba(148,163,184,0.14)", fontSize: 13, fontWeight: 700, textAlign: "center" }}>
+                        Image unavailable
+                      </div>
+                    )}
                   </div>
                   <div style={{ ...featureVariant.body, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start", alignContent: "start", alignSelf: "stretch" }}>
                     {itemTextBlocks.map((textBlock, textIndex) => {
