@@ -2739,12 +2739,13 @@ export default function VisualBuilderPage() {
       : Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
         ? studioProject.pageBlocks[activeProjectPageName]
         : [];
-  const canvasInstanceKey = [
-    studioProject?.id || "",
-    activeProjectPageName,
-    activePageBlocks.length,
-    activePageBlocks.map((block) => block?.id || block?.type || "").join(":"),
-  ].join("|");
+  // Keying on project+page only (not block content/count) is intentional: PageBuilderCanvas
+  // already syncs pageBlocks prop changes internally via its own effect, which preserves
+  // scroll position and the selected block. Including block ids/count here forced a full
+  // remount on every edit/save (autosave, background refresh, etc.), which destroyed and
+  // recreated the canvas — causing the flash/scroll-to-top and bypassing that effect's
+  // "keep the live canvas as source of truth" guard against stale background updates.
+  const canvasInstanceKey = `${studioProject?.id || ""}|${activeProjectPageName}`;
   const activePageEntry = Array.isArray(studioProject?.pages)
     ? studioProject.pages.find((entry) => entry?.name === activeProjectPageName || slugify(entry?.name) === slugify(activeProjectPageName))
     : null;
