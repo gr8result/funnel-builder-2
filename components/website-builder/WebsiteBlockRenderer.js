@@ -60,6 +60,16 @@ export { websiteBlockKeyframes, getAnimationStyle } from "./website-renderer/wbA
 
 const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.env.NODE_ENV !== "production";
 
+// Grid Section items store an app-level media URL directly, bypassing the publish-time asset
+// repair pass (which only runs for unverified snapshots). Repair known-dead storage files here
+// so live rendering doesn't depend on that skipped pass.
+const KNOWN_DEAD_GRID_SECTION_IMAGE_REPAIRS = new Map([
+  [
+    "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779254218148-ChatGPT-Image-May-20--2026--02_12_55-PM.png",
+    "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779576621033-Funnels-and-leads.png",
+  ],
+]);
+
 function FooterNewsletterSignupForm({ editor, props, patchFt, footerPanelBorder, ftLink, ftBtnBg, ftBtnText, siteId }) {
   const [email, setEmail] = React.useState("");
   const [status, setStatus] = React.useState("idle");
@@ -3398,6 +3408,10 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
     }
 
     case "grid-section": {
+      const resolvedGridItemImage = (rawItem) => {
+        const stored = rawItem.image || getAssetFromLibrary(assets, rawItem.imageAssetId)?.src || "";
+        return KNOWN_DEAD_GRID_SECTION_IMAGE_REPAIRS.get(stored) || stored;
+      };
       const items = normalizeGridSectionItems(props.items);
       const cardStyle = resolveGridSectionCardStyle(props, compact);
       const servicesVariant = isServicesGridVariant(props, items);
@@ -3482,7 +3496,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               }}
             >
               {items.map((rawItem, itemIndex) => {
-                const resolvedItemImage = rawItem.image || getAssetFromLibrary(assets, rawItem.imageAssetId)?.src || "";
+                const resolvedItemImage = resolvedGridItemImage(rawItem);
                 const item = resolvedItemImage !== rawItem.image ? { ...rawItem, image: resolvedItemImage } : rawItem;
                 const baseDelay = itemIndex * cardStagger;
                 const resolvedSurfaceSpeed = surfaceSpeed || (servicesVariant ? 0.95 : null);
