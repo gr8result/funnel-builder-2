@@ -3174,6 +3174,7 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
             <select value={String(props.submitAction || "none")} onChange={(e) => update({ submitAction: e.target.value })} style={styles.propertyInput}>
               <option value="none">Preview Only</option>
               <option value="calendar-booking">Open Calendar Booking</option>
+              <option value="send-email">Send Email</option>
             </select>
           </div>
           {String(props.submitAction || "none") === "calendar-booking" ? (
@@ -3181,6 +3182,29 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
               <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Booking URL</label>
               <input type="text" value={resolveContactBookingUrl(props.bookingUrl || "")} onChange={(e) => update({ bookingUrl: e.target.value })} style={styles.propertyInput} placeholder={DEFAULT_ENQUIRY_BOOKING_URL} />
               <p style={styles.aiHint}>Your public calendar booking page, e.g. `/u/your-username`.</p>
+            </>
+          ) : null}
+          {String(props.submitAction || "none") === "send-email" ? (
+            <>
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>To Email</label>
+              <input type="email" value={String(props.toEmail || "")} onChange={(e) => update({ toEmail: e.target.value })} style={styles.propertyInput} placeholder="you@business.com" />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Email Subject</label>
+              <input type="text" value={String(props.emailSubject || "")} onChange={(e) => update({ emailSubject: e.target.value })} style={styles.propertyInput} placeholder="New website enquiry" />
+              <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Success Message</label>
+              <input type="text" value={String(props.successMessage || "")} onChange={(e) => update({ successMessage: e.target.value })} style={styles.propertyInput} placeholder="Thanks - your enquiry has been sent." />
+              <label style={{ ...styles.propertyLabel, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={props.autoReplyEnabled === true} onChange={(e) => update({ autoReplyEnabled: e.target.checked })} />
+                Send an auto-reply to the submitter
+              </label>
+              {props.autoReplyEnabled === true ? (
+                <>
+                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Auto Reply Subject</label>
+                  <input type="text" value={String(props.autoReplySubject || "")} onChange={(e) => update({ autoReplySubject: e.target.value })} style={styles.propertyInput} placeholder="We received your enquiry" />
+                  <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Auto Reply Message</label>
+                  <textarea value={String(props.autoReplyMessage || "")} onChange={(e) => update({ autoReplyMessage: e.target.value })} style={{ ...styles.propertyInput, minHeight: 80 }} placeholder="Thanks for reaching out - we've received your enquiry and will be in touch shortly." />
+                </>
+              ) : null}
+              <p style={styles.aiHint}>Submissions are emailed directly to the address above. The auto-reply only sends if a form field has an email input.</p>
             </>
           ) : null}
           <div style={{ marginTop: 8 }}>

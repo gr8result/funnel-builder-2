@@ -149,6 +149,75 @@ function FooterNewsletterSignupForm({ editor, props, patchFt, footerPanelBorder,
   );
 }
 
+function ContactFormSendEmailButton({ formId, props, buttonStyle }) {
+  const [status, setStatus] = React.useState("idle");
+  const [message, setMessage] = React.useState("");
+  const busy = status === "submitting";
+
+  const submit = async () => {
+    const formEl = typeof document !== "undefined" ? document.getElementById(formId) : null;
+    if (!formEl) return;
+    if (typeof formEl.reportValidity === "function" && !formEl.reportValidity()) return;
+
+    const data = new FormData(formEl);
+    const fields = asArray(props.fields).map((field, idx) => ({
+      name: field.name || `field-${idx}`,
+      label: htmlToPlainText(field.label || field.name || ""),
+      type: field.type || "text",
+      value: String(data.get(field.name || `field-${idx}`) || ""),
+    }));
+
+    setStatus("submitting");
+    setMessage("");
+    try {
+      const response = await fetch("/api/website/contact-form-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: props.toEmail || "",
+          subject: htmlToPlainText(props.emailSubject || ""),
+          fields,
+          page: typeof window !== "undefined" ? window.location.toString() : "",
+          submittedAt: new Date().toISOString(),
+          autoReply: {
+            enabled: props.autoReplyEnabled === true,
+            subject: htmlToPlainText(props.autoReplySubject || ""),
+            message: htmlToPlainText(props.autoReplyMessage || ""),
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || "Could not send your enquiry.");
+      }
+      formEl.reset();
+      setStatus("success");
+      setMessage(htmlToPlainText(props.successMessage || "") || "Thanks - your enquiry has been sent.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error?.message || "We couldn't send your enquiry. Please try again.");
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={submit}
+        disabled={busy}
+        style={{ ...buttonStyle, border: "none", cursor: busy ? "default" : "pointer", opacity: busy ? 0.75 : 1, font: "inherit" }}
+      >
+        {busy ? "Sending..." : (htmlToPlainText(props.submitText || "") || "Send Details")}
+      </button>
+      {message ? (
+        <div role="status" style={{ marginTop: 8, color: status === "error" ? "#dc2626" : "#16a34a", fontSize: 14, lineHeight: 1.4, fontWeight: 600 }}>
+          {message}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function resolvePageAwareCta(props = {}, navigationContext = null) {
   const cta = props.cta && typeof props.cta === "object" ? props.cta : {};
   const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
@@ -2973,6 +3042,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const formMaxWidth = Math.max(360, parseSizeValue(props.formMaxWidth, 760));
       const submitAction = String(props.submitAction || "none");
       const bookingUrl = resolveContactBookingUrl(props.bookingUrl || "");
+      const contactFormId = `contact-form-${String(block?.id || block?.uid || "form").replace(/[^a-zA-Z0-9_-]/g, "")}`;
       const patchContactField = (fieldIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         const nextFields = asArray(props.fields).map((field, currentIndex) => (
@@ -3054,7 +3124,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               ))}
             </div>
           ) : (
-            <form style={sharedStyles.formGrid} onSubmit={(event) => event.preventDefault()}>
+            <form id={contactFormId} style={sharedStyles.formGrid} onSubmit={(event) => event.preventDefault()}>
               {asArray(props.fields).map((field, idx) => (
                 <div key={`${field.name}-${idx}`} style={sharedStyles.formField}>
                   <label style={{ ...sharedStyles.formLabel, color: props.textColor || "#0f172a" }}>
@@ -3097,6 +3167,12 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ) : (
               <a href={bookingUrl} style={{ ...sharedStyles.formSubmitBtn, ...getAnimationStyle("fade-up", 0.08), background: props.buttonBackgroundColor || "#0f172a", color: props.buttonTextColor || "#ffffff", textDecoration: "none" }} dangerouslySetInnerHTML={{ __html: asRichHtml(props.submitText || "Send Details") }} />
             )
+          ) : submitAction === "send-email" && !editor ? (
+            <ContactFormSendEmailButton
+              formId={contactFormId}
+              props={props}
+              buttonStyle={{ ...sharedStyles.formSubmitBtn, ...getAnimationStyle("fade-up", 0.08), background: props.buttonBackgroundColor || "#0f172a", color: props.buttonTextColor || "#ffffff" }}
+            />
           ) : (
             <div
               data-website-inline-editor="true"
