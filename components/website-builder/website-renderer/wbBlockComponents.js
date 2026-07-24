@@ -5842,6 +5842,16 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     accentColor: p?.accentColor ?? "#0ea5e9",
   }));
 
+  // Panel image uploads are async (a real network round trip). If a second panel's
+  // upload is started before the first one resolves, both closures over `panels`/`props`
+  // are captured from the same pre-upload render. Reading through refs instead of the
+  // closed-over variables at patch time ensures each save builds on the latest state
+  // rather than silently reverting whichever upload resolved first.
+  const latestPropsRef = React.useRef(props);
+  latestPropsRef.current = props;
+  const latestPanelsRef = React.useRef(panels);
+  latestPanelsRef.current = panels;
+
   React.useEffect(() => {
     logAccordionRenderDebug({ blockId: props.__blockId || props.id || props.blockId || "", blockType: props.__blockType || (props.stackMode === "side" ? "side-scroll-accordion" : "scroll-stack"), panels, renderer: "ScrollStackBlock" });
   }, [props.__blockId, props.__blockType, props.id, props.blockId, props.stackMode, panels.length]);
@@ -5899,16 +5909,16 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   function patchPanels(newPanels) {
     if (!editor || typeof onChangeBlock !== "function") return;
-    onChangeBlock({ ...props, [panelSourceKey]: newPanels });
+    onChangeBlock({ ...latestPropsRef.current, [panelSourceKey]: newPanels });
   }
 
   function patchPanel(idx, patch) {
-    patchPanels(panels.map((p, i) => i !== idx ? p : { ...p, ...patch }));
+    patchPanels(latestPanelsRef.current.map((p, i) => i !== idx ? p : { ...p, ...patch }));
   }
 
   function patchPanelImage(idx, value, asset = null) {
     const nextImage = String(value || "").trim();
-    const failedKey = panels[idx]?.id || idx;
+    const failedKey = latestPanelsRef.current[idx]?.id || idx;
     setFailedImages((prev) => {
       const next = { ...prev };
       delete next[failedKey];
@@ -5917,15 +5927,15 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     patchPanel(idx, {
       imageUrl: nextImage,
       image: nextImage,
-      imageAssetId: asset?.id || panels[idx]?.imageAssetId || "",
+      imageAssetId: asset?.id || latestPanelsRef.current[idx]?.imageAssetId || "",
     });
   }
 
   function addPanel() {
     const now = Date.now();
-    const len = panels.length;
+    const len = latestPanelsRef.current.length;
     patchPanels([
-      ...panels,
+      ...latestPanelsRef.current,
       {
         id: `ss-panel-${now}`,
         eyebrow: `Section ${len + 1}`,
@@ -5949,7 +5959,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   }
 
   function removePanel(idx) {
-    patchPanels(panels.filter((_, i) => i !== idx));
+    patchPanels(latestPanelsRef.current.filter((_, i) => i !== idx));
   }
 
   async function handleImageUpload(panelIdx, file) {
