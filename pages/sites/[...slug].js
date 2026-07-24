@@ -15,6 +15,7 @@ import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAs
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
+import { isMobileUserAgent, useResponsiveCompact } from "../../lib/website-builder/responsiveViewport";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -354,6 +355,7 @@ export async function getServerSideProps(ctx) {
         siteDataHash,
         requestedPath: slugArr.slice(1),
         isDomainRequest: isHostLookup,
+        initialCompact: isMobileUserAgent(ctx.req?.headers?.["user-agent"] || ""),
       },
     };
   }
@@ -380,9 +382,14 @@ export async function getServerSideProps(ctx) {
   };
 }
 
-export function PublishedWebsiteRenderer({ publication, siteDataHash = "", requestedPath, isDomainRequest }) {
+export function PublishedWebsiteRenderer({ publication, siteDataHash = "", requestedPath, isDomainRequest, initialCompact = false }) {
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
+
+  // The renderer's existing compact-mode rules were never activating for real visitors because
+  // this was hardcoded to false. Best-guess from the request's User-Agent on the server (avoids
+  // a layout flash for the common case), corrected to the real viewport width after hydration.
+  const compact = useResponsiveCompact(initialCompact);
 
   const project = publication?.site_data || {};
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
@@ -598,7 +605,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
       <main data-published-website-root="true" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
-            {renderWebsiteBlock(globalNavBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalNavBlock, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </div>
         ) : null}
 
@@ -608,7 +615,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
               const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
               return (
                 <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={seamlessPublishedBlockFrame(blockBg)}>
-                  {renderWebsiteBlock(block, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+                  {renderWebsiteBlock(block, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
                 </div>
               );
             })}
@@ -626,7 +633,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
 
         {injectFooter ? (
           <div key="global-footer" data-published-block="true" data-published-block-id={globalFooterBlock?.id || ""} data-published-block-type={globalFooterBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalFooterBlock))}>
-            {renderWebsiteBlock(globalFooterBlock, { compact: false, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalFooterBlock, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </div>
         ) : null}
 
@@ -650,9 +657,9 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   );
 }
 
-export default function SitePage({ mode, title, sections, publication, siteDataHash, requestedPath, isDomainRequest }) {
+export default function SitePage({ mode, title, sections, publication, siteDataHash, requestedPath, isDomainRequest, initialCompact }) {
   if (mode === "published-website") {
-    return <PublishedWebsiteRenderer publication={publication} siteDataHash={siteDataHash || ""} requestedPath={requestedPath} isDomainRequest={isDomainRequest} />;
+    return <PublishedWebsiteRenderer publication={publication} siteDataHash={siteDataHash || ""} requestedPath={requestedPath} isDomainRequest={isDomainRequest} initialCompact={initialCompact} />;
   }
 
   return (
