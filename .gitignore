@@ -61,7 +61,12 @@ tmp-thumbs/
 .nextignor
 
 # website builder local exports, recovery snapshots, and autosave backups
+# Supabase (website_builder_sites / website_builder_pages / website_builder_page_versions) is the
+# durable store for customer websites -- none of this is customer-website source of truth.
 website-builder-backups/
+website-builder-sites/_emergency-drafts/
+website-builder-sites-backup-*/
+website-builder-sites-*-backup-*/
 recovery/
 /2208a52a-8175-477e-823c-fc6de7fe4afe/
 website-builder-sites/**/full-project.json

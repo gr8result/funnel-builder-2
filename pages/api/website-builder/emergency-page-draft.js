@@ -11,6 +11,11 @@ export const config = {
 
 const ROOT_DIR = path.join(process.cwd(), "website-builder-sites", "_emergency-drafts");
 
+// Supabase (website_builder_pages) is the durable store. Emergency drafts are a local
+// development recovery aid only -- production must not write customer content into the
+// repo filesystem.
+const IS_PRODUCTION_RUNTIME = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+
 function safeSegment(value, fallback = "item") {
   const cleaned = String(value || "")
     .trim()
@@ -76,6 +81,9 @@ export default async function handler(req, res) {
 
   if (method === "POST") {
     const blocks = Array.isArray(req.body?.blocks) ? req.body.blocks : [];
+    if (IS_PRODUCTION_RUNTIME) {
+      return res.status(200).json({ ok: true, skipped: true, blocks: blocks.length });
+    }
     const draft = {
       projectId,
       pageName,

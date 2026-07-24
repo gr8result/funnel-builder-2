@@ -372,11 +372,15 @@ async function handler(req, res) {
   });
 
   if (projectId) {
+    // Best-effort local dev recovery snapshot -- Supabase (published_websites) is the
+    // durable record either way, so a snapshot failure must never fail the publish itself.
     await createWebsiteBuilderBackup(userId, projectId, {
       source: "publish",
       reason: "Before publishing website",
       project,
       metadata: { slug, customDomain: requestedCustomDomain || "" },
+    }).catch((error) => {
+      console.warn("[website-publish] local backup snapshot failed (non-fatal)", { projectId, error: error?.message || error });
     });
   }
 
