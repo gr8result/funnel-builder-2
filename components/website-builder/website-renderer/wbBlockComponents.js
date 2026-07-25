@@ -6317,6 +6317,32 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
+  // This effect must run unconditionally on every render (Rules of Hooks) even though its
+  // scroll-tracking behaviour only matters for the desktop sticky-stack branch further down.
+  // It used to live after the editor/compact early returns below, so whenever `compact`
+  // changed value on an already-mounted instance (e.g. corrected from an SSR guess to the
+  // real viewport width after hydration) React would see a different hook count between
+  // renders and crash with "Rendered fewer hooks than expected."
+  React.useEffect(() => {
+    if (editor || compact || typeof window === "undefined") return;
+    const n = panels.length;
+    if (n === 0) return;
+
+    function onScroll() {
+      const el = sectionRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scrolledIn = -rect.top;
+      const totalRange = el.offsetHeight - window.innerHeight;
+      const raw = Math.max(0, Math.min(n - 0.0001, (scrolledIn / Math.max(1, totalRange)) * n));
+      setScrollProgress(raw);
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [editor, compact, panels.length]);
+
   // -- EDITOR MODE: flat stacked panels, no sticky ----------------------------
   if (editor) {
     return (
@@ -6374,26 +6400,6 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   //   bottom edge — exactly the "physical card deck" layering we want.
 
   const PEEK = Math.max(48, Math.min(140, Number(props.peekHeight ?? props.cardPeekHeight ?? 52))); // px - visible header strip when stacked
-
-  React.useEffect(() => {
-    if (editor || compact || typeof window === "undefined") return;
-    const n = panels.length;
-    if (n === 0) return;
-
-    function onScroll() {
-      const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scrolledIn = -rect.top;
-      const totalRange = el.offsetHeight - window.innerHeight;
-      const raw = Math.max(0, Math.min(n - 0.0001, (scrolledIn / Math.max(1, totalRange)) * n));
-      setScrollProgress(raw);
-    }
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [editor, compact, panels.length]);
 
   function jumpToCard(targetIdx) {
     const el = sectionRef.current;
