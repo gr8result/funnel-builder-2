@@ -15,7 +15,8 @@ import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAs
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
-import { isMobileUserAgent, useResponsiveCompact } from "../../lib/website-builder/responsiveViewport";
+import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
+import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -389,7 +390,10 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   // The renderer's existing compact-mode rules were never activating for real visitors because
   // this was hardcoded to false. Best-guess from the request's User-Agent on the server (avoids
   // a layout flash for the common case), corrected to the real viewport width after hydration.
-  const compact = useResponsiveCompact(initialCompact);
+  // `device` additionally distinguishes tablet from mobile (see lib/website-builder/responsiveValue.js)
+  // so per-device prop overrides (logo size, section height, ...) resolve correctly for real visitors.
+  const device = useResponsiveDevice(initialCompact ? "mobile" : "desktop");
+  const compact = device !== "desktop";
 
   const project = publication?.site_data || {};
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
@@ -421,7 +425,8 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   // Strip any per-page footer blocks when a global footer exists — prevents duplicates and
   // ensures the home page (which may still have the original footer in its pageBlocks) also
   // gets the global footer injected consistently with every other page.
-  const blocksToRender = injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav;
+  const blocksToRender = (injectFooter ? blocksWithoutNav.filter((block) => block.type !== "footer") : blocksWithoutNav)
+    .filter((block) => isBlockVisibleOnDevice(block?.props, device));
   const basePath = isDomainRequest ? "" : buildWebsitePath(publication?.slug || project?.name || "site");
   const pageMap = {};
   pages.forEach((page) => {
@@ -602,10 +607,10 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
           ${websiteBlockKeyframes()}
         `}</style>
       </Head>
-      <main data-published-website-root="true" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
+      <main data-published-website-root="true" className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
-            {renderWebsiteBlock(globalNavBlock, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </div>
         ) : null}
 
@@ -615,7 +620,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
               const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
               return (
                 <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={seamlessPublishedBlockFrame(blockBg)}>
-                  {renderWebsiteBlock(block, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
                 </div>
               );
             })}
@@ -633,7 +638,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
 
         {injectFooter ? (
           <div key="global-footer" data-published-block="true" data-published-block-id={globalFooterBlock?.id || ""} data-published-block-type={globalFooterBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalFooterBlock))}>
-            {renderWebsiteBlock(globalFooterBlock, { compact, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalFooterBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </div>
         ) : null}
 

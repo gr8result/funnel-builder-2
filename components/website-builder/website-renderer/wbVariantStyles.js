@@ -266,7 +266,7 @@ function fullWidthStyle(props, compact, editor) {
   if (props?.fullWidthBackground === false) {
     return {
       width: "100%",
-      maxWidth: `${maxWidth}px`,
+      maxWidth: compact ? "100%" : `${maxWidth}px`,
       marginLeft: "auto",
       marginRight: "auto",
       ...designStyle,
@@ -287,7 +287,7 @@ function sectionContentStyle(props, compact, explicitMaxWidth = null) {
   const maxWidth = Math.max(320, Number(explicitMaxWidth || props?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
   return {
     width: "100%",
-    maxWidth: `${maxWidth}px`,
+    maxWidth: compact ? "100%" : `${maxWidth}px`,
     marginLeft: "auto",
     marginRight: "auto",
     boxSizing: "border-box",
@@ -1573,7 +1573,7 @@ function imageGalleryVariantStyles(props, compact) {
       grid: {
         display: "grid",
         gap: compact ? 14 : 18,
-        gridTemplateColumns: `repeat(${Math.max(1, Number(props.columns) || 3)}, minmax(0, 1fr))`,
+        gridTemplateColumns: compact ? "1fr" : `repeat(${Math.max(1, Number(props.columns) || 3)}, minmax(0, 1fr))`,
       },
       card: (idx) => ({
         borderRadius: 8,
@@ -1616,7 +1616,7 @@ function imageGalleryVariantStyles(props, compact) {
     grid: {
       display: "grid",
       gap: 12,
-      gridTemplateColumns: `repeat(${Math.max(1, Number(props.columns) || 3)}, minmax(0, 1fr))`,
+      gridTemplateColumns: compact ? "1fr" : `repeat(${Math.max(1, Number(props.columns) || 3)}, minmax(0, 1fr))`,
     },
     card: () => ({
       borderRadius: 18,
@@ -2343,9 +2343,16 @@ function getBrandInitials(brand = "") {
   return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
 }
 
-function BrandMark({ brand, logoSrc, size = 44, background = "#0f172a", color = "#ffffff", borderColor = "rgba(148,163,184,0.28)", borderRadius = 10 }) {
+function BrandMark({ brand, logoSrc, size = 44, maxWidth, background = "#0f172a", color = "#ffffff", borderColor = "rgba(148,163,184,0.28)", borderRadius = 10 }) {
   if (logoSrc) {
-    return <img src={logoSrc} alt={brand || "Brand logo"} style={{ width: size, height: "auto", objectFit: "contain", display: "block", borderRadius: 6 }} />;
+    // The visible size is controlled entirely by this wrapper (width/max-width); the image itself
+    // never gets an explicit width so it can never be stretched or cropped out of its own aspect
+    // ratio -- it just scales down to fit whatever the wrapper allows.
+    return (
+      <div style={{ width: size, maxWidth: maxWidth || "100%", lineHeight: 0 }}>
+        <img src={logoSrc} alt={brand || "Brand logo"} style={{ display: "block", width: "auto", height: "auto", maxWidth: "100%", objectFit: "contain", borderRadius: 6 }} />
+      </div>
+    );
   }
 
   return (

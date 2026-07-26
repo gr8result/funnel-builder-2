@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { resolveResponsiveProp, getResponsiveOverride, hasResponsiveOverride, setResponsiveValue, clearResponsiveOverride, responsiveSourceLabel } from "../../../lib/website-builder/responsiveValue";
 import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
@@ -140,7 +141,8 @@ const DEFAULT_MAIN_NAV_LINKS = Object.freeze([
 ]);
 
 function getMainNavKey(item = {}) {
-  return slugifyNavValue(item.label || item.name || item.title || item.href || item.url || item.path || "");
+  const hrefSlug = slugifyNavValue(String(item.href || item.url || item.path || "").replace(/^\/+/, "").split(/[?#]/)[0]);
+  return slugifyNavValue(item.pageId || item.page_id || item.slug || item.pageSlug || hrefSlug || item.label || item.name || item.title || "");
 }
 
 function flattenMainNavLinks(links = []) {
@@ -177,7 +179,18 @@ function normalizeSimpleMainNavRows(links = []) {
     byKey.set(key, row);
   });
 
-  const rows = DEFAULT_MAIN_NAV_LINKS.map((fallback) => {
+  if (existingRows.length > 0) {
+    return [...byKey.values()].map((row) => ({
+      ...row,
+      id: row.id || `nav-${getMainNavKey(row) || "link"}`,
+      label: row.label || "Link",
+      href: normalizeNavHref(row.href, row.label),
+      placement: row.placement === "modules" ? "modules" : "top",
+      children: [],
+    }));
+  }
+
+  return DEFAULT_MAIN_NAV_LINKS.map((fallback) => {
     const key = slugifyNavValue(fallback.label);
     const existing = byKey.get(key) || {};
     return {
@@ -189,21 +202,6 @@ function normalizeSimpleMainNavRows(links = []) {
       children: [],
     };
   });
-
-  existingRows.forEach((row) => {
-    const key = getMainNavKey(row);
-    if (!key || DEFAULT_MAIN_NAV_LINKS.some((fallback) => slugifyNavValue(fallback.label) === key)) return;
-    rows.push({
-      ...row,
-      id: row.id || `nav-${key}`,
-      label: row.label || "Link",
-      href: normalizeNavHref(row.href, row.label),
-      placement: row.placement === "modules" ? "modules" : "top",
-      children: [],
-    });
-  });
-
-  return rows;
 }
 
 function buildMainNavTree(rows = []) {
@@ -1392,7 +1390,7 @@ function NewsletterPropertiesPanel({ block, index, onChange }) {
   );
 }
 
-function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor, project }) {
+function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onOpenSimpleImageEditor, project, device = "desktop" }) {
   const props = block?.props || {};
   const update = (patch) => {
     const currentNavigationLinks = props.navigationLinks || props.navLinks;
@@ -1551,7 +1549,18 @@ function FooterPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
             </button>
           ) : null}
           <div style={{ marginTop: 8 }}>
-            <NumberField label="Logo Width (px)" value={Number(props.logoWidth) || 48} min={20} max={300} onChange={(v) => update({ logoWidth: v })} />
+            <ResponsiveNumberField
+              label={`Logo Width (px)${device !== "desktop" ? ` — ${device === "mobile" ? "Mobile" : "Tablet"}` : ""}`}
+              props={props}
+              baseKey="logoWidth"
+              device={device}
+              unit="number"
+              min={20}
+              max={300}
+              fitContentFallback
+              fitContentValue={{ tablet: 44, mobile: 36 }}
+              onChange={(nextProps) => onChange(index, nextProps)}
+            />
           </div>
         </div>
 
@@ -4183,6 +4192,119 @@ function SplitBlockPropertiesPanel({ block, index, onChange, brandAssets, onUplo
   );
 }
 
+// Generic per-device inspector field: resolves `props[baseKey]` (or its Tablet/Mobile sibling)
+// through the shared inheritance rule, shows the user whether what they're looking at is the
+// device's own override or something inherited, and gives them Create/Reset/Copy actions to
+// manage that override -- without ever touching the other devices' values. `render(value, setValue)`
+// draws the actual control (number input, select, etc); this wrapper only handles the
+// resolve/override/badge/actions mechanics so it can be reused for any property type.
+//
+// `device === "desktop"` has no override concept (desktop IS the base value), so the badge/action
+// row only appears in Tablet/Mobile mode.
+function ResponsiveField({ label, props, baseKey, device, onChange, render, fitContentFallback = false, fitContentValue = "auto", mirrorKeys = [] }) {
+  const resolved = resolveResponsiveProp(props, baseKey, device, { fitContentFallback, fitContentValue });
+  const overrideExists = hasResponsiveOverride(props, baseKey, device);
+  const badgeLabel = device === "desktop" ? null : responsiveSourceLabel(resolved.source, device);
+
+  const applyValue = (value) => {
+    let next = setResponsiveValue(props, baseKey, device, value);
+    mirrorKeys.forEach((key) => { next = setResponsiveValue(next, key, device, value); });
+    onChange(next);
+  };
+
+  const resetToInherited = () => {
+    let next = clearResponsiveOverride(props, baseKey, device);
+    mirrorKeys.forEach((key) => { next = clearResponsiveOverride(next, key, device); });
+    onChange(next);
+  };
+
+  const copyFrom = (sourceDevice) => {
+    const sourceValue = sourceDevice === "desktop" ? props?.[baseKey] : getResponsiveOverride(props, baseKey, sourceDevice);
+    if (sourceValue === undefined || sourceValue === null || sourceValue === "") return;
+    applyValue(sourceValue);
+  };
+
+  return (
+    <div style={styles.sectionCard}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <label style={styles.propertyLabel}>{label}</label>
+        {badgeLabel ? (
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.02em",
+            padding: "2px 8px",
+            borderRadius: 999,
+            color: overrideExists ? "#166534" : "#475569",
+            background: overrideExists ? "#dcfce7" : "#e2e8f0",
+            border: `1px solid ${overrideExists ? "#86efac" : "#cbd5e1"}`,
+          }}>
+            {badgeLabel}
+          </span>
+        ) : null}
+      </div>
+      {render(resolved.value, applyValue)}
+      {device !== "desktop" ? (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+          {overrideExists ? (
+            <>
+              <button type="button" style={{ ...styles.secondaryBtn, fontSize: 12, padding: "4px 8px" }} onClick={resetToInherited}>Reset to automatic</button>
+              <button type="button" style={{ ...styles.secondaryBtn, fontSize: 12, padding: "4px 8px" }} onClick={resetToInherited}>Reset to inherited</button>
+            </>
+          ) : (
+            <button type="button" style={{ ...styles.secondaryBtn, fontSize: 12, padding: "4px 8px" }} onClick={() => applyValue(resolved.value === "auto" ? 0 : resolved.value)}>
+              Create override
+            </button>
+          )}
+          <button type="button" style={{ ...styles.secondaryBtn, fontSize: 12, padding: "4px 8px" }} onClick={() => copyFrom("desktop")}>Copy Desktop Value</button>
+          {device === "mobile" ? (
+            <button type="button" style={{ ...styles.secondaryBtn, fontSize: 12, padding: "4px 8px" }} onClick={() => copyFrom("tablet")}>Copy Tablet Value</button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// Numeric px-value convenience wrapper around ResponsiveField -- matches NumberField's look.
+// `unit: "px"` stores values as "123px" strings (for CSS dimension props like heights); `unit:
+// "number"` stores a plain number (for things like logoWidth that other code reads with Number()).
+function ResponsiveNumberField({ label, props, baseKey, device, onChange, min = 0, max = 2000, step = 1, unit = "number", fitContentFallback = false, fitContentValue = "auto", mirrorKeys = [], placeholder }) {
+  return (
+    <ResponsiveField
+      label={label}
+      props={props}
+      baseKey={baseKey}
+      device={device}
+      onChange={onChange}
+      fitContentFallback={fitContentFallback}
+      fitContentValue={fitContentValue}
+      mirrorKeys={mirrorKeys}
+      render={(value, setValue) => {
+        const isAuto = value === "auto";
+        const numericValue = isAuto ? "" : (unit === "px" ? parsePixelValue(value, "") : value);
+        return (
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={numericValue === "" ? "" : Number(numericValue)}
+            placeholder={isAuto ? "auto (fit content)" : placeholder}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") return;
+              const num = Number(raw);
+              setValue(unit === "px" ? `${num}px` : num);
+            }}
+            style={styles.propertyInput}
+          />
+        );
+      }}
+    />
+  );
+}
+
 function NumberField({ label, value, min = 0, max = 200, step = 1, onChange }) {
   return (
     <div style={styles.numberField}>
@@ -4365,7 +4487,7 @@ function ImagePropertiesPanel({ block, index, onChange, brandAssets, onUploadIma
   );
 }
 
-function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAsset, update }) {
+function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAsset, update, device = "desktop" }) {
   const savedLogo = brandAssets?.logo || null;
   const savedImages = Array.isArray(brandAssets?.images) ? brandAssets.images : [];
 
@@ -4434,18 +4556,35 @@ function NavbarLogoPicker({ index, props, brandAssets, onUploadImage, onSelectAs
           </button>
         ))}
       </div>
-      <NumberField
-        label="Logo width"
-        value={props.logoWidth || 44}
+      <ResponsiveNumberField
+        label={`Logo Width${device !== "desktop" ? ` — ${device === "mobile" ? "Mobile" : "Tablet"}` : ""}`}
+        props={props}
+        baseKey="logoWidth"
+        device={device}
+        unit="number"
         min={20}
-        max={180}
-        onChange={(next) => update({ logoWidth: next })}
+        max={300}
+        fitContentFallback
+        fitContentValue={{ tablet: 180, mobile: 140 }}
+        onChange={(nextProps) => update(nextProps)}
+      />
+      <ResponsiveNumberField
+        label={`Logo Max Width${device !== "desktop" ? ` — ${device === "mobile" ? "Mobile" : "Tablet"}` : ""}`}
+        props={props}
+        baseKey="logoMaxWidth"
+        device={device}
+        unit="number"
+        min={20}
+        max={300}
+        fitContentFallback
+        fitContentValue={{ tablet: 180, mobile: 140 }}
+        onChange={(nextProps) => update(nextProps)}
       />
     </div>
   );
 }
 
-function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, pages = [] }) {
+function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, pages = [], device = "desktop" }) {
   const props = block.props || {};
   const [section, setSection] = useState("menu");
   const navbarSectionShells = [
@@ -4546,6 +4685,7 @@ function NavbarPropertiesPanel({ block, index, onChange, brandAssets, onUploadIm
               onUploadImage={onUploadImage}
               onSelectAsset={onSelectAsset}
               update={update}
+              device={device}
             />
 
             <div style={{ ...styles.sectionCard, ...navbarSectionShells[2] }}>
@@ -6722,6 +6862,7 @@ export {
   ScrollStackPropertiesPanel,
   CompetitorComparisonPropertiesPanel,
   NumberField, ImagePropertiesPanel,
+  ResponsiveField, ResponsiveNumberField,
   NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
   ColorSelector, CompactColorField,

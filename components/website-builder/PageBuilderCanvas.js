@@ -4,7 +4,9 @@ import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
-import { mergeVideoHeroProps } from "../../lib/website-builder/videoHero";
+import { primaryNavigationSharedComponentId } from "../../lib/website-builder/sharedNavigation";
+import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
+import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
 import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
@@ -97,6 +99,46 @@ function canvasBlocksHash(blocks) {
 }
 
 const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
+
+function previewSlugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function resolvePreviewPageEntry(project = {}, activePage = "") {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const requested = previewSlugify(activePage || "");
+  return pages.find((entry) => {
+    const id = previewSlugify(entry?.id || entry?.pageId || "");
+    const slug = savedPreviewPageSlug(project, entry) || previewSlugify(entry?.slug || "");
+    const name = previewSlugify(entry?.name || "");
+    return (requested && id === requested) || (requested && slug === requested) || entry?.name === activePage || name === requested;
+  }) || pages[0] || null;
+}
+
+function savedPreviewPageSlug(project = {}, page = {}) {
+  const slugMap = project?.pageSlugs && typeof project.pageSlugs === "object" ? project.pageSlugs : {};
+  return previewSlugify(
+    page?.slug
+    || slugMap[page?.id]
+    || slugMap[page?.pageId]
+    || slugMap[page?.name]
+    || page?.pageSlug
+    || page?.routeSlug
+    || ""
+  );
+}
+
+function resolvePreviewPageSlug(project = {}, activePage = "") {
+  const page = resolvePreviewPageEntry(project, activePage);
+  if (!page) return { page: null, slug: "", error: "Preview page could not be opened because the selected page was not found." };
+  const slug = savedPreviewPageSlug(project, page);
+  if (!slug) return { page, slug: "", error: `Preview page could not be opened because "${page.name || activePage || "the selected page"}" has no valid saved slug.` };
+  return { page, slug, error: "" };
+}
 
 function parseToolbarFontSize(value, fallback = 18) {
   const parsed = Number.parseFloat(String(value ?? "").replace("px", ""));
@@ -1149,6 +1191,24 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
     if (newBlockType && BlockDefinitions[newBlockType]) {
       const newBlock = createNewBlock(newBlockType);
+      if (newBlock.type === BlockTypes.NAV_BAR) {
+        const sharedComponentId = project?.globalNavBlock?.sharedComponentId || project?.globalNavBlock?.props?.sharedComponentId || primaryNavigationSharedComponentId(project);
+        onUpdateGlobalBlock?.("nav", {
+          ...newBlock,
+          id: sharedComponentId,
+          role: "primary-navigation",
+          sharedComponentId,
+          props: {
+            ...(newBlock.props || {}),
+            ...(project?.globalNavBlock?.props || {}),
+            role: "primary-navigation",
+            sharedComponentId,
+          },
+        });
+        setSelectedGlobalRole("nav");
+        setSelectedIndex(null);
+        return;
+      }
       const updated = [...blocks];
       updated.splice(safeIndex, 0, newBlock);
       pushHistory(latestBlocksRef.current.slice());
@@ -1323,6 +1383,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...latestBlocksRef.current];
     const previousBlock = updated[index];
     if (!previousBlock) return;
+    if (previousBlock.type === BlockTypes.NAV_BAR) {
+      const sharedComponentId = project?.globalNavBlock?.sharedComponentId || project?.globalNavBlock?.props?.sharedComponentId || primaryNavigationSharedComponentId(project);
+      const nextGlobalBlock = normalizeCanvasBlockUpdate(project?.globalNavBlock || previousBlock, {
+        ...(project?.globalNavBlock || previousBlock),
+        id: sharedComponentId,
+        role: "primary-navigation",
+        sharedComponentId,
+        props: {
+          ...((project?.globalNavBlock || previousBlock).props || {}),
+          ...newProps,
+          role: "primary-navigation",
+          sharedComponentId,
+        },
+      });
+      onUpdateGlobalBlock?.("nav", nextGlobalBlock);
+      const pageBlocksWithoutNav = updated.filter((block) => block?.type !== BlockTypes.NAV_BAR);
+      commitBlocks(pageBlocksWithoutNav, { history: false });
+      setSelectedGlobalRole("nav");
+      setSelectedIndex(null);
+      return;
+    }
     updated[index] = normalizeCanvasBlockUpdate(previousBlock, { ...previousBlock, props: newProps });
     commitBlocks(updated, { history: false });
   };
@@ -1344,7 +1425,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (!target) return null;
 
     const nextProps = applyAssetToProps(target.props || {}, key, normalizedAsset);
-    if (String(target.type || "") === BlockTypes.VIDEO_HERO && ["__video_hero_src__", "videoUrl", "videoSrc", "mediaUrl", "src", "url"].includes(String(key || ""))) {
+    if (String(target.type || "") === BlockTypes.VIDEO_HERO && isVideoHeroMediaFieldKey(key)) {
       Object.assign(nextProps, mergeVideoHeroProps(target.props || {}, {
         videoUrl: normalizedAsset.src || "",
         videoStoragePath: normalizedAsset.storagePath || target.props?.videoStoragePath || "",
@@ -1360,6 +1441,17 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       ...target,
       props: nextProps,
     });
+
+    if (String(target.type || "") === BlockTypes.VIDEO_HERO) {
+      console.info("[website-builder video-hero] Uploaded URL applied to canvas", {
+        blockId: target.id || "",
+        fieldKey: key || "",
+        uploadedUrl: normalizedAsset.src || "",
+        renderingUrl: resolveVideoHeroUrl(updated[index]?.props || {}),
+        storagePath: normalizedAsset.storagePath || updated[index]?.props?.videoStoragePath || "",
+        widget: updated[index],
+      });
+    }
 
     commitBlocks(updated);
     return updated;
@@ -1421,7 +1513,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const handleCanvasImageUpload = async (index, key, file) => {
     const asset = await Promise.resolve(onUploadImage?.(index, key, file));
     if (!asset?.src) return asset;
-    if (String(key || "").startsWith("__")) {
+    if (String(key || "").startsWith("__") && !isVideoHeroMediaFieldKey(key)) {
       return asset;
     }
     applyAssetToCanvasBlock(index, key, asset);
@@ -1587,8 +1679,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     setSelectedIndex(insertAt);
   };
 
-  const previewWidth = previewMode === "mobile" ? 430 : previewMode === "tablet" ? 920 : "100%";
+  const previewWidth = previewMode === "mobile" ? 430 : previewMode === "tablet" ? 1024 : "100%";
+  // Tablet must render with the same mobile-safe compact layout as phone preview -- otherwise
+  // the canvas narrows to 920px while every `compact ? mobile : desktop` style rule in the
+  // renderer still resolves to desktop (absolute positions, multi-column grids, fixed widths),
+  // which is what causes blocks/toolbar controls to overlap in tablet preview.
+  const previewIsCompact = previewMode !== "desktop";
   const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
+  const responsiveCanvasLayoutWidth = resolveResponsiveLayoutWidth(pageCanvasWidth, previewMode);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
   const resolveCanvasFrameBackground = (entries, entryIndex) => (
@@ -1989,10 +2087,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const writePreviewSnapshot = (committedBlocks, savedProject = null) => {
     if (typeof window === "undefined" || !project?.id) return "";
     const token = createPreviewToken();
-    const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
     const sourceProject = savedProject && typeof savedProject === "object" ? savedProject : project;
-    const pages = Array.isArray(sourceProject?.pages) ? sourceProject.pages : [];
-    const selectedPage = pages.find((entry) => entry?.name === pageName) || pages[0] || { name: pageName };
+    const selectedPage = resolvePreviewPageEntry(sourceProject, activePage);
+    const pageName = String(selectedPage?.name || activePage || sourceProject?.pages?.[0]?.name || "Home");
     const snapshotProject = {
       ...sourceProject,
       id: project.id,
@@ -2046,12 +2143,19 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
     }
     const previewToken = writePreviewSnapshot(committedBlocks, saved && !saved?._saveError ? saved : null);
-    const pageName = String(activePage || project?.pages?.[0]?.name || "Home");
-    const pageSlug = pageName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "home";
+    const { page: previewPage, slug: pageSlug, error: pageSlugError } = resolvePreviewPageSlug(saved && !saved?._saveError ? saved : project, activePage);
+    if (pageSlugError) {
+      previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${pageSlugError}</p>`;
+      showSavePopup(pageSlugError, "error");
+      return;
+    }
+    const isHomePage = pageSlug === "home" || pageSlug === "index" || previewSlugify(previewPage?.id || "") === "home";
+    const previewPath = `/modules/website-builder/project/${project.id}/preview`;
     const previewUrl = new URL(
-      `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageSlug)}&viewport=${encodeURIComponent(previewMode)}`,
+      `${previewPath}${isHomePage ? "" : `?page=${encodeURIComponent(pageSlug)}`}`,
       window.location.origin,
-    ).toString();
+    );
+    previewUrl.searchParams.set("viewport", previewMode);
     if (!saved || saved?._saveError) {
       const message = saved?._saveErrorMessage || "Preview blocked because the page did not save successfully.";
       previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message}</p>`;
@@ -2059,12 +2163,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     if (previewToken) {
-      const url = new URL(previewUrl);
-      url.searchParams.set("previewToken", previewToken);
-      previewWindow.location.replace(url.toString());
+      previewUrl.searchParams.set("previewToken", previewToken);
+      previewWindow.location.replace(previewUrl.toString());
       return;
     }
-    previewWindow.location.replace(previewUrl);
+    previewWindow.location.replace(previewUrl.toString());
   };
 
   const handlePreviewSite = async () => {
@@ -3191,6 +3294,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     showSavePopup("Saving...", "info");
     try {
       const committedBlocks = await commitPendingInlineEdits();
+      console.info("[website-builder video-hero] Saving widget", {
+        pageName: activePage,
+        widgets: (Array.isArray(committedBlocks) ? committedBlocks : [])
+          .filter((block) => String(block?.type || "") === BlockTypes.VIDEO_HERO)
+          .map((block) => ({
+            id: block?.id || "",
+            videoUrl: resolveVideoHeroUrl(block?.props || {}),
+            fields: {
+              video: block?.props?.video || "",
+              videoUrl: block?.props?.videoUrl || "",
+              videoSrc: block?.props?.videoSrc || "",
+              src: block?.props?.src || "",
+              backgroundVideo: block?.props?.backgroundVideo || "",
+            },
+            widget: block,
+          })),
+      });
       // Use onForceSave (awaits cloud sync) if available, otherwise fall back to onSave
       const saveFn = typeof onForceSave === "function" ? onForceSave : onSave;
       const saved = await Promise.resolve(saveFn?.(committedBlocks));
@@ -3562,6 +3682,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               ref={blocksContainerRef}
               data-canvas-scale={1}
               data-builder-block-list="true"
+              className="gr8wb-viewport"
               style={{
                 ...styles.blocksList,
                 width: previewMode === "desktop" ? "100%" : previewWidth,
@@ -3575,7 +3696,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                   role="nav"
                   block={globalNavBlock}
                   brandAssets={brandAssets}
-                  compact={previewMode === "mobile"}
+                  compact={previewIsCompact}
+                  device={previewMode}
+                  layoutWidth={responsiveCanvasLayoutWidth}
                   selected={selectedGlobalRole === "nav"}
                   onSelect={() => selectGlobalBlock("nav")}
                   onChange={(nextBlock) => onUpdateGlobalBlock?.("nav", nextBlock)}
@@ -3606,11 +3729,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       <CanvasBlock
                         block={block}
                         index={blockIndex}
-                        pageCanvasWidth={pageCanvasWidth}
+                        pageCanvasWidth={responsiveCanvasLayoutWidth}
                         frameBackground={resolveCanvasFrameBackground(canvasBlockEntries, idx)}
                         canvasScale={1}
                         brandAssets={brandAssets}
-                        compactPreview={previewMode === "mobile"}
+                        compactPreview={previewIsCompact}
+                        device={previewMode}
                         animationReplayToken={animationReplayState.index === blockIndex ? animationReplayState.tick : 0}
                         selected={selectedIndex === blockIndex}
                         hovered={hoveredIndex === blockIndex}
@@ -3658,7 +3782,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       role="footer"
                       block={globalFooterBlock}
                       brandAssets={brandAssets}
-                      compact={previewMode === "mobile"}
+                      compact={previewIsCompact}
+                      device={previewMode}
+                      layoutWidth={responsiveCanvasLayoutWidth}
                       selected={selectedGlobalRole === "footer"}
                       onSelect={() => selectGlobalBlock("footer")}
                       onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
@@ -3684,6 +3810,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               <PropertiesPanel
                 block={selectedGlobalBlock || blocks[selectedIndex] || null}
                 index={selectedGlobalBlock ? -1 : selectedIndex}
+                device={previewMode}
                 onChange={selectedGlobalBlock
                   ? (_index, nextProps) => {
                       if (!selectedGlobalRole || !selectedGlobalBlock) return;

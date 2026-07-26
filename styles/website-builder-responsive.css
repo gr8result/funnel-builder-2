@@ -1,0 +1,224 @@
+/* =========================================================================
+   GR8 Result — Website Builder shared responsive rendering system.
+
+   One ruleset, applied identically to all three surfaces that render page
+   blocks (via `renderWebsiteBlock` in components/website-builder/WebsiteBlockRenderer.js):
+     - the visual builder canvas       (components/website-builder/PageBuilderCanvas.js)
+     - the standalone preview page     (components/website-builder/WebsitePreviewSurface.js)
+     - the published/custom-domain site (pages/sites/[...slug].js)
+
+   Container queries, not @media, are used deliberately: the visual builder
+   simulates Tablet/Mobile widths by narrowing an inner <div> inside a full
+   desktop browser window, not a real narrow viewport, so a `@media` query
+   would never fire while editing. `@container` measures the actual rendered
+   width of that div instead. On the two real-viewport surfaces (preview
+   used standalone, and the published site) the viewport root is 100% wide,
+   so a container query against it behaves identically to an equivalent
+   media query -- one set of rules, correct everywhere.
+
+   Every rule here is scoped under .gr8wb-viewport so it can never leak into
+   unrelated parts of the app.
+   ========================================================================= */
+
+.gr8wb-viewport {
+  container-type: inline-size;
+  container-name: gr8wb;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+/* ---------- Foundation: always on, every breakpoint ---------- */
+
+.gr8wb-viewport img,
+.gr8wb-viewport video,
+.gr8wb-viewport iframe,
+.gr8wb-viewport svg {
+  max-width: 100%;
+}
+
+.gr8wb-viewport img,
+.gr8wb-viewport video {
+  display: block;
+  height: auto;
+}
+
+.gr8wb-viewport iframe {
+  display: block;
+  width: 100%;
+}
+
+.gr8wb-viewport [data-website-preview-block],
+.gr8wb-viewport [data-published-block],
+.gr8wb-viewport [data-canvas-block-index],
+.gr8wb-viewport [data-global-block-preview] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.gr8wb-viewport,
+.gr8wb-viewport * {
+  box-sizing: border-box;
+}
+
+/* Any block-level grid the JS renderer forgot to gate on `compact` still
+   gets collapsed to a single column below 768px as a hard backstop. */
+@container gr8wb (max-width: 767px) {
+  .gr8wb-viewport {
+    width: 100%;
+    max-width: 430px;
+    margin-inline: auto;
+  }
+
+  .gr8wb-viewport [data-website-preview-block],
+  .gr8wb-viewport [data-published-block],
+  .gr8wb-viewport [data-canvas-block-index],
+  .gr8wb-viewport [data-global-block-preview],
+  .gr8wb-viewport section,
+  .gr8wb-viewport article,
+  .gr8wb-viewport header,
+  .gr8wb-viewport footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .gr8wb-viewport section,
+  .gr8wb-viewport article {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .gr8wb-viewport [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .gr8wb-viewport [style*="display: flex"],
+  .gr8wb-viewport [style*="display:flex"] {
+    min-width: 0 !important;
+  }
+
+  .gr8wb-viewport img:not([data-wb-background-image]),
+  .gr8wb-viewport picture,
+  .gr8wb-viewport video,
+  .gr8wb-viewport iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .gr8wb-viewport img:not([data-wb-background-image]) {
+    height: auto !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
+
+  .gr8wb-viewport video,
+  .gr8wb-viewport iframe {
+    aspect-ratio: 16 / 9;
+  }
+
+  .gr8wb-viewport h1 {
+    font-size: clamp(1.8rem, 8vw, 3rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .gr8wb-viewport h2 {
+    font-size: clamp(1.55rem, 6.5vw, 2.35rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .gr8wb-viewport h3 {
+    font-size: clamp(1.25rem, 5vw, 1.8rem) !important;
+    line-height: 1.18 !important;
+  }
+
+  .gr8wb-viewport p,
+  .gr8wb-viewport li,
+  .gr8wb-viewport label,
+  .gr8wb-viewport input,
+  .gr8wb-viewport textarea,
+  .gr8wb-viewport select {
+    font-size: clamp(0.95rem, 4vw, 1.125rem);
+    line-height: 1.55;
+  }
+
+  .gr8wb-viewport a,
+  .gr8wb-viewport button {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .gr8wb-viewport [style*="display: grid"],
+  .gr8wb-viewport [data-wb-grid] {
+    min-width: 0 !important;
+  }
+
+  .gr8wb-viewport [data-wb-grid] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet gets a real intermediate layout instead of inheriting mobile's
+   single column: card grids, image galleries, pricing tables and the
+   footer's top card row all go to 2 columns (a grid explicitly configured
+   for exactly 1 column stays at 1). */
+@container gr8wb (min-width: 768px) and (max-width: 1023px) {
+  .gr8wb-viewport {
+    width: 100%;
+    max-width: 1024px;
+    margin-inline: auto;
+  }
+
+  .gr8wb-viewport [data-website-preview-block],
+  .gr8wb-viewport [data-published-block],
+  .gr8wb-viewport [data-canvas-block-index],
+  .gr8wb-viewport [data-global-block-preview],
+  .gr8wb-viewport section,
+  .gr8wb-viewport article,
+  .gr8wb-viewport header,
+  .gr8wb-viewport footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .gr8wb-viewport section,
+  .gr8wb-viewport article {
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .gr8wb-viewport img:not([data-wb-background-image]),
+  .gr8wb-viewport video,
+  .gr8wb-viewport iframe {
+    max-width: 100% !important;
+  }
+
+  .gr8wb-viewport h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem) !important;
+    line-height: 1.08 !important;
+  }
+
+  .gr8wb-viewport h2 {
+    font-size: clamp(2rem, 4.8vw, 3rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .gr8wb-viewport [data-wb-grid="cards"],
+  .gr8wb-viewport [data-wb-grid="gallery"],
+  .gr8wb-viewport [data-wb-grid="pricing"],
+  .gr8wb-viewport [data-wb-grid="footer-top"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .gr8wb-viewport [data-wb-grid-count="1"] {
+    grid-template-columns: 1fr !important;
+  }
+}
