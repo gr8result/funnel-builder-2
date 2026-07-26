@@ -48,7 +48,7 @@ export default function ProductImagePicker({ supabase, userId, imageUrl, require
           </div>
         ) : (
           <div className="placeholder optional">
-            <span>No image</span>
+            <span>No Product Image Available</span>
             <small>Optional for this item type</small>
           </div>
         )}

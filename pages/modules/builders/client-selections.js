@@ -10,6 +10,7 @@ import {
   calculateSelectionFinancials,
   calculateSessionBudget,
   clientPriceImpactLabel,
+  hasActiveDraftVariation,
   numberValue,
   roundMoney,
 } from "../../../lib/builders/selectionBudget";
@@ -751,6 +752,11 @@ export default function BuilderClientSelectionsPage() {
   async function createDraftVariationFromSummary() {
     if (!isInternal) {
       setError("Only builder and designer roles can create selection variations.");
+      return;
+    }
+    const existingVariation = variations.find((variation) => variation.id === selectedSession?.variation_id) || null;
+    if (hasActiveDraftVariation(selectedSession, existingVariation)) {
+      setError(`This session already has a ${existingVariation?.status || "draft"} variation (${existingVariation?.variation_number || "in progress"}). Open it in Variations to review or adjust it instead of creating another.`);
       return;
     }
     const rows = activeSelections.filter((selection) => numberValue(selection.variation_amount) !== 0);

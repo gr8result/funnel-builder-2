@@ -55,31 +55,6 @@ const ROOM_TEMPLATES = {
   Paint: ["Wall Paint", "Ceiling Paint", "Trim Paint", "Feature Paint"],
 };
 
-const PRODUCT_IMAGE_URLS = {
-  "site clearance": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=700&q=80",
-  "bulk earthworks": "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=700&q=80",
-  "timber retaining wall": "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?auto=format&fit=crop&w=700&q=80",
-  "block retaining wall": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=700&q=80",
-  "temporary fencing": "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=700&q=80",
-  "construction access": "https://images.unsplash.com/photo-1590496793929-36417d3117de?auto=format&fit=crop&w=700&q=80",
-  "colorbond corrugated": "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=700&q=80",
-  "premium colorbond": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=700&q=80",
-  "monier horizon": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=700&q=80",
-  "westinghouse 600mm oven": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=700&q=80",
-  "bosch serie 6 oven": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=700&q=80",
-  "westinghouse 600mm gas cooktop": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=700&q=80",
-  "bosch 600mm gas cooktop": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=700&q=80",
-  "westinghouse slideout rangehood": "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=700&q=80",
-  "westinghouse dishwasher": "https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?auto=format&fit=crop&w=700&q=80",
-  "oliveri diaz sink": "https://images.unsplash.com/photo-1604709177225-055f99402ea3?auto=format&fit=crop&w=700&q=80",
-  "phoenix vivid sink mixer": "https://images.unsplash.com/photo-1584622781564-1d987f7333c1?auto=format&fit=crop&w=700&q=80",
-  "timberline wall hung vanity": "https://images.unsplash.com/photo-1620626011761-996317b8d101?auto=format&fit=crop&w=700&q=80",
-  "caroma cube basin": "https://images.unsplash.com/photo-1604709177225-055f99402ea3?auto=format&fit=crop&w=700&q=80",
-  "caroma luna toilet": "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=700&q=80",
-  "ceramic floor tile": "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=700&q=80",
-  "ceramic wall tile": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=700&q=80",
-};
-
 const PRODUCT_OPTION_LIBRARY = {
   "site clearance": [
     productOption("ABC Earthworks", "Site Clearance", "Standard vegetation removal", "Natural site finish", "ABC Earthworks", "Cleared building envelope, rubbish and debris removed from site.", 0, 0, "mid_range", "#6b7f3b"),
@@ -536,16 +511,16 @@ function productOption(brand, productName, model, finish, supplier, description,
   };
 }
 
-function imageForProduct(productName, colour) {
-  const lower = String(productName || "").toLowerCase();
-  const match = Object.entries(PRODUCT_IMAGE_URLS).find(([key]) => lower.includes(key));
-  if (match) return match[1];
-  return placeholderImage(productName, colour);
+// No stock photography anywhere in this module — every sample/demo option that
+// has no real product photo gets this clean, clearly-labelled placeholder
+// instead. Real catalogue products always use their own primary_image_url.
+function imageForProduct(productName) {
+  return placeholderImage(productName);
 }
 
-function placeholderImage(label, colour = "#c99735") {
+function placeholderImage(label) {
   const safeLabel = String(label || "Product").replace(/[<>&"]/g, "");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="280" viewBox="0 0 420 280"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${colour}"/><stop offset="1" stop-color="#f8fafc"/></linearGradient></defs><rect width="420" height="280" rx="18" fill="url(#g)"/><rect x="26" y="26" width="368" height="228" rx="14" fill="rgba(255,255,255,.72)" stroke="rgba(7,24,39,.18)"/><circle cx="96" cy="106" r="34" fill="rgba(7,24,39,.13)"/><path d="M55 218h310l-86-92-65 62-42-36z" fill="rgba(7,24,39,.16)"/><text x="210" y="78" text-anchor="middle" font-family="Arial" font-size="20" font-weight="800" fill="#071827">${safeLabel}</text><text x="210" y="244" text-anchor="middle" font-family="Arial" font-size="13" fill="#334155">Product image placeholder</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="280" viewBox="0 0 420 280"><rect width="420" height="280" rx="18" fill="#eef1f5"/><rect x="26" y="26" width="368" height="228" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-dasharray="6 6"/><g fill="none" stroke="#94a3b8" stroke-width="2"><rect x="160" y="98" width="100" height="72" rx="6"/><circle cx="182" cy="120" r="8"/><path d="M160 152l24-24 20 18 20-14 36 36"/></g><text x="210" y="204" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#475569">No Product Image Available</text><text x="210" y="224" text-anchor="middle" font-family="Arial" font-size="11" fill="#64748b">${safeLabel}</text></svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
@@ -1343,10 +1318,38 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
 
         {imagePreview && (
           <div className="modalBackdrop" onClick={() => setImagePreview(null)}>
-            <div className="imageModal" onClick={(event) => event.stopPropagation()}>
+            <div className={imagePreview.rowId ? "imageModal productDetailModal" : "imageModal"} onClick={(event) => event.stopPropagation()}>
               <button onClick={() => setImagePreview(null)}>Close</button>
               <img src={imagePreview.url} alt={imagePreview.alt || "Selection image"} />
-              <strong>{imagePreview.alt}</strong>
+              {imagePreview.rowId ? (
+                <div className="productDetailBody">
+                  <h3>{imagePreview.productName || imagePreview.item}</h3>
+                  <dl>
+                    {imagePreview.brand && <><dt>Brand</dt><dd>{imagePreview.brand}</dd></>}
+                    {imagePreview.model && <><dt>Model</dt><dd>{imagePreview.model}</dd></>}
+                    {imagePreview.finish && <><dt>Finish / Colour</dt><dd>{imagePreview.finish}</dd></>}
+                    {imagePreview.supplier && <><dt>Supplier</dt><dd>{imagePreview.supplier}</dd></>}
+                    <dt>Price</dt>
+                    <dd>{imagePreview.upgradeCost > 0 ? `+${money(imagePreview.upgradeCost)} Upgrade` : imagePreview.upgradeCost < 0 ? `${money(imagePreview.upgradeCost)} Credit` : "Included"}</dd>
+                  </dl>
+                  {imagePreview.description && <p>{imagePreview.description}</p>}
+                  <div className="productDetailActions">
+                    <button
+                      type="button"
+                      className="libraryButton"
+                      onClick={() => {
+                        const rowId = imagePreview.rowId;
+                        setImagePreview(null);
+                        if (activeRoom) openSelector(activeRoom.id, rowId);
+                      }}
+                    >
+                      Choose a Different Product
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <strong>{imagePreview.alt}</strong>
+              )}
             </div>
           </div>
         )}
@@ -1638,7 +1641,7 @@ function InfoField({ label, value, type = "text", multiline = false, onChange })
 
 function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
   const roomUpgrade = room.rows.reduce((sum, row) => sum + numberValue(row.upgradeCost), 0);
-  const roomImage = room.imageUrl || room.rows.find((row) => row.imageUrl)?.imageUrl || book.cover.backgroundImageUrl;
+  const roomImage = room.imageUrl || room.rows.find((row) => row.imageUrl)?.imageUrl || book.cover.backgroundImageUrl || placeholderImage(room.name);
   const roomInclusions = room.rows.filter((row) => row.included).slice(0, 5);
   const roomLabel = isRoomLike(room.name) ? "Room" : "Section";
   return (
@@ -1745,7 +1748,23 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
                 <td><input value={row.supplier} onChange={(event) => onRowChange(row.id, { supplier: event.target.value })} /></td>
                 <td>
                   {row.imageUrl ? (
-                    <button className="thumbButton" onClick={() => onPreviewImage({ url: row.imageUrl, alt: row.selectedProduct || row.item })}>
+                    <button
+                      className="thumbButton"
+                      onClick={() => onPreviewImage({
+                        url: row.imageUrl,
+                        alt: row.selectedProduct || row.item,
+                        rowId: row.id,
+                        item: row.item,
+                        productName: row.selectedProduct,
+                        brand: row.brand,
+                        model: row.productModel,
+                        finish: row.finishColour,
+                        supplier: row.supplier,
+                        description: row.description,
+                        upgradeCost: row.upgradeCost,
+                        included: row.included,
+                      })}
+                    >
                       <img src={row.imageUrl} alt={row.item} />
                     </button>
                   ) : <button className="thumbButton empty" onClick={() => onSelectProduct(row.id)}>Image</button>}
@@ -1877,7 +1896,7 @@ function ProductSelector({ products, categories, manufacturers, suppliers, categ
         <div className="productGrid">
           {products.map((product) => (
             <button key={product.id} className="modalProductCard" onClick={() => onSelect(product)}>
-              <div className="modalProductImage">{product.primary_image_url ? <img src={product.primary_image_url} alt={product.product_name} /> : "No image"}</div>
+              <div className="modalProductImage">{product.primary_image_url ? <img src={product.primary_image_url} alt={product.product_name} /> : "No Product Image Available"}</div>
               <strong>{product.product_name}</strong>
               <span>{manufacturers.get(product.manufacturer_id) || "No brand"} | {product.model || product.sku || "No model"}</span>
               <small>{suppliers.get(product.supplier_id) || "No supplier"}</small>
@@ -1906,7 +1925,10 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
     templateId: template?.id || "",
     templateName: template?.template_name || template?.specification_name || "",
     cover: {
-      backgroundImageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80",
+      // No stock photography by default — the cover renders a clean branded
+      // gradient (see CoverPage's pageStyle fallback) until a builder sets a
+      // real project/site photo via the background image field.
+      backgroundImageUrl: "",
       logoUrl: resolved.builderLogo || "",
       builderName: resolved.builderName || "",
       tagline: resolved.tagline || COVER_BRAND_FALLBACK.tagline,
@@ -2424,6 +2446,15 @@ const styles = `
   .modalProductCard em { color: #0f5132; font-weight: 900; font-style: normal; }
   .imageModal { background: white; border-radius: 10px; padding: 14px; display: grid; gap: 10px; max-width: 88vw; max-height: 90vh; }
   .imageModal img { max-width: 80vw; max-height: 74vh; object-fit: contain; }
+  .imageModal.productDetailModal { width: min(760px, 90vw); grid-template-columns: 1fr; }
+  .imageModal.productDetailModal img { max-width: 100%; max-height: 46vh; }
+  .productDetailBody { display: grid; gap: 10px; color: #071827; text-align: left; }
+  .productDetailBody h3 { margin: 0; }
+  .productDetailBody dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+  .productDetailBody dt { color: #64748b; font-weight: 600; }
+  .productDetailBody dd { margin: 0; }
+  .productDetailBody p { margin: 0; color: #334155; }
+  .productDetailActions { display: flex; justify-content: flex-end; }
   @page { size: A4 portrait; margin: 0; }
   @media print {
     .screen { display: block; background: white; }

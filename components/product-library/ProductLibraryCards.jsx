@@ -34,7 +34,7 @@ function Card({ product, categoryName, supplierName, manufacturerName, canViewCo
         ) : missingImage ? (
           <span className="required-badge">Image required</span>
         ) : (
-          <span className="placeholder">No image</span>
+          <span className="placeholder">No Product Image Available</span>
         )}
         <span className="tier-badge">{tierLabel(product.pricing_tier)}</span>
       </span>
