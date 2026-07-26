@@ -7,6 +7,7 @@ import { mergeVideoHeroProps, resolveVideoHeroUrl } from "../../../lib/website-b
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
+import { isBlockVisibleOnDevice } from "../../../lib/website-builder/responsiveValue";
 import { GRID_ICON_LIBRARY, isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import RichText from "../../RichText";
 import {
@@ -43,7 +44,7 @@ import {
   PricingTablePropertiesPanel, FAQPropertiesPanel, SplitBlockPropertiesPanel, FeatureAccordionPropertiesPanel,
   ScrollStackPropertiesPanel,
   CompetitorComparisonPropertiesPanel,
-  NumberField, ImagePropertiesPanel, NavbarLogoPicker, NavbarPropertiesPanel,
+  NumberField, ResponsiveField, ResponsiveNumberField, ImagePropertiesPanel, NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
   ColorSelector, CompactColorField, rgbToHex, stripEditorArtifacts,
   TEXT_TOOLBAR_FONTS, TEXT_TOOLBAR_SIZES, TEXT_TOOLBAR_LINE_HEIGHTS,
@@ -170,9 +171,10 @@ class BlockPreviewBoundary extends React.Component {
   }
 }
 
-const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, selected, layoutWidth }) {
+const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index, brandAssets, onChange, onUploadImage, onUploadLayerImage, onSelectAsset, replayToken, compact, device, selected, layoutWidth }) {
   return renderBlockPreview(block, brandAssets, {
     compact,
+    device,
     layoutWidth,
     animationPreview: Number(replayToken || 0) > 0,
     isSelected: selected,
@@ -187,14 +189,17 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.brandAssets === next.brandAssets
   && prev.replayToken === next.replayToken
   && prev.compact === next.compact
+  && prev.device === next.device
   && prev.selected === next.selected
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || (allowHoverOverlay && hovered);
   const resizeStateRef = useRef(null);
+  const actionBarRef = useRef(null);
+  const [actionBarHeight, setActionBarHeight] = useState(42);
   const [hoveredSlot, setHoveredSlot] = useState(null);
   const isDragTarget = false;
   const stickyMode = String(block?.props?.stickyMode || "normal");
@@ -202,6 +207,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
   const isStretchToCanvasGrid = !compactPreview && block?.type === "grid-section" && block?.props?.stretchToCanvas === true;
   const isFullWidthBlock = !compactPreview && ((canStretchFullWidth && isFullWidthBackgroundEnabled(block)) || isStretchToCanvasGrid);
+  // Hidden-on-this-device blocks still render in the editor (dimmed, with a badge) so they stay
+  // selectable and can be un-hidden -- only real visitors (WebsitePreviewSurface / the published
+  // site) actually skip rendering them.
+  const isHiddenForDevice = device && device !== "desktop" && !isBlockVisibleOnDevice(block?.props, device);
 
   useEffect(() => {
     const handlePointerMove = (event) => {
@@ -226,6 +235,23 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       window.removeEventListener("mouseup", handlePointerUp);
     };
   }, [index, onResizeHeight]);
+
+  // The selection toolbar overlays the top of the block (position: absolute) rather than
+  // pushing it down in normal flow, so `blockPreview` reserves space for it via paddingTop.
+  // A static reserve only covers a single button row; in tablet/mobile preview the narrower
+  // block width forces the toolbar to wrap onto 2-4 rows, and a static reserve then leaves
+  // the extra rows sitting on top of the block's real content. Measure the toolbar's actual
+  // rendered height instead so the reserve always matches, at any preview width.
+  useEffect(() => {
+    if (!showOverlay) return undefined;
+    const node = actionBarRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setActionBarHeight(Math.ceil(node.getBoundingClientRect().height || 0));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [showOverlay, compactPreview, block?.type]);
 
   const startHeightResize = (event) => {
     event.preventDefault();
@@ -253,6 +279,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         border: "none",
         outline: "none",
         boxShadow: "none",
+        opacity: isHiddenForDevice ? 0.4 : 1,
         ...((block?.type === "columns-2" || block?.type === "columns-3" || block?.type === "grid-section") ? { padding: 0, background: block?.props?.backgroundColor || "transparent", border: "none", borderRadius: 0, boxShadow: "none" } : {}),
         ...(block?.type === "space" ? (() => {
           const sp    = block.props || {};
@@ -308,9 +335,9 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       }}
     >
       {showOverlay ? (
-        <div style={styles.blockActionBar} data-builder-block-controls="true">
+        <div ref={actionBarRef} style={{ ...styles.blockActionBar, ...(compactPreview ? styles.blockActionBarCompact : {}) }} data-builder-block-controls="true">
           <div style={styles.blockActionLeft}>
-            <span style={styles.blockActionLabel}>{def?.name || block.type}</span>
+            <span style={{ ...styles.blockActionLabel, ...(compactPreview ? styles.blockActionLabelCompact : {}) }}>{def?.name || block.type}</span>
           </div>
           <div style={styles.blockActionButtons}>
             <button
@@ -322,27 +349,29 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
                 e.dataTransfer.setData("existingBlockIndex", String(index));
                 onBlockDragStart?.(index);
               }}
-              style={{ ...styles.blockActionBtnIcon, cursor: "grab", touchAction: "none" }}
+              style={{ ...styles.blockActionBtnIcon, ...(compactPreview ? styles.blockActionBtnIconCompact : {}), cursor: "grab", touchAction: "none" }}
               title="Drag to reorder or drop into a column"
               aria-label="Drag block"
             >
               ⠿
             </button>
+            {!compactPreview ? (
+              <button
+                type="button"
+                style={styles.blockActionBtnIcon}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveToTop?.(index);
+                }}
+                title="Move to top"
+                aria-label="Move to top"
+              >
+                ⇡
+              </button>
+            ) : null}
             <button
               type="button"
-              style={styles.blockActionBtnIcon}
-              onClick={(e) => {
-                e.stopPropagation();
-                onMoveToTop?.(index);
-              }}
-              title="Move to top"
-              aria-label="Move to top"
-            >
-              ⇡
-            </button>
-            <button
-              type="button"
-              style={styles.blockActionBtnIcon}
+              style={{ ...styles.blockActionBtnIcon, ...(compactPreview ? styles.blockActionBtnIconCompact : {}) }}
               onClick={(e) => {
                 e.stopPropagation();
                 onMoveStep?.(index, -1);
@@ -354,7 +383,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             </button>
             <button
               type="button"
-              style={styles.blockActionBtnIcon}
+              style={{ ...styles.blockActionBtnIcon, ...(compactPreview ? styles.blockActionBtnIconCompact : {}) }}
               onClick={(e) => {
                 e.stopPropagation();
                 onMoveStep?.(index, 1);
@@ -366,7 +395,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             </button>
             <button
               type="button"
-              style={styles.blockActionBtn}
+              style={{ ...styles.blockActionBtn, ...(compactPreview ? styles.blockActionBtnCompact : {}) }}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.(index, e.currentTarget);
@@ -375,21 +404,23 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             >
               Edit
             </button>
+            {!compactPreview ? (
+              <button
+                type="button"
+                style={styles.blockActionBtnIcon}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAnimate?.(index, e.currentTarget);
+                }}
+                title="Animation settings"
+                aria-label="Animation settings"
+              >
+                🕘
+              </button>
+            ) : null}
             <button
               type="button"
-              style={styles.blockActionBtnIcon}
-              onClick={(e) => {
-                e.stopPropagation();
-                onAnimate?.(index, e.currentTarget);
-              }}
-              title="Animation settings"
-              aria-label="Animation settings"
-            >
-              🕘
-            </button>
-            <button
-              type="button"
-              style={styles.blockActionBtnIcon}
+              style={{ ...styles.blockActionBtnIcon, ...(compactPreview ? styles.blockActionBtnIconCompact : {}) }}
               onClick={(e) => {
                 e.stopPropagation();
                 onDuplicate(index);
@@ -401,7 +432,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
             </button>
             <button
               type="button"
-              style={{ ...styles.blockActionBtnIcon, ...styles.blockActionBtnDanger }}
+              style={{ ...styles.blockActionBtnIcon, ...(compactPreview ? styles.blockActionBtnIconCompact : {}), ...styles.blockActionBtnDanger }}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(index);
@@ -457,13 +488,18 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
           </div>
         </div>
       ) : null}
+      {isHiddenForDevice ? (
+        <div style={{ position: "absolute", top: 8, left: 8, zIndex: 17, display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 999, background: "rgba(15,23,42,0.9)", color: "#fca5a5", fontSize: 11, fontWeight: 700, letterSpacing: "0.02em", border: "1px solid rgba(248,113,113,0.4)", pointerEvents: "none" }}>
+          🚫 Hidden on {device === "mobile" ? "Mobile" : "Tablet"}
+        </div>
+      ) : null}
       <div style={styles.blockPreviewShell}>
         {showOverlay ? (
         <div style={styles.blockInfoPill}>
           <span style={styles.blockIcon}>{def?.icon || "📦"}</span>
         </div>
         ) : null}
-        <div style={{ ...styles.blockPreview, ...(showOverlay ? styles.blockPreviewWithOverlay : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
+        <div style={{ ...styles.blockPreview, ...(showOverlay ? { paddingTop: actionBarHeight + 8 } : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
           <BlockPreviewBoundary block={block} resetKey={animationReplayToken} label="Block preview failed">
             <CanvasBlockPreview
               key={`${block.id || index}-${animationReplayToken || 0}`}
@@ -471,6 +507,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
               index={index}
               brandAssets={brandAssets}
               compact={compactPreview}
+              device={device}
               layoutWidth={pageCanvasWidth}
               selected={selected}
               onChange={onChange}
@@ -663,10 +700,23 @@ function DropInsertZone({ active, onDragOver, onDrop }) {
   );
 }
 
-function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected = false, onSelect, onChange, onSaveAsGlobal, onDelete }) {
+function GlobalBlockPreview({ label, role, block, brandAssets, compact, device, layoutWidth = null, selected = false, onSelect, onChange, onSaveAsGlobal, onDelete }) {
   if (!block) return null;
   const [hovered, setHovered] = useState(false);
   const showOverlay = selected || hovered;
+  const actionBarRef = useRef(null);
+  const [actionBarHeight, setActionBarHeight] = useState(42);
+
+  useEffect(() => {
+    if (!showOverlay) return undefined;
+    const node = actionBarRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => setActionBarHeight(Math.ceil(node.getBoundingClientRect().height || 0));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [showOverlay, compact]);
 
   return (
     <div
@@ -688,14 +738,14 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
       onMouseLeave={() => setHovered(false)}
     >
       {showOverlay ? (
-        <div style={styles.blockActionBar} data-builder-block-controls="true">
+        <div ref={actionBarRef} style={{ ...styles.blockActionBar, ...(compact ? styles.blockActionBarCompact : {}) }} data-builder-block-controls="true">
           <div style={styles.blockActionLeft}>
-            <span style={styles.blockActionLabel}>{label}</span>
+            <span style={{ ...styles.blockActionLabel, ...(compact ? styles.blockActionLabelCompact : {}) }}>{label}</span>
           </div>
           <div style={styles.blockActionButtons}>
             <button
               type="button"
-              style={styles.blockActionBtn}
+              style={{ ...styles.blockActionBtn, ...(compact ? styles.blockActionBtnCompact : {}) }}
               onClick={(event) => {
                 event.stopPropagation();
                 onSelect?.();
@@ -704,23 +754,27 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
             >
               Edit
             </button>
+            {!compact ? (
+              <button
+                type="button"
+                style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSaveAsGlobal?.(block, role);
+                }}
+                title={`Save as global ${role === "nav" ? "navigation" : "footer"}`}
+              >
+                📌 {role === "nav" ? "Nav" : "Footer"}
+              </button>
+            ) : null}
+            {!compact ? (
+              <span style={{ ...styles.blockActionBtn, cursor: "default", background: "rgba(59,130,246,0.18)", color: "#bfdbfe", border: "1px solid rgba(96,165,250,0.35)" }}>
+                Global block
+              </span>
+            ) : null}
             <button
               type="button"
-              style={{ ...styles.blockActionBtn, background: "#1e3a5f", color: "#7dd3fc", border: "1px solid #2563eb", fontSize: 16, padding: "2px 7px" }}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSaveAsGlobal?.(block, role);
-              }}
-              title={`Save as global ${role === "nav" ? "navigation" : "footer"}`}
-            >
-              📌 {role === "nav" ? "Nav" : "Footer"}
-            </button>
-            <span style={{ ...styles.blockActionBtn, cursor: "default", background: "rgba(59,130,246,0.18)", color: "#bfdbfe", border: "1px solid rgba(96,165,250,0.35)" }}>
-              Global block
-            </span>
-            <button
-              type="button"
-              style={{ ...styles.blockActionBtn, background: "#3b0a0a", color: "#fca5a5", border: "1px solid #dc2626" }}
+              style={{ ...styles.blockActionBtn, ...(compact ? styles.blockActionBtnCompact : {}), background: "#3b0a0a", color: "#fca5a5", border: "1px solid #dc2626" }}
               onClick={(event) => {
                 event.stopPropagation();
                 if (window.confirm(`Remove the global ${role === "nav" ? "navigation" : "footer"} block?`)) {
@@ -734,12 +788,14 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, selected
           </div>
         </div>
       ) : null}
-      <div style={styles.globalBlockPreviewSurface}>
+      <div style={{ ...styles.globalBlockPreviewSurface, ...(showOverlay ? { paddingTop: actionBarHeight + 8 } : {}) }}>
         <BlockPreviewBoundary block={block} label="Global block preview failed">
           {renderWebsiteBlock(block, {
             compact,
+            device,
             assets: brandAssets,
             editor: true,
+            layoutWidth,
             onChangeBlock: (nextProps) => onChange?.({ ...block, props: nextProps }),
           })}
         </BlockPreviewBoundary>
@@ -1959,7 +2015,7 @@ const SERVICES_LAYOUT_OPTIONS = [
   { value: "slider", label: "Slider" },
 ];
 
-function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRefreshAssetLibrary }) {
+function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRefreshAssetLibrary, device = "desktop" }) {
   const props = block?.props || {};
   const [activeTab, setActiveTab] = useState("content");
   const [expandedCardIndex, setExpandedCardIndex] = useState(0);
@@ -2134,7 +2190,18 @@ function GridSectionPropertiesPanel({ block, index, onChange, brandAssets, onRef
             <NumberField label="Grid Gap" value={Number(props.columnGap ?? 20)} min={0} max={120} onChange={(value) => update({ columnGap: value })} />
             <NumberField label="Top Margin" value={Number(props.columnsTopMargin ?? 18)} min={0} max={240} onChange={(value) => update({ columnsTopMargin: value })} />
             <NumberField label="Block Max Width" value={Number(props.blockMaxWidth) || 1200} min={320} max={1800} onChange={(value) => update({ blockMaxWidth: value })} />
-            <NumberField label="Section Height" value={parsePixelValue(props.sectionHeight || props.minHeight, 280)} min={160} max={1400} onChange={(value) => update({ sectionHeight: `${value}px`, minHeight: `${value}px` })} />
+            <ResponsiveNumberField
+              label={`Section Height${device !== "desktop" ? ` (${device === "mobile" ? "Mobile" : "Tablet"})` : ""}`}
+              props={props}
+              baseKey="sectionHeight"
+              mirrorKeys={["minHeight"]}
+              device={device}
+              unit="px"
+              min={160}
+              max={1400}
+              fitContentFallback
+              onChange={(nextProps) => onChange(index, nextProps)}
+            />
             <NumberField label="Item Min Height" value={Number(props.gridItemMinHeight ?? 0)} min={0} max={1200} onChange={(value) => update({ gridItemMinHeight: value })} />
             <NumberField label="Main Title Size" value={Number(props.cardTitleSize ?? 28)} min={16} max={72} onChange={(value) => update({ cardTitleSize: value })} />
             <NumberField label="Subtitle Size" value={Number(props.eyebrowFontSize ?? 18)} min={12} max={48} onChange={(value) => update({ eyebrowFontSize: value })} />
@@ -3328,11 +3395,10 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, onRefreshAssetLibrary, project, activePage, currentObjective }) => {
+const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, onRefreshAssetLibrary, project, activePage, currentObjective, device = "desktop" }) => {
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenError, setRegenError] = useState("");
   const [regenTone, setRegenTone] = useState("balanced");
-  const [sectionHeightDraft, setSectionHeightDraft] = useState("");
   const [assetBrowser, setAssetBrowser] = useState({ visible: false, fieldKey: "", title: "" });
   const [heroEditorSection, setHeroEditorSection] = useState("layout");
   const [videoUploading, setVideoUploading] = useState(false);
@@ -3341,10 +3407,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   useEffect(() => {
     setRegenBusy(false);
     setRegenError("");
-    setSectionHeightDraft(String(parsePixelValue(block?.props?.minHeight, block?.type === BlockTypes.HERO ? 420 : 220)));
     setAssetBrowser({ visible: false, fieldKey: "", title: "" });
     setHeroEditorSection("layout");
-  }, [block?.id, block?.props?.minHeight, block?.type]);
+  }, [block?.id, block?.type]);
 
   if (!block) {
     return (
@@ -3524,6 +3589,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         onUploadImage={onUploadImage}
         onSelectAsset={onSelectAsset}
         pages={project?.pages || []}
+        device={device}
       />
     );
   }
@@ -3660,6 +3726,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         onUploadImage={onUploadImage}
         onOpenSimpleImageEditor={onOpenSimpleImageEditor || onOpenImageEditor}
         project={project}
+        device={device}
       />
     );
   }
@@ -4005,6 +4072,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         onChange={onChange}
         brandAssets={brandAssets}
         onRefreshAssetLibrary={onRefreshAssetLibrary}
+        device={device}
       />
     );
   }
@@ -4678,10 +4746,14 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   const textContentKeys = Object.keys(block.props || {}).filter((k) => isLongTextField(k));
+  const deviceLabel = device === "mobile" ? "Mobile" : device === "tablet" ? "Tablet" : "Desktop";
 
   return (
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🎨 Edit: {def?.name}</h3>
+      <div style={{ margin: "0 0 10px", display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 999, background: "#e0f2fe", color: "#075985", border: "1px solid #7dd3fc", fontSize: 12, fontWeight: 800 }}>
+        Editing: {deviceLabel}
+      </div>
       {isHero ? (
         <div style={{ marginBottom: 10 }}>
           <div style={heroTabRowBase}>
@@ -4718,22 +4790,31 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
       />
       <div style={styles.propertyGrid}>
         {supportsSectionHeight(block.type) && shouldShowHeroPanelSection("layout") ? (
+          <ResponsiveNumberField
+            label={`Section Height${device !== "desktop" ? ` (${device === "mobile" ? "Mobile" : "Tablet"})` : ""}`}
+            props={block.props}
+            baseKey="minHeight"
+            device={device}
+            unit="px"
+            min={120}
+            max={2000}
+            fitContentFallback
+            placeholder={String(block.type === BlockTypes.HERO ? 420 : 220)}
+            onChange={(nextProps) => onChange(index, nextProps)}
+          />
+        ) : null}
+        {device !== "desktop" && shouldShowHeroPanelSection("layout") ? (
           <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Section Height</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={sectionHeightDraft}
-              onChange={(e) => setSectionHeightDraft(String(e.target.value || "").replace(/[^\d]/g, ""))}
-              onBlur={() => {
-                const px = Math.max(120, Number(sectionHeightDraft || 0) || (block.type === BlockTypes.HERO ? 420 : 220));
-                const next = String(px);
-                setSectionHeightDraft(next);
-                onChange(index, { ...block.props, minHeight: `${next}px` });
-              }}
-              placeholder="420"
-              style={styles.propertyInput}
-            />
+            <label style={styles.propertyLabel}>Visibility</label>
+            <label style={styles.inlineToggle}>
+              <input
+                type="checkbox"
+                checked={!isBlockVisibleOnDevice(block.props, device)}
+                onChange={(e) => onChange(index, { ...block.props, [device === "mobile" ? "hiddenOnMobile" : "hiddenOnTablet"]: e.target.checked })}
+                style={styles.checkboxInput}
+              />
+              Hide this block on {device === "mobile" ? "Mobile" : "Tablet"}
+            </label>
           </div>
         ) : null}
         {supportsFullWidthBackground(block.type) && shouldShowHeroPanelSection("layout") ? (

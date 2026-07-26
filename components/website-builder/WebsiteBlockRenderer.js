@@ -3,6 +3,7 @@ import RichText from "../RichText";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
+import { isResponsiveDevice, resolveResponsiveLayoutWidth, resolveResponsiveProp } from "../../lib/website-builder/responsiveValue";
 import PlatformPricingPlans from "../billing/PlatformPricingPlans";
 import { getPlatformChartPlans } from "../../data/platformPricing";
 import { renderGridLibraryIcon, renderSocialPlatformIcon } from "./gridIconLibrary";
@@ -35,6 +36,7 @@ import {
 } from "./website-renderer/wbVariantStyles";
 import { normalizeFooterNavigationProps } from "../../lib/website-builder/footerNavigation";
 import { listItemAltText, resolveListItemImage } from "../../lib/website-builder/listBlockItems";
+import { resolveGridSectionItemImageUrl } from "../../lib/website-builder/gridSectionImages";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -793,7 +795,7 @@ function TemplateShowcaseBlock({ props, compact = false, editor = false, navigat
   const phoneItem = items[2] || mainItem;
 
   return (
-    <section style={{ ...fullWidthStyle({ fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), background: bg, color: textColor, minHeight: compact ? "640px" : (props.minHeight || "720px"), position: "relative", overflow: "hidden" }}>
+    <section style={{ ...fullWidthStyle({ fullWidthBackground: props.fullWidthBackground !== false }, compact, editor), background: bg, color: textColor, minHeight: resolveSectionMinHeight(props, device, compact, "640px", "720px"), position: "relative", overflow: "hidden" }}>
       <style>{`
         @keyframes templateShowcaseSlide { from { transform: translateX(0); } to { transform: translateX(-33.333%); } }
         @keyframes templateShowcaseFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
@@ -1135,6 +1137,16 @@ function resolveFeatureGridStyles(props, compact) {
   };
 }
 
+// Resolves a section's `minHeight` (or `sectionHeight`) per device instead of letting a desktop
+// fixed pixel height stay active at every breakpoint. If the user has set an explicit tablet or
+// mobile override it wins; otherwise tablet/mobile fall back to a sensible mobile-safe value
+// (`compactFallback`, typically "auto" / fit-content) rather than inheriting the desktop number.
+function resolveSectionMinHeight(props, device, compact, compactFallback, desktopFallback, baseKey = "minHeight") {
+  const resolved = resolveResponsiveProp(props, baseKey, device, { fitContentFallback: true, fitContentValue: compactFallback });
+  if (resolved.value !== undefined && resolved.value !== null && resolved.value !== "") return resolved.value;
+  return compact ? compactFallback : desktopFallback;
+}
+
 function resolveFeatureCardHeightStyle(props) {
   const mode = String(props?.cardHeightMode || "auto");
   const height = clampFeatureNumber(props?.featureCardHeight, 0, 0, 1600);
@@ -1145,13 +1157,21 @@ function resolveFeatureCardHeightStyle(props) {
   return {};
 }
 
-export function renderWebsiteBlock(block, { compact = false, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
+export function renderWebsiteBlock(block, { compact = false, device, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
+  // `device` is the 3-way desktop/tablet/mobile value (see lib/website-builder/responsiveValue.js)
+  // used to resolve per-device prop overrides (logo size, section height, visibility, ...).
+  // Callers that only know the older binary `compact` flag still work: tablet and mobile both
+  // collapse to "mobile" here, which is the same mobile-safe layout `compact` already selects --
+  // it only means per-device *overrides* can't distinguish tablet from mobile for that caller,
+  // not that anything breaks.
+  if (!isResponsiveDevice(device)) device = compact ? "mobile" : "desktop";
   const rawProps = block?.props || {};
   // When a global canvas width (layoutWidth) is provided, enforce it as the content container's
   // max-width so all blocks stay within the canvas bounds. Full-bleed backgrounds use
   // fullWidthStyle() which intentionally ignores baseLayoutWidth, so they remain full-screen.
-  const props = (layoutWidth && Number(layoutWidth) > 0)
-    ? { ...rawProps, baseLayoutWidth: Math.max(320, Number(layoutWidth)), __blockId: block?.id || "", __blockType: block?.type || "" }
+  const effectiveLayoutWidth = resolveResponsiveLayoutWidth(layoutWidth || rawProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH, device);
+  const props = (layoutWidth && Number(layoutWidth) > 0) || device !== "desktop"
+    ? { ...rawProps, baseLayoutWidth: effectiveLayoutWidth, __blockId: block?.id || "", __blockType: block?.type || "" }
     : { ...rawProps, __blockId: block?.id || "", __blockType: block?.type || "" };
   const shouldRunAnimations = !editor || animationPreview;
   const sectionAnimationStyle = !shouldRunAnimations
@@ -1169,7 +1189,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
   switch (block?.type) {
     case "nav-bar":
-      return <NavBarBlock blockProps={props} compact={compact} logoSrc={brandLogoSrc} editor={editor} navigationContext={navigationContext} />;
+      return <NavBarBlock blockProps={props} compact={compact} device={device} logoSrc={brandLogoSrc} editor={editor} navigationContext={navigationContext} />;
 
     case "hero":
     case "parallax": {
@@ -1312,7 +1332,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             ...heroFullWidth,
             ...heroVariant.shell,
             marginTop: heroMarginTop ? `${heroMarginTop}px` : undefined,
-            minHeight: isOrbitScroll ? undefined : (compact ? 180 : props.minHeight || "400px"),
+            minHeight: isOrbitScroll ? undefined : resolveSectionMinHeight(props, device, compact, 180, props.minHeight || "400px"),
             ...sectionBgStyle,
             padding: compact ? "40px 24px" : "80px 48px",
           }}
@@ -2088,7 +2108,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             position: "relative",
             borderRadius: 0,
             ...textFullWidth,
-            minHeight: props.minHeight || "160px",
+            minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || "160px"),
             paddingTop: `${textPadTop}px`,
             paddingBottom: `${textPadBottom}px`,
             paddingLeft: sectionPad.replace(/\s.*/, ""),
@@ -2776,6 +2796,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || (editor ? "Pricing" : "")) }}
           />
           <div
+            data-wb-grid="pricing"
+            data-wb-grid-count={Math.max(1, plans.length)}
             style={{
               ...sharedStyles.priceGrid(compact, plans.length, props.pricingCardWidth, props.pricingCardGap),
               ...(pricingVariant.grid?.(compact, plans.length) || {}),
@@ -3219,7 +3241,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
             style={{ ...sharedStyles.sectionTitle(compact), ...headingTypography(props), outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "4px 6px" : 0 }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(props.title || "Gallery") }}
           />
-          <div style={galleryVariant.grid}>
+          <div data-wb-grid="gallery" data-wb-grid-count={Math.max(1, Number(props.columns) || 3)} style={galleryVariant.grid}>
             {asArray(props.images).map((rawImage, idx) => {
               const image = normalizeGalleryItem(rawImage, idx);
               return (
@@ -3270,7 +3292,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
         rightColumnWidth: props.leftColumnWidth, rightColumnExtraImages: props.leftColumnExtraImages, rightColumnBlock: props.leftColumnBlock,
       }) : null;
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || undefined) }}>
           <div style={{ ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact), padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
           <div style={{ ...sharedStyles.columns(2), gridTemplateColumns: compact ? "1fr" : col2GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
@@ -3371,7 +3393,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const col3W3 = Number(props.column3Width) || 0;
       const col3GridCols = (col3W1 || col3W2 || col3W3) ? `${col3W1 || 1}fr ${col3W2 || 1}fr ${col3W3 || 1}fr` : "1fr 1fr 1fr";
       return (
-        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined }}>
+        <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || undefined) }}>
           <div style={{ ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact), padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
           <div style={{ ...sharedStyles.columns(compact ? 1 : 3), gridTemplateColumns: compact ? "1fr" : col3GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
@@ -3485,7 +3507,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
 
     case "grid-section": {
       const resolvedGridItemImage = (rawItem) => {
-        const stored = rawItem.image || getAssetFromLibrary(assets, rawItem.imageAssetId)?.src || "";
+        const stored = resolveGridSectionItemImageUrl(rawItem, assets);
         return KNOWN_DEAD_GRID_SECTION_IMAGE_REPAIRS.get(stored) || stored;
       };
       const items = normalizeGridSectionItems(props.items);
@@ -3538,7 +3560,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
           delay={props.sectionAnimationDelay || 0.04}
           speed={props.sectionAnimationSpeed || surfaceSpeed}
           disabled={editor}
-          style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: resolvedSectionBackground, ...(sectionBgImage ? { backgroundImage: servicesVariant ? undefined : `url("${sectionBgImage}")`, backgroundSize: "cover", backgroundPosition: "center center" } : {}), boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: props.minHeight || undefined, height: props.sectionHeight || undefined, overflow: servicesVariant ? "hidden" : undefined }}
+          style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: resolvedSectionBackground, ...(sectionBgImage ? { backgroundImage: servicesVariant ? undefined : `url("${sectionBgImage}")`, backgroundSize: "cover", backgroundPosition: "center center" } : {}), boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || undefined), height: resolveSectionMinHeight(props, device, compact, "auto", props.sectionHeight || undefined, "sectionHeight"), overflow: servicesVariant ? "hidden" : undefined }}
         >
           <div style={contentWrapStyle}>
             {props.title ? (
@@ -3554,6 +3576,8 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
               </div>
             ) : null}
             <div
+              data-wb-grid={sliderLayout ? undefined : "cards"}
+              data-wb-grid-count={sliderLayout ? undefined : rawColumns}
               style={{
                 ...(sliderLayout ? {
                   display: "flex",
@@ -4644,7 +4668,11 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
       const ftBtnBg = props.newsletterButtonColor || "#2563eb";
       const ftBtnText = props.newsletterButtonTextColor || "#ffffff";
       const footerLogoSrc = brandLogoSrc;
-      const footerMarkSize = Number(props.logoWidth) || 48;
+      const resolvedFooterLogoWidth = resolveResponsiveProp(props, "logoWidth", device, {
+        fitContentFallback: true,
+        fitContentValue: { tablet: 44, mobile: 36 },
+      });
+      const footerMarkSize = Number(resolvedFooterLogoWidth.value) || (device === "desktop" ? 48 : (device === "tablet" ? 44 : 36));
       const navLinks = Array.isArray(footerProps.navigationLinks) ? footerProps.navigationLinks : [];
       const extraLinks = Array.isArray(footerProps.extraLinks) ? footerProps.extraLinks : [];
       const rawNavigationLinks = props.navigationLinks || props.navLinks;
@@ -4755,7 +4783,7 @@ export function renderWebsiteBlock(block, { compact = false, assets, editor = fa
                 </div>
               ) : null}
 
-              <div style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
+              <div data-wb-grid="footer-top" data-wb-grid-count={1 + linkGroups.length + (props.showNewsletter !== false ? 1 : 0)} style={{ display: "grid", gridTemplateColumns: topGridColumns, gap: compact ? 18 : 22, marginBottom: compact ? 24 : 36 }}>
                 <div data-footer-card-role="contact" style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: 14 }}>
                   <BrandMark brand={props.brand} logoSrc={footerLogoSrc} size={footerMarkSize} background={ftBtnBg} color={ftBtnText} borderColor={ftBorder} borderRadius={10} />
                   {(props.contactHeading || editor) ? <span contentEditable={editor} suppressContentEditableWarning onBlur={(e) => patchFt({ contactHeading: e.currentTarget.textContent })} style={inlineStyle({ fontSize: 16, fontWeight: 600, letterSpacing: "0.14em", textTransform: "uppercase", color: colorWithAlpha(ftLink, 0.92) })}>{props.contactHeading || "Contact"}</span> : null}

@@ -44,6 +44,7 @@ select:focus {
   color: #fff !important;
 }
 @import "./website-builder-canvas-fix.css";
+@import "./website-builder-responsive.css";
 
 /* Removed Tailwind directives: not used in platform */
 

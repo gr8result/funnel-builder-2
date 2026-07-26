@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import BackToTopButton from "./website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
+import { isBlockVisibleOnDevice, resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
 
 function slugify(value) {
   return String(value || "")
@@ -63,17 +64,23 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
   const injectNav = globalNavBlock && !pageBlocks.some((block) => block.id && block.id === globalNavBlock.id);
   const blocksWithoutNav = injectNav ? pageBlocks.filter((block) => block.type !== "nav-bar") : pageBlocks;
   const injectFooter = !!globalFooterBlock;
-  const blocksWithoutShellDuplicates = injectFooter
+  const blocksWithoutShellDuplicates = (injectFooter
     ? blocksWithoutNav.filter((block) => block.type !== "footer")
-    : blocksWithoutNav;
+    : blocksWithoutNav
+  ).filter((block) => isBlockVisibleOnDevice(block?.props, previewViewport));
   const shellBlocks = [globalNavBlock, ...blocksWithoutShellDuplicates, globalFooterBlock].filter(Boolean);
   const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
   const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
-  const compactPreview = previewViewport === "mobile";
+  // Tablet must use the same mobile-safe compact layout as phone preview -- otherwise the
+  // shell narrows to ~920px while every `compact ? mobile : desktop` rule in the renderer
+  // still resolves to desktop (absolute positions, multi-column grids, fixed widths), which
+  // is what causes blocks to overlap in tablet preview. This also keeps preview consistent
+  // with the published site, which treats anything below 1024px as compact.
+  const compactPreview = previewViewport !== "desktop";
   const previewShellWidth = previewViewport === "mobile"
-    ? 430
+    ? resolveResponsiveLayoutWidth(layoutWidth, "mobile")
     : previewViewport === "tablet"
-      ? Math.min(920, layoutWidth)
+      ? resolveResponsiveLayoutWidth(layoutWidth, "tablet")
       : layoutWidth;
 
   const navigationContext = useMemo(() => {
@@ -191,17 +198,17 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        <div style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
+        <div className="gr8wb-viewport" style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
           {injectNav ? (
             <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalNavBlock?.id || ""} data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalNavBlock, pageBackground))}>
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
+              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
 
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             blocksWithoutShellDuplicates.map((block, index) => (
               <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-id={block.id || ""} data-website-preview-block-type={block.type || ""} style={styles.blockFrame(resolveStackBlockBackground(blocksWithoutShellDuplicates, index, pageBackground))}>
-                {renderWebsiteBlock(block, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
+                {renderWebsiteBlock(block, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
               </div>
             ))
           ) : pageContent ? (
@@ -238,7 +245,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
 
           {injectFooter ? (
             <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalFooterBlock?.id || ""} data-website-preview-block-type={globalFooterBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalFooterBlock, pageBackground))}>
-              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth, siteId: project?.id || "" })}
+              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
             </div>
           ) : null}
         </div>
