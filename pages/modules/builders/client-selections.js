@@ -43,6 +43,8 @@ const initialForm = {
   gstRate: GST_RATE,
   manualOverridePrice: "",
   selectionStatus: "not_selected",
+  productId: "",
+  pricingTier: "",
   supplierId: "",
   supplierName: "",
   sourceQuoteRowId: "",
@@ -72,6 +74,7 @@ export default function BuilderClientSelectionsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [form, setForm] = useState(initialForm);
   const [confirmation, setConfirmation] = useState(null);
+  const [catalogueBrowserOpen, setCatalogueBrowserOpen] = useState(false);
   const [showInternalSummary, setShowInternalSummary] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -348,6 +351,35 @@ export default function BuilderClientSelectionsPage() {
     });
   }
 
+  // Populates the manual-entry form from a Client Selections Library catalogue product.
+  // The selection row still stores its own copy of every field (created below in
+  // createSelection) so later edits to the master product never change an already-saved
+  // selection — this only seeds the form once, at pick time.
+  function applyProductFromCatalogue(product, lookups) {
+    setForm((current) => ({
+      ...current,
+      productId: product.id,
+      pricingTier: product.pricing_tier || "CLASSIC",
+      brand: lookups.manufacturerById.get(product.manufacturer_id) || current.brand,
+      productName: product.product_name || current.productName,
+      modelNumber: product.model || current.modelNumber,
+      colour: product.colour || current.colour,
+      finish: product.finish || current.finish,
+      imageUrl: product.primary_image_url || current.imageUrl,
+      specificationUrl: product.datasheet_pdf_url || current.specificationUrl,
+      description: product.description || current.description,
+      supplierName: lookups.supplierById.get(product.supplier_id) || current.supplierName,
+      includedAllowance: product.base_allowance ?? current.includedAllowance,
+      builderCost: product.cost_price ?? current.builderCost,
+      notes: product.client_notes || current.notes,
+    }));
+    setCatalogueBrowserOpen(false);
+  }
+
+  function clearCatalogueProduct() {
+    setForm((current) => ({ ...current, productId: "", pricingTier: "" }));
+  }
+
   async function ensureSession() {
     if (selectedSession) return selectedSession;
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) throw new Error("Select a project and estimate snapshot first.");
@@ -495,6 +527,8 @@ export default function BuilderClientSelectionsPage() {
         session_id: session.id,
         boq_item_id: source?.id || null,
         source_quote_row_id: source?.source_quote_row_id || form.sourceQuoteRowId || null,
+        product_id: form.productId || null,
+        pricing_tier: form.pricingTier || null,
         category: form.category,
         subcategory: form.subcategory.trim(),
         room: form.room.trim(),
@@ -834,7 +868,11 @@ export default function BuilderClientSelectionsPage() {
             <p style={styles.subtitle}>Compare product selections against the original estimate while keeping private budget controls visible only to authorised project roles.</p>
           </div>
           <div style={styles.headerActions}>
+            <Link href="/modules/builders/product-library" style={styles.secondaryLink}>Client Selections Library</Link>
             <Link href="/modules/builders/selections-book" style={styles.secondaryLink}>Selections Book</Link>
+            {selectedProjectId && (
+              <Link href={`/modules/builders/inclusions-schedule/${selectedProjectId}`} style={styles.secondaryLink}>Inclusions Schedule</Link>
+            )}
             <Link href="/modules/builders/variations" style={styles.primaryLink}>Variations</Link>
           </div>
         </header>
@@ -917,7 +955,11 @@ export default function BuilderClientSelectionsPage() {
                   <h2 style={styles.panelTitle}>Add Product Option</h2>
                   <p style={styles.panelText}>{isDesigner ? "Designer access can create selections and view budget warnings, but cost and margin fields remain controlled by builder roles." : "Store calculated and overridden client prices without exposing cost fields to clients."}</p>
                 </div>
+                <button type="button" onClick={() => setCatalogueBrowserOpen(true)} style={styles.primaryDarkButton}>Browse Client Selections Catalogue</button>
               </div>
+              {form.productId ? (
+                <p style={styles.panelText}>Linked to catalogue product ({titleCase(form.pricingTier || "classic")}). <a href="#" onClick={(event) => { event.preventDefault(); clearCatalogueProduct(); }}>Clear and enter manually</a></p>
+              ) : null}
               <div style={styles.formGrid}>
                 <SelectField label="Category" value={form.category} onChange={(value) => updateForm("category", value)} options={SELECTION_CATEGORIES.map((category) => ({ value: category, label: titleCase(category) }))} />
                 <TextField label="Room" value={form.room} onChange={(value) => updateForm("room", value)} />
@@ -1042,8 +1084,117 @@ export default function BuilderClientSelectionsPage() {
             </div>
           </div>
         ) : null}
+
+        {catalogueBrowserOpen ? (
+          <CatalogueBrowserModal
+            workspaceId={workspaceId}
+            onSelect={applyProductFromCatalogue}
+            onClose={() => setCatalogueBrowserOpen(false)}
+          />
+        ) : null}
       </main>
     </>
+  );
+}
+
+function CatalogueBrowserModal({ workspaceId, onSelect, onClose }) {
+  const [rows, setRows] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loadingRows, setLoadingRows] = useState(false);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    let cancelled = false;
+    async function load() {
+      setLoadingRows(true);
+      const [productResult, manufacturerResult, supplierResult] = await Promise.all([
+        supabase
+          .from("builder_products")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .in("library_scope", ["CLIENT_SELECTION", "BOTH"])
+          .eq("active", true)
+          .eq("available_for_selection", true)
+          .order("product_name", { ascending: true })
+          .limit(500),
+        supabase.from("builder_product_manufacturers").select("id, manufacturer_name").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
+        supabase.from("builder_product_suppliers").select("id, supplier_name").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
+      ]);
+      if (cancelled) return;
+      setRows(productResult.data || []);
+      setManufacturers(manufacturerResult.data || []);
+      setSuppliers(supplierResult.data || []);
+      setLoadingRows(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [workspaceId]);
+
+  const manufacturerById = useMemo(() => new Map(manufacturers.map((m) => [m.id, m.manufacturer_name])), [manufacturers]);
+  const supplierById = useMemo(() => new Map(suppliers.map((s) => [s.id, s.supplier_name])), [suppliers]);
+
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((row) => {
+      const text = [row.product_name, row.model, row.sku, manufacturerById.get(row.manufacturer_id), supplierById.get(row.supplier_id), row.description]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return text.includes(term);
+    });
+  }, [rows, search, manufacturerById, supplierById]);
+
+  return (
+    <div style={styles.modalBackdrop}>
+      <div style={{ ...styles.modal, maxWidth: 860, width: "94vw", maxHeight: "88vh", overflowY: "auto" }}>
+        <h2 style={styles.modalTitle}>Client Selections Catalogue</h2>
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search name, brand, model, code..."
+          style={{ ...styles.input, marginBottom: 12, width: "100%" }}
+        />
+        {loadingRows ? (
+          <p style={styles.panelText}>Loading catalogue...</p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+            {filteredRows.map((product) => {
+              const upgradeValue = product.upgrade_value_mode === "manual"
+                ? roundMoney(numberValue(product.upgrade_cost))
+                : roundMoney(numberValue(product.cost_price) - numberValue(product.base_allowance));
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() => onSelect(product, { manufacturerById, supplierById })}
+                  style={{ ...styles.productCard, textAlign: "left", cursor: "pointer" }}
+                >
+                  <div style={styles.productImageWrap}>
+                    <img
+                      src={product.primary_image_url || `https://placehold.co/320x220/e2e8f0/334155?text=${encodeURIComponent(product.product_name || "Product")}`}
+                      alt={product.product_name || ""}
+                      style={styles.productImage}
+                    />
+                  </div>
+                  <div style={styles.productBody}>
+                    <strong>{product.product_name}</strong>
+                    <div style={styles.panelText}>{[manufacturerById.get(product.manufacturer_id), product.model].filter(Boolean).join(" · ")}</div>
+                    <div style={styles.panelText}>{titleCase(product.pricing_tier || "classic")} tier · {clientPriceImpactLabel(upgradeValue)}</div>
+                  </div>
+                </button>
+              );
+            })}
+            {!filteredRows.length && <p style={styles.panelText}>No catalogue products match this search.</p>}
+          </div>
+        )}
+        <div style={styles.modalActions}>
+          <button type="button" onClick={onClose} style={styles.utilityButton}>Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

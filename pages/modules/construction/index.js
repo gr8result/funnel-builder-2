@@ -106,6 +106,14 @@ export default function ConstructionHub() {
             description="Track each job through procurement steps: quote, sample, order, delivery, install and sign-off."
             action="Open Production Flow"
           />
+          <ToolCard
+            href="/modules/builders/product-library"
+            accent="#0f766e"
+            icon="CS"
+            title="Client Selections Library"
+            description="A visual client-selections catalogue with pricing tiers (Classic, Premier, Premium), suppliers and categories — separate from the Estimate Builder materials library."
+            action="Open Client Selections Library"
+          />
         </div>
 
         <section style={S.estimateSection}>
