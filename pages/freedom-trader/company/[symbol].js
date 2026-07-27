@@ -6,6 +6,15 @@ import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
 import { buildHeikinAshiCandles, FreedomChartDisplayToggles, FreedomChartTypeSelector, FREEDOM_CHART_TYPES, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
 import { canonicalCompanyTicker, companyMeta } from "../../../lib/freedom/companyRoutes";
 import { normalizeSignalLabel, signalClassName } from "../../../lib/freedom/signalEngine";
+import {
+  calculatePositionMetrics,
+  computeFibLevels,
+  DEFAULT_MINIMUM_RISK_REWARD,
+  DEFAULT_SAFETY_BUFFER_PERCENT,
+  detectDirectionFromTrend,
+  generateFibTradePlan,
+  validateLevelOrder,
+} from "../../../lib/freedom-trader/fibTradePlan";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -14,15 +23,7 @@ const CHART_RANGE_STORAGE_KEY = "freedom-trader-chart-ranges";
 const CHART_TYPE_STORAGE_KEY = "freedom-trader-chart-type";
 const FIB_STORAGE_KEY = "freedom-trader-fib-retracements";
 
-const FIB_LEVELS = [
-  { key: "0", ratio: 0, label: "0%" },
-  { key: "236", ratio: 0.236, label: "23.6%" },
-  { key: "382", ratio: 0.382, label: "38.2%" },
-  { key: "500", ratio: 0.5, label: "50%" },
-  { key: "618", ratio: 0.618, label: "61.8%" },
-  { key: "786", ratio: 0.786, label: "78.6%" },
-  { key: "1000", ratio: 1, label: "100%" },
-];
+const LEVEL_ASSIGNMENT_LABELS = { entry: "ENTRY", stop: "STOP", target: "TARGET 1", target2: "TARGET 2" };
 
 const FIB_BAND_COLORS = [
   "rgba(255, 76, 76, 0.18)",
@@ -177,20 +178,17 @@ function normalizeFibDrawing(drawing) {
     anchor1,
     anchor2,
     visible: drawing?.visible !== false,
+    direction: drawing?.direction === "bearish" ? "bearish" : "bullish",
+    showExtensions: Boolean(drawing?.showExtensions),
+    safetyBufferPercent: Number.isFinite(Number(drawing?.safetyBufferPercent)) ? Number(drawing.safetyBufferPercent) : DEFAULT_SAFETY_BUFFER_PERCENT,
   };
-}
-
-function fibPriceForRatio(drawing, ratio) {
-  if (!drawing) return null;
-  const low = Number(drawing.anchor1?.price);
-  const high = Number(drawing.anchor2?.price);
-  if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
-  return roundPrice(high - (high - low) * ratio);
 }
 
 function levelsComplete(levels) {
   return Number.isFinite(levels?.entry) && Number.isFinite(levels?.target) && Number.isFinite(levels?.stop);
 }
+
+const DEFAULT_LEVEL_SOURCES = { entry: "analysis", stop: "analysis", target: "analysis", target2: null };
 
 function sma(values, period) {
   return values.map((_, index) => {
@@ -428,7 +426,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const chartNodeRef = useRef(null);
   const chartRangeRef = useRef(null);
   const chartPanRef = useRef({ active: false, startX: 0, startRange: null });
-  const visualLevelsRef = useRef({ entry: null, target: null, stop: null });
+  const visualLevelsRef = useRef({ entry: null, target: null, target2: null, stop: null });
   const fibDrawingRef = useRef(null);
   const [unlocked, setUnlocked] = useState(false);
   const [checkingStorage, setCheckingStorage] = useState(true);
@@ -462,8 +460,9 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const [manualBuyForm, setManualBuyForm] = useState(null);
   const [tradeActionSaving, setTradeActionSaving] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
-  const [visualLevels, setVisualLevels] = useState({ entry: null, target: null, stop: null });
-  const [linePixels, setLinePixels] = useState({ entry: null, target: null, stop: null });
+  const [visualLevels, setVisualLevels] = useState({ entry: null, target: null, target2: null, stop: null });
+  const [levelSources, setLevelSources] = useState(DEFAULT_LEVEL_SOURCES);
+  const [linePixels, setLinePixels] = useState({ entry: null, target: null, target2: null, stop: null });
   const [draggingLevel, setDraggingLevel] = useState(null);
   const [chartMode, setChartMode] = useState("pan");
   const [fibDrawing, setFibDrawing] = useState(null);
@@ -538,38 +537,38 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const fallbackSetup = useMemo(() => analyseSetup(symbol, quote || {}, candles), [symbol, quote, candles]);
   const setup = useMemo(() => mapServerAnalysisToSetup(symbol, analysis, fallbackSetup), [symbol, analysis, fallbackSetup]);
   const closes = useMemo(() => candles.map((candle) => candle.close), [candles]);
+  const tradeDirection = fibDrawing?.direction === "bearish" ? "bearish" : "bullish";
+  const levelOrderCheck = useMemo(() => (levelsComplete(visualLevels) ? validateLevelOrder(tradeDirection, visualLevels) : { valid: true, reason: null }), [tradeDirection, visualLevels]);
   const visualMetrics = useMemo(() => {
-    if (!levelsComplete(visualLevels)) return { riskReward: null, percentageReturn: null, expectedProfit: null, maximumLoss: null, capitalRequired: null, positionSize: 0, riskLimit: null };
-    const riskPerShare = visualLevels.entry - visualLevels.stop;
-    const rewardPerShare = visualLevels.target - visualLevels.entry;
-    const riskLimit = (Number(portfolioValue) || 0) * ((Number(maxRiskPercent) || 0) / 100);
-    const riskSizedShares = riskPerShare > 0 ? Math.max(0, Math.floor(riskLimit / riskPerShare)) : 0;
-    const capitalSizedShares = visualLevels.entry > 0 ? Math.max(0, Math.floor((Number(tradingCapital) || 0) / visualLevels.entry)) : 0;
-    const positionSize = Math.min(riskSizedShares, capitalSizedShares);
-    return {
-      riskReward: riskPerShare > 0 ? rewardPerShare / riskPerShare : null,
-      percentageReturn: visualLevels.entry > 0 ? (rewardPerShare / visualLevels.entry) * 100 : null,
-      expectedProfit: positionSize * rewardPerShare,
-      maximumLoss: positionSize * riskPerShare,
-      capitalRequired: positionSize * visualLevels.entry,
-      positionSize,
-      riskLimit,
-    };
-  }, [maxRiskPercent, portfolioValue, tradingCapital, visualLevels]);
+    if (!levelsComplete(visualLevels)) return { riskReward: null, riskRewardTarget2: null, percentageReturn: null, expectedProfit: null, expectedProfitTarget2: null, maximumLoss: null, capitalRequired: null, positionSize: 0, riskLimit: null };
+    return calculatePositionMetrics({
+      direction: tradeDirection,
+      entry: visualLevels.entry,
+      stop: visualLevels.stop,
+      target: visualLevels.target,
+      target2: visualLevels.target2,
+      portfolioValue,
+      maxRiskPercent,
+      tradingCapital,
+    });
+  }, [maxRiskPercent, portfolioValue, tradeDirection, tradingCapital, visualLevels]);
 
   useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem(PLANNER_STORAGE_KEY) || "{}");
       const stored = saved?.[symbol];
-      setVisualLevels(levelsComplete(stored) ? stored : {
-        entry: roundPrice(setup.entry),
-        target: roundPrice(setup.target),
-        stop: roundPrice(setup.stop),
-      });
+      if (levelsComplete(stored)) {
+        setVisualLevels({ entry: stored.entry, target: stored.target, target2: stored.target2 ?? null, stop: stored.stop });
+        setLevelSources({ ...DEFAULT_LEVEL_SOURCES, ...(stored.sources || {}) });
+      } else {
+        setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) });
+        setLevelSources(DEFAULT_LEVEL_SOURCES);
+      }
     } catch {
-      setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), stop: roundPrice(setup.stop) });
+      setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) });
+      setLevelSources(DEFAULT_LEVEL_SOURCES);
     }
-  }, [setup.entry, setup.stop, setup.target, symbol]);
+  }, [setup.entry, setup.stop, setup.target, setup.target2, symbol]);
 
   useEffect(() => {
     try {
@@ -691,6 +690,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     if (!setup.marketData?.validated || !Number.isFinite(currentPrice)) blockers.push("Market price is stale or unverified.");
     if (chartMeta?.dataLabel === "Unavailable") blockers.push("Market price is stale or unverified.");
     if (!chartMeta?.ok || !candles.length || chartError) blockers.push(chartError || "Chart data is unavailable.");
+    if (tradeDirection === "bearish") blockers.push("This is a bearish Fib plan for reference only. Freedom Trader can currently only record long (buy) positions -- switch the Fib direction to bullish before preparing a buy order.");
     if (!levelsComplete(levels)) blockers.push("Entry, stop loss and target must all be placed on the chart.");
     if (levelsComplete(levels) && levels.stop >= levels.entry) blockers.push("Stop loss must be below entry for a long trade.");
     if (levelsComplete(levels) && levels.target <= levels.entry) blockers.push("Target must be above entry.");
@@ -711,6 +711,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
       entry: roundPrice(visualLevels.entry),
       stop: roundPrice(visualLevels.stop),
       target: roundPrice(visualLevels.target),
+      target2: roundPrice(visualLevels.target2),
     };
     const metrics = visualMetrics;
     const currentPrice = Number(setup.currentPrice);
@@ -723,6 +724,8 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
       entryPrice: levels.entry,
       stopPrice: levels.stop,
       targetPrice: levels.target,
+      targetPrice2: levels.target2,
+      expectedProfitTarget2: roundPrice(metrics.expectedProfitTarget2),
       quantity: metrics.positionSize,
       capitalRequired: roundPrice(metrics.capitalRequired),
       maximumLoss: roundPrice(metrics.maximumLoss),
@@ -917,23 +920,48 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     }
   }
 
-  const saveVisualLevels = useCallback((levels) => {
+  const saveVisualLevels = useCallback((levels, sources) => {
     if (!levelsComplete(levels)) return;
     try {
       const saved = JSON.parse(window.localStorage.getItem(PLANNER_STORAGE_KEY) || "{}");
-      window.localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify({ ...saved, [symbol]: levels }));
+      window.localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify({ ...saved, [symbol]: { ...levels, sources: sources || DEFAULT_LEVEL_SOURCES } }));
     } catch {}
   }, [symbol]);
 
-  const updateVisualLevel = useCallback((key, value) => {
+  const updateVisualLevel = useCallback((key, value, source = "custom") => {
     const nextValue = roundPrice(value);
     if (!Number.isFinite(nextValue)) return;
     setVisualLevels((current) => {
       const next = { ...current, [key]: nextValue };
-      saveVisualLevels(next);
+      setLevelSources((currentSources) => {
+        const nextSources = { ...currentSources, [key]: source };
+        saveVisualLevels(next, nextSources);
+        return nextSources;
+      });
       return next;
     });
   }, [saveVisualLevels]);
+
+  const clearVisualLevel = useCallback((key) => {
+    setVisualLevels((current) => {
+      const next = { ...current, [key]: null };
+      setLevelSources((currentSources) => {
+        const nextSources = { ...currentSources, [key]: null };
+        saveVisualLevels(next, nextSources);
+        return nextSources;
+      });
+      return next;
+    });
+  }, [saveVisualLevels]);
+
+  const resetLevelsToAnalysis = useCallback(() => {
+    const next = { entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) };
+    const sources = { entry: "analysis", stop: "analysis", target: "analysis", target2: setup.target2 != null ? "analysis" : null };
+    setVisualLevels(next);
+    setLevelSources(sources);
+    saveVisualLevels(next, sources);
+    setSaveMessage("Trade levels reset to the analysis recommendation.");
+  }, [saveVisualLevels, setup.entry, setup.stop, setup.target, setup.target2]);
 
   const saveFibDrawing = useCallback((drawing) => {
     const normalized = normalizeFibDrawing(drawing);
@@ -1066,8 +1094,8 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         const value = toPoint(fallbackDate, price);
         return value?.y;
       };
-      const next = { entry: toY(currentVisualLevels.entry), target: toY(currentVisualLevels.target), stop: toY(currentVisualLevels.stop) };
-      if (Object.values(next).every(Number.isFinite)) setLinePixels(next);
+      const next = { entry: toY(currentVisualLevels.entry), target: toY(currentVisualLevels.target), target2: Number.isFinite(currentVisualLevels.target2) ? toY(currentVisualLevels.target2) : null, stop: toY(currentVisualLevels.stop) };
+      if ([next.entry, next.target, next.stop].every(Number.isFinite)) setLinePixels(next);
     }
     const drawing = normalizeFibDrawing(fibDrawingRef.current);
     if (!drawing || drawing.visible === false) {
@@ -1085,10 +1113,15 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     const width = Math.max(80, right - left);
     const bodyLeft = right - left < 80 ? left - (80 - (right - left)) / 2 : left;
     const bodyRight = bodyLeft + width;
-    const rawLevels = FIB_LEVELS.map((level) => {
-      const price = fibPriceForRatio(drawing, level.ratio);
-      const point = toPoint(drawing.anchor2.date, price);
-      return point && Number.isFinite(point.y) ? { ...level, price, y: point.y, labelY: point.y } : null;
+    const assignmentFor = (price) => {
+      if (!Number.isFinite(price)) return null;
+      const match = ["entry", "stop", "target", "target2"].find((key) => Number.isFinite(currentVisualLevels[key]) && Math.abs(currentVisualLevels[key] - price) < 0.005);
+      return match || null;
+    };
+    const computedLevels = computeFibLevels({ anchor1Price: drawing.anchor1.price, anchor2Price: drawing.anchor2.price, direction: drawing.direction, includeExtensions: drawing.showExtensions });
+    const rawLevels = computedLevels.map((level) => {
+      const point = toPoint(drawing.anchor2.date, level.price);
+      return point && Number.isFinite(point.y) ? { ...level, y: point.y, labelY: point.y, assignment: assignmentFor(level.price) } : null;
     }).filter(Boolean);
     const sorted = [...rawLevels].sort((a, b) => a.y - b.y);
     const minGap = 24;
@@ -1098,14 +1131,14 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     for (let index = sorted.length - 2; index >= 0; index -= 1) {
       sorted[index].labelY = Math.min(sorted[index].labelY, sorted[index + 1].labelY - minGap);
     }
-    const bands = FIB_LEVELS.slice(0, -1).map((level, index) => {
-      const from = rawLevels.find((item) => item.key === level.key);
-      const to = rawLevels.find((item) => item.key === FIB_LEVELS[index + 1].key);
-      if (!from || !to) return null;
+    const baseLevels = rawLevels.filter((level) => !level.extension);
+    const bands = baseLevels.slice(0, -1).map((level, index) => {
+      const to = baseLevels[index + 1];
+      if (!level || !to) return null;
       return {
-        key: `${level.key}-${FIB_LEVELS[index + 1].key}`,
-        top: Math.min(from.y, to.y),
-        height: Math.max(2, Math.abs(from.y - to.y)),
+        key: `${level.key}-${to.key}`,
+        top: Math.min(level.y, to.y),
+        height: Math.max(2, Math.abs(level.y - to.y)),
         color: FIB_BAND_COLORS[index],
       };
     }).filter(Boolean);
@@ -1206,6 +1239,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
       anchor1: draftFibAnchor,
       anchor2: point ? { date: point.date, price: point.price } : draftFibAnchor,
       visible: true,
+      direction: detectDirectionFromTrend(setup.trend),
     });
     if (next && (next.anchor1.date !== next.anchor2.date || next.anchor1.price !== next.anchor2.price)) {
       saveFibDrawing(next);
@@ -1215,7 +1249,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     }
     setDraftFibAnchor(null);
     setChartMode("select");
-  }, [chartMode, chartPointFromEvent, draftFibAnchor, saveFibDrawing]);
+  }, [chartMode, chartPointFromEvent, draftFibAnchor, saveFibDrawing, setup.trend]);
 
   const startFibDrag = useCallback((event, type, anchorKey = null) => {
     if (chartMode !== "select" || !fibDrawing) return;
@@ -1232,12 +1266,63 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     });
   }, [chartMode, chartPointFromEvent, fibDrawing]);
 
-  const setTradeLineFromFib = useCallback((lineKey, levelKey) => {
+  const assignFibLevel = useCallback((lineKey, levelKey) => {
     const level = fibGeometry.levels.find((item) => item.key === levelKey);
     if (!level || !Number.isFinite(level.price)) return;
-    updateVisualLevel(lineKey, level.price);
+    updateVisualLevel(lineKey, level.price, "fib-manual");
     setSelectedFibLevelKey("");
   }, [fibGeometry.levels, updateVisualLevel]);
+
+  const clearFibAssignment = useCallback((levelKey) => {
+    const level = fibGeometry.levels.find((item) => item.key === levelKey);
+    if (level?.assignment) clearVisualLevel(level.assignment);
+    setSelectedFibLevelKey("");
+  }, [clearVisualLevel, fibGeometry.levels]);
+
+  const setFibDirection = useCallback((direction) => {
+    commitFibDrawing((current) => current ? { ...current, direction: direction === "bearish" ? "bearish" : "bullish" } : current);
+  }, [commitFibDrawing]);
+
+  const setFibShowExtensions = useCallback((showExtensions) => {
+    commitFibDrawing((current) => current ? { ...current, showExtensions: Boolean(showExtensions) } : current);
+  }, [commitFibDrawing]);
+
+  const setFibSafetyBuffer = useCallback((percent) => {
+    const value = Number(percent);
+    commitFibDrawing((current) => current ? { ...current, safetyBufferPercent: Number.isFinite(value) ? value : DEFAULT_SAFETY_BUFFER_PERCENT } : current);
+  }, [commitFibDrawing]);
+
+  const applyGeneratedFibPlan = useCallback(() => {
+    if (!fibDrawing) {
+      setSaveMessage("Draw a Fibonacci retracement on the chart first.");
+      return;
+    }
+    const plan = generateFibTradePlan({
+      anchor1Price: fibDrawing.anchor1.price,
+      anchor2Price: fibDrawing.anchor2.price,
+      direction: fibDrawing.direction,
+      analysisEntry: setup.entry,
+      analysisTarget: setup.target,
+      analysisSupport: setup.support,
+      analysisResistance: setup.resistance,
+      safetyBufferPercent: fibDrawing.safetyBufferPercent,
+      minimumRiskReward: DEFAULT_MINIMUM_RISK_REWARD,
+    });
+    if (!plan.valid) {
+      setSaveMessage(`Use Fib for Trade Plan: ${plan.reason}`);
+      return;
+    }
+    const next = { entry: plan.entry, stop: plan.stop, target: plan.target, target2: plan.target2 };
+    const sources = { entry: "fib-auto", stop: "fib-auto", target: "fib-auto", target2: plan.target2 != null ? "fib-auto" : null };
+    setVisualLevels(next);
+    setLevelSources(sources);
+    saveVisualLevels(next, sources);
+    setSaveMessage(`Fib trade plan applied (entry near ${plan.entryFibLabel || "the retracement zone"}, risk/reward ${plan.riskReward.toFixed(2)}:1).`);
+  }, [fibDrawing, saveVisualLevels, setup.entry, setup.resistance, setup.support, setup.target]);
+
+  const resetLevelsToFib = useCallback(() => {
+    applyGeneratedFibPlan();
+  }, [applyGeneratedFibPlan]);
 
   useEffect(() => {
     refreshOverlayPixels();
@@ -1442,7 +1527,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     };
   }, [chartData, chartInterval, chartType, displayToggles.completedTrades, displayToggles.openPositions, displayToggles.volume, loadSavedChartRange, refreshOverlayPixels, saveChartRange, setup, symbol, timeframe]);
 
-  const visualOverlayReady = levelsComplete(visualLevels) && Object.values(linePixels).every(Number.isFinite);
+  const visualOverlayReady = levelsComplete(visualLevels) && [linePixels.entry, linePixels.target, linePixels.stop].every(Number.isFinite);
   const chartPlotTop = 22;
   const chartPlotBottom = 22 + 660 * 0.66;
   const clampChartZone = (a, b) => {
@@ -1527,14 +1612,17 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
           {(setup.opportunity?.reasonsAgainst?.length ? setup.opportunity.reasonsAgainst : setup.opportunity?.failedConditions?.length ? setup.opportunity.failedConditions : ["No opposing signal loaded yet."]).map((reason) => <p key={reason}>{reason}</p>)}
         </article>
         <article>
-          <h2>Trade Plan</h2>
-          <p>Entry: {formatCurrency(setup.entry)} - {formatCurrency(setup.entryHigh)}</p>
-          <p>Invalidation / stop: {formatCurrency(setup.stop)}</p>
-          <p>Target 1: {formatCurrency(setup.target)}</p>
-          <p>Target 2: {formatCurrency(setup.target2)}</p>
-          <p>Risk per share: {formatCurrency(setup.risk)}</p>
-          <p>Reward per share: {formatCurrency(setup.reward)}</p>
-          <p>Risk/reward: {formatNumber(setup.riskReward)}</p>
+          <h2>Trade Plan ({tradeDirection === "bearish" ? "Bearish" : "Bullish"})</h2>
+          <p>Entry ({levelSources.entry || "custom"}): {formatCurrency(visualLevels.entry)}</p>
+          <p>Stop-loss ({levelSources.stop || "custom"}): {formatCurrency(visualLevels.stop)}</p>
+          <p>Target 1 ({levelSources.target || "custom"}): {formatCurrency(visualLevels.target)}</p>
+          {Number.isFinite(visualLevels.target2) ? <p>Target 2 ({levelSources.target2 || "custom"}): {formatCurrency(visualLevels.target2)}</p> : null}
+          <p>Risk per share: {formatCurrency(levelsComplete(visualLevels) ? Math.abs(visualLevels.entry - visualLevels.stop) : null)}</p>
+          <p>Reward per share (Target 1): {formatCurrency(levelsComplete(visualLevels) ? Math.abs(visualLevels.target - visualLevels.entry) : null)}</p>
+          <p>Risk/reward (Target 1): {formatNumber(visualMetrics.riskReward)}</p>
+          {Number.isFinite(visualMetrics.riskRewardTarget2) ? <p>Risk/reward (Target 2): {formatNumber(visualMetrics.riskRewardTarget2)}</p> : null}
+          <p>This chart, this card and the position size below always use the same active levels shown here.</p>
+          {!levelOrderCheck.valid ? <p className="fibInvalidNotice">Invalid: {levelOrderCheck.reason}</p> : null}
         </article>
       </section>
 
@@ -1599,6 +1687,23 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
             <button type="button" onClick={() => setFibVisibility(false)} disabled={!fibDrawing || !fibVisible}>Hide Fib</button>
             <button type="button" onClick={() => setFibVisibility(true)} disabled={!fibDrawing || fibVisible}>Show Fib</button>
           </div>
+          {fibDrawing ? (
+            <div className="fibConfigRow">
+              <span>Fib direction</span>
+              <button className={tradeDirection === "bullish" ? "active" : ""} type="button" onClick={() => setFibDirection("bullish")}>Bullish</button>
+              <button className={tradeDirection === "bearish" ? "active" : ""} type="button" onClick={() => setFibDirection("bearish")}>Bearish</button>
+              <label className="fibExtensionToggle">
+                <input type="checkbox" checked={Boolean(fibDrawing.showExtensions)} onChange={(event) => setFibShowExtensions(event.target.checked)} />
+                Show extensions (127.2/138.2/161.8/200%)
+              </label>
+              <label className="fibBufferInput">
+                Stop buffer %
+                <input type="number" min="0" max="10" step="0.1" value={fibDrawing.safetyBufferPercent} onChange={(event) => setFibSafetyBuffer(event.target.value)} />
+              </label>
+              <button className="primaryAction" type="button" onClick={applyGeneratedFibPlan}>Use Fib for Trade Plan</button>
+              <button type="button" onClick={resetLevelsToAnalysis}>Reset to Analysis</button>
+            </div>
+          ) : null}
         </div>
         <FreedomChartDisplayToggles toggles={displayToggles} onChange={setDisplayToggles} />
         <div
@@ -1643,8 +1748,8 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               />
               {fibGeometry.levels.map((level) => (
                 <button
-                  aria-label={`${level.label} Fibonacci level ${formatCurrency(level.price)}`}
-                  className={`fibLevel ${selectedFibLevelKey === level.key ? "selected" : ""}`}
+                  aria-label={`${level.label} Fibonacci level ${formatCurrency(level.price)}${level.assignment ? `, assigned as ${LEVEL_ASSIGNMENT_LABELS[level.assignment]}` : ""}`}
+                  className={`fibLevel ${selectedFibLevelKey === level.key ? "selected" : ""} ${level.extension ? "extension" : ""} ${level.assignment ? `assigned assigned-${level.assignment}` : ""}`}
                   key={level.key}
                   onClick={() => setSelectedFibLevelKey(level.key)}
                   onContextMenu={(event) => {
@@ -1659,7 +1764,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
                   type="button"
                 >
                   <span className="fibLabel" style={{ top: level.labelY - level.y }}>
-                    {level.label} {formatCurrency(level.price)}
+                    {level.label} {level.assignment ? `— ${LEVEL_ASSIGNMENT_LABELS[level.assignment]} —` : ""} {formatCurrency(level.price)}
                   </span>
                 </button>
               ))}
@@ -1686,9 +1791,11 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               />
               {selectedFibLevel ? (
                 <div className="fibLevelMenu" style={{ left: fibGeometry.body.left + 10, top: selectedFibLevel.labelY + 14 }}>
-                  <button type="button" onClick={() => setTradeLineFromFib("entry", selectedFibLevel.key)}>Set as Buy</button>
-                  <button type="button" onClick={() => setTradeLineFromFib("stop", selectedFibLevel.key)}>Set as Stop Loss</button>
-                  <button type="button" onClick={() => setTradeLineFromFib("target", selectedFibLevel.key)}>Set as Sell</button>
+                  <button type="button" onClick={() => assignFibLevel("entry", selectedFibLevel.key)}>Set as Entry</button>
+                  <button type="button" onClick={() => assignFibLevel("stop", selectedFibLevel.key)}>Set as Stop-loss</button>
+                  <button type="button" onClick={() => assignFibLevel("target", selectedFibLevel.key)}>Set as Target 1</button>
+                  <button type="button" onClick={() => assignFibLevel("target2", selectedFibLevel.key)}>Set as Target 2</button>
+                  {selectedFibLevel.assignment ? <button type="button" onClick={() => clearFibAssignment(selectedFibLevel.key)}>Clear assignment</button> : null}
                 </div>
               ) : null}
             </div>
@@ -1706,10 +1813,11 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               <div className="zone profitZone" style={{ top: profitZone.top, height: profitZone.height }} />
               <div className="zone riskZone" style={{ top: riskZone.top, height: riskZone.height }} />
               {[
-                { key: "target", label: "SELL", value: visualLevels.target, y: linePixels.target, className: "targetLine" },
-                { key: "entry", label: "BUY", value: visualLevels.entry, y: linePixels.entry, className: "entryLine" },
-                { key: "stop", label: "STOP LOSS", value: visualLevels.stop, y: linePixels.stop, className: "stopLine" },
-              ].map((line) => (
+                Number.isFinite(linePixels.target2) ? { key: "target2", label: "TARGET 2", value: visualLevels.target2, y: linePixels.target2, className: "target2Line" } : null,
+                { key: "target", label: "TARGET 1", value: visualLevels.target, y: linePixels.target, className: "targetLine" },
+                { key: "entry", label: "ENTRY", value: visualLevels.entry, y: linePixels.entry, className: "entryLine" },
+                { key: "stop", label: "STOP", value: visualLevels.stop, y: linePixels.stop, className: "stopLine" },
+              ].filter(Boolean).map((line) => (
                 <button
                   aria-label={`Drag ${line.label}`}
                   className={`plannerLine ${line.className} ${draggingLevel === line.key ? "dragging" : ""}`}
@@ -1731,16 +1839,31 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         <div className="visualPlannerPanel">
           <Metric label="Analysis Signal" value={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
           <Metric label="Journal Position" value={openPosition ? tradeStatus : "No journal position"} />
-          <Metric label="BUY" value={formatCurrency(visualLevels.entry)} />
-          <Metric label="STOP LOSS" value={formatCurrency(visualLevels.stop)} />
-          <Metric label="SELL" value={formatCurrency(visualLevels.target)} />
-          <Metric label="Risk/Reward" value={formatNumber(visualMetrics.riskReward)} />
-          <Metric label="Expected Profit" value={formatCurrency(visualMetrics.expectedProfit)} />
-          <button type="button" onClick={() => {
-            const recommended = { entry: roundPrice(setup.entry), target: roundPrice(setup.target), stop: roundPrice(setup.stop) };
-            setVisualLevels(recommended);
-            saveVisualLevels(recommended);
-          }}>Reset to Recommended Levels</button>
+          {[
+            { key: "entry", label: "ENTRY" },
+            { key: "stop", label: "STOP" },
+            { key: "target", label: "TARGET 1" },
+            { key: "target2", label: "TARGET 2" },
+          ].map((field) => (
+            <label className="manualLevelInput" key={field.key}>
+              {field.label} ({levelSources[field.key] || "custom"})
+              <span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={visualLevels[field.key] ?? ""}
+                  onChange={(event) => (event.target.value === "" ? clearVisualLevel(field.key) : updateVisualLevel(field.key, event.target.value, "custom"))}
+                />
+                {Number.isFinite(visualLevels[field.key]) ? <button type="button" onClick={() => clearVisualLevel(field.key)} aria-label={`Clear ${field.label}`}>&times;</button> : null}
+              </span>
+            </label>
+          ))}
+          <Metric label="Risk/Reward (Target 1)" value={formatNumber(visualMetrics.riskReward)} />
+          {Number.isFinite(visualMetrics.riskRewardTarget2) ? <Metric label="Risk/Reward (Target 2)" value={formatNumber(visualMetrics.riskRewardTarget2)} /> : null}
+          <Metric label="Expected Profit (Target 1)" value={formatCurrency(visualMetrics.expectedProfit)} />
+          {Number.isFinite(visualMetrics.expectedProfitTarget2) ? <Metric label="Expected Profit (Target 2)" value={formatCurrency(visualMetrics.expectedProfitTarget2)} /> : null}
+          <button type="button" onClick={resetLevelsToAnalysis}>Reset to Analysis</button>
+          {fibDrawing ? <button type="button" onClick={resetLevelsToFib}>Reset to Fib Recommendation</button> : null}
           <button type="button" onClick={addToWatchlist}>Add to Watchlist</button>
           <button className="primaryAction" type="button" onClick={openTradeConfirmation}>View Trade Plan</button>
           {saveMessage ? <p className="inlineNotice">{saveMessage}</p> : null}
@@ -1778,7 +1901,9 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               <Metric label="Current Verified Price" value={formatCurrency(tradeDraft.currentPrice)} />
               <Metric label="Entry Price" value={formatCurrency(tradeDraft.entryPrice)} />
               <Metric label="Stop Loss" value={formatCurrency(tradeDraft.stopPrice)} />
-              <Metric label="Target" value={formatCurrency(tradeDraft.targetPrice)} />
+              <Metric label="Target 1" value={formatCurrency(tradeDraft.targetPrice)} />
+              {Number.isFinite(tradeDraft.targetPrice2) ? <Metric label="Target 2" value={formatCurrency(tradeDraft.targetPrice2)} /> : null}
+              {Number.isFinite(tradeDraft.expectedProfitTarget2) ? <Metric label="Expected Profit (Target 2)" value={formatCurrency(tradeDraft.expectedProfitTarget2)} /> : null}
               <Metric label="Distance to Entry" value={`${formatCurrency(Math.abs(tradeDraft.distanceToEntry))} / ${formatPercent(Math.abs(tradeDraft.distanceToEntryPercent))}`} />
               <Metric label="Shares" value={`${tradeDraft.quantity || 0}`} />
               <Metric label="Capital" value={formatCurrency(tradeDraft.capitalRequired)} />
@@ -1885,7 +2010,16 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .fibLevel { background: transparent; border: 0; border-radius: 0; cursor: pointer; height: 18px; margin: -9px 0 0; min-height: 18px; padding: 0; pointer-events: auto; position: absolute; z-index: 3; }
         .fibLevel:before { background: rgba(255,255,255,.74); content: ""; height: 1px; left: 0; position: absolute; right: 0; top: 9px; }
         .fibLevel.selected:before, .fibLevel:hover:before { background: #fff; height: 2px; }
+        .fibLevel.extension:before { background: rgba(255,153,0,.6); border-top: 1px dashed rgba(255,153,0,.8); }
+        .fibLevel.assigned:before { height: 2px; }
+        .fibLevel.assigned-entry:before { background: rgba(94,189,255,.94); }
+        .fibLevel.assigned-stop:before { background: rgba(255,92,92,.94); }
+        .fibLevel.assigned-target:before, .fibLevel.assigned-target2:before { background: rgba(35,209,139,.92); }
         .fibLabel { background: rgba(5,8,11,.9); border: 1px solid rgba(255,255,255,.18); border-radius: 6px; color: #f8fbff; font-size: 12px; font-weight: 950; left: 0; line-height: 1; padding: 5px 7px; position: absolute; transform: translate(-100%, -50%); white-space: nowrap; }
+        .fibConfigRow { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .fibConfigRow > span { color: #aebdc4; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+        .fibExtensionToggle, .fibBufferInput { align-items: center; color: #d8e5ea; display: inline-flex; font-size: 12px; font-weight: 800; gap: 6px; }
+        .fibBufferInput input { width: 64px; }
         .fibAnchor, .fibMoveHandle { align-items: center; background: #061014; border: 3px solid #fff; border-radius: 999px; box-shadow: 0 7px 20px rgba(0,0,0,.5); cursor: grab; display: inline-flex; justify-content: center; min-height: 0; padding: 0; pointer-events: auto; position: absolute; transform: translate(-50%, -50%); z-index: 5; }
         .fibAnchor { height: 22px; width: 22px; }
         .fibAnchorOne { border-color: #ffe25c; }
@@ -1905,9 +2039,15 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .targetLine:before, .targetLine span, .targetLine strong { background: rgba(35,209,139,.92); color: #03130d; }
         .entryLine:before, .entryLine span, .entryLine strong { background: rgba(94,189,255,.94); color: #03111d; }
         .stopLine:before, .stopLine span, .stopLine strong { background: rgba(255,92,92,.94); color: #210606; }
+        .target2Line:before, .target2Line span, .target2Line strong { background: rgba(94,220,190,.85); color: #03130d; }
         .plannerLine.dragging span, .plannerLine.dragging strong { box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 30px rgba(0,0,0,.35); }
         .visualPlannerPanel { border-top: 1px solid rgba(255,255,255,.08); display: grid; gap: 12px; grid-template-columns: repeat(5,minmax(0,1fr)) repeat(3,minmax(120px,.65fr)); padding: 16px; }
         .visualPlannerPanel button { min-height: 44px; padding: 0 12px; }
+        .manualLevelInput { color: #aebdc4; display: grid; font-size: 11px; font-weight: 900; gap: 6px; text-transform: uppercase; }
+        .manualLevelInput span { align-items: center; display: flex; gap: 4px; }
+        .manualLevelInput input { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 6px; color: #fff; font-size: 15px; font-weight: 900; height: 36px; padding: 0 8px; text-transform: none; width: 100%; }
+        .manualLevelInput button { background: rgba(255,92,92,.18); border: 1px solid rgba(255,92,92,.4); border-radius: 6px; color: #ffc8c8; cursor: pointer; font-weight: 950; height: 30px; min-height: 30px; padding: 0 8px; }
+        .fibInvalidNotice { color: #ff9b9b; font-weight: 900; }
         .tradeMarkerDetails { background: rgba(5,8,11,.94); border-top: 1px solid rgba(255,255,255,.1); display: grid; gap: 7px; grid-template-columns: repeat(4,minmax(0,1fr)) auto; padding: 14px 16px; }
         .tradeMarkerDetails strong { color: #fff; text-transform: uppercase; }
         .tradeMarkerDetails span { color: #d8e5ea; font-size: 13px; }
