@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
-import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
+import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -27,11 +27,11 @@ const frequencyMs = {
   manual: 0,
 };
 
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
-function formatCurrency(value) {
-  return Number.isFinite(value) ? money.format(value) : "--";
+function formatCurrency(value, currency = "USD") {
+  if (!Number.isFinite(value)) return "--";
+  return new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
 }
 
 function formatNumber(value) {
@@ -60,6 +60,7 @@ export default function MarketOpportunities({ passwordHash }) {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
+  const [scanSummary, setScanSummary] = useState(null);
   const [updatedAt, setUpdatedAt] = useState("");
 
   useEffect(() => {
@@ -138,6 +139,7 @@ export default function MarketOpportunities({ passwordHash }) {
       if (!response.ok || !data?.ok) throw new Error(data?.error || "Market scanner is temporarily unavailable.");
       const incoming = data.results || [];
       setOffset(data.nextOffset || 0);
+      setScanSummary(data.scanSummary || null);
       setResults((current) => {
         const bySymbol = new Map((append ? current : []).map((item) => [item.symbol, item]));
         incoming.forEach((item) => bySymbol.set(item.symbol, item));
@@ -146,7 +148,6 @@ export default function MarketOpportunities({ passwordHash }) {
       saveScannerWatchlist(incoming);
       notifyNewSetups(incoming);
       setUpdatedAt(data.updatedAt || new Date().toISOString());
-      if (!incoming.length) setScanMessage(`Scanned ${data.scannedCount} of ${data.universeCount} supported symbols. No approved setup in this chunk.`);
     } catch (err) {
       setScanMessage(err.message || "Market scanner failed.");
     } finally {
@@ -157,16 +158,27 @@ export default function MarketOpportunities({ passwordHash }) {
   if (checking) return <div className="boot">Opening Market Opportunities...</div>;
   if (!unlocked) return <Gate password={password} setPassword={setPassword} error={error} onSubmit={unlock} />;
 
+  const bestOpportunity = results[0] || null;
+  const plainSummary = (() => {
+    if (!scanSummary) return "Run the scanner to see today's opportunities.";
+    if (bestOpportunity) {
+      return `${scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded} compan${(scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded) === 1 ? "y was" : "ies were"} analysed successfully. The strongest current setup is ${bestOpportunity.companyName} (${bestOpportunity.symbol}), rated ${bestOpportunity.status}.`;
+    }
+    const parts = [`${scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded} compan${(scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded) === 1 ? "y was" : "ies were"} analysed successfully with no qualifying trade yet.`];
+    if (scanSummary.dataUnavailable) parts.push(`${scanSummary.dataUnavailable} could not be checked because market data was unavailable.`);
+    if (scanSummary.disabledSymbols?.length) parts.push(`${scanSummary.disabledSymbols.length} configured symbol${scanSummary.disabledSymbols.length === 1 ? " is" : "s are"} disabled: ${scanSummary.disabledSymbols[0].reason}`);
+    return parts.join(" ");
+  })();
+
   return (
     <div className="page">
       <Head><title>Market Opportunities | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
-      <PaperAccountBar />
-      <FreedomModuleNav module="trader" paper />
+      <FreedomModuleNav module="trader" />
       <header className="hero">
         <div>
           <h1>Market Opportunities</h1>
-          <p>The watchlist follows names you know. This scanner searches supported liquid markets for new setups you have not seen yet.</p>
+          <p>This scanner only checks the exact supported symbol universe shown below. It proposes trade plans and alerts; it never places orders.</p>
         </div>
         <div className="heroStats">
           <article><span>Approved Setups</span><strong>{strongCount}</strong></article>
@@ -175,11 +187,16 @@ export default function MarketOpportunities({ passwordHash }) {
         </div>
       </header>
 
+      <section className={`plainSummary ${scanSummary ? (scanSummary.scanCompletionStatus === "complete" ? "complete" : "incomplete") : ""}`}>
+        <strong>{!scanSummary ? "No trade is ready yet." : scanSummary.scanCompletionStatus === "complete" ? "Scan completed successfully." : "Scan completed with incomplete market data."}</strong>
+        <p>{plainSummary}</p>
+      </section>
+
       <section className="settings">
         <label>Markets scanned
           <select multiple value={settings.markets} onChange={(event) => updateSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}>
-            <option value="US">S&P 500 / Nasdaq supported US shares</option>
-            <option value="ASX">ASX 200 supported Australian shares</option>
+            <option value="US">Supported US shares (NASDAQ/NYSE)</option>
+            <option value="ASX">Supported ASX Australian shares (requires a paid data plan &mdash; currently unavailable)</option>
           </select>
         </label>
         <label>Minimum score<input type="number" value={settings.minimumScore} onChange={(event) => updateSetting("minimumScore", Number(event.target.value))} /></label>
@@ -198,6 +215,21 @@ export default function MarketOpportunities({ passwordHash }) {
       </section>
 
       {scanMessage ? <section className="notice">{scanMessage}</section> : null}
+      {scanSummary ? (
+        <section className="scanSummary">
+          <article><span>Universe</span><strong>{scanSummary.universe ?? scanSummary.supportedUniverseCount}</strong></article>
+          <article><span>Requested</span><strong>{scanSummary.requested ?? scanSummary.symbolsRequested}</strong></article>
+          <article><span>Successfully Analysed</span><strong>{scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded}</strong></article>
+          <article><span>Data Unavailable</span><strong>{scanSummary.dataUnavailable ?? scanSummary.symbolsRejectedMissingData}</strong></article>
+          <article><span>Qualified</span><strong>{scanSummary.qualified ?? scanSummary.approvedOpportunities}</strong></article>
+          <article><span>Not Qualified</span><strong>{scanSummary.notQualified ?? "--"}</strong></article>
+          <div className="symbolList"><span>Symbols scanned</span><p>{scanSummary.scannedSymbols?.join(", ") || "--"}</p></div>
+          <div className="symbolList"><span>Rejected counts (analysed, no setup)</span><p>{Object.entries(scanSummary.rejectionCounts || {}).map(([reason, count]) => `${reason}: ${count}`).join("; ") || "No rejected symbols in this chunk."}</p></div>
+          <div className="symbolList"><span>Why data was unavailable</span><p>{scanSummary.dataUnavailableReasons?.length ? scanSummary.dataUnavailableReasons.join("; ") : "None in this batch."}</p></div>
+          {scanSummary.disabledSymbols?.length ? <div className="symbolList"><span>Disabled symbols (not scanned)</span><p>{scanSummary.disabledSymbols.map((item) => `${item.symbol}: ${item.reason}`).join(" | ")}</p></div> : null}
+          <div className="symbolList"><span>Scan timing</span><p>{scanSummary.scanStartedAt || "--"} to {scanSummary.scanCompletedAt || "--"}</p></div>
+        </section>
+      ) : null}
 
       <main className="panel">
         <div className="panelHeader">
@@ -208,32 +240,34 @@ export default function MarketOpportunities({ passwordHash }) {
           <table>
             <thead>
               <tr>
-                <th>Company</th><th>Trading Score</th><th>Confidence</th><th>Current Price</th>
-                <th>Recommended Entry</th><th>Stop Loss</th><th>Target</th><th>Risk/Reward</th><th>Trade Type</th><th>Status</th><th>Reason</th>
+                <th>Company</th><th>Market</th><th>Trading Score</th><th>Confidence</th><th>Current Price</th>
+                <th>Recommended Entry</th><th>Stop Loss</th><th>Target</th><th>Risk/Reward</th><th>Trade Type</th><th>Status</th><th>Reason</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
               {results.map((row) => (
                 <tr key={row.symbol}>
-                  <td><Link href={`/freedom/company/${row.symbol}?from=scanner`}>{row.companyName}</Link><small>{row.symbol}</small></td>
+                  <td><Link href={traderCompanyHref(row.symbol, "from=scanner")}>{row.companyName}</Link><small>{row.symbol}</small></td>
+                  <td>{row.exchange || "--"}<small>{row.currency || "USD"}</small></td>
                   <td>{formatNumber(row.tradingScore)}</td>
                   <td>{formatNumber(row.confidence)}%</td>
-                  <td>{formatCurrency(row.currentPrice)}</td>
-                  <td>{formatCurrency(row.recommendedEntry)}</td>
-                  <td>{formatCurrency(row.stopLoss)}</td>
-                  <td>{formatCurrency(row.target)}</td>
+                  <td>{formatCurrency(row.currentPrice, row.currency)}<small>{row.dataQuality === "live" ? "Live" : row.dataQuality === "daily-only" ? "Daily close" : "Delayed"}</small></td>
+                  <td>{formatCurrency(row.recommendedEntry, row.currency)}</td>
+                  <td>{formatCurrency(row.stopLoss, row.currency)}</td>
+                  <td>{formatCurrency(row.target, row.currency)}</td>
                   <td>{formatNumber(row.riskReward)}</td>
                   <td>{row.setupType}</td>
                   <td><span className={`status ${String(row.status).replace(/\s+/g, "").toLowerCase()}`}>{row.status}</span></td>
                   <td>{row.reason}</td>
+                  <td><Link className="prepareTradeLink" href={traderCompanyHref(row.symbol, "from=scanner&prepare=1")}>Prepare Trade</Link></td>
                 </tr>
               ))}
-              {!results.length ? <tr><td colSpan="11">Run the scanner to find approved opportunities.</td></tr> : null}
+              {!results.length ? <tr><td colSpan="13">Run the scanner to find approved opportunities.</td></tr> : null}
             </tbody>
           </table>
         </div>
       </main>
-      <footer>No real trades are placed. The scanner identifies opportunities and creates alerts only.</footer>
+      <footer>No real trades are placed. The scanner identifies opportunities; use alerts, watchlists, and the trade journal to manage broker-confirmed activity. This is a rules-based trading plan, not a guarantee of profit &mdash; confirm prices and place the order through your broker.</footer>
       <Styles />
     </div>
   );
@@ -254,7 +288,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.settings,.panel,.notice,footer{margin:0 auto;max-width:1760px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.settings,.notice,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{display:flex;gap:28px;justify-content:space-between;padding:28px}.platformSwitch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.platformSwitch a,.hero a{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#d8e5ea;font-weight:950;padding:9px 13px;text-decoration:none}.platformSwitch a.active{background:#0057d9;border-color:#0057d9;color:#fff}h1,h2,p{margin:0}h1{font-size:52px}p,footer{color:#aebdc4}.heroStats{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));min-width:360px}.heroStats article,.settings label{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.heroStats span,label{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.heroStats strong{display:block;font-size:28px;margin-top:8px}.settings{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;padding:16px}label{display:grid;gap:8px}input,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:42px;padding:8px 10px}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:42px;padding:0 14px}.notice{color:#b8f4e6;font-weight:850;margin-top:18px;padding:14px 16px}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;padding:18px 20px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1540px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px 14px;text-align:left;vertical-align:top}th{background:rgba(255,255,255,.04);color:#aebdc4;font-size:12px;text-transform:uppercase;white-space:nowrap}td{color:#e7eef2;font-size:13px}td a{color:#d7efff;display:block;font-weight:950;text-decoration:none}td small{color:#aebdc4;display:block;font-size:11px;font-weight:900;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px;white-space:nowrap}.status.buynow{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);color:#b8f4e6}.status.waitforentry{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.watch{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.notrade{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}footer{font-size:13px;margin-top:20px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.hero{flex-direction:column}.settings{grid-template-columns:repeat(2,minmax(0,1fr))}.heroStats{min-width:0}}@media(max-width:720px){.page{padding:88px 16px 16px}.settings,.heroStats{grid-template-columns:1fr}h1{font-size:40px}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.settings,.panel,.notice,.scanSummary,footer{margin:0 auto;max-width:1760px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.settings,.notice,.scanSummary,.scanSummary article,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{display:flex;gap:28px;justify-content:space-between;padding:28px}.platformSwitch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.platformSwitch a,.hero a{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#d8e5ea;font-weight:950;padding:9px 13px;text-decoration:none}.platformSwitch a.active{background:#0057d9;border-color:#0057d9;color:#fff}h1,h2,p{margin:0}h1{font-size:52px}p,footer{color:#aebdc4}.heroStats{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));min-width:360px}.heroStats article,.settings label{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.heroStats span,label,.scanSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.heroStats strong,.scanSummary strong{display:block;font-size:28px;margin-top:8px}.settings,.scanSummary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;padding:16px}.scanSummary .symbolList{grid-column:1/-1}.scanSummary .symbolList p{font-size:12px;line-height:1.6;max-height:76px;overflow:auto}.scanSummary article{padding:14px}label{display:grid;gap:8px}input,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:42px;padding:8px 10px}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:42px;padding:0 14px}.notice{color:#b8f4e6;font-weight:850;margin-top:18px;padding:14px 16px}.plainSummary{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-top:18px;padding:16px 18px}.plainSummary.complete{border-color:rgba(35,209,139,.4)}.plainSummary.incomplete{border-color:rgba(255,153,0,.4)}.plainSummary strong{color:#fff;display:block;font-size:16px}.plainSummary p{color:#c7d4d9;margin-top:6px}.prepareTradeLink{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);border-radius:999px;color:#b8f4e6;display:inline-block;font-size:11px;font-weight:950;padding:7px 10px;text-decoration:none;white-space:nowrap}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;padding:18px 20px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1640px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px 14px;text-align:left;vertical-align:top}th{background:rgba(255,255,255,.04);color:#aebdc4;font-size:12px;text-transform:uppercase;white-space:nowrap}td{color:#e7eef2;font-size:13px}td a{color:#d7efff;display:block;font-weight:950;text-decoration:none}td small{color:#aebdc4;display:block;font-size:11px;font-weight:900;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px;white-space:nowrap}.status.buynow{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);color:#b8f4e6}.status.waitforentry{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.watch{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.notrade{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}footer{font-size:13px;margin-top:20px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.hero{flex-direction:column}.settings,.scanSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.heroStats{min-width:0}}@media(max-width:720px){.page{padding:88px 16px 16px}.settings,.scanSummary,.heroStats{grid-template-columns:1fr}h1{font-size:40px}}
   `}</style>;
 }
 
