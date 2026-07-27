@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
 import ProductImagePicker from "./ProductImagePicker";
 import ProductAdditionalImages from "./ProductAdditionalImages";
 import {
+  IMAGE_SOURCE_TYPES,
   LIBRARY_SCOPES,
   PRICE_BANDS,
   PRICING_MODES,
   PRICING_TIERS,
   UPGRADE_VALUE_MODES,
+  VERIFICATION_STATUSES,
   defaultRequiresImageForCategory,
 } from "../../lib/product-library/constants";
 import { computeUpgradeValue, effectiveUpgradeValue, money, upgradeImpactLabel } from "../../lib/product-library/helpers";
+import { isValidProductUrl } from "../../lib/product-library/urlValidation";
 
 const EMPTY_FORM = {
   product_name: "",
@@ -48,6 +52,11 @@ const EMPTY_FORM = {
   primary_image_url: "",
   additional_image_urls: [],
   datasheet_pdf_url: "",
+  manufacturer_product_url: "",
+  image_source_url: "",
+  image_source_type: "",
+  verification_status: "unverified",
+  date_last_verified: "",
   notes: "",
   client_notes: "",
 };
@@ -127,6 +136,9 @@ export default function ProductDetailDrawer({
   const effectiveValue = effectiveUpgradeValue(form);
   const impactLabel = upgradeImpactLabel(effectiveValue);
   const groupedCategories = groupCategoriesBySelectionGroup(categories);
+  const productUrlCheck = isValidProductUrl(form.product_url);
+  const manufacturerUrlCheck = isValidProductUrl(form.manufacturer_product_url);
+  const canSaveUrls = productUrlCheck.ok && manufacturerUrlCheck.ok;
 
   return (
     <div className="drawer-overlay" onClick={onCancel}>
@@ -295,6 +307,69 @@ export default function ProductDetailDrawer({
               Specification PDF <span className="optional">(URL, optional)</span>
               <input value={form.datasheet_pdf_url} onChange={(event) => update("datasheet_pdf_url", event.target.value)} placeholder="https://..." />
             </label>
+
+            <p className="field-label">Product Links</p>
+            <label>
+              Supplier Product URL <span className="optional">(direct product page, not the supplier's home page)</span>
+              <input
+                value={form.product_url}
+                onChange={(event) => update("product_url", event.target.value)}
+                placeholder="https://www.supplier.com/products/exact-model"
+              />
+            </label>
+            {!productUrlCheck.ok && <p className="field-error">{productUrlCheck.error}</p>}
+            {productUrlCheck.ok && productUrlCheck.warning && <p className="field-warning">{productUrlCheck.warning}</p>}
+            {productUrlCheck.ok && !productUrlCheck.empty && (
+              <a className="view-product-link" href={productUrlCheck.url} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={14} /> View Product Website
+              </a>
+            )}
+            {(productUrlCheck.empty || !productUrlCheck.ok) && (
+              <p className="hint">Product website not available.</p>
+            )}
+            <label>
+              Manufacturer Product URL <span className="optional">(optional)</span>
+              <input
+                value={form.manufacturer_product_url}
+                onChange={(event) => update("manufacturer_product_url", event.target.value)}
+                placeholder="https://www.manufacturer.com/products/exact-model"
+              />
+            </label>
+            {!manufacturerUrlCheck.ok && <p className="field-error">{manufacturerUrlCheck.error}</p>}
+
+            <p className="field-label">Image Verification</p>
+            <div className="grid two">
+              <label>
+                Image Source URL <span className="optional">(where this photo came from, optional)</span>
+                <input value={form.image_source_url} onChange={(event) => update("image_source_url", event.target.value)} placeholder="https://..." />
+              </label>
+              <label>
+                Image Source Type
+                <select value={form.image_source_type} onChange={(event) => update("image_source_type", event.target.value)}>
+                  <option value="">Not set</option>
+                  {IMAGE_SOURCE_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Verification Status
+                <select value={form.verification_status} onChange={(event) => update("verification_status", event.target.value)}>
+                  {VERIFICATION_STATUSES.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Date Last Verified
+                <input type="date" value={form.date_last_verified || ""} onChange={(event) => update("date_last_verified", event.target.value)} />
+              </label>
+            </div>
+            {form.verification_status !== "exact_model_verified" && (
+              <p className="hint warning">
+                This image is not confirmed as the exact model — it will not be presented to a client as verified.
+              </p>
+            )}
           </section>
 
           <section>
@@ -425,10 +500,10 @@ export default function ProductDetailDrawer({
           </div>
           <div className="right">
             <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
-            <button type="button" disabled={saving || !form.product_name.trim()} onClick={() => onSave(form, { close: false })}>
+            <button type="button" disabled={saving || !form.product_name.trim() || !canSaveUrls} onClick={() => onSave(form, { close: false })}>
               {saving ? "Saving..." : "Save"}
             </button>
-            <button type="button" disabled={saving || !form.product_name.trim()} onClick={() => onSave(form, { close: true })}>
+            <button type="button" disabled={saving || !form.product_name.trim() || !canSaveUrls} onClick={() => onSave(form, { close: true })}>
               Save &amp; Close
             </button>
           </div>
@@ -568,6 +643,33 @@ export default function ProductDetailDrawer({
           margin: 4px 0 10px;
           color: #93a4bd;
           font-size: 12px;
+        }
+        .hint.warning {
+          color: #fbbf24;
+        }
+        .field-error {
+          margin: -4px 0 10px;
+          color: #fca5a5;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .field-warning {
+          margin: -4px 0 10px;
+          color: #fbbf24;
+          font-size: 12px;
+        }
+        .view-product-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin: -2px 0 12px;
+          color: #38bdf8;
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+        }
+        .view-product-link:hover {
+          text-decoration: underline;
         }
         .advanced {
           border-top: 1px dashed rgba(148, 163, 184, 0.25);

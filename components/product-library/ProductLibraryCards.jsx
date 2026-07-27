@@ -1,6 +1,8 @@
 import { memo } from "react";
 import { money, computeSellPrice, isMissingRequiredImage, effectiveUpgradeValue, upgradeImpactLabel } from "../../lib/product-library/helpers";
 import { PRICING_TIERS } from "../../lib/product-library/constants";
+import ExternalProductLink from "./ExternalProductLink";
+import ProductImageMagnifier from "./ProductImageMagnifier";
 
 function tierLabel(tier) {
   return PRICING_TIERS.find((entry) => entry.value === (tier || "CLASSIC"))?.label || "Classic";
@@ -26,20 +28,48 @@ function Card({ product, categoryName, supplierName, manufacturerName, canViewCo
     );
   }
 
+  // A plain <button> can't contain the image's <a>/magnifier <button> (invalid,
+  // non-interactive-nesting HTML) — the card is a div with button semantics so
+  // the image/name can open the real product page in a new tab independently
+  // of opening the editor, per the "two separate actions" requirement.
   return (
-    <button type="button" className="card visual" onClick={() => onOpen(product)}>
+    <div
+      role="button"
+      tabIndex={0}
+      className="card visual"
+      onClick={() => onOpen(product)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(product); }
+      }}
+    >
       <span className="thumb">
-        {product.primary_image_url ? (
-          <img src={product.primary_image_url} alt={product.product_name} loading="lazy" />
-        ) : missingImage ? (
-          <span className="required-badge">Image required</span>
-        ) : (
-          <span className="placeholder">No Product Image Available</span>
-        )}
+        <ExternalProductLink url={product.product_url} className="thumb-link" showIcon={false}>
+          {product.primary_image_url ? (
+            <img src={product.primary_image_url} alt={product.product_name} loading="lazy" />
+          ) : missingImage ? (
+            <span className="required-badge">Image required</span>
+          ) : (
+            <span className="placeholder">No Product Image Available</span>
+          )}
+        </ExternalProductLink>
+        <ProductImageMagnifier
+          imageUrl={product.primary_image_url}
+          name={product.product_name}
+          brand={manufacturerName}
+          model={product.model}
+          colour={product.colour}
+          finish={product.finish}
+          supplier={supplierName}
+          verificationStatus={product.verification_status}
+          productUrl={product.product_url}
+          triggerClassName="thumb-magnifier"
+        />
         <span className="tier-badge">{tierLabel(product.pricing_tier)}</span>
       </span>
       <span className="body">
-        <strong>{product.product_name}</strong>
+        <ExternalProductLink url={product.product_url} showIcon>
+          <strong>{product.product_name}</strong>
+        </ExternalProductLink>
         <small>{manufacturerName || "No brand"}{product.model ? ` · ${product.model}` : ""}</small>
         <small>{[categoryName, product.subcategory].filter(Boolean).join(" · ") || categoryName}</small>
         <small>{supplierName || "No supplier"}</small>
@@ -47,7 +77,7 @@ function Card({ product, categoryName, supplierName, manufacturerName, canViewCo
         {canViewCosts && <small className="price">{money(product.cost_price) || money(product.retail_price)}{sellPrice != null ? ` → ${money(sellPrice)}` : ""}</small>}
       </span>
       <span className={product.active === false ? "status inactive" : "status active"}>{product.active === false ? "Inactive" : "Active"}</span>
-    </button>
+    </div>
   );
 }
 
@@ -115,6 +145,17 @@ export default function ProductLibraryCards({ products, categoryById, supplierBy
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+        .card.visual .thumb :global(.thumb-link) {
+          display: grid;
+          place-items: center;
+          width: 100%;
+          height: 100%;
+        }
+        .card.visual .thumb :global(.thumb-magnifier) {
+          position: absolute;
+          bottom: 8px;
+          right: 8px;
         }
         .required-badge {
           color: #fbbf24;

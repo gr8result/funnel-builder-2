@@ -4,8 +4,7 @@ import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
 import { buildHeikinAshiCandles, FreedomChartDisplayToggles, FreedomChartTypeSelector, FREEDOM_CHART_TYPES, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
-import PaperAccountBar from "../../../components/freedom-trader/PaperAccountBar";
-import PaperOrderTicket from "../../../components/freedom-trader/PaperOrderTicket";
+import { canonicalCompanyTicker, companyMeta } from "../../../lib/freedom/companyRoutes";
 import { normalizeSignalLabel, signalClassName } from "../../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
@@ -55,6 +54,8 @@ const CHART_INTERVALS = [
 ];
 
 const COMPANIES = {
+  AAPL: { companyName: "Apple", sector: "Technology", logoText: "AP", primaryColor: "#A2AAAD", secondaryColor: "#111827" },
+  MSFT: { companyName: "Microsoft", sector: "Software", logoText: "MS", primaryColor: "#00A4EF", secondaryColor: "#7FBA00" },
   NVDA: { companyName: "NVIDIA", sector: "Semiconductors", logoText: "NV", primaryColor: "#76B900", secondaryColor: "#0B3D02" },
   AMD: { companyName: "Advanced Micro Devices", sector: "Semiconductors", logoText: "AM", primaryColor: "#ED1C24", secondaryColor: "#111827" },
   TSLA: { companyName: "Tesla", sector: "EV & Energy", logoText: "TS", primaryColor: "#E82127", secondaryColor: "#151515" },
@@ -65,6 +66,9 @@ const COMPANIES = {
   COIN: { companyName: "Coinbase", sector: "Crypto Infrastructure", logoText: "CO", primaryColor: "#0052FF", secondaryColor: "#08111F" },
   MSTR: { companyName: "MicroStrategy", sector: "Bitcoin Treasury", logoText: "MS", primaryColor: "#D9232E", secondaryColor: "#111827" },
   SMCI: { companyName: "Super Micro Computer", sector: "AI Infrastructure", logoText: "SM", primaryColor: "#2AA7DF", secondaryColor: "#101828" },
+  "CBA.AX": { companyName: "Commonwealth Bank", sector: "Financials", logoText: "CB", primaryColor: "#FFCC00", secondaryColor: "#111827" },
+  "BHP.AX": { companyName: "BHP Group", sector: "Materials", logoText: "BH", primaryColor: "#E35205", secondaryColor: "#111827" },
+  "CSL.AX": { companyName: "CSL", sector: "Healthcare", logoText: "CS", primaryColor: "#E1261C", secondaryColor: "#111827" },
 };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -129,6 +133,10 @@ function futureTimeSlots(candles, interval) {
     if (isDailyInterval(interval)) return addTradingDays(lastTime, index + 1).toISOString().slice(0, 10);
     return new Date(lastTime.getTime() + intervalMinutes(interval) * 60_000 * (index + 1)).toISOString();
   });
+}
+
+function emptyOhlcPoint() {
+  return [null, null, null, null];
 }
 
 function loadStoredChartType() {
@@ -313,6 +321,7 @@ function analyseSetup(symbol, quote, candles) {
 
 function mapServerAnalysisToSetup(symbol, analysis, fallbackSetup) {
   if (!analysis) return fallbackSetup;
+  const opportunity = analysis.opportunity || {};
   return {
     symbol,
     currentPrice: analysis.currentPrice,
@@ -335,21 +344,25 @@ function mapServerAnalysisToSetup(symbol, analysis, fallbackSetup) {
     trend: analysis.trend,
     status: analysis.status,
     signalResult: analysis.signalResult,
+    opportunity,
     legacySetupStatus: analysis.legacySetupStatus,
     confidence: analysis.confidence,
-    entry: analysis.setup?.plannedEntry ?? null,
-    target: analysis.setup?.target ?? null,
-    stop: analysis.setup?.stop ?? null,
-    risk: analysis.setup?.riskPerShare ?? null,
-    reward: analysis.setup?.rewardPerShare ?? null,
-    riskReward: analysis.setup?.riskRewardRatio ?? null,
-    suggestedQuantity: analysis.setup?.riskPerShare ? Math.max(1, Math.floor(1000 / analysis.setup.riskPerShare)) : 1,
+    entry: opportunity.proposedEntryLow ?? analysis.setup?.plannedEntry ?? null,
+    entryHigh: opportunity.proposedEntryHigh ?? analysis.setup?.plannedEntry ?? null,
+    target: opportunity.target1 ?? analysis.setup?.target ?? null,
+    target2: opportunity.target2 ?? null,
+    stop: opportunity.stopLoss ?? analysis.setup?.stop ?? null,
+    risk: opportunity.riskPerShare ?? analysis.setup?.riskPerShare ?? null,
+    reward: opportunity.rewardPerShare ?? analysis.setup?.rewardPerShare ?? null,
+    riskReward: opportunity.riskReward ?? analysis.setup?.riskRewardRatio ?? null,
+    suggestedQuantity: opportunity.riskPerShare ? Math.max(1, Math.floor(1000 / opportunity.riskPerShare)) : analysis.setup?.riskPerShare ? Math.max(1, Math.floor(1000 / analysis.setup.riskPerShare)) : 1,
     maximumRisk: 1000,
     expectedHoldingPeriod: analysis.setup?.expectedHoldingPeriod || analysis.dataStatus?.status || "Waiting for scanner",
     expiresAt: analysis.setup?.setupExpiryDate,
-    reasoning: analysis.setup?.setupReasoning || analysis.dataStatus?.status || "Waiting for complete setup inputs.",
+    reasoning: opportunity.reasonsFor?.join(", ") || analysis.setup?.setupReasoning || analysis.dataStatus?.status || "Waiting for complete setup inputs.",
     scoreExplanation: analysis.scoreExplanation || {},
     marketData: analysis.marketData,
+    dataStatus: analysis.dataStatus,
   };
 }
 
@@ -400,17 +413,17 @@ function PasswordGate({ passwordHash, onUnlock }) {
   );
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps(context) {
   const { createHash } = await import("crypto");
   const password = process.env.FREEDOM_TERMINAL_PASSWORD || "freedom123";
   const passwordHash = createHash("sha256").update(`${PASSWORD_SALT}:${password}`).digest("hex");
-  return { props: { passwordHash } };
+  return { props: { passwordHash, initialSymbol: canonicalCompanyTicker(context.params?.symbol || "NVDA") } };
 }
 
-export default function TraderCompany({ passwordHash }) {
+export default function TraderCompany({ passwordHash, initialSymbol }) {
   const router = useRouter();
-  const symbol = String(router.query.symbol || "NVDA").toUpperCase();
-  const company = COMPANIES[symbol] || { companyName: symbol, sector: "Trading Watchlist", logoText: symbol.slice(0, 2), primaryColor: "#ff9900", secondaryColor: "#1d9bff" };
+  const symbol = canonicalCompanyTicker(router.query.symbol || initialSymbol || "NVDA");
+  const company = COMPANIES[symbol] || { ...companyMeta(symbol), logoText: symbol.slice(0, 2), primaryColor: "#ff9900", secondaryColor: "#1d9bff" };
   const chartRef = useRef(null);
   const chartNodeRef = useRef(null);
   const chartRangeRef = useRef(null);
@@ -435,9 +448,6 @@ export default function TraderCompany({ passwordHash }) {
   const [chartError, setChartError] = useState("");
   const [chartMeta, setChartMeta] = useState(null);
   const [openPosition, setOpenPosition] = useState(null);
-  const [paperPosition, setPaperPosition] = useState(null);
-  const [paperOrders, setPaperOrders] = useState([]);
-  const [paperTrades, setPaperTrades] = useState([]);
   const [selectedTradeMarker, setSelectedTradeMarker] = useState(null);
   const [displayToggles, setDisplayToggles] = useState({
     tradePlan: true,
@@ -447,9 +457,6 @@ export default function TraderCompany({ passwordHash }) {
     fibonacci: true,
     volume: true,
   });
-  const [buyModalOpen, setBuyModalOpen] = useState(false);
-  const [paperTicketMode, setPaperTicketMode] = useState("buy");
-  const [buyForm, setBuyForm] = useState({});
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [tradeDraft, setTradeDraft] = useState(null);
   const [manualBuyForm, setManualBuyForm] = useState(null);
@@ -492,6 +499,7 @@ export default function TraderCompany({ passwordHash }) {
         setError("");
         setChartError("");
         setChartMeta(null);
+        setCandles([]);
         const [analysisResponse, historyResponse] = await Promise.all([
           fetch(`/api/freedom-trader/analysis?symbol=${symbol}`),
           tabHidden
@@ -513,18 +521,10 @@ export default function TraderCompany({ passwordHash }) {
           setCandles([]);
           setChartError(historyData?.error || "Historical data temporarily unavailable.");
         }
-        const [positionsResponse, paperResponse] = await Promise.all([
-          fetch("/api/freedom-trader/positions"),
-          fetch("/api/freedom-trader/paper-account"),
-        ]);
+        const positionsResponse = await fetch("/api/freedom-trader/positions");
         const positionsData = await positionsResponse.json().catch(() => null);
-        const paperData = await paperResponse.json().catch(() => null);
         const existingPosition = positionsData?.positions?.find((position) => position.symbol === symbol && position.status === "open");
         setOpenPosition(existingPosition || null);
-        const existingPaperPosition = paperData?.positions?.find((position) => position.ticker === symbol);
-        setPaperPosition(existingPaperPosition || null);
-        setPaperOrders((paperData?.orders || paperData?.pendingOrders || []).filter((order) => order.ticker === symbol));
-        setPaperTrades((paperData?.trades || []).filter((trade) => trade.ticker === symbol));
       } catch (err) {
         console.error("Freedom Trader company load failed:", err);
         setError(err.message || "Trading data temporarily unavailable.");
@@ -601,78 +601,28 @@ export default function TraderCompany({ passwordHash }) {
     };
   }, [portfolioValue, maxRiskPercent, setup.entry, setup.reward, setup.risk, shareOverride, tradingCapital]);
 
-  function openBuyModal() {
-    setSaveMessage("");
-    setPaperTicketMode("buy");
-    setBuyForm({
-      symbol,
-      currentPrice: setup.currentPrice || "",
-      quantityMode: "1",
-      customQuantity: "",
-      entryPrice: setup.entry || setup.currentPrice || "",
-      targetPrice: setup.target || "",
-      stopPrice: setup.stop || "",
-      brokerage: 0,
-      notes: "",
-    });
-    setBuyModalOpen(true);
-  }
+  const autoPrepareRequested = router.query.prepare === "1";
+  useEffect(() => {
+    if (!autoPrepareRequested || loading || tradeModalOpen || !unlocked) return;
+    openTradeConfirmation();
+  }, [autoPrepareRequested, loading, tradeModalOpen, unlocked]);
 
-  function openSellModal() {
-    setSaveMessage("");
-    setPaperTicketMode("sell");
-    setBuyModalOpen(true);
-  }
-
-  function buyQuantity() {
-    return buyForm.quantityMode === "custom" ? Number(buyForm.customQuantity) : Number(buyForm.quantityMode || 1);
-  }
-
-  function buyRiskReward() {
-    const entry = Number(buyForm.entryPrice);
-    const target = Number(buyForm.targetPrice);
-    const stop = Number(buyForm.stopPrice);
-    const risk = entry - stop;
-    const reward = target - entry;
-    return risk > 0 ? reward / risk : null;
-  }
-
-  async function recordBuy() {
-    const quantity = Math.floor(buyQuantity());
-    const entryPrice = Number(buyForm.entryPrice);
-    const targetPrice = Number(buyForm.targetPrice);
-    const stopPrice = Number(buyForm.stopPrice);
-    const rr = buyRiskReward();
-    if (quantity < 1 || !entryPrice || entryPrice <= 0 || !targetPrice || targetPrice <= entryPrice || !stopPrice || stopPrice >= entryPrice) {
-      setSaveMessage("Enter quantity >= 1, positive entry, target above entry and stop below entry.");
-      return;
-    }
-    if (Number.isFinite(rr) && rr < 2) {
-      const confirmed = window.confirm("Risk/reward is below 2:1. Confirm you deliberately want to save this trade anyway.");
-      if (!confirmed) return;
-    }
+  function addToWatchlist() {
     try {
-      const response = await fetch("/api/freedom-trader/positions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbol,
-          companyName: company.companyName,
-          quantity,
-          entryPrice,
-          targetPrice,
-          stopPrice,
-          brokerage: Number(buyForm.brokerage || 0),
-          notes: buyForm.notes,
-        }),
+      const key = "freedom-trader-scanner-watchlist";
+      const current = JSON.parse(window.localStorage.getItem(key) || "[]");
+      const bySymbol = new Map(current.map((item) => [item.symbol, item]));
+      bySymbol.set(symbol, {
+        symbol,
+        companyName: company.companyName,
+        sector: company.sector,
+        addedAt: new Date().toISOString(),
+        reason: `${centralSignal.overallSignal} trade-plan watchlist add`,
       });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.ok) throw new Error(data?.error || "Unable to save trade.");
-      setSaveMessage("Trade recorded. Target and stop alerts created.");
-      window.location.href = "/freedom-trader/positions";
-    } catch (err) {
-      console.error("Freedom Trader record buy failed:", err);
-      setSaveMessage(err.message || "Unable to save trade.");
+      window.localStorage.setItem(key, JSON.stringify(Array.from(bySymbol.values()).slice(-80)));
+      setSaveMessage(`${symbol} added to the Freedom Trader watchlist.`);
+    } catch {
+      setSaveMessage("Unable to update the local watchlist.");
     }
   }
 
@@ -804,7 +754,19 @@ export default function TraderCompany({ passwordHash }) {
       sharesPurchased: tradeDraft.quantity || 1,
       brokerageCost: 0,
       purchaseDateTime: new Date().toISOString().slice(0, 16),
+      brokerReference: "",
+      notes: "",
     });
+  }
+
+  function openBroker() {
+    window.open("https://www.cmcmarkets.com/en-au/login", "_blank", "noopener,noreferrer");
+  }
+
+  function cancelSetup() {
+    setSaveMessage(`${symbol} setup cancelled. No trade was placed.`);
+    setManualBuyForm(null);
+    setTradeModalOpen(false);
   }
 
   async function createAllAlerts(draft = tradeDraft) {
@@ -920,6 +882,31 @@ export default function TraderCompany({ passwordHash }) {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.ok) throw new Error(data?.error || "Unable to record manual buy.");
+      try {
+        await fetch("/api/freedom-trader/trade-journal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticker: symbol,
+            company: company.companyName,
+            exchange: analysis?.exchange || "NASDAQ",
+            currency: setup.currentPrice && String(symbol).endsWith(".AX") ? "AUD" : "USD",
+            side: "buy",
+            tradeDateTime: new Date(purchaseDateTime).toISOString(),
+            quantity: sharesPurchased,
+            actualFillPrice: actualPurchasePrice,
+            brokerageFees: brokerageCost,
+            stopLoss: draft.stopPrice,
+            target: draft.targetPrice,
+            status: "open",
+            documentReference: manualBuyForm?.brokerReference || "",
+            notes: manualBuyForm?.notes || "Manual broker buy recorded from Freedom Trader chart.",
+            openPositionId: data.position?.id || null,
+          }),
+        });
+      } catch (journalError) {
+        console.error("Freedom Trader journal log for buy failed:", journalError);
+      }
       setSaveMessage("Manual buy recorded. Opening positions...");
       window.location.href = "/freedom-trader/positions";
     } catch (error) {
@@ -1023,70 +1010,35 @@ export default function TraderCompany({ passwordHash }) {
         return nextDiff < bestDiff ? date : best;
       }, dates[0]);
     };
-    const tradeMarkers = paperTrades.map((trade) => {
-      const side = String(trade.side || "").toLowerCase();
-      const realised = Number(trade.realised_profit_loss);
-      return {
-        name: side === "sell" ? "Completed sell" : "Completed buy",
-        value: [closestDate(trade.traded_at), Number(trade.price)],
-        symbol: side === "sell" ? "triangle" : "pin",
-        symbolSize: 18,
-        itemStyle: { color: side === "sell" ? "#ff5c5c" : "#23d18b" },
-        label: {
-          formatter: `${side === "sell" ? "SELL" : "BUY"} ${trade.quantity} @ ${formatCurrency(Number(trade.price))}${Number.isFinite(realised) ? `\nPROFIT ${formatCurrency(realised)}` : ""}`,
-        },
-        markerDetail: {
-          type: side === "sell" ? "completed sell" : "completed buy",
-          dateTime: trade.traded_at,
-          quantity: trade.quantity,
-          fillPrice: Number(trade.price),
-          fees: Number(trade.brokerage_fee),
-          orderType: "filled paper order",
-          realisedProfitLoss: Number.isFinite(realised) ? realised : null,
-          exitReason: trade.exit_reason || null,
-        },
-      };
-    }).filter((marker) => Number.isFinite(marker.value[1]));
-    const orderMarkers = paperOrders.filter((order) => order.status === "pending").map((order) => ({
-      name: "Pending limit order",
-      value: [closestDate(order.created_at), Number(order.requested_price)],
-      symbol: "diamond",
-      symbolSize: 16,
-      itemStyle: { color: "#ffe25c" },
-      label: { formatter: `PENDING ${String(order.side || "").toUpperCase()} ${order.quantity} @ ${formatCurrency(Number(order.requested_price))}` },
-      markerDetail: {
-        type: "pending limit order",
-        dateTime: order.created_at,
-        quantity: order.quantity,
-        fillPrice: null,
-        fees: Number(order.brokerage_fee),
-        orderType: order.order_type,
-        realisedProfitLoss: null,
-        exitReason: null,
-      },
-    })).filter((marker) => Number.isFinite(marker.value[1]));
+    const tradeMarkers = [];
+    const orderMarkers = [];
     return {
       dates,
       candles: [
         ...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]),
-        ...futureDates.map(() => ["-", "-", "-", "-"]),
+        ...futureDates.map(emptyOhlcPoint),
       ],
-      closeLine: [...displayCandles.map((candle) => candle.close), ...futureDates.map(() => "-")],
-      ohlcBars: [...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]), ...futureDates.map(() => ["-", "-", "-", "-"])],
-      volume: [...candles.map((candle) => candle.volume || 0), ...futureDates.map(() => "-")],
+      closeLine: [...displayCandles.map((candle) => candle.close), ...futureDates.map(() => null)],
+      ohlcBars: [...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]), ...futureDates.map(emptyOhlcPoint)],
+      volume: [...candles.map((candle) => candle.volume || 0), ...futureDates.map(() => null)],
       tradeMarkers,
       orderMarkers,
       realCount: candles.length,
       futureCount: futureDates.length,
     };
-  }, [candles, chartInterval, chartType, paperOrders, paperTrades]);
+  }, [candles, chartInterval, chartType]);
 
   const chartPointFromEvent = useCallback((event) => {
     const chart = chartRef.current;
     const node = chartNodeRef.current;
     if (!chart || !node || !chartData.dates.length) return null;
     const rect = node.getBoundingClientRect();
-    const raw = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [event.clientX - rect.left, event.clientY - rect.top]);
+    let raw;
+    try {
+      raw = chart.convertFromPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [event.clientX - rect.left, event.clientY - rect.top]);
+    } catch {
+      return null;
+    }
     if (!Array.isArray(raw)) return null;
     const rawIndex = typeof raw[0] === "number" ? raw[0] : chartData.dates.indexOf(raw[0]);
     const index = clamp(Math.round(rawIndex), 0, chartData.dates.length - 1);
@@ -1100,7 +1052,12 @@ export default function TraderCompany({ passwordHash }) {
     if (!chart || !candles.length) return;
     const fallbackDate = candles[candles.length - 1]?.date;
     const toPoint = (date, price) => {
-      const value = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [date || fallbackDate, price]);
+      let value;
+      try {
+        value = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [date || fallbackDate, price]);
+      } catch {
+        return null;
+      }
       return Array.isArray(value) ? { x: value[0], y: value[1] } : null;
     };
     const currentVisualLevels = visualLevelsRef.current;
@@ -1340,10 +1297,14 @@ export default function TraderCompany({ passwordHash }) {
   useEffect(() => {
     let disposed = false;
     async function renderChart() {
-      if (!chartNodeRef.current || !chartData.realCount) return;
+      if (!chartNodeRef.current) return;
       const echarts = await import("echarts");
       if (disposed) return;
       if (!chartRef.current) chartRef.current = echarts.init(chartNodeRef.current, null, { renderer: "canvas" });
+      if (!chartData.realCount) {
+        chartRef.current.clear();
+        return;
+      }
       const totalCount = chartData.dates.length;
       const realCount = chartData.realCount;
       const rangeKey = chartRangeKey(symbol, timeframe, chartInterval);
@@ -1361,6 +1322,7 @@ export default function TraderCompany({ passwordHash }) {
         ].filter(Boolean),
       };
       const basePriceSeries = {
+        id: "freedom-price",
         name: symbol,
         data: normalizeChartType(chartType) === "line" || normalizeChartType(chartType) === "area" ? chartData.closeLine : chartData.candles,
         markLine: priceMarkLine,
@@ -1425,8 +1387,9 @@ export default function TraderCompany({ passwordHash }) {
         ],
         series: [
           priceSeries,
-          displayToggles.volume ? { name: "Volume", type: "bar", xAxisIndex: 1, yAxisIndex: 1, data: chartData.volume, itemStyle: { color: "rgba(29,155,255,0.45)" } } : null,
+          displayToggles.volume ? { id: "freedom-volume", name: "Volume", type: "bar", xAxisIndex: 1, yAxisIndex: 1, data: chartData.volume, itemStyle: { color: "rgba(29,155,255,0.45)" } } : null,
           displayToggles.completedTrades ? {
+            id: "freedom-completed-trades",
             name: "Completed Trades",
             type: "scatter",
             data: chartData.tradeMarkers,
@@ -1434,6 +1397,7 @@ export default function TraderCompany({ passwordHash }) {
             z: 8,
           } : null,
           displayToggles.openPositions ? {
+            id: "freedom-pending-orders",
             name: "Pending Orders",
             type: "scatter",
             data: chartData.orderMarkers,
@@ -1441,7 +1405,7 @@ export default function TraderCompany({ passwordHash }) {
             z: 8,
           } : null,
         ].filter(Boolean),
-      }, { notMerge: false, lazyUpdate: true });
+      }, { replaceMerge: ["series", "xAxis", "yAxis", "dataZoom"], lazyUpdate: true });
       const handleDataZoom = () => {
         const option = chartRef.current?.getOption?.();
         const zoom = Array.isArray(option?.dataZoom) ? option.dataZoom[0] : null;
@@ -1512,8 +1476,7 @@ export default function TraderCompany({ passwordHash }) {
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong>
         <span>Active Trading & Market Opportunities</span>
       </section>
-      <PaperAccountBar />
-      <FreedomModuleNav module="trader" paper />
+      <FreedomModuleNav module="trader" />
       <header className="hero">
         <div className="heroMain">
           <span className="logo">{company.logoText}</span>
@@ -1531,13 +1494,49 @@ export default function TraderCompany({ passwordHash }) {
           </div>
         </div>
         <div className="heroActions">
-          <button className="primaryAction" type="button" onClick={openBuyModal}>BUY PAPER TRADE</button>
           <button type="button" onClick={() => createAlert("PRICE WATCH", setup.currentPrice, "above")}>CREATE ALERT</button>
-          {paperPosition ? <button type="button" onClick={openSellModal}>SELL POSITION</button> : null}
-          {paperPosition ? <Link className="editPositionLink" href="/freedom-trader/portfolio">EDIT STOP / TARGET</Link> : null}
-          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
+          <button type="button" onClick={addToWatchlist}>ADD TO WATCHLIST</button>
+          <Link className="primaryAction" href={`/freedom-trader/trade-journal?symbol=${encodeURIComponent(symbol)}`}>RECORD BROKER TRADE</Link>
+          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>VIEW TRADE PLAN</button>
         </div>
       </header>
+      <section className="planOnlyWarning">TRADE PLAN ONLY - PLACE AND CONFIRM THE ORDER THROUGH YOUR BROKER</section>
+
+      <section className="decisionPanel">
+        <div>
+          <span>Current Decision</span>
+          <SignalBadge signal={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
+          <p>{setup.opportunity?.reasonsFor?.[0] || setup.reasoning}</p>
+        </div>
+        <Metric label="Score" value={setup.opportunity?.score ?? setup.tradingScore ?? "--"} />
+        <Metric label="Confidence" value={Number.isFinite(setup.confidence) ? `${setup.confidence}%` : setup.opportunity?.confidence || "--"} />
+        <Metric label="Verified Price" value={formatCurrency(setup.currentPrice)} />
+        <Metric label="Last Updated" value={setup.opportunity?.priceTimestamp || setup.dataStatus?.latestTimestamp || "--"} />
+        <Metric label="Exchange" value={analysis?.exchange || setup.opportunity?.exchange || "--"} />
+        <Metric label="Currency" value={setup.opportunity?.currency || "USD"} />
+        <Metric label="Provider" value={setup.opportunity?.dataProvider || setup.marketData?.historySource || "--"} />
+      </section>
+
+      <section className="decisionGrid">
+        <article>
+          <h2>Why It Qualifies</h2>
+          {(setup.opportunity?.reasonsFor?.length ? setup.opportunity.reasonsFor : [setup.reasoning]).map((reason) => <p key={reason}>{reason}</p>)}
+        </article>
+        <article>
+          <h2>Why It May Fail</h2>
+          {(setup.opportunity?.reasonsAgainst?.length ? setup.opportunity.reasonsAgainst : setup.opportunity?.failedConditions?.length ? setup.opportunity.failedConditions : ["No opposing signal loaded yet."]).map((reason) => <p key={reason}>{reason}</p>)}
+        </article>
+        <article>
+          <h2>Trade Plan</h2>
+          <p>Entry: {formatCurrency(setup.entry)} - {formatCurrency(setup.entryHigh)}</p>
+          <p>Invalidation / stop: {formatCurrency(setup.stop)}</p>
+          <p>Target 1: {formatCurrency(setup.target)}</p>
+          <p>Target 2: {formatCurrency(setup.target2)}</p>
+          <p>Risk per share: {formatCurrency(setup.risk)}</p>
+          <p>Reward per share: {formatCurrency(setup.reward)}</p>
+          <p>Risk/reward: {formatNumber(setup.riskReward)}</p>
+        </article>
+      </section>
 
       {error ? <section className="alert">{error}</section> : null}
       {setup.marketData && !setup.marketData.validated ? (
@@ -1731,7 +1730,7 @@ export default function TraderCompany({ passwordHash }) {
         </div>
         <div className="visualPlannerPanel">
           <Metric label="Analysis Signal" value={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
-          <Metric label="Paper Position" value={openPosition ? tradeStatus : "No open paper position"} />
+          <Metric label="Journal Position" value={openPosition ? tradeStatus : "No journal position"} />
           <Metric label="BUY" value={formatCurrency(visualLevels.entry)} />
           <Metric label="STOP LOSS" value={formatCurrency(visualLevels.stop)} />
           <Metric label="SELL" value={formatCurrency(visualLevels.target)} />
@@ -1742,8 +1741,8 @@ export default function TraderCompany({ passwordHash }) {
             setVisualLevels(recommended);
             saveVisualLevels(recommended);
           }}>Reset to Recommended Levels</button>
-          <button type="button" onClick={openBuyModal}>Create Paper Trade</button>
-          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>Validate & Create Trade</button>
+          <button type="button" onClick={addToWatchlist}>Add to Watchlist</button>
+          <button className="primaryAction" type="button" onClick={openTradeConfirmation}>View Trade Plan</button>
           {saveMessage ? <p className="inlineNotice">{saveMessage}</p> : null}
         </div>
         {selectedTradeMarker ? (
@@ -1766,7 +1765,7 @@ export default function TraderCompany({ passwordHash }) {
       {tradeModalOpen && tradeDraft ? (
         <div className="modalBackdrop">
           <section className="modal">
-            <h2>Validate & Create Trade</h2>
+            <h2>Trade Plan Details</h2>
             {tradeDraft.blockers?.length ? (
               <div className="modalWarning">
                 <strong>Setup blocked</strong>
@@ -1798,49 +1797,29 @@ export default function TraderCompany({ passwordHash }) {
                 {" "}{tradeDraft.status === "BUY NOW" ? "The chart setup is at or below the planned entry." : "Wait for the pullback before buying."}
               </span>
             </div>
-            <p className="brokerNotice">Freedom Trader does not execute broker orders. Record Buy is only available after you manually confirm the broker order was placed.</p>
+            <p className="brokerNotice">TRADE PLAN ONLY - PLACE AND CONFIRM THE ORDER THROUGH YOUR BROKER. Record the trade only after your external broker confirms the fill.</p>
             {manualBuyForm ? (
               <div className="manualTradeForm">
                 <label>Actual purchase price<input value={manualBuyForm.actualPurchasePrice} onChange={(event) => setManualBuyForm((current) => ({ ...current, actualPurchasePrice: event.target.value }))} type="number" /></label>
                 <label>Shares purchased<input value={manualBuyForm.sharesPurchased} onChange={(event) => setManualBuyForm((current) => ({ ...current, sharesPurchased: event.target.value }))} type="number" /></label>
                 <label>Brokerage cost<input value={manualBuyForm.brokerageCost} onChange={(event) => setManualBuyForm((current) => ({ ...current, brokerageCost: event.target.value }))} type="number" /></label>
                 <label>Purchase date and time<input value={manualBuyForm.purchaseDateTime} onChange={(event) => setManualBuyForm((current) => ({ ...current, purchaseDateTime: event.target.value }))} type="datetime-local" /></label>
+                <label>Broker order/reference number (optional)<input value={manualBuyForm.brokerReference} onChange={(event) => setManualBuyForm((current) => ({ ...current, brokerReference: event.target.value }))} type="text" /></label>
+                <label>Notes (optional)<input value={manualBuyForm.notes} onChange={(event) => setManualBuyForm((current) => ({ ...current, notes: event.target.value }))} type="text" /></label>
+                <p className="brokerNotice">This is a rules-based trading plan, not a guarantee of profit. Confirm prices and place the order through your broker.</p>
+                <button type="button" className="primaryAction" onClick={recordTradeDraftBuy} disabled={tradeActionSaving === "buy"}>{tradeActionSaving === "buy" ? "Recording..." : "Confirm Purchase"}</button>
               </div>
             ) : null}
             <div className="modalActions">
-              <button type="button" onClick={() => saveTradeSetup()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "setup" ? "Saving..." : "Save Trade Setup"}</button>
-              <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create All Alerts"}</button>
-              <button className="primaryAction" type="button" onClick={manualBuyForm ? recordTradeDraftBuy : startManualBuy} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "buy" ? "Recording..." : "Record Manual Buy"}</button>
-              <button type="button" onClick={() => setTradeModalOpen(false)}>Cancel</button>
+              <button type="button" onClick={openBroker}>Open Broker</button>
+              <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create Alert"}</button>
+              <button type="button" onClick={addToWatchlist}>Add to Watchlist</button>
+              {!manualBuyForm ? <button type="button" className="primaryAction" onClick={startManualBuy} disabled={tradeDraft.blockers?.length}>Mark as Purchased</button> : null}
+              <Link className="primaryAction" href={`/freedom-trader/trade-journal?symbol=${encodeURIComponent(symbol)}`}>Record Broker Trade</Link>
+              <button type="button" onClick={cancelSetup}>Cancel Setup</button>
             </div>
           </section>
         </div>
-      ) : null}
-
-      {buyModalOpen ? (
-        <PaperOrderTicket
-          mode={paperTicketMode}
-          company={{ ...company, symbol, exchange: analysis?.exchange || "NASDAQ" }}
-          position={paperTicketMode === "sell" ? paperPosition : null}
-          setup={{
-            ...setup,
-            entry: visualLevels.entry,
-            stop: visualLevels.stop,
-            target: visualLevels.target,
-            marketData: {
-              ...(setup.marketData || {}),
-              exchange: analysis?.exchange || "NASDAQ",
-              currency: String(symbol).endsWith(".AX") ? "AUD" : "USD",
-              provider: setup.marketData?.quoteSource || setup.marketData?.provider || "Finnhub",
-            },
-          }}
-          onClose={() => setBuyModalOpen(false)}
-          onSubmitted={() => {
-            setSaveMessage("Paper order submitted. No real money was used.");
-            setBuyModalOpen(false);
-            window.location.reload();
-          }}
-        />
       ) : null}
 
       <style jsx>{`
@@ -1859,11 +1838,20 @@ export default function TraderCompany({ passwordHash }) {
         .back { color: #d7efff; font-size: 18px; font-weight: 900; text-decoration: none; }
         .heroMain { align-items: center; display: flex; gap: 18px; margin-top: 24px; }
         .heroActions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+        .heroActions a, .modalActions a { align-items: center; border-radius: 7px; display: inline-flex; font-weight: 950; min-height: 38px; padding: 0 13px; text-decoration: none; }
         .analysisSignalBox { align-items: flex-end; display: grid; gap: 5px; justify-items: end; margin-left: auto; }
         .analysisSignalBox > span, .analysisSignalBox small { color: #aab8be; font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
         .editPositionLink { align-items: center; background: rgba(29,155,255,.12); border: 1px solid rgba(29,155,255,.34); border-radius: 7px; color: #d7efff; display: inline-flex; font-weight: 950; min-height: 38px; padding: 0 12px; text-decoration: none; }
         .heroActions button { background: rgba(29,155,255,.14); border: 1px solid rgba(29,155,255,.34); color: #d7efff; padding: 0 13px; }
         .heroActions .primaryAction, .primaryAction { background: #ff9900; border-color: #ff9900; color: #061014; }
+        .planOnlyWarning { background: rgba(255,153,0,.12); border: 1px solid rgba(255,153,0,.34); border-radius: 8px; color: #ffd7a1; font-weight: 950; letter-spacing: .03em; margin-top: 18px; padding: 14px 16px; text-align: center; }
+        .decisionPanel, .decisionGrid { display: grid; gap: 14px; margin-top: 18px; }
+        .decisionPanel { background: rgba(8,14,17,.92); border: 1px solid rgba(29,155,255,.2); border-radius: 8px; grid-template-columns: 2fr repeat(7, minmax(0,1fr)); padding: 18px; }
+        .decisionPanel > div:first-child { display: grid; gap: 8px; }
+        .decisionPanel span { color: #aebdc4; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+        .decisionGrid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+        .decisionGrid article { background: rgba(8,14,17,.92); border: 1px solid rgba(179,199,207,.13); border-radius: 8px; padding: 18px; }
+        .decisionGrid p { color: #d8e5ea; line-height: 1.5; margin-top: 9px; }
         .logo { align-items: center; background: linear-gradient(135deg, var(--company-primary), var(--company-secondary)); border-radius: 999px; display: inline-flex; font-size: 20px; font-weight: 950; height: 74px; justify-content: center; width: 74px; }
         h1, h2, p { margin: 0; }
         h1 { font-size: 48px; line-height: 1; }

@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
-import { LineChart } from "lucide-react";
+import { LineChart, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import ICONS from "./iconMap";
 import { useWorkspace } from "../hooks/useWorkspace";
 
@@ -83,7 +83,7 @@ const MODULE_ITEMS = [
   { href: "/modules/agency",                   label: "Agency Dashboard",      icon: ICONS.agency,         color: "u19", roles: MGMT,    comingSoon: true, emoji: "🏢" },
 ];
 
-export default function SideNav() {
+export default function SideNav({ collapsed = false, onToggleCollapsed = null }) {
   const router = useRouter();
   const [activePath, setActivePath] = useState(router.pathname);
   const { role, loading: wsLoading } = useWorkspace();
@@ -104,13 +104,26 @@ export default function SideNav() {
   const visibleModules = MODULE_ITEMS.filter((item) => canSee(item, effectiveRole));
 
   return (
-    <aside className="sidenav">
+    <aside className={`sidenav${collapsed ? " collapsed" : ""}`}>
       <div className="branding">
         <img src="/logo.png" alt="Company Logo" className="logo" />
-        <div className="brand-text">
-          <div>GR8 RESULT</div>
-          <div>Digital Solutions</div>
-        </div>
+        {!collapsed && (
+          <div className="brand-text">
+            <div>GR8 RESULT</div>
+            <div>Digital Solutions</div>
+          </div>
+        )}
+        {onToggleCollapsed && (
+          <button
+            type="button"
+            className="collapse-toggle"
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            title={collapsed ? "Expand navigation" : "Collapse navigation"}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
       </div>
 
       <div className="sections">
@@ -177,6 +190,12 @@ export default function SideNav() {
           scrollbar-width: thin;
           scrollbar-color: #374151 #111827;
           z-index: 100;
+          transition: width 0.18s ease;
+        }
+
+        .sidenav.collapsed {
+          width: 64px;
+          padding: 18px 10px 80px;
         }
 
         .branding {
@@ -186,6 +205,33 @@ export default function SideNav() {
           margin-bottom: 18px;
           border-bottom: 1px solid #1f2937;
           padding-bottom: 14px;
+        }
+
+        .sidenav.collapsed .branding {
+          justify-content: center;
+        }
+
+        .collapse-toggle {
+          margin-left: auto;
+          background: transparent;
+          border: 1px solid #374151;
+          border-radius: 6px;
+          color: #cbd5e1;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .collapse-toggle:hover {
+          background: #1f2937;
+        }
+
+        .sidenav.collapsed .collapse-toggle {
+          margin-left: 0;
         }
 
         .logo {
@@ -225,6 +271,10 @@ export default function SideNav() {
           color: #9ca3af;
         }
 
+        .sidenav.collapsed h4 {
+          display: none;
+        }
+
         .nav-item {
           display: flex;
           align-items: center;
@@ -240,6 +290,11 @@ export default function SideNav() {
           text-overflow: ellipsis;
         }
 
+        .sidenav.collapsed .nav-item {
+          justify-content: center;
+          padding: 10px 0;
+        }
+
         .nav-item .icon {
           flex-shrink: 0;
           font-size: 20px;
@@ -247,6 +302,14 @@ export default function SideNav() {
           display: flex;
           align-items: center;
           justify-content: center;
+        }
+
+        .sidenav.collapsed .nav-item .icon {
+          margin-right: 0;
+        }
+
+        .sidenav.collapsed .nav-item .label {
+          display: none;
         }
 
         /* Outline colours */

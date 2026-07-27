@@ -1,11 +1,16 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
+import ExternalProductLink from "../../../components/product-library/ExternalProductLink";
+import ProductImageMagnifier from "../../../components/product-library/ProductImageMagnifier";
+import { useNavCollapse } from "../../../components/Layout";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
+const BOOK_SIDEBAR_COLLAPSE_KEY = "gr8:selectionsBook:sidebarCollapsed";
 
 const DEFAULT_ROOMS = [
   "Site Works",
@@ -598,6 +603,47 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [debugOpen, setDebugOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem(BOOK_SIDEBAR_COLLAPSE_KEY) === "1"; }
+    catch { return false; }
+  });
+  const [focusMode, setFocusMode] = useState(false);
+  const focusModePriorState = useRef(null);
+  const { navCollapsed, setNavCollapsed } = useNavCollapse();
+
+  function setSidebarCollapsed(next) {
+    setSidebarCollapsedState((current) => {
+      const value = typeof next === "function" ? next(current) : next;
+      try { localStorage.setItem(BOOK_SIDEBAR_COLLAPSE_KEY, value ? "1" : "0"); } catch {}
+      return value;
+    });
+  }
+
+  function enterFocusMode() {
+    focusModePriorState.current = { sidebarCollapsed, navCollapsed };
+    setSidebarCollapsed(true);
+    setNavCollapsed(true);
+    setFocusMode(true);
+  }
+
+  function exitFocusMode() {
+    const prior = focusModePriorState.current;
+    setSidebarCollapsed(prior ? prior.sidebarCollapsed : false);
+    setNavCollapsed(prior ? prior.navCollapsed : false);
+    setFocusMode(false);
+    focusModePriorState.current = null;
+  }
+
+  useEffect(() => {
+    if (!focusMode) return;
+    function handleKeyDown(event) {
+      if (event.key === "Escape") exitFocusMode();
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMode]);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
@@ -1150,61 +1196,72 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
       <Head>
         <title>Selections Book | Builders Platform</title>
       </Head>
-      <main className="screen">
-        <aside className="sidebar">
-          <div className="brandStrip">
-            <img src={displayCover.logoUrl || DEFAULT_BUILDER_TEMPLATE_BRAND.logoUrl} alt={displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name} />
-            <div>
-              <strong>{displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name}</strong>
-              <span>Selections Book</span>
-            </div>
-          </div>
-          <label>
-            Project
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
-              <option value="">Select project</option>
-              {projects.map((project) => <option key={project.id} value={project.id}>{project.project_name}</option>)}
-            </select>
-          </label>
-          <label>
-            Snapshot
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)}>
-              <option value="">No snapshot</option>
-              {snapshots.map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.snapshot_label || `Snapshot ${snapshot.snapshot_number}`}</option>)}
-            </select>
-          </label>
-          <label>
-            Builder Standard
-            <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
-              {templates.map((template) => <option key={template.id} value={template.id}>{template.template_name}</option>)}
-            </select>
-          </label>
-
-          <nav className="pages">
-            <button className={activePage === "cover" ? "active" : ""} onClick={() => setActivePage("cover")}>1 Cover</button>
-            <button className={activePage === "project" ? "active" : ""} onClick={() => setActivePage("project")}>2 Project Info</button>
-            {book.rooms.map((room, index) => (
-              <button
-                key={room.id}
-                className={activePage === "room" && activeRoomId === room.id ? "active" : ""}
-                onClick={() => {
-                  setActivePage("room");
-                  setActiveRoomId(room.id);
-                }}
-              >
-                {index + 3} {room.name}
+      <main className={`screen${sidebarCollapsed ? " sidebarCollapsed" : ""}${focusMode ? " focusMode" : ""}`}>
+        {sidebarCollapsed ? (
+          <button type="button" className="sidebarExpandTab" onClick={() => setSidebarCollapsed(false)} aria-label="Expand navigation" title="Expand navigation">
+            <PanelLeftOpen size={16} />
+          </button>
+        ) : (
+          <aside className="sidebar">
+            <div className="sidebarHeader">
+              <div className="brandStrip">
+                <img src={displayCover.logoUrl || DEFAULT_BUILDER_TEMPLATE_BRAND.logoUrl} alt={displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name} />
+                <div>
+                  <strong>{displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name}</strong>
+                  <span>Selections Book</span>
+                </div>
+              </div>
+              <button type="button" className="sidebarCollapseButton" onClick={() => setSidebarCollapsed(true)} aria-label="Collapse navigation" title="Collapse navigation">
+                <PanelLeftClose size={16} />
               </button>
-            ))}
-          </nav>
+            </div>
+            <label>
+              Project
+              <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
+                <option value="">Select project</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.project_name}</option>)}
+              </select>
+            </label>
+            <label>
+              Snapshot
+              <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)}>
+                <option value="">No snapshot</option>
+                {snapshots.map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.snapshot_label || `Snapshot ${snapshot.snapshot_number}`}</option>)}
+              </select>
+            </label>
+            <label>
+              Builder Standard
+              <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                {templates.map((template) => <option key={template.id} value={template.id}>{template.template_name}</option>)}
+              </select>
+            </label>
 
-          <div className="roomTools">
-            <input value={newRoomName} onChange={(event) => setNewRoomName(event.target.value)} placeholder="New room name" />
-            <select value={newRoomTemplate} onChange={(event) => setNewRoomTemplate(event.target.value)}>
-              {Object.keys(ROOM_TEMPLATES).map((name) => <option key={name} value={name}>{name}</option>)}
-            </select>
-            <button onClick={addRoom}>Add New Room</button>
-          </div>
-        </aside>
+            <nav className="pages">
+              <button className={activePage === "cover" ? "active" : ""} onClick={() => setActivePage("cover")}>1 Cover</button>
+              <button className={activePage === "project" ? "active" : ""} onClick={() => setActivePage("project")}>2 Project Info</button>
+              {book.rooms.map((room, index) => (
+                <button
+                  key={room.id}
+                  className={activePage === "room" && activeRoomId === room.id ? "active" : ""}
+                  onClick={() => {
+                    setActivePage("room");
+                    setActiveRoomId(room.id);
+                  }}
+                >
+                  {index + 3} {room.name}
+                </button>
+              ))}
+            </nav>
+
+            <div className="roomTools">
+              <input value={newRoomName} onChange={(event) => setNewRoomName(event.target.value)} placeholder="New room name" />
+              <select value={newRoomTemplate} onChange={(event) => setNewRoomTemplate(event.target.value)}>
+                {Object.keys(ROOM_TEMPLATES).map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+              <button onClick={addRoom}>Add New Room</button>
+            </div>
+          </aside>
+        )}
 
         <section className="workspace">
           <header className="topbar">
@@ -1213,6 +1270,15 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
               <h1>{book.cover.projectName || "Inclusions & Selections Schedule"}</h1>
             </div>
             <div className="actions">
+              {focusMode ? (
+                <button type="button" className="focusModeButton" onClick={exitFocusMode}>
+                  <Minimize2 size={15} /> Exit Focus Mode
+                </button>
+              ) : (
+                <button type="button" className="focusModeButton" onClick={enterFocusMode}>
+                  <Maximize2 size={15} /> Focus Mode
+                </button>
+              )}
               <Link href="/modules/builders/client-selections">Open Imported Records</Link>
               {activePage === "cover" && (
                 <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
@@ -1318,38 +1384,10 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
 
         {imagePreview && (
           <div className="modalBackdrop" onClick={() => setImagePreview(null)}>
-            <div className={imagePreview.rowId ? "imageModal productDetailModal" : "imageModal"} onClick={(event) => event.stopPropagation()}>
+            <div className="imageModal" onClick={(event) => event.stopPropagation()}>
               <button onClick={() => setImagePreview(null)}>Close</button>
               <img src={imagePreview.url} alt={imagePreview.alt || "Selection image"} />
-              {imagePreview.rowId ? (
-                <div className="productDetailBody">
-                  <h3>{imagePreview.productName || imagePreview.item}</h3>
-                  <dl>
-                    {imagePreview.brand && <><dt>Brand</dt><dd>{imagePreview.brand}</dd></>}
-                    {imagePreview.model && <><dt>Model</dt><dd>{imagePreview.model}</dd></>}
-                    {imagePreview.finish && <><dt>Finish / Colour</dt><dd>{imagePreview.finish}</dd></>}
-                    {imagePreview.supplier && <><dt>Supplier</dt><dd>{imagePreview.supplier}</dd></>}
-                    <dt>Price</dt>
-                    <dd>{imagePreview.upgradeCost > 0 ? `+${money(imagePreview.upgradeCost)} Upgrade` : imagePreview.upgradeCost < 0 ? `${money(imagePreview.upgradeCost)} Credit` : "Included"}</dd>
-                  </dl>
-                  {imagePreview.description && <p>{imagePreview.description}</p>}
-                  <div className="productDetailActions">
-                    <button
-                      type="button"
-                      className="libraryButton"
-                      onClick={() => {
-                        const rowId = imagePreview.rowId;
-                        setImagePreview(null);
-                        if (activeRoom) openSelector(activeRoom.id, rowId);
-                      }}
-                    >
-                      Choose a Different Product
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <strong>{imagePreview.alt}</strong>
-              )}
+              <strong>{imagePreview.alt}</strong>
             </div>
           </div>
         )}
@@ -1713,24 +1751,25 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
         <table className="selectionTable">
           <thead>
             <tr>
-              <th>Item</th>
-              <th>Description</th>
+              <th className="stickyCol stickyCol1">Item</th>
+              <th className="stickyCol stickyCol2">Description</th>
               <th>Brand</th>
               <th>Product / Model</th>
               <th>Finish / Colour</th>
               <th>Supplier</th>
               <th>Image</th>
               <th>Included</th>
-              <th>Upgrade Options</th>
+              <th>Upgrade / Credit</th>
+              <th>Selection Status</th>
             </tr>
           </thead>
           <tbody>
             {room.rows.map((row) => (
               <tr key={row.id}>
-                <td className="itemCell"><span className="itemIcon">{selectionIcon(row.item)}</span><input value={row.item} onChange={(event) => onRowChange(row.id, { item: event.target.value })} /></td>
-                <td><textarea value={row.description} onChange={(event) => onRowChange(row.id, { description: event.target.value })} /></td>
-                <td><input value={row.brand} onChange={(event) => onRowChange(row.id, { brand: event.target.value })} /></td>
-                <td>
+                <td className="itemCell stickyCol stickyCol1" data-label="Item"><span className="itemIcon">{selectionIcon(row.item)}</span><input value={row.item} onChange={(event) => onRowChange(row.id, { item: event.target.value })} /></td>
+                <td className="stickyCol stickyCol2" data-label="Description"><textarea value={row.description} onChange={(event) => onRowChange(row.id, { description: event.target.value })} /></td>
+                <td data-label="Brand"><input value={row.brand} onChange={(event) => onRowChange(row.id, { brand: event.target.value })} /></td>
+                <td data-label="Product / Model">
                   <div className="productChoice">
                     <select value={row.selectedOptionId || ""} onChange={(event) => onApplyOption(row.id, event.target.value)}>
                       {(row.options?.length ? row.options : []).map((option) => (
@@ -1744,43 +1783,43 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
                     <strong>{row.productModel || row.selectedProduct}</strong>
                   </div>
                 </td>
-                <td><input value={row.finishColour} onChange={(event) => onRowChange(row.id, { finishColour: event.target.value })} /></td>
-                <td><input value={row.supplier} onChange={(event) => onRowChange(row.id, { supplier: event.target.value })} /></td>
-                <td>
+                <td data-label="Finish / Colour"><input value={row.finishColour} onChange={(event) => onRowChange(row.id, { finishColour: event.target.value })} /></td>
+                <td data-label="Supplier"><input value={row.supplier} onChange={(event) => onRowChange(row.id, { supplier: event.target.value })} /></td>
+                <td data-label="Image">
                   {row.imageUrl ? (
-                    <button
-                      className="thumbButton"
-                      onClick={() => onPreviewImage({
-                        url: row.imageUrl,
-                        alt: row.selectedProduct || row.item,
-                        rowId: row.id,
-                        item: row.item,
-                        productName: row.selectedProduct,
-                        brand: row.brand,
-                        model: row.productModel,
-                        finish: row.finishColour,
-                        supplier: row.supplier,
-                        description: row.description,
-                        upgradeCost: row.upgradeCost,
-                        included: row.included,
-                      })}
-                    >
-                      <img src={row.imageUrl} alt={row.item} />
-                    </button>
+                    <div className="thumbCell">
+                      <ExternalProductLink url={row.productUrl} className="thumbButton" showIcon={false}>
+                        <img src={row.imageUrl} alt={row.item} />
+                      </ExternalProductLink>
+                      <ProductImageMagnifier
+                        imageUrl={row.imageUrl}
+                        name={row.selectedProduct || row.item}
+                        brand={row.brand}
+                        model={row.productModel}
+                        colour={row.finishColour}
+                        finish={row.finishColour}
+                        supplier={row.supplier}
+                        verificationStatus={row.verificationStatus}
+                        productUrl={row.productUrl}
+                        triggerClassName="thumbMagnifier"
+                      />
+                    </div>
                   ) : <button className="thumbButton empty" onClick={() => onSelectProduct(row.id)}>Image</button>}
                 </td>
-                <td>
+                <td data-label="Included">
                   <button className={`includedTick ${row.included ? "yes" : "no"}`} onClick={() => onRowChange(row.id, { included: !row.included })}>
                     {row.included ? "✓" : "-"}
                   </button>
                 </td>
-                <td>
-                  <div className="upgradeCell">
-                    <select value={row.status} onChange={(event) => onRowChange(row.id, { status: event.target.value })}>
-                      {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
-                    </select>
-                    <span>{money(row.upgradeCost)}</span>
-                  </div>
+                <td className="upgradeAmountCell" data-label="Upgrade / Credit">
+                  <span className={numberValue(row.upgradeCost) < 0 ? "creditAmount" : "upgradeAmount"}>
+                    {numberValue(row.upgradeCost) === 0 ? "Included" : money(row.upgradeCost)}
+                  </span>
+                </td>
+                <td data-label="Selection Status">
+                  <select className="statusSelect" value={row.status} onChange={(event) => onRowChange(row.id, { status: event.target.value })}>
+                    {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
+                  </select>
                 </td>
               </tr>
             ))}
@@ -2270,8 +2309,14 @@ function replaceAt(rows, index, next) {
 }
 
 const styles = `
-  .screen { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: #e8edf3; color: #07111f; font-family: Inter, Arial, sans-serif; }
+  .screen { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: #e8edf3; color: #07111f; font-family: Inter, Arial, sans-serif; transition: grid-template-columns 0.18s ease; }
+  .screen.sidebarCollapsed { grid-template-columns: 34px minmax(0, 1fr); }
   .sidebar { background: #071827; color: #e8edf3; padding: 16px; overflow: auto; max-height: 100vh; position: sticky; top: 0; }
+  .sidebarHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .sidebarCollapseButton, .sidebarExpandTab { background: transparent; border: 1px solid #284258; border-radius: 6px; color: #cbd5e1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .sidebarExpandTab { position: sticky; top: 16px; margin: 16px 0 0 4px; }
+  .focusModeButton { display: inline-flex; align-items: center; gap: 6px; background: #0a2a43; }
+  .screen.focusMode { grid-template-columns: 34px minmax(0, 1fr); }
   .brandStrip { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; margin-bottom: 18px; }
   .brandStrip img { width: 54px; height: 44px; object-fit: contain; background: white; border-radius: 6px; }
   .brandStrip span, .sidebar label { color: #9fb2c7; font-size: 12px; }
@@ -2393,11 +2438,29 @@ const styles = `
   .roomTabs button.active { background: #071827; color: white; }
   .roomTabs button.ghost { border-style: dashed; color: #64748b; }
   .roomTabs button.danger { border-color: #ef4444; color: #dc2626; }
-  .selectionTableWrap { overflow: auto; border: 1px solid #dce3ea; }
+  .selectionTableWrap { overflow-x: auto; overflow-y: visible; border: 1px solid #dce3ea; max-width: 100%; }
   .selectionTable { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 11px; }
   .selectionTable th { background: #071827; color: white; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 9px 7px; border-right: 1px solid rgba(255,255,255,.16); }
   .selectionTable td { border: 1px solid #e2e8f0; padding: 6px; vertical-align: middle; background: #fff; }
   .selectionTable tr:nth-child(even) td { background: #fbfcfe; }
+  .selectionTable th.stickyCol { position: sticky; z-index: 3; background: #071827; }
+  .selectionTable td.stickyCol { position: sticky; z-index: 2; background: #fff; }
+  .selectionTable tr:nth-child(even) td.stickyCol { background: #fbfcfe; }
+  .stickyCol1 { left: 0; min-width: 120px; box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08); }
+  .stickyCol2 { left: 120px; min-width: 160px; box-shadow: 2px 0 4px rgba(15, 23, 42, 0.08); }
+  .upgradeAmountCell { text-align: right; font-weight: 900; white-space: nowrap; }
+  .upgradeAmount { color: #0f5132; }
+  .creditAmount { color: #b91c1c; }
+  .statusSelect { font-size: 10px; padding: 4px; background: #fff !important; color: #071827 !important; }
+  @media (max-width: 640px) {
+    .selectionTableWrap { border: 0; overflow: visible; }
+    .selectionTable, .selectionTable thead, .selectionTable tbody, .selectionTable th, .selectionTable td, .selectionTable tr { display: block; width: auto; }
+    .selectionTable thead { position: absolute; left: -9999px; }
+    .selectionTable tr { margin-bottom: 12px; border: 1px solid #dce3ea; border-radius: 8px; overflow: hidden; }
+    .selectionTable td { position: static !important; border: 0; border-bottom: 1px solid #eef2f6; padding: 8px 10px; min-width: 0; box-shadow: none; }
+    .selectionTable td:last-child { border-bottom: 0; }
+    .selectionTable td[data-label]:before { content: attr(data-label); display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #64748b; margin-bottom: 3px; }
+  }
   .selectionTable input, .selectionTable textarea { border: 0 !important; background: transparent !important; border-radius: 0; padding: 2px; font-size: 11px; color: #071827 !important; }
   .selectionTable textarea { min-height: 42px; resize: vertical; line-height: 1.35; }
   .itemCell { display: grid; grid-template-columns: 30px 1fr; gap: 7px; align-items: center; min-width: 145px; font-weight: 900; }
@@ -2407,13 +2470,12 @@ const styles = `
   .productChoice strong { font-size: 10px; color: #475569; font-weight: 800; }
   .libraryButton { background: transparent; color: #071827; border: 1px dashed #cbd5e1; font-size: 10px; padding: 4px 6px; text-align: left; }
   .libraryButton:hover { border-color: #d7a640; background: #fffaf0; }
-  .thumbButton { width: 110px; height: 58px; padding: 0; overflow: hidden; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+  .thumbCell { position: relative; width: 110px; height: 58px; }
+  .thumbButton { display: grid; width: 110px; height: 58px; padding: 0; overflow: hidden; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
   .thumbButton img { width: 100%; height: 100%; object-fit: cover; }
+  .thumbMagnifier { position: absolute; bottom: 2px; right: 2px; }
   .includedTick { width: 34px; height: 30px; display: grid; place-items: center; margin: 0 auto; border-radius: 50%; background: white; color: #16a34a; font-size: 19px; }
   .includedTick.no { color: #dc2626; }
-  .upgradeCell { display: grid; gap: 5px; min-width: 92px; }
-  .upgradeCell select { font-size: 10px; padding: 4px; background: #fff !important; color: #071827 !important; }
-  .upgradeCell span { font-weight: 900; color: #0f5132; }
   .notesRow { display: grid; grid-template-columns: 1fr 1fr 170px; gap: 8px; margin-top: 12px; }
   .notesRow div { background: #fbf4ea; border-radius: 4px; padding: 10px; display: grid; gap: 6px; }
   .notesRow textarea { min-height: 54px; border: 0 !important; background: transparent !important; resize: vertical; padding: 0; color: #071827 !important; }
@@ -2446,15 +2508,6 @@ const styles = `
   .modalProductCard em { color: #0f5132; font-weight: 900; font-style: normal; }
   .imageModal { background: white; border-radius: 10px; padding: 14px; display: grid; gap: 10px; max-width: 88vw; max-height: 90vh; }
   .imageModal img { max-width: 80vw; max-height: 74vh; object-fit: contain; }
-  .imageModal.productDetailModal { width: min(760px, 90vw); grid-template-columns: 1fr; }
-  .imageModal.productDetailModal img { max-width: 100%; max-height: 46vh; }
-  .productDetailBody { display: grid; gap: 10px; color: #071827; text-align: left; }
-  .productDetailBody h3 { margin: 0; }
-  .productDetailBody dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
-  .productDetailBody dt { color: #64748b; font-weight: 600; }
-  .productDetailBody dd { margin: 0; }
-  .productDetailBody p { margin: 0; color: #334155; }
-  .productDetailActions { display: flex; justify-content: flex-end; }
   @page { size: A4 portrait; margin: 0; }
   @media print {
     .screen { display: block; background: white; }

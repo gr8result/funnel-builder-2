@@ -2,6 +2,7 @@ import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify } from "../../../lib/product-library/csv";
 import { PRODUCT_LIBRARY_SCOPES, normalizeLibraryScope } from "../../../lib/product-library/constants";
+import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
 
 async function handler(req, res) {
   if (req.method !== "POST") {
@@ -53,6 +54,17 @@ async function handler(req, res) {
           return;
         }
         seenSkusInFile.add(skuKey);
+      }
+
+      const supplierUrlCheck = isValidProductUrl(record.supplier_product_url);
+      if (!supplierUrlCheck.ok) {
+        errors.push({ row: rowNumber, error: `Supplier product URL: ${supplierUrlCheck.error}`, record });
+        return;
+      }
+      const manufacturerUrlCheck = isValidProductUrl(record.manufacturer_product_url);
+      if (!manufacturerUrlCheck.ok) {
+        errors.push({ row: rowNumber, error: `Manufacturer product URL: ${manufacturerUrlCheck.error}`, record });
+        return;
       }
 
       const identity = [sku, record.model, productName].map((value) => slugify(value)).join("|");

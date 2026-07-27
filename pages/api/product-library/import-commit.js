@@ -1,8 +1,18 @@
 import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify, normalizeMoney, truthyCsv, normalizePriceBand, normalizePricingTierCsv } from "../../../lib/product-library/csv";
-import { PRODUCT_LIBRARY_SCOPES, defaultRequiresImageForCategory, normalizeLibraryScope } from "../../../lib/product-library/constants";
+import { PRODUCT_LIBRARY_SCOPES, VERIFICATION_STATUSES, defaultRequiresImageForCategory, normalizeLibraryScope } from "../../../lib/product-library/constants";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
+import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
+
+const VALID_VERIFICATION_STATUSES = new Set(VERIFICATION_STATUSES.map((entry) => entry.value));
+
+function splitImageUrls(value) {
+  return String(value || "")
+    .split(/[|;]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
 
 const VALID_APPLY_MODES = new Set(["upsert", "create_only", "update_only"]);
 
@@ -99,6 +109,11 @@ async function handler(req, res) {
           seenSkusInFile.add(skuKey);
         }
 
+        const supplierUrlCheck = isValidProductUrl(record.supplier_product_url);
+        if (!supplierUrlCheck.ok) throw new Error(`Supplier product URL: ${supplierUrlCheck.error}`);
+        const manufacturerUrlCheck = isValidProductUrl(record.manufacturer_product_url);
+        if (!manufacturerUrlCheck.ok) throw new Error(`Manufacturer product URL: ${manufacturerUrlCheck.error}`);
+
         const identity = [sku, record.model, productName].map((value) => slugify(value)).join("|");
         const existing = existingByIdentity.get(identity) || (sku ? existingBySku.get(slugify(sku)) : null);
         if (existing && applyMode === "create_only") throw new Error("Row matches an existing product and applyMode is create_only");
@@ -161,6 +176,12 @@ async function handler(req, res) {
           available_for_selection: truthyCsv(record.available_for_selection, true),
           display_order: Number(record.display_order) || 0,
           primary_image_url: record.image_url || null,
+          additional_image_urls: splitImageUrls(record.additional_image_urls),
+          product_url: supplierUrlCheck.url || null,
+          manufacturer_product_url: manufacturerUrlCheck.url || null,
+          image_source_url: record.image_source_url || null,
+          verification_status: VALID_VERIFICATION_STATUSES.has(record.image_verification_status) ? record.image_verification_status : "unverified",
+          date_last_verified: record.date_last_verified || null,
           datasheet_pdf_url: record.spec_pdf_url || null,
           active: truthyCsv(record.active, true),
           updated_at: new Date().toISOString(),

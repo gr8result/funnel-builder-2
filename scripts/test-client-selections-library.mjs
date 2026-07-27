@@ -15,6 +15,8 @@ import {
   calculateSessionBudget,
   roundMoney,
 } from "../lib/builders/selectionBudget.js";
+import { isValidProductUrl } from "../lib/product-library/urlValidation.js";
+import { PRODUCT_CSV_HEADERS } from "../lib/product-library/csv.js";
 
 // --- Upgrade value: Upgrade Value = Builder Cost - Included Allowance ---------------
 assert.equal(computeUpgradeValue({ cost_price: 850, base_allowance: 500 }), 350, "auto upgrade value should be cost - allowance");
@@ -188,5 +190,41 @@ assert.match(productsApi, /archivedInstead: true/, "a referenced product must be
 const clientSelectionsPage = fs.readFileSync(new URL("../pages/modules/builders/client-selections.js", import.meta.url), "utf8");
 assert.match(clientSelectionsPage, /product_id: form\.productId \|\| null/, "a selection created from the catalogue must store product_id");
 assert.match(clientSelectionsPage, /brand: form\.brand\.trim\(\)/, "the selection row must snapshot brand/model/colour/etc. at selection time, not just a product_id reference");
+assert.match(clientSelectionsPage, /hasActiveDraftVariation/, "creating a draft variation must be guarded against duplicates");
+
+// --- Product URL validation: never a fabricated link, never an insecure scheme silently accepted ---
+assert.equal(isValidProductUrl("").empty, true, "an empty URL is valid (nothing stored) but flagged as empty");
+assert.equal(isValidProductUrl("   ").empty, true);
+assert.equal(isValidProductUrl("https://www.bosch-home.com.au/productdetail/HBG7341B1A").ok, true, "a real https product URL must validate");
+assert.equal(isValidProductUrl("not a url").ok, false, "garbage input must be rejected, never silently accepted");
+assert.equal(isValidProductUrl("javascript:alert(1)").ok, false, "non-http(s) schemes must be rejected");
+assert.equal(isValidProductUrl("ftp://example.com/product").ok, false);
+const httpCheck = isValidProductUrl("http://example.com/product");
+assert.equal(httpCheck.ok, true, "http is allowed but must carry a warning, matching the brief's 'preferably HTTPS'");
+assert.ok(httpCheck.warning, "an http (non-secure) link must surface a warning to the user");
+
+// --- CSV schema covers the brief's media/verification fields ---
+["additional_image_urls", "supplier_product_url", "manufacturer_product_url", "image_source_url", "image_verification_status", "date_last_verified"].forEach((header) => {
+  assert.ok(PRODUCT_CSV_HEADERS.includes(header), `PRODUCT_CSV_HEADERS must include ${header}`);
+});
+
+// --- Static assertions for the collapsible nav / Focus Mode / media migration ---
+const layoutSource = fs.readFileSync(new URL("../components/Layout.js", import.meta.url), "utf8");
+assert.match(layoutSource, /export const NavCollapseContext/, "Layout.js must expose a nav-collapse context so pages can drive Focus Mode without prop-drilling through _app.js");
+assert.match(layoutSource, /NAV_COLLAPSE_STORAGE_KEY/, "the global nav collapse preference must be persisted");
+
+const selectionsBookSource = fs.readFileSync(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
+assert.match(selectionsBookSource, /BOOK_SIDEBAR_COLLAPSE_KEY/, "the schedule's local sidebar collapse preference must be persisted");
+assert.match(selectionsBookSource, /enterFocusMode/);
+assert.match(selectionsBookSource, /event\.key === "Escape"/, "Escape must exit Focus Mode");
+assert.match(selectionsBookSource, /Selection Status/, "the schedule table must have its own Selection Status column, split from the upgrade/credit amount");
+
+const externalLinkSource = fs.readFileSync(new URL("../components/product-library/ExternalProductLink.jsx", import.meta.url), "utf8");
+assert.match(externalLinkSource, /target="_blank"/, "product links must open in a new tab, never navigate the current selections session away");
+assert.match(externalLinkSource, /rel="noopener noreferrer"/, "product links must use rel=noopener noreferrer");
+
+const mediaMigrationSql = fs.readFileSync(new URL("../supabase/migrations/20260728_client_selections_media_links.sql", import.meta.url), "utf8");
+assert.match(mediaMigrationSql, /verification_status/, "the media migration must add the verification workflow columns");
+assert.match(mediaMigrationSql, /image_unavailable/, "stock-photo-domain images already stored must be flagged, never silently deleted");
 
 console.log("Client Selections Library calculation and validation tests passed.");

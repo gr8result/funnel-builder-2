@@ -1,6 +1,6 @@
 ﻿// /components/Layout.js
 import { ensureUserFolders } from "../utils/storage-init";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { isDeveloperEmail } from "../lib/adminUsers";
 import SideNav from "./SideNav";
@@ -12,6 +12,17 @@ const DEFAULT_BRAND_NAME = "Gr8 Result Digital Solutions";
 const DEFAULT_BRAND_LOGO = "/logo/gr8result-logo.png";
 
 const NAV_WIDTH = 300;
+const NAV_COLLAPSED_WIDTH = 64;
+const NAV_COLLAPSE_STORAGE_KEY = "gr8:nav:collapsed";
+
+// Lets a page (e.g. the Client Selections schedule's Focus Mode) collapse the
+// global platform nav without prop-drilling through _app.js. Every existing
+// page that doesn't use this context sees no behaviour change — default is
+// always "expanded", matching today's fixed 300px nav exactly.
+export const NavCollapseContext = createContext({ navCollapsed: false, setNavCollapsed: () => {} });
+export function useNavCollapse() {
+  return useContext(NavCollapseContext);
+}
 const PROTECTED_ROUTE_PREFIXES = [
   "/dashboard",
   "/modules",
@@ -180,6 +191,19 @@ export default function Layout({ children }) {
   const [marketplaceVendorAllowed, setMarketplaceVendorAllowed] = useState(false);
   const [developerAccess, setDeveloperAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [navCollapsed, setNavCollapsedState] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem(NAV_COLLAPSE_STORAGE_KEY) === "1"; }
+    catch { return false; }
+  });
+
+  function setNavCollapsed(next) {
+    setNavCollapsedState((current) => {
+      const value = typeof next === "function" ? next(current) : next;
+      try { localStorage.setItem(NAV_COLLAPSE_STORAGE_KEY, value ? "1" : "0"); } catch {}
+      return value;
+    });
+  }
 
   useEffect(() => {
     (async () => {
@@ -395,19 +419,21 @@ export default function Layout({ children }) {
 
   // Hide nav and business branding if user is not verified for the main platform
   const showNav = showNavDefault && hasPlatformAccess;
+  const effectiveNavWidth = navCollapsed ? NAV_COLLAPSED_WIDTH : NAV_WIDTH;
   // Use single-column layout if nav is hidden
   const layoutStyle = showNav
-    ? wrap
+    ? { ...wrap, gridTemplateColumns: `${effectiveNavWidth}px 1fr` }
     : { ...wrap, gridTemplateColumns: "1fr" };
   const sectionStyle = showNav
     ? rightCol
     : { ...rightCol, gridTemplateRows: "1fr", minWidth: 0 };
 
   return (
+    <NavCollapseContext.Provider value={{ navCollapsed, setNavCollapsed }}>
     <div style={layoutStyle}>
       {showNav && (
         <aside style={leftCol}>
-          <SideNav />
+          <SideNav collapsed={navCollapsed} onToggleCollapsed={() => setNavCollapsed((current) => !current)} />
         </aside>
       )}
 
@@ -450,6 +476,7 @@ export default function Layout({ children }) {
         <main style={main}>{children}</main>
       </section>
     </div>
+    </NavCollapseContext.Provider>
   );
 }
 

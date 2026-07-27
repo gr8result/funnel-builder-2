@@ -187,6 +187,16 @@ export default function BuilderProductLibraryPage() {
     const activeProducts = products.filter((product) => product.active !== false);
     const categoryIds = new Set(products.map((product) => product.category_id).filter(Boolean));
     const supplierIds = new Set(products.map((product) => product.supplier_id).filter(Boolean));
+
+    const urlCounts = new Map();
+    const skuCounts = new Map();
+    products.forEach((product) => {
+      if (product.product_url) urlCounts.set(product.product_url, (urlCounts.get(product.product_url) || 0) + 1);
+      if (product.sku) skuCounts.set(product.sku.trim().toLowerCase(), (skuCounts.get(product.sku.trim().toLowerCase()) || 0) + 1);
+    });
+    const duplicateUrlCount = Array.from(urlCounts.values()).filter((count) => count > 1).reduce((total, count) => total + count, 0);
+    const duplicateSkuCount = Array.from(skuCounts.values()).filter((count) => count > 1).reduce((total, count) => total + count, 0);
+
     return {
       totalActive: activeProducts.length,
       totalCategories: categoryIds.size,
@@ -197,6 +207,13 @@ export default function BuilderProductLibraryPage() {
       standardInclusionCount: activeProducts.filter((product) => product.standard_included).length,
       missingImageCount: activeProducts.filter((product) => product.requires_image && !product.primary_image_url).length,
       inactiveCount: products.filter((product) => product.active === false).length,
+      noProductUrlCount: activeProducts.filter((product) => !product.product_url).length,
+      unverifiedCount: activeProducts.filter((product) => (product.verification_status || "unverified") === "unverified").length,
+      imageUnavailableCount: activeProducts.filter((product) => product.verification_status === "image_unavailable").length,
+      linkBrokenCount: activeProducts.filter((product) => product.verification_status === "link_broken").length,
+      discontinuedCount: activeProducts.filter((product) => product.verification_status === "discontinued").length,
+      duplicateUrlCount,
+      duplicateSkuCount,
     };
   }, [products]);
 
@@ -446,6 +463,12 @@ export default function BuilderProductLibraryPage() {
       product.active === false ? "no" : "yes",
       product.display_order ?? 0,
       product.primary_image_url || "",
+      (Array.isArray(product.additional_image_urls) ? product.additional_image_urls : []).join("|"),
+      product.product_url || "",
+      product.manufacturer_product_url || "",
+      product.image_source_url || "",
+      product.verification_status || "unverified",
+      product.date_last_verified || "",
       product.datasheet_pdf_url || "",
       product.description || "",
       product.notes || "",
@@ -458,7 +481,15 @@ export default function BuilderProductLibraryPage() {
     const exampleRow = [
       "OVEN-001", "Series 8 Built-in Oven", "Ovens", "Built-in", "Kitchen and appliances", "PREMIER",
       "yes", "yes", "CLIENT_SELECTION", "Bosch", "HBG7241B1", "Reece", "OVEN-001", "900mm", "Stainless Steel", "Matte",
-      "850", "500", "", "1350", "1200", "", "yes", "each", "no", "yes", "yes", "10", "https://example.com/image.jpg", "",
+      "850", "500", "", "1350", "1200", "", "yes", "each", "no", "yes", "yes", "10",
+      "https://www.bosch-home.com.au/productdetail/HBG7241B1",
+      "",
+      "https://www.bosch-home.com.au/productdetail/HBG7241B1",
+      "",
+      "https://www.bosch-home.com.au/productdetail/HBG7241B1",
+      "exact_model_verified",
+      "2026-07-28",
+      "",
       "Premium built-in oven with pyrolytic self-clean.", "", "",
     ];
     downloadCsv("product-library-import-template.csv", [PRODUCT_CSV_HEADERS, exampleRow]);
@@ -784,6 +815,18 @@ function LibraryDashboard({ stats, canViewCosts }) {
     { label: "Missing Images", value: stats.missingImageCount, warn: stats.missingImageCount > 0 },
     { label: "Inactive", value: stats.inactiveCount },
   ];
+  // Product media/link verification report — surfaces exactly what the brief
+  // asks an administrator to be able to see: missing links, unverified or
+  // flagged images, broken links, discontinued products, and duplicates.
+  const mediaReportTiles = [
+    { label: "No Product URL", value: stats.noProductUrlCount, warn: stats.noProductUrlCount > 0 },
+    { label: "Unverified Images", value: stats.unverifiedCount, warn: stats.unverifiedCount > 0 },
+    { label: "Image Unavailable / Flagged", value: stats.imageUnavailableCount, warn: stats.imageUnavailableCount > 0 },
+    { label: "Broken Links", value: stats.linkBrokenCount, warn: stats.linkBrokenCount > 0 },
+    { label: "Discontinued", value: stats.discontinuedCount, warn: stats.discontinuedCount > 0 },
+    { label: "Duplicate Product URLs", value: stats.duplicateUrlCount, warn: stats.duplicateUrlCount > 0 },
+    { label: "Duplicate Product Codes", value: stats.duplicateSkuCount, warn: stats.duplicateSkuCount > 0 },
+  ];
   return (
     <section className="dashboard">
       {tiles.map((tile) => (
@@ -792,7 +835,23 @@ function LibraryDashboard({ stats, canViewCosts }) {
           <span>{tile.label}</span>
         </div>
       ))}
+      <div className="reportHeading">Media &amp; Link Verification Report</div>
+      {mediaReportTiles.map((tile) => (
+        <div key={tile.label} className={tile.warn ? "tile warn" : "tile"}>
+          <strong>{tile.value}</strong>
+          <span>{tile.label}</span>
+        </div>
+      ))}
       <style jsx>{`
+        .reportHeading {
+          grid-column: 1 / -1;
+          margin-top: 6px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #93a4bd;
+        }
         .dashboard {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
