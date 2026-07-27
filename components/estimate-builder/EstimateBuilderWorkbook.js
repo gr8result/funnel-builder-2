@@ -30,13 +30,15 @@ import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/cons
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
-import { createPremierInclusionsWorkingCopy } from "../document-engine/templates/premierInclusionsMasterTemplate";
+import { createPremierInclusionsWorkingCopy, resolveBaseStandardInclusionsTemplate } from "../document-engine/templates/premierInclusionsMasterTemplate";
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
-import AIPlanTakeoffPage from "./ai-takeoff/AIPlanTakeoffPage";
+import { importPdfAsStandardDocumentPreview } from "../../lib/standard-inclusions/pdfImport";
+import PdfImportReview from "../document-engine/import/PdfImportReview";
+import JobFileMenu from "./JobFileMenu.jsx";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import {
@@ -58,6 +60,62 @@ import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/Ve
 import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/pbPropertiesPanels";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
+
+// The legacy ai-takeoff engine is retired from the normal navigation flow —
+// "Takeoff Engine" now opens the standalone Takeoff V2 rebuild
+// (modules/takeoff-v2) instead of rendering AIPlanTakeoffPage in place. Legacy
+// code stays archived/untouched for reference only (modules/takeoff-legacy).
+function TakeoffV2Redirect({ openJobDetails }) {
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (openJobDetails) {
+      params.set("projectName", openJobDetails.projectName || "");
+      params.set("jobNumber", openJobDetails.jobNumber || "");
+      params.set("projectAddress", openJobDetails.projectAddress || "");
+      params.set("fileName", openJobDetails.fileName || "");
+    }
+    const query = params.toString();
+    window.location.assign(query ? `/modules/takeoff-v2?${query}` : "/modules/takeoff-v2");
+  }, [openJobDetails]);
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 320, color: "#64748b", fontSize: 14 }}>
+      Opening Takeoff Engine V2...
+    </div>
+  );
+}
+
+const STANDARD_INCLUSIONS_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const STANDARD_INCLUSIONS_MAX_UPLOAD_MB = Math.round(STANDARD_INCLUSIONS_MAX_UPLOAD_BYTES / 1024 / 1024);
+
+// Uploads directly to the Supabase Storage signed URL (bypassing the Next.js
+// API body limit) via XHR so upload progress events are available.
+function uploadFileToSignedUrlWithProgress(signedUrl, file, accessToken, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", signedUrl, true);
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+    if (anonKey) xhr.setRequestHeader("apikey", anonKey);
+    if (accessToken) xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable || typeof onProgress !== "function") return;
+      onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onerror = () => reject(new Error("Network error while uploading the file. Please check your connection and try again."));
+    xhr.onabort = () => reject(new Error("The upload was cancelled."));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Upload failed (HTTP ${xhr.status}). Please try again.`));
+      }
+    };
+    const body = new FormData();
+    body.append("cacheControl", "3600");
+    body.append("", file);
+    xhr.send(body);
+  });
+}
 
 
 // AI Gantt Builder — loaded client-side only
@@ -412,6 +470,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
   const activeVisual = workspaceVisual(sheet.workbook.page);
   const ActivePageIcon = activeVisual.Icon;
+  const isStandardInclusionsMasterTemplate = sheet.workbook.page === "standardInclusions";
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
@@ -589,10 +648,12 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             <strong style={styles.navTitle}>{previewMode ? "Preview" : "Project Workspace"}</strong>
           </span>
         </div>
-        <div style={styles.navQuoteTotalLine}>
-          <span>Current quote total</span>
-          <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
-        </div>
+        {!isStandardInclusionsMasterTemplate ? (
+          <div style={styles.navQuoteTotalLine}>
+            <span>Current quote total</span>
+            <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
+          </div>
+        ) : null}
         {sheet.pages.map((page) => {
           const visual = workspaceVisual(page.key);
           const NavIcon = visual.Icon;
@@ -619,9 +680,11 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         <div style={styles.navNote}>
           {previewMode
             ? "Preview mode is blank and locked. Data entry, editing, copying, saving, and exports are disabled."
+            : isStandardInclusionsMasterTemplate
+              ? "Maintain the reusable inclusions master template. Project estimates receive their own separate copy."
             : "Project Setup remains the source of truth. Dashboard fields, quote totals, supplier quotes, and workbook pages stay linked to the same estimate data."}
         </div>
-        {!previewMode && (
+        {!previewMode && !isStandardInclusionsMasterTemplate && (
           <FloatingSaveJob
             saveStatus={saveStatus}
             onSaveJob={() => runSaveAction("Saving job", jobFile.save)}
@@ -637,27 +700,29 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
               <span style={styles.lockedBadge}>Locked Preview</span>
             ) : (
               <>
-            <FileMenu
-              open={fileMenuOpen}
-              onToggle={() => setFileMenuOpen((current) => !current)}
-              onClose={() => setFileMenuOpen(false)}
-              busy={isSaving}
-              recentJobs={jobFile.recentJobs}
-              onOpenRecentJob={(id) => jobFile.openRecent(id)}
-              items={[
-                { label: "New Job", action: () => setNewJobModalOpen(true) },
-                {
-                  label: "Open Job",
-                  action: async () => {
-                    const result = await jobFile.open();
-                    if (!result.ok && result.message) setJobFileError(result.message);
+            {!isStandardInclusionsMasterTemplate ? (
+              <JobFileMenu
+                open={fileMenuOpen}
+                onToggle={() => setFileMenuOpen((current) => !current)}
+                onClose={() => setFileMenuOpen(false)}
+                busy={isSaving}
+                recentJobs={jobFile.recentJobs}
+                onOpenRecentJob={(id) => jobFile.openRecent(id)}
+                items={[
+                  { label: "New Job", action: () => setNewJobModalOpen(true) },
+                  {
+                    label: "Open Job",
+                    action: async () => {
+                      const result = await jobFile.open();
+                      if (!result.ok && result.message) setJobFileError(result.message);
+                    },
                   },
-                },
-                { label: "Save", action: () => runSaveAction("Saving job", jobFile.save), primary: true },
-                { label: "Save As", action: () => runSaveAction("Saving job as", jobFile.saveAs) },
-                { label: "Save As Base Template", action: () => runSaveAction("Saving base template", sheet.saveAsBaseTemplate) },
-              ]}
-            />
+                  { label: "Save", action: () => runSaveAction("Saving job", jobFile.save), primary: true },
+                  { label: "Save As", action: () => runSaveAction("Saving job as", jobFile.saveAs) },
+                  { label: "Save As Base Template", action: () => runSaveAction("Saving base template", sheet.saveAsBaseTemplate) },
+                ]}
+              />
+            ) : null}
             <TemplateFileMenu
               sheet={sheet}
               open={templateMenuOpen}
@@ -735,25 +800,39 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           </div>
         )}
 
-        <section style={{ ...styles.topbar, background: activeVisual.gradient }}>
-          <div style={styles.pageBannerTitleGroup}>
-            <span style={styles.pageBannerIcon}><ActivePageIcon size={34} strokeWidth={2.3} /></span>
-            <span>
-              <span style={styles.pageBannerEyebrow}>Estimate Builder</span>
-              <h1 style={styles.pageTitle}>{activeVisual.title}</h1>
-              <p style={styles.pageBannerSubtitle}>{activeVisual.subtitle}</p>
-            </span>
-          </div>
-          <div style={styles.openFileBanner}>
-            <span style={styles.openFileLabel}>Current saved file</span>
-            <span style={styles.openFileName}>{openJobDetails.fileName}</span>
-          </div>
-          <div style={styles.openJobBanner}>
-            <OpenJobHeaderField label="Open Job" value={openJobDetails.projectName} />
-            <OpenJobHeaderField label="Job #" value={openJobDetails.jobNumber} />
-            <OpenJobHeaderField label="Address" value={openJobDetails.projectAddress} wide />
-          </div>
-        </section>
+        {isStandardInclusionsMasterTemplate ? (
+          <section style={{ ...styles.topbar, background: activeVisual.gradient }}>
+            <div style={styles.pageBannerTitleGroup}>
+              <span style={styles.pageBannerIcon}><ActivePageIcon size={34} strokeWidth={2.3} /></span>
+              <span>
+                <span style={styles.pageBannerEyebrow}>STANDARD INCLUSIONS</span>
+                <h1 style={styles.pageTitle}>STANDARD INCLUSIONS</h1>
+                <p style={styles.pageBannerSubtitle}>Create and maintain the builder's reusable inclusions template. Each project receives a separate copy.</p>
+              </span>
+            </div>
+            <StandardInclusionsTemplateBanner standard={sheet.workbook.standardInclusions || {}} />
+          </section>
+        ) : (
+          <section style={{ ...styles.topbar, background: activeVisual.gradient }}>
+            <div style={styles.pageBannerTitleGroup}>
+              <span style={styles.pageBannerIcon}><ActivePageIcon size={34} strokeWidth={2.3} /></span>
+              <span>
+                <span style={styles.pageBannerEyebrow}>Estimate Builder</span>
+                <h1 style={styles.pageTitle}>{activeVisual.title}</h1>
+                <p style={styles.pageBannerSubtitle}>{activeVisual.subtitle}</p>
+              </span>
+            </div>
+            <div style={styles.openFileBanner}>
+              <span style={styles.openFileLabel}>Current saved file</span>
+              <span style={styles.openFileName}>{openJobDetails.fileName}</span>
+            </div>
+            <div style={styles.openJobBanner}>
+              <OpenJobHeaderField label="Open Job" value={openJobDetails.projectName} />
+              <OpenJobHeaderField label="Job #" value={openJobDetails.jobNumber} />
+              <OpenJobHeaderField label="Address" value={openJobDetails.projectAddress} wide />
+            </div>
+          </section>
+        )}
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
             {sheet.workbook.page === "projectDashboard" && (
@@ -799,7 +878,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
           {sheet.workbook.page === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
           {sheet.workbook.page === "aiPlanTakeoff" && (
-            <AIPlanTakeoffPage sheet={sheet} />
+            <TakeoffV2Redirect openJobDetails={openJobDetails} />
           )}
           {sheet.workbook.page === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
@@ -811,7 +890,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         ) : null}
       </main>
 
-      <aside style={styles.summary}>
+      {!isStandardInclusionsMasterTemplate ? <aside style={styles.summary}>
         {sheet.workbook.page === "projectEstimate" || sheet.workbook.page === "clientPage" || sheet.workbook.page === "cashflowSummary" ? (
           <>
             <div style={styles.eyebrow}>{sheet.workbook.page === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
@@ -860,7 +939,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             </Panel>
           </>
         )}
-      </aside>
+      </aside> : null}
 
       {jobPickerOpen && (
         <JobPickerModal
@@ -6806,6 +6885,8 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
+  const [pdfImportReview, setPdfImportReview] = useState(null);
+  const [pdfImportReviewBusy, setPdfImportReviewBusy] = useState(false);
   const onlyOfficeAuthToken = "";
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
   const pages = normalisePremierPdfPages(standard.pdfPages);
@@ -6948,11 +7029,18 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus("Started a new blank Standard Inclusions schedule.");
   }
 
-  function usePremierTemplate() {
+  async function usePremierTemplate() {
     if (!window.confirm("Load the Premier Template? This will only happen because you explicitly selected it. A backup of the current schedule will be retained.")) return;
-    const document = createPremierInclusionsWorkingCopy({
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token || "";
+    const document = await resolveBaseStandardInclusionsTemplate({
       builderId: sheet.workbook?.builderId || "local-builder",
       workbookId,
+      workspaceId,
+      authHeaders: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+      },
     });
     const saved = markStandardDocumentSaved({
       ...document,
@@ -7015,24 +7103,52 @@ export function StandardInclusionsSheet({ sheet }) {
 
   async function preparePowerPointImport(event) {
     const selectedFile = event.target.files?.[0];
+    event.target.value = "";
     if (!selectedFile || !String(selectedFile.name || "").toLowerCase().endsWith(".pptx")) {
-      event.target.value = "";
       return;
     }
-    setStandardStatus("Uploading PowerPoint...");
+    if (selectedFile.size > STANDARD_INCLUSIONS_MAX_UPLOAD_BYTES) {
+      setStandardStatus(`That PowerPoint file is too large. Please upload a .pptx up to ${STANDARD_INCLUSIONS_MAX_UPLOAD_MB} MB.`);
+      return;
+    }
+    setStandardStatus("Preparing upload...");
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || "";
-      const formData = new FormData();
-      formData.append("file", selectedFile, selectedFile.name);
-      event.target.value = "";
+      if (!token) throw new Error("You must be signed in to upload a PowerPoint file.");
+      const authHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+      };
+
+      const signedResponse = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ action: "create-signed-upload", name: selectedFile.name, type: selectedFile.type, size: selectedFile.size }),
+      });
+      const signed = await signedResponse.json().catch(() => ({}));
+      if (!signedResponse.ok || !signed?.ok || !signed?.signedUrl || !signed?.token) {
+        const code = signed?.code || "STANDARD_INCLUSIONS_UPLOAD_FAILED";
+        throw new Error(`${code}: ${signed?.error || "Could not start the PowerPoint upload."}`);
+      }
+
+      setStandardStatus("Uploading PowerPoint... 0%");
+      await uploadFileToSignedUrlWithProgress(signed.signedUrl, selectedFile, token, (percent) => {
+        setStandardStatus(`Uploading PowerPoint... ${percent}%`);
+      });
+
+      setStandardStatus("Processing PowerPoint...");
       const response = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
         method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
-        },
-        body: formData,
+        headers: authHeaders,
+        body: JSON.stringify({
+          action: "complete-signed-upload",
+          documentId: signed.documentId,
+          storagePath: signed.storagePath,
+          name: selectedFile.name,
+          size: selectedFile.size,
+        }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) {
@@ -7073,24 +7189,127 @@ export function StandardInclusionsSheet({ sheet }) {
   async function preparePdfImport(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || file.type !== "application/pdf") return;
+    if (!file || (file.type !== "application/pdf" && !/\.pdf$/i.test(String(file.name || "")))) return;
     setPendingPdfFile(file);
     setManagementMode("pdf-import-options");
-    setStandardStatus("Choose how to import this PDF.");
+    setStandardStatus("Ready to import this PDF as a fixed-page schedule.");
   }
 
-  async function prepareSelectedPdfImport(mode = "editable-text") {
+  // Processes the uploaded PDF and hands the result to the review screen —
+  // nothing is saved/replaces the live schedule until the user explicitly
+  // accepts it there. Previously this saved immediately on processing with no
+  // review step at all.
+  async function importPendingPdfNow() {
     const file = pendingPdfFile;
     if (!file) return;
-    setStandardStatus("Preparing PDF import preview...");
+    const previousStatus = standardStatus;
+    setStandardStatus("Loading PDF...");
     try {
-      setImportPreview(await importPdfAsStandardDocumentPreview(file, { mode }));
-      setPendingPdfFile(null);
-      setManagementMode("import-preview");
-      setStandardStatus("PDF import preview ready. Confirm to replace the active schedule.");
+      const preview = await importPdfAsStandardDocumentPreview(file, {
+        onProgress: ({ pageNumber, pageCount }) => {
+          setStandardStatus(`Importing page ${pageNumber} of ${pageCount}`);
+        },
+      });
+      const previewPages = Array.isArray(preview.document?.pages) ? preview.document.pages : [];
+      if (!previewPages.length) throw new Error("Import failed: the PDF did not render any pages.");
+      setPdfImportReview(preview);
+      setStandardStatus(`Processed ${previewPages.length} page${previewPages.length === 1 ? "" : "s"} — review before saving.`);
     } catch (error) {
-      console.error("Standard Inclusions PDF preview failed", error);
-      setStandardStatus(error?.message || "PDF import preview failed.");
+      console.error("Standard Inclusions PDF import failed", error);
+      setStandardStatus(error?.message || previousStatus || "PDF import failed.");
+    }
+  }
+
+  function cancelPdfImportReview() {
+    setPdfImportReview(null);
+    setPendingPdfFile(null);
+    setManagementMode("");
+    setStandardStatus("PDF import cancelled.");
+  }
+
+  async function confirmPdfImportReview(finalDocument) {
+    const preview = pdfImportReview;
+    if (!preview) return;
+    setPdfImportReviewBusy(true);
+    try {
+      const finalPages = Array.isArray(finalDocument?.pages) ? finalDocument.pages : [];
+      if (!finalPages.length) throw new Error("At least one page must be kept to save this import.");
+      const importSource = preview.source || finalDocument.metadata?.documentSource || "pdf-import";
+      const document = markStandardDocumentSaved({
+        ...finalDocument,
+        activePageId: finalPages[0]?.id || finalDocument.activePageId || "",
+        metadata: {
+          ...(finalDocument.metadata || {}),
+          documentSource: importSource,
+          sourceFileName: preview.fileName || finalDocument.metadata?.sourceFileName || "",
+        },
+      }, { ...standard, activeDocumentSource: importSource });
+      const persistedStandard = await saveStandardWithRevision({
+        documentBuilder: document,
+        source: importSource,
+        scheduleDeleted: false,
+        isDeleted: false,
+        deletedAt: null,
+        activeDocumentId: document.id,
+        activeDocumentName: document.name,
+        activeDocumentSource: importSource,
+        activeDocumentLastSavedAt: document.metadata?.lastSavedAt || new Date().toISOString(),
+        pdfPages: [],
+        selectedPdfPageId: "",
+        pdfSourceName: preview.fileName,
+        pptxSourceName: "",
+        pdfEditorMode: "document-page-builder",
+        onlyOfficeDocumentId: "",
+        onlyOfficeVersion: 0,
+        onlyOfficePptxAssetId: "",
+        onlyOfficeExportedPdfAssetId: "",
+      }, "import-pdf", preview.fileName, { persist: true });
+      const persistedDocument = persistedStandard?.documentBuilder || document;
+      const persistedPageCount = Array.isArray(persistedDocument.pages) ? persistedDocument.pages.length : finalPages.length;
+      setPdfImportReview(null);
+      setImportPreview(null);
+      setPendingPdfFile(null);
+      setManagementMode("");
+      setSelectedElementId("");
+      setStandardStatus(`Imported and saved ${persistedPageCount} Standard Inclusions page${persistedPageCount === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error("Standard Inclusions PDF import save failed", error);
+      setStandardStatus(error?.message || "Could not save the reviewed import.");
+    }
+    setPdfImportReviewBusy(false);
+  }
+
+  // Promotes the reviewed import to the shared system-base template (used by
+  // every new builder account) in addition to saving it as this builder's own
+  // live schedule — the person doing the import is usually the one
+  // maintaining the canonical company schedule.
+  async function saveReviewedPdfAsBaseTemplate(finalDocument) {
+    setPdfImportReviewBusy(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const response = await fetch("/api/standard-inclusions/base-template", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+        },
+        body: JSON.stringify({
+          documentJson: finalDocument,
+          sourceFileName: pdfImportReview?.fileName || "",
+          importReport: { warnings: pdfImportReview?.warnings || [], fontSubstitutions: pdfImportReview?.fontSubstitutions || [] },
+          autoActivate: true,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not save this as the base template.");
+      setStandardStatus("Saved as the new shared base template (v" + payload.template.version + ") — every new builder account will now receive it. Also saving to your own schedule...");
+      await confirmPdfImportReview(finalDocument);
+    } catch (error) {
+      console.error("Save as base template failed", error);
+      setStandardStatus(error?.message || "Could not save this as the base template.");
+      setPdfImportReviewBusy(false);
     }
   }
 
@@ -7175,6 +7394,15 @@ export function StandardInclusionsSheet({ sheet }) {
       </section>
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
+      {pdfImportReview ? (
+        <PdfImportReview
+          preview={pdfImportReview}
+          onCancel={pdfImportReviewBusy ? () => {} : cancelPdfImportReview}
+          onConfirm={pdfImportReviewBusy ? () => {} : confirmPdfImportReview}
+          onSaveAsBaseTemplate={pdfImportReviewBusy ? () => {} : saveReviewedPdfAsBaseTemplate}
+          canSaveAsBaseTemplate
+        />
+      ) : null}
       {activeOnlyOfficeDocumentId ? (
         <OnlyOfficePresentationEditor
           key={`${activeOnlyOfficeDocumentId}-v${standard.onlyOfficeVersion || 1}`}
@@ -7199,7 +7427,7 @@ export function StandardInclusionsSheet({ sheet }) {
               savedScheduleLoading={savedScheduleLoading}
               importPreview={importPreview}
               pendingPdfFile={pendingPdfFile}
-              onChoosePdfMode={prepareSelectedPdfImport}
+              onChoosePdfMode={importPendingPdfNow}
               onSelectCandidate={replaceWithCandidate}
               onRestoreRevision={restoreRevision}
               onCancelManagement={() => {
@@ -7229,7 +7457,7 @@ export function StandardInclusionsSheet({ sheet }) {
           onRestore={restorePreviousVersion}
           onStartBlank={startBlankSchedule}
           onUsePremierTemplate={usePremierTemplate}
-          onChoosePdfMode={prepareSelectedPdfImport}
+          onChoosePdfMode={importPendingPdfNow}
           onSelectCandidate={replaceWithCandidate}
           onRestoreRevision={restoreRevision}
           onCancelManagement={() => {
@@ -7775,6 +8003,7 @@ function StandardScheduleActiveSummary({ summary }) {
       <span>Document ID: {summary.documentId || "-"}</span>
       <span>Source: {summary.source || "-"}</span>
       <span>Pages: {summary.pageCount}</span>
+      <span>Editable blocks: {summary.editableBlockCount || 0}</span>
       <span>Last saved: {formatShortDateTime(summary.lastSavedAt)}</span>
     </div>
   );
@@ -7811,13 +8040,9 @@ function StandardScheduleContextPanel({
           </div>
           <p style={styles.dashboardPanelSubtitle}>{pendingPdfFile.name}</p>
           <div style={styles.standardSchedulePdfChoiceGrid}>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode("editable-text")}>
-              <strong>Editable conversion</strong>
-              <span>Extract text into editable blocks where possible and keep page visuals as references only where needed.</span>
-            </button>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode("background")}>
-              <strong>High-quality fixed-page import</strong>
-              <span>This imports each PDF page as a high-quality visual page. It is not fully editable.</span>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
+              <strong>Import PDF Now</strong>
+              <span>Each page imports as a locked, high-quality visual background with no automatically generated text blocks. You can still add your own blocks after import.</span>
             </button>
           </div>
         </div>
@@ -7943,11 +8168,13 @@ function StandardScheduleEmptyState({
 }
 
 function standardScheduleSummary(document, standard = {}) {
+  const documentPages = Array.isArray(document?.pages) ? document.pages : [];
   return {
     name: document?.name || standard.activeDocumentName || "",
     documentId: document?.id || standard.activeDocumentId || "",
     source: document?.metadata?.documentSource || standard.activeDocumentSource || "",
-    pageCount: Array.isArray(document?.pages) ? document.pages.length : 0,
+    pageCount: documentPages.length,
+    editableBlockCount: documentPages.reduce((sum, page) => sum + (Array.isArray(page?.objects) ? page.objects.length : 0), 0),
     lastSavedAt: document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "",
   };
 }
@@ -8153,67 +8380,10 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
   return slideImages;
 }
 
-async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
-  const pdfjsLib = await loadPdfJs();
-  const bytes = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
-  const pages = [];
-  let editableTextCount = 0;
-  const warnings = [];
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 2.25 });
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const context = canvas.getContext("2d", { alpha: false });
-    await page.render({ canvasContext: context, viewport }).promise;
-    const objects = [];
-    if (mode === "editable-text") {
-      const textContent = await page.getTextContent().catch(() => null);
-      (textContent?.items || []).forEach((item, index) => {
-        const text = String(item.str || "").trim();
-        if (!text) return;
-        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-        const x = tx[4];
-        const y = canvas.height - tx[5];
-        objects.push(createObject("text", {
-          name: `Extracted text ${index + 1}`,
-          x: (x / canvas.width) * 794,
-          y: (y / canvas.height) * 1123,
-          width: Math.min(700, Math.max(80, Number(item.width || 80) * (794 / canvas.width))),
-          height: 24,
-          style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
-          data: { text },
-        }));
-        editableTextCount += 1;
-      });
-      if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
-    }
-    pages.push(createA4Page({
-      id: `standard-inclusions-pdf-page-${Date.now()}-${pageNumber}`,
-      name: `PDF Page ${pageNumber}`,
-      background: { color: "#ffffff", imageRef: canvas.toDataURL("image/jpeg", 0.94) },
-      objects,
-    }));
-  }
-  const timestamp = new Date().toISOString();
-  const documentBuilder = createDocument({
-    id: `standard-inclusions-pdf-${Date.now()}`,
-    name: file.name.replace(/\.pdf$/i, "") || "Imported PDF Standard Inclusions",
-    pages,
-    activePageId: pages[0]?.id || null,
-    metadata: {
-      documentType: "standardInclusions",
-      documentSource: "pdf-import",
-      importMode: mode,
-      sourceFileName: file.name,
-      importedAt: timestamp,
-      lastSavedAt: timestamp,
-    },
-  });
-  return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, fixedVisualCount: mode === "background" ? pages.length : warnings.length, warnings };
-}
+// PDF import (text/image/shape extraction, coordinate + font mapping) lives in
+// lib/standard-inclusions/pdfImport.js — see importPdfAsStandardDocumentPreview
+// imported above. Kept out of this file so it's testable and reusable the
+// same way lib/standard-inclusions/powerpointImport.js already is.
 
 async function importPptxAsStandardDocumentPreview(file) {
   const [{ default: JSZip }] = await Promise.all([import("jszip")]);
@@ -11553,53 +11723,6 @@ function formatProposalDate(value) {
   return Number.isNaN(date.getTime()) ? "unknown date" : date.toLocaleString();
 }
 
-function FileMenu({ open, items, recentJobs = [], onOpenRecentJob, onToggle, onClose, busy = false }) {
-  return (
-    <div style={styles.fileMenuWrap}>
-      <button style={styles.fileMenuButton} onClick={onToggle} disabled={busy} aria-haspopup="menu" aria-expanded={open}>
-        {busy ? "Saving..." : "File"}
-      </button>
-      {open && (
-        <div style={styles.fileMenu} role="menu">
-          {items.map((item) => (
-            <button
-              key={item.label}
-              style={{ ...styles.fileMenuItem, ...(item.primary ? styles.fileMenuItemPrimary : {}), ...(busy ? styles.fileMenuItemDisabled : {}) }}
-              disabled={busy}
-              onClick={async () => {
-                await Promise.resolve(item.action());
-                onClose();
-              }}
-              role="menuitem"
-            >
-              {busy && item.primary ? "Saving..." : item.label}
-            </button>
-          ))}
-          <div style={styles.fileMenuDivider} />
-          <div style={styles.fileMenuSectionTitle}>Recent Jobs</div>
-          {recentJobs.length ? recentJobs.slice(0, 4).map((job) => (
-            <button
-              key={job.id}
-              style={{ ...styles.fileMenuItem, ...styles.fileMenuRecentItem, ...(busy ? styles.fileMenuItemDisabled : {}) }}
-              disabled={busy}
-              onClick={async () => {
-                await Promise.resolve(onOpenRecentJob?.(job.id));
-                onClose();
-              }}
-              role="menuitem"
-            >
-              <span>{job.jobName || "Saved estimate job"}</span>
-              <small>{formatTemplateDate(job.lastModified)}</small>
-            </button>
-          )) : (
-            <div style={styles.fileMenuEmpty}>No recent jobs</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function NewJobModal({ form, onChange, busy = false, onClose, onCreate }) {
   return (
     <div style={styles.modalBackdrop}>
@@ -11678,6 +11801,30 @@ function JobPickerModal({ jobs = [], message = "", busy = false, onRefresh, onOp
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function StandardInclusionsTemplateBanner({ standard = {} }) {
+  const document = standard.documentBuilder || null;
+  const pageCount = Array.isArray(document?.pages)
+    ? document.pages.length
+    : Array.isArray(standard.pdfPages)
+      ? standard.pdfPages.length
+      : 0;
+  const templateName = document?.name || standard.activeDocumentName || "Builder inclusions template";
+  const lastSaved = document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "";
+  const status = standard.scheduleDeleted || standard.isDeleted
+    ? "No active template"
+    : pageCount
+      ? "Active template"
+      : "Ready";
+  return (
+    <div style={styles.standardTemplateBannerInfo}>
+      <span><strong>Template name</strong><span>{templateName}</span></span>
+      <span><strong>Number of pages</strong><span>{pageCount}</span></span>
+      <span><strong>Last saved</strong><span>{formatShortDateTime(lastSaved)}</span></span>
+      <span><strong>Template status</strong><span>{status}</span></span>
     </div>
   );
 }
@@ -14370,16 +14517,6 @@ const styles = {
   bannerBackButton: { minHeight: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#0f172a", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: "8px 12px", fontSize: 14, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" },
   lockedBadge: { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", borderRadius: 999, padding: "8px 12px", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
   previewFieldset: { border: 0, padding: 0, margin: 0, minWidth: 0 },
-  fileMenuWrap: { position: "relative", display: "inline-flex" },
-  fileMenuButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 12, padding: "9px 14px", fontWeight: 900, cursor: "pointer", minWidth: 76, boxShadow: "0 8px 18px rgba(15, 118, 110, 0.18)" },
-  fileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 20, minWidth: 190, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 6 },
-  fileMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: 0, borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 600, cursor: "pointer" },
-  fileMenuItemPrimary: { background: "#ecfdf5", color: "#0f766e" },
-  fileMenuItemDisabled: { opacity: 0.55, cursor: "wait" },
-  fileMenuDivider: { height: 1, background: "#dbe4ef", margin: "6px 0" },
-  fileMenuSectionTitle: { padding: "6px 10px 4px", color: "#64748b", fontSize: 11, fontWeight: 900, letterSpacing: "0.05em", textTransform: "uppercase" },
-  fileMenuRecentItem: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, lineHeight: 1.25 },
-  fileMenuEmpty: { padding: "8px 10px", color: "#64748b", fontSize: 12, fontWeight: 700 },
   modalBackdrop: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15, 23, 42, 0.45)" },
   jobPickerModal: { width: "min(760px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
   newJobModal: { width: "min(820px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
@@ -14569,6 +14706,7 @@ const styles = {
   projectEstimateTabActive: { background: "#92400e", borderColor: "#92400e", color: "#ffffff", boxShadow: "0 8px 18px rgba(146,64,14,0.18)" },
   projectEstimateBaselineBar: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 12, alignItems: "center", border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: 12, fontWeight: 950 },
   standardPricedUsing: { border: "2px solid #15803d", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: "10px 12px", fontSize: 16, fontWeight: 950 },
+  standardTemplateBannerInfo: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8, minWidth: 360, color: "#ecfdf5", fontSize: 13, fontWeight: 750 },
   standardInclusionsShell: { display: "grid", gap: 16 },
   standardInclusionsHero: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 410px", gap: 18, alignItems: "stretch", border: "1px solid #bbf7d0", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)", borderRadius: 18, padding: 22, boxShadow: "0 18px 44px rgba(22,101,52,0.10)" },
   standardPackagePanel: { display: "grid", gap: 10, border: "1px solid #bbf7d0", background: "#ffffff", borderRadius: 14, padding: 14 },

@@ -21,12 +21,17 @@
     "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs",
     "test:wb-typography": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-typography-persistence.mjs",
     "test:wb-persistence": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-save-publish-persistence-regression.mjs",
+    "test:wb-shared-navigation": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-shared-navigation.mjs",
+    "test:wb-preview-slug-and-panel-image": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-preview-slug-and-panel-image-regression.mjs",
     "test:standard-inclusions-management": "node scripts/test-standard-inclusions-management-regression.mjs",
     "test:standard-inclusions-onlyoffice": "node scripts/test-standard-inclusions-onlyoffice-contract.mjs",
     "standard-inclusions:upload-master": "node scripts/upload-standard-inclusions-master.mjs",
     "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs",
-    "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs",
-    "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs"
+    "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs && node modules/takeoff-v2/tests/orientation.test.mjs && node modules/takeoff-v2/tests/scaleCalibration.test.mjs && node modules/takeoff-v2/tests/areaCalculation.test.mjs && node modules/takeoff-v2/tests/wallGraph.test.mjs && node modules/takeoff-v2/tests/snapping.test.mjs",
+    "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs",
+    "test:takeoff-v2-scale-walls-area-acceptance": "node scripts/test-takeoff-v2-scale-walls-area-acceptance.mjs",
+    "test:client-selections-library": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-client-selections-library.mjs",
+    "test:standard-inclusions-pdf-reconstruction": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-standard-inclusions-pdf-import-reconstruction.mjs"
   },
   "dependencies": {
     "@chaibuilder/sdk": "^4.0.0-beta.51",
@@ -100,6 +105,7 @@
     "redux-thunk": "^3.1.0",
     "resend": "^6.1.2",
     "stripe": "^18.5.0",
+    "tesseract.js": "^5.1.1",
     "tr46": "^4.1.1",
     "tui-color-picker": "^2.2.8",
     "tui-image-editor": "^3.15.3",
@@ -108,6 +114,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
