@@ -7,6 +7,9 @@ const repoRoot = path.resolve(__dirname, "..");
 const sourcePath = path.join(repoRoot, "components", "estimate-builder", "EstimateBuilderWorkbook.js");
 const source = fs.readFileSync(sourcePath, "utf8");
 const editorSource = fs.readFileSync(path.join(repoRoot, "components", "document-engine", "editor", "DocumentPageBuilder.jsx"), "utf8");
+const defaultSource = fs.readFileSync(path.join(repoRoot, "lib", "construction-estimation", "estimateBuilderWorkbookDefaults.js"), "utf8");
+const standardBuilderSource = fs.readFileSync(path.join(repoRoot, "lib", "builders", "standardInclusions.js"), "utf8");
+const masterTemplateSource = fs.readFileSync(path.join(repoRoot, "lib", "standard-inclusions", "masterTemplate.js"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -42,6 +45,11 @@ const activeReturn = sheetBody.slice(firstReturn);
 
 assert(source.includes("createPremierInclusionsWorkingCopy"), "Standard Inclusions must keep the Premier Template available for deliberate use");
 assert(premierTemplateBody.includes("resolveBaseStandardInclusionsTemplate"), "Premier Template action must resolve the active versioned base template");
+assert(standardBuilderSource.includes("options.documentBuilder"), "Standard Inclusions defaults must accept an injected active base document");
+assert(defaultSource.includes("standardInclusionsBaseDocument"), "Workbook defaults must support injecting the active Standard Inclusions base document");
+assert(defaultSource.includes("createEstimateBuilderWorkbookDefaultsWithBaseTemplate"), "Bootstrap code must have an async active-base default factory");
+assert(masterTemplateSource.includes("loadActiveBaseTemplateServer"), "The base-template resolver must support server-side bootstrap paths");
+assert(masterTemplateSource.includes("standard_inclusions_base_templates"), "The server-side resolver must read the versioned shared base-template table");
 assert(!activeBody.includes("useEffect("), "Opening Standard Inclusions must not autosave or auto-create a fallback document");
 assert(!activeBody.includes("isPremierInclusionsWorkingCopyCurrent"), "Opening Standard Inclusions must not force the native master working copy");
 assert(!source.includes("function StandardScheduleManagementPanel"), "The duplicated Schedule Management component must be removed");
