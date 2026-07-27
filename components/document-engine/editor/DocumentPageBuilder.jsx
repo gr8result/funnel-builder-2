@@ -5,6 +5,7 @@ import { bringForward, sendBackward } from "../core/layerEngine.js";
 import { createObject, duplicateObject, moveObject, resizeObject } from "../core/objectEngine.js";
 import { clearSelection, selectObject } from "../core/selectionEngine.js";
 import { PageRenderer } from "../renderer/pageRenderer.jsx";
+import { relayoutDocxFlowDocument } from "../../../lib/standard-inclusions/docxImport.js";
 
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
@@ -68,7 +69,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   }, [mode, readonly, selectedObject, textEditingObjectId, draft]);
 
   function commitDocument(nextDocument, options = {}) {
-    const next = hydrateDocument(nextDocument);
+    const next = hydrateDocument(nextDocument?.metadata?.layoutMode === "docx-flow" ? relayoutDocxFlowDocument(nextDocument) : nextDocument);
     setDraft(next);
     onChange?.(serializeDocument(next));
     if (!options.silent) onStatus?.("Document page builder updated.");
@@ -189,11 +190,25 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
 
   function commitTextEdit(objectId, text) {
     if (!objectId) return;
-    updateActivePage((page) => updateObjectOnPage(page, objectId, (object) => ({
+    const nextDocument = updatePage(draft, activePage.id, (page) => updateObjectOnPage(page, objectId, (object) => ({
       ...object,
       data: { ...object.data, text, edited: true },
-    })), "Text updated.");
+    })));
+    commitDocument(nextDocument);
+    onStatus?.("Text updated.");
     setTextEditingObjectId("");
+  }
+
+  function commitTableCellEdit(objectId, rowIndex, columnIndex, text) {
+    if (!objectId) return;
+    const nextDocument = updatePage(draft, activePage.id, (page) => updateObjectOnPage(page, objectId, (object) => {
+      const rows = (object.data?.rows || []).map((row, r) => row.map((cell, c) => (
+        r === rowIndex && c === columnIndex ? { ...(cell || {}), text } : cell
+      )));
+      return { ...object, data: { ...object.data, rows, edited: true } };
+    }));
+    commitDocument(nextDocument);
+    onStatus?.("Table updated.");
   }
 
   function patchSelectedTextStyle(stylePatch, message = "Text formatting updated.") {
@@ -361,6 +376,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
               setTextEditingObjectId(objectId);
             }}
             onTextCommit={commitTextEdit}
+            onTableCellCommit={commitTableCellEdit}
           />
         </div>
       </main>
@@ -471,6 +487,30 @@ function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, 
           </select></label>
           <label style={styles.field}>Colour<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.color, "#0b2545")} onChange={(event) => onPatch({ style: { color: event.target.value } })} /></label>
           <label style={styles.field}>Thickness<input disabled={readonly} type="number" min="1" style={styles.input} value={object.style?.thickness || 2} onChange={(event) => onPatch({ style: { thickness: Math.max(1, Number(event.target.value) || 1) } })} /></label>
+        </>
+      ) : null}
+      {object.type === "table" ? (
+        <>
+          <button
+            type="button"
+            disabled={readonly}
+            style={styles.secondaryButton}
+            onClick={() => {
+              const columnCount = Math.max(1, Number(object.data?.columnCount || object.data?.rows?.[0]?.length || 2));
+              onPatch({ data: { rows: [...(object.data?.rows || []), Array.from({ length: columnCount }, () => ({ text: "" }))] } });
+            }}
+          >
+            Add Row
+          </button>
+          <button
+            type="button"
+            disabled={readonly || !(object.data?.rows || []).length}
+            style={styles.secondaryButton}
+            onClick={() => onPatch({ data: { rows: (object.data?.rows || []).slice(0, -1) } })}
+          >
+            Remove Row
+          </button>
+          <label style={styles.field}>Border<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.borderColor, "#cbd5e1")} onChange={(event) => onPatch({ style: { borderColor: event.target.value } })} /></label>
         </>
       ) : null}
       <div style={styles.geometryGrid}>

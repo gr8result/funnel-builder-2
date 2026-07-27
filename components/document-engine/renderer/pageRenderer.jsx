@@ -12,6 +12,7 @@ export function PageRenderer({
   onResizeObject,
   onTextEditStart,
   onTextCommit,
+  onTableCellCommit,
   exportMode = false,
 }) {
   if (!page) return null;
@@ -44,6 +45,7 @@ export function PageRenderer({
           onResize={onResizeObject}
           onTextEditStart={onTextEditStart}
           onTextCommit={onTextCommit}
+          onTableCellCommit={onTableCellCommit}
         />
       ))}
     </div>

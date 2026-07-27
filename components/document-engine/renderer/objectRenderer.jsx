@@ -11,6 +11,7 @@ export function ObjectRenderer({
   onResize,
   onTextEditStart,
   onTextCommit,
+  onTableCellCommit,
 }) {
   const textEditRef = useRef(null);
   useEffect(() => {
@@ -57,7 +58,7 @@ export function ObjectRenderer({
       }}
     >
       {editing && selected ? <ElementBadge object={object} /> : null}
-      {renderObjectContent(object, workbook, { editing, textEditing, textEditRef, onTextCommit })}
+      {renderObjectContent(object, workbook, { editing, textEditing, textEditRef, onTextCommit, onTableCellCommit })}
       {editing && selected && !textEditing ? <ResizeHandles object={object} onResize={onResize} /> : null}
     </div>
   );
@@ -119,7 +120,7 @@ function renderObjectContent(object, workbook, editor = {}) {
     );
   }
   if (object.type === "table") {
-    return <div style={{ width: "100%", height: "100%", border: `1px solid ${object.style?.borderColor || "#d1d5db"}` }}>Table</div>;
+    return <TableContent object={object} editor={editor} />;
   }
   if (object.type === "signature") {
     return <div style={{ width: "100%", height: "100%", borderBottom: `1px solid ${object.style?.borderColor || "#111827"}`, display: "flex", alignItems: "flex-end" }}>{object.data?.label || "Signature"}</div>;
@@ -131,6 +132,51 @@ function renderObjectContent(object, workbook, editor = {}) {
     return <div style={{ fontSize: Math.min(object.width, object.height), lineHeight: 1 }}>□</div>;
   }
   return <div style={{ width: "100%", height: "100%" }} />;
+}
+
+function TableContent({ object, editor = {} }) {
+  const rows = Array.isArray(object.data?.rows) ? object.data.rows : [];
+  const columnCount = Math.max(1, Number(object.data?.columnCount || rows[0]?.length || 1));
+  const borderColor = object.style?.borderColor || "#cbd5e1";
+  const cellPadding = Number(object.style?.cellPadding || 6);
+  return (
+    <table style={{ width: "100%", height: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontSize: object.style?.fontSize || 13, color: object.style?.textColor || "#111827" }}>
+      <tbody>
+        {rows.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {(row.length ? row : Array.from({ length: columnCount }, () => ({ text: "" }))).map((cell = {}, columnIndex) => {
+              if (cell.hidden) return null;
+              return (
+                <td
+                  key={columnIndex}
+                  colSpan={cell.colSpan || 1}
+                  rowSpan={cell.rowSpan || 1}
+                  contentEditable={editor.editing && !object.locked}
+                  suppressContentEditableWarning
+                  style={{
+                    border: `1px solid ${borderColor}`,
+                    background: cell.backgroundColor || "transparent",
+                    padding: cellPadding,
+                    verticalAlign: "top",
+                    outline: "none",
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                  }}
+                  onBlur={(event) => editor.onTableCellCommit?.(object.id, rowIndex, columnIndex, event.currentTarget.innerText)}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => {
+                    if (editor.editing) event.stopPropagation();
+                  }}
+                >
+                  {cell.text || ""}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 function baseObjectStyle(object) {

@@ -37,7 +37,9 @@ import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import { importPdfAsStandardDocumentPreview } from "../../lib/standard-inclusions/pdfImport";
+import { importDocxAsStandardDocumentPreview } from "../../lib/standard-inclusions/docxImport";
 import PdfImportReview from "../document-engine/import/PdfImportReview";
+import DocxImportReview from "../document-engine/import/DocxImportReview";
 import JobFileMenu from "./JobFileMenu.jsx";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
@@ -6873,6 +6875,7 @@ export function StandardInclusionsSheet({ sheet }) {
   const { workspaceId } = useWorkspace();
   const workbookId = sheet.workbook?.id || sheet.workbook?.jobId || sheet.workbook?.openedFileName || "local";
   const pdfUploadRef = useRef(null);
+  const docxUploadRef = useRef(null);
   const pptxUploadRef = useRef(null);
   const replacePageRef = useRef(null);
   const elementFileRef = useRef(null);
@@ -6885,6 +6888,8 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
+  const [docxImportReview, setDocxImportReview] = useState(null);
+  const [docxImportReviewBusy, setDocxImportReviewBusy] = useState(false);
   const [pdfImportReview, setPdfImportReview] = useState(null);
   const [pdfImportReviewBusy, setPdfImportReviewBusy] = useState(false);
   const onlyOfficeAuthToken = "";
@@ -6955,6 +6960,13 @@ export function StandardInclusionsSheet({ sheet }) {
     } finally {
       setSavedScheduleLoading(false);
     }
+  }
+
+  function openReplaceScheduleDialog() {
+    setImportPreview(null);
+    setPendingPdfFile(null);
+    setManagementMode("replace-options");
+    setStandardStatus("Choose how you want to replace the Standard Inclusions schedule.");
   }
 
   function replaceWithCandidate(candidate) {
@@ -7195,6 +7207,128 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus("Ready to import this PDF as a fixed-page schedule.");
   }
 
+  async function prepareDocxImport(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || (file.type !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && !/\.docx$/i.test(String(file.name || "")))) return;
+    setDocxImportReviewBusy(true);
+    setStandardStatus("Reading Word document...");
+    try {
+      const preview = await importDocxAsStandardDocumentPreview(file, {
+        onProgress: ({ stage }) => {
+          if (stage === "uploading-image") setStandardStatus("Uploading imported images...");
+          if (stage === "layout") setStandardStatus("Building editable schedule pages...");
+        },
+      });
+      const previewPages = Array.isArray(preview.document?.pages) ? preview.document.pages : [];
+      if (!previewPages.length) throw new Error("Import failed: the Word document did not produce any pages.");
+      setDocxImportReview(preview);
+      setImportPreview(null);
+      setPendingPdfFile(null);
+      setManagementMode("");
+      setStandardStatus(`Processed "${preview.fileName}" into ${previewPages.length} editable page${previewPages.length === 1 ? "" : "s"} - review before saving.`);
+    } catch (error) {
+      console.error("Standard Inclusions DOCX import failed", error);
+      setStandardStatus(error?.message || "Word document import failed.");
+    }
+    setDocxImportReviewBusy(false);
+  }
+
+  function cancelDocxImportReview() {
+    setDocxImportReview(null);
+    setManagementMode("");
+    setStandardStatus("Word document import cancelled.");
+  }
+
+  function returnToDocxUpload() {
+    setDocxImportReview(null);
+    setStandardStatus("Choose another Word document to import.");
+    docxUploadRef.current?.click();
+  }
+
+  async function confirmDocxImportReview(finalDocument) {
+    const preview = docxImportReview;
+    if (!preview) return;
+    setDocxImportReviewBusy(true);
+    try {
+      const finalPages = Array.isArray(finalDocument?.pages) ? finalDocument.pages : [];
+      if (!finalPages.length) throw new Error("At least one page must be kept to save this import.");
+      const document = markStandardDocumentSaved({
+        ...finalDocument,
+        activePageId: finalPages[0]?.id || finalDocument.activePageId || "",
+        metadata: {
+          ...(finalDocument.metadata || {}),
+          documentSource: "docx-import",
+          sourceFileName: preview.fileName || finalDocument.metadata?.sourceFileName || "",
+        },
+      }, { ...standard, activeDocumentSource: "docx-import" });
+      const persistedStandard = await saveStandardWithRevision({
+        documentBuilder: document,
+        source: "docx-import",
+        scheduleDeleted: false,
+        isDeleted: false,
+        deletedAt: null,
+        activeDocumentId: document.id,
+        activeDocumentName: document.name,
+        activeDocumentSource: "docx-import",
+        activeDocumentLastSavedAt: document.metadata?.lastSavedAt || new Date().toISOString(),
+        pdfPages: [],
+        selectedPdfPageId: "",
+        pdfSourceName: "",
+        pptxSourceName: "",
+        pdfEditorMode: "document-page-builder",
+        onlyOfficeDocumentId: "",
+        onlyOfficeVersion: 0,
+        onlyOfficePptxAssetId: "",
+        onlyOfficeExportedPdfAssetId: "",
+      }, "import-docx", preview.fileName, { persist: true });
+      const persistedDocument = persistedStandard?.documentBuilder || document;
+      const persistedPageCount = Array.isArray(persistedDocument.pages) ? persistedDocument.pages.length : finalPages.length;
+      setDocxImportReview(null);
+      setImportPreview(null);
+      setPendingPdfFile(null);
+      setManagementMode("");
+      setSelectedElementId("");
+      setStandardStatus(`Imported and saved ${persistedPageCount} editable Standard Inclusions page${persistedPageCount === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error("Standard Inclusions DOCX import save failed", error);
+      setStandardStatus(error?.message || "Could not save the reviewed Word import.");
+    }
+    setDocxImportReviewBusy(false);
+  }
+
+  async function saveReviewedDocxAsBaseTemplate(finalDocument) {
+    setDocxImportReviewBusy(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const response = await fetch("/api/standard-inclusions/base-template", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+        },
+        body: JSON.stringify({
+          documentJson: finalDocument,
+          sourceFileName: docxImportReview?.fileName || "",
+          importReport: {
+            warnings: docxImportReview?.warnings || [],
+            fontSubstitutions: docxImportReview?.fontSubstitutions || [],
+          },
+          autoActivate: false,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not save this as a draft base template.");
+      setStandardStatus("Saved as a draft base template (v" + payload.template.version + "). Platform admins can activate it for new builders.");
+    } catch (error) {
+      console.error("Save DOCX import as base template failed", error);
+      setStandardStatus(error?.message || "Could not save this as a draft base template.");
+    }
+    setDocxImportReviewBusy(false);
+  }
+
   // Processes the uploaded PDF and hands the result to the review screen —
   // nothing is saved/replaces the live schedule until the user explicitly
   // accepts it there. Previously this saved immediately on processing with no
@@ -7393,7 +7527,19 @@ export function StandardInclusionsSheet({ sheet }) {
         {standardStatus ? <div style={styles.proposalBuilderStatus}>{standardStatus}</div> : null}
       </section>
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
+      <input ref={docxUploadRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{ display: "none" }} onChange={prepareDocxImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
+      {docxImportReview ? (
+        <DocxImportReview
+          preview={docxImportReview}
+          busy={docxImportReviewBusy}
+          onCancel={docxImportReviewBusy ? () => {} : cancelDocxImportReview}
+          onReturnToUpload={docxImportReviewBusy ? () => {} : returnToDocxUpload}
+          onConfirm={docxImportReviewBusy ? () => {} : confirmDocxImportReview}
+          onSaveAsBaseTemplate={docxImportReviewBusy ? () => {} : saveReviewedDocxAsBaseTemplate}
+          canSaveAsBaseTemplate
+        />
+      ) : null}
       {pdfImportReview ? (
         <PdfImportReview
           preview={pdfImportReview}
@@ -7427,6 +7573,11 @@ export function StandardInclusionsSheet({ sheet }) {
               savedScheduleLoading={savedScheduleLoading}
               importPreview={importPreview}
               pendingPdfFile={pendingPdfFile}
+              onUploadDocx={() => docxUploadRef.current?.click()}
+              onUploadPdf={() => pdfUploadRef.current?.click()}
+              onUploadPptx={() => pptxUploadRef.current?.click()}
+              onUsePremierTemplate={usePremierTemplate}
+              onChooseSavedSchedule={loadSavedSchedules}
               onChoosePdfMode={importPendingPdfNow}
               onSelectCandidate={replaceWithCandidate}
               onRestoreRevision={restoreRevision}
@@ -7438,7 +7589,7 @@ export function StandardInclusionsSheet({ sheet }) {
               onConfirmImport={confirmImportPreview}
             />
           )}
-          onReplace={loadSavedSchedules}
+          onReplace={openReplaceScheduleDialog}
           onDelete={deleteCurrentSchedule}
           onChange={saveDocumentBuilder}
           onStatus={setStandardStatus}
@@ -7452,6 +7603,7 @@ export function StandardInclusionsSheet({ sheet }) {
           savedScheduleLoading={savedScheduleLoading}
           importPreview={importPreview}
           pendingPdfFile={pendingPdfFile}
+          onUploadDocx={() => docxUploadRef.current?.click()}
           onUploadPptx={() => pptxUploadRef.current?.click()}
           onUploadPdf={() => pdfUploadRef.current?.click()}
           onRestore={restorePreviousVersion}
@@ -8017,6 +8169,11 @@ function StandardScheduleContextPanel({
   savedScheduleLoading,
   importPreview,
   pendingPdfFile,
+  onUploadDocx,
+  onUploadPdf,
+  onUploadPptx,
+  onUsePremierTemplate,
+  onChooseSavedSchedule,
   onChoosePdfMode,
   onSelectCandidate,
   onRestoreRevision,
@@ -8025,6 +8182,7 @@ function StandardScheduleContextPanel({
 }) {
   const hasPanel = (
     (managementMode === "pdf-import-options" && pendingPdfFile) ||
+    managementMode === "replace-options" ||
     managementMode === "replace" ||
     managementMode === "restore" ||
     (managementMode === "import-preview" && importPreview)
@@ -8032,17 +8190,47 @@ function StandardScheduleContextPanel({
   if (!hasPanel) return null;
   return (
     <section style={styles.standardScheduleContextPanel}>
+      {managementMode === "replace-options" ? (
+        <div style={styles.standardSchedulePanel}>
+          <div style={styles.proposalMiniActions}>
+            <strong>Replace Standard Inclusions Schedule</strong>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
+          </div>
+          <div style={styles.standardSchedulePdfChoiceGrid}>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadDocx}>
+              <strong>Import Editable Word Document (.docx)</strong>
+              <span>Recommended for schedules that need editable text, tables, images, headers, footers, and page flow in the Document Engine.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPdf}>
+              <strong>Attach Finished PDF</strong>
+              <span>Use when the schedule is already final and should stay as fixed pages instead of a Word-style editable layout.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUsePremierTemplate}>
+              <strong>Use Premier Base Template</strong>
+              <span>Load the current system base template into this workbook as an editable schedule.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onChooseSavedSchedule}>
+              <strong>Choose Saved Schedule</strong>
+              <span>Reuse a Standard Inclusions document already saved in this workbook or related estimates.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPptx}>
+              <strong>Upload PowerPoint Template</strong>
+              <span>Keep using the existing ONLYOFFICE editing path for PowerPoint-based schedules.</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
       {managementMode === "pdf-import-options" && pendingPdfFile ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Import PDF</strong>
+            <strong>Attach Finished PDF</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
           </div>
           <p style={styles.dashboardPanelSubtitle}>{pendingPdfFile.name}</p>
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
-              <strong>Import PDF Now</strong>
-              <span>Pages are processed into editable Document Engine objects where reliable, with hybrid or flat-image fallback required for pages that cannot be reconstructed accurately.</span>
+              <strong>Attach PDF Now</strong>
+              <span>The PDF remains a fixed-page schedule. Use the Word importer when editable flowing content is required.</span>
             </button>
           </div>
         </div>
@@ -8128,6 +8316,7 @@ function StandardScheduleEmptyState({
   savedScheduleLoading,
   importPreview,
   pendingPdfFile,
+  onUploadDocx,
   onUploadPptx,
   onUploadPdf,
   onRestore,
@@ -8143,11 +8332,12 @@ function StandardScheduleEmptyState({
     <section style={styles.standardScheduleEmptyState}>
       <h3>No Standard Inclusions Schedule is currently loaded.</h3>
       <div style={styles.proposalMiniActions}>
-        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadPptx}>Upload PowerPoint</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Upload PDF</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadDocx}>Import Editable Word Document (.docx)</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Attach Finished PDF</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUsePremierTemplate}>Use Premier Base Template</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Create Blank Schedule</button>
         <button type="button" disabled={readonly || !revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUsePremierTemplate}>Use Premier Template</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPptx}>Upload PowerPoint Template</button>
       </div>
       <StandardScheduleContextPanel
         readonly={readonly}
@@ -8157,6 +8347,11 @@ function StandardScheduleEmptyState({
         savedScheduleLoading={savedScheduleLoading}
         importPreview={importPreview}
         pendingPdfFile={pendingPdfFile}
+        onUploadDocx={onUploadDocx}
+        onUploadPdf={onUploadPdf}
+        onUploadPptx={onUploadPptx}
+        onUsePremierTemplate={onUsePremierTemplate}
+        onChooseSavedSchedule={() => {}}
         onChoosePdfMode={onChoosePdfMode}
         onSelectCandidate={onSelectCandidate}
         onRestoreRevision={onRestoreRevision}

@@ -20,6 +20,9 @@ export function createA4Page(props = {}) {
       imageRef: null,
       ...(props.background || {}),
     },
+    data: {
+      ...(props.data || {}),
+    },
     objects: normaliseLayers((props.objects || []).map(normaliseObject)),
   };
 }
