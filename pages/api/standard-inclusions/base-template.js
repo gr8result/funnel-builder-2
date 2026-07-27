@@ -7,7 +7,18 @@ const TABLE = "standard_inclusions_base_templates";
 // proxy for "platform admin" (this repo has no dedicated platform-superadmin
 // flag yet; any owner/admin of any workspace can manage the shared base
 // template, which is a real limitation worth tightening later).
-const ADMIN_ROLES = ["owner", "admin", "builder_admin"];
+function platformAdminEmails() {
+  return String(process.env.PLATFORM_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function canManageSystemTemplates(user) {
+  const emails = platformAdminEmails();
+  if (!emails.length) return false;
+  return emails.includes(String(user?.email || "").toLowerCase());
+}
 
 async function handler(req, res) {
   try {
@@ -21,8 +32,8 @@ async function handler(req, res) {
       return res.status(200).json({ ok: true, activeTemplate: data || null });
     }
 
-    if (!ADMIN_ROLES.includes(req.memberRole)) {
-      return res.status(403).json({ ok: false, error: "Only workspace admins can manage the shared base template." });
+    if (!canManageSystemTemplates(req.user)) {
+      return res.status(403).json({ ok: false, error: "Only platform administrators can manage the shared base template." });
     }
 
     if (req.method === "POST") {

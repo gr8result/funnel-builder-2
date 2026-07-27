@@ -8042,7 +8042,7 @@ function StandardScheduleContextPanel({
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
               <strong>Import PDF Now</strong>
-              <span>Each page imports as a locked, high-quality visual background with no automatically generated text blocks. You can still add your own blocks after import.</span>
+              <span>Pages are processed into editable Document Engine objects where reliable, with hybrid or flat-image fallback required for pages that cannot be reconstructed accurately.</span>
             </button>
           </div>
         </div>

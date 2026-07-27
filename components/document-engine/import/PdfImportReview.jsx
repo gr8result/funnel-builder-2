@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { flattenPdfPageToImage, reprocessPdfPage } from "../../../lib/standard-inclusions/pdfImport.js";
+import { flattenPdfPageToImage, hybridPdfPageToDocumentObjects, reprocessPdfPage } from "../../../lib/standard-inclusions/pdfImport.js";
 
 // Sits between "PDF processed" and "saved as the live schedule" — the review
 // step the previous import flow skipped entirely (it saved immediately on
@@ -8,7 +8,7 @@ import { flattenPdfPageToImage, reprocessPdfPage } from "../../../lib/standard-i
 export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAsBaseTemplate, canSaveAsBaseTemplate = false }) {
   const [pages, setPages] = useState(() => preview.document.pages.map((page, index) => ({
     ...page,
-    _status: "pending", // pending | accepted | skipped | flattened | reprocessed
+    _status: preview.pageReports?.[index]?.requiresFallbackChoice ? "failed" : "pending", // pending | failed | accepted | skipped | flattened | hybrid | reprocessed
     _report: preview.pageReports?.[index] || null,
   })));
   const [activeIndex, setActiveIndex] = useState(0);
@@ -57,11 +57,28 @@ export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAs
     setBusyIndex(-1);
   }
 
+  async function handleHybrid(index) {
+    setBusyIndex(index);
+    setError("");
+    try {
+      const pageNumber = index + 1;
+      const hybrid = await hybridPdfPageToDocumentObjects(preview._pdf, pageNumber, { lib: preview._lib });
+      setPageStatus(index, "hybrid", { width: hybrid.width, height: hybrid.height, objects: hybrid.objects });
+    } catch (hybridError) {
+      setError(hybridError?.message || `Could not create hybrid import for page ${index + 1}.`);
+    }
+    setBusyIndex(-1);
+  }
+
   function handleSkip(index) {
     setPageStatus(index, "skipped");
   }
 
   function handleAccept(index) {
+    if (pages[index]?._status === "failed" || pages[index]?._report?.requiresFallbackChoice) {
+      setError(`This page could not be reconstructed accurately enough for editable import. Choose a fallback for page ${index + 1}.`);
+      return;
+    }
     setPageStatus(index, "accepted");
   }
 
@@ -74,11 +91,29 @@ export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAs
     };
   }
 
+  function unresolvedFailedPages() {
+    return pages
+      .map((page, index) => ({ page, index }))
+      .filter(({ page }) => page._status === "failed" || (page._report?.requiresFallbackChoice && !["accepted", "flattened", "hybrid", "skipped", "reprocessed"].includes(page._status)));
+  }
+
   function handleAcceptAll() {
+    const unresolved = unresolvedFailedPages();
+    if (unresolved.length) {
+      setError(`This page could not be reconstructed accurately enough for editable import. Choose Reprocess Page, Use Hybrid Import, Use Page as Flat Image, Skip Page, or Cancel Import for page ${unresolved[0].index + 1}.`);
+      setActiveIndex(unresolved[0].index);
+      return;
+    }
     onConfirm(buildFinalDocument());
   }
 
   function handleConfirm() {
+    const unresolved = unresolvedFailedPages();
+    if (unresolved.length) {
+      setError(`This page could not be reconstructed accurately enough for editable import. Choose a fallback for page ${unresolved[0].index + 1} before saving.`);
+      setActiveIndex(unresolved[0].index);
+      return;
+    }
     onConfirm(buildFinalDocument());
   }
 
@@ -134,6 +169,7 @@ export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAs
                 <span style={styles.pageListNumber}>{index + 1}</span>
                 <span style={styles.pageListMeta}>
                   <strong>{page._status === "skipped" ? "Skipped" : `${page.objects.length} objects`}</strong>
+                  {page._status === "failed" ? <small style={styles.pageListWarning}>Needs fallback</small> : null}
                   {page._report?.warnings?.length ? <small style={styles.pageListWarning}>⚠ {page._report.warnings.length} warning(s)</small> : null}
                 </span>
               </button>
@@ -151,7 +187,11 @@ export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAs
                   {activePage.objects.filter((o) => o.type === "text").length} text ·{" "}
                   {activePage.objects.filter((o) => o.type === "image").length} images ·{" "}
                   {activePage.objects.filter((o) => o.type === "shape" || o.type === "divider").length} shapes
+                  {activePage._report?.fidelityScore != null ? ` · fidelity ${activePage._report.fidelityScore}` : ""}
                 </p>
+                {activePage._status === "failed" ? (
+                  <p style={styles.failureText}>This page could not be reconstructed accurately enough for editable import.</p>
+                ) : null}
                 {activePage._report?.warnings?.map((warning, i) => (
                   <p key={i} style={styles.pageWarningText}>⚠ {warning}</p>
                 ))}
@@ -162,6 +202,9 @@ export default function PdfImportReview({ preview, onConfirm, onCancel, onSaveAs
                   <button type="button" style={styles.primaryButton} disabled={busyIndex === activeIndex} onClick={() => handleAccept(activeIndex)}>Accept Page</button>
                   <button type="button" style={styles.ghostButton} disabled={busyIndex === activeIndex} onClick={() => handleReprocess(activeIndex)}>
                     {busyIndex === activeIndex ? "Working..." : "Reprocess Page"}
+                  </button>
+                  <button type="button" style={styles.ghostButton} disabled={busyIndex === activeIndex} onClick={() => handleHybrid(activeIndex)}>
+                    {busyIndex === activeIndex ? "Working..." : "Use Hybrid Import"}
                   </button>
                   <button type="button" style={styles.ghostButton} disabled={busyIndex === activeIndex} onClick={() => handleFlatten(activeIndex)}>
                     {busyIndex === activeIndex ? "Working..." : "Use As Flat Image"}
@@ -220,6 +263,7 @@ const styles = {
   statusTag: { fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: "#93a4bd" },
   pageDetailStats: { margin: 0, color: "#93a4bd", fontSize: 13 },
   pageWarningText: { margin: 0, color: "#fbbf24", fontSize: 12.5 },
+  failureText: { margin: 0, color: "#fecaca", background: "rgba(127,29,29,0.26)", border: "1px solid rgba(248,113,113,0.35)", borderRadius: 8, padding: "8px 10px", fontSize: 13, fontWeight: 800 },
   pageActions: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 },
   footer: { display: "flex", justifyContent: "flex-end", gap: 10, borderTop: "1px solid rgba(148,163,184,0.18)", paddingTop: 14 },
   primaryButton: { border: 0, borderRadius: 8, background: "#2563eb", color: "white", fontWeight: 800, padding: "9px 14px", cursor: "pointer" },

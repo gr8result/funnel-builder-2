@@ -9,7 +9,7 @@ export function createDividerObject(props = {}) {
       thickness: 2,
       ...(props.style || {}),
     },
-    data: {},
+    data: { orientation: "horizontal" },
     ...props,
   });
 }

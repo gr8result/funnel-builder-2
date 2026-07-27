@@ -41,7 +41,7 @@ const activeBody = sheetBody.slice(0, firstDormantLegacyDeclaration > -1 ? first
 const activeReturn = sheetBody.slice(firstReturn);
 
 assert(source.includes("createPremierInclusionsWorkingCopy"), "Standard Inclusions must keep the Premier Template available for deliberate use");
-assert(premierTemplateBody.includes("createPremierInclusionsWorkingCopy"), "Premier Template must load only from the explicit template action");
+assert(premierTemplateBody.includes("resolveBaseStandardInclusionsTemplate"), "Premier Template action must resolve the active versioned base template");
 assert(!activeBody.includes("useEffect("), "Opening Standard Inclusions must not autosave or auto-create a fallback document");
 assert(!activeBody.includes("isPremierInclusionsWorkingCopyCurrent"), "Opening Standard Inclusions must not force the native master working copy");
 assert(!source.includes("function StandardScheduleManagementPanel"), "The duplicated Schedule Management component must be removed");
@@ -64,8 +64,8 @@ assert(!source.includes("PDF upload mode"), "PDF upload mode controls must not r
 assert(!source.includes("Import each page as a fixed page background"), "Fixed-background PDF copy must not be the default workflow");
 assert(!source.includes("pdfImportMode"), "PDF import mode must not be global screen state");
 assert(contextPanelBody.includes("managementMode === \"pdf-import-options\""), "PDF choices must be shown only after a PDF is selected");
-assert(contextPanelBody.includes("Editable conversion"), "PDF choices must include editable conversion");
-assert(contextPanelBody.includes("High-quality fixed-page import"), "PDF choices must include fixed-page import as an explicit choice");
+assert(contextPanelBody.includes("Import PDF Now"), "PDF choices must include the PDF import action");
+assert(contextPanelBody.includes("hybrid or flat-image fallback"), "PDF choice copy must describe fallback review for low-fidelity pages");
 assert(!activeBody.includes("createPremierInclusionsDocument("), "The three-page fallback must not be used in the active Standard Inclusions workflow");
 
 [

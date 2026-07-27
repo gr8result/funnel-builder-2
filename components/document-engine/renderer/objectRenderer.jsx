@@ -66,7 +66,7 @@ export function ObjectRenderer({
 function renderObjectContent(object, workbook, editor = {}) {
   if (object.type === "text" || object.type === "dynamicField") {
     const text = resolveDynamicText(object.data?.text || "", workbook);
-    const activationHidden = object.data?.overlayMode === "pptx-text-activation" && !object.data?.edited && !editor.textEditing;
+    const activationHidden = ["pptx-text-activation", "pdf-text-activation"].includes(object.data?.overlayMode) && !object.data?.edited && !editor.textEditing;
     return (
       <div
         contentEditable={editor.editing && editor.textEditing && !object.locked}
@@ -107,7 +107,16 @@ function renderObjectContent(object, workbook, editor = {}) {
     );
   }
   if (object.type === "divider") {
-    return <div style={{ width: "100%", height: object.style?.thickness || object.height, background: object.style?.color || "#111827" }} />;
+    const orientation = object.data?.orientation === "vertical" ? "vertical" : "horizontal";
+    return (
+      <div
+        style={{
+          width: orientation === "vertical" ? object.style?.thickness || object.width : "100%",
+          height: orientation === "vertical" ? "100%" : object.style?.thickness || object.height,
+          background: object.style?.color || "#111827",
+        }}
+      />
+    );
   }
   if (object.type === "table") {
     return <div style={{ width: "100%", height: "100%", border: `1px solid ${object.style?.borderColor || "#d1d5db"}` }}>Table</div>;

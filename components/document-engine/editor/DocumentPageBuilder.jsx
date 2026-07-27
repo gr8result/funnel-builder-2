@@ -255,8 +255,12 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
       for (const node of pageNodes) {
         const canvas = await html2canvas(node, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
         const image = await pdf.embedPng(canvas.toDataURL("image/png"));
-        const pdfPage = pdf.addPage([595.28, 841.89]);
-        pdfPage.drawImage(image, { x: 0, y: 0, width: 595.28, height: 841.89 });
+        const pageWidth = Math.max(1, Number(node.offsetWidth) || 794);
+        const pageHeight = Math.max(1, Number(node.offsetHeight) || 1123);
+        const pdfWidth = pageWidth / (96 / 72);
+        const pdfHeight = pageHeight / (96 / 72);
+        const pdfPage = pdf.addPage([pdfWidth, pdfHeight]);
+        pdfPage.drawImage(image, { x: 0, y: 0, width: pdfWidth, height: pdfHeight });
       }
       const bytes = await pdf.save();
       const blob = new Blob([bytes], { type: "application/pdf" });
@@ -459,6 +463,16 @@ function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, 
           <label style={styles.field}>Border<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.stroke, "#d1d5db")} onChange={(event) => onPatch({ style: { stroke: event.target.value, strokeWidth: object.style?.strokeWidth || 1 } })} /></label>
         </>
       ) : null}
+      {object.type === "divider" ? (
+        <>
+          <label style={styles.field}>Orientation<select disabled={readonly} style={styles.input} value={object.data?.orientation || "horizontal"} onChange={(event) => onPatch({ data: { orientation: event.target.value } })}>
+            <option value="horizontal">Horizontal</option>
+            <option value="vertical">Vertical</option>
+          </select></label>
+          <label style={styles.field}>Colour<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.color, "#0b2545")} onChange={(event) => onPatch({ style: { color: event.target.value } })} /></label>
+          <label style={styles.field}>Thickness<input disabled={readonly} type="number" min="1" style={styles.input} value={object.style?.thickness || 2} onChange={(event) => onPatch({ style: { thickness: Math.max(1, Number(event.target.value) || 1) } })} /></label>
+        </>
+      ) : null}
       <div style={styles.geometryGrid}>
         {["x", "y", "width", "height"].map((key) => (
           <label key={key} style={styles.field}>{key.toUpperCase()}<input disabled={readonly} type="number" style={styles.input} value={Math.round(Number(object[key]) || 0)} onChange={(event) => onGeometry(key, event.target.value)} /></label>
@@ -516,6 +530,7 @@ function createBlockObject(type) {
       width: 320,
       height: 4,
       style: { color: "#0b2545", thickness: 4 },
+      data: { orientation: "horizontal" },
     });
   }
   if (type === "signature") {
