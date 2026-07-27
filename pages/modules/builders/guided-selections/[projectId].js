@@ -17,6 +17,7 @@ import { INTERNAL_ROLES, COST_ROLES } from "../../../../lib/product-library/cons
 import SelectionChecklistNav from "../../../../components/product-library/SelectionChecklistNav";
 import GuidedSelectionWorkspace from "../../../../components/product-library/GuidedSelectionWorkspace";
 import RunningSelectionsSummary from "../../../../components/product-library/RunningSelectionsSummary";
+import ChecklistAdminPanel from "../../../../components/product-library/ChecklistAdminPanel";
 
 const SUMMARY_COLLAPSE_KEY = "gr8:guidedSelections:summaryCollapsed";
 
@@ -42,6 +43,7 @@ export default function GuidedSelectionsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [checklistAdminOpen, setChecklistAdminOpen] = useState(false);
   const [summaryCollapsed, setSummaryCollapsedState] = useState(() => {
     if (typeof window === "undefined") return false;
     try { return localStorage.getItem(SUMMARY_COLLAPSE_KEY) === "1"; } catch { return false; }
@@ -69,7 +71,8 @@ export default function GuidedSelectionsPage() {
     return map;
   }, [activeSelections]);
 
-  const activeItem = useMemo(() => checklistItems.find((item) => item.id === activeItemId) || null, [checklistItems, activeItemId]);
+  const enabledChecklistItems = useMemo(() => checklistItems.filter((item) => item.active), [checklistItems]);
+  const activeItem = useMemo(() => enabledChecklistItems.find((item) => item.id === activeItemId) || null, [enabledChecklistItems, activeItemId]);
   const activeCategory = activeItem ? categoryById.get(activeItem.category_id) : null;
   const activeProducts = useMemo(() => {
     if (!activeItem?.category_id) return [];
@@ -86,7 +89,7 @@ export default function GuidedSelectionsPage() {
       setError("");
       const [projectResult, checklistResult, categoryResult, productResult, manufacturerResult, supplierResult, settingsResult] = await Promise.all([
         supabase.from("builder_commercial_projects").select("id, project_name, client_name, site_address, status, currency, original_estimate_total, contract_total, pricing_tier").eq("workspace_id", workspaceId).eq("id", projectId).maybeSingle(),
-        supabase.from("builder_selection_checklist_items").select("id, workspace_id, selection_group, room, item_label, category_id, required, active, sort_order").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).eq("active", true).order("sort_order", { ascending: true }),
+        supabase.from("builder_selection_checklist_items").select("id, workspace_id, selection_group, room, item_label, category_id, required, active, sort_order").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("sort_order", { ascending: true }),
         supabase.from("builder_product_categories").select("id, category_key, category_name, selection_group, selection_control_type").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
         supabase.from("builder_products").select("id, product_name, category_id, manufacturer_id, supplier_id, model, colour, finish, primary_image_url, product_url, verification_status, cost_price, base_allowance, upgrade_value_mode, upgrade_cost, pricing_tier, standard_included, client_notes").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).in("library_scope", ["CLIENT_SELECTION", "BOTH"]).eq("active", true).eq("available_for_selection", true),
         supabase.from("builder_product_manufacturers").select("id, manufacturer_name").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
@@ -169,7 +172,7 @@ export default function GuidedSelectionsPage() {
 
   const totalUpgrades = useMemo(() => roundMoney(activeSelections.reduce((total, selection) => total + Math.max(0, numberValue(selection.variation_amount)), 0)), [activeSelections]);
   const totalCredits = useMemo(() => roundMoney(activeSelections.reduce((total, selection) => total + Math.max(0, -numberValue(selection.variation_amount)), 0)), [activeSelections]);
-  const requiredMissingCount = useMemo(() => checklistItems.filter((item) => item.required && !selectedByItemId.has(item.id)).length, [checklistItems, selectedByItemId]);
+  const requiredMissingCount = useMemo(() => enabledChecklistItems.filter((item) => item.required && !selectedByItemId.has(item.id)).length, [enabledChecklistItems, selectedByItemId]);
 
   async function persistSessionTotals(nextSelections) {
     const nextBudget = calculateSessionBudget({
@@ -263,14 +266,14 @@ export default function GuidedSelectionsPage() {
   }
 
   function goToNextIncomplete() {
-    const currentIndex = checklistItems.findIndex((item) => item.id === activeItemId);
-    const next = checklistItems.slice(currentIndex + 1).find((item) => !selectedByItemId.has(item.id))
-      || checklistItems.find((item) => !selectedByItemId.has(item.id));
+    const currentIndex = enabledChecklistItems.findIndex((item) => item.id === activeItemId);
+    const next = enabledChecklistItems.slice(currentIndex + 1).find((item) => !selectedByItemId.has(item.id))
+      || enabledChecklistItems.find((item) => !selectedByItemId.has(item.id));
     if (next) setActiveItemId(next.id);
   }
 
   async function handleFinalise() {
-    const missing = checklistItems.filter((item) => item.required && !selectedByItemId.has(item.id));
+    const missing = enabledChecklistItems.filter((item) => item.required && !selectedByItemId.has(item.id));
     if (missing.length) {
       setError(`${missing.length} required selection(s) still need to be made: ${missing.slice(0, 5).map((item) => item.item_label).join(", ")}${missing.length > 5 ? "..." : ""}`);
       return;
@@ -297,6 +300,28 @@ export default function GuidedSelectionsPage() {
     }
   }
 
+  async function handleCreateChecklistItem(fields) {
+    const { data, error: createError } = await supabase.from("builder_selection_checklist_items").insert(fields).select("*").single();
+    if (createError) throw createError;
+    setChecklistItems((current) => [...current, data].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+  }
+
+  async function handleUpdateChecklistItem(itemId, fields) {
+    const { data, error: updateError } = await supabase
+      .from("builder_selection_checklist_items")
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .eq("workspace_id", workspaceId)
+      .eq("id", itemId)
+      .select("*")
+      .single();
+    if (updateError) { setError(updateError.message || "Could not update this checklist item."); return; }
+    setChecklistItems((current) => current.map((item) => (item.id === itemId ? data : item)).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)));
+  }
+
+  async function handleDeactivateChecklistItem(itemId) {
+    await handleUpdateChecklistItem(itemId, { active: false });
+  }
+
   if (workspaceLoading || loading) {
     return <main className="page"><p className="loading">Loading guided selections...</p><style jsx>{`.page{padding:40px;color:#93a4bd;background:#0b1220;min-height:100vh}`}</style></main>;
   }
@@ -312,17 +337,31 @@ export default function GuidedSelectionsPage() {
             <span className="meta">{project?.client_name}{project?.site_address ? ` · ${project.site_address}` : ""}</span>
           </div>
           <div className="topActions">
+            {isInternal && <button type="button" className="manageChecklistButton" onClick={() => setChecklistAdminOpen(true)}>Manage Checklist</button>}
             <Link href="/modules/builders/product-library">Client Selections Library</Link>
             <Link href="/modules/builders/selections-book">Office Review Table</Link>
           </div>
         </header>
+
+        {isInternal && (
+          <ChecklistAdminPanel
+            open={checklistAdminOpen}
+            items={checklistItems}
+            categories={categories}
+            workspaceId={workspaceId}
+            onClose={() => setChecklistAdminOpen(false)}
+            onCreate={handleCreateChecklistItem}
+            onUpdate={handleUpdateChecklistItem}
+            onDeactivate={handleDeactivateChecklistItem}
+          />
+        )}
 
         {error && <div className="alert error">{error}</div>}
         {success && <div className="alert success">{success}</div>}
 
         <div className={`layout ${summaryCollapsed ? "summaryCollapsed" : ""}`}>
           <section className="checklistPane">
-            <SelectionChecklistNav items={checklistItems} selectedByItemId={selectedByItemId} activeItemId={activeItemId} onSelectItem={(item) => setActiveItemId(item.id)} />
+            <SelectionChecklistNav items={enabledChecklistItems} selectedByItemId={selectedByItemId} activeItemId={activeItemId} onSelectItem={(item) => setActiveItemId(item.id)} />
           </section>
 
           <section className="workspacePane">
@@ -347,7 +386,7 @@ export default function GuidedSelectionsPage() {
           <section className="summaryPane">
             <RunningSelectionsSummary
               completedCount={selectedByItemId.size}
-              totalCount={checklistItems.length}
+              totalCount={enabledChecklistItems.length}
               requiredMissingCount={requiredMissingCount}
               totalUpgrades={totalUpgrades}
               totalCredits={totalCredits}
@@ -367,13 +406,15 @@ export default function GuidedSelectionsPage() {
 
       <style jsx>{`
         .page { min-height: 100vh; background: #0b1220; color: #e5eefb; padding: 20px 24px 40px; }
-        .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+        .topbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px 16px; margin-bottom: 16px; }
         .eyebrow { margin: 0; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #7dd3fc; }
         .topbar h1 { margin: 4px 0 2px; font-size: 24px; }
         .meta { color: #93a4bd; font-size: 13px; }
-        .topActions { display: flex; gap: 14px; align-items: center; }
+        .topActions { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
         .topActions :global(a) { color: #93a4bd; font-size: 13px; font-weight: 700; text-decoration: none; }
         .topActions :global(a:hover) { color: #e5eefb; }
+        .manageChecklistButton { background: transparent; border: 1px solid rgba(148,163,184,0.35); color: #e5eefb; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .manageChecklistButton:hover { border-color: #7dd3fc; color: #7dd3fc; }
         .alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
         .alert.error { background: rgba(127,29,29,0.25); border: 1px solid rgba(248,113,113,0.4); color: #fecaca; }
         .alert.success { background: rgba(21,128,61,0.2); border: 1px solid rgba(74,222,128,0.4); color: #bbf7d0; }
@@ -388,8 +429,18 @@ export default function GuidedSelectionsPage() {
         .itemActions button:disabled { opacity: 0.5; cursor: not-allowed; }
         .summaryPane { position: sticky; top: 20px; background: #0b1626; border: 1px solid rgba(148,163,184,0.18); border-radius: 12px; padding: 14px; height: calc(100vh - 150px); }
         @media (max-width: 1180px) {
-          .layout, .layout.summaryCollapsed { grid-template-columns: 1fr; }
-          .checklistPane, .summaryPane { height: auto; max-height: 50vh; position: static; }
+          .layout, .layout.summaryCollapsed { grid-template-columns: 220px minmax(0, 1fr); grid-template-areas: "checklist workspace" "summary summary"; }
+          .checklistPane { grid-area: checklist; }
+          .workspacePane { grid-area: workspace; }
+          .summaryPane { grid-area: summary; height: auto; max-height: 40vh; position: static; }
+        }
+        @media (max-width: 780px) {
+          .page { padding: 14px 14px 32px; }
+          .layout, .layout.summaryCollapsed { grid-template-columns: 1fr; grid-template-areas: "checklist" "workspace" "summary"; }
+          .checklistPane { height: auto; max-height: 45vh; }
+          .topbar h1 { font-size: 20px; }
+          .itemActions { flex-wrap: wrap; }
+          .itemActions button { flex: 1 1 auto; }
         }
       `}</style>
     </>

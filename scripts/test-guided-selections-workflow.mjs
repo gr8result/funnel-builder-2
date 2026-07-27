@@ -71,6 +71,25 @@ assert.match(summarySource, /Finalise Client Selections/);
 assert.match(summarySource, /Generate Inclusions Schedule/);
 assert.match(summarySource, /Prepare Quote Update/);
 
+// --- Colorbond/Monier seed data: real published colour ranges, not invented placeholders ---
+const seedSql = read("supabase/migrations/20260730_colorbond_monier_seed_products.sql");
+["Surfmist", "Shale Grey", "Monument", "Woodland Grey"].forEach((colourName) => {
+  assert.ok(seedSql.includes(colourName), `Colorbond seed must include the real published colour "${colourName}"`);
+});
+["Horizon", "Elabana", "Shingle"].forEach((rangeName) => {
+  assert.ok(seedSql.includes(rangeName), `Monier seed must include the real tile range "${rangeName}"`);
+});
+assert.match(seedSql, /verification_status.*'unverified'/, "seeded colour/tile rows must be flagged unverified, not silently presented as confirmed product data");
+assert.match(seedSql, /roof_colour|gutters_colour|fascia_colour|downpipes_colour/, "seed must populate the colour categories the guided workflow example depends on");
+
+// --- Checklist admin CRUD panel: real data mutation, not a hardcoded static list ---
+const adminPanelSource = read("components/product-library/ChecklistAdminPanel.jsx");
+["onCreate", "onUpdate", "onDeactivate"].forEach((handlerName) => {
+  assert.ok(adminPanelSource.includes(handlerName), `ChecklistAdminPanel must support ${handlerName} so the checklist stays real editable data`);
+});
+assert.match(pageSource, /ChecklistAdminPanel/, "the guided selections page must wire in the checklist admin panel");
+assert.match(pageSource, /builder_selection_checklist_items.*insert|insert.*builder_selection_checklist_items/s, "creating a checklist item must write to the real table");
+
 // --- Pure calculation sanity (reusing the already-tested shared engine, just confirming the guided page's usage shape is valid input) ---
 const variation = calculateSelectionVariation({
   allowance: 500,
