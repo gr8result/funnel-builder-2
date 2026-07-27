@@ -20,7 +20,7 @@ import {
   Truck,
 } from "lucide-react";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
-import { useWorkspace } from "../../hooks/useWorkspace";
+import { useApiFetch, useWorkspace } from "../../hooks/useWorkspace";
 import { useJobFile } from "../../hooks/useJobFile";
 import { supabase } from "../../utils/supabase-client";
 import { isDeveloperEmail } from "../../lib/adminUsers";
@@ -6873,6 +6873,7 @@ function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly })
 export function StandardInclusionsSheet({ sheet }) {
   const readonly = sheet.previewMode;
   const { workspaceId } = useWorkspace();
+  const apiFetch = useApiFetch();
   const workbookId = sheet.workbook?.id || sheet.workbook?.jobId || sheet.workbook?.openedFileName || "local";
   const pdfUploadRef = useRef(null);
   const docxUploadRef = useRef(null);
@@ -7215,6 +7216,7 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus("Reading Word document...");
     try {
       const preview = await importDocxAsStandardDocumentPreview(file, {
+        uploadAsset: uploadDocxImportAsset,
         onProgress: ({ stage }) => {
           if (stage === "uploading-image") setStandardStatus("Uploading imported images...");
           if (stage === "layout") setStandardStatus("Building editable schedule pages...");
@@ -7232,6 +7234,24 @@ export function StandardInclusionsSheet({ sheet }) {
       setStandardStatus(error?.message || "Word document import failed.");
     }
     setDocxImportReviewBusy(false);
+  }
+
+  async function uploadDocxImportAsset(dataUrl) {
+    const response = await apiFetch("/api/standard-inclusions/docx-import/upload-asset", {
+      method: "POST",
+      body: JSON.stringify({ dataUrl }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      throw new Error("Your session has expired. Please sign in again, then re-import the Word document.");
+    }
+    if (response.status === 403) {
+      throw new Error("You do not have access to upload Standard Inclusions assets in this workspace.");
+    }
+    if (!response.ok || !payload?.ok || !payload?.url) {
+      throw new Error(payload?.error || `Could not upload an extracted Word image (HTTP ${response.status}).`);
+    }
+    return payload.url;
   }
 
   function cancelDocxImportReview() {

@@ -90,7 +90,7 @@ assert(docxImportSource.includes("word/numbering.xml"), "DOCX importer must read
 assert(docxImportSource.includes("word/_rels/document.xml.rels"), "DOCX importer must read document relationships");
 assert(docxImportSource.includes("media/"), "DOCX importer must extract media from the DOCX package");
 assert(docxImportSource.includes("DOMParser"), "DOCX importer must use a structured XML parser");
-assert(docxImportSource.includes("/api/standard-inclusions/docx-import/upload-asset"), "DOCX images must upload through the asset route");
+assert(source.includes("/api/standard-inclusions/docx-import/upload-asset"), "DOCX images must upload through the authenticated asset route");
 assert(docxImportSource.includes("relayoutDocxFlowDocument"), "DOCX flow documents must support reflow after edits");
 
 [

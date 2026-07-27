@@ -41,6 +41,7 @@ assert(importer.includes("DOMParser"), "DOCX importer must parse XML with DOMPar
 assert(importer.includes("upload(`data:${contentType};base64,"), "DOCX importer may use a transient data URL only for image upload");
 assert(importer.includes("imageRef = await upload"), "DOCX image references must come back from asset upload");
 assert(!importer.includes("data: { imageRef: `data:"), "Document JSON must not embed image data URLs");
+assert(!importer.includes("fetch(\"/api/standard-inclusions/docx-import/upload-asset\""), "DOCX importer must not make an unauthenticated asset-upload fetch");
 assert(importer.includes("docxPageSettings"), "DOCX page settings must be retained for future reflow");
 assert(importer.includes("relayoutDocxFlowDocument"), "DOCX flow documents must support relayout after edits");
 
@@ -55,6 +56,11 @@ assert(review.includes("Return to Upload"), "Review screen must allow uploading 
 assert(review.includes("Save Draft Base Template"), "Review screen must expose draft base-template save");
 
 assert(builder.includes("autoActivate: false"), "DOCX base-template save must create a draft, not activate globally");
+assert(builder.includes("useApiFetch"), "DOCX image uploads must use the shared authenticated API fetch helper");
+assert(builder.includes("uploadAsset: uploadDocxImportAsset"), "DOCX importer must receive an authenticated asset uploader from the UI");
+assert(builder.includes("/api/standard-inclusions/docx-import/upload-asset"), "DOCX UI uploader must call the Standard Inclusions asset route");
+assert(builder.includes("Your session has expired. Please sign in again"), "Expired sessions must produce a friendly DOCX upload error");
+assert(builder.includes("x-workspace-id") || builder.includes("apiFetch(\"/api/standard-inclusions/docx-import/upload-asset\""), "DOCX upload must flow through workspace-aware authenticated fetch");
 assert(builder.includes("Import Editable Word Document (.docx)"), "DOCX must be the primary editable import choice");
 assert(builder.includes("Attach Finished PDF"), "Finished-PDF workflow must remain available");
 assert(builder.includes("Use Premier Base Template"), "Premier base template must remain explicitly selectable");
