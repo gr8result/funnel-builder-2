@@ -16,6 +16,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:freedom-paper": "node --test test/freedom-paper-trading.test.js",
+    "test:freedom-market-data": "node --test test/freedom-trader-market-data.test.js",
     "autoresponder:cron": "node scripts/local-autoresponder-cron.js",
     "sms:flush": "node scripts/flush-sms-queue.js",
     "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs",

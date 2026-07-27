@@ -1,14 +1,5 @@
-import { fetchTwelveDataHistory, normalizeTwelveDataInterval } from "../../../lib/freedom-trader/twelveData.js";
-
-const CACHE_TTL_MS = 60 * 1000;
-const MAX_TWELVE_DATA_CREDITS_PER_MINUTE = 7;
-const historyCache = globalThis.__freedomTraderHistoryCache || new Map();
-const inFlightRequests = globalThis.__freedomTraderHistoryInFlight || new Map();
-const creditWindow = globalThis.__freedomTraderTwelveDataCreditWindow || { minute: "", credits: 0 };
-
-globalThis.__freedomTraderHistoryCache = historyCache;
-globalThis.__freedomTraderHistoryInFlight = inFlightRequests;
-globalThis.__freedomTraderTwelveDataCreditWindow = creditWindow;
+import { normalizeTwelveDataInterval } from "../../../lib/freedom-trader/twelveData.js";
+import { fetchSharedHistory } from "../../../lib/freedom-trader/marketDataService.js";
 
 function normalizeSymbol(value) {
   return String(value || "").trim().toUpperCase();
@@ -46,152 +37,16 @@ function rangeInterval(range) {
   }[range] || "1day";
 }
 
-function cacheKey(symbol, range, interval) {
-  return `${symbol}:${range}:${interval}`;
-}
-
-function currentMinuteKey() {
-  return new Date().toISOString().slice(0, 16);
-}
-
-function msUntilNextMinute() {
-  const now = new Date();
-  return 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 250;
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function resetCreditWindowIfNeeded() {
-  const minute = currentMinuteKey();
-  if (creditWindow.minute !== minute) {
-    creditWindow.minute = minute;
-    creditWindow.credits = 0;
-  }
-}
-
-function canSpendCredits(credits = 1) {
-  resetCreditWindowIfNeeded();
-  return creditWindow.credits + credits <= MAX_TWELVE_DATA_CREDITS_PER_MINUTE;
-}
-
-function spendCredits(credits = 1) {
-  resetCreditWindowIfNeeded();
-  creditWindow.credits += credits;
-  return creditWindow.credits;
-}
-
-function isMinuteLimitError(error) {
-  return String(error || "").toLowerCase().includes("current limit being 8")
-    || String(error || "").toLowerCase().includes("api credits for the current minute")
-    || String(error || "").toLowerCase().includes("per-minute");
-}
-
-function limitErrorResult(symbol, range, interval) {
-  return {
-    ok: false,
-    symbol,
-    range,
-    interval,
-    provider: "Twelve Data",
-    source: "Twelve Data",
-    dataLabel: "Unavailable",
-    exchange: null,
-    currency: null,
-    candleCount: 0,
-    candles: [],
-    error: "Twelve Data's per-minute request limit has been reached. The chart will retry shortly.",
-  };
-}
-
-function logHistoryRequest({ symbol, range, interval, endpoint, cacheStatus, estimatedCredits }) {
-  console.log("Freedom Trader Twelve Data request", {
-    timestamp: new Date().toISOString(),
-    ticker: symbol,
-    endpoint,
-    range,
-    interval,
-    cache: cacheStatus,
-    creditsEstimated: estimatedCredits,
-    creditsUsedThisMinute: creditWindow.credits,
-  });
-}
-
-async function fetchWithMinuteRetry(symbol, range, interval) {
-  const endpoint = "time_series";
-  const estimatedCredits = 1;
-
-  if (!canSpendCredits(estimatedCredits)) {
-    logHistoryRequest({ symbol, range, interval, endpoint, cacheStatus: "rate-limited-before-request", estimatedCredits });
-    return limitErrorResult(symbol, range, interval);
-  }
-
-  spendCredits(estimatedCredits);
-  logHistoryRequest({ symbol, range, interval, endpoint, cacheStatus: "miss", estimatedCredits });
-  let result = await fetchTwelveDataHistory({ symbol, range, interval });
-
-  if (!result.ok && isMinuteLimitError(result.error)) {
-    await wait(msUntilNextMinute());
-    if (!canSpendCredits(estimatedCredits)) {
-      return limitErrorResult(symbol, range, interval);
-    }
-    spendCredits(estimatedCredits);
-    logHistoryRequest({ symbol, range, interval, endpoint, cacheStatus: "retry-after-minute-limit", estimatedCredits });
-    result = await fetchTwelveDataHistory({ symbol, range, interval });
-    if (!result.ok && isMinuteLimitError(result.error)) {
-      return limitErrorResult(symbol, range, interval);
-    }
-  }
-
-  return result;
-}
-
+// Thin wrapper preserving the historical response shape used by the chart
+// (pages/freedom-trader/company/[symbol].js) while delegating the actual
+// fetch/cache/rate-limit/retry work to the single shared market-data
+// service, so this route shares its Twelve Data credit budget with the
+// scanner and analysis engine instead of keeping its own separate one.
 export async function fetchTraderHistory(symbol, range = "1y", requestedInterval = null) {
   const normalizedSymbol = normalizeSymbol(symbol);
   const normalizedRange = normalizeRange(range);
   const interval = normalizeTwelveDataInterval(requestedInterval, normalizedRange) || rangeInterval(normalizedRange);
-  const key = cacheKey(normalizedSymbol, normalizedRange, interval);
-  const cached = historyCache.get(key);
-
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
-    logHistoryRequest({
-      symbol: normalizedSymbol,
-      range: normalizedRange,
-      interval,
-      endpoint: "time_series",
-      cacheStatus: "hit",
-      estimatedCredits: 0,
-    });
-    return { ...cached.data, cache: { hit: true, cachedAt: cached.cachedAt, ttlMs: CACHE_TTL_MS } };
-  }
-
-  if (inFlightRequests.has(key)) {
-    logHistoryRequest({
-      symbol: normalizedSymbol,
-      range: normalizedRange,
-      interval,
-      endpoint: "time_series",
-      cacheStatus: "deduped-in-flight",
-      estimatedCredits: 0,
-    });
-    const data = await inFlightRequests.get(key);
-    return { ...data, cache: { hit: false, deduped: true, ttlMs: CACHE_TTL_MS } };
-  }
-
-  const request = fetchWithMinuteRetry(normalizedSymbol, normalizedRange, interval)
-    .then((data) => {
-      if (data?.ok) {
-        historyCache.set(key, { cachedAt: Date.now(), data });
-      }
-      return data;
-    })
-    .finally(() => {
-      inFlightRequests.delete(key);
-    });
-
-  inFlightRequests.set(key, request);
-  return request;
+  return fetchSharedHistory(normalizedSymbol, normalizedRange, interval);
 }
 
 export default async function handler(req, res) {

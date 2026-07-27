@@ -1,4 +1,5 @@
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin";
+import { getCurrentPrice } from "../../../lib/freedom-trader/marketDataService.js";
 
 function getSupabase() {
   try {
@@ -24,14 +25,13 @@ function daysBetween(start, end) {
   return Math.max(0, Math.floor((new Date(end).getTime() - new Date(start).getTime()) / 86400000));
 }
 
+// Shared market-data service instead of a Finnhub-only call: falls back to
+// the latest daily close (clearly marked delayed) instead of going blank
+// whenever a live quote isn't available.
 async function fetchQuote(symbol) {
-  const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  if (!apiKey) return null;
   try {
-    const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`);
-    const data = await response.json().catch(() => null);
-    if (!response.ok) return null;
-    return round(data?.c);
+    const result = await getCurrentPrice(symbol);
+    return result.price;
   } catch (error) {
     console.error("Freedom Trader position quote failed:", error);
     return null;
@@ -296,6 +296,25 @@ async function updatePosition(req, res) {
       if (pending.id) {
         await supabase.from("pending_trades").update({ status: "CLOSED" }).eq("id", pending.id);
         await supabase.from("trade_alerts").update({ triggered: true }).eq("trade_id", pending.id).eq("triggered", false);
+      }
+      // Best-effort: close out the matching journal entry so the sale shows
+      // up in the trade journal without a separate manual entry. Journal
+      // persistence is optional (the position itself is already saved), so
+      // a failure here must never block the sale from completing.
+      try {
+        await supabase
+          .from("trade_journal")
+          .update({
+            status: "closed",
+            closing_price: exitPrice,
+            closing_date: exitDate,
+            exit_reason: req.body?.exitReason || "Position closed from Freedom Trader.",
+            brokerage_fees: brokerageBuy + brokerageSell,
+          })
+          .eq("open_position_id", existing.id)
+          .eq("status", "open");
+      } catch (journalError) {
+        console.error("Freedom Trader journal close-out failed:", journalError);
       }
       return res.status(200).json({ ok: true, position: normalizeClosedPosition(data), error: null });
     }

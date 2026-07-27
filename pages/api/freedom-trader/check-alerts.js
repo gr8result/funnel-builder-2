@@ -1,4 +1,5 @@
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin";
+import { getCurrentPrice } from "../../../lib/freedom-trader/marketDataService.js";
 
 function getSupabase() {
   try {
@@ -15,13 +16,9 @@ function cleanNumber(value) {
 }
 
 async function fetchQuote(symbol) {
-  const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  if (!apiKey) return null;
   try {
-    const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`);
-    const data = await response.json().catch(() => null);
-    if (!response.ok) return null;
-    return cleanNumber(data?.c);
+    const result = await getCurrentPrice(symbol);
+    return result.price;
   } catch (error) {
     console.error("Freedom Trader alert quote failed:", error);
     return null;

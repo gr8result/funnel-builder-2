@@ -1,6 +1,6 @@
-import { fetchTraderHistory } from "./history.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
-import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
+import { evaluateOpportunity } from "../../../lib/freedom-trader/opportunityEngine.js";
+import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
 
 function round(value, decimals = 2) {
   const number = Number(value);
@@ -78,84 +78,6 @@ function average(values) {
   return clean.length ? clean.reduce((total, value) => total + value, 0) / clean.length : null;
 }
 
-function dateFromUnixSeconds(value) {
-  const timestamp = Number(value);
-  return Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp * 1000).toISOString().slice(0, 10) : null;
-}
-
-function priceDifference(actual, expected) {
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || expected === 0) return null;
-  return {
-    actual: round(actual),
-    expected: round(expected),
-    absolute: round(actual - expected, 4),
-    percent: round(((actual - expected) / expected) * 100, 4),
-  };
-}
-
-function materialPriceMismatch(actual, expected, tolerancePercent = 0.25) {
-  const difference = priceDifference(actual, expected);
-  return difference && Math.abs(difference.percent) > tolerancePercent;
-}
-
-function validateMarketData({ quote, history }) {
-  const latest = history?.candles?.[history.candles.length - 1] || null;
-  const quoteDate = dateFromUnixSeconds(quote?.t);
-  const issues = [];
-  const warnings = [];
-  const comparisons = {
-    currentVsLatestClose: priceDifference(round(quote?.c), latest?.close),
-    open: priceDifference(round(quote?.o), latest?.open),
-    high: priceDifference(round(quote?.h), latest?.high),
-    low: priceDifference(round(quote?.l), latest?.low),
-    adjustedClose: Number.isFinite(latest?.adjClose) ? priceDifference(latest.close, latest.adjClose) : null,
-  };
-
-  if (!Number.isFinite(round(quote?.c))) issues.push("Finnhub did not return a valid current price.");
-  if (!latest) issues.push(`${history?.source || "The market data provider"} did not return a latest candle.`);
-  if (quoteDate && latest?.date && !String(latest.date).startsWith(quoteDate)) issues.push(`Quote date ${quoteDate} does not match candle date ${latest.date}.`);
-  if (materialPriceMismatch(round(quote?.c), latest?.close)) issues.push(`Finnhub current price differs materially from ${history?.source || "the candle provider"} latest close.`);
-  if (materialPriceMismatch(round(quote?.o), latest?.open, 0.5)) warnings.push(`Finnhub open differs from ${history?.source || "the candle provider"} open.`);
-  if (materialPriceMismatch(round(quote?.h), latest?.high, 0.5)) warnings.push(`Finnhub day high differs from ${history?.source || "the candle provider"} high.`);
-  if (materialPriceMismatch(round(quote?.l), latest?.low, 0.5)) warnings.push(`Finnhub day low differs from ${history?.source || "the candle provider"} low.`);
-  if (comparisons.adjustedClose && Math.abs(comparisons.adjustedClose.percent) > 0.05) {
-    warnings.push("Adjusted close differs from raw close; trading calculations use raw OHLC prices.");
-  }
-  if (!Number.isFinite(latest?.volume)) issues.push(`${history?.source || "The candle provider"} did not return valid latest volume.`);
-
-  return {
-    validated: issues.length === 0,
-    issues,
-    warnings,
-    quoteSource: "Finnhub",
-    historySource: history?.source || "Candle provider",
-    quoteTimestamp: Number.isFinite(Number(quote?.t)) ? Number(quote.t) : null,
-    quoteDate,
-    latestCandleDate: latest?.date || null,
-    latestVolume: Number.isFinite(latest?.volume) ? latest.volume : null,
-    comparisons,
-  };
-}
-
-function reconcileLatestCandleWithQuote(candles, quote, marketData) {
-  if (!marketData?.validated || !Array.isArray(candles) || !candles.length) return candles;
-  const next = candles.map((candle) => ({ ...candle }));
-  const latest = next[next.length - 1];
-  const quoteClose = round(quote?.c);
-  const quoteOpen = round(quote?.o);
-  const quoteHigh = round(quote?.h);
-  const quoteLow = round(quote?.l);
-  if (marketData.quoteDate !== latest.date || !Number.isFinite(quoteClose)) return next;
-
-  latest.close = quoteClose;
-  if (Number.isFinite(quoteOpen)) latest.open = quoteOpen;
-  if (Number.isFinite(quoteHigh)) latest.high = Math.max(quoteHigh, quoteClose, latest.high);
-  if (Number.isFinite(quoteLow)) latest.low = Math.min(quoteLow, quoteClose, latest.low);
-  latest.priceValidated = true;
-  latest.priceSource = "Finnhub quote reconciled with connected candle provider";
-  return next;
-}
-
 function calculateAtr(candles, period = 14) {
   if (candles.length <= period) return null;
   const trueRanges = candles.slice(-period).map((candle, index, slice) => {
@@ -173,22 +95,6 @@ function getMeta(symbol) {
   return TRADER_WATCHLIST.find((item) => item.symbol === symbol) || { symbol, companyName: symbol, exchange: "NASDAQ", sector: "Trading Watchlist" };
 }
 
-async function fetchQuote(symbol) {
-  const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json().catch(() => null);
-    if (!response.ok) return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-    return { ok: true, data, error: null };
-  } catch (error) {
-    console.error("Freedom Trader quote failed:", error);
-    return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-  }
-}
-
 function scoreStatus(score) {
   if (!Number.isFinite(score)) return "INFO";
   if (score >= 90) return "STRONG SETUP";
@@ -198,44 +104,50 @@ function scoreStatus(score) {
   return "NO TRADE";
 }
 
-function historyDiagnostics(history, cleanCandles, requestedRange = "1y", requestedInterval = "1d") {
-  const first = cleanCandles[0]?.date || history?.candles?.[0]?.date || null;
-  const latest = cleanCandles[cleanCandles.length - 1]?.date || history?.candles?.[history.candles.length - 1]?.date || null;
-  const apiError = history?.error || null;
+// Reports exactly how far the snapshot got, so the scanner can tell "data
+// unavailable" apart from "analysed, no setup" instead of collapsing both
+// into the same score-based rejection.
+function historyDiagnostics(snapshot, cleanCandles) {
+  const candles = snapshot?.candles?.daily || [];
+  const first = cleanCandles[0]?.date || candles[0]?.date || null;
+  const latest = cleanCandles[cleanCandles.length - 1]?.date || candles[candles.length - 1]?.date || null;
+  const apiError = snapshot?.dataQuality === "unavailable" ? snapshot?.error : null;
   let status = "Ready";
-  if (apiError && /minute|credit|limit/i.test(apiError)) status = "Twelve Data minute limit reached";
-  else if (apiError) status = apiError;
-  else if (!cleanCandles.length) status = requestedInterval === "1d" ? "No daily history returned" : "No intraday history returned";
+  if (apiError) status = apiError;
+  else if (!cleanCandles.length) status = "No daily history returned";
   else if (cleanCandles.length < 20) status = `Only ${cleanCandles.length} of 20 candles available`;
   else if (cleanCandles.length < 50) status = `Only ${cleanCandles.length} of 50 candles available`;
   else if (cleanCandles.length < 200) status = "Indicator requires 200 candles";
+
   return {
-    provider: history?.provider || history?.source || "Twelve Data",
-    requestedRange,
-    requestedInterval,
+    provider: snapshot?.source || "Twelve Data",
+    requestedRange: "1y",
+    requestedInterval: "1day",
     actualCandleCount: cleanCandles.length,
     firstTimestamp: first,
     latestTimestamp: latest,
-    cacheStatus: history?.cache?.hit ? "hit" : history?.cache?.deduped ? "deduped-in-flight" : history?.cache ? "miss" : "none",
+    dataQuality: snapshot?.dataQuality || "unavailable",
+    cacheStatus: "shared-market-data-service",
     apiError,
     status,
     readyForScore: status === "Ready",
   };
 }
 
-export function buildAnalysis({ symbol, quote, candles, marketData = null, history = null }) {
+export function buildAnalysis({ symbol, snapshot }) {
   const meta = getMeta(symbol);
+  const candles = snapshot?.candles?.daily || [];
   const clean = candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])));
-  const dataStatus = historyDiagnostics(history, clean);
+  const dataStatus = historyDiagnostics(snapshot, clean);
   const closes = clean.map((candle) => candle.close);
   const volumes = clean.map((candle) => candle.volume);
   const latest = clean[clean.length - 1] || {};
-  const currentPrice = round(quote?.c) ?? latest.close ?? null;
-  const previousClose = round(quote?.pc) ?? (closes.length > 1 ? closes[closes.length - 2] : null);
-  const change = Number.isFinite(currentPrice) && Number.isFinite(previousClose) ? round(currentPrice - previousClose) : round(quote?.d);
+  const currentPrice = Number.isFinite(snapshot?.quote?.price) ? snapshot.quote.price : latest.close ?? null;
+  const previousClose = Number.isFinite(snapshot?.quote?.previousClose) ? snapshot.quote.previousClose : (closes.length > 1 ? closes[closes.length - 2] : null);
+  const change = Number.isFinite(currentPrice) && Number.isFinite(previousClose) ? round(currentPrice - previousClose) : null;
   const changePercent = Number.isFinite(currentPrice) && Number.isFinite(previousClose) && previousClose !== 0
     ? round(((currentPrice - previousClose) / previousClose) * 100)
-    : round(quote?.dp);
+    : null;
   const ma20 = sma(closes, 20);
   const ma50 = sma(closes, 50);
   const ma200 = sma(closes, 200);
@@ -315,6 +227,23 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   }
 
   const confidence = Number.isFinite(tradingScore) ? round(clamp(tradingScore * 0.8 + (Number.isFinite(relativeVolume) ? Math.min(relativeVolume, 3) * 5 : 0))) : null;
+  const indicatorSummary = {
+    ma20,
+    ma50,
+    ma200,
+    rsi14: rsi,
+    macd: macd.macd,
+    macdSignal: macd.signal,
+    macdHistogram: macd.histogram,
+    atr14: atr,
+    averageVolume20: avgVolume20,
+    relativeVolume,
+    support,
+    resistance,
+    volatility20: volatility,
+    distanceFromSupport,
+    distanceFromResistance,
+  };
   const setup = {
     valid: status === "STRONG SETUP" || status === "BUY SETUP" || (Number.isFinite(riskRewardRatio) && riskRewardRatio >= 2),
     plannedEntry,
@@ -327,37 +256,31 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     setupExpiryDate,
     setupReasoning,
   };
-  const signalResult = calculateTraderSignal({
+  const marketData = {
+    validated: dataStatus.readyForScore,
+    issues: dataStatus.readyForScore ? [] : [dataStatus.status],
+    warnings: snapshot?.quote?.delayed && snapshot?.dataQuality === "daily-only" ? ["Price is based on the latest daily close, not a live intraday quote."] : [],
+    quoteSource: snapshot?.source || "Twelve Data",
+    historySource: snapshot?.source || "Twelve Data",
+    latestCandleDate: dataStatus.latestTimestamp,
+    dataQuality: snapshot?.dataQuality,
+  };
+  const opportunity = evaluateOpportunity({
     ticker: symbol,
+    companyName: meta.companyName,
     exchange: meta.exchange,
-    currency: "USD",
+    currency: snapshot?.currency || (String(symbol).endsWith(".AX") ? "AUD" : "USD"),
     timeframe: "1D",
+    dataProvider: snapshot?.source || "Twelve Data",
     currentPrice,
-    plannedEntry,
-    tradingScore,
-    confidence,
-    indicators: {
-      ma20,
-      ma50,
-      ma200,
-      rsi14: rsi,
-      macd: macd.macd,
-      macdSignal: macd.signal,
-      macdHistogram: macd.histogram,
-      atr14: atr,
-      averageVolume20: avgVolume20,
-      relativeVolume,
-      support,
-      resistance,
-      volatility20: volatility,
-      distanceFromSupport,
-      distanceFromResistance,
-    },
+    indicators: indicatorSummary,
+    volume: avgVolume20,
     setup,
     marketData,
     dataStatus,
   });
-  status = signalResult.overallSignal;
+  tradingScore = opportunity.score;
+  status = opportunity.overallStatus;
 
   return {
     symbol,
@@ -369,23 +292,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     change,
     changePercent,
     volume: latestVolume,
-    indicators: {
-      ma20,
-      ma50,
-      ma200,
-      rsi14: rsi,
-      macd: macd.macd,
-      macdSignal: macd.signal,
-      macdHistogram: macd.histogram,
-      atr14: atr,
-      averageVolume20: avgVolume20,
-      relativeVolume,
-      support,
-      resistance,
-      volatility20: volatility,
-      distanceFromSupport,
-      distanceFromResistance,
-    },
+    indicators: indicatorSummary,
     fibonacci: {
       anchors: null,
       levels: [],
@@ -396,117 +303,86 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     trend,
     status,
     legacySetupStatus,
-    signalResult,
-    confidence,
-    scoreExplanation: components,
+    signalResult: {
+      ticker: opportunity.ticker,
+      exchange: opportunity.exchange,
+      currency: opportunity.currency,
+      timeframe: opportunity.timeframe,
+      selectedTimeframe: opportunity.timeframe,
+      overallSignal: opportunity.overallStatus,
+      confidence: opportunity.confidenceScore,
+      signalTimestamp: new Date().toISOString(),
+      marketDataTimestamp: opportunity.priceTimestamp,
+      dataProvider: opportunity.dataProvider,
+      componentIndicators: indicatorSummary,
+      reasons: opportunity.reasonsFor,
+      explanation: opportunity.reasonsFor.join(". "),
+    },
+    opportunity,
+    confidence: opportunity.confidenceScore,
+    scoreExplanation: opportunity.scoreBreakdown,
     setup,
     marketData,
     dataStatus,
+    dataQuality: snapshot?.dataQuality,
     candleCount: clean.length,
     error: null,
   };
 }
 
-export async function analyseSymbol(symbol) {
-  const requestedRange = "1y";
-  const requestedInterval = "1d";
-  const [quoteResult, history] = await Promise.all([
-    fetchQuote(symbol),
-    fetchTraderHistory(symbol, requestedRange, requestedInterval),
-  ]);
-  const cleanHistoryCandles = Array.isArray(history?.candles)
-    ? history.candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])))
-    : [];
-  const dataStatus = historyDiagnostics(history, cleanHistoryCandles, requestedRange, requestedInterval);
+function dataUnavailableRow(symbol, snapshot) {
+  const meta = getMeta(symbol);
+  const dataStatus = historyDiagnostics(snapshot, []);
+  const marketData = {
+    validated: false,
+    issues: [snapshot?.error || "Market data unavailable."],
+    warnings: [],
+    quoteSource: snapshot?.source || "Twelve Data",
+    historySource: snapshot?.source || "Twelve Data",
+    dataQuality: "unavailable",
+  };
+  const opportunity = evaluateOpportunity({
+    ticker: symbol,
+    companyName: meta.companyName,
+    exchange: meta.exchange,
+    currency: snapshot?.currency || (String(symbol).endsWith(".AX") ? "AUD" : "USD"),
+    timeframe: "1D",
+    dataProvider: snapshot?.source || "Twelve Data",
+    currentPrice: null,
+    indicators: {},
+    volume: null,
+    setup: { valid: false },
+    dataStatus,
+    marketData,
+  });
+  return {
+    symbol,
+    companyName: meta.companyName,
+    exchange: meta.exchange,
+    sector: meta.sector,
+    currentPrice: null,
+    changePercent: null,
+    indicators: {},
+    tradingScore: null,
+    trend: "Data unavailable",
+    status: "DATA UNAVAILABLE",
+    confidence: null,
+    scoreExplanation: {},
+    setup: { valid: false, setupReasoning: "Market data could not be loaded. No trade recommendation is available." },
+    opportunity,
+    signalResult: { overallSignal: "DATA UNAVAILABLE", timeframe: "1D", confidence: null, reasons: [snapshot?.error || "Market data unavailable."] },
+    dataStatus,
+    marketData,
+    dataQuality: "unavailable",
+    candleCount: 0,
+    error: snapshot?.error || "Market data unavailable.",
+  };
+}
 
-  if (!quoteResult.ok || !quoteResult.data) {
-    const meta = getMeta(symbol);
-    return {
-      symbol,
-      companyName: meta.companyName,
-      exchange: meta.exchange,
-      sector: meta.sector,
-      currentPrice: null,
-      changePercent: null,
-      indicators: {},
-      tradingScore: null,
-      trend: "Market data not validated",
-      status: "INFO",
-      confidence: null,
-      scoreExplanation: {},
-      setup: { valid: false, setupReasoning: "Live market price could not be confirmed. No trade recommendation is available." },
-      dataStatus: { ...dataStatus, status: quoteResult.error || "Live quote temporarily unavailable.", apiError: quoteResult.error || dataStatus.apiError },
-      marketData: {
-        validated: false,
-        issues: [quoteResult.error || "Live quote temporarily unavailable."],
-        warnings: [],
-        quoteSource: "Finnhub",
-        historySource: history?.source || "Candle provider",
-      },
-      candleCount: history?.candles?.length || 0,
-      error: quoteResult.error || "Live quote temporarily unavailable.",
-    };
-  }
-
-  if (!history.ok) {
-    const meta = getMeta(symbol);
-    return {
-      symbol,
-      companyName: meta.companyName,
-      exchange: meta.exchange,
-      sector: meta.sector,
-      currentPrice: round(quoteResult.data?.c),
-      changePercent: round(quoteResult.data?.dp),
-      indicators: {},
-      tradingScore: null,
-      trend: dataStatus.status,
-      status: "INFO",
-      confidence: null,
-      scoreExplanation: {},
-      setup: { valid: false, setupReasoning: "Historical data temporarily unavailable. No trade recommendation is available." },
-      dataStatus,
-      marketData: {
-        validated: false,
-        issues: [history.error || "Historical data temporarily unavailable."],
-        warnings: [],
-        quoteSource: "Finnhub",
-        historySource: history?.source || "Candle provider",
-      },
-      candleCount: 0,
-      error: dataStatus.status || "Historical data temporarily unavailable.",
-    };
-  }
-
-  const marketData = validateMarketData({ quote: quoteResult.data, history });
-  if (!marketData.validated) {
-    const meta = getMeta(symbol);
-    return {
-      symbol,
-      companyName: meta.companyName,
-      exchange: meta.exchange,
-      sector: meta.sector,
-      currentPrice: round(quoteResult.data?.c),
-      previousClose: round(quoteResult.data?.pc),
-      change: round(quoteResult.data?.d),
-      changePercent: round(quoteResult.data?.dp),
-      volume: history.candles?.[history.candles.length - 1]?.volume ?? null,
-      indicators: {},
-      fibonacci: { anchors: null, levels: [], confluence: [] },
-      tradingScore: null,
-      trend: "Market data not validated",
-      status: "INFO",
-      confidence: null,
-      scoreExplanation: {},
-      setup: { valid: false, setupReasoning: `Market data validation failed: ${marketData.issues.join(" ")}` },
-      dataStatus,
-      marketData,
-      candleCount: history.candles?.length || 0,
-      error: `Market data validation failed: ${marketData.issues.join(" ")}`,
-    };
-  }
-
-  const reconciledCandles = reconcileLatestCandleWithQuote(history.candles, quoteResult.data, marketData);
-  return buildAnalysis({ symbol, quote: quoteResult.data, candles: reconciledCandles, marketData, history });
+export async function analyseSymbol(symbol, snapshotInput = null) {
+  const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: "1y", interval: "1day" });
+  if (snapshot.dataQuality === "unavailable") return dataUnavailableRow(symbol, snapshot);
+  return buildAnalysis({ symbol, snapshot });
 }
 
 export default async function handler(req, res) {

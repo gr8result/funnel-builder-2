@@ -1,27 +1,6 @@
 import { analyseSymbol } from "./analysis.js";
-import { createSupabaseAdmin } from "../../../lib/supabaseAdmin.js";
-
-const FALLBACK_UNIVERSE = [
-  ["AAPL", "Apple", "Technology", "US"], ["MSFT", "Microsoft", "Software", "US"], ["NVDA", "NVIDIA", "Semiconductors", "US"],
-  ["AMZN", "Amazon", "Cloud & E-commerce", "US"], ["META", "Meta Platforms", "Digital Advertising & AI", "US"], ["GOOGL", "Alphabet", "Digital Advertising & AI", "US"],
-  ["AVGO", "Broadcom", "Semiconductors", "US"], ["AMD", "Advanced Micro Devices", "Semiconductors", "US"], ["TSLA", "Tesla", "EV & Energy", "US"],
-  ["PLTR", "Palantir", "AI Software", "US"], ["COST", "Costco", "Consumer Defensive", "US"], ["V", "Visa", "Payments", "US"],
-  ["MA", "Mastercard", "Payments", "US"], ["NFLX", "Netflix", "Streaming", "US"], ["ADBE", "Adobe", "Software", "US"],
-  ["CRM", "Salesforce", "Software", "US"], ["ORCL", "Oracle", "Software", "US"], ["NOW", "ServiceNow", "Software", "US"],
-  ["INTC", "Intel", "Semiconductors", "US"], ["QCOM", "Qualcomm", "Semiconductors", "US"], ["MU", "Micron", "Semiconductors", "US"],
-  ["AMAT", "Applied Materials", "Semiconductor Equipment", "US"], ["LRCX", "Lam Research", "Semiconductor Equipment", "US"], ["ASML", "ASML", "Semiconductor Equipment", "US"],
-  ["TSM", "Taiwan Semiconductor", "Semiconductors", "US"], ["JPM", "JPMorgan Chase", "Financials", "US"], ["BAC", "Bank of America", "Financials", "US"],
-  ["GS", "Goldman Sachs", "Financials", "US"], ["MS", "Morgan Stanley", "Financials", "US"], ["UNH", "UnitedHealth", "Healthcare", "US"],
-  ["LLY", "Eli Lilly", "Healthcare", "US"], ["MRK", "Merck", "Healthcare", "US"], ["ABBV", "AbbVie", "Healthcare", "US"],
-  ["XOM", "Exxon Mobil", "Energy", "US"], ["CVX", "Chevron", "Energy", "US"], ["CAT", "Caterpillar", "Industrials", "US"],
-  ["GE", "GE Aerospace", "Industrials", "US"], ["BA", "Boeing", "Industrials", "US"], ["DE", "Deere", "Industrials", "US"],
-  ["WMT", "Walmart", "Consumer Defensive", "US"], ["HD", "Home Depot", "Retail", "US"], ["LOW", "Lowe's", "Retail", "US"],
-  ["NKE", "Nike", "Consumer", "US"], ["MCD", "McDonald's", "Restaurants", "US"], ["SBUX", "Starbucks", "Restaurants", "US"],
-  ["COIN", "Coinbase", "Crypto Infrastructure", "US"], ["MSTR", "MicroStrategy", "Bitcoin Treasury", "US"], ["SMCI", "Super Micro Computer", "AI Infrastructure", "US"],
-  ["BHP.AX", "BHP Group", "Materials", "ASX"], ["CBA.AX", "Commonwealth Bank", "Financials", "ASX"], ["CSL.AX", "CSL", "Healthcare", "ASX"],
-  ["NAB.AX", "National Australia Bank", "Financials", "ASX"], ["WBC.AX", "Westpac", "Financials", "ASX"], ["ANZ.AX", "ANZ Group", "Financials", "ASX"],
-  ["WES.AX", "Wesfarmers", "Retail", "ASX"], ["WOW.AX", "Woolworths", "Consumer Defensive", "ASX"], ["MQG.AX", "Macquarie Group", "Financials", "ASX"],
-].map(([symbol, companyName, sector, market]) => ({ symbol, companyName, sector, market }));
+import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
+import { OPPORTUNITY_ENGINE_VERSION, supportedUniverseForMarkets } from "../../../lib/freedom-trader/opportunityEngine.js";
 
 const DEFAULT_SETTINGS = {
   markets: ["US"],
@@ -34,69 +13,23 @@ const DEFAULT_SETTINGS = {
   chunkSize: 30,
 };
 
-const SCANNER_MAX_TWELVE_DATA_CREDITS_PER_MINUTE = 6;
 const scannerCache = globalThis.__freedomTraderScannerCache || new Map();
-const scannerMinuteWindow = globalThis.__freedomTraderScannerMinuteWindow || { minute: "", credits: 0 };
 globalThis.__freedomTraderScannerCache = scannerCache;
-globalThis.__freedomTraderScannerMinuteWindow = scannerMinuteWindow;
-
-function minuteKey() {
-  return new Date().toISOString().slice(0, 16);
-}
-
-function resetScannerMinuteIfNeeded() {
-  const minute = minuteKey();
-  if (scannerMinuteWindow.minute !== minute) {
-    scannerMinuteWindow.minute = minute;
-    scannerMinuteWindow.credits = 0;
-  }
-}
+const SCANNER_CACHE_TTL_MS = 10 * 60 * 1000;
 
 function scannerCacheKey(symbol) {
-  return `${symbol}:1y:1d`;
+  return `${OPPORTUNITY_ENGINE_VERSION}:${symbol}:1y:1d`;
 }
 
 function cachedScannerResult(symbol) {
   const cached = scannerCache.get(scannerCacheKey(symbol));
-  if (!cached || Date.now() - cached.cachedAt > 10 * 60 * 1000) return null;
+  if (!cached || Date.now() - cached.cachedAt > SCANNER_CACHE_TTL_MS) return null;
   return {
     ...cached.row,
     dataStatus: {
       ...(cached.row.dataStatus || {}),
       cacheStatus: "scanner-cache-hit",
     },
-  };
-}
-
-function waitingRow(item, reason = "Waiting for scanner") {
-  return {
-    symbol: item.symbol,
-    companyName: item.companyName,
-    exchange: item.market,
-    sector: item.sector,
-    currentPrice: null,
-    changePercent: null,
-    volume: null,
-    indicators: {},
-    tradingScore: null,
-    trend: reason,
-    status: "INFO",
-    confidence: null,
-    scoreExplanation: {},
-    setup: { valid: false, setupReasoning: reason },
-    dataStatus: {
-      provider: "Twelve Data",
-      requestedRange: "1y",
-      requestedInterval: "1d",
-      actualCandleCount: 0,
-      firstTimestamp: null,
-      latestTimestamp: null,
-      cacheStatus: "queued",
-      apiError: null,
-      status: reason,
-      readyForScore: false,
-    },
-    error: reason,
   };
 }
 
@@ -116,26 +49,8 @@ function cleanSettings(input = {}) {
   };
 }
 
-async function fetchFinnhubSymbols(settings) {
-  const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  if (!apiKey || !settings.markets.includes("US")) return [];
-  try {
-    const response = await fetch(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${encodeURIComponent(apiKey)}`);
-    const data = await response.json().catch(() => []);
-    if (!response.ok || !Array.isArray(data)) return [];
-    return data
-      .filter((item) => /common stock/i.test(String(item.type || "")))
-      .filter((item) => /^[A-Z]{1,5}$/.test(String(item.symbol || "")))
-      .map((item) => ({ symbol: item.symbol, companyName: item.description || item.symbol, sector: "US Listed", market: "US" }));
-  } catch {
-    return [];
-  }
-}
-
-async function getUniverse(settings) {
-  const dynamic = await fetchFinnhubSymbols(settings);
-  const fallback = FALLBACK_UNIVERSE.filter((item) => settings.markets.includes(item.market === "ASX" ? "ASX" : "US"));
-  const rows = [...dynamic, ...fallback];
+function requestedRows(settings) {
+  const rows = supportedUniverseForMarkets(settings.markets);
   const seen = new Set();
   return rows.filter((item) => {
     if (seen.has(item.symbol)) return false;
@@ -146,6 +61,16 @@ async function getUniverse(settings) {
   });
 }
 
+// Symbols configured but disabled (e.g. ASX, pending a data-plan upgrade)
+// are reported honestly instead of silently vanishing from the universe.
+async function getUniverse(settings) {
+  return requestedRows(settings).filter((item) => item.enabled !== false);
+}
+
+function getDisabledRows(settings) {
+  return requestedRows(settings).filter((item) => item.enabled === false);
+}
+
 function setupType(row) {
   const reasoning = String(row.setup?.setupReasoning || "").toLowerCase();
   if (reasoning.includes("breakout")) return "Breakout";
@@ -154,6 +79,8 @@ function setupType(row) {
 }
 
 function displayStatus(row) {
+  if (row.status === "DATA UNAVAILABLE") return "Data Unavailable";
+  if (row.opportunity?.overallStatus) return row.opportunity.overallStatus;
   if (!Number.isFinite(row.tradingScore) || row.tradingScore < 70) return "No Trade";
   if (!Number.isFinite(row.setup?.riskRewardRatio) || row.setup.riskRewardRatio < 2) return "Watch";
   if (row.tradingScore >= 82 && Number.isFinite(row.currentPrice) && Number.isFinite(row.setup?.plannedEntry)) {
@@ -163,59 +90,45 @@ function displayStatus(row) {
 }
 
 function detectionReason(row) {
+  if (row.status === "DATA UNAVAILABLE") return row.error || "Market data could not be loaded for this symbol.";
+  if (row.opportunity?.reasonsFor?.length) return row.opportunity.reasonsFor.slice(0, 3).join(", ");
   if (!row.dataStatus?.readyForScore) return row.dataStatus?.status || row.error || "Waiting for scanner";
   return `${setupType(row)} detected with score ${row.tradingScore}, relative volume ${row.indicators?.relativeVolume ?? "--"}x and risk/reward ${row.setup?.riskRewardRatio ?? "--"}.`;
 }
 
-function passesFilters(row, settings) {
-  return row.dataStatus?.readyForScore &&
-    Number(row.tradingScore) >= settings.minimumScore &&
-    Number(row.volume) >= settings.minimumDailyVolume &&
-    Number(row.setup?.riskRewardRatio) >= settings.minimumRiskReward &&
-    Number(row.indicators?.volatility20) <= settings.maximumVolatility &&
-    ["Buy Now", "Wait for Entry"].includes(displayStatus(row));
+function isDataUnavailable(row) {
+  return row.status === "DATA UNAVAILABLE" || row.dataQuality === "unavailable";
 }
 
-async function createApprovedAlert(result) {
-  try {
-    const supabase = createSupabaseAdmin();
-    const { data: pending, error: pendingError } = await supabase
-      .from("pending_trades")
-      .insert({
-        ticker: result.symbol,
-        entry_price: result.recommendedEntry,
-        stop_loss: result.stopLoss,
-        target_price: result.target,
-        shares: null,
-        risk_reward: result.riskReward,
-        expected_profit: null,
-        status: result.status || "WAIT FOR ENTRY",
-        fib_data: result.fibonacci || null,
-        created_at: new Date().toISOString(),
-      })
-      .select("*")
-      .single();
-    if (pendingError) throw pendingError;
+function passesFilters(row, settings) {
+  return !isDataUnavailable(row) &&
+    row.opportunity &&
+    ["STRONG BUY", "BUY"].includes(row.opportunity.overallStatus) &&
+    !row.opportunity.failedConditions?.length &&
+    Number(row.opportunity.score) >= settings.minimumScore &&
+    Number(row.volume) >= settings.minimumDailyVolume &&
+    Number(row.opportunity.riskReward) >= settings.minimumRiskReward;
+}
 
-    const { data: existing } = await supabase
-      .from("trade_alerts")
-      .select("id")
-      .eq("trade_id", pending.id)
-      .eq("alert_type", "SCANNER ENTRY")
-      .eq("trigger_price", result.recommendedEntry)
-      .eq("triggered", false)
-      .maybeSingle();
-    if (existing?.id) return;
-    await supabase.from("trade_alerts").insert({
-      trade_id: pending.id,
-      alert_type: "SCANNER ENTRY",
-      trigger_price: result.recommendedEntry,
-      triggered: false,
-      created_at: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("Scanner alert creation skipped:", error);
-  }
+function rejectionReason(row, settings) {
+  if (isDataUnavailable(row)) return row.error || "data unavailable";
+  if (row.opportunity?.failedConditions?.length) return row.opportunity.failedConditions[0];
+  if (!row.dataStatus?.readyForScore) return row.dataStatus?.status || row.error || "price data missing";
+  if (!Number.isFinite(Number(row.currentPrice))) return "price data missing";
+  if (!Number.isFinite(Number(row.tradingScore)) || Number(row.tradingScore) < settings.minimumScore) return "score too low";
+  if (!Number.isFinite(Number(row.volume)) || Number(row.volume) < settings.minimumDailyVolume) return "volume too low";
+  if (!Number.isFinite(Number(row.setup?.riskRewardRatio)) || Number(row.setup.riskRewardRatio) < settings.minimumRiskReward) return "risk/reward too low";
+  if (!Number.isFinite(Number(row.indicators?.volatility20)) || Number(row.indicators.volatility20) > settings.maximumVolatility) return "volatility outside limits";
+  if (!["Buy Now", "Wait for Entry"].includes(displayStatus(row))) return "entry not confirmed";
+  return "approved";
+}
+
+function countByReason(rows, settings) {
+  return rows.reduce((counts, row) => {
+    const reason = rejectionReason(row, settings);
+    if (reason !== "approved") counts[reason] = (counts[reason] || 0) + 1;
+    return counts;
+  }, {});
 }
 
 export default async function handler(req, res) {
@@ -225,62 +138,128 @@ export default async function handler(req, res) {
   }
 
   const settings = cleanSettings(req.method === "POST" ? req.body : req.query);
+  const scanStartedAt = new Date().toISOString();
   const universe = await getUniverse(settings);
+  const disabledRows = getDisabledRows(settings);
   const offset = Math.max(0, Number(req.query.offset ?? req.body?.offset) || 0);
   const chunk = universe.slice(offset, offset + settings.chunkSize);
   const nextOffset = offset + settings.chunkSize >= universe.length ? 0 : offset + settings.chunkSize;
-  resetScannerMinuteIfNeeded();
+
+  // Split the chunk into "already cached" (skip the network entirely) and
+  // "need fresh data" (one batched Twelve Data call covers all of them,
+  // instead of one HTTP request per symbol).
+  const toFetch = [];
   const analysed = [];
+  const analysedBySymbol = new Map();
   for (const item of chunk) {
     const cached = cachedScannerResult(item.symbol);
     if (cached) {
-      analysed.push(cached);
-      continue;
-    }
-    if (scannerMinuteWindow.credits >= SCANNER_MAX_TWELVE_DATA_CREDITS_PER_MINUTE) {
-      analysed.push(waitingRow(item, "Twelve Data minute limit reached"));
-      continue;
-    }
-    scannerMinuteWindow.credits += 1;
-    try {
-      const row = await analyseSymbol(item.symbol);
-      scannerCache.set(scannerCacheKey(item.symbol), { cachedAt: Date.now(), row });
-      analysed.push(row);
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : "Scanner analysis failed";
-      const row = waitingRow(item, reason);
-      scannerCache.set(scannerCacheKey(item.symbol), { cachedAt: Date.now(), row });
-      analysed.push(row);
+      analysedBySymbol.set(item.symbol, cached);
+    } else {
+      toFetch.push(item.symbol);
     }
   }
+
+  if (toFetch.length) {
+    const snapshots = await getMarketSnapshotBatch(toFetch, { range: "1y", interval: "1day" });
+    for (const symbol of toFetch) {
+      try {
+        const row = await analyseSymbol(symbol, snapshots.get(symbol));
+        scannerCache.set(scannerCacheKey(symbol), { cachedAt: Date.now(), row });
+        analysedBySymbol.set(symbol, row);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Scanner analysis failed";
+        const row = { symbol, companyName: symbol, status: "DATA UNAVAILABLE", dataQuality: "unavailable", error: reason, dataStatus: { readyForScore: false, status: reason } };
+        scannerCache.set(scannerCacheKey(symbol), { cachedAt: Date.now(), row });
+        analysedBySymbol.set(symbol, row);
+      }
+    }
+  }
+
+  chunk.forEach((item) => {
+    const row = analysedBySymbol.get(item.symbol);
+    if (row) analysed.push(row);
+  });
+
   const results = analysed
     .filter((row) => passesFilters(row, settings))
     .map((row) => ({
       symbol: row.symbol,
       companyName: row.companyName,
+      exchange: row.exchange || (String(row.symbol).endsWith(".AX") ? "ASX" : "US"),
+      currency: row.dataStatus?.currency || (String(row.symbol).endsWith(".AX") ? "AUD" : "USD"),
       currentPrice: row.currentPrice,
-      tradingScore: row.tradingScore,
+      dataQuality: row.dataQuality,
+      priceTimestamp: row.dataStatus?.latestTimestamp || null,
+      tradingScore: row.opportunity?.score ?? row.tradingScore,
+      scoreBreakdown: row.opportunity?.scoreBreakdown || row.scoreExplanation,
       setupType: setupType(row),
-      recommendedEntry: row.setup?.plannedEntry,
-      target: row.setup?.target,
-      stopLoss: row.setup?.stop,
-      riskReward: row.setup?.riskRewardRatio,
-      confidence: row.confidence,
+      recommendedEntry: row.opportunity?.proposedEntryLow ?? row.setup?.plannedEntry,
+      entryZoneHigh: row.opportunity?.proposedEntryHigh ?? row.setup?.plannedEntry,
+      target: row.opportunity?.target1 ?? row.setup?.target,
+      target2: row.opportunity?.target2 ?? null,
+      stopLoss: row.opportunity?.stopLoss ?? row.setup?.stop,
+      riskReward: row.opportunity?.riskReward ?? row.setup?.riskRewardRatio,
+      confidence: row.opportunity?.confidenceScore ?? row.confidence,
       status: displayStatus(row),
       reason: detectionReason(row),
+      rejectionReason: "approved",
+      opportunity: row.opportunity,
       dataStatus: row.dataStatus,
       fibonacci: row.fibonacci,
       source: row,
     }))
     .sort((a, b) => b.tradingScore - a.tradingScore || b.riskReward - a.riskReward);
 
-  await Promise.all(results.slice(0, 10).map(createApprovedAlert));
+  const rejectionCounts = countByReason(analysed, settings);
+  const scannedSymbols = chunk.map((item) => item.symbol);
+  const supportedSymbols = universe.map((item) => item.symbol);
+  const dataUnavailableRows = analysed.filter(isDataUnavailable);
+  const successfullyAnalysedRows = analysed.filter((row) => !isDataUnavailable(row) && row.dataStatus?.readyForScore);
+  const scanCompletedAt = new Date().toISOString();
+
+  // A scan is "complete" only when every requested symbol ended up either
+  // successfully analysed or explicitly marked unavailable -- never silent.
+  const accountedFor = successfullyAnalysedRows.length + dataUnavailableRows.length
+    + analysed.filter((row) => !isDataUnavailable(row) && !row.dataStatus?.readyForScore).length;
+  const scanCompletionStatus = dataUnavailableRows.length === 0 && accountedFor === scannedSymbols.length
+    ? "complete"
+    : "incomplete-data";
 
   return res.status(200).json({
     ok: true,
     settings,
     universeCount: universe.length,
     scannedCount: chunk.length,
+    scannedSymbols,
+    supportedSymbols,
+    scanSummary: {
+      marketLabels: settings.markets,
+      supportedUniverseCount: universe.length,
+      supportedSymbols,
+      scannedSymbols,
+      // Honest, unambiguous counters (Stage 2): every requested symbol is
+      // either successfully analysed, explicitly unavailable, or both
+      // buckets sum to the requested count -- there is no silent dropout.
+      universe: universe.length,
+      requested: scannedSymbols.length,
+      successfullyAnalysed: successfullyAnalysedRows.length,
+      dataUnavailable: dataUnavailableRows.length,
+      qualified: results.length,
+      notQualified: successfullyAnalysedRows.length - results.length,
+      scanCompletionStatus,
+      symbolsRequested: scannedSymbols.length,
+      symbolsSuccessfullyLoaded: successfullyAnalysedRows.length,
+      symbolsRejectedMissingData: dataUnavailableRows.length,
+      symbolsAnalysed: successfullyAnalysedRows.length,
+      approvedOpportunities: results.length,
+      rejectionCounts,
+      dataUnavailableReasons: Array.from(new Set(dataUnavailableRows.map((row) => row.error).filter(Boolean))),
+      disabledSymbols: disabledRows.map((item) => ({ symbol: item.symbol, companyName: item.companyName, reason: item.disabledReason })),
+      scanStartedAt,
+      scanCompletedAt,
+      remainingSymbols: nextOffset === 0 ? 0 : Math.max(0, universe.length - nextOffset),
+    },
     nextOffset,
     results,
     scannerStatus: analysed.map((row) => ({
@@ -288,10 +267,10 @@ export default async function handler(req, res) {
       companyName: row.companyName,
       tradingScore: row.tradingScore,
       status: row.status,
+      rejectionReason: rejectionReason(row, settings),
       dataStatus: row.dataStatus,
       error: row.error,
     })),
-    twelveDataCreditsUsedThisMinute: scannerMinuteWindow.credits,
     updatedAt: new Date().toISOString(),
     schedule: ["before market open", "during trading session", "after market close"],
     error: null,
