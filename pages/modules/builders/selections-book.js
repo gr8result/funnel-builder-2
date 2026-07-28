@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
@@ -11,6 +11,7 @@ import { useNavCollapse } from "../../../components/Layout";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const BOOK_SIDEBAR_COLLAPSE_KEY = "gr8:selectionsBook:sidebarCollapsed";
+const DETAILS_PANEL_COLLAPSE_KEY = "gr8:selectionsBook:detailsPanelCollapsed";
 
 const DEFAULT_ROOMS = [
   "Site Works",
@@ -611,6 +612,11 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   const [focusMode, setFocusMode] = useState(false);
   const focusModePriorState = useRef(null);
   const { navCollapsed, setNavCollapsed } = useNavCollapse();
+  const [detailsPanelCollapsed, setDetailsPanelCollapsedState] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem(DETAILS_PANEL_COLLAPSE_KEY) === "1"; }
+    catch { return false; }
+  });
 
   function setSidebarCollapsed(next) {
     setSidebarCollapsedState((current) => {
@@ -620,10 +626,19 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     });
   }
 
+  function setDetailsPanelCollapsed(next) {
+    setDetailsPanelCollapsedState((current) => {
+      const value = typeof next === "function" ? next(current) : next;
+      try { localStorage.setItem(DETAILS_PANEL_COLLAPSE_KEY, value ? "1" : "0"); } catch {}
+      return value;
+    });
+  }
+
   function enterFocusMode() {
-    focusModePriorState.current = { sidebarCollapsed, navCollapsed };
+    focusModePriorState.current = { sidebarCollapsed, navCollapsed, detailsPanelCollapsed };
     setSidebarCollapsed(true);
     setNavCollapsed(true);
+    setDetailsPanelCollapsed(true);
     setFocusMode(true);
   }
 
@@ -631,6 +646,7 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     const prior = focusModePriorState.current;
     setSidebarCollapsed(prior ? prior.sidebarCollapsed : false);
     setNavCollapsed(prior ? prior.navCollapsed : false);
+    setDetailsPanelCollapsed(prior ? prior.detailsPanelCollapsed : false);
     setFocusMode(false);
     focusModePriorState.current = null;
   }
@@ -1351,6 +1367,8 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
                 pageNumber={book.rooms.findIndex((room) => room.id === activeRoom.id) + 3}
                 book={book}
                 totals={totals}
+                detailsPanelCollapsed={detailsPanelCollapsed}
+                onToggleDetailsPanel={() => setDetailsPanelCollapsed((current) => !current)}
                 onOpenRoom={(roomId) => {
                   setActivePage("room");
                   setActiveRoomId(roomId);
@@ -1677,13 +1695,13 @@ function InfoField({ label, value, type = "text", multiline = false, onChange })
   );
 }
 
-function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
+function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, detailsPanelCollapsed, onToggleDetailsPanel, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
   const roomUpgrade = room.rows.reduce((sum, row) => sum + numberValue(row.upgradeCost), 0);
   const roomImage = room.imageUrl || room.rows.find((row) => row.imageUrl)?.imageUrl || book.cover.backgroundImageUrl || placeholderImage(room.name);
   const roomInclusions = room.rows.filter((row) => row.included).slice(0, 5);
   const roomLabel = isRoomLike(room.name) ? "Room" : "Section";
   return (
-    <section className="page roomPage contractPage">
+    <section className={`page roomPage contractPage${detailsPanelCollapsed ? " detailsCollapsed" : ""}`}>
       <aside className="documentSpine">
         <div className="spineBrand">
           <img src={book.cover.logoUrl} alt={book.cover.builderName} />
@@ -1749,6 +1767,18 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
 
       <div className="selectionTableWrap">
         <table className="selectionTable">
+          <colgroup>
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "19%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "22%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "9%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "5%" }} />
+          </colgroup>
           <thead>
             <tr>
               <th className="stickyCol stickyCol1">Item</th>
@@ -1834,34 +1864,45 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
       </div>
       </main>
 
-      <aside className="roomSidePanel">
-        <section>
-          <h3>About This {roomLabel}</h3>
-          <textarea value={room.about || aboutTextForRoom(room.name)} onChange={(event) => onRoomChange({ about: event.target.value })} />
-        </section>
-        <section>
-          <h3>Inclusions</h3>
-          <ul>
-            {roomInclusions.map((row) => <li key={row.id}>{row.selectedProduct || row.item}</li>)}
-          </ul>
-        </section>
-        <section>
-          <h3>Specification Summary</h3>
-          <dl>
-            <dt>Style</dt><dd>{String(book.templateName || "").includes("Higher") ? "Premium" : "Modern"}</dd>
-            <dt>Colour Palette</dt><dd>Neutral</dd>
-            <dt>Overall Finish</dt><dd>{room.rows.find((row) => row.finishColour)?.finishColour || "Chrome / selected finishes"}</dd>
-            <dt>Adjustment</dt><dd>{money(roomUpgrade)}</dd>
-          </dl>
-        </section>
-        <section>
-          <h3>Room Image</h3>
-          <button className="roomImageButton" onClick={() => onPreviewImage({ url: roomImage, alt: room.name })}>
-            <img src={roomImage} alt={room.name} />
-          </button>
-          <input value={room.imageUrl || ""} onChange={(event) => onRoomChange({ imageUrl: event.target.value })} placeholder="Room image URL" />
-        </section>
-      </aside>
+      {detailsPanelCollapsed ? (
+        <button type="button" className="detailsExpandTab" onClick={onToggleDetailsPanel} aria-label="Expand details panel" title="Expand details panel">
+          <PanelRightOpen size={15} />
+        </button>
+      ) : (
+        <aside className="roomSidePanel">
+          <div className="roomSidePanelHeader">
+            <button type="button" className="detailsCollapseButton" onClick={onToggleDetailsPanel} aria-label="Collapse details panel" title="Collapse details panel">
+              <PanelRightClose size={15} />
+            </button>
+          </div>
+          <section>
+            <h3>About This {roomLabel}</h3>
+            <textarea value={room.about || aboutTextForRoom(room.name)} onChange={(event) => onRoomChange({ about: event.target.value })} />
+          </section>
+          <section>
+            <h3>Inclusions</h3>
+            <ul>
+              {roomInclusions.map((row) => <li key={row.id}>{row.selectedProduct || row.item}</li>)}
+            </ul>
+          </section>
+          <section>
+            <h3>Specification Summary</h3>
+            <dl>
+              <dt>Style</dt><dd>{String(book.templateName || "").includes("Higher") ? "Premium" : "Modern"}</dd>
+              <dt>Colour Palette</dt><dd>Neutral</dd>
+              <dt>Overall Finish</dt><dd>{room.rows.find((row) => row.finishColour)?.finishColour || "Chrome / selected finishes"}</dd>
+              <dt>Adjustment</dt><dd>{money(roomUpgrade)}</dd>
+            </dl>
+          </section>
+          <section>
+            <h3>Room Image</h3>
+            <button className="roomImageButton" onClick={() => onPreviewImage({ url: roomImage, alt: room.name })}>
+              <img src={roomImage} alt={room.name} />
+            </button>
+            <input value={room.imageUrl || ""} onChange={(event) => onRoomChange({ imageUrl: event.target.value })} placeholder="Room image URL" />
+          </section>
+        </aside>
+      )}
 
       <footer className="contractFooter">
         <span>{book.cover.builderName} Pty Ltd</span>
@@ -2317,6 +2358,10 @@ const styles = `
   .sidebarExpandTab { position: sticky; top: 16px; margin: 16px 0 0 4px; }
   .focusModeButton { display: inline-flex; align-items: center; gap: 6px; background: #0a2a43; }
   .screen.focusMode { grid-template-columns: 34px minmax(0, 1fr); }
+  .screen.focusMode .workspace { padding: 16px 12px 28px; }
+  .screen.focusMode .topbar, .screen.focusMode .alert { max-width: none; margin-left: 0; margin-right: 0; }
+  .screen.focusMode .documentWrap { justify-content: stretch; justify-items: stretch; }
+  .screen.focusMode .page { width: 100%; max-width: none; }
   .brandStrip { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; margin-bottom: 18px; }
   .brandStrip img { width: 54px; height: 44px; object-fit: contain; background: white; border-radius: 6px; }
   .brandStrip span, .sidebar label { color: #9fb2c7; font-size: 12px; }
@@ -2405,7 +2450,9 @@ const styles = `
   .revisionTable th { background: #071827; color: white; font-size: 11px; text-transform: uppercase; }
   .signatureGrid { display: grid; grid-template-columns: 1fr 160px; gap: 18px; margin-top: 14px; }
   .signatureGrid span { border-bottom: 1px solid #94a3b8; padding: 12px 0; }
-  .contractPage { display: grid; grid-template-columns: 220px minmax(760px, 1fr) 210px; grid-template-rows: 1fr 42px; min-height: 940px; background: #fff; }
+  .contractPage { display: grid; grid-template-columns: 220px minmax(760px, 1fr) 210px; grid-template-rows: 1fr 42px; min-height: 940px; background: #fff; transition: grid-template-columns 0.18s ease; }
+  .contractPage.detailsCollapsed { grid-template-columns: 220px minmax(0, 1fr) 28px; }
+  .detailsExpandTab { position: relative; margin: 118px 6px 0 0; background: #fff; border: 1px solid #e5c48b; border-radius: 6px; color: #071827; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .documentSpine { grid-row: 1 / 3; background: linear-gradient(180deg, #071827 0%, #04111f 100%); color: white; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
   .spineBrand { display: grid; gap: 4px; }
   .spineBrand img { width: 150px; height: 88px; object-fit: contain; background: rgba(255,255,255,.96); padding: 4px; }
@@ -2438,8 +2485,8 @@ const styles = `
   .roomTabs button.active { background: #071827; color: white; }
   .roomTabs button.ghost { border-style: dashed; color: #64748b; }
   .roomTabs button.danger { border-color: #ef4444; color: #dc2626; }
-  .selectionTableWrap { overflow-x: auto; overflow-y: visible; border: 1px solid #dce3ea; max-width: 100%; }
-  .selectionTable { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 11px; }
+  .selectionTableWrap { overflow-x: auto; overflow-y: visible; border: 1px solid #dce3ea; width: 100%; min-width: 0; }
+  .selectionTable { width: 100%; min-width: 1250px; table-layout: fixed; border-collapse: collapse; font-size: 11px; }
   .selectionTable th { background: #071827; color: white; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 9px 7px; border-right: 1px solid rgba(255,255,255,.16); }
   .selectionTable td { border: 1px solid #e2e8f0; padding: 6px; vertical-align: middle; background: #fff; }
   .selectionTable tr:nth-child(even) td { background: #fbfcfe; }
@@ -2480,7 +2527,9 @@ const styles = `
   .notesRow div { background: #fbf4ea; border-radius: 4px; padding: 10px; display: grid; gap: 6px; }
   .notesRow textarea { min-height: 54px; border: 0 !important; background: transparent !important; resize: vertical; padding: 0; color: #071827 !important; }
   .notesRow span { font-size: 22px; font-weight: 950; }
-  .roomSidePanel { padding: 118px 14px 54px 0; display: grid; align-content: start; gap: 0; }
+  .roomSidePanel { position: relative; padding: 118px 14px 54px 0; display: grid; align-content: start; gap: 0; }
+  .roomSidePanelHeader { position: absolute; top: 6px; right: 6px; }
+  .detailsCollapseButton { background: #fff; border: 1px solid #e5c48b; border-radius: 6px; color: #071827; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .roomSidePanel section { border: 1px solid #e5c48b; border-bottom: 0; padding: 12px; background: #fff; }
   .roomSidePanel section:last-child { border-bottom: 1px solid #e5c48b; }
   .roomSidePanel h3 { margin: 0 0 9px; color: #071827; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
@@ -2517,6 +2566,6 @@ const styles = `
     .page { box-shadow: none; page-break-after: always; break-after: page; }
     .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
-  @media (max-width: 1380px) { .contractPage { grid-template-columns: 200px minmax(720px, 1fr) 190px; } .roomTabs { grid-template-columns: repeat(4, minmax(92px, auto)) 1fr auto auto; } .roomTabs button:nth-child(n+5):nth-child(-n+6) { display: none; } }
-  @media (max-width: 980px) { .screen { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .documentSpine, .roomSidePanel, .contractFooter { grid-column: 1; grid-row: auto; } .roomHero, .roomTabs, .notesRow { grid-template-columns: 1fr; } }
+  @media (max-width: 1380px) { .contractPage { grid-template-columns: 200px minmax(720px, 1fr) 190px; } .contractPage.detailsCollapsed { grid-template-columns: 200px minmax(0, 1fr) 28px; } .roomTabs { grid-template-columns: repeat(4, minmax(92px, auto)) 1fr auto auto; } .roomTabs button:nth-child(n+5):nth-child(-n+6) { display: none; } }
+  @media (max-width: 980px) { .screen { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage, .contractPage.detailsCollapsed { grid-template-columns: 1fr; } .documentSpine, .roomSidePanel, .detailsExpandTab, .contractFooter { grid-column: 1; grid-row: auto; } .detailsExpandTab { margin: 0 0 10px; } .roomHero, .roomTabs, .notesRow { grid-template-columns: 1fr; } }
 `;
