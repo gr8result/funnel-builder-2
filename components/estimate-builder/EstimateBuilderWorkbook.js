@@ -7273,6 +7273,8 @@ export function StandardInclusionsSheet({ sheet }) {
     try {
       const finalPages = Array.isArray(finalDocument?.pages) ? finalDocument.pages : [];
       if (!finalPages.length) throw new Error("At least one page must be kept to save this import.");
+      const validation = finalDocument.metadata?.docxPageCountValidation || preview.validation || null;
+      if (validation?.mismatch) throw new Error(validation.message || "The imported Word page count does not match the source document.");
       const document = markStandardDocumentSaved({
         ...finalDocument,
         activePageId: finalPages[0]?.id || finalDocument.activePageId || "",
@@ -7320,6 +7322,8 @@ export function StandardInclusionsSheet({ sheet }) {
   async function saveReviewedDocxAsBaseTemplate(finalDocument) {
     setDocxImportReviewBusy(true);
     try {
+      const validation = finalDocument.metadata?.docxPageCountValidation || docxImportReview?.validation || null;
+      if (validation?.mismatch) throw new Error(validation.message || "The imported Word page count does not match the source document.");
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || "";
       const response = await fetch("/api/standard-inclusions/base-template", {

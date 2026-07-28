@@ -30,6 +30,9 @@ function assert(condition, message) {
   "footer",
   "pageBreak",
   "sectionBreak",
+  "fixed-page",
+  "wp:anchor",
+  "txbxContent",
   "table",
   "image",
   "paragraph",
@@ -43,6 +46,13 @@ assert(importer.includes("imageRef = await upload"), "DOCX image references must
 assert(!importer.includes("data: { imageRef: `data:"), "Document JSON must not embed image data URLs");
 assert(!importer.includes("fetch(\"/api/standard-inclusions/docx-import/upload-asset\""), "DOCX importer must not make an unauthenticated asset-upload fetch");
 assert(importer.includes("docxPageSettings"), "DOCX page settings must be retained for future reflow");
+assert(importer.includes("docProps/app.xml"), "DOCX importer must inspect Word extended properties for source page count");
+assert(importer.includes("chooseDocxLayoutMode"), "DOCX importer must choose flow vs fixed-page layout mode");
+assert(importer.includes("layoutDocxFixedPages"), "DOCX importer must support fixed-page designed layouts");
+assert(importer.includes("wordAnchorToPageRect"), "DOCX importer must preserve Word anchor coordinates");
+assert(importer.includes("twipsToDocumentUnits"), "DOCX importer must expose twip conversion helpers");
+assert(importer.includes("emuToDocumentUnits"), "DOCX importer must expose EMU conversion helpers");
+assert(importer.includes("validateImportedPageCount"), "DOCX importer must validate source and imported page counts");
 assert(importer.includes("relayoutDocxFlowDocument"), "DOCX flow documents must support relayout after edits");
 
 assert(uploadRoute.includes("MAX_ASSET_BYTES"), "Upload route must enforce an image size limit");
@@ -54,8 +64,12 @@ assert(review.includes("Review Imported Word Schedule"), "DOCX imports must have
 assert(review.includes("Accept Import"), "Review screen must have an explicit accept action");
 assert(review.includes("Return to Upload"), "Review screen must allow uploading a different DOCX");
 assert(review.includes("Save Draft Base Template"), "Review screen must expose draft base-template save");
+assert(review.includes("Import blocked"), "Review screen must block page-count mismatches");
+assert(review.includes("sourcePageCount"), "Review screen must show source page count");
+assert(review.includes("layoutMode"), "Review screen must show layout mode");
 
 assert(builder.includes("autoActivate: false"), "DOCX base-template save must create a draft, not activate globally");
+assert(builder.includes("validation?.mismatch"), "DOCX save paths must reject page-count mismatch imports");
 assert(builder.includes("useApiFetch"), "DOCX image uploads must use the shared authenticated API fetch helper");
 assert(builder.includes("uploadAsset: uploadDocxImportAsset"), "DOCX importer must receive an authenticated asset uploader from the UI");
 assert(builder.includes("/api/standard-inclusions/docx-import/upload-asset"), "DOCX UI uploader must call the Standard Inclusions asset route");

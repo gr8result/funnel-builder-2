@@ -7,13 +7,21 @@ export default function DocxImportReview({ preview, busy = false, onConfirm, onC
   const activePage = pages[activeIndex] || pages[0] || null;
   const summary = useMemo(() => ({
     pageCount: pages.length,
+    sourcePageCount: preview?.sourcePageCount || preview?.document?.metadata?.docxStructure?.sourcePageCount || 0,
+    layoutMode: preview?.layoutMode || preview?.document?.metadata?.layoutMode || "flow",
+    validation: preview?.validation || preview?.document?.metadata?.docxPageCountValidation || null,
     paragraphCount: preview?.paragraphCount || 0,
     tableCount: preview?.tableCount || 0,
     imageCount: preview?.imageCount || 0,
+    fixedElementCount: preview?.fixedElementCount || 0,
+    floatingImageCount: preview?.floatingImageCount || 0,
+    textBoxCount: preview?.textBoxCount || 0,
+    anchoredObjectCount: preview?.anchoredObjectCount || 0,
     warnings: preview?.warnings || [],
     fontSubstitutions: preview?.fontSubstitutions || [],
     unsupportedFeatures: preview?.unsupportedFeatures || [],
   }), [pages.length, preview]);
+  const pageCountMismatch = Boolean(summary.validation?.mismatch);
 
   function saveAsBaseTemplate() {
     if (!window.confirm("Save this reviewed DOCX import as a draft shared Premier base template? Activation still requires platform-admin approval.")) return;
@@ -26,18 +34,34 @@ export default function DocxImportReview({ preview, busy = false, onConfirm, onC
         <header style={styles.header}>
           <div>
             <h2 style={styles.title}>Review Imported Word Schedule</h2>
-            <p style={styles.subtitle}>{preview.fileName} - {summary.pageCount} page{summary.pageCount === 1 ? "" : "s"} generated from DOCX flow content.</p>
+            <p style={styles.subtitle}>
+              {preview.fileName} - {summary.pageCount} imported page{summary.pageCount === 1 ? "" : "s"}
+              {summary.sourcePageCount ? ` from ${summary.sourcePageCount} source page${summary.sourcePageCount === 1 ? "" : "s"}` : ""}.
+              Layout: {summary.layoutMode}.
+            </p>
           </div>
           <button type="button" style={styles.ghostButton} disabled={busy} onClick={onCancel}>Cancel</button>
         </header>
 
         <div style={styles.summaryRow}>
           <SummaryStat label="Pages" value={summary.pageCount} />
+          <SummaryStat label="Source Pages" value={summary.sourcePageCount || "-"} warn={pageCountMismatch} />
           <SummaryStat label="Paragraphs" value={summary.paragraphCount} />
           <SummaryStat label="Tables" value={summary.tableCount} />
           <SummaryStat label="Images" value={summary.imageCount} />
+          <SummaryStat label="Fixed Objects" value={summary.fixedElementCount} />
+          <SummaryStat label="Floating Images" value={summary.floatingImageCount} />
+          <SummaryStat label="Text Boxes" value={summary.textBoxCount} />
+          <SummaryStat label="Anchors" value={summary.anchoredObjectCount} />
           <SummaryStat label="Warnings" value={summary.warnings.length + summary.unsupportedFeatures.length} warn={summary.warnings.length || summary.unsupportedFeatures.length} />
         </div>
+
+        {pageCountMismatch ? (
+          <div style={styles.errorBox}>
+            <strong>Import blocked</strong>
+            <p style={styles.noticeText}>{summary.validation.message}</p>
+          </div>
+        ) : null}
 
         {summary.fontSubstitutions.length ? (
           <div style={styles.noticeBox}>
@@ -74,8 +98,8 @@ export default function DocxImportReview({ preview, busy = false, onConfirm, onC
         <footer style={styles.footer}>
           <button type="button" style={styles.ghostButton} disabled={busy} onClick={onReturnToUpload}>Return to Upload</button>
           <button type="button" style={styles.ghostButton} disabled={busy} onClick={onCancel}>Cancel</button>
-          <button type="button" style={styles.primaryButton} disabled={busy || !pages.length} onClick={() => onConfirm(preview.document)}>{busy ? "Saving..." : "Accept Import"}</button>
-          {canSaveAsBaseTemplate ? <button type="button" style={styles.baseButton} disabled={busy || !pages.length} onClick={saveAsBaseTemplate}>Save Draft Base Template</button> : null}
+          <button type="button" style={styles.primaryButton} disabled={busy || !pages.length || pageCountMismatch} onClick={() => onConfirm(preview.document)}>{busy ? "Saving..." : "Accept Import"}</button>
+          {canSaveAsBaseTemplate ? <button type="button" style={styles.baseButton} disabled={busy || !pages.length || pageCountMismatch} onClick={saveAsBaseTemplate}>Save Draft Base Template</button> : null}
         </footer>
       </div>
     </div>
@@ -102,6 +126,8 @@ const styles = {
   statWarn: { borderColor: "#f59e0b", background: "#fffbeb" },
   noticeBox: { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 8, padding: "10px 12px", fontSize: 13 },
   warningBox: { border: "1px solid #facc15", background: "#fefce8", borderRadius: 8, padding: "10px 12px", fontSize: 13 },
+  errorBox: { border: "1px solid #ef4444", background: "#fef2f2", borderRadius: 8, padding: "10px 12px", fontSize: 13, color: "#991b1b" },
+  noticeText: { margin: "4px 0 0" },
   list: { margin: "6px 0 0", paddingLeft: 18 },
   body: { display: "grid", gridTemplateColumns: "210px minmax(0, 1fr)", gap: 14, minHeight: 520 },
   pageList: { display: "grid", gap: 7, alignContent: "start", overflow: "auto", maxHeight: 600 },

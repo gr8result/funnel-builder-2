@@ -54,6 +54,7 @@ export function serializeDocument(document) {
       height: page.height,
       unit: page.unit,
       background: page.background,
+      data: page.data,
       objects: page.objects,
     })),
     activePageId: current.activePageId,
