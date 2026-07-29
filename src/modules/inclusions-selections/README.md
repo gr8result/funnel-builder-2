@@ -1,28 +1,28 @@
 # Inclusions and Selections
 
-This is a clean top-down rebuild.
+This module is the clean top-down replacement boundary for Inclusions and Selections.
 
-Required architecture:
+The domain order is:
 
-Project
-→ Areas and rooms
-→ Area types
-→ Area groups
-→ Room templates
-→ Selection requirements
-→ Inclusion tiers
-→ Product selections
-→ Pricing and variations
-→ Approvals
-→ Locked snapshots
-→ Estimate export
+Project -> Areas and rooms -> Area groups -> Area types -> Templates -> Requirements -> Inclusion tiers -> Product selections -> Pricing -> Approvals -> Locked snapshots -> Estimate export.
 
-Rules:
+Current scope:
 
-- No legacy selections business logic may be imported.
-- No product-first workflow may be restored.
-- Products cannot create or imply project rooms.
-- Draft selections cannot directly alter an approved estimate.
-- The new module must remain isolated from the retired interface.
+- Domain entities, value objects, fixtures, repository interfaces, and pure services.
+- No visible UI.
+- No route wiring.
+- No Supabase migrations.
+- No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
+- No Product Library table ownership changes.
+- No Estimate Builder behaviour changes.
 
-Do not add working selections features yet.
+Key files:
+
+- `areas/`, `area-groups/`, `area-types/`: project area structure and validation.
+- `templates/`, `requirements/`, `tiers/`: generated room requirements and inclusion tiers.
+- `products/`, `selections/`: product references, inheritance, and apply-to previews.
+- `pricing/`, `approvals/`, `snapshots/`, `estimate-export/`: commercial lifecycle through locked estimate export.
+- `repositories/`: persistence contracts and an in-memory test implementation.
+- `tests/domainFoundation.test.ts`: focused unit coverage for validation, generation, compatibility, pricing, locking, snapshots, and export.
+
+Development rules live in `docs/INCLUSIONS_SELECTIONS_DEVELOPMENT_RULES.md`.

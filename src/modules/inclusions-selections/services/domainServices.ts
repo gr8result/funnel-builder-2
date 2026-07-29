@@ -1,0 +1,8 @@
+export { validateProjectAreas } from "../areas/projectAreaValidation";
+export { generateRequirementsForArea } from "../templates/templateGenerationService";
+export { resolveEffectiveSelection, resetSelectionOverride } from "../selections/inheritanceResolver";
+export { previewApplySelection, applySelectionPreview } from "../selections/applyToService";
+export { calculateSelectionPricing } from "../pricing/pricingService";
+export { canLockSelectionSet } from "../approvals/approvalRules";
+export { createSelectionSnapshot, supersedeSnapshot } from "../snapshots/snapshotService";
+export { createEstimateSelectionExport } from "../estimate-export/estimateExportAdapter";
