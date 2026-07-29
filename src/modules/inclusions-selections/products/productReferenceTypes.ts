@@ -16,6 +16,11 @@ export type ProductReference = {
   catalogueProductId?: string;
   name: string;
   brand?: string;
+  model?: string;
+  colour?: string;
+  description?: string;
+  imageUrl?: string;
+  productCode?: string;
   supplierId?: SupplierId;
   defaultVariantId?: ProductVariantId;
   unit: string;
@@ -29,6 +34,9 @@ export type ProductVariantReference = {
   productReferenceId: ProductReferenceId;
   name: string;
   sku?: string;
+  description?: string;
+  colour?: string;
+  finish?: string;
   unitCost?: Money;
   active: boolean;
 };

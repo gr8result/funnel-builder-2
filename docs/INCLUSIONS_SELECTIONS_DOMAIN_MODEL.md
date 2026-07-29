@@ -14,6 +14,9 @@ Date: 2026-07-29
 - `SavedBuilderTemplate`: organisation-scoped reusable template assignment structure.
 - `ProductReference`: a stable selection-facing reference to a catalogue product or allowance.
 - `ProjectSelection`: draft/submitted/approved/locked product or allowance choice for one requirement.
+- `SelectionLocation`: the physical usage location for a ProjectSelection, preserving area, requirement, quantity, pricing quantity and unit.
+- `RequirementNote`: structured internal, supplier, installation, override or Not Applicable note attached to a requirement.
+- `RequirementAttachmentReference`: reference to product images, specifications, samples, quotes, drawings or manual selection images.
 - `SelectionApproval`: builder/client/admin decision attached to a selection.
 - `SelectionSnapshot`: immutable locked record of selection lines.
 - `EstimateSelectionExport`: estimate-facing output generated from a locked snapshot.
@@ -45,3 +48,11 @@ Protected requirements are never silently deleted when they have selections, app
 ## Product Compatibility
 
 Compatibility is requirement-first. A product can satisfy a requirement only when category, subtype, active state, area type, and internal/external constraints match.
+
+## Workspace Views
+
+Room View and Category View are presentation choices over the same ProjectRequirements. They must not create separate category-only records. Every draft choice remains attached to a ProjectRequirement and every physical usage remains traceable through SelectionLocation.
+
+## Product Adapter Boundary
+
+Workspace product search and lookup flow through `ProductSelectionCatalogueAdapter`. Development fixtures may live behind the adapter, but the selections module does not own Product Library or Supplier Library persistence.

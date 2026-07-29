@@ -126,7 +126,7 @@ export async function runTemplateStageTests(): Promise<void> {
   assert(pageSource.includes("Room Templates and Inclusion Tiers"), "Stage 2 route should render the page title.");
   assert(pageSource.includes("/inclusions-selections/areas"), "Back to Areas returns to Stage 1.");
   assert(pageSource.includes("/inclusions-selections/workspace"), "Valid stage reaches workspace placeholder.");
-  assert(workspaceSource.includes("Product selections will be completed by room or category in the next stage."), "Workspace placeholder text should be exact.");
+  assert(workspaceSource.includes("Inclusions and Selections Workspace"), "Workspace route should now be the Stage 3 workspace.");
   assert(pageSource.includes("@media (max-width: 760px)") && pageSource.includes("projectAreaCards"), "Responsive mobile cards should be present.");
   assert(!pageSource.includes("ProductLibrary") && !pageSource.includes("Estimate Builder") && !pageSource.includes("selectionBudget"), "No product selection or Estimate Builder code is loaded.");
 }

@@ -18,7 +18,10 @@ Date: 2026-07-29
 - Prefer pure services for validation, generation, inheritance, compatibility, pricing, approval, snapshot, and export logic.
 - Keep repositories as interfaces at the boundary.
 - Use fixtures only for tests and local domain checks.
-- Add UI only after the domain contracts are stable.
+- Add UI in focused stage routes after the domain contracts for that stage are stable.
+- Keep workspace compatibility, pricing, Apply To and validation behaviour in services, not React components.
+- Access products and suppliers through adapter/reference interfaces only.
+- Keep draft workspace persistence behind repository interfaces. In-memory repositories are acceptable until migrations are explicitly approved.
 
 ## Testing
 
@@ -29,6 +32,12 @@ Minimum coverage for domain work:
 - inheritance and reset behaviour,
 - product compatibility and apply-to preview,
 - pricing and variation calculation,
+- room/category workspace loading,
+- product and variant selection,
+- custom selection category binding,
+- Apply To preview and skipped/incompatible targets,
+- SelectionLocation traceability,
+- draft save and reload,
 - approval locking,
 - snapshot creation,
 - estimate export aggregation.

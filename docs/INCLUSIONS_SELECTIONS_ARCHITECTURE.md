@@ -29,12 +29,12 @@ The module must not import from:
 
 ## Non-Goals In This Phase
 
-- No visible UI outside the approved stage-one Create Selection Areas route.
 - No API routes.
 - No database migrations.
 - No Estimate Builder integration.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
+- No client approval, final document, locked snapshot, procurement export or Estimate Builder export workflow from the workspace.
 
 ## Stage-One Route
 
@@ -46,7 +46,11 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 
 `/inclusions-selections/templates` is the second visible replacement workflow. It assigns AreaTemplates and InclusionTiers to the Stage 1 ProjectAreas, previews generated ProjectRequirements, reconciles them safely and saves the template stage configuration.
 
-`/inclusions-selections/workspace` exists only as the next-stage placeholder. Product selection, pricing, approvals, documents and Estimate Builder export remain deferred.
+## Stage-Three Route
+
+`/inclusions-selections/workspace` is the third visible replacement workflow. It loads Stage 1 ProjectAreas and Stage 2 ProjectRequirements, then lets builders complete draft selections by Room View or Category View while preserving room/location-based records.
+
+`/inclusions-selections/review` exists only as the next-stage placeholder. Final pricing review, approvals, documents, snapshots and Estimate Builder export remain deferred.
 
 ## Services
 
@@ -56,6 +60,11 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 - `resolveEffectiveTemplateAssignment`: resolves project, group, type and area overrides.
 - `previewRequirementGeneration`: previews added, kept, updated, removable and protected requirements.
 - `reconcileProjectRequirements`: generates and reconciles ProjectRequirements without silently deleting protected records.
+- `loadSelectionWorkspace`: loads ProjectAreas, ProjectRequirements, draft selections, locations, notes, attachments and workspace draft state.
+- `loadRoomView` and `loadCategoryView`: present the same requirements by room or by category without duplicating records.
+- `createProjectSelection`, `selectProductVariant`, `createCustomSelection`, `updateRequirementStatus`, `clearProjectSelection` and `resetSelectionToInherited`: mutate draft selection state through the application service boundary.
+- `previewApplyTo` and `applySelectionToTargets`: preview and apply draft selections only to compatible requirements while retaining SelectionLocations.
+- `validateSelectionWorkspace` and `saveWorkspaceDraft`: validate and persist the draft workspace through the repository interface.
 - `resolveEffectiveSelection`: applies default inheritance precedence.
 - `previewApplySelection`: previews bulk application without mutating records.
 - `calculateSelectionPricing`: computes commercial values.

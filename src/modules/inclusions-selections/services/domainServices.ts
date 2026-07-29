@@ -5,6 +5,7 @@ export { previewApplySelection, applySelectionPreview } from "../selections/appl
 export { calculateSelectionPricing } from "../pricing/pricingService";
 export * from "./projectAreaRegisterService";
 export * from "./templateStageService";
+export * from "./selectionWorkspaceService";
 export { canLockSelectionSet } from "../approvals/approvalRules";
 export { createSelectionSnapshot, supersedeSnapshot } from "../snapshots/snapshotService";
 export { createEstimateSelectionExport } from "../estimate-export/estimateExportAdapter";

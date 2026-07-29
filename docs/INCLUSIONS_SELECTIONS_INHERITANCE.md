@@ -45,3 +45,20 @@ Supported scopes:
 - `whole_project`
 
 Bulk application remains requirement-first. It cannot create areas, invent requirements, or force incompatible products onto a room.
+
+## Stage 3 Workspace Apply-To
+
+The Stage 3 workspace expands the visible Apply To scopes through `previewApplyTo` and `applySelectionToTargets`:
+
+- `this_requirement`
+- `this_room`
+- `selected_rooms`
+- `all_rooms_of_area_type`
+- `all_rooms_in_area_group`
+- `every_compatible_requirement`
+
+The preview lists compatible, incompatible and skipped targets before mutation. Applying a selection creates or replaces draft ProjectSelection records only for compatible, selected targets and creates traceable SelectionLocations for each changed requirement.
+
+## Stage 3 Reset
+
+`resetSelectionToInherited` removes the draft ProjectSelection for a requirement. The workspace then displays the next effective inherited template/tier source from Stage 2. Reset does not approve, snapshot or export a selection.
