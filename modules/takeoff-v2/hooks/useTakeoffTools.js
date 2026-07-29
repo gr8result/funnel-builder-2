@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility } from "../types.js";
-import { distance } from "../takeoff/geometry.js";
+import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
 import { computeAxisLock, applyAxisConstraint, axisAngleDegrees } from "../takeoff/axisLock.js";
@@ -31,6 +31,7 @@ import {
   setSegmentThickness,
   segmentToWallSegment,
   sumSegmentLengthsMm,
+  splitSegment,
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import { detectExteriorWalls as runDetection } from "../takeoff/wallDetection.js";
@@ -41,6 +42,8 @@ import {
   calculatePerimeterMm,
 } from "../takeoff/areaCalculation.js";
 import { polygonAreaDocUnits2, isSimplePolygon } from "../takeoff/geometry.js";
+import { offsetPolygonInward, offsetPolygonOutward } from "../takeoff/polygonOffset.js";
+import { defaultPlanRegion, normalizeRegionCorners } from "../takeoff/planRegion.js";
 
 const UNDO_LIMIT = 50;
 const VERTEX_HIT_TOLERANCE_SCREEN_PX = 10;
@@ -96,6 +99,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [closeShapeError, setCloseShapeError] = useState(null);
   const [closeShapeSuccessMessage, setCloseShapeSuccessMessage] = useState("");
   const [clearExteriorConfirmOpen, setClearExteriorConfirmOpen] = useState(false);
+  const [planRegionDraftCorner, setPlanRegionDraftCorner] = useState(null);
+  const [planRegionHoverPoint, setPlanRegionHoverPoint] = useState(null);
   const [wallDetectionBusy, setWallDetectionBusy] = useState(false);
   const [wallDetectionMessage, setWallDetectionMessage] = useState("");
   const [wallDetectionCode, setWallDetectionCode] = useState(null); // "USER_AUTH_REQUIRED"|"PROVIDER_NOT_CONFIGURED"|"PROVIDER_AUTH_FAILED"|"PROVIDER_ERROR"|null
@@ -139,6 +144,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setManualAreaDialogOpen(false);
     setCloseShapeError(null);
     setCloseShapeSuccessMessage("");
+    setPlanRegionDraftCorner(null);
+    setPlanRegionHoverPoint(null);
   }, []);
 
   const setActiveTool = useCallback((tool) => {
@@ -369,7 +376,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setWallDetectionMessage("");
     setWallDetectionCode(null);
     try {
-      const result = await runDetection({ imageDataUrl, imageWidth, imageHeight, viewport });
+      const result = await runDetection({ imageDataUrl, imageWidth, imageHeight, viewport, planRegion: page?.planRegion || null });
       if (!result.connected) {
         setWallDetectionStatus("unavailable");
         setWallDetectionMessage(result.message);
@@ -392,9 +399,71 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setWallDetectionStatus("idle");
       setWallDetectionMessage(result.message);
       setWallDetectionCode("OK");
+      // Auto-transition into Edit Exterior so the just-detected perimeter is
+      // immediately reviewable/editable, rather than leaving the user on
+      // whatever tool they had active (per spec) — only when detection
+      // actually produced something to review.
+      if (result.segments.length > 0) setActiveTool("edit-walls");
     } finally {
       setWallDetectionBusy(false);
     }
+  }, [page, commitPage, pushUndo, setActiveTool]);
+
+  // Results-panel/toolbar "Accept All High-Confidence Segments" — confirms
+  // every unreviewed automatic segment whose per-segment confidence is
+  // "high" in one action, without touching medium/low-confidence ones that
+  // still need a human look.
+  const highConfidenceUnconfirmedCount = useMemo(() => {
+    const graph = page?.exteriorWalls;
+    if (!graph) return 0;
+    return graph.segments.filter((s) => s.source === "automatic" && !s.confirmed && s.confidence === "high").length;
+  }, [page]);
+
+  const acceptAllHighConfidenceSegments = useCallback((field = "exteriorWalls") => {
+    const graph = page?.[field];
+    if (!graph) return;
+    mutateWallField(field, (g) => ({
+      vertices: g.vertices,
+      segments: g.segments.map((s) => (s.confidence === "high" ? { ...s, confirmed: true } : s)),
+    }));
+  }, [page, mutateWallField]);
+
+  // ---- Plan region: marks the actual floor-plan area, excluding notes /
+  // title block / legends / schedules / the sheet border from automatic
+  // detection (see takeoff/planRegion.js and wallDetection.js). A simple
+  // click-two-corners rectangle, mirroring the app's other two-point tools
+  // (Set Scale) rather than a drag gesture, for consistency with the rest
+  // of the pointer-event dispatch in PlanViewer.jsx.
+  const suggestedPlanRegion = useMemo(() => {
+    if (page?.planRegion) return page.planRegion;
+    return defaultPlanRegion(page?.sourceWidth, page?.sourceHeight);
+  }, [page]);
+
+  const updatePlanRegionHover = useCallback((rawPoint) => {
+    setPlanRegionHoverPoint(rawPoint);
+  }, []);
+
+  const handlePlanRegionClick = useCallback((rawPoint) => {
+    if (!planRegionDraftCorner) {
+      setPlanRegionDraftCorner(rawPoint);
+      return;
+    }
+    const rect = normalizeRegionCorners(planRegionDraftCorner, rawPoint);
+    pushUndo("planRegion", page?.planRegion ?? null);
+    commitPage({ planRegion: { ...rect, confirmed: true, source: "manual" } });
+    setPlanRegionDraftCorner(null);
+    setPlanRegionHoverPoint(null);
+  }, [planRegionDraftCorner, page, commitPage, pushUndo]);
+
+  const acceptSuggestedPlanRegion = useCallback(() => {
+    if (!suggestedPlanRegion) return;
+    pushUndo("planRegion", page?.planRegion ?? null);
+    commitPage({ planRegion: { ...suggestedPlanRegion, confirmed: true } });
+  }, [suggestedPlanRegion, page, commitPage, pushUndo]);
+
+  const clearPlanRegion = useCallback(() => {
+    pushUndo("planRegion", page?.planRegion ?? null);
+    commitPage({ planRegion: null });
   }, [page, commitPage, pushUndo]);
 
   // Dismisses the "automatic detection unavailable" banner without a retry —
@@ -654,6 +723,33 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     mutateWallField(selectedField, (graph) => setSegmentThickness(graph, selectedSegmentId, thicknessMm));
   }, [selectedSegmentId, selectedField, mutateWallField]);
 
+  // WallContextPanel's "Convert to Manual" — an unreviewed automatic
+  // detection becomes a confirmed, user-owned segment, matching what
+  // Confirm Exterior Walls would eventually require anyway.
+  const convertSelectedSegmentToManual = useCallback(() => {
+    if (!selectedSegmentId) return;
+    mutateWallField(selectedField, (graph) => ({
+      vertices: graph.vertices,
+      segments: graph.segments.map((s) => (s.id === selectedSegmentId ? { ...s, source: "manual", confirmed: true, confidence: null } : s)),
+    }));
+  }, [selectedSegmentId, selectedField, mutateWallField]);
+
+  // WallContextPanel's "Split" — splits the selected segment at its
+  // midpoint; a specific split point isn't available from a single button,
+  // so the midpoint is the sensible default (the user can then drag the new
+  // vertex wherever it actually belongs).
+  const splitSelectedSegment = useCallback(() => {
+    if (!selectedSegmentId) return;
+    const graph = page?.[selectedField];
+    const segment = graph?.segments.find((s) => s.id === selectedSegmentId);
+    const a = segment && graph.vertices.find((v) => v.id === segment.aId);
+    const b = segment && graph.vertices.find((v) => v.id === segment.bId);
+    if (!a || !b) return;
+    const mid = midpoint(a, b);
+    mutateWallField(selectedField, (g) => splitSegment(g, selectedSegmentId, mid));
+    setSelectedSegmentId(null);
+  }, [selectedSegmentId, selectedField, page, mutateWallField]);
+
   // Validates *before* mutating — a failed close (e.g. the closing segment
   // would cross another wall) leaves the graph untouched and surfaces the
   // spec-exact reason via closeShapeError, rather than silently no-op'ing or
@@ -757,6 +853,57 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return calculatePolygonAreaM2(areaValidation.orderedPoints, page.calibration.mmPerDocumentUnit);
   }, [areaValidation, page]);
 
+  // External footprint vs internal floor area, per the exterior wall's
+  // recorded boundary basis (which face of the wall the trace represents).
+  // Never relabels the as-traced figure as "internal" for the (default,
+  // most common) "outside" basis — the internal estimate is only ever
+  // produced by actually offsetting the polygon by the wall thickness, and
+  // is null (with an explanatory message) whenever that offset can't be
+  // computed cleanly, per spec's graceful-failure requirement.
+  const footprintAndInternalArea = useMemo(() => {
+    if (!areaValidation.valid || calculatedAreaM2 == null || !page?.calibration) return null;
+    const basis = page.exteriorWalls?.boundaryBasis || "outside";
+    const thicknessMm = page.exteriorWalls?.wallThicknessMm;
+    const mmPerDocumentUnit = page.calibration.mmPerDocumentUnit;
+    const ordered = areaValidation.orderedPoints;
+    const hasThickness = Number.isFinite(thicknessMm) && thicknessMm > 0;
+    const toM2 = (docPoints) => (docPoints ? calculatePolygonAreaM2(docPoints, mmPerDocumentUnit) : null);
+
+    let externalFootprintM2 = null;
+    let internalFloorAreaM2 = null;
+
+    if (basis === "inside") {
+      internalFloorAreaM2 = calculatedAreaM2;
+      if (hasThickness) externalFootprintM2 = toM2(offsetPolygonOutward(ordered, thicknessMm / mmPerDocumentUnit));
+    } else if (basis === "centreline") {
+      if (hasThickness) {
+        const halfDocUnits = thicknessMm / 2 / mmPerDocumentUnit;
+        externalFootprintM2 = toM2(offsetPolygonOutward(ordered, halfDocUnits));
+        internalFloorAreaM2 = toM2(offsetPolygonInward(ordered, halfDocUnits));
+      }
+    } else {
+      externalFootprintM2 = calculatedAreaM2;
+      if (hasThickness) internalFloorAreaM2 = toM2(offsetPolygonInward(ordered, thicknessMm / mmPerDocumentUnit));
+    }
+
+    const internalAreaError = internalFloorAreaM2 == null
+      ? "Internal area could not be calculated automatically. Trace the internal boundary using the Area Tool."
+      : "";
+    return { basis, externalFootprintM2, internalFloorAreaM2, internalAreaError };
+  }, [areaValidation, calculatedAreaM2, page]);
+
+  const setExteriorBoundaryBasis = useCallback((basis) => {
+    if (!page?.exteriorWalls) return;
+    pushUndo("exteriorWalls", page.exteriorWalls);
+    commitPage({ exteriorWalls: { ...page.exteriorWalls, boundaryBasis: basis } });
+  }, [page, commitPage, pushUndo]);
+
+  const setExteriorWallThicknessMm = useCallback((thicknessMm) => {
+    if (!page?.exteriorWalls) return;
+    pushUndo("exteriorWalls", page.exteriorWalls);
+    commitPage({ exteriorWalls: { ...page.exteriorWalls, wallThicknessMm: thicknessMm } });
+  }, [page, commitPage, pushUndo]);
+
   const confirmArea = useCallback(({ confirmedAreaM2, note, name = "Ground Floor", areaType = "Living Area" } = {}) => {
     if (!areaValidation.valid || calculatedAreaM2 == null) return;
     const finalConfirmed = Number.isFinite(confirmedAreaM2) ? confirmedAreaM2 : calculatedAreaM2;
@@ -767,6 +914,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       vertices: areaValidation.orderedPoints,
       calculatedAreaM2,
       source: "manual", // the exterior-wall perimeter it's generated from may itself be manual or automatic, but the *area confirmation* is always the user's own action
+      externalFootprintM2: footprintAndInternalArea?.externalFootprintM2 ?? null,
+      internalFloorAreaM2: footprintAndInternalArea?.internalFloorAreaM2 ?? null,
     });
     area.confirmedAreaM2 = finalConfirmed;
     area.confirmedNote = finalConfirmed !== calculatedAreaM2 ? (note || "") : "";
@@ -775,7 +924,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     pushUndo("areas", page?.areas || []);
     commitPage({ areas: [...(page?.areas || []), area] });
     setAreaDialogOpen(false);
-  }, [areaValidation, calculatedAreaM2, page, commitPage, pushUndo]);
+  }, [areaValidation, calculatedAreaM2, footprintAndInternalArea, page, commitPage, pushUndo]);
 
   // ---- Manual area tracing (Area tool) --------------------------------------
   //
@@ -1114,6 +1263,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
+    highConfidenceUnconfirmedCount, acceptAllHighConfidenceSegments,
+    suggestedPlanRegion, planRegionDraftCorner, planRegionHoverPoint,
+    updatePlanRegionHover, handlePlanRegionClick, acceptSuggestedPlanRegion, clearPlanRegion,
     findWallVertexNear, handleWallCanvasClick,
     findWallVertexNearAny, handleEditToolClick,
     beginWallVertexDrag, updateWallVertexDrag, endWallVertexDrag, draggingVertex,
@@ -1121,6 +1273,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     deleteSelectedWallVertex, deleteSelectedWallSegment,
     canDeleteWallSelection, deleteSelectedWallItem,
     changeSelectedSegmentWallType, setSelectedSegmentThickness,
+    convertSelectedSegmentToManual, splitSelectedSegment,
     closeWallPerimeter, closeShapeError, closeShapeSuccessMessage, canCloseShape,
     canClearExterior, clearExteriorConfirmOpen, requestClearExterior, cancelClearExterior, confirmClearExterior,
     wallValidation, confirmExteriorWalls, totalPerimeterMm,
@@ -1140,6 +1293,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
     // Area — from a confirmed exterior perimeter (unchanged) and manual tracing (new)
     areaDialogOpen, setAreaDialogOpen, areaValidation, calculatedAreaM2, confirmArea,
+    footprintAndInternalArea, setExteriorBoundaryBasis, setExteriorWallThicknessMm,
     areaDraftVertices, areaHoverPoint, updateAreaHover, handleAreaCanvasClick, finishAreaTrace, cancelAreaTrace,
     manualAreaDialogOpen, setManualAreaDialogOpen, manualAreaCandidate, confirmManualArea,
     updateArea, deleteArea,

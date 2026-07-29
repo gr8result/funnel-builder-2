@@ -25,6 +25,8 @@ import OrientationPicker from "./OrientationPicker.jsx";
 import TakeoffToolbar from "./TakeoffToolbar.jsx";
 import ScaleCalibrationDialog from "./ScaleCalibrationDialog.jsx";
 import AreaConfirmDialog from "./AreaConfirmDialog.jsx";
+import ManualAreaConfirmDialog from "./ManualAreaConfirmDialog.jsx";
+import ResultsPanel from "./ResultsPanel.jsx";
 
 export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) {
   const router = useRouter();
@@ -245,6 +247,7 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
                 />
               )}
               <TakeoffToolbar page={selectedPage} tools={tools} onDetectExteriorWalls={handleDetectExteriorWalls} />
+              <div style={S.viewerRow}>
               <div style={S.viewerFlex}>
                 <PlanViewer
                   ref={planViewerRef}
@@ -259,6 +262,10 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
                   planGeometryIndex={planGeometryIndex}
                 />
               </div>
+              <div style={S.resultsSidebar}>
+                <ResultsPanel page={selectedPage} tools={tools} />
+              </div>
+              </div>
               <ScaleCalibrationDialog
                 calibrationDialog={tools.calibrationDialog}
                 onConfirm={tools.confirmCalibration}
@@ -268,9 +275,20 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
               <AreaConfirmDialog
                 open={tools.areaDialogOpen}
                 calculatedAreaM2={tools.calculatedAreaM2}
+                footprintAndInternalArea={tools.footprintAndInternalArea}
+                boundaryBasis={selectedPage?.exteriorWalls?.boundaryBasis || "outside"}
+                wallThicknessMm={selectedPage?.exteriorWalls?.wallThicknessMm ?? null}
+                onSetBoundaryBasis={tools.setExteriorBoundaryBasis}
+                onSetWallThicknessMm={tools.setExteriorWallThicknessMm}
                 onAccept={tools.confirmArea}
                 onEditWalls={() => { tools.setAreaDialogOpen(false); tools.setActiveTool("edit-walls"); }}
                 onCancel={() => tools.setAreaDialogOpen(false)}
+              />
+              <ManualAreaConfirmDialog
+                open={tools.manualAreaDialogOpen}
+                candidate={tools.manualAreaCandidate}
+                onAccept={tools.confirmManualArea}
+                onCancel={() => tools.setManualAreaDialogOpen(false)}
               />
             </>
           ) : (
@@ -291,6 +309,8 @@ const S = {
   body: { flex: 1, display: "flex", minHeight: 0 },
   sidebar: { width: 300, flexShrink: 0, borderRight: "1px solid #e2e8f0", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 },
+  viewerRow: { flex: 1, minHeight: 0, display: "flex", gap: 0 },
   viewerFlex: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" },
+  resultsSidebar: { width: 260, flexShrink: 0, borderLeft: "1px solid #e2e8f0", background: "#f8fafc", overflowY: "auto", padding: 10 },
   emptyViewer: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: 14 },
 };

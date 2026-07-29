@@ -115,12 +115,71 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
           </button>
         )}
 
+        {page?.planRegion?.confirmed ? (
+          <>
+            <span style={S.wallStatus} data-testid="plan-region-status">Plan region set</span>
+            <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("plan-region")} data-testid="plan-region-adjust">
+              Adjust Region
+            </button>
+            <button type="button" style={S.miniButton} onClick={tools.clearPlanRegion} data-testid="plan-region-clear">
+              Clear Region
+            </button>
+          </>
+        ) : tools.activeTool === "plan-region" ? (
+          <>
+            <span style={S.wallMessage} data-testid="plan-region-hint">
+              {tools.planRegionDraftCorner ? "Click the opposite corner to finish." : "Click one corner of the floor plan area."}
+            </span>
+            {tools.suggestedPlanRegion && !tools.planRegionDraftCorner && (
+              <button type="button" style={S.miniButton} onClick={tools.acceptSuggestedPlanRegion} data-testid="plan-region-accept-suggested">
+                Accept Plan Region
+              </button>
+            )}
+            <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("select")} data-testid="plan-region-cancel">
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("plan-region")} data-testid="plan-region-select-manually">
+            Select Region Manually
+          </button>
+        )}
+
+        {tools.activeTool === "area" && (
+          <>
+            <button
+              type="button"
+              style={S.miniButton}
+              disabled={tools.areaDraftVertices.length < 3}
+              onClick={tools.finishAreaTrace}
+              data-testid="area-finish-trace"
+            >
+              Finish Area
+            </button>
+            {tools.areaDraftVertices.length > 0 && (
+              <button type="button" style={S.miniButton} onClick={tools.cancelAreaTrace} data-testid="area-cancel-trace">
+                Cancel Trace
+              </button>
+            )}
+            {wallsConfirmed && tools.areaValidation.valid && (
+              <button type="button" style={S.miniButton} onClick={() => tools.setAreaDialogOpen(true)} data-testid="area-from-exterior">
+                Create Area From Exterior Walls
+              </button>
+            )}
+          </>
+        )}
+
         {hasWalls && (
           <span style={S.wallStatus} data-testid="wall-status">
             {wallsConfirmed
               ? `Exterior walls confirmed — Total perimeter: ${formatLength(tools.totalPerimeterMm || 0)}`
               : `Exterior walls: ${page.exteriorWalls.segments.length} segments${page.exteriorWalls.isClosed ? " — Closed" : " — Open"}${page.exteriorWalls.detectionConfidence != null ? ` — Confidence: ${page.exteriorWalls.detectionConfidence}%` : ""}`}
           </span>
+        )}
+        {tools.highConfidenceUnconfirmedCount > 0 && (
+          <button type="button" style={S.miniButton} onClick={() => tools.acceptAllHighConfidenceSegments()} data-testid="accept-high-confidence-segments">
+            Accept All High-Confidence Segments ({tools.highConfidenceUnconfirmedCount})
+          </button>
         )}
         {hasWalls && !wallsConfirmed && (
           <button type="button" style={S.miniButton} disabled={!tools.wallValidation.valid} onClick={tools.confirmExteriorWalls} data-testid="tool-confirm-walls">

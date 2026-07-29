@@ -148,6 +148,8 @@ export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
  * @property {"automatic"|"manual"} source
  * @property {boolean} confirmed
  * @property {string|null} confirmedAt
+ * @property {number|null} externalFootprintM2    set only for an area generated from a closed exterior perimeter (Method A) — the outside-face footprint, distinct from calculatedAreaM2's boundary-basis-as-traced value
+ * @property {number|null} internalFloorAreaM2    the wall-thickness-adjusted internal estimate for that same perimeter, or null if it couldn't be calculated automatically
  */
 
 /**
@@ -283,7 +285,7 @@ export function createMeasurement({ id, pointA, pointB, lengthMm, label = "" }) 
   return { id, pointA, pointB, lengthMm, label, createdAt: new Date().toISOString() };
 }
 
-export function createArea({ id, name, areaType = "Custom", vertices, calculatedAreaM2, source = "manual" }) {
+export function createArea({ id, name, areaType = "Custom", vertices, calculatedAreaM2, source = "manual", externalFootprintM2 = null, internalFloorAreaM2 = null }) {
   return {
     id,
     name,
@@ -296,6 +298,8 @@ export function createArea({ id, name, areaType = "Custom", vertices, calculated
     source,
     confirmed: false,
     confirmedAt: null,
+    externalFootprintM2,
+    internalFloorAreaM2,
   };
 }
 

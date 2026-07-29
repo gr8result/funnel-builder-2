@@ -3,6 +3,7 @@ import { clampSharpRenderScale, computeFitScale, createPageRenderer } from "../v
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
+import WallContextPanel from "./WallContextPanel.jsx";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
@@ -316,6 +317,8 @@ const PlanViewer = forwardRef(function PlanViewer(
           tools.updateOpeningHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (activeTool === "area") {
           tools.updateAreaHover(pagePoint, { zoomScale: view.zoomScale });
+        } else if (activeTool === "plan-region") {
+          tools.updatePlanRegionHover(pagePoint);
         } else {
           let constrained = pagePoint;
           if (event.shiftKey && activeTool === "edit-walls" && tools.selectedVertexId) {
@@ -383,6 +386,8 @@ const PlanViewer = forwardRef(function PlanViewer(
           tools.handleOpeningCanvasClick(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (tool === "area") {
           tools.handleAreaCanvasClick(dragState.pagePoint, { zoomScale: view.zoomScale });
+        } else if (tool === "plan-region") {
+          tools.handlePlanRegionClick(dragState.pagePoint);
         }
       }
     }
@@ -472,6 +477,9 @@ const PlanViewer = forwardRef(function PlanViewer(
             />
           )}
         </div>
+        {tools && (tools.activeTool === "edit-walls" || tools.activeTool === "edit") && (
+          <WallContextPanel page={page} tools={tools} />
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { midpoint, distance } from "../takeoff/geometry.js";
 import { formatLength } from "../takeoff/units.js";
 import { findOpenEndpoints } from "../takeoff/wallGraph.js";
+import { normalizeRegionCorners } from "../takeoff/planRegion.js";
 
 const IDENTITY_VIEW = { panX: 0, panY: 0, zoomScale: 1 };
 
@@ -84,6 +85,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
   const isWallDraw = tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall";
   const isOpeningTool = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool);
   const isAreaTool = tools.activeTool === "area";
+  const isPlanRegionTool = tools.activeTool === "plan-region";
   const isEditTool = tools.activeTool === "edit" || tools.activeTool === "edit-walls";
   const preview = tools.hoverPreview;
 
@@ -121,6 +123,25 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
             </g>
           );
         })}
+
+        {/* Plan region: confirmed rectangle always shown faintly (so it's
+            clear what automatic detection is scoped to); the in-progress
+            two-click draft and an unconfirmed suggestion only show while the
+            tool is active. */}
+        {page?.planRegion?.confirmed && (
+          <PlanRegionRect region={page.planRegion} project={project} dashed={false} testId="plan-region-confirmed" />
+        )}
+        {isPlanRegionTool && !page?.planRegion?.confirmed && tools.suggestedPlanRegion && !tools.planRegionDraftCorner && (
+          <PlanRegionRect region={tools.suggestedPlanRegion} project={project} dashed testId="plan-region-suggested" />
+        )}
+        {isPlanRegionTool && tools.planRegionDraftCorner && tools.planRegionHoverPoint && (
+          <PlanRegionRect
+            region={normalizeRegionCorners(tools.planRegionDraftCorner, tools.planRegionHoverPoint)}
+            project={project}
+            dashed
+            testId="plan-region-draft"
+          />
+        )}
 
         {/* Confirmed area polygon fills */}
         {showLayer("areas") && (page?.areas || []).map((area) => {
@@ -359,6 +380,24 @@ function ManualAreaDraft({ vertices, hoverPoint, project }) {
         <circle key={i} cx={p.x} cy={p.y} r={i === 0 ? 6 : 4} fill={i === 0 ? "#fff" : "#7c3aed"} stroke="#7c3aed" strokeWidth={2} />
       ))}
     </g>
+  );
+}
+
+function PlanRegionRect({ region, project, dashed, testId }) {
+  if (!region || !(region.width > 0) || !(region.height > 0)) return null;
+  const topLeft = project({ x: region.x, y: region.y });
+  const bottomRight = project({ x: region.x + region.width, y: region.y + region.height });
+  const x = Math.min(topLeft.x, bottomRight.x);
+  const y = Math.min(topLeft.y, bottomRight.y);
+  const width = Math.abs(bottomRight.x - topLeft.x);
+  const height = Math.abs(bottomRight.y - topLeft.y);
+  return (
+    <rect
+      x={x} y={y} width={width} height={height}
+      fill="none" stroke="#0891b2" strokeWidth={2}
+      strokeDasharray={dashed ? "8 5" : undefined}
+      data-testid={testId}
+    />
   );
 }
 

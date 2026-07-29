@@ -10,6 +10,7 @@
 // modules/takeoff-v2 self-contained, per its existing isolation rule.
 
 import { buildWallGraphFromPolylines, isPerimeterClosed } from "./wallGraph.js";
+import { polylineWithinRegion } from "./planRegion.js";
 import { supabase } from "../../../utils/supabase-client";
 
 // Root cause of "AI detection API error 401" (verified live, not guessed —
@@ -67,7 +68,14 @@ async function requestExteriorWallDetection({ imageDataUrl, imageWidth, imageHei
 // viewport is the same pdfjs PageViewport used by pageToScreenPoint/
 // screenToPagePoint — its convertToPdfPoint already bakes in rotation, so the
 // resulting graph lands directly in page-space regardless of current rotation.
-export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeight, viewport, stitchToleranceDocUnits = 6 }) {
+// `planRegion` (page-space, unrotated PDF points) is optional — when the
+// page has one set, any detected overlay whose points mostly fall outside
+// it is dropped before it ever becomes a wall segment. This is what keeps a
+// misfired "externalWall" overlay over the title block, a legend, or the
+// sheet's own border rectangle from ever entering the wall graph, without
+// needing any text/table classifier — the user-confirmed region is the
+// single source of truth for "this is the actual floor plan area."
+export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeight, viewport, stitchToleranceDocUnits = 6, planRegion = null }) {
   const result = await requestExteriorWallDetection({ imageDataUrl, imageWidth, imageHeight });
   if (!result.connected) {
     return {
@@ -78,6 +86,8 @@ export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeigh
     };
   }
 
+  const totalOverlays = result.overlays.filter((overlay) => overlay.type === "externalWall").length;
+
   const polylines = result.overlays
     .filter((overlay) => overlay.type === "externalWall" && Array.isArray(overlay.points) && overlay.points.length >= 2)
     .map((overlay) => ({
@@ -86,17 +96,23 @@ export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeigh
         return { x, y };
       }),
       confidence: overlay.confidence || null,
-    }));
+    }))
+    .filter((polyline) => polylineWithinRegion(polyline.points, planRegion));
+
+  const excludedByRegion = totalOverlays - polylines.length;
 
   const graph = buildWallGraphFromPolylines(polylines, { tolerance: stitchToleranceDocUnits, source: "automatic" });
   const isClosed = isPerimeterClosed(graph.vertices, graph.segments);
 
+  const baseMessage = result.message || `Detected ${graph.segments.length} segment${graph.segments.length !== 1 ? "s" : ""}.`;
   return {
     connected: true,
     vertices: graph.vertices,
     segments: graph.segments,
     isClosed,
     detectionConfidence: Math.round((result.confidence || 0) * 100),
-    message: result.message || `Detected ${graph.segments.length} segment${graph.segments.length !== 1 ? "s" : ""}.`,
+    message: excludedByRegion > 0
+      ? `${baseMessage} (${excludedByRegion} candidate${excludedByRegion !== 1 ? "s" : ""} outside the plan region excluded.)`
+      : baseMessage,
   };
 }
