@@ -53,6 +53,10 @@ function openingLayerFor(openingType) {
   return "doors";
 }
 
+function isAutomaticCandidate(segment) {
+  return segment?.source === "automatic" && segment.confirmed === false;
+}
+
 // Purely visual overlay, rendered as a sibling to the two plan canvases
 // *inside* PlanViewer's existing pan/zoom transform wrapper — so every point
 // drawn here inherits pan/zoom/rotation for free via that CSS transform,
@@ -64,20 +68,28 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
   const project = (point) => pageToScreenPoint({ viewport, ...IDENTITY_VIEW }, point.x, point.y);
   const layers = page?.layerVisibility || {};
   const showLayer = (key) => layers[key] !== false;
+  const shouldShowWallSegment = (segment) => !isAutomaticCandidate(segment) || showLayer("automaticCandidates");
 
   const exteriorWalls = page?.exteriorWalls;
   const internalWalls = page?.internalWalls;
+  const visibleExteriorSegments = exteriorWalls?.segments.filter(shouldShowWallSegment) || [];
+  const visibleInternalSegments = internalWalls?.segments.filter(shouldShowWallSegment) || [];
 
-  function displayVerticesFor(graph, field) {
+  function displayVerticesFor(graph, field, visibleSegments) {
     if (!graph) return [];
-    return graph.vertices.map((v) =>
+    const visibleVertexIds = new Set();
+    visibleSegments.forEach((segment) => {
+      visibleVertexIds.add(segment.aId);
+      visibleVertexIds.add(segment.bId);
+    });
+    return graph.vertices.filter((v) => visibleVertexIds.has(v.id)).map((v) =>
       tools.draggingVertex?.id === v.id && (tools.draggingVertex.field || "exteriorWalls") === field
         ? { ...v, x: tools.draggingVertex.x, y: tools.draggingVertex.y }
         : v
     );
   }
-  const exteriorDisplayVertices = displayVerticesFor(exteriorWalls, "exteriorWalls");
-  const internalDisplayVertices = displayVerticesFor(internalWalls, "internalWalls");
+  const exteriorDisplayVertices = displayVerticesFor(exteriorWalls, "exteriorWalls", visibleExteriorSegments);
+  const internalDisplayVertices = displayVerticesFor(internalWalls, "internalWalls", visibleInternalSegments);
   const exteriorVertexById = new Map(exteriorDisplayVertices.map((v) => [v.id, v]));
   const internalVertexById = new Map(internalDisplayVertices.map((v) => [v.id, v]));
 
@@ -124,11 +136,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
           );
         })}
 
-        {/* Plan region: confirmed rectangle always shown faintly (so it's
-            clear what automatic detection is scoped to); the in-progress
-            two-click draft and an unconfirmed suggestion only show while the
-            tool is active. */}
-        {page?.planRegion?.confirmed && (
+        {/* Plan region is an explicit region-edit overlay only. It is not wall
+            geometry and must not appear during normal wall editing/delete. */}
+        {isPlanRegionTool && page?.planRegion?.confirmed && (
           <PlanRegionRect region={page.planRegion} project={project} dashed={false} testId="plan-region-confirmed" />
         )}
         {isPlanRegionTool && !page?.planRegion?.confirmed && tools.suggestedPlanRegion && !tools.planRegionDraftCorner && (
@@ -161,11 +171,11 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Exterior + internal wall segments */}
-        {showLayer("exteriorWalls") && exteriorWalls?.segments.map((segment) => (
+        {showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
         ))}
-        {showLayer("internalWalls") && internalWalls?.segments.map((segment) => (
+        {showLayer("internalWalls") && visibleInternalSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={internalVertexById} project={project}
             selected={tools.selectedField === "internalWalls" && tools.selectedSegmentId === segment.id} />
         ))}

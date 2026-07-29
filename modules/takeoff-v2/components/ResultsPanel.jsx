@@ -35,12 +35,15 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
   return (
     <div style={S.panel} data-testid="results-panel">
       <SummarySection title="EXTERIOR WALLS" onSelect={() => zoomToGraph(exteriorWalls)}>
-        <Metric label="Segments" value={exteriorWalls?.segments?.length || 0} />
+        <Metric label="Segments" value={tools?.activeExteriorWallSegmentCount || 0} />
         <Metric label="Total Length" value={formatLength(tools?.totalExteriorWallLengthMm || 0)} />
+        {tools?.automaticCandidateCount > 0 && (
+          <Metric label="Candidate Segments" value={tools.automaticCandidateCount} />
+        )}
       </SummarySection>
 
       <SummarySection title="INTERIOR WALLS" onSelect={() => zoomToGraph(interiorWalls)}>
-        <Metric label="Segments" value={interiorWalls?.segments?.length || 0} />
+        <Metric label="Segments" value={tools?.activeInternalWallSegmentCount || 0} />
         <Metric label="Total Length" value={formatLength(tools?.totalInternalWallLengthMm || 0)} />
       </SummarySection>
 

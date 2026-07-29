@@ -78,6 +78,40 @@ function vertexTouchesLockedSegment(graph, vertexId) {
   return Boolean(graph?.segments?.some((segment) => segment.locked && (segment.aId === vertexId || segment.bId === vertexId)));
 }
 
+function isAutomaticCandidateSegment(segment) {
+  return segment?.source === "automatic" && segment.confirmed === false;
+}
+
+function activeWallSegments(graph) {
+  return (graph?.segments || []).filter((segment) => !isAutomaticCandidateSegment(segment));
+}
+
+function activeWallVertexIds(graph) {
+  const ids = new Set();
+  activeWallSegments(graph).forEach((segment) => {
+    ids.add(segment.aId);
+    ids.add(segment.bId);
+  });
+  return ids;
+}
+
+function activeWallGraph(graph) {
+  if (!graph) return null;
+  const segments = activeWallSegments(graph);
+  const vertexIds = new Set();
+  segments.forEach((segment) => {
+    vertexIds.add(segment.aId);
+    vertexIds.add(segment.bId);
+  });
+  const vertices = (graph.vertices || []).filter((vertex) => vertexIds.has(vertex.id));
+  return { ...graph, vertices, segments, isClosed: isPerimeterClosed(vertices, segments) };
+}
+
+function pageWithActiveExteriorWalls(page) {
+  if (!page?.exteriorWalls) return page;
+  return { ...page, exteriorWalls: activeWallGraph(page.exteriorWalls) };
+}
+
 export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) {
   const [activeTool, setActiveToolState] = useState("select");
 
@@ -423,6 +457,19 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return graph.segments.filter((s) => s.source === "automatic" && !s.confirmed && s.confidence === "high").length;
   }, [page]);
 
+  const automaticCandidateCount = useMemo(() => {
+    const graph = page?.exteriorWalls;
+    if (!graph) return 0;
+    return graph.segments.filter(isAutomaticCandidateSegment).length;
+  }, [page]);
+
+  const activeExteriorWallSegmentCount = useMemo(() => activeWallSegments(page?.exteriorWalls).length, [page]);
+  const activeInternalWallSegmentCount = useMemo(() => activeWallSegments(page?.internalWalls).length, [page]);
+  const activeExteriorWallsClosed = useMemo(() => {
+    const graph = activeWallGraph(page?.exteriorWalls);
+    return Boolean(graph?.isClosed);
+  }, [page]);
+
   const acceptAllHighConfidenceSegments = useCallback((field = "exteriorWalls") => {
     const graph = page?.[field];
     if (!graph) return;
@@ -500,9 +547,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const findWallVertexNear = useCallback((point, { zoomScale = 1, toleranceScreenPx = VERTEX_HIT_TOLERANCE_SCREEN_PX } = {}) => {
     if (!page?.exteriorWalls) return null;
     const toleranceDocUnits = toleranceScreenPx / Math.max(zoomScale, 0.01);
+    const activeIds = activeWallVertexIds(page.exteriorWalls);
     let best = null;
     let bestDistance = toleranceDocUnits;
     page.exteriorWalls.vertices.forEach((vertex) => {
+      if (!activeIds.has(vertex.id)) return;
       const d = distance(vertex, point);
       if (d <= bestDistance) { best = vertex; bestDistance = d; }
     });
@@ -532,7 +581,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const byId = new Map(page.exteriorWalls.vertices.map((v) => [v.id, v]));
     let bestSegment = null;
     let bestSegmentDistance = toleranceDocUnits;
-    page.exteriorWalls.segments.forEach((segment) => {
+    activeWallSegments(page.exteriorWalls).forEach((segment) => {
       const a = byId.get(segment.aId);
       const b = byId.get(segment.bId);
       if (!a || !b) return;
@@ -674,7 +723,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     let bestField = null;
     let bestDistance = toleranceDocUnits;
     ["exteriorWalls", "internalWalls"].forEach((field) => {
+      const activeIds = activeWallVertexIds(page?.[field]);
       (page?.[field]?.vertices || []).forEach((vertex) => {
+        if (!activeIds.has(vertex.id)) return;
         const d = distance(vertex, point);
         if (d <= bestDistance) { best = vertex; bestField = field; bestDistance = d; }
       });
@@ -702,7 +753,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       const byId = new Map(graph.vertices.map((v) => [v.id, v]));
       let bestSegment = null;
       let bestSegmentDistance = toleranceDocUnits;
-      graph.segments.forEach((segment) => {
+      activeWallSegments(graph).forEach((segment) => {
         const a = byId.get(segment.aId);
         const b = byId.get(segment.bId);
         if (!a || !b) return;
@@ -897,7 +948,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   // ---- Confirm exterior walls / area ---------------------------------------
 
-  const wallValidation = useMemo(() => validateExteriorWallsForConfirmation(page), [page]);
+  const wallValidation = useMemo(() => validateExteriorWallsForConfirmation(pageWithActiveExteriorWalls(page)), [page]);
 
   const confirmExteriorWalls = useCallback(() => {
     if (!wallValidation.valid || !page?.exteriorWalls) return;
@@ -908,7 +959,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const totalPerimeterMm = useMemo(() => {
     if (!page?.exteriorWalls?.confirmed || !page?.calibration) return null;
-    return calculatePerimeterMm(page.exteriorWalls.vertices, page.exteriorWalls.segments, page.calibration.mmPerDocumentUnit);
+    const graph = activeWallGraph(page.exteriorWalls);
+    return calculatePerimeterMm(graph.vertices, graph.segments, page.calibration.mmPerDocumentUnit);
   }, [page]);
 
   // Live running totals for the toolbar/results panel — built length, not
@@ -916,12 +968,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // above, which is specifically the confirmed exterior perimeter).
   const totalExteriorWallLengthMm = useMemo(() => {
     if (!page?.calibration || !page?.exteriorWalls) return 0;
-    return sumSegmentLengthsMm(page.exteriorWalls.vertices, page.exteriorWalls.segments, page.calibration.mmPerDocumentUnit);
+    return sumSegmentLengthsMm(page.exteriorWalls.vertices, activeWallSegments(page.exteriorWalls), page.calibration.mmPerDocumentUnit);
   }, [page]);
 
   const totalInternalWallLengthMm = useMemo(() => {
     if (!page?.calibration || !page?.internalWalls) return 0;
-    return sumSegmentLengthsMm(page.internalWalls.vertices, page.internalWalls.segments, page.calibration.mmPerDocumentUnit);
+    return sumSegmentLengthsMm(page.internalWalls.vertices, activeWallSegments(page.internalWalls), page.calibration.mmPerDocumentUnit);
   }, [page]);
 
   const openingCountsByType = useMemo(() => {
@@ -934,7 +986,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return counts;
   }, [page]);
 
-  const areaValidation = useMemo(() => validatePerimeterForArea(page), [page]);
+  const areaValidation = useMemo(() => validatePerimeterForArea(pageWithActiveExteriorWalls(page)), [page]);
 
   const calculatedAreaM2 = useMemo(() => {
     if (!areaValidation.valid || !page?.calibration) return null;
@@ -1351,7 +1403,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
-    highConfidenceUnconfirmedCount, acceptAllHighConfidenceSegments,
+    highConfidenceUnconfirmedCount, automaticCandidateCount,
+    activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
+    acceptAllHighConfidenceSegments,
     suggestedPlanRegion, planRegionDraftCorner, planRegionHoverPoint,
     updatePlanRegionHover, handlePlanRegionClick, acceptSuggestedPlanRegion, clearPlanRegion,
     findWallVertexNear, handleWallCanvasClick,

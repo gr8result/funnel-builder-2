@@ -173,7 +173,7 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
           <span style={S.wallStatus} data-testid="wall-status">
             {wallsConfirmed
               ? `Exterior walls confirmed — Total perimeter: ${formatLength(tools.totalPerimeterMm || 0)}`
-              : `Exterior walls: ${page.exteriorWalls.segments.length} segments${page.exteriorWalls.isClosed ? " — Closed" : " — Open"}${page.exteriorWalls.detectionConfidence != null ? ` — Confidence: ${page.exteriorWalls.detectionConfidence}%` : ""}`}
+              : `Exterior walls: ${tools.activeExteriorWallSegmentCount || 0} active segments${tools.activeExteriorWallsClosed ? " — Closed" : " — Open"}${tools.automaticCandidateCount > 0 ? ` — ${tools.automaticCandidateCount} candidate segments detected` : ""}${page.exteriorWalls.detectionConfidence != null ? ` — Confidence: ${page.exteriorWalls.detectionConfidence}%` : ""}`}
           </span>
         )}
         {tools.highConfidenceUnconfirmedCount > 0 && (

@@ -6,6 +6,10 @@
 
 import { distance, segmentIntersection } from "./geometry.js";
 
+function isAutomaticCandidateSegment(segment) {
+  return segment?.source === "automatic" && segment.confirmed === false;
+}
+
 function sameLocation(a, b) {
   return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
 }
@@ -28,11 +32,19 @@ export function buildSnapCandidates(page, { excludeVertexId = null } = {}) {
 
   if (page?.exteriorWalls) {
     const byId = new Map(page.exteriorWalls.vertices.map((v) => [v.id, v]));
+    const activeVertexIds = new Set();
+    page.exteriorWalls.segments.forEach((segment) => {
+      if (isAutomaticCandidateSegment(segment)) return;
+      activeVertexIds.add(segment.aId);
+      activeVertexIds.add(segment.bId);
+    });
     page.exteriorWalls.vertices.forEach((vertex) => {
       if (vertex.id === excludeVertexId) return;
+      if (!activeVertexIds.has(vertex.id)) return;
       points.push({ x: vertex.x, y: vertex.y, kind: "vertex", refId: vertex.id });
     });
     page.exteriorWalls.segments.forEach((segment) => {
+      if (isAutomaticCandidateSegment(segment)) return;
       const a = byId.get(segment.aId);
       const b = byId.get(segment.bId);
       if (a && b) segments.push({ a, b });
