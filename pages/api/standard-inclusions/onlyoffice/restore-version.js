@@ -44,8 +44,8 @@ async function handler(req, res) {
       if (!Number.isFinite(targetVersion)) return res.status(400).json({ ok: false, error: "targetVersion is required for mode 'version'" });
       const history = Array.isArray(document.revision_history) ? document.revision_history : [];
       const entry = [...history].reverse().find((item) => Number(item.version) === targetVersion);
-      if (!entry?.pptxAssetId) return res.status(404).json({ ok: false, error: `Version ${targetVersion} was not found in this document's history.` });
-      sourceStoragePath = entry.pptxAssetId;
+      if (!entry?.officeAssetId && !entry?.pptxAssetId) return res.status(404).json({ ok: false, error: `Version ${targetVersion} was not found in this document's history.` });
+      sourceStoragePath = entry.officeAssetId || entry.pptxAssetId;
       action = "restore-version";
       extraMetadata = { restoredFromVersion: targetVersion };
     } else {

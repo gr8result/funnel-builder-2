@@ -19,7 +19,7 @@ async function handler(req, res) {
       return res.status(404).json({ ok: false, error: "This document has not been exported to PDF yet." });
     }
     const buffer = await downloadStandardInclusionsAsset(document.current_exported_pdf_asset_id);
-    const fileName = String(document.source_file_name || "standard-inclusions.pptx").replace(/\.pptx$/i, ".pdf");
+    const fileName = String(document.source_file_name || "standard-inclusions").replace(/\.(pptx|docx|pdf)$/i, ".pdf");
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(fileName)}"`);
     res.setHeader("Cache-Control", "no-store, max-age=0");

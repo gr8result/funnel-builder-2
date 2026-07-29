@@ -30,13 +30,16 @@ const preparePowerPointImport = workbook.slice(
 assert(workbook.includes("OnlyOfficePresentationEditor"), "Standard Inclusions renders the ONLYOFFICE presentation editor");
 assert(preparePowerPointImport.includes("/api/standard-inclusions/onlyoffice/upload-pptx"), "PowerPoint upload posts to the ONLYOFFICE upload route");
 assert(!preparePowerPointImport.includes("importPptxAsStandardDocumentPreview"), "PowerPoint upload no longer calls the custom XML-to-block importer");
-assert(workbook.includes('source: "onlyoffice-pptx"'), "Workbook state records ONLYOFFICE PPTX source");
+assert(workbook.includes("STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX"), "Workbook state records ONLYOFFICE PPTX source");
+assert(workbook.includes("STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX"), "Workbook state records ONLYOFFICE DOCX source");
 assert(workbook.includes("onlyOfficeDocumentId: document.id"), "Workbook stores the ONLYOFFICE document ID");
-assert(onlyoffice.includes('documentType: "slide"'), "ONLYOFFICE config opens PPTX files as presentations");
+assert(onlyoffice.includes("documentType: onlyOfficeDocumentType(fileType)"), "ONLYOFFICE config opens Office files with the matching native editor");
+assert(onlyoffice.includes('return fileType === "docx" ? "word" : "slide"'), "ONLYOFFICE config opens DOCX files as Word documents");
 assert(onlyoffice.includes("/web-apps/apps/api/documents/api.js"), "Editor config loads the official ONLYOFFICE Docs API script");
 assert(upload.includes("createStandardInclusionsOnlyOfficeDocument"), "Upload route creates a persistent Standard Inclusions document record");
+assert(upload.includes('".docx"'), "Upload route accepts editable DOCX files");
 assert(callback.includes("if (![2, 6].includes(status))"), "Callback saves only ONLYOFFICE ready-to-save statuses");
-assert(callback.includes("revision_history"), "Callback appends saved PPTX revisions");
+assert(callback.includes("revision_history"), "Callback appends saved Office revisions");
 assert(editor.includes("new DocsAPI.DocEditor"), "Client component mounts the native ONLYOFFICE editor");
 assert(fs.existsSync(path.join(root, "supabase/migrations/20260720_standard_inclusions_onlyoffice.sql")), "Database migration for ONLYOFFICE document records exists");
 

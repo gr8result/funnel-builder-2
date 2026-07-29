@@ -6,6 +6,7 @@ import {
   loadStandardInclusionsDocumentForUser,
   onlyOfficeDocumentKey,
   onlyOfficeDocumentServerUrl,
+  standardInclusionsDocumentFileType,
   signOnlyOfficeJwt,
   uploadStandardInclusionsAsset,
   appBaseUrl,
@@ -27,19 +28,20 @@ async function handler(req, res) {
     if (!documentServerUrl) {
       return res.status(501).json({
         ok: false,
-        error: "ONLYOFFICE_DOCUMENT_SERVER_URL is not configured, so PPTX to PDF export cannot run.",
+        error: "ONLYOFFICE_DOCUMENT_SERVER_URL is not configured, so PDF export cannot run.",
         code: "ONLYOFFICE_DOCUMENT_SERVER_MISSING",
       });
     }
 
     const version = Number(document.version || 1);
+    const fileType = standardInclusionsDocumentFileType(document);
     const accessKey = createOnlyOfficeAccessKey(document.id, document.current_pptx_asset_id, version);
     const requestBody = {
       async: false,
-      filetype: "pptx",
+      filetype: fileType,
       key: `${onlyOfficeDocumentKey(document)}-pdf`,
       outputtype: "pdf",
-      title: document.source_file_name || "Standard Inclusions.pptx",
+      title: document.source_file_name || `Standard Inclusions.${fileType}`,
       url: `${appBaseUrl(req)}/api/standard-inclusions/onlyoffice/file?documentId=${encodeURIComponent(document.id)}&accessKey=${accessKey}`,
     };
     const token = signOnlyOfficeJwt(requestBody);

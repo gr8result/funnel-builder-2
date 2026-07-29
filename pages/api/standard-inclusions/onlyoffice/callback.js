@@ -2,6 +2,8 @@ import {
   STANDARD_INCLUSIONS_TABLE,
   createOnlyOfficeId,
   loadStandardInclusionsDocumentById,
+  onlyOfficeContentType,
+  standardInclusionsDocumentFileType,
   uploadStandardInclusionsAsset,
   verifyOnlyOfficeJwt,
 } from "../../../../lib/standard-inclusions/onlyoffice";
@@ -33,9 +35,10 @@ export default async function handler(req, res) {
     if (!fileUrl) return res.status(400).json({ error: 1 });
 
     const nextVersion = Number(document.version || 1) + 1;
-    const storagePath = `${document.owner_user_id}/standard-inclusions/${document.tenant_id}/${document.id}/revisions/v${nextVersion}.pptx`;
+    const fileType = standardInclusionsDocumentFileType(document);
+    const storagePath = `${document.owner_user_id}/standard-inclusions/${document.tenant_id}/${document.id}/revisions/v${nextVersion}.${fileType}`;
     const fileBuffer = await downloadCallbackFile(fileUrl);
-    await uploadStandardInclusionsAsset(storagePath, fileBuffer, "application/vnd.openxmlformats-officedocument.presentationml.presentation", false);
+    await uploadStandardInclusionsAsset(storagePath, fileBuffer, onlyOfficeContentType(fileType), false);
 
     const now = new Date().toISOString();
     const revision = {
@@ -43,7 +46,10 @@ export default async function handler(req, res) {
       version: nextVersion,
       action: status === 6 ? "force-save" : "save",
       pptxAssetId: storagePath,
+      officeAssetId: storagePath,
       previousPptxAssetId: document.current_pptx_asset_id,
+      previousOfficeAssetId: document.current_pptx_asset_id,
+      fileType,
       callbackStatus: status,
       users: Array.isArray(req.body?.users) ? req.body.users : [],
       createdAt: now,
@@ -58,6 +64,13 @@ export default async function handler(req, res) {
         current_exported_pdf_asset_id: null,
         updated_at: now,
         revision_history: revisionHistory,
+        metadata: {
+          ...(document.metadata || {}),
+          fileType,
+          currentOfficeAssetId: storagePath,
+          editorMode: fileType === "docx" ? "onlyoffice-docx" : "onlyoffice-pptx",
+          lastSavedAt: now,
+        },
       })
       .eq("id", document.id);
     if (error) throw error;

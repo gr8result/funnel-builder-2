@@ -8,6 +8,7 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
   const [error, setError] = useState("");
   const [resolvedAuthToken, setResolvedAuthToken] = useState(authToken || "");
   const [restoring, setRestoring] = useState(false);
+  const [officeDocument, setOfficeDocument] = useState(null);
 
   useEffect(() => {
     if (authToken) {
@@ -41,13 +42,15 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load ONLYOFFICE editor.");
+        setOfficeDocument(payload.document || null);
         await loadOnlyOfficeScript(payload.editor.scriptUrl);
         if (cancelled) return;
         const DocsAPI = window.DocsAPI;
         if (!DocsAPI?.DocEditor) throw new Error("ONLYOFFICE editor script loaded but DocsAPI.DocEditor is unavailable.");
         editorRef.current?.destroyEditor?.();
         editorRef.current = new DocsAPI.DocEditor(containerId.current, payload.editor.config);
-        onStatus?.("PowerPoint opened in ONLYOFFICE Presentation Editor.");
+        const fileType = payload.document?.metadata?.fileType || payload.editor?.config?.document?.fileType || "pptx";
+        onStatus?.(`${fileType === "docx" ? "Word document" : "PowerPoint"} opened in ONLYOFFICE.`);
       } catch (nextError) {
         if (!cancelled) {
           setError(nextError?.message || "ONLYOFFICE editor failed to load.");
@@ -80,6 +83,16 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "PDF export failed.");
+      if (payload.pdfAssetId) {
+        const nextDocument = {
+          ...(officeDocument || {}),
+          id: documentId,
+          current_exported_pdf_asset_id: payload.pdfAssetId,
+          updated_at: new Date().toISOString(),
+        };
+        setOfficeDocument(nextDocument);
+        onDocumentUpdated?.(nextDocument);
+      }
 
       const pdfResponse = await fetch(`/api/standard-inclusions/onlyoffice/download-pdf?documentId=${encodeURIComponent(documentId)}`, {
         headers: { Authorization: `Bearer ${resolvedAuthToken}` },
@@ -95,7 +108,7 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      onStatus?.("Standard Inclusions PDF exported and downloaded — attach it via \"Import Inclusions PDF\" in the Project Estimate to update the approved document.");
+      onStatus?.("Standard Inclusions PDF exported and downloaded. Project Estimate will use the latest exported PDF for this schedule.");
     } catch (nextError) {
       onStatus?.(nextError?.message || "PDF export failed.");
     }
@@ -104,8 +117,8 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
   async function restoreVersion(mode) {
     if (!documentId || !resolvedAuthToken || restoring) return;
     const confirmMessage = mode === "master"
-      ? "Restore Master will overwrite this tenant's current PowerPoint with the approved master template. Continue?"
-      : "Duplicate Version will save a new checkpoint of the current PowerPoint before you keep editing. Continue?";
+      ? "Restore Master will overwrite this schedule with the approved master template. Continue?"
+      : "Save As Copy will save a new checkpoint of the current document before you keep editing. Continue?";
     if (!window.confirm(confirmMessage)) return;
     setRestoring(true);
     onStatus?.(mode === "master" ? "Restoring master template..." : "Duplicating current version...");
@@ -152,16 +165,22 @@ export default function OnlyOfficePresentationEditor({ documentId, authToken, on
       .catch((nextError) => onStatus?.(nextError?.message || "Download failed."));
   }
 
+  const fileType = officeDocument?.metadata?.fileType || (String(officeDocument?.source_file_name || "").toLowerCase().endsWith(".docx") ? "docx" : "pptx");
+  const editorTitle = fileType === "docx" ? "ONLYOFFICE Word Editor" : "ONLYOFFICE Presentation Editor";
+  const sourceLabel = fileType === "docx" ? "Download DOCX" : "Download PPTX";
+
   return (
     <section style={styles.shell}>
       <div style={styles.toolbar}>
-        <strong>ONLYOFFICE Presentation Editor</strong>
-        <span style={styles.documentId}>{documentId}</span>
-        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => restoreVersion("master")}>Restore Master</button>
-        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => restoreVersion("duplicate")}>Duplicate Version</button>
-        <button type="button" style={styles.secondaryButton} onClick={downloadPptx}>Download PPTX</button>
+        <button type="button" style={styles.secondaryButton} onClick={onClose}>Back to Standard Inclusions</button>
+        <strong>{editorTitle}</strong>
+        <span style={styles.documentId}>{officeDocument?.source_file_name || documentId}</span>
+        <span style={styles.documentId}>Saved v{officeDocument?.version || 1}</span>
+        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => restoreVersion("duplicate")}>Save As Copy</button>
+        <button type="button" style={styles.secondaryButton} disabled={restoring} onClick={() => onStatus?.("Version history is retained on each save. A detailed history browser can be opened from Standard Inclusions management.")}>Version History</button>
+        <button type="button" style={styles.secondaryButton} onClick={downloadPptx}>{sourceLabel}</button>
         <button type="button" style={styles.secondaryButton} onClick={exportPdf}>Export PDF</button>
-        <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
+        <button type="button" style={styles.secondaryButton} onClick={onClose}>Close Editor</button>
       </div>
       {loading ? <div style={styles.state}>Loading ONLYOFFICE...</div> : null}
       {error ? <div style={styles.error}>{error}</div> : null}

@@ -20,7 +20,7 @@ import {
   Truck,
 } from "lucide-react";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
-import { useApiFetch, useWorkspace } from "../../hooks/useWorkspace";
+import { useWorkspace } from "../../hooks/useWorkspace";
 import { useJobFile } from "../../hooks/useJobFile";
 import { supabase } from "../../utils/supabase-client";
 import { isDeveloperEmail } from "../../lib/adminUsers";
@@ -29,7 +29,7 @@ import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/esti
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
-import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
+import { STANDARD_INCLUSIONS_EDITOR_MODES, normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
 import { createPremierInclusionsWorkingCopy, resolveBaseStandardInclusionsTemplate } from "../document-engine/templates/premierInclusionsMasterTemplate";
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
@@ -37,9 +37,7 @@ import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import { importPdfAsStandardDocumentPreview } from "../../lib/standard-inclusions/pdfImport";
-import { importDocxAsStandardDocumentPreview } from "../../lib/standard-inclusions/docxImport";
 import PdfImportReview from "../document-engine/import/PdfImportReview";
-import DocxImportReview from "../document-engine/import/DocxImportReview";
 import JobFileMenu from "./JobFileMenu.jsx";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
@@ -6848,7 +6846,6 @@ function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly })
 export function StandardInclusionsSheet({ sheet }) {
   const readonly = sheet.previewMode;
   const { workspaceId } = useWorkspace();
-  const apiFetch = useApiFetch();
   const workbookId = sheet.workbook?.id || sheet.workbook?.jobId || sheet.workbook?.openedFileName || "local";
   const pdfUploadRef = useRef(null);
   const docxUploadRef = useRef(null);
@@ -6864,8 +6861,6 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
-  const [docxImportReview, setDocxImportReview] = useState(null);
-  const [docxImportReviewBusy, setDocxImportReviewBusy] = useState(false);
   const [pdfImportReview, setPdfImportReview] = useState(null);
   const [pdfImportReviewBusy, setPdfImportReviewBusy] = useState(false);
   const onlyOfficeAuthToken = "";
@@ -6883,10 +6878,12 @@ export function StandardInclusionsSheet({ sheet }) {
   const activeSummary = standardScheduleSummary(activeDocument, standard);
 
   async function saveStandard(next, options = {}) {
+    const nextEditorMode = next.editorMode || next.pdfEditorMode || standard.editorMode || standard.pdfEditorMode || STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE;
     const nextStandard = normaliseStandardInclusions({
       ...standard,
       ...next,
-      pdfEditorMode: "document-page-builder",
+      editorMode: nextEditorMode,
+      pdfEditorMode: nextEditorMode,
     }, sheet.workbook.builderId || "local-builder");
     const savedStandard = await sheet.updateStandardInclusions?.(nextStandard, options);
     return normaliseStandardInclusions(savedStandard || nextStandard, sheet.workbook.builderId || "local-builder");
@@ -6908,7 +6905,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     });
     setStandardStatus("Standard Inclusions document saved.");
   }
@@ -6966,7 +6964,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "replace", candidate.source || "saved-schedule");
     setManagementMode("");
     setStandardStatus("Standard Inclusions schedule replaced from saved document.");
@@ -6988,7 +6987,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "delete", activeSummary.source || "active-document");
     setImportPreview(null);
     setManagementMode("");
@@ -7012,7 +7012,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "start-blank", "blank-schedule");
     setStandardStatus("Started a new blank Standard Inclusions schedule.");
   }
@@ -7053,7 +7054,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "use-premier-template", "premier-template");
     setStandardStatus("Premier Template loaded by explicit request.");
   }
@@ -7083,7 +7085,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "restore", `revision:${revision.revisionId}`);
     setManagementMode("");
     setStandardStatus("Previous Standard Inclusions schedule restored.");
@@ -7146,22 +7149,25 @@ export function StandardInclusionsSheet({ sheet }) {
       const document = payload.document;
       setStandardStatus("Opening PowerPoint in the ONLYOFFICE editor...");
       await saveStandardWithRevision({
-        source: "onlyoffice-pptx",
+        source: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX,
+        editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX,
         scheduleDeleted: false,
         isDeleted: false,
         deletedAt: null,
         activeDocumentId: document.id,
         activeDocumentName: document.source_file_name || selectedFile.name,
-        activeDocumentSource: "onlyoffice-pptx",
+        activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX,
         activeDocumentLastSavedAt: new Date().toISOString(),
         pdfPages: [],
         selectedPdfPageId: "",
         pdfSourceName: "",
         pptxSourceName: document.source_file_name || selectedFile.name,
-        pdfEditorMode: "onlyoffice",
+        pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX,
         onlyOfficeDocumentId: document.id,
         onlyOfficeVersion: Number(document.version || 1),
         onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
+        onlyOfficeOfficeAssetId: document.current_pptx_asset_id || "",
+        onlyOfficeFileType: "pptx",
         onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
       }, "upload-pptx-onlyoffice", document.source_file_name || selectedFile.name, { persist: true });
       setImportPreview(null);
@@ -7184,148 +7190,92 @@ export function StandardInclusionsSheet({ sheet }) {
   }
 
   async function prepareDocxImport(event) {
-    const file = event.target.files?.[0];
+    const selectedFile = event.target.files?.[0];
     event.target.value = "";
-    if (!file || (file.type !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && !/\.docx$/i.test(String(file.name || "")))) return;
-    setDocxImportReviewBusy(true);
-    setStandardStatus("Reading Word document...");
+    if (!selectedFile || (selectedFile.type !== "application/vnd.openxmlformats-officedocument.wordprocessingml.document" && !/\.docx$/i.test(String(selectedFile.name || "")))) return;
+    if (selectedFile.size > STANDARD_INCLUSIONS_MAX_UPLOAD_BYTES) {
+      setStandardStatus(`That Word file is too large. Please upload a .docx up to ${STANDARD_INCLUSIONS_MAX_UPLOAD_MB} MB.`);
+      return;
+    }
+    setImportPreview(null);
+    setPendingPdfFile(null);
+    setStandardStatus("Preparing Word document upload...");
     try {
-      const preview = await importDocxAsStandardDocumentPreview(file, {
-        uploadAsset: uploadDocxImportAsset,
-        onProgress: ({ stage }) => {
-          if (stage === "uploading-image") setStandardStatus("Uploading imported images...");
-          if (stage === "layout") setStandardStatus("Building editable schedule pages...");
-        },
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      if (!token) throw new Error("You must be signed in to upload a Word document.");
+      const authHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+      };
+
+      const signedResponse = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ action: "create-signed-upload", name: selectedFile.name, type: selectedFile.type, size: selectedFile.size }),
       });
-      const previewPages = Array.isArray(preview.document?.pages) ? preview.document.pages : [];
-      if (!previewPages.length) throw new Error("Import failed: the Word document did not produce any pages.");
-      setDocxImportReview(preview);
-      setImportPreview(null);
-      setPendingPdfFile(null);
-      setManagementMode("");
-      setStandardStatus(`Processed "${preview.fileName}" into ${previewPages.length} editable page${previewPages.length === 1 ? "" : "s"} - review before saving.`);
-    } catch (error) {
-      console.error("Standard Inclusions DOCX import failed", error);
-      setStandardStatus(error?.message || "Word document import failed.");
-    }
-    setDocxImportReviewBusy(false);
-  }
+      const signed = await signedResponse.json().catch(() => ({}));
+      if (!signedResponse.ok || !signed?.ok || !signed?.signedUrl || !signed?.token) {
+        const code = signed?.code || "STANDARD_INCLUSIONS_UPLOAD_FAILED";
+        throw new Error(`${code}: ${signed?.error || "Could not start the Word document upload."}`);
+      }
 
-  async function uploadDocxImportAsset(dataUrl) {
-    const response = await apiFetch("/api/standard-inclusions/docx-import/upload-asset", {
-      method: "POST",
-      body: JSON.stringify({ dataUrl }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (response.status === 401) {
-      throw new Error("Your session has expired. Please sign in again, then re-import the Word document.");
-    }
-    if (response.status === 403) {
-      throw new Error("You do not have access to upload Standard Inclusions assets in this workspace.");
-    }
-    if (!response.ok || !payload?.ok || !payload?.url) {
-      throw new Error(payload?.error || `Could not upload an extracted Word image (HTTP ${response.status}).`);
-    }
-    return payload.url;
-  }
+      setStandardStatus("Uploading Word document... 0%");
+      await uploadFileToSignedUrlWithProgress(signed.signedUrl, selectedFile, token, (percent) => {
+        setStandardStatus(`Uploading Word document... ${percent}%`);
+      });
 
-  function cancelDocxImportReview() {
-    setDocxImportReview(null);
-    setManagementMode("");
-    setStandardStatus("Word document import cancelled.");
-  }
-
-  function returnToDocxUpload() {
-    setDocxImportReview(null);
-    setStandardStatus("Choose another Word document to import.");
-    docxUploadRef.current?.click();
-  }
-
-  async function confirmDocxImportReview(finalDocument) {
-    const preview = docxImportReview;
-    if (!preview) return;
-    setDocxImportReviewBusy(true);
-    try {
-      const finalPages = Array.isArray(finalDocument?.pages) ? finalDocument.pages : [];
-      if (!finalPages.length) throw new Error("At least one page must be kept to save this import.");
-      const validation = finalDocument.metadata?.docxPageCountValidation || preview.validation || null;
-      if (validation?.mismatch) throw new Error(validation.message || "The imported Word page count does not match the source document.");
-      const document = markStandardDocumentSaved({
-        ...finalDocument,
-        activePageId: finalPages[0]?.id || finalDocument.activePageId || "",
-        metadata: {
-          ...(finalDocument.metadata || {}),
-          documentSource: "docx-import",
-          sourceFileName: preview.fileName || finalDocument.metadata?.sourceFileName || "",
-        },
-      }, { ...standard, activeDocumentSource: "docx-import" });
-      const persistedStandard = await saveStandardWithRevision({
-        documentBuilder: document,
-        source: "docx-import",
+      setStandardStatus("Processing Word document...");
+      const response = await fetch("/api/standard-inclusions/onlyoffice/upload-pptx", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          action: "complete-signed-upload",
+          documentId: signed.documentId,
+          storagePath: signed.storagePath,
+          name: selectedFile.name,
+          size: selectedFile.size,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) {
+        const code = payload?.code || "DOCX_UPLOAD_FAILED";
+        throw new Error(`${code}: ${payload?.error || "Word document upload failed."}`);
+      }
+      const document = payload.document;
+      setStandardStatus("Opening Word document in the ONLYOFFICE editor...");
+      await saveStandardWithRevision({
+        source: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX,
+        editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX,
         scheduleDeleted: false,
         isDeleted: false,
         deletedAt: null,
         activeDocumentId: document.id,
-        activeDocumentName: document.name,
-        activeDocumentSource: "docx-import",
-        activeDocumentLastSavedAt: document.metadata?.lastSavedAt || new Date().toISOString(),
+        activeDocumentName: document.source_file_name || selectedFile.name,
+        activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX,
+        activeDocumentLastSavedAt: new Date().toISOString(),
+        documentBuilder: null,
         pdfPages: [],
         selectedPdfPageId: "",
         pdfSourceName: "",
         pptxSourceName: "",
-        pdfEditorMode: "document-page-builder",
-        onlyOfficeDocumentId: "",
-        onlyOfficeVersion: 0,
-        onlyOfficePptxAssetId: "",
-        onlyOfficeExportedPdfAssetId: "",
-      }, "import-docx", preview.fileName, { persist: true });
-      const persistedDocument = persistedStandard?.documentBuilder || document;
-      const persistedPageCount = Array.isArray(persistedDocument.pages) ? persistedDocument.pages.length : finalPages.length;
-      setDocxImportReview(null);
+        onlyOfficeDocumentId: document.id,
+        onlyOfficeVersion: Number(document.version || 1),
+        onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
+        onlyOfficeOfficeAssetId: document.current_pptx_asset_id || "",
+        onlyOfficeFileType: "docx",
+        onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
+        pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX,
+      }, "upload-docx-onlyoffice", document.source_file_name || selectedFile.name, { persist: true });
       setImportPreview(null);
       setPendingPdfFile(null);
       setManagementMode("");
-      setSelectedElementId("");
-      setStandardStatus(`Imported and saved ${persistedPageCount} editable Standard Inclusions page${persistedPageCount === 1 ? "" : "s"}.`);
+      setStandardStatus(`Word document uploaded: "${document.source_file_name || selectedFile.name}" is now open in the ONLYOFFICE editor.`);
     } catch (error) {
-      console.error("Standard Inclusions DOCX import save failed", error);
-      setStandardStatus(error?.message || "Could not save the reviewed Word import.");
+      console.error("Standard Inclusions DOCX import failed", error);
+      setStandardStatus(error?.message || "Word document upload failed.");
     }
-    setDocxImportReviewBusy(false);
-  }
-
-  async function saveReviewedDocxAsBaseTemplate(finalDocument) {
-    setDocxImportReviewBusy(true);
-    try {
-      const validation = finalDocument.metadata?.docxPageCountValidation || docxImportReview?.validation || null;
-      if (validation?.mismatch) throw new Error(validation.message || "The imported Word page count does not match the source document.");
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || "";
-      const response = await fetch("/api/standard-inclusions/base-template", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
-        },
-        body: JSON.stringify({
-          documentJson: finalDocument,
-          sourceFileName: docxImportReview?.fileName || "",
-          importReport: {
-            warnings: docxImportReview?.warnings || [],
-            fontSubstitutions: docxImportReview?.fontSubstitutions || [],
-          },
-          autoActivate: false,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not save this as a draft base template.");
-      setStandardStatus("Saved as a draft base template (v" + payload.template.version + "). Platform admins can activate it for new builders.");
-    } catch (error) {
-      console.error("Save DOCX import as base template failed", error);
-      setStandardStatus(error?.message || "Could not save this as a draft base template.");
-    }
-    setDocxImportReviewBusy(false);
   }
 
   // Processes the uploaded PDF and hands the result to the review screen —
@@ -7391,7 +7341,8 @@ export function StandardInclusionsSheet({ sheet }) {
         selectedPdfPageId: "",
         pdfSourceName: preview.fileName,
         pptxSourceName: "",
-        pdfEditorMode: "document-page-builder",
+        editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
+        pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
         onlyOfficeDocumentId: "",
         onlyOfficeVersion: 0,
         onlyOfficePptxAssetId: "",
@@ -7480,7 +7431,8 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: importPreview.source === "pdf-import" ? importPreview.fileName : "",
       pptxSourceName: importPreview.source === "pptx-import" ? importPreview.fileName : "",
-      pdfEditorMode: "document-page-builder",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
       }, importPreview.source === "pptx-import" ? "import-pptx" : "import-pdf", importPreview.fileName, { persist: true });
     } catch (error) {
       console.error("Standard Inclusions import save failed", error);
@@ -7500,18 +7452,23 @@ export function StandardInclusionsSheet({ sheet }) {
 
   function handleOnlyOfficeDocumentUpdated(document) {
     if (!document?.id) return;
+    const fileType = document.metadata?.fileType || standard.onlyOfficeFileType || (standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX ? "docx" : "pptx");
+    const editorMode = fileType === "docx" ? STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX : STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX;
     saveStandardWithRevision({
-      source: "onlyoffice-pptx",
+      source: editorMode,
+      editorMode,
       scheduleDeleted: false,
       isDeleted: false,
       deletedAt: null,
       activeDocumentId: document.id,
       activeDocumentName: document.source_file_name || standard.activeDocumentName,
-      activeDocumentSource: "onlyoffice-pptx",
+      activeDocumentSource: editorMode,
       activeDocumentLastSavedAt: new Date().toISOString(),
       onlyOfficeDocumentId: document.id,
       onlyOfficeVersion: Number(document.version || 1),
       onlyOfficePptxAssetId: document.current_pptx_asset_id || "",
+      onlyOfficeOfficeAssetId: document.current_pptx_asset_id || "",
+      onlyOfficeFileType: fileType,
       onlyOfficeExportedPdfAssetId: document.current_exported_pdf_asset_id || "",
     }, "onlyoffice-version-change", document.source_file_name || "", { persist: true });
   }
@@ -7520,7 +7477,7 @@ export function StandardInclusionsSheet({ sheet }) {
     <div style={styles.standardPdfShell}>
       <section style={styles.standardPdfToolbar}>
         <div>
-          <div style={styles.eyebrow}>Document Page Builder</div>
+          <div style={styles.eyebrow}>Standard Inclusions Editor</div>
           <h2 style={styles.cashflowTitle}>Standard Inclusions</h2>
         </div>
         {standardStatus ? <div style={styles.proposalBuilderStatus}>{standardStatus}</div> : null}
@@ -7528,17 +7485,6 @@ export function StandardInclusionsSheet({ sheet }) {
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
       <input ref={docxUploadRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{ display: "none" }} onChange={prepareDocxImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
-      {docxImportReview ? (
-        <DocxImportReview
-          preview={docxImportReview}
-          busy={docxImportReviewBusy}
-          onCancel={docxImportReviewBusy ? () => {} : cancelDocxImportReview}
-          onReturnToUpload={docxImportReviewBusy ? () => {} : returnToDocxUpload}
-          onConfirm={docxImportReviewBusy ? () => {} : confirmDocxImportReview}
-          onSaveAsBaseTemplate={docxImportReviewBusy ? () => {} : saveReviewedDocxAsBaseTemplate}
-          canSaveAsBaseTemplate
-        />
-      ) : null}
       {pdfImportReview ? (
         <PdfImportReview
           preview={pdfImportReview}
@@ -7834,7 +7780,8 @@ export function StandardInclusionsSheet({ sheet }) {
       savedAt: new Date().toISOString(),
       pdfPages: masterPages,
       selectedPdfPageId: masterPages[Math.max(0, selectedPageIndex)]?.id || masterPages[0]?.id || "",
-      pdfEditorMode: "editable-canvas-pages",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     };
     saveStandard({ masterTemplate, pdfPages: editablePages });
     try {
@@ -8009,7 +7956,7 @@ export function StandardInclusionsSheet({ sheet }) {
         </div>
         <div style={styles.proposalMiniActions}>
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={() => pdfUploadRef.current?.click()}>Upload Premier Inclusions PDF</button>
-          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pptxUploadRef.current?.click()}>Upload PowerPoint Template</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pptxUploadRef.current?.click()}>Import Editable PowerPoint (.pptx)</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Replace Entire PDF</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
           <button type="button" disabled={!pages.length} style={styles.secondaryButton} onClick={() => setStandardStatus("Use the Up and Down controls in the page list to reorder pages.")}>Reorder Pages</button>
@@ -8198,11 +8145,15 @@ function StandardScheduleContextPanel({
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadDocx}>
               <strong>Import Editable Word Document (.docx)</strong>
-              <span>Recommended for schedules that need editable text, tables, images, headers, footers, and page flow in the Document Engine.</span>
+              <span>Open and save the native Word file in ONLYOFFICE so text boxes, drawings, images, headers, footers, and page breaks stay intact.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPptx}>
+              <strong>Import Editable PowerPoint (.pptx)</strong>
+              <span>Open and save the native PowerPoint file in ONLYOFFICE.</span>
             </button>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPdf}>
               <strong>Attach Finished PDF</strong>
-              <span>Use when the schedule is already final and should stay as fixed pages instead of a Word-style editable layout.</span>
+              <span>Use when the schedule is already final and should stay as finished PDF pages.</span>
             </button>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUsePremierTemplate}>
               <strong>Use Premier Base Template</strong>
@@ -8211,10 +8162,6 @@ function StandardScheduleContextPanel({
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onChooseSavedSchedule}>
               <strong>Choose Saved Schedule</strong>
               <span>Reuse a Standard Inclusions document already saved in this workbook or related estimates.</span>
-            </button>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPptx}>
-              <strong>Upload PowerPoint Template</strong>
-              <span>Keep using the existing ONLYOFFICE editing path for PowerPoint-based schedules.</span>
             </button>
           </div>
         </div>
@@ -8229,7 +8176,7 @@ function StandardScheduleContextPanel({
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
               <strong>Attach PDF Now</strong>
-              <span>The PDF remains a fixed-page schedule. Use the Word importer when editable flowing content is required.</span>
+              <span>The PDF remains a finished fixed-page schedule and is inserted into Project Estimate as pages.</span>
             </button>
           </div>
         </div>
@@ -8336,7 +8283,7 @@ function StandardScheduleEmptyState({
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUsePremierTemplate}>Use Premier Base Template</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Create Blank Schedule</button>
         <button type="button" disabled={readonly || !revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPptx}>Upload PowerPoint Template</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPptx}>Import Editable PowerPoint (.pptx)</button>
       </div>
       <StandardScheduleContextPanel
         readonly={readonly}

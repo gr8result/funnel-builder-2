@@ -3,6 +3,8 @@ import {
   createOnlyOfficeAccessKey,
   downloadStandardInclusionsAsset,
   loadStandardInclusionsDocumentById,
+  onlyOfficeContentType,
+  standardInclusionsDocumentFileType,
 } from "../../../../lib/standard-inclusions/onlyoffice";
 
 function accessKeysMatch(received, expected) {
@@ -27,11 +29,12 @@ export default async function handler(req, res) {
     const expected = createOnlyOfficeAccessKey(document.id, document.current_pptx_asset_id, Number(document.version || 1));
     if (!accessKeysMatch(accessKey, expected)) return res.status(403).json({ ok: false, error: "Invalid document access key." });
     const buffer = await downloadStandardInclusionsAsset(document.current_pptx_asset_id);
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(document.source_file_name || "standard-inclusions.pptx")}"`);
+    const fileType = standardInclusionsDocumentFileType(document);
+    res.setHeader("Content-Type", onlyOfficeContentType(fileType));
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(document.source_file_name || `standard-inclusions.${fileType}`)}"`);
     res.setHeader("Cache-Control", "no-store, max-age=0");
     return res.status(200).send(buffer);
   } catch (error) {
-    return res.status(error?.statusCode || 500).json({ ok: false, error: error?.message || "Could not stream presentation." });
+    return res.status(error?.statusCode || 500).json({ ok: false, error: error?.message || "Could not stream ONLYOFFICE document." });
   }
 }
