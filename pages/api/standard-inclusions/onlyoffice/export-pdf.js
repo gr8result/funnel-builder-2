@@ -6,10 +6,10 @@ import {
   loadStandardInclusionsDocumentForUser,
   onlyOfficeDocumentKey,
   onlyOfficeDocumentServerUrl,
+  onlyOfficeAppInternalUrl,
   standardInclusionsDocumentFileType,
   signOnlyOfficeJwt,
   uploadStandardInclusionsAsset,
-  appBaseUrl,
 } from "../../../../lib/standard-inclusions/onlyoffice";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
@@ -42,7 +42,7 @@ async function handler(req, res) {
       key: `${onlyOfficeDocumentKey(document)}-pdf`,
       outputtype: "pdf",
       title: document.source_file_name || `Standard Inclusions.${fileType}`,
-      url: `${appBaseUrl(req)}/api/standard-inclusions/onlyoffice/file?documentId=${encodeURIComponent(document.id)}&accessKey=${accessKey}`,
+      url: `${onlyOfficeAppInternalUrl(req)}/api/standard-inclusions/onlyoffice/file?documentId=${encodeURIComponent(document.id)}&accessKey=${accessKey}`,
     };
     const token = signOnlyOfficeJwt(requestBody);
     const response = await fetch(`${documentServerUrl}/converter?shardkey=${encodeURIComponent(requestBody.key)}`, {
