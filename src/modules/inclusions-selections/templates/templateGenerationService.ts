@@ -20,7 +20,8 @@ export function generateRequirementsForArea(input: RequirementGenerationInput): 
   const existingByDefinition = new Map(existing.map((requirement) => [requirement.definitionId, requirement]));
   const requirements = input.template.requirementDefinitions.map((definition) => {
     const current = existingByDefinition.get(definition.id);
-    const status: ProjectRequirement["status"] = definition.required ? "required" : "optional";
+    const applicability = definition.applicability ?? (definition.required ? "required" : "optional");
+    const status: ProjectRequirement["status"] = applicability === "required" ? "required" : "optional";
     return {
       ...current,
       id: current?.id ?? makeScopedId("requirement", [input.area.projectId, input.area.id, definition.id]),
@@ -34,7 +35,9 @@ export function generateRequirementsForArea(input: RequirementGenerationInput): 
       title: definition.title,
       quantity: current?.quantity ?? definition.defaultQuantity,
       status,
-      required: definition.required,
+      required: applicability === "required",
+      applicability,
+      displayOrder: current?.displayOrder,
     } satisfies ProjectRequirement;
   });
 

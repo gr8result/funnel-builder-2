@@ -13,6 +13,7 @@ export type RequirementCategory =
   | "allowance";
 
 export type RequirementStatus = "draft" | "required" | "optional" | "obsolete" | "blocked_obsolete";
+export type RequirementApplicability = "required" | "optional" | "conditional" | "not_applicable";
 
 export type RequirementDefinition = {
   id: RequirementDefinitionId;
@@ -23,6 +24,7 @@ export type RequirementDefinition = {
   quantityMode: "per_area" | "per_item" | "allowance" | "manual";
   defaultQuantity: number;
   required: boolean;
+  applicability?: RequirementApplicability;
   allowedAreaTypeIds?: AreaTypeId[];
   allowedTierIds?: InclusionTierId[];
 };
@@ -37,4 +39,11 @@ export type ProjectRequirement = ProjectScopedEntity & {
   quantity: number;
   status: RequirementStatus;
   required: boolean;
+  applicability?: RequirementApplicability;
+  hasSelection?: boolean;
+  hasApprovalHistory?: boolean;
+  hasPricingData?: boolean;
+  downstreamReference?: string;
+  manualCustomisation?: boolean;
+  displayOrder?: number;
 };

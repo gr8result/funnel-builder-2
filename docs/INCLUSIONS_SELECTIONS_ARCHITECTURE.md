@@ -38,14 +38,24 @@ The module must not import from:
 
 ## Stage-One Route
 
-`/inclusions-selections/areas` is the first visible replacement workflow. It creates the project area register from standard area groups, standard area types, project levels and optional custom areas. `/inclusions-selections/templates` exists only as the next-stage placeholder.
+`/inclusions-selections/areas` is the first visible replacement workflow. It creates the project area register from standard area groups, standard area types, project levels and optional custom areas.
 
 The route writes through `ProjectAreaRegisterRepository`. Until a database migration is approved, the active repository is the in-memory implementation and drafts persist only for the current application lifecycle. The route must not import retired selections modules, Product Library modules, Supplier Library modules or Estimate Builder modules.
+
+## Stage-Two Route
+
+`/inclusions-selections/templates` is the second visible replacement workflow. It assigns AreaTemplates and InclusionTiers to the Stage 1 ProjectAreas, previews generated ProjectRequirements, reconciles them safely and saves the template stage configuration.
+
+`/inclusions-selections/workspace` exists only as the next-stage placeholder. Product selection, pricing, approvals, documents and Estimate Builder export remain deferred.
 
 ## Services
 
 - `validateProjectAreas`: validates explicit project area structure.
 - `generateRequirementsForArea`: turns an area template into project requirements.
+- `loadTemplateStage`: loads ProjectAreas, template configuration, saved builder templates and ProjectRequirements.
+- `resolveEffectiveTemplateAssignment`: resolves project, group, type and area overrides.
+- `previewRequirementGeneration`: previews added, kept, updated, removable and protected requirements.
+- `reconcileProjectRequirements`: generates and reconciles ProjectRequirements without silently deleting protected records.
 - `resolveEffectiveSelection`: applies default inheritance precedence.
 - `previewApplySelection`: previews bulk application without mutating records.
 - `calculateSelectionPricing`: computes commercial values.

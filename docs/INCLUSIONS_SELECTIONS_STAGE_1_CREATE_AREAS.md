@@ -5,7 +5,7 @@ This stage creates the project-owned area register used by later templates, incl
 ## Active Routes
 
 - `/inclusions-selections/areas` - Create Selection Areas.
-- `/inclusions-selections/templates` - placeholder only; template assignment is not built in this stage.
+- `/inclusions-selections/templates` - next workflow stage for room templates and inclusion tiers.
 
 Both routes require an existing project context. The current page accepts `organisationId` or `orgId`, plus `projectId`, with optional project summary query values.
 
@@ -31,7 +31,7 @@ This preserves the repository boundary and organisation/project scoping, but dra
 
 ## Not Implemented
 
-- Template assignment.
+- Template assignment in Stage 1. This is implemented separately by Stage 2.
 - Requirement generation from selected areas in the UI.
 - Inclusion tiers.
 - Product Library integration.

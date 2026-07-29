@@ -8,7 +8,7 @@ Inheritance lets builders define sensible defaults without copying selections ma
 
 ## Precedence
 
-The resolver uses this order, lowest to highest:
+Selection inheritance in later stages uses this order, lowest to highest:
 
 1. Builder default
 2. Project default
@@ -17,6 +17,17 @@ The resolver uses this order, lowest to highest:
 5. Requirement override
 
 A direct project selection always wins over inherited defaults.
+
+## Template Stage Precedence
+
+Room template and inclusion tier assignment uses this Stage 2 order, lowest to highest:
+
+1. Project default
+2. AreaGroup override
+3. AreaType override
+4. ProjectArea override
+
+AreaTemplate and InclusionTier remain separate values. Resetting a ProjectArea override returns to AreaType, then AreaGroup, then Project default.
 
 ## Reset Behaviour
 
