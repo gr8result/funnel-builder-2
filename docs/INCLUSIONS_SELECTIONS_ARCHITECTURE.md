@@ -34,7 +34,7 @@ The module must not import from:
 - No Estimate Builder integration.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
-- No client approval, final document, locked snapshot, procurement export or Estimate Builder export workflow from the workspace.
+- No client approval, builder approval, final document, locked snapshot, procurement export or Estimate Builder export workflow from the workspace or review stage.
 
 ## Stage-One Route
 
@@ -50,7 +50,11 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 
 `/inclusions-selections/workspace` is the third visible replacement workflow. It loads Stage 1 ProjectAreas and Stage 2 ProjectRequirements, then lets builders complete draft selections by Room View or Category View while preserving room/location-based records.
 
-`/inclusions-selections/review` exists only as the next-stage placeholder. Final pricing review, approvals, documents, snapshots and Estimate Builder export remain deferred.
+## Stage-Four Route
+
+`/inclusions-selections/review` is the fourth visible replacement workflow. It reviews Stage 3 ProjectSelections and SelectionLocations, derives room/category review projections, calculates draft pricing and variation summaries, generates review issues and marks a clean project Ready for Approval.
+
+`/inclusions-selections/approvals` exists only as the next-stage placeholder. Client approval, builder approval, final documents, snapshots and Estimate Builder export remain deferred.
 
 ## Services
 
@@ -65,6 +69,10 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 - `createProjectSelection`, `selectProductVariant`, `createCustomSelection`, `updateRequirementStatus`, `clearProjectSelection` and `resetSelectionToInherited`: mutate draft selection state through the application service boundary.
 - `previewApplyTo` and `applySelectionToTargets`: preview and apply draft selections only to compatible requirements while retaining SelectionLocations.
 - `validateSelectionWorkspace` and `saveWorkspaceDraft`: validate and persist the draft workspace through the repository interface.
+- `loadSelectionReview`: loads Stage 3 workspace records plus review metadata.
+- `calculateProjectReviewSummary`, `calculateRoomReview`, `calculateCategoryReview` and `calculateVariationSummary`: derive review totals without duplicating records.
+- `buildClientVariationProjection` and `buildBuilderInternalProjection`: keep client-facing values separate from internal builder values.
+- `generateReviewIssues`, `validateReviewReadiness`, `acknowledgeReviewWarning`, `overrideAllowance`, `markReadyForApproval` and `saveSelectionReview`: manage review validation and metadata through repository interfaces.
 - `resolveEffectiveSelection`: applies default inheritance precedence.
 - `previewApplySelection`: previews bulk application without mutating records.
 - `calculateSelectionPricing`: computes commercial values.

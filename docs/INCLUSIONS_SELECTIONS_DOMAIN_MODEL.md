@@ -17,6 +17,10 @@ Date: 2026-07-29
 - `SelectionLocation`: the physical usage location for a ProjectSelection, preserving area, requirement, quantity, pricing quantity and unit.
 - `RequirementNote`: structured internal, supplier, installation, override or Not Applicable note attached to a requirement.
 - `RequirementAttachmentReference`: reference to product images, specifications, samples, quotes, drawings or manual selection images.
+- `SelectionReviewState`: project review metadata for selected review view, status and Ready for Approval state.
+- `ReviewIssue`: derived review issue with stable ID, severity, scope, resolution action and blocking status.
+- `AllowanceOverride`: review-stage record of previous and new allowance values with actor and reason.
+- `ReviewAuditEvent`: compact audit record for review actions without duplicating selection data.
 - `SelectionApproval`: builder/client/admin decision attached to a selection.
 - `SelectionSnapshot`: immutable locked record of selection lines.
 - `EstimateSelectionExport`: estimate-facing output generated from a locked snapshot.
@@ -56,3 +60,7 @@ Room View and Category View are presentation choices over the same ProjectRequir
 ## Product Adapter Boundary
 
 Workspace product search and lookup flow through `ProductSelectionCatalogueAdapter`. Development fixtures may live behind the adapter, but the selections module does not own Product Library or Supplier Library persistence.
+
+## Review Projections
+
+Stage 4 ReviewLine, room review, category review, variation summary, client projection and builder internal projection are calculated views over ProjectRequirement, ProjectSelection and SelectionLocation records. They do not replace those records.

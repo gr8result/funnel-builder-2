@@ -25,6 +25,11 @@ export type ProductReference = {
   defaultVariantId?: ProductVariantId;
   unit: string;
   active: boolean;
+  discontinued?: boolean;
+  priceEffectiveDate?: string;
+  priceExpiresAt?: string;
+  priceSource?: string;
+  builderCost?: Money;
   compatibility: ProductCompatibility;
   unitCost?: Money;
 };
@@ -38,5 +43,8 @@ export type ProductVariantReference = {
   colour?: string;
   finish?: string;
   unitCost?: Money;
+  builderCost?: Money;
+  priceEffectiveDate?: string;
+  priceExpiresAt?: string;
   active: boolean;
 };

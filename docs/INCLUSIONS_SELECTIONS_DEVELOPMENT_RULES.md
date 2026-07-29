@@ -20,8 +20,9 @@ Date: 2026-07-29
 - Use fixtures only for tests and local domain checks.
 - Add UI in focused stage routes after the domain contracts for that stage are stable.
 - Keep workspace compatibility, pricing, Apply To and validation behaviour in services, not React components.
+- Keep review pricing, issue generation, projections and readiness logic in services, not React components.
 - Access products and suppliers through adapter/reference interfaces only.
-- Keep draft workspace persistence behind repository interfaces. In-memory repositories are acceptable until migrations are explicitly approved.
+- Keep draft workspace and review persistence behind repository interfaces. In-memory repositories are acceptable until migrations are explicitly approved.
 
 ## Testing
 
@@ -38,6 +39,11 @@ Minimum coverage for domain work:
 - Apply To preview and skipped/incompatible targets,
 - SelectionLocation traceability,
 - draft save and reload,
+- review summary, room/category projections and variation calculations,
+- client/internal projection separation,
+- review issue register and warning acknowledgement,
+- allowance override audit records,
+- Ready for Approval stale-state detection,
 - approval locking,
 - snapshot creation,
 - estimate export aggregation.

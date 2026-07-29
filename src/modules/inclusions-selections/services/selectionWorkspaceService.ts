@@ -304,6 +304,11 @@ export async function createProjectSelection(
     colour: exactVariant?.colour ?? product?.colour,
     supplierId: product?.supplierId,
     supplierSku: exactVariant?.sku,
+    builderCost: exactVariant?.builderCost ?? product?.builderCost,
+    priceSource: product?.priceSource ? "catalogue" : "catalogue",
+    priceEffectiveDate: exactVariant?.priceEffectiveDate ?? product?.priceEffectiveDate,
+    priceExpiresAt: exactVariant?.priceExpiresAt ?? product?.priceExpiresAt,
+    pricingStatus: exactVariant?.unitCost ?? product?.unitCost ? "confirmed" : "price_missing",
   };
   const pricing = priceSelection(requirement, value, quantity, value.clientPrice?.amount);
   const id = selectionId(state.context, requirementId);
@@ -342,7 +347,7 @@ export function createCustomSelection(state: SelectionWorkspaceState, requiremen
   if (input.quantity <= 0) return fail("invalid_quantity", "Quantity must be greater than zero.", requirementId);
   const id = selectionId(state.context, requirementId);
   const customSelectionId = makeScopedId("custom_selection", [state.context.organisationId, state.context.projectId, requirementId, input.name]);
-  const value: SelectionValue = { customSelectionId, customSelectionName: input.name.trim(), customSelectionCategory: input.category, description: input.description.trim(), brand: input.brand, model: input.model, colour: input.colour, supplierId: input.supplierId, supplierSku: input.supplierSku, clientPrice: money(input.clientPrice), allowance: money(input.allowance), unit: input.unit };
+  const value: SelectionValue = { customSelectionId, customSelectionName: input.name.trim(), customSelectionCategory: input.category, description: input.description.trim(), brand: input.brand, model: input.model, colour: input.colour, supplierId: input.supplierId, supplierSku: input.supplierSku, clientPrice: money(input.clientPrice), allowance: money(input.allowance), unit: input.unit, priceSource: "manual", pricingStatus: "manual_price" };
   const pricing = priceSelection(requirement, value, input.quantity, input.clientPrice);
   const selection: ProjectSelection = { id, organisationId: state.context.organisationId, projectId: state.context.projectId, requirementId, value, source: "builder", status: "draft", revision: (state.selections.find((item) => item.requirementId === requirementId)?.revision ?? 0) + 1, selectionStatus: "complete", quantity: input.quantity, unit: input.unit, inheritedFrom: "manual_custom_selection", ...pricing };
   const location: SelectionLocation = { id: locationId(state.context, id, requirement.areaId, requirement.id), organisationId: state.context.organisationId, projectId: state.context.projectId, selectionId: id, requirementId: requirement.id, areaId: requirement.areaId, label: `${state.templateStage.areaRegister.areas.find((area) => area.id === requirement.areaId)?.name ?? "Area"} - ${requirement.title}`, quantity: input.quantity, pricingQuantity: input.quantity, unit: input.unit };

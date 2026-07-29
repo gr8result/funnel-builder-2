@@ -119,7 +119,7 @@ export async function runSelectionWorkspaceTests(): Promise<void> {
   assert(pageSource.includes("@media (max-width: 760px)") && pageSource.includes("RequirementWorkspace"), "Mobile requirement cards render without fixed-width workspace dependency.");
   assert(pageSource.includes("/inclusions-selections/templates"), "Back to Templates works.");
   assert(pageSource.includes("/inclusions-selections/review"), "Valid workspace reaches Review placeholder.");
-  assert(reviewSource.includes("Pricing, variations and final selection review will be completed in the next stage."), "Review placeholder text should be exact.");
+  assert(reviewSource.includes("Review Selections and Variations"), "Review route should now be the Stage 4 review.");
   assert(!pageSource.includes("Estimate Builder") && !pageSource.includes("createSelectionSnapshot") && !pageSource.includes("approval"), "No approval, snapshot or Estimate Builder export code loads.");
 }
 

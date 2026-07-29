@@ -19,6 +19,11 @@ export type SelectionValue = {
   supplierId?: string;
   supplierSku?: string;
   clientPrice?: Money;
+  builderCost?: Money;
+  priceSource?: "catalogue" | "manual" | "allowance" | "supplier_quote" | "provisional";
+  priceEffectiveDate?: string;
+  priceExpiresAt?: string;
+  pricingStatus?: "confirmed" | "provisional" | "allowance_only" | "price_missing" | "supplier_quote_required" | "manual_price" | "expired_price" | "unavailable_product";
   unit?: string;
 };
 
