@@ -10,6 +10,8 @@ Estimate Builder is not changed in this phase. The new module only defines the f
 
 Draft selections cannot alter an approved estimate. Estimate integration must consume locked snapshots only.
 
+Stage 5 creates locked selection snapshots but does not export them to Estimate Builder. The `/inclusions-selections/documents-export` route remains a placeholder for the next stage.
+
 ## Export Contract
 
 `createEstimateSelectionExport` converts a locked `SelectionSnapshot` into estimate lines.

@@ -34,7 +34,7 @@ The module must not import from:
 - No Estimate Builder integration.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
-- No client approval, builder approval, final document, locked snapshot, procurement export or Estimate Builder export workflow from the workspace or review stage.
+- No final document, procurement export or Estimate Builder export workflow from the approvals stage.
 
 ## Stage-One Route
 
@@ -54,7 +54,11 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 
 `/inclusions-selections/review` is the fourth visible replacement workflow. It reviews Stage 3 ProjectSelections and SelectionLocations, derives room/category review projections, calculates draft pricing and variation summaries, generates review issues and marks a clean project Ready for Approval.
 
-`/inclusions-selections/approvals` exists only as the next-stage placeholder. Client approval, builder approval, final documents, snapshots and Estimate Builder export remain deferred.
+## Stage-Five Route
+
+`/inclusions-selections/approvals` is the fifth visible replacement workflow. It records client and builder approvals against a deterministic approval fingerprint, detects stale approvals after material selection changes and locks immutable selection snapshot versions only when both approvals match the same reviewed version.
+
+`/inclusions-selections/documents-export` exists only as the next-stage placeholder. Final documents and Estimate Builder export remain deferred.
 
 ## Services
 
@@ -73,6 +77,7 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 - `calculateProjectReviewSummary`, `calculateRoomReview`, `calculateCategoryReview` and `calculateVariationSummary`: derive review totals without duplicating records.
 - `buildClientVariationProjection` and `buildBuilderInternalProjection`: keep client-facing values separate from internal builder values.
 - `generateReviewIssues`, `validateReviewReadiness`, `acknowledgeReviewWarning`, `overrideAllowance`, `markReadyForApproval` and `saveSelectionReview`: manage review validation and metadata through repository interfaces.
+- `loadApprovalStage`, `recordClientApproval`, `recordBuilderApproval`, `recordClientChangesRequested`, `validateSnapshotReadiness`, `createLockedSelectionSnapshot`, `startNewDraftRevision` and `compareSelectionSnapshots`: manage Stage 5 approval and locked snapshot state through repository interfaces.
 - `resolveEffectiveSelection`: applies default inheritance precedence.
 - `previewApplySelection`: previews bulk application without mutating records.
 - `calculateSelectionPricing`: computes commercial values.

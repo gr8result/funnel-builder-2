@@ -15,12 +15,13 @@ Date: 2026-07-29
 ## Code Shape
 
 - Keep domain concepts in focused folders.
-- Prefer pure services for validation, generation, inheritance, compatibility, pricing, approval, snapshot, and export logic.
+- Prefer pure services for validation, generation, inheritance, compatibility, pricing, approval, snapshot comparison, and export logic.
 - Keep repositories as interfaces at the boundary.
 - Use fixtures only for tests and local domain checks.
 - Add UI in focused stage routes after the domain contracts for that stage are stable.
 - Keep workspace compatibility, pricing, Apply To and validation behaviour in services, not React components.
 - Keep review pricing, issue generation, projections and readiness logic in services, not React components.
+- Keep approval fingerprints, stale approval detection, approval validation, snapshot readiness and snapshot locking in services, not React components.
 - Access products and suppliers through adapter/reference interfaces only.
 - Keep draft workspace and review persistence behind repository interfaces. In-memory repositories are acceptable until migrations are explicitly approved.
 
@@ -44,8 +45,12 @@ Minimum coverage for domain work:
 - review issue register and warning acknowledgement,
 - allowance override audit records,
 - Ready for Approval stale-state detection,
-- approval locking,
-- snapshot creation,
+- approval fingerprint determinism,
+- client approval and builder approval validation,
+- stale approval and changes-requested handling,
+- locked snapshot readiness,
+- immutable snapshot creation,
+- snapshot version comparison,
 - estimate export aggregation.
 
 ## Isolation Checks

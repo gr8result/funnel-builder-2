@@ -21,8 +21,11 @@ Date: 2026-07-29
 - `ReviewIssue`: derived review issue with stable ID, severity, scope, resolution action and blocking status.
 - `AllowanceOverride`: review-stage record of previous and new allowance values with actor and reason.
 - `ReviewAuditEvent`: compact audit record for review actions without duplicating selection data.
-- `SelectionApproval`: builder/client/admin decision attached to a selection.
-- `SelectionSnapshot`: immutable locked record of selection lines.
+- `ApprovalRecord`: client or builder approval attached to a material approval fingerprint for a project selection version.
+- `ApprovalHistoryEvent`: audit-style history entry for approval preparation, review, approval, revocation, changes requested, snapshot locking and draft revision starts.
+- `LockedSelectionSnapshot`: immutable locked record of selection lines, totals, approval references, source fingerprint and version metadata.
+- `LockedSelectionSnapshotLine`: frozen copy of the room, requirement, selection, location, pricing and note data that was approved.
+- `DraftRevision`: editable revision marker started after a locked snapshot.
 - `EstimateSelectionExport`: estimate-facing output generated from a locked snapshot.
 
 ## Identity Rules
@@ -64,3 +67,9 @@ Workspace product search and lookup flow through `ProductSelectionCatalogueAdapt
 ## Review Projections
 
 Stage 4 ReviewLine, room review, category review, variation summary, client projection and builder internal projection are calculated views over ProjectRequirement, ProjectSelection and SelectionLocation records. They do not replace those records.
+
+## Approval Versions
+
+Stage 5 approvals are recorded against an approval fingerprint. The fingerprint ignores UI-only state and includes material selection data, pricing data, client-visible notes, locations and review readiness. Client and builder approvals must share the current fingerprint before a snapshot can be locked.
+
+Locked snapshots are append-only. New versions can supersede earlier versions, but previous locked versions remain readable and comparable.
