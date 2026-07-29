@@ -8,6 +8,8 @@
 // Namespaced separately from the legacy key so V2 can be developed and torn down
 // without ever touching legacy state.
 
+import { withPlanPageDefaults } from "../types.js";
+
 const DOCUMENTS_KEY = (jobId) => `gr8:takeoff-v2:documents:${jobId || "unassigned"}`;
 const PAGES_KEY = (documentId) => `gr8:takeoff-v2:pages:${documentId}`;
 const SELECTED_PAGE_KEY = (jobId) => `gr8:takeoff-v2:selectedPage:${jobId || "unassigned"}`;
@@ -22,9 +24,27 @@ function readJson(key, fallback) {
   }
 }
 
+// Known constraint of this store's design (localStorage, whole PDFs as
+// base64 data URLs): a browser's per-origin quota (typically 5-10MB) can be
+// exceeded by a handful of plan uploads, especially across repeated test
+// sessions that never delete old documents. Surfacing a clear, actionable
+// message here (instead of the raw DOMException text) is a proportionate
+// fix for that failure mode; moving plan bytes to real backend storage is a
+// separate, larger architectural change, not done here.
+function isQuotaExceededError(err) {
+  return err instanceof DOMException && (err.name === "QuotaExceededError" || err.code === 22 || err.code === 1014);
+}
+
 function writeJson(key, value) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    if (isQuotaExceededError(err)) {
+      throw new Error("This browser's local storage is full. Delete an existing plan document to free up space, then try again.");
+    }
+    throw err;
+  }
 }
 
 function removeKey(key) {
@@ -66,17 +86,23 @@ export function deleteDocument(jobId, documentId) {
 
 // ---------- pages ----------
 
+// Every read of a saved page runs it through withPlanPageDefaults — a page
+// saved before a given field existed (exteriorWalls, openings, planRegion,
+// ...) gets safe defaults instead of undefined, and a corrupted single
+// section never blocks the rest of the page from loading. Applied on every
+// read path (listPages/getPage) rather than once at write time, so it also
+// repairs records written by an older build of this module.
 export function listPages(documentId) {
-  return readJson(PAGES_KEY(documentId), []);
+  return readJson(PAGES_KEY(documentId), []).map(withPlanPageDefaults);
 }
 
 export function savePage(page) {
-  const pages = listPages(page.documentId);
+  const pages = readJson(PAGES_KEY(page.documentId), []);
   const next = pages.filter((existing) => existing.id !== page.id);
   next.push({ ...page, updatedAt: new Date().toISOString() });
   next.sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(page.documentId), next);
-  return next.find((existing) => existing.id === page.id);
+  return withPlanPageDefaults(next.find((existing) => existing.id === page.id));
 }
 
 export function getPage(documentId, pageId) {
@@ -86,7 +112,7 @@ export function getPage(documentId, pageId) {
 export function savePages(documentId, pages) {
   const sorted = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(documentId), sorted);
-  return sorted;
+  return sorted.map(withPlanPageDefaults);
 }
 
 // ---------- selected page (per job) ----------

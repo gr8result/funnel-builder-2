@@ -81,24 +81,42 @@ OVERALL CONFIDENCE:
 If this image is NOT a floor plan, return:
 { "confidence": 0, "externalWalls": [], "internalWalls": [], "rooms": [], "doors": [], "windows": [] }`;
 
+// Dev-only, stage-by-stage logging — never logs keys, tokens, full auth
+// headers, or document contents, only which stage was reached and whether it
+// succeeded. Distinguishing these stages is exactly what "AI detection API
+// error 401" used to collapse into one message.
+function logStage(message) {
+  if (process.env.NODE_ENV !== "production") console.log(`[plan-detect] ${message}`);
+}
+
 async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
+  // withAuth (see lib/withWorkspace.js) already rejected the request before
+  // this handler ever runs if the user session didn't resolve — reaching
+  // this line means req.user is populated.
+  logStage("Takeoff detection request received");
+  logStage(`User session resolved: yes (user ${req.user?.id ? "present" : "MISSING — should not happen past withAuth"})`);
+
   const { imageDataUrl, imageWidth, imageHeight } = req.body || {};
-  if (!imageDataUrl) return res.status(400).json({ error: "imageDataUrl required" });
+  if (!imageDataUrl) return res.status(400).json({ error: "imageDataUrl required", code: "BAD_REQUEST" });
+  logStage(`Plan image received: yes (${imageWidth || "?"}x${imageHeight || "?"})`);
 
   const key = process.env.OPENAI_API_KEY;
+  logStage(`Provider configured: ${key ? "yes" : "no"}`);
   if (!key) {
     return res.status(200).json({
       connected:  false,
       overlays:   [],
       rooms:      [],
       confidence: 0,
-      message:    "AI detection service is not connected yet. (OPENAI_API_KEY not configured.)",
+      code:       "PROVIDER_NOT_CONFIGURED",
+      message:    "Automatic detection is not configured on this environment.",
     });
   }
 
   try {
+    logStage("Provider request started");
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method:  "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
@@ -118,11 +136,26 @@ async function handler(req, res) {
         ],
       }),
     });
+    logStage(`Provider response status: ${response.status}`);
+
+    if (response.status === 401 || response.status === 403) {
+      // The application's own auth already passed (withAuth) — this 401/403
+      // is the *provider* (OpenAI) rejecting our server-side API key, e.g.
+      // it's revoked/expired/wrong-project. Never conflate this with the
+      // application's own USER_AUTH_REQUIRED case.
+      console.error("[plan-detect] Provider authentication failed (key rejected by OpenAI) — check OPENAI_API_KEY.");
+      return res.status(200).json({
+        connected: false, overlays: [], rooms: [], confidence: 0,
+        code: "PROVIDER_AUTH_FAILED",
+        message: "The plan detection service rejected its server credentials.",
+      });
+    }
 
     if (!response.ok) {
       const txt = await response.text();
       return res.status(200).json({
         connected: false, overlays: [], rooms: [], confidence: 0,
+        code: "PROVIDER_ERROR",
         message: `AI error ${response.status}: ${txt.slice(0, 300)}`,
       });
     }
@@ -262,6 +295,7 @@ async function handler(req, res) {
 
     return res.status(200).json({
       connected:  true,
+      code:       "OK",
       overlays:   allOverlays,
       rooms,
       confidence: totalConf,
@@ -269,8 +303,10 @@ async function handler(req, res) {
     });
 
   } catch (err) {
+    console.error("[plan-detect] Unhandled error:", err?.message || err);
     return res.status(500).json({
       connected: false, overlays: [], rooms: [], confidence: 0,
+      code: "PROVIDER_ERROR",
       message:   `Server error: ${err.message}`,
     });
   }

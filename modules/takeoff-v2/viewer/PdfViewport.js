@@ -48,15 +48,34 @@ export async function getPageDimensions(pdfDocument, pageNumber) {
   return { width: viewport.width, height: viewport.height };
 }
 
+// Exposes the raw operator list (used by geometry/planVectorExtraction.js to
+// pull real vector linework out of the PDF) alongside the same `OPS` enum
+// pdfjs-dist uses to encode it, via the one shared pdfjs-dist loading path
+// above rather than a second `import("pdfjs-dist")` call site.
+export async function getOperatorListForPage(pdfDocument, pageNumber) {
+  const pdfjsLib = await loadPdfjsLib();
+  const page = await pdfDocument.getPage(pageNumber);
+  const operatorList = await page.getOperatorList();
+  return { operatorList, OPS: pdfjsLib.OPS };
+}
+
 /**
  * Creates an independent renderer bound to one canvas. Call `render` again with a
  * new rotation/scale to re-render (e.g. after a rotate click) — any in-flight
  * render task for THIS renderer is cancelled first, per spec.
+ *
+ * `scale` controls how many PDF-point-to-pixel detail actually gets drawn
+ * (sharpness); `cssWidth`/`cssHeight` control how big the canvas ELEMENT sits
+ * on screen. Passing a `scale` higher than what `cssWidth`/`cssHeight` implies
+ * renders more pixels into the same on-screen box — that's the whole
+ * high-resolution-zoom mechanism (see PlanViewer.jsx): the box size (and so
+ * the coordinate system pageToScreenPoint/screenToPagePoint use) never
+ * changes, only the pixel density backing it does.
  */
 export function createPageRenderer(canvas) {
   let activeTask = null;
 
-  async function render({ pdfDocument, pageNumber, rotation, scale }) {
+  async function render({ pdfDocument, pageNumber, rotation, scale, cssWidth, cssHeight }) {
     const page = await pdfDocument.getPage(pageNumber);
     const viewport = page.getViewport({ scale, rotation });
 
@@ -65,24 +84,25 @@ export function createPageRenderer(canvas) {
       activeTask = null;
     }
 
-    const pixelRatio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    canvas.width = Math.ceil(viewport.width * pixelRatio);
-    canvas.height = Math.ceil(viewport.height * pixelRatio);
-    canvas.style.width = `${Math.ceil(viewport.width)}px`;
-    canvas.style.height = `${Math.ceil(viewport.height)}px`;
+    const outputScale = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    // Setting canvas.width/height (even to an unchanged value) clears the
+    // bitmap per the HTML canvas spec, so no separate clearRect is needed.
+    canvas.width = Math.floor(viewport.width * outputScale);
+    canvas.height = Math.floor(viewport.height * outputScale);
+    canvas.style.width = `${Math.ceil(cssWidth ?? viewport.width)}px`;
+    canvas.style.height = `${Math.ceil(cssHeight ?? viewport.height)}px`;
 
     const context = canvas.getContext("2d");
-    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    context.clearRect(0, 0, viewport.width, viewport.height);
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
-    const task = page.render({ canvasContext: context, viewport });
+    const task = page.render({ canvasContext: context, viewport, transform });
     activeTask = task;
     try {
       await task.promise;
     } finally {
       if (activeTask === task) activeTask = null;
     }
-    return { viewport, page };
+    return { viewport, page, outputScale };
   }
 
   function cancel() {
@@ -93,6 +113,40 @@ export function createPageRenderer(canvas) {
   }
 
   return { render, cancel };
+}
+
+// Backing-store safeguards for the high-resolution zoom re-render — well under
+// typical browser canvas limits (Chrome/Firefox allow roughly 16384px per
+// side and ~268M total pixels), leaving headroom rather than rendering right
+// up to the edge of what crashes a tab.
+export const MAX_RENDER_CANVAS_DIMENSION = 8000;
+export const MAX_RENDER_CANVAS_PIXELS = 30_000_000;
+
+/**
+ * Caps baseScale*zoomScale so the backing-store canvas (already multiplied by
+ * devicePixelRatio) can't exceed the safeguards above. Returns the actual
+ * scale to render at — equal to the requested scale whenever it's within
+ * limits, otherwise the largest safe scale.
+ */
+export function clampSharpRenderScale({ baseScale, zoomScale, unrotatedWidth, unrotatedHeight, rotation, pixelRatio = 1 }) {
+  const requestedScale = baseScale * zoomScale;
+  if (!unrotatedWidth || !unrotatedHeight || !requestedScale) return requestedScale;
+
+  const sideways = rotation === 90 || rotation === 270;
+  const width = sideways ? unrotatedHeight : unrotatedWidth;
+  const height = sideways ? unrotatedWidth : unrotatedHeight;
+
+  const backingWidth = width * requestedScale * pixelRatio;
+  const backingHeight = height * requestedScale * pixelRatio;
+
+  const dimensionLimit = Math.min(
+    MAX_RENDER_CANVAS_DIMENSION / backingWidth,
+    MAX_RENDER_CANVAS_DIMENSION / backingHeight,
+    1
+  );
+  const pixelLimit = Math.min(Math.sqrt(MAX_RENDER_CANVAS_PIXELS / (backingWidth * backingHeight)), 1);
+
+  return requestedScale * Math.min(dimensionLimit, pixelLimit);
 }
 
 /**

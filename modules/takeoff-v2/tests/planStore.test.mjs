@@ -66,4 +66,24 @@ saveDocument({ ...doc2, fileName: "renamed.pdf" });
 assert.equal(getSelectedPageId(jobId), "page-3");
 assert.equal(listPages("doc-2").length, 1);
 
+// A full localStorage quota surfaces a clear, actionable message instead of
+// the raw browser DOMException text — this is what a real upload hits when
+// too many plan PDFs have accumulated (see the screenshot this regression
+// test was written from: "Failed to execute 'setItem' on 'Storage': ...
+// exceeded the quota").
+{
+  const realStorage = globalThis.window.localStorage;
+  globalThis.window.localStorage = {
+    ...realStorage,
+    setItem: () => {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    },
+  };
+  assert.throws(
+    () => saveDocument({ id: "doc-3", jobId, fileName: "too-big.pdf", originalFileUrl: "data:application/pdf;base64,CCCC", createdAt: new Date().toISOString() }),
+    /local storage is full/i
+  );
+  globalThis.window.localStorage = realStorage;
+}
+
 console.log("planStore.test.mjs passed");

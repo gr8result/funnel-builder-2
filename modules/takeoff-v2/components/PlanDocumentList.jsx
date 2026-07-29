@@ -2,6 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { createPlanDocument, createPlanPage, generateId } from "../types.js";
 import { loadPdfDocument, getPageDimensions } from "../viewer/PdfViewport.js";
 import { deleteDocument, saveDocument, savePages } from "../persistence/planStore.js";
+import { detectPageOrientation } from "../orientation/detectPageOrientation.js";
+import { applyOrientationResult } from "../orientation/applyOrientationResult.js";
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -49,13 +51,21 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
         for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
           setProgress(`Reading ${file.name} page ${pageNumber} of ${pdfDocument.numPages}...`);
           const { width, height } = await getPageDimensions(pdfDocument, pageNumber);
-          pages.push(createPlanPage({
+          let page = createPlanPage({
             id: generateId("page"),
             documentId: document.id,
             pageNumber,
             sourceWidth: width,
             sourceHeight: height,
-          }));
+          });
+
+          // First-import automatic orientation — never rerun on later reloads,
+          // only here or on an explicit Re-detect Orientation click.
+          setProgress(`Checking orientation for ${file.name} page ${pageNumber}...`);
+          const detection = await detectPageOrientation(pdfDocument, pageNumber, { sourceWidth: width, sourceHeight: height });
+          page = applyOrientationResult(page, detection);
+
+          pages.push(page);
         }
 
         saveDocument(document);
