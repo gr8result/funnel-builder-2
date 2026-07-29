@@ -211,6 +211,21 @@ async function main() {
     );
     record("second (manually traced) area appears in results panel", true);
 
+    // ---------- Persistence across reload ----------
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="takeoff-v2-page"]', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="results-panel"]', { timeout: 20000 });
+    const wallStatusAfterReload = await textOf(page, "wall-status");
+    record("exterior walls confirmed state persists across reload", (wallStatusAfterReload || "").includes("confirmed"), wallStatusAfterReload);
+    const areaRowsAfterReload = await page.$$eval('[data-testid="results-area-row"]', (els) => els.length);
+    record("both areas persist across reload", areaRowsAfterReload === 2, `count=${areaRowsAfterReload}`);
+    const resultsTextAfterReload = await page.$eval('[data-testid="results-panel"]', (el) => el.textContent);
+    record("external footprint / internal floor area figures persist across reload", /Internal floor area: 16.25/.test(resultsTextAfterReload), resultsTextAfterReload);
+    await shot(page, "10-after-reload");
+    // Layout may have shifted slightly after reload (banners etc.) — refetch
+    // rather than trust the pre-reload box for subsequent coordinate math.
+    Object.assign(viewportBox, await (await page.$('[data-testid="plan-viewport"]')).boundingBox());
+
     // ---------- Clear Exterior (with confirm) ----------
     await page.click('[data-testid="tool-select"]');
     await page.click('[data-testid="tool-clear-exterior"]');
