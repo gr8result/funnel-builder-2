@@ -1,118 +1,262 @@
 import Head from "next/head";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, FileText, RefreshCw, Shield } from "lucide-react";
+import {
+  Check,
+  ChevronRight,
+  CopyCheck,
+  FolderTree,
+  Home,
+  ListChecks,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  Users,
+} from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
-import {
-  DEFAULT_WARNING_THRESHOLD_PERCENT,
-  SELECTION_CATEGORIES,
-  calculateSelectionFinancials,
-  calculateSessionBudget,
-  clientPriceImpactLabel,
-  hasActiveDraftVariation,
-  numberValue,
-  roundMoney,
-} from "../../../lib/builders/selectionBudget";
 
-const INTERNAL_ROLES = new Set(["owner", "admin", "builder_admin", "builder_staff", "interior_designer"]);
-const COST_ROLES = new Set(["owner", "admin", "builder_admin", "builder_staff"]);
-const GST_RATE = 10;
+const STORAGE_KEY = "client_selections_top_down_stage1";
+const TEMPLATE_TIERS = ["Premium", "Premier", "Classic", "Custom"];
+const FLOOR_LEVELS = ["Ground floor", "First floor", "Second floor", "Basement", "External"];
+const DEFAULT_TEMPLATE_TIER = "Premier";
 
-const initialForm = {
-  category: "appliances",
-  subcategory: "",
-  room: "",
-  brand: "",
-  productName: "",
-  modelNumber: "",
-  supplierSku: "",
-  manufacturerSku: "",
-  imageUrl: "",
-  specificationUrl: "",
-  installationGuideUrl: "",
-  warrantyUrl: "",
-  finish: "",
-  colour: "",
-  description: "",
-  includedAllowance: 0,
-  supplierCost: 0,
-  builderCost: 0,
-  installationCost: 0,
-  builderMarkupPercent: 20,
-  fixedBuilderMarkup: 0,
-  gstRate: GST_RATE,
-  manualOverridePrice: "",
-  selectionStatus: "not_selected",
-  productId: "",
-  pricingTier: "",
-  supplierId: "",
-  supplierName: "",
-  sourceQuoteRowId: "",
-  requiredBy: "",
-  notes: "",
+const AREA_GROUPS = [
+  {
+    title: "External areas",
+    type: "external",
+    defaultFloor: "External",
+    areas: ["Exterior", "Front facade", "Rear exterior", "Alfresco", "Patio", "Porch", "Balcony", "Deck", "Pool area", "Pool house", "Outdoor kitchen", "Courtyard", "Driveway", "Paths", "Landscaping selections", "Retaining walls", "Fencing", "External stairs", "External lighting"],
+  },
+  {
+    title: "Garage and utility areas",
+    type: "utility",
+    defaultFloor: "Ground floor",
+    areas: ["Single garage", "Double garage", "Triple garage", "Workshop", "Carport", "Storage room", "Plant room", "Mud room"],
+  },
+  {
+    title: "Living areas",
+    type: "living",
+    defaultFloor: "Ground floor",
+    areas: ["Entry", "Foyer", "Living room", "Family room", "Lounge", "Media room", "Theatre room", "Rumpus room", "Games room", "Dining room", "Study", "Home office", "Library", "Activity room", "Retreat", "Upper living", "Hallways", "Internal stairs"],
+  },
+  {
+    title: "Kitchen and food preparation",
+    type: "kitchen",
+    defaultFloor: "Ground floor",
+    areas: ["Main kitchen", "Butler's pantry", "Walk-in pantry", "Scullery", "Upper kitchenette", "Secondary kitchen", "Bar", "Cellar"],
+  },
+  {
+    title: "Bedrooms",
+    type: "bedroom",
+    defaultFloor: "Ground floor",
+    areas: ["Master bedroom", "Bedroom 1", "Bedroom 2", "Bedroom 3", "Bedroom 4", "Bedroom 5", "Bedroom 6", "Guest bedroom", "Nursery"],
+  },
+  {
+    title: "Wet areas",
+    type: "wet_area",
+    defaultFloor: "Ground floor",
+    areas: ["Main bathroom", "Ensuite", "Ensuite 2", "Ensuite 3", "Powder room", "WC", "Laundry", "Mud room wash area", "Pool bathroom", "Outdoor bathroom"],
+  },
+  {
+    title: "Wardrobes and storage",
+    type: "wardrobe",
+    defaultFloor: "Ground floor",
+    areas: ["Walk-in robe", "Walk-in robe 2", "Built-in robe", "Linen cupboard", "Broom cupboard", "General storage", "Under-stair storage"],
+  },
+  {
+    title: "Other rooms",
+    type: "custom",
+    defaultFloor: "Ground floor",
+    areas: ["Custom area", "Custom room", "Custom external zone"],
+  },
+];
+
+const TEMPLATE_LIBRARY = {
+  bedroom: ["Flooring", "Carpet colour", "Internal door", "Door handle", "Paint colour", "Ceiling fan", "Power points", "Robe doors", "Robe fitout"],
+  wet_area: ["Tapware range", "Tapware finish", "Toilet", "Basin", "Shower hardware", "Accessories", "Floor tile", "Wall tile", "Grout", "Mirror", "Cabinet finish", "Handles", "Benchtop"],
+  kitchen: ["Oven", "Cooktop", "Rangehood", "Dishwasher", "Sink", "Mixer", "Cabinet profile", "Cabinet colour", "Handles", "Benchtop", "Splashback", "Pantry fitout", "Lighting", "Flooring"],
+  living: ["Flooring", "Skirting", "Internal door", "Door handle", "Paint colour", "Lighting", "Power points", "Window furnishings"],
+  external: ["Roof system", "Roof profile", "Roof colour", "Gutters", "Fascia", "Downpipes", "Cladding", "External paint", "External lighting", "External tiles or paving"],
+  utility: ["Flooring", "Internal door", "Door handle", "Paint colour", "Lighting", "Power points", "Storage fitout"],
+  wardrobe: ["Robe doors", "Robe internals", "Handles", "Lighting", "Paint colour"],
+  custom: ["Selection item", "Finish", "Colour"],
 };
 
-export default function BuilderClientSelectionsPage() {
-  const { workspaceId, role, loading: workspaceLoading } = useWorkspace();
-  const [projects, setProjects] = useState([]);
-  const [snapshots, setSnapshots] = useState([]);
-  const [boqItems, setBoqItems] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [sessions, setSessions] = useState([]);
-  const [selections, setSelections] = useState([]);
-  const [variations, setVariations] = useState([]);
-  const [budgetSettings, setBudgetSettings] = useState(null);
-  const [budgetSettingsForm, setBudgetSettingsForm] = useState({
-    privateUpgradeCeiling: 0,
-    warningThresholdPercent: DEFAULT_WARNING_THRESHOLD_PERCENT,
-    defaultBuilderMarkupPercent: 20,
-    defaultGstRate: GST_RATE,
-  });
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
-  const [selectedSessionId, setSelectedSessionId] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [form, setForm] = useState(initialForm);
-  const [confirmation, setConfirmation] = useState(null);
-  const [catalogueBrowserOpen, setCatalogueBrowserOpen] = useState(false);
-  const [showInternalSummary, setShowInternalSummary] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+const DEFAULT_GROUP_TYPES = [
+  { name: "Bedrooms", groupType: "Bedrooms", areaType: "bedroom" },
+  { name: "Wet areas", groupType: "Wet areas", areaType: "wet_area" },
+  { name: "Living areas", groupType: "Living areas", areaType: "living" },
+  { name: "Kitchens", groupType: "Kitchens", areaType: "kitchen" },
+  { name: "External areas", groupType: "External areas", areaType: "external" },
+  { name: "Garages", groupType: "Garages", areaType: "utility" },
+  { name: "Wardrobes", groupType: "Wardrobes", areaType: "wardrobe" },
+];
 
-  const isInternal = INTERNAL_ROLES.has(role);
-  const canViewCosts = COST_ROLES.has(role);
-  const canEditCosts = COST_ROLES.has(role);
-  const canEditBudgetSettings = COST_ROLES.has(role);
-  const isDesigner = role === "interior_designer";
-  const canManageSelections = isInternal || role === "client";
-  const safeSelectionColumns = "id, session_id, snapshot_id, category, subcategory, room, title, description, included_in_contract, selected_product_name, selected_colour, selected_finish, status, required_by, selected_at, approved_at, brand, product_name, model_number, image_url, specification_url, installation_guide_url, warranty_url, finish, colour, variation_amount, selection_status, is_included_selection, is_active, created_at, updated_at";
-  const internalSelectionColumns = `${safeSelectionColumns}, boq_item_id, variation_id, source_quote_row_id, allowance_amount, selected_supplier_id, selected_supplier_name, selected_details, metadata, supplier_sku, manufacturer_sku, included_allowance, gst_rate, calculated_client_selection_price, manual_override_price, has_manual_override, client_selection_price, notes, supplier_cost, builder_cost, installation_cost, builder_markup_percent, fixed_builder_markup`;
+const TEMPLATE_DEFAULTS = {
+  bedroom: {
+    Premier: {
+      flooring: "Premier carpet range",
+      carpet_colour: "Client selected colour",
+      internal_door: "Premier internal door",
+      door_handle: "Brushed nickel lever set",
+      paint_colour: "Whole-house wall colour",
+    },
+  },
+  wet_area: {
+    Premier: {
+      tapware_range: "Caroma Luna",
+      tapware_finish: "Brushed Nickel",
+      toilet: "Premier close coupled suite",
+      basin: "Semi inset basin",
+      floor_tile: "Premier porcelain floor tile",
+      wall_tile: "Premier ceramic wall tile",
+    },
+  },
+};
+
+function uid(prefix = "id") {
+  return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
+}
+
+function slug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function categoryObjects(type) {
+  return (TEMPLATE_LIBRARY[type] || TEMPLATE_LIBRARY.custom).map((name, index) => ({
+    id: slug(name),
+    name,
+    required: index < Math.max(3, Math.min(8, (TEMPLATE_LIBRARY[type] || []).length)),
+    sortOrder: index + 1,
+  }));
+}
+
+function emptyState() {
+  const areas = [];
+  let order = 1;
+  AREA_GROUPS.forEach((group) => {
+    group.areas.forEach((name) => {
+      areas.push({
+        id: uid("area"),
+        name,
+        type: group.type,
+        floor: group.defaultFloor,
+        quantity: 1,
+        groupId: "",
+        included: false,
+        required: true,
+        displayOrder: order,
+        notes: "",
+        template: null,
+        overrides: {},
+      });
+      order += 1;
+    });
+  });
+  return {
+    areas,
+    groups: DEFAULT_GROUP_TYPES.map((group) => ({ id: uid("group"), ...group, memberRoomIds: [], sharedSelections: {}, template: null })),
+    activeRoomId: "",
+    activeGroupId: "",
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normaliseState(value) {
+  const base = emptyState();
+  if (!value || typeof value !== "object") return base;
+  const areas = Array.isArray(value.areas) ? value.areas : base.areas;
+  const groups = Array.isArray(value.groups) ? value.groups : base.groups;
+  return {
+    ...base,
+    ...value,
+    areas: areas.map((area, index) => ({
+      ...area,
+      id: area.id || uid("area"),
+      quantity: Number(area.quantity || 1),
+      displayOrder: Number(area.displayOrder || index + 1),
+      overrides: area.overrides || {},
+    })),
+    groups: groups.map((group) => ({
+      ...group,
+      id: group.id || uid("group"),
+      memberRoomIds: Array.isArray(group.memberRoomIds) ? group.memberRoomIds : [],
+      sharedSelections: group.sharedSelections || {},
+    })),
+  };
+}
+
+function selectionSource(room, group, categoryId) {
+  if (room?.overrides?.[categoryId]) return { type: "override", value: room.overrides[categoryId].value };
+  if (group?.sharedSelections?.[categoryId]) return { type: "inherited", value: group.sharedSelections[categoryId].value };
+  if (room?.template?.defaults?.[categoryId]) return { type: "template", value: room.template.defaults[categoryId] };
+  return { type: "missing", value: "" };
+}
+
+export default function BuilderClientSelectionsPage() {
+  const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [session, setSession] = useState(null);
+  const [state, setState] = useState(() => emptyState());
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const includedRooms = useMemo(
+    () => state.areas.filter((area) => area.included).sort((a, b) => a.displayOrder - b.displayOrder),
+    [state.areas]
+  );
+  const activeRoom = includedRooms.find((room) => room.id === state.activeRoomId) || includedRooms[0] || null;
+  const activeGroup = state.groups.find((group) => group.id === (activeRoom?.groupId || state.activeGroupId)) || null;
+  const activeCategories = activeRoom ? categoryObjects(activeRoom.type) : [];
+
+  const projectProgress = useMemo(() => {
+    let required = 0;
+    let complete = 0;
+    includedRooms.forEach((room) => {
+      const group = state.groups.find((entry) => entry.id === room.groupId);
+      categoryObjects(room.type).forEach((category) => {
+        if (!category.required) return;
+        required += 1;
+        if (selectionSource(room, group, category.id).value) complete += 1;
+      });
+    });
+    return {
+      required,
+      complete,
+      percent: required ? Math.round((complete / required) * 100) : 0,
+    };
+  }, [includedRooms, state.groups]);
 
   useEffect(() => {
-    if (!workspaceId) {
-      setProjects([]);
-      setSelectedProjectId("");
+    if (!workspaceId && !workspaceLoading) {
+      setProjects([{ id: "demo-project", project_name: "Demo Project - Client Selections Stage 1", client_name: "Demo client" }]);
+      setSelectedProjectId("demo-project");
+      const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+      setState(normaliseState(saved ? JSON.parse(saved) : null));
+      setSession(null);
       return;
     }
-
+    if (!workspaceId) return;
     let cancelled = false;
     async function loadProjects() {
       setLoading(true);
       setError("");
       const { data, error: loadError } = await supabase
         .from("builder_commercial_projects")
-        .select("id, project_name, client_name, site_address, status, currency, original_estimate_total, contract_total, updated_at, created_at")
+        .select("id, project_name, client_name, site_address, status, updated_at")
         .eq("workspace_id", workspaceId)
         .order("updated_at", { ascending: false });
-
       if (cancelled) return;
       if (loadError) {
         setError(loadError.message || "Could not load projects.");
         setProjects([]);
-        setSelectedProjectId("");
       } else {
         const rows = data || [];
         setProjects(rows);
@@ -120,1356 +264,595 @@ export default function BuilderClientSelectionsPage() {
       }
       setLoading(false);
     }
-
     loadProjects();
     return () => {
       cancelled = true;
     };
-  }, [workspaceId]);
+  }, [workspaceId, workspaceLoading]);
 
   useEffect(() => {
-    if (!workspaceId || !selectedProjectId) {
-      setSnapshots([]);
-      setSessions([]);
-      setSelections([]);
-      setSuppliers([]);
-      setVariations([]);
-      setBudgetSettings(null);
-      setSelectedSnapshotId("");
-      setSelectedSessionId("");
+    if (!workspaceId && selectedProjectId === "demo-project") {
+      const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+      setState(normaliseState(saved ? JSON.parse(saved) : null));
       return;
     }
-
+    if (!workspaceId || !selectedProjectId) return;
     let cancelled = false;
-    async function loadProjectData() {
+    async function loadSelectionStructure() {
       setLoading(true);
+      setMessage("");
       setError("");
-      const sessionSelect = isInternal
-        ? "id, project_id, snapshot_id, session_name, original_estimate_total, private_upgrade_ceiling, current_net_selection_variation, current_updated_estimate_total, warning_threshold_percent, selection_budget_status, status, variation_id, metadata, created_at, updated_at"
-        : "id, project_id, snapshot_id, session_name, original_estimate_total, current_net_selection_variation, current_updated_estimate_total, status, variation_id, created_at, updated_at";
-      const [snapshotResult, sessionResult, selectionResult, supplierResult, variationResult, settingsResult] = await Promise.all([
-        supabase
-          .from("builder_estimate_snapshots")
-          .select("id, snapshot_number, snapshot_label, status, source_quote_number, final_quote_total, created_at")
-          .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
-          .order("snapshot_number", { ascending: false }),
-        supabase
-          .from("builder_selection_sessions")
-          .select(sessionSelect)
-          .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("builder_client_selections")
-          .select(isInternal ? internalSelectionColumns : safeSelectionColumns)
-          .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
-          .order("category", { ascending: true })
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("builder_suppliers")
-          .select("id, name, email, phone, trade_category, status")
-          .eq("workspace_id", workspaceId)
-          .order("name", { ascending: true }),
-        supabase
-          .from("builder_variations")
-          .select("id, variation_number, title, status, total, metadata, created_at")
-          .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
-          .order("created_at", { ascending: false }),
-        isInternal
-          ? supabase
-              .from("builder_selection_budget_settings")
-              .select("id, project_id, session_id, private_upgrade_ceiling, warning_threshold_percent, category_markup_overrides, default_builder_markup_percent, default_gst_rate, updated_at")
-              .eq("workspace_id", workspaceId)
-              .eq("project_id", selectedProjectId)
-              .order("updated_at", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-
+      const { data, error: loadError } = await supabase
+        .from("builder_selection_sessions")
+        .select("id, project_id, session_name, status, metadata, created_at, updated_at")
+        .eq("workspace_id", workspaceId)
+        .eq("project_id", selectedProjectId)
+        .order("updated_at", { ascending: false });
       if (cancelled) return;
-      const firstError = snapshotResult.error || sessionResult.error || selectionResult.error || supplierResult.error || variationResult.error || settingsResult.error;
-      if (firstError) {
-        setError(firstError.message || "Could not load selections.");
-        setSnapshots([]);
-        setSessions([]);
-        setSelections([]);
-        setSuppliers([]);
-        setVariations([]);
+      if (loadError) {
+        setError(loadError.message || "Could not load Client Selections structure.");
+        setSession(null);
+        setState(emptyState());
       } else {
-        const snapshotRows = snapshotResult.data || [];
-        const sessionRows = sessionResult.data || [];
-        setSnapshots(snapshotRows);
-        setSessions(sessionRows);
-        setSelections(selectionResult.data || []);
-        setSuppliers(supplierResult.data || []);
-        setVariations(variationResult.data || []);
-        setBudgetSettings((settingsResult.data || [])[0] || null);
-        setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || sessionRows[0]?.snapshot_id || snapshotRows[0]?.id || "");
-        setSelectedSessionId((current) => sessionRows.find((session) => session.id === current)?.id || sessionRows[0]?.id || "");
+        const existing = (data || []).find((row) => row.metadata?.architecture === "project_areas_room_templates") || (data || [])[0] || null;
+        setSession(existing);
+        setState(normaliseState(existing?.metadata?.[STORAGE_KEY]));
       }
       setLoading(false);
     }
-
-    loadProjectData();
+    loadSelectionStructure();
     return () => {
       cancelled = true;
     };
-  }, [isInternal, workspaceId, selectedProjectId]);
+  }, [workspaceId, selectedProjectId]);
 
-  useEffect(() => {
-    if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
-      setBoqItems([]);
-      return;
-    }
-
-    let cancelled = false;
-    async function loadBoqItems() {
-      const { data, error: loadError } = await supabase
-        .from("builder_boq_items")
-        .select("id, source_quote_row_id, source_section_name, item_name, description, quantity, unit, unit_rate, line_total, status, sort_order")
-        .eq("workspace_id", workspaceId)
-        .eq("project_id", selectedProjectId)
-        .eq("snapshot_id", selectedSnapshotId)
-        .order("sort_order", { ascending: true });
-
-      if (cancelled) return;
-      if (loadError) {
-        setError(loadError.message || "Could not load BOQ rows.");
-        setBoqItems([]);
-      } else {
-        setBoqItems(data || []);
-      }
-    }
-
-    loadBoqItems();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId, selectedProjectId, selectedSnapshotId]);
-
-  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
-  const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
-  const selectedSession = useMemo(() => sessions.find((session) => session.id === selectedSessionId) || null, [sessions, selectedSessionId]);
-  const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier])), [suppliers]);
-
-  useEffect(() => {
-    setBudgetSettingsForm({
-      privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling ?? budgetSettings?.private_upgrade_ceiling ?? 0,
-      warningThresholdPercent: selectedSession?.warning_threshold_percent ?? budgetSettings?.warning_threshold_percent ?? DEFAULT_WARNING_THRESHOLD_PERCENT,
-      defaultBuilderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? 20,
-      defaultGstRate: budgetSettings?.default_gst_rate ?? GST_RATE,
+  function updateState(updater) {
+    setState((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      return { ...next, updatedAt: new Date().toISOString() };
     });
-  }, [budgetSettings, selectedSession]);
+  }
 
-  useEffect(() => {
-    if (!budgetSettings) return;
-    setForm((current) => ({
+  function toggleArea(areaId) {
+    updateState((current) => {
+      const areas = current.areas.map((area) => {
+        if (area.id !== areaId) return area;
+        const included = !area.included;
+        return { ...area, included, groupId: included ? area.groupId : "" };
+      });
+      return { ...current, areas };
+    });
+  }
+
+  function updateArea(areaId, patch) {
+    updateState((current) => ({
       ...current,
-      builderMarkupPercent: current.builderMarkupPercent === initialForm.builderMarkupPercent
-        ? budgetSettings.default_builder_markup_percent ?? current.builderMarkupPercent
-        : current.builderMarkupPercent,
-      gstRate: current.gstRate === initialForm.gstRate
-        ? budgetSettings.default_gst_rate ?? current.gstRate
-        : current.gstRate,
+      areas: current.areas.map((area) => (area.id === areaId ? { ...area, ...patch } : area)),
     }));
-  }, [budgetSettings]);
-
-  const sessionSelections = useMemo(() => {
-    return selections.filter((selection) => {
-      if (selectedSessionId) return selection.session_id === selectedSessionId;
-      if (selectedSnapshotId) return selection.snapshot_id === selectedSnapshotId;
-      return true;
-    });
-  }, [selectedSessionId, selectedSnapshotId, selections]);
-
-  const activeSelections = useMemo(
-    () => sessionSelections.filter((selection) => selection.is_active !== false && !["replaced", "removed"].includes(selection.selection_status)),
-    [sessionSelections]
-  );
-
-  const budget = useMemo(() => {
-    const originalEstimateTotal = selectedSession?.original_estimate_total || selectedSnapshot?.final_quote_total || selectedProject?.original_estimate_total || selectedProject?.contract_total || 0;
-    return calculateSessionBudget({
-      originalEstimateTotal,
-      privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling || 0,
-      warningThresholdPercent: selectedSession?.warning_threshold_percent || DEFAULT_WARNING_THRESHOLD_PERCENT,
-      selections: activeSelections,
-    });
-  }, [activeSelections, selectedProject, selectedSession, selectedSnapshot]);
-
-  const categorySummaries = useMemo(() => {
-    const map = new Map();
-    activeSelections.forEach((selection) => {
-      const key = selection.category || "other";
-      const current = map.get(key) || { category: key, originalAllowance: 0, selectedValue: 0, netDifference: 0, rows: [] };
-      current.originalAllowance += numberValue(selection.included_allowance || selection.allowance_amount);
-      current.selectedValue += numberValue(selection.client_selection_price || selection.selected_details?.clientSelectionPrice);
-      current.netDifference += numberValue(selection.variation_amount || selection.selected_details?.variationAmount);
-      current.rows.push(selection);
-      map.set(key, current);
-    });
-    return Array.from(map.values()).map((summary) => ({
-      ...summary,
-      originalAllowance: roundMoney(summary.originalAllowance),
-      selectedValue: roundMoney(summary.selectedValue),
-      netDifference: roundMoney(summary.netDifference),
-    }));
-  }, [activeSelections]);
-
-  const filteredSelections = useMemo(() => {
-    return sessionSelections.filter((selection) => categoryFilter === "all" || selection.category === categoryFilter);
-  }, [categoryFilter, sessionSelections]);
-
-  const formFinancials = useMemo(() => calculateSelectionFinancials(form), [form]);
-  const activeSelectedByCategory = useMemo(() => {
-    const map = new Map();
-    activeSelections.forEach((selection) => {
-      if (["selected", "approved"].includes(selection.selection_status)) map.set(selection.category || "other", selection);
-    });
-    return map;
-  }, [activeSelections]);
-
-  function updateForm(field, value) {
-    setForm((current) => {
-      const next = { ...current, [field]: value };
-      if (field === "supplierId") next.supplierName = supplierById.get(value)?.name || next.supplierName;
-      if (field === "category") {
-        const override = budgetSettings?.category_markup_overrides?.[value] ?? selectedSession?.metadata?.categoryMarkupOverrides?.[value];
-        if (override !== undefined && override !== null) next.builderMarkupPercent = override;
-      }
-      if (field === "sourceQuoteRowId") {
-        const source = boqItems.find((item) => item.source_quote_row_id === value || item.id === value);
-        if (source) {
-          next.productName = next.productName || source.item_name || "";
-          next.description = next.description || source.description || source.item_name || "";
-          next.includedAllowance = next.includedAllowance || source.line_total || 0;
-          next.category = categoryFromSource(source.source_section_name) || next.category;
-        }
-      }
-      return next;
-    });
   }
 
-  // Populates the manual-entry form from a Client Selections Library catalogue product.
-  // The selection row still stores its own copy of every field (created below in
-  // createSelection) so later edits to the master product never change an already-saved
-  // selection — this only seeds the form once, at pick time.
-  function applyProductFromCatalogue(product, lookups) {
-    setForm((current) => ({
+  function addRoom(type = "bedroom") {
+    const group = AREA_GROUPS.find((entry) => entry.type === type) || AREA_GROUPS[AREA_GROUPS.length - 1];
+    const count = state.areas.filter((area) => area.type === type).length + 1;
+    const room = {
+      id: uid("area"),
+      name: type === "bedroom" ? `Bedroom ${count}` : "Custom room",
+      type,
+      floor: group.defaultFloor,
+      quantity: 1,
+      groupId: "",
+      included: true,
+      required: true,
+      displayOrder: state.areas.length + 1,
+      notes: "",
+      template: null,
+      overrides: {},
+    };
+    updateState((current) => ({ ...current, areas: [...current.areas, room], activeRoomId: room.id }));
+  }
+
+  function assignGroup(roomId, groupId) {
+    updateState((current) => ({
       ...current,
-      productId: product.id,
-      pricingTier: product.pricing_tier || "CLASSIC",
-      brand: lookups.manufacturerById.get(product.manufacturer_id) || current.brand,
-      productName: product.product_name || current.productName,
-      modelNumber: product.model || current.modelNumber,
-      colour: product.colour || current.colour,
-      finish: product.finish || current.finish,
-      imageUrl: product.primary_image_url || current.imageUrl,
-      specificationUrl: product.datasheet_pdf_url || current.specificationUrl,
-      description: product.description || current.description,
-      supplierName: lookups.supplierById.get(product.supplier_id) || current.supplierName,
-      includedAllowance: product.base_allowance ?? current.includedAllowance,
-      builderCost: product.cost_price ?? current.builderCost,
-      notes: product.client_notes || current.notes,
+      areas: current.areas.map((area) => (area.id === roomId ? { ...area, groupId } : area)),
+      groups: current.groups.map((group) => ({
+        ...group,
+        memberRoomIds: group.id === groupId
+          ? Array.from(new Set([...group.memberRoomIds, roomId]))
+          : group.memberRoomIds.filter((id) => id !== roomId),
+      })),
+      activeGroupId: groupId,
     }));
-    setCatalogueBrowserOpen(false);
   }
 
-  function clearCatalogueProduct() {
-    setForm((current) => ({ ...current, productId: "", pricingTier: "" }));
-  }
-
-  async function ensureSession() {
-    if (selectedSession) return selectedSession;
-    if (!workspaceId || !selectedProjectId || !selectedSnapshotId) throw new Error("Select a project and estimate snapshot first.");
-
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id || null;
-    const originalEstimateTotal = numberValue(selectedSnapshot?.final_quote_total || selectedProject?.original_estimate_total || selectedProject?.contract_total);
-    const payload = {
-      workspace_id: workspaceId,
-      project_id: selectedProjectId,
-      snapshot_id: selectedSnapshotId,
-      session_name: `${selectedProject?.project_name || "Project"} Selections`,
-      original_estimate_total: originalEstimateTotal,
-      private_upgrade_ceiling: 0,
-      current_net_selection_variation: 0,
-      current_updated_estimate_total: originalEstimateTotal,
-      warning_threshold_percent: DEFAULT_WARNING_THRESHOLD_PERCENT,
-      selection_budget_status: "within_budget",
-      created_by: userId,
-      updated_by: userId,
-    };
-    const { data, error: insertError } = await supabase.from("builder_selection_sessions").insert(payload).select("*").single();
-    if (insertError) throw insertError;
-    setSessions((current) => [data, ...current]);
-    setSelectedSessionId(data.id);
-    return data;
-  }
-
-  async function saveBudgetSettings() {
-    if (!canEditBudgetSettings) {
-      setError("Only builder roles can edit private budget settings.");
-      return;
-    }
-    if (!workspaceId || !selectedProjectId) {
-      setError("Select a project before saving budget settings.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const session = await ensureSession();
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const nextBudget = calculateSessionBudget({
-        originalEstimateTotal: session.original_estimate_total,
-        privateUpgradeCeiling: budgetSettingsForm.privateUpgradeCeiling,
-        warningThresholdPercent: budgetSettingsForm.warningThresholdPercent,
-        selections: activeSelections,
-      });
-      const now = new Date().toISOString();
-      const oldValue = {
-        privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling ?? budgetSettings?.private_upgrade_ceiling ?? 0,
-        warningThresholdPercent: selectedSession?.warning_threshold_percent ?? budgetSettings?.warning_threshold_percent ?? DEFAULT_WARNING_THRESHOLD_PERCENT,
-        defaultBuilderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? 20,
-        defaultGstRate: budgetSettings?.default_gst_rate ?? GST_RATE,
+  function autoGroup(areaType, groupName) {
+    const group = state.groups.find((entry) => entry.groupType === groupName) || state.groups.find((entry) => entry.areaType === areaType);
+    if (!group) return;
+    updateState((current) => {
+      const ids = current.areas.filter((area) => area.included && area.type === areaType).map((area) => area.id);
+      return {
+        ...current,
+        areas: current.areas.map((area) => (ids.includes(area.id) ? { ...area, groupId: group.id } : area)),
+        groups: current.groups.map((entry) => (entry.id === group.id ? { ...entry, memberRoomIds: ids } : entry)),
+        activeGroupId: group.id,
       };
-      const sessionPayload = {
-        private_upgrade_ceiling: numberValue(budgetSettingsForm.privateUpgradeCeiling),
-        warning_threshold_percent: numberValue(budgetSettingsForm.warningThresholdPercent) || DEFAULT_WARNING_THRESHOLD_PERCENT,
-        current_net_selection_variation: nextBudget.currentNetSelectionVariation,
-        current_updated_estimate_total: nextBudget.currentUpdatedEstimateTotal,
-        selection_budget_status: nextBudget.selectionBudgetStatus,
-        updated_by: userId,
-        updated_at: now,
-      };
-      const settingsPayload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        session_id: session.id,
-        private_upgrade_ceiling: sessionPayload.private_upgrade_ceiling,
-        warning_threshold_percent: sessionPayload.warning_threshold_percent,
-        category_markup_overrides: budgetSettings?.category_markup_overrides || {},
-        default_builder_markup_percent: numberValue(budgetSettingsForm.defaultBuilderMarkupPercent),
-        default_gst_rate: numberValue(budgetSettingsForm.defaultGstRate) || GST_RATE,
-        created_by: userId,
-        updated_by: userId,
-        updated_at: now,
-      };
-
-      const [{ data: updatedSession, error: sessionError }, { data: updatedSettings, error: settingsError }] = await Promise.all([
-        supabase
-          .from("builder_selection_sessions")
-          .update(sessionPayload)
-          .eq("workspace_id", workspaceId)
-          .eq("id", session.id)
-          .select("*")
-          .single(),
-        supabase
-          .from("builder_selection_budget_settings")
-          .upsert(settingsPayload, { onConflict: "workspace_id,project_id,session_id" })
-          .select("*")
-          .single(),
-      ]);
-      if (sessionError) throw sessionError;
-      if (settingsError) throw settingsError;
-
-      setSessions((current) => current.map((row) => row.id === session.id ? updatedSession : row));
-      setBudgetSettings(updatedSettings);
-      await auditHistory({
-        sessionId: session.id,
-        action: "upgrade_ceiling_changed",
-        userId,
-        oldValue,
-        newValue: settingsPayload,
-        reason: "Private budget settings updated",
-      });
-      setSuccess("Private budget settings saved.");
-    } catch (settingsError) {
-      setError(settingsError.message || "Could not save private budget settings.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function createSelection() {
-    if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
-      setError("Select a workspace, project and estimate snapshot first.");
-      return;
-    }
-    if (!form.productName.trim()) {
-      setError("Product name is required.");
-      return;
-    }
-    if (!canManageSelections) {
-      setError("Your role cannot update selections.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const session = await ensureSession();
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const supplier = form.supplierId ? supplierById.get(form.supplierId) : null;
-      const source = form.sourceQuoteRowId ? boqItems.find((item) => item.source_quote_row_id === form.sourceQuoteRowId || item.id === form.sourceQuoteRowId) : null;
-      const financials = calculateSelectionFinancials(form);
-      const payload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        snapshot_id: selectedSnapshotId,
-        session_id: session.id,
-        boq_item_id: source?.id || null,
-        source_quote_row_id: source?.source_quote_row_id || form.sourceQuoteRowId || null,
-        product_id: form.productId || null,
-        pricing_tier: form.pricingTier || null,
-        category: form.category,
-        subcategory: form.subcategory.trim(),
-        room: form.room.trim(),
-        title: form.productName.trim(),
-        description: form.description.trim(),
-        included_in_contract: financials.variationAmount === 0,
-        allowance_amount: financials.includedAllowance,
-        selected_product_name: form.productName.trim(),
-        selected_supplier_id: form.supplierId || null,
-        selected_supplier_name: supplier?.name || form.supplierName.trim(),
-        selected_colour: form.colour.trim(),
-        selected_finish: form.finish.trim(),
-        brand: form.brand.trim(),
-        product_name: form.productName.trim(),
-        model_number: form.modelNumber.trim(),
-        supplier_sku: form.supplierSku.trim(),
-        manufacturer_sku: form.manufacturerSku.trim(),
-        image_url: form.imageUrl.trim(),
-        specification_url: form.specificationUrl.trim(),
-        installation_guide_url: form.installationGuideUrl.trim(),
-        warranty_url: form.warrantyUrl.trim(),
-        finish: form.finish.trim(),
-        colour: form.colour.trim(),
-        included_allowance: financials.includedAllowance,
-        supplier_cost: canEditCosts ? numberValue(form.supplierCost) : 0,
-        builder_cost: canEditCosts ? numberValue(form.builderCost) : 0,
-        installation_cost: numberValue(form.installationCost),
-        builder_markup_percent: canEditCosts ? numberValue(form.builderMarkupPercent) : 0,
-        fixed_builder_markup: canEditCosts ? numberValue(form.fixedBuilderMarkup) : 0,
-        gst_rate: financials.gstRate,
-        calculated_client_selection_price: financials.calculatedClientSelectionPrice,
-        manual_override_price: financials.hasManualOverride ? financials.clientSelectionPrice : null,
-        has_manual_override: financials.hasManualOverride,
-        client_selection_price: financials.clientSelectionPrice,
-        variation_amount: financials.variationAmount,
-        selection_status: form.selectionStatus,
-        is_included_selection: financials.isIncludedSelection,
-        is_active: true,
-        status: form.selectionStatus === "not_selected" ? "pending" : form.selectionStatus,
-        selected_at: ["selected", "approved"].includes(form.selectionStatus) ? new Date().toISOString() : null,
-        approved_at: form.selectionStatus === "approved" ? new Date().toISOString() : null,
-        selected_details: {
-          clientSelectionPrice: financials.clientSelectionPrice,
-          calculatedClientSelectionPrice: financials.calculatedClientSelectionPrice,
-          variationAmount: financials.variationAmount,
-          impactType: financials.impactType,
-          hasManualOverride: financials.hasManualOverride,
-        },
-        required_by: form.requiredBy || null,
-        metadata: { source: "selections_budget_manager" },
-        notes: isInternal ? form.notes.trim() : "",
-        created_by: userId,
-        updated_by: userId,
-      };
-
-      const { data, error: insertError } = await supabase
-        .from("builder_client_selections")
-        .insert(payload)
-        .select("*")
-        .single();
-      if (insertError) throw insertError;
-
-      const nextSelections = [data, ...activeSelections];
-      await persistBudget(session.id, nextSelections, userId);
-      await auditHistory({
-        sessionId: session.id,
-        selectionId: data.id,
-        action: "product_selected",
-        userId,
-        oldValue: null,
-        newValue: payload,
-        newVariation: financials.variationAmount,
-        reason: "Selection product created",
-      });
-      setSelections((current) => [data, ...current]);
-      setForm({
-        ...initialForm,
-        category: form.category,
-        builderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? initialForm.builderMarkupPercent,
-        gstRate: budgetSettings?.default_gst_rate ?? initialForm.gstRate,
-      });
-      setSuccess(`Selection "${data.product_name || data.title}" saved.`);
-    } catch (saveError) {
-      setError(saveError.message || "Could not save selection.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function openSelectionConfirm(selection) {
-    const current = budget.currentNetSelectionVariation;
-    const previous = activeSelectedByCategory.get(selection.category);
-    const previousVariation = previous && previous.id !== selection.id ? numberValue(previous.variation_amount) : 0;
-    const next = roundMoney(current - previousVariation + numberValue(selection.variation_amount));
-    setConfirmation({ selection, previous: previous?.id !== selection.id ? previous : null, current, next });
-  }
-
-  async function confirmSelection() {
-    if (!confirmation) return;
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const { selection, previous } = confirmation;
-      const now = new Date().toISOString();
-
-      if (previous) {
-        const { error: previousError } = await supabase
-          .from("builder_client_selections")
-          .update({ selection_status: "replaced", status: "changed", is_active: false, updated_by: userId, updated_at: now })
-          .eq("workspace_id", workspaceId)
-          .eq("id", previous.id);
-        if (previousError) throw previousError;
-      }
-
-      const { data: updated, error: updateError } = await supabase
-        .from("builder_client_selections")
-        .update({ selection_status: "selected", status: "selected", selected_at: now, is_active: true, updated_by: userId, updated_at: now })
-        .eq("workspace_id", workspaceId)
-        .eq("id", selection.id)
-        .select(isInternal ? internalSelectionColumns : safeSelectionColumns)
-        .single();
-      if (updateError) throw updateError;
-
-      const nextAll = selections.map((row) => {
-        if (previous && row.id === previous.id) return { ...row, selection_status: "replaced", status: "changed", is_active: false };
-        if (row.id === updated.id) return updated;
-        return row;
-      });
-      const nextActive = nextAll.filter((row) => row.session_id === selectedSessionId && row.is_active !== false && !["replaced", "removed"].includes(row.selection_status));
-      await persistBudget(selectedSessionId, nextActive, userId);
-      await auditHistory({
-        sessionId: selectedSessionId,
-        selectionId: updated.id,
-        previousSelectionId: previous?.id || null,
-        replacementSelectionId: updated.id,
-        action: previous ? "product_replaced" : "product_selected",
-        userId,
-        oldValue: previous || null,
-        newValue: updated,
-        previousVariation: previous ? numberValue(previous.variation_amount) : null,
-        newVariation: numberValue(updated.variation_amount),
-        reason: previous ? "Selection replaced from product card" : "Selection confirmed from product card",
-      });
-      setSelections(nextAll);
-      setConfirmation(null);
-      setSuccess(previous ? "Selection replaced and budget totals updated." : "Selection confirmed and budget totals updated.");
-    } catch (confirmError) {
-      setError(confirmError.message || "Could not confirm selection.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function persistBudget(sessionId, rows, userId) {
-    if (!sessionId) return;
-    const nextBudget = calculateSessionBudget({
-      originalEstimateTotal: budget.originalEstimateTotal,
-      privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling || 0,
-      warningThresholdPercent: selectedSession?.warning_threshold_percent || DEFAULT_WARNING_THRESHOLD_PERCENT,
-      selections: rows,
-    });
-    const sessionPayload = {
-      current_net_selection_variation: nextBudget.currentNetSelectionVariation,
-      current_updated_estimate_total: nextBudget.currentUpdatedEstimateTotal,
-      selection_budget_status: nextBudget.selectionBudgetStatus,
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
-    };
-    const { data, error: updateError } = await supabase
-      .from("builder_selection_sessions")
-      .update(sessionPayload)
-      .eq("workspace_id", workspaceId)
-      .eq("id", sessionId)
-      .select("*")
-      .single();
-    if (updateError) throw updateError;
-    setSessions((current) => current.map((session) => session.id === sessionId ? data : session));
-
-    const summaries = categorySummariesFromRows(rows).map((summary) => ({
-      workspace_id: workspaceId,
-      project_id: selectedProjectId,
-      session_id: sessionId,
-      category: summary.category,
-      original_allowance: summary.originalAllowance,
-      selected_value: summary.selectedValue,
-      net_difference: summary.netDifference,
-      created_by: userId,
-      updated_by: userId,
-    }));
-    if (isInternal && summaries.length) {
-      await supabase.from("builder_selection_categories").upsert(summaries, { onConflict: "workspace_id,session_id,category" });
-    }
-  }
-
-  async function auditHistory({ sessionId, selectionId = null, previousSelectionId = null, replacementSelectionId = null, action, userId, oldValue, newValue, previousVariation = null, newVariation = null, reason = "" }) {
-    await supabase.from("builder_selection_history").insert({
-      workspace_id: workspaceId,
-      project_id: selectedProjectId,
-      session_id: sessionId,
-      selection_id: selectionId,
-      previous_selection_id: previousSelectionId,
-      replacement_selection_id: replacementSelectionId,
-      action,
-      user_id: userId,
-      user_role: role,
-      changed_by: userId,
-      previous_variation: previousVariation,
-      new_variation: newVariation,
-      old_value: oldValue,
-      new_value: newValue,
-      reason,
-      created_by: userId,
-      updated_by: userId,
     });
   }
 
-  async function createDraftVariationFromSummary() {
-    if (!isInternal) {
-      setError("Only builder and designer roles can create selection variations.");
+  function createGroup() {
+    const group = { id: uid("group"), name: "Custom group", groupType: "Custom group", areaType: "custom", memberRoomIds: [], sharedSelections: {}, template: null };
+    updateState((current) => ({ ...current, groups: [...current.groups, group], activeGroupId: group.id }));
+  }
+
+  function updateGroup(groupId, patch) {
+    updateState((current) => ({
+      ...current,
+      groups: current.groups.map((group) => (group.id === groupId ? { ...group, ...patch } : group)),
+    }));
+  }
+
+  function applyTemplateToGroup(groupId, tier = DEFAULT_TEMPLATE_TIER) {
+    updateState((current) => {
+      const group = current.groups.find((entry) => entry.id === groupId);
+      if (!group) return current;
+      const defaults = TEMPLATE_DEFAULTS[group.areaType]?.[tier] || {};
+      const template = {
+        id: `${slug(tier)}_${group.areaType}_template`,
+        name: `${tier} ${group.groupType === "Wet areas" ? "Wet-area" : group.areaType.replace("_", " ")} template`,
+        tier,
+        version: "1.0",
+        source: "stage_1_template_library",
+        dateApplied: new Date().toISOString(),
+        defaults,
+      };
+      return {
+        ...current,
+        groups: current.groups.map((entry) => (entry.id === groupId ? { ...entry, template } : entry)),
+        areas: current.areas.map((area) => (group.memberRoomIds.includes(area.id) ? { ...area, template } : area)),
+      };
+    });
+  }
+
+  function applyTemplateToRoom(roomId, tier = DEFAULT_TEMPLATE_TIER) {
+    updateState((current) => ({
+      ...current,
+      areas: current.areas.map((area) => {
+        if (area.id !== roomId) return area;
+        const defaults = TEMPLATE_DEFAULTS[area.type]?.[tier] || {};
+        return {
+          ...area,
+          template: {
+            id: `${slug(tier)}_${area.type}_template`,
+            name: `${tier} ${area.type.replace("_", " ")} template`,
+            tier,
+            version: "1.0",
+            source: "stage_1_template_library",
+            dateApplied: new Date().toISOString(),
+            defaults,
+          },
+        };
+      }),
+    }));
+  }
+
+  function updateGroupSelection(groupId, categoryId, value) {
+    updateState((current) => ({
+      ...current,
+      groups: current.groups.map((group) => {
+        if (group.id !== groupId) return group;
+        return {
+          ...group,
+          sharedSelections: {
+            ...group.sharedSelections,
+            [categoryId]: {
+              id: uid("group_selection"),
+              categoryId,
+              value,
+              priceEffect: 0,
+              inheritedByRooms: group.memberRoomIds,
+              changedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }),
+    }));
+  }
+
+  function overrideRoomSelection(roomId, categoryId, value) {
+    updateState((current) => ({
+      ...current,
+      areas: current.areas.map((area) => {
+        if (area.id !== roomId) return area;
+        const group = current.groups.find((entry) => entry.id === area.groupId);
+        const original = group?.sharedSelections?.[categoryId]?.value || area.template?.defaults?.[categoryId] || "";
+        return {
+          ...area,
+          overrides: {
+            ...area.overrides,
+            [categoryId]: {
+              id: uid("room_override"),
+              categoryId,
+              value,
+              originalGroupValue: original,
+              reason: "Room-specific client selection",
+              changedAt: new Date().toISOString(),
+            },
+          },
+        };
+      }),
+    }));
+  }
+
+  function restoreRoomSelection(roomId, categoryId) {
+    updateState((current) => ({
+      ...current,
+      areas: current.areas.map((area) => {
+        if (area.id !== roomId) return area;
+        const overrides = { ...area.overrides };
+        delete overrides[categoryId];
+        return { ...area, overrides };
+      }),
+    }));
+  }
+
+  async function saveStructure() {
+    if (!workspaceId && selectedProjectId === "demo-project") {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setMessage("Saved locally for the demo project. Refresh the page to confirm the structure reloads.");
       return;
     }
-    const existingVariation = variations.find((variation) => variation.id === selectedSession?.variation_id) || null;
-    if (hasActiveDraftVariation(selectedSession, existingVariation)) {
-      setError(`This session already has a ${existingVariation?.status || "draft"} variation (${existingVariation?.variation_number || "in progress"}). Open it in Variations to review or adjust it instead of creating another.`);
-      return;
-    }
-    const rows = activeSelections.filter((selection) => numberValue(selection.variation_amount) !== 0);
-    if (!rows.length) {
-      setError("There are no upgrade or credit lines to send to Variations.");
-      return;
-    }
+    if (!workspaceId || !selectedProjectId) return;
     setSaving(true);
     setError("");
-    setSuccess("");
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const subtotal = roundMoney(rows.reduce((total, row) => total + variationExGst(row), 0));
-      const total = roundMoney(rows.reduce((sum, row) => sum + numberValue(row.variation_amount), 0));
-      const gstTotal = roundMoney(total - subtotal);
-      const variationPayload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        snapshot_id: selectedSnapshotId,
-        variation_number: nextVariationNumber(variations),
-        title: "Selections Summary Variation",
-        reason: "Client selections above/below original estimate",
-        status: "draft",
-        subtotal,
-        gst_total: gstTotal,
-        total,
-        margin_total: 0,
-        metadata: {
-          uiStatus: "draft",
-          source: "selections_budget_manager",
-          selectionSessionId: selectedSessionId,
-          netSelectionVariation: budget.currentNetSelectionVariation,
-          originalEstimateTotal: budget.originalEstimateTotal,
-          updatedEstimatedPrice: budget.currentUpdatedEstimateTotal,
-        },
-        notes: "Draft created from approved selections summary. Review before sending or approving.",
-        created_by: userId,
-        updated_by: userId,
-      };
-      const { data: variation, error: variationError } = await supabase.from("builder_variations").insert(variationPayload).select("*").single();
-      if (variationError) throw variationError;
-
-      const itemPayloads = rows.map((row) => ({
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        variation_id: variation.id,
-        snapshot_id: selectedSnapshotId,
-        boq_item_id: row.boq_item_id || null,
-        source_quote_row_id: row.source_quote_row_id || null,
-        source_section_name: titleCase(row.category),
-        description: `${titleCase(row.category)} - ${row.brand ? `${row.brand} ` : ""}${row.product_name || row.title}${row.model_number ? ` (${row.model_number})` : ""}`,
-        quantity: 1,
-        unit: "ea",
-        unit_cost: canViewCosts ? numberValue(row.builder_cost) + numberValue(row.installation_cost) : 0,
-        unit_price: variationExGst(row),
-        gst_rate: numberValue(row.gst_rate || GST_RATE),
-        cost_total: canViewCosts ? numberValue(row.builder_cost) + numberValue(row.installation_cost) : 0,
-        line_total: variationExGst(row),
-        status: "active",
-        metadata: {
-          source: "selections_budget_manager",
-          selectionId: row.id,
-          selectionSessionId: selectedSessionId,
-          category: row.category,
-          includedAllowance: numberValue(row.included_allowance || row.allowance_amount),
-          selectedClientPrice: numberValue(row.client_selection_price),
-          variationAmount: numberValue(row.variation_amount),
-          modelNumber: row.model_number || null,
-          imageUrl: row.image_url || null,
-        },
-        created_by: userId,
-      }));
-      const { error: itemError } = await supabase.from("builder_variation_items").insert(itemPayloads);
-      if (itemError) {
-        await supabase.from("builder_variations").delete().eq("workspace_id", workspaceId).eq("id", variation.id);
-        throw itemError;
-      }
-
-      await supabase
+    setMessage("");
+    const metadata = {
+      ...(session?.metadata || {}),
+      architecture: "project_areas_room_templates",
+      [STORAGE_KEY]: state,
+      deletion_report: {
+        removedPrimaryInterface: "Flat budget/product row Client Selections page",
+        preservedTables: ["builder_client_selections", "builder_selection_sessions", "builder_products", "builder_product_categories", "builder_estimate_snapshots", "builder_variations"],
+        migrationPath: "Existing selections remain in builder_client_selections and can be migrated into room/category entities.",
+        updatedAt: new Date().toISOString(),
+      },
+    };
+    if (session?.id) {
+      const { data, error: updateError } = await supabase
         .from("builder_selection_sessions")
-        .update({ status: "variation_created", variation_id: variation.id, updated_by: userId, updated_at: new Date().toISOString() })
+        .update({ metadata, session_name: "Client Selections - Project Areas and Rooms", status: "setup_in_progress", updated_at: new Date().toISOString() })
         .eq("workspace_id", workspaceId)
-        .eq("id", selectedSessionId);
-      await auditHistory({
-        sessionId: selectedSessionId,
-        action: "variation_created",
-        userId,
-        oldValue: null,
-        newValue: variationPayload,
-        newVariation: total,
-        reason: "Draft variation created from selections summary",
-      });
-      setVariations((current) => [variation, ...current]);
-      setSuccess(`Draft variation ${variation.variation_number} created.`);
-    } catch (variationError) {
-      setError(variationError.message || "Could not create draft variation.");
-    } finally {
-      setSaving(false);
+        .eq("id", session.id)
+        .select("id, project_id, session_name, status, metadata, created_at, updated_at")
+        .single();
+      if (updateError) setError(updateError.message || "Could not save Client Selections structure.");
+      else {
+        setSession(data);
+        setMessage("Saved. Project areas, groups, templates and overrides will reload with this project.");
+      }
+    } else {
+      const { data, error: insertError } = await supabase
+        .from("builder_selection_sessions")
+        .insert({
+          workspace_id: workspaceId,
+          project_id: selectedProjectId,
+          session_name: "Client Selections - Project Areas and Rooms",
+          status: "setup_in_progress",
+          metadata,
+        })
+        .select("id, project_id, session_name, status, metadata, created_at, updated_at")
+        .single();
+      if (insertError) setError(insertError.message || "Could not create Client Selections structure.");
+      else {
+        setSession(data);
+        setMessage("Created and saved the top-down Client Selections structure.");
+      }
     }
+    setSaving(false);
   }
-
-  const privateAlert = privateBudgetAlert(budget);
 
   return (
     <>
       <Head>
-        <title>Client Selections Budget Manager</title>
+        <title>Client Selections | Project Areas and Rooms</title>
       </Head>
-      <main style={styles.page}>
-        <header style={styles.header}>
+      <main className="screen">
+        <header className="topbar">
           <div>
-            <div style={styles.eyebrow}>Gr8 Result Client Selections</div>
-            <h1 style={styles.title}>Selections Budget Manager</h1>
-            <p style={styles.subtitle}>Compare product selections against the original estimate while keeping private budget controls visible only to authorised project roles.</p>
+            <p className="eyebrow">Client Selections</p>
+            <h1>Project Areas and Rooms</h1>
+            <p className="subcopy">Project first, then areas, room groups, templates, and detailed selections.</p>
           </div>
-          <div style={styles.headerActions}>
-            <Link href="/modules/builders/product-library" style={styles.secondaryLink}>Client Selections Library</Link>
-            <Link href="/modules/builders/selections-book" style={styles.secondaryLink}>Selections Book</Link>
-            {selectedProjectId && (
-              <Link href={`/modules/builders/inclusions-schedule/${selectedProjectId}`} style={styles.secondaryLink}>Inclusions Schedule</Link>
-            )}
-            <Link href="/modules/builders/variations" style={styles.primaryLink}>Variations</Link>
+          <div className="toolbar">
+            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} disabled={workspaceLoading || loading}>
+              {projects.length ? projects.map((project) => (
+                <option key={project.id} value={project.id}>{project.project_name || project.client_name || "Untitled project"}</option>
+              )) : <option value="">No projects found</option>}
+            </select>
+            <button onClick={saveStructure} disabled={!selectedProjectId || saving}>
+              {saving ? <RefreshCw size={16} /> : <Save size={16} />} Save
+            </button>
           </div>
         </header>
 
-        <section style={styles.controls}>
-          <label style={styles.field}>
-            <span style={styles.label}>Project</span>
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !projects.length}>
-              {!projects.length ? <option value="">No projects found</option> : null}
-              {projects.map((project) => <option key={project.id} value={project.id}>{project.project_name || "Untitled Project"}{project.client_name ? ` - ${project.client_name}` : ""}</option>)}
-            </select>
-          </label>
-          <label style={styles.field}>
-            <span style={styles.label}>Estimate Snapshot</span>
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !snapshots.length}>
-              {!snapshots.length ? <option value="">No snapshots found</option> : null}
-              {snapshots.map((snapshot) => <option key={snapshot.id} value={snapshot.id}>Snapshot {snapshot.snapshot_number}{snapshot.source_quote_number ? ` - ${snapshot.source_quote_number}` : ""}</option>)}
-            </select>
-          </label>
-          <label style={styles.field}>
-            <span style={styles.label}>Selections Session</span>
-            <select value={selectedSessionId} onChange={(event) => setSelectedSessionId(event.target.value)} style={styles.select} disabled={workspaceLoading || loading || !sessions.length}>
-              {!sessions.length ? <option value="">New session will be created</option> : null}
-              {sessions.map((session) => <option key={session.id} value={session.id}>{session.session_name || "Client Selections"} - {titleCase(session.status)}</option>)}
-            </select>
-          </label>
-          <label style={styles.field}>
-            <span style={styles.label}>Category</span>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} style={styles.select}>
-              <option value="all">All categories</option>
-              {SELECTION_CATEGORIES.map((category) => <option key={category} value={category}>{titleCase(category)}</option>)}
-            </select>
-          </label>
+        {(message || error) && <div className={error ? "notice error" : "notice"}>{error || message}</div>}
+
+        <section className="summaryBand">
+          <Metric label="Included rooms" value={includedRooms.length} />
+          <Metric label="Room groups" value={state.groups.filter((group) => group.memberRoomIds.length).length} />
+          <Metric label="Required complete" value={`${projectProgress.percent}%`} />
+          <Metric label="Remaining selections" value={Math.max(projectProgress.required - projectProgress.complete, 0)} />
         </section>
 
-        {error ? <div style={styles.error}>{error}</div> : null}
-        {success ? <div style={styles.success}>{success}</div> : null}
-        {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
-
-        <section style={styles.summaryDock}>
-          <FinancialTile label="Original Estimate Price" value={money(budget.originalEstimateTotal, selectedProject?.currency)} />
-          <FinancialTile label={budget.currentNetSelectionVariation < 0 ? "Selections Credit" : "Current Selections Above Estimate"} value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} tone={budget.currentNetSelectionVariation > 0 ? "upgrade" : budget.currentNetSelectionVariation < 0 ? "credit" : ""} />
-          <FinancialTile label="Updated Estimated Price" value={money(budget.currentUpdatedEstimateTotal, selectedProject?.currency)} emphasis />
-        </section>
-
-        {isInternal ? (
-          <section style={styles.privatePanel}>
-            <div style={styles.privateHeader}>
-              <Shield size={20} />
-              <div>
-                <h2 style={styles.panelTitle}>Private Budget Panel</h2>
-                <p style={styles.panelText}>Visible to builder and interior designer roles only.</p>
-              </div>
+        <section className="workspace">
+          <aside className="panel setupPanel">
+            <PanelTitle icon={<ListChecks size={18} />} title="Area Checklist" />
+            <div className="quickActions">
+              <button onClick={() => addRoom("bedroom")}><Plus size={15} /> Bedroom</button>
+              <button onClick={() => addRoom("custom")}><Plus size={15} /> Custom room</button>
+              <button onClick={() => addRoom("external")}><Plus size={15} /> External zone</button>
             </div>
-            {privateAlert ? <div style={{ ...styles.privateAlert, ...(budget.selectionBudgetStatus === "over_limit" ? styles.privateAlertDanger : {}) }}><AlertTriangle size={18} />{privateAlert}</div> : null}
-            <div style={styles.privateGrid}>
-              <MiniTotal label="Private Upgrade Ceiling" value={money(budget.privateUpgradeCeiling, selectedProject?.currency)} />
-              <MiniTotal label="Current Net Upgrades" value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} />
-              <MiniTotal label="Remaining Capacity" value={money(budget.remainingCapacity, selectedProject?.currency)} tone={budget.remainingCapacity < 0 ? "bad" : "good"} />
-              <MiniTotal label="Percentage Used" value={`${budget.percentageUsed}%`} />
-              <MiniTotal label="Budget Status" value={titleCase(budget.selectionBudgetStatus)} tone={budget.selectionBudgetStatus === "over_limit" ? "bad" : budget.selectionBudgetStatus === "within_budget" ? "good" : ""} />
-            </div>
-            {canEditBudgetSettings ? (
-              <div style={styles.settingsGrid}>
-                <NumberField label="Private Upgrade Ceiling" value={budgetSettingsForm.privateUpgradeCeiling} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, privateUpgradeCeiling: value }))} />
-                <NumberField label="Warning Threshold %" value={budgetSettingsForm.warningThresholdPercent} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, warningThresholdPercent: value }))} />
-                <NumberField label="Default Markup %" value={budgetSettingsForm.defaultBuilderMarkupPercent} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, defaultBuilderMarkupPercent: value }))} />
-                <NumberField label="Default GST %" value={budgetSettingsForm.defaultGstRate} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, defaultGstRate: value }))} />
-                <button type="button" onClick={saveBudgetSettings} disabled={saving} style={styles.primaryDarkButton}>Save Settings</button>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section style={styles.layout}>
-          {isInternal ? (
-            <section style={styles.panel}>
-              <div style={styles.panelHeader}>
-                <div>
-                  <h2 style={styles.panelTitle}>Add Product Option</h2>
-                  <p style={styles.panelText}>{isDesigner ? "Designer access can create selections and view budget warnings, but cost and margin fields remain controlled by builder roles." : "Store calculated and overridden client prices without exposing cost fields to clients."}</p>
-                </div>
-                <button type="button" onClick={() => setCatalogueBrowserOpen(true)} style={styles.primaryDarkButton}>Browse Client Selections Catalogue</button>
-              </div>
-              {form.productId ? (
-                <p style={styles.panelText}>Linked to catalogue product ({titleCase(form.pricingTier || "classic")}). <a href="#" onClick={(event) => { event.preventDefault(); clearCatalogueProduct(); }}>Clear and enter manually</a></p>
-              ) : null}
-              <div style={styles.formGrid}>
-                <SelectField label="Category" value={form.category} onChange={(value) => updateForm("category", value)} options={SELECTION_CATEGORIES.map((category) => ({ value: category, label: titleCase(category) }))} />
-                <TextField label="Room" value={form.room} onChange={(value) => updateForm("room", value)} />
-                <TextField label="Brand" value={form.brand} onChange={(value) => updateForm("brand", value)} />
-                <TextField label="Product Name" value={form.productName} onChange={(value) => updateForm("productName", value)} />
-                <TextField label="Model Number" value={form.modelNumber} onChange={(value) => updateForm("modelNumber", value)} />
-                <TextField label="Finish / Colour" value={form.finish || form.colour} onChange={(value) => { updateForm("finish", value); updateForm("colour", value); }} />
-                <TextField label="Image URL" value={form.imageUrl} onChange={(value) => updateForm("imageUrl", value)} wide />
-                <TextField label="Specification URL" value={form.specificationUrl} onChange={(value) => updateForm("specificationUrl", value)} />
-                <TextField label="Warranty URL" value={form.warrantyUrl} onChange={(value) => updateForm("warrantyUrl", value)} />
-                <TextField label="Installation Guide URL" value={form.installationGuideUrl} onChange={(value) => updateForm("installationGuideUrl", value)} />
-                <SelectField label="Supplier" value={form.supplierId} onChange={(value) => updateForm("supplierId", value)} options={[{ value: "", label: "Manual supplier" }, ...suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))]} />
-                <TextField label="Supplier Name" value={form.supplierName} onChange={(value) => updateForm("supplierName", value)} />
-                <SelectField label="Source Quote Row" value={form.sourceQuoteRowId} onChange={(value) => updateForm("sourceQuoteRowId", value)} options={[{ value: "", label: "No source row" }, ...boqItems.map((item) => ({ value: item.source_quote_row_id || item.id, label: `${item.source_quote_row_id || item.id} - ${item.item_name || item.description}` }))]} wide />
-                <TextArea label="Brief Description" value={form.description} onChange={(value) => updateForm("description", value)} wide />
-                <NumberField label="Included Allowance" value={form.includedAllowance} onChange={(value) => updateForm("includedAllowance", value)} />
-                {canEditCosts ? (
-                  <>
-                    <NumberField label="Supplier Cost" value={form.supplierCost} onChange={(value) => updateForm("supplierCost", value)} />
-                    <NumberField label="Builder Cost" value={form.builderCost} onChange={(value) => updateForm("builderCost", value)} />
-                    <NumberField label="Installation Cost" value={form.installationCost} onChange={(value) => updateForm("installationCost", value)} />
-                    <NumberField label="Builder Markup %" value={form.builderMarkupPercent} onChange={(value) => updateForm("builderMarkupPercent", value)} />
-                    <NumberField label="Fixed Builder Markup" value={form.fixedBuilderMarkup} onChange={(value) => updateForm("fixedBuilderMarkup", value)} />
-                  </>
-                ) : null}
-                <NumberField label="GST Rate %" value={form.gstRate} onChange={(value) => updateForm("gstRate", value)} />
-                <NumberField label="Manual Final Price" value={form.manualOverridePrice} onChange={(value) => updateForm("manualOverridePrice", value)} />
-                <SelectField label="Selection Status" value={form.selectionStatus} onChange={(value) => updateForm("selectionStatus", value)} options={["not_selected", "selected", "approved"].map((status) => ({ value: status, label: titleCase(status) }))} />
-                <TextArea label="Internal Notes" value={form.notes} onChange={(value) => updateForm("notes", value)} wide />
-              </div>
-              <div style={styles.calcStrip}>
-                <MiniTotal label="Client Price" value={money(formFinancials.clientSelectionPrice, selectedProject?.currency)} />
-                <MiniTotal label="Price Impact" value={clientPriceImpactLabel(formFinancials.variationAmount)} tone={formFinancials.variationAmount > 0 ? "bad" : formFinancials.variationAmount < 0 ? "good" : ""} />
-                {canViewCosts ? <MiniTotal label="Calculated Ex GST" value={money(formFinancials.priceBeforeGst, selectedProject?.currency)} /> : null}
-              </div>
-              <button type="button" onClick={createSelection} disabled={saving || loading} style={{ ...styles.createButton, ...((saving || loading) ? styles.disabledButton : {}) }}>
-                {saving ? "Saving..." : "Save Product Option"}
-              </button>
-            </section>
-          ) : null}
-
-          <section style={styles.panel}>
-            <div style={styles.panelHeader}>
-              <div>
-                <h2 style={styles.panelTitle}>Selection Product Cards</h2>
-                <p style={styles.panelText}>{filteredSelections.length} product option{filteredSelections.length === 1 ? "" : "s"} available for this session.</p>
-              </div>
-            </div>
-            {!filteredSelections.length ? <div style={styles.empty}>No selections have been created for this project yet.</div> : null}
-            <div style={styles.productGrid}>
-              {filteredSelections.map((selection) => (
-                <ProductCard
-                  key={selection.id}
-                  selection={selection}
-                  currency={selectedProject?.currency}
-                  isInternal={isInternal}
-                  canViewCosts={canViewCosts}
-                  onSelect={() => openSelectionConfirm(selection)}
-                />
-              ))}
-            </div>
-          </section>
-        </section>
-
-        <section style={styles.summarySection}>
-          <div style={styles.panelHeader}>
-            <div>
-              <h2 style={styles.panelTitle}>{isInternal && showInternalSummary ? "Internal Summary" : "Client Summary"}</h2>
-              <p style={styles.panelText}>Category totals are grouped from active selections only.</p>
-            </div>
-            <div style={styles.headerActions}>
-              {isInternal ? <button type="button" onClick={() => setShowInternalSummary((value) => !value)} style={styles.utilityButton}>{showInternalSummary ? "Client Summary" : "Internal Summary"}</button> : null}
-              {isInternal ? <button type="button" onClick={createDraftVariationFromSummary} disabled={saving || !activeSelections.length} style={styles.primaryDarkButton}><FileText size={16} />Create Draft Variation</button> : null}
-            </div>
-          </div>
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  {isInternal && showInternalSummary ? <th>Included Amount</th> : null}
-                  {isInternal && showInternalSummary ? <th>Selected Amount</th> : null}
-                  <th>{isInternal && showInternalSummary ? "Difference" : "Client Impact"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categorySummaries.map((summary) => (
-                  <tr key={summary.category}>
-                    <td>{titleCase(summary.category)}</td>
-                    {isInternal && showInternalSummary ? <td>{money(summary.originalAllowance, selectedProject?.currency)}</td> : null}
-                    {isInternal && showInternalSummary ? <td>{money(summary.selectedValue, selectedProject?.currency)}</td> : null}
-                    <td>{isInternal && showInternalSummary ? signedMoney(summary.netDifference, selectedProject?.currency) : categoryClientLabel(summary.netDifference, selectedProject?.currency)}</td>
-                  </tr>
+            {AREA_GROUPS.map((group) => (
+              <div key={group.title} className="areaGroup">
+                <h2>{group.title}</h2>
+                {state.areas.filter((area) => area.type === group.type).map((area) => (
+                  <div key={area.id} className={`areaRow${area.included ? " included" : ""}`}>
+                    <label>
+                      <input type="checkbox" checked={area.included} onChange={() => toggleArea(area.id)} />
+                      <span>{area.name}</span>
+                    </label>
+                    {area.included && (
+                      <div className="areaEdit">
+                        <input value={area.name} onChange={(event) => updateArea(area.id, { name: event.target.value })} aria-label="Area name" />
+                        <select value={area.floor} onChange={(event) => updateArea(area.id, { floor: event.target.value })}>
+                          {[...FLOOR_LEVELS, "Custom level"].map((floor) => <option key={floor} value={floor}>{floor}</option>)}
+                        </select>
+                        <input type="number" min="1" value={area.quantity} onChange={(event) => updateArea(area.id, { quantity: Number(event.target.value || 1) })} aria-label="Quantity" />
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={styles.bottomTotals}>
-            <MiniTotal label="Original Estimate" value={money(budget.originalEstimateTotal, selectedProject?.currency)} />
-            <MiniTotal label="Total Selection Upgrades" value={signedMoney(totalBySign(activeSelections, 1), selectedProject?.currency)} />
-            <MiniTotal label="Total Selection Credits" value={signedMoney(totalBySign(activeSelections, -1), selectedProject?.currency)} />
-            <MiniTotal label="Net Selection Variation" value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} />
-            <MiniTotal label="Updated Estimated Price" value={money(budget.currentUpdatedEstimateTotal, selectedProject?.currency)} />
-          </div>
+              </div>
+            ))}
+          </aside>
+
+          <section className="panel hierarchyPanel">
+            <PanelTitle icon={<FolderTree size={18} />} title="Floor Grouping" />
+            {FLOOR_LEVELS.map((floor) => {
+              const rooms = includedRooms.filter((room) => room.floor === floor);
+              if (!rooms.length) return null;
+              return (
+                <div key={floor} className="floorBlock">
+                  <h2>{floor.toUpperCase()}</h2>
+                  {rooms.map((room) => {
+                    const group = state.groups.find((entry) => entry.id === room.groupId);
+                    const categories = categoryObjects(room.type);
+                    const complete = categories.filter((category) => selectionSource(room, group, category.id).value).length;
+                    const percent = categories.length ? Math.round((complete / categories.length) * 100) : 0;
+                    return (
+                      <button key={room.id} className={`roomButton${activeRoom?.id === room.id ? " active" : ""}`} onClick={() => updateState((current) => ({ ...current, activeRoomId: room.id, activeGroupId: room.groupId }))}>
+                        <Home size={15} />
+                        <span>{room.name}</span>
+                        <small>{percent}%</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="panel groupPanel">
+            <PanelTitle icon={<Users size={18} />} title="Room Groups" />
+            <div className="quickActions">
+              <button onClick={() => autoGroup("bedroom", "Bedrooms")}><CopyCheck size={15} /> Group bedrooms</button>
+              <button onClick={() => autoGroup("wet_area", "Wet areas")}><CopyCheck size={15} /> Group wet areas</button>
+              <button onClick={createGroup}><Plus size={15} /> Custom group</button>
+            </div>
+            {state.groups.map((group) => {
+              const members = includedRooms.filter((room) => room.groupId === group.id);
+              return (
+                <div key={group.id} className={`groupBox${state.activeGroupId === group.id ? " active" : ""}`}>
+                  <input value={group.name} onChange={(event) => updateGroup(group.id, { name: event.target.value })} />
+                  <div className="muted">{group.groupType} / {members.length} rooms</div>
+                  <div className="memberGrid">
+                    {includedRooms.map((room) => (
+                      <label key={room.id}>
+                        <input type="checkbox" checked={room.groupId === group.id} onChange={(event) => assignGroup(room.id, event.target.checked ? group.id : "")} />
+                        {room.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="templateButtons">
+                    {TEMPLATE_TIERS.map((tier) => (
+                      <button key={tier} onClick={() => applyTemplateToGroup(group.id, tier)} className={group.template?.tier === tier ? "selected" : ""}>{tier}</button>
+                    ))}
+                  </div>
+                  {!!members.length && (
+                    <SharedSelections group={group} onChange={(categoryId, value) => updateGroupSelection(group.id, categoryId, value)} />
+                  )}
+                </div>
+              );
+            })}
+          </section>
         </section>
 
-        {confirmation ? (
-          <div style={styles.modalBackdrop}>
-            <div style={styles.modal}>
-              <h2 style={styles.modalTitle}>{confirmation.previous ? "Replace Selection" : "Confirm Selection"}</h2>
-              <p style={styles.modalText}>
-                This selection will {numberValue(confirmation.selection.variation_amount) >= 0 ? "add" : "credit"} {money(Math.abs(numberValue(confirmation.selection.variation_amount)), selectedProject?.currency)} {numberValue(confirmation.selection.variation_amount) >= 0 ? "above" : "below"} the amount included in the original estimate.
-              </p>
-              <div style={styles.modalTotals}>
-                <MiniTotal label="Current selections above estimate" value={signedMoney(confirmation.current, selectedProject?.currency)} />
-                <MiniTotal label="After this change" value={signedMoney(confirmation.next, selectedProject?.currency)} />
-              </div>
-              <div style={styles.modalActions}>
-                <button type="button" onClick={() => setConfirmation(null)} style={styles.utilityButton}>Choose Another</button>
-                <button type="button" onClick={confirmSelection} disabled={saving} style={styles.primaryDarkButton}><Check size={16} />Confirm Selection</button>
-              </div>
+        <section className="roomWorkspace">
+          <div className="roomHeader">
+            <div>
+              <p className="eyebrow">Client Selections Appointment</p>
+              <h2>{activeRoom?.name || "Select a room"}</h2>
+              <p>{activeRoom?.template?.name || "No template applied"} {activeGroup ? ` / ${activeGroup.name}` : ""}</p>
             </div>
+            {activeRoom && (
+              <div className="toolbar">
+                <select value={activeRoom.groupId || ""} onChange={(event) => assignGroup(activeRoom.id, event.target.value)}>
+                  <option value="">No group</option>
+                  {state.groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
+                <select value={activeRoom.template?.tier || ""} onChange={(event) => applyTemplateToRoom(activeRoom.id, event.target.value)}>
+                  <option value="">Apply template</option>
+                  {TEMPLATE_TIERS.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
+                </select>
+              </div>
+            )}
           </div>
-        ) : null}
 
-        {catalogueBrowserOpen ? (
-          <CatalogueBrowserModal
-            workspaceId={workspaceId}
-            onSelect={applyProductFromCatalogue}
-            onClose={() => setCatalogueBrowserOpen(false)}
-          />
-        ) : null}
+          {activeRoom ? (
+            <div className="categoryGrid">
+              {activeCategories.map((category) => {
+                const source = selectionSource(activeRoom, activeGroup, category.id);
+                const isOverride = source.type === "override";
+                return (
+                  <article key={category.id} className={`categoryCard ${source.value ? "complete" : "incomplete"}`}>
+                    <div>
+                      <h3>{category.name}</h3>
+                      <p>{source.value || "Selection required"}</p>
+                    </div>
+                    <span className={`pill ${source.type}`}>{source.type}</span>
+                    {activeGroup && (
+                      <div className="selectionInputs">
+                        <label>
+                          Group selection
+                          <input
+                            value={activeGroup.sharedSelections?.[category.id]?.value || ""}
+                            onChange={(event) => updateGroupSelection(activeGroup.id, category.id, event.target.value)}
+                            placeholder={`Apply ${category.name} to ${activeGroup.name}`}
+                          />
+                        </label>
+                        <label>
+                          Room override
+                          <input
+                            value={activeRoom.overrides?.[category.id]?.value || ""}
+                            onChange={(event) => overrideRoomSelection(activeRoom.id, category.id, event.target.value)}
+                            placeholder="Override this room only"
+                          />
+                        </label>
+                        {isOverride && (
+                          <button className="restore" onClick={() => restoreRoomSelection(activeRoom.id, category.id)}>
+                            <RotateCcw size={15} /> Restore to group value
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {isOverride && <div className="overrideNote">Overridden from {activeGroup?.name || "group"} selection</div>}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="emptyState"><ChevronRight size={20} /> Tick project areas to begin.</div>
+          )}
+        </section>
       </main>
+
+      <style jsx>{`
+        .screen { min-height: 100vh; background: #f5f7fb; color: #172033; padding: 24px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color-scheme: light; }
+        .topbar, .roomHeader { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 18px; }
+        h1, h2, h3, p { margin: 0; }
+        h1 { font-size: 32px; line-height: 1.1; }
+        h2 { font-size: 18px; }
+        h3 { font-size: 14px; }
+        .eyebrow { color: #2f6f73; font-size: 12px; text-transform: uppercase; font-weight: 800; letter-spacing: .08em; margin-bottom: 6px; }
+        .subcopy, .muted, .roomHeader p, .categoryCard p { color: #657188; font-size: 13px; }
+        .toolbar, .quickActions, .templateButtons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        button, select, input { border: 1px solid #d4dce8; border-radius: 7px; background: #fff !important; color: #172033 !important; min-height: 36px; padding: 8px 10px; font: inherit; }
+        button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 750; cursor: pointer; }
+        button:hover { border-color: #6ea4a8; }
+        button:disabled { opacity: .55; cursor: not-allowed; }
+        .toolbar button { background: #173f44 !important; color: white !important; border-color: #173f44; }
+        .notice { margin: 0 0 16px; padding: 12px 14px; border: 1px solid #b8d9c9; background: #eef9f3; border-radius: 8px; color: #175235; }
+        .notice.error { border-color: #f2b7b7; background: #fff1f1; color: #9c2020; }
+        .summaryBand { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .metric { background: white; border: 1px solid #dfe6ef; border-radius: 8px; padding: 14px; }
+        .metric strong { display: block; font-size: 24px; }
+        .metric span { color: #657188; font-size: 12px; text-transform: uppercase; font-weight: 800; }
+        .workspace { display: grid; grid-template-columns: minmax(340px, 1.3fr) minmax(260px, .8fr) minmax(360px, 1.2fr); gap: 14px; align-items: start; }
+        .panel, .roomWorkspace { background: white; border: 1px solid #dfe6ef; border-radius: 8px; padding: 16px; }
+        .setupPanel, .hierarchyPanel, .groupPanel { max-height: 72vh; overflow: auto; }
+        .panelTitle { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .areaGroup { border-top: 1px solid #edf1f6; padding-top: 14px; margin-top: 14px; }
+        .areaGroup h2, .floorBlock h2 { font-size: 12px; text-transform: uppercase; color: #657188; margin-bottom: 8px; letter-spacing: .06em; }
+        .areaRow { border: 1px solid transparent; border-radius: 8px; padding: 8px; }
+        .areaRow.included { background: #f7fbfb; border-color: #cfe4e5; }
+        .areaRow label, .memberGrid label { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+        .areaEdit { display: grid; grid-template-columns: minmax(140px, 1fr) 130px 58px; gap: 7px; margin-top: 8px; }
+        .areaEdit input, .areaEdit select { min-height: 32px; padding: 6px 8px; font-size: 12px; }
+        .floorBlock { margin-bottom: 16px; }
+        .roomButton { width: 100%; justify-content: flex-start; margin-bottom: 7px; }
+        .roomButton small { margin-left: auto; color: #657188; }
+        .roomButton.active { background: #173f44 !important; color: white !important; border-color: #173f44; }
+        .roomButton.active small { color: #dceff0; }
+        .groupBox { border: 1px solid #e1e7f0; border-radius: 8px; padding: 12px; margin-top: 10px; display: grid; gap: 10px; }
+        .groupBox.active { border-color: #6ea4a8; box-shadow: 0 0 0 3px #e7f3f3; }
+        .groupBox > input { font-weight: 800; }
+        .memberGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; max-height: 130px; overflow: auto; }
+        .templateButtons button { min-height: 30px; padding: 5px 8px; font-size: 12px; }
+        .templateButtons .selected { background: #173f44 !important; color: white !important; border-color: #173f44; }
+        .sharedBox { border-top: 1px solid #edf1f6; padding-top: 10px; display: grid; gap: 7px; }
+        .sharedBox label, .selectionInputs label { display: grid; gap: 5px; color: #657188; font-size: 12px; font-weight: 750; }
+        .roomWorkspace { margin-top: 14px; }
+        .categoryGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 12px; }
+        .categoryCard { border: 1px solid #e1e7f0; border-radius: 8px; padding: 12px; display: grid; gap: 10px; align-content: start; }
+        .categoryCard.complete { border-color: #a9d9bf; background: #fbfffc; }
+        .categoryCard.incomplete { background: #fff; }
+        .pill { width: fit-content; border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 850; text-transform: uppercase; background: #edf1f6; color: #657188; }
+        .pill.inherited { background: #e9f7f8; color: #175a61; }
+        .pill.override { background: #fff3d7; color: #87530a; }
+        .pill.template { background: #edf5ec; color: #2d6a31; }
+        .selectionInputs { display: grid; gap: 8px; }
+        .selectionInputs input { width: 100%; min-width: 0; }
+        .restore { justify-content: flex-start; color: #87530a; background: #fff8e7; border-color: #f2d89c; }
+        .overrideNote { border-left: 3px solid #d69222; padding-left: 8px; color: #87530a; font-size: 12px; font-weight: 750; }
+        .emptyState { min-height: 140px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #657188; }
+        @media (max-width: 1240px) {
+          .workspace, .categoryGrid, .summaryBand { grid-template-columns: 1fr 1fr; }
+          .groupPanel { grid-column: 1 / -1; }
+        }
+        @media (max-width: 760px) {
+          .screen { padding: 14px; }
+          .topbar, .roomHeader { display: grid; }
+          .workspace, .categoryGrid, .summaryBand { grid-template-columns: 1fr; }
+          .areaEdit { grid-template-columns: 1fr; }
+        }
+      `}</style>
     </>
   );
 }
 
-function CatalogueBrowserModal({ workspaceId, onSelect, onClose }) {
-  const [rows, setRows] = useState([]);
-  const [manufacturers, setManufacturers] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
-  const [search, setSearch] = useState("");
-  const [loadingRows, setLoadingRows] = useState(false);
+BuilderClientSelectionsPage.disableLayout = true;
 
-  useEffect(() => {
-    if (!workspaceId) return;
-    let cancelled = false;
-    async function load() {
-      setLoadingRows(true);
-      const [productResult, manufacturerResult, supplierResult] = await Promise.all([
-        supabase
-          .from("builder_products")
-          .select("*")
-          .eq("workspace_id", workspaceId)
-          .in("library_scope", ["CLIENT_SELECTION", "BOTH"])
-          .eq("active", true)
-          .eq("available_for_selection", true)
-          .order("product_name", { ascending: true })
-          .limit(500),
-        supabase.from("builder_product_manufacturers").select("id, manufacturer_name").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
-        supabase.from("builder_product_suppliers").select("id, supplier_name").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`),
-      ]);
-      if (cancelled) return;
-      setRows(productResult.data || []);
-      setManufacturers(manufacturerResult.data || []);
-      setSuppliers(supplierResult.data || []);
-      setLoadingRows(false);
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [workspaceId]);
-
-  const manufacturerById = useMemo(() => new Map(manufacturers.map((m) => [m.id, m.manufacturer_name])), [manufacturers]);
-  const supplierById = useMemo(() => new Map(suppliers.map((s) => [s.id, s.supplier_name])), [suppliers]);
-
-  const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter((row) => {
-      const text = [row.product_name, row.model, row.sku, manufacturerById.get(row.manufacturer_id), supplierById.get(row.supplier_id), row.description]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return text.includes(term);
-    });
-  }, [rows, search, manufacturerById, supplierById]);
-
+function Metric({ label, value }) {
   return (
-    <div style={styles.modalBackdrop}>
-      <div style={{ ...styles.modal, maxWidth: 860, width: "94vw", maxHeight: "88vh", overflowY: "auto" }}>
-        <h2 style={styles.modalTitle}>Client Selections Catalogue</h2>
-        <input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search name, brand, model, code..."
-          style={{ ...styles.input, marginBottom: 12, width: "100%" }}
-        />
-        {loadingRows ? (
-          <p style={styles.panelText}>Loading catalogue...</p>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-            {filteredRows.map((product) => {
-              const upgradeValue = product.upgrade_value_mode === "manual"
-                ? roundMoney(numberValue(product.upgrade_cost))
-                : roundMoney(numberValue(product.cost_price) - numberValue(product.base_allowance));
-              return (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => onSelect(product, { manufacturerById, supplierById })}
-                  style={{ ...styles.productCard, textAlign: "left", cursor: "pointer" }}
-                >
-                  <div style={styles.productImageWrap}>
-                    <img
-                      src={product.primary_image_url || `https://placehold.co/320x220/e2e8f0/334155?text=${encodeURIComponent(product.product_name || "Product")}`}
-                      alt={product.product_name || ""}
-                      style={styles.productImage}
-                    />
-                  </div>
-                  <div style={styles.productBody}>
-                    <strong>{product.product_name}</strong>
-                    <div style={styles.panelText}>{[manufacturerById.get(product.manufacturer_id), product.model].filter(Boolean).join(" · ")}</div>
-                    <div style={styles.panelText}>{titleCase(product.pricing_tier || "classic")} tier · {clientPriceImpactLabel(upgradeValue)}</div>
-                  </div>
-                </button>
-              );
-            })}
-            {!filteredRows.length && <p style={styles.panelText}>No catalogue products match this search.</p>}
-          </div>
-        )}
-        <div style={styles.modalActions}>
-          <button type="button" onClick={onClose} style={styles.utilityButton}>Close</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProductCard({ selection, currency, isInternal, canViewCosts, onSelect }) {
-  const variation = numberValue(selection.variation_amount || selection.selected_details?.variationAmount);
-  const status = selection.selection_status || selection.status || "not_selected";
-  const productName = selection.product_name || selection.selected_product_name || selection.title;
-  const imageUrl = selection.image_url || `https://placehold.co/640x420/e2e8f0/334155?text=${encodeURIComponent(productName || "Selection")}`;
-  return (
-    <article style={{ ...styles.productCard, ...(status === "selected" || status === "approved" ? styles.productCardSelected : {}) }}>
-      <div style={styles.productImageWrap}>
-        <img src={imageUrl} alt={productName || "Selection product"} style={styles.productImage} />
-        <span style={{ ...styles.impactBadge, ...(variation > 0 ? styles.badgeUpgrade : variation < 0 ? styles.badgeCredit : styles.badgeIncluded) }}>{clientPriceImpactLabel(variation)}</span>
-      </div>
-      <div style={styles.productBody}>
-        <div style={styles.cardHeader}>
-          <div>
-            <p style={styles.cardMeta}>{selection.brand || selection.selected_supplier_name || "Selection"}</p>
-            <h3 style={styles.cardTitle}>{productName}</h3>
-            <p style={styles.cardMeta}>{selection.model_number ? `Model ${selection.model_number}` : "Model not recorded"}</p>
-          </div>
-          <span style={{ ...styles.statusPill, ...statusStyle(status) }}>{titleCase(status)}</span>
-        </div>
-        <p style={styles.descriptionText}>{selection.description || [selection.finish, selection.colour].filter(Boolean).join(" / ") || "Product details available during the selections appointment."}</p>
-        <p style={styles.finishLine}>{selection.finish || selection.colour || selection.selected_finish || selection.selected_colour || "Finish to be confirmed"}</p>
-        <div style={styles.linkRow}>
-          <DocLink href={selection.specification_url} label="Specifications" />
-          <DocLink href={selection.warranty_url} label="Warranty" />
-          <DocLink href={selection.installation_guide_url} label="Install Guide" />
-        </div>
-        {isInternal ? (
-          <div style={styles.internalMini}>
-            <MiniTotal label="Original Allowance" value={money(selection.included_allowance || selection.allowance_amount, currency)} />
-            <MiniTotal label="Selected Value" value={money(selection.client_selection_price, currency)} />
-            {canViewCosts ? <MiniTotal label="Builder Cost" value={money(numberValue(selection.builder_cost) + numberValue(selection.installation_cost), currency)} /> : null}
-          </div>
-        ) : null}
-        <div style={styles.productActions}>
-          <button type="button" onClick={onSelect} style={styles.selectButton}>{status === "selected" || status === "approved" ? "Replace Selection" : "Select"}</button>
-          <button type="button" onClick={onSelect} style={styles.utilityButton}><RefreshCw size={15} />View Details</button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function DocLink({ href, label }) {
-  if (!href) return <span style={styles.disabledDoc}>{label}</span>;
-  return <a href={href} target="_blank" rel="noreferrer" style={styles.docLink}>{label}</a>;
-}
-
-function FinancialTile({ label, value, tone = "", emphasis = false }) {
-  return (
-    <div style={{ ...styles.financialTile, ...(emphasis ? styles.financialTileEmphasis : {}), ...(tone === "upgrade" ? styles.financialTileUpgrade : {}), ...(tone === "credit" ? styles.financialTileCredit : {}) }}>
-      <span>{label}</span>
+    <div className="metric">
       <strong>{value}</strong>
-    </div>
-  );
-}
-
-function MiniTotal({ label, value, tone = "" }) {
-  return (
-    <div style={{ ...styles.miniTotal, ...(tone === "bad" ? styles.miniTotalBad : {}), ...(tone === "good" ? styles.miniTotalGood : {}) }}>
       <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }
 
-function TextField({ label, value, onChange, wide = false }) {
+function PanelTitle({ icon, title }) {
   return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
-    </label>
+    <div className="panelTitle">
+      {icon}
+      <h2>{title}</h2>
+    </div>
   );
 }
 
-function NumberField({ label, value, onChange }) {
+function SharedSelections({ group, onChange }) {
+  const categories = categoryObjects(group.areaType).slice(0, 4);
   return (
-    <label style={styles.field}>
-      <span style={styles.label}>{label}</span>
-      <input type="number" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
-    </label>
+    <div className="sharedBox">
+      {categories.map((category) => (
+        <label key={category.id}>
+          Apply {category.name} to all rooms in this group
+          <input
+            value={group.sharedSelections?.[category.id]?.value || ""}
+            onChange={(event) => onChange(category.id, event.target.value)}
+            placeholder={`Group ${category.name}`}
+          />
+        </label>
+      ))}
+    </div>
   );
 }
-
-function TextArea({ label, value, onChange, wide = false }) {
-  return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} style={styles.textarea} />
-    </label>
-  );
-}
-
-function SelectField({ label, value, onChange, options, wide = false }) {
-  return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} style={styles.select}>
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function categorySummariesFromRows(rows) {
-  const map = new Map();
-  rows.forEach((selection) => {
-    const key = selection.category || "other";
-    const current = map.get(key) || { category: key, originalAllowance: 0, selectedValue: 0, netDifference: 0 };
-    current.originalAllowance += numberValue(selection.included_allowance || selection.allowance_amount);
-    current.selectedValue += numberValue(selection.client_selection_price);
-    current.netDifference += numberValue(selection.variation_amount);
-    map.set(key, current);
-  });
-  return Array.from(map.values()).map((summary) => ({
-    ...summary,
-    originalAllowance: roundMoney(summary.originalAllowance),
-    selectedValue: roundMoney(summary.selectedValue),
-    netDifference: roundMoney(summary.netDifference),
-  }));
-}
-
-function privateBudgetAlert(budget) {
-  if (budget.selectionBudgetStatus === "approaching_limit") return "The client is approaching their approved upgrade ceiling.";
-  if (budget.selectionBudgetStatus === "limit_reached") return "The client has reached their approved upgrade ceiling.";
-  if (budget.selectionBudgetStatus === "over_limit") return `The client has exceeded their approved upgrade ceiling by ${money(Math.abs(budget.remainingCapacity))}.`;
-  return "";
-}
-
-function variationExGst(selection) {
-  const gstRate = numberValue(selection.gst_rate || GST_RATE);
-  return roundMoney(numberValue(selection.variation_amount) / (1 + gstRate / 100));
-}
-
-function totalBySign(rows, sign) {
-  return roundMoney(rows.reduce((total, row) => {
-    const value = numberValue(row.variation_amount);
-    if (sign > 0 && value > 0) return total + value;
-    if (sign < 0 && value < 0) return total + value;
-    return total;
-  }, 0));
-}
-
-function categoryClientLabel(value, currency) {
-  const number = numberValue(value);
-  if (number < 0) return `Category Credit: ${signedMoney(number, currency)}`;
-  return `Category Upgrade: ${signedMoney(number, currency)}`;
-}
-
-function categoryFromSource(value) {
-  const key = String(value || "").toLowerCase();
-  return SELECTION_CATEGORIES.find((category) => key.includes(category.replace(/_/g, " "))) || "";
-}
-
-function nextVariationNumber(existing = []) {
-  const max = existing.reduce((highest, variation) => {
-    const match = String(variation.variation_number || "").match(/VAR-(\d+)/i);
-    return match ? Math.max(highest, Number(match[1])) : highest;
-  }, 0);
-  return `VAR-${String(max + 1).padStart(3, "0")}`;
-}
-
-function money(value, currency = "AUD") {
-  const number = Number(value);
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: currency || "AUD",
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(number) ? number : 0);
-}
-
-function signedMoney(value, currency = "AUD") {
-  const number = numberValue(value);
-  if (number === 0) return money(0, currency);
-  const formatted = money(Math.abs(number), currency);
-  return `${number > 0 ? "+" : "-"}${formatted}`;
-}
-
-function titleCase(value) {
-  return String(value || "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function statusStyle(status) {
-  if (status === "approved" || status === "selected") return { background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0" };
-  if (status === "replaced") return { background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe" };
-  if (status === "removed") return { background: "#fff1f2", color: "#b91c1c", borderColor: "#fecaca" };
-  return { background: "#f8fafc", color: "#475569", borderColor: "#cbd5e1" };
-}
-
-const styles = {
-  page: { minHeight: "100vh", background: "#f5f7fb", color: "#111827", padding: 18 },
-  header: { background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "22px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, boxShadow: "0 18px 45px rgba(17, 24, 39, 0.16)" },
-  eyebrow: { color: "#5eead4", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" },
-  title: { margin: "4px 0", fontSize: 34, lineHeight: 1.08, fontWeight: 850 },
-  subtitle: { margin: 0, color: "#cbd5e1", fontSize: 15, maxWidth: 760 },
-  headerActions: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" },
-  primaryLink: { background: "#ffffff", color: "#111827", border: "1px solid rgba(255,255,255,0.7)", borderRadius: 8, padding: "10px 14px", textDecoration: "none", fontWeight: 800, whiteSpace: "nowrap" },
-  secondaryLink: { background: "rgba(255,255,255,0.08)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 8, padding: "10px 14px", textDecoration: "none", fontWeight: 800, whiteSpace: "nowrap" },
-  controls: { marginTop: 16, background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 },
-  field: { display: "flex", flexDirection: "column", gap: 6, minWidth: 0 },
-  fieldWide: { display: "flex", flexDirection: "column", gap: 6, minWidth: 0, gridColumn: "1 / -1" },
-  label: { color: "#475569", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" },
-  select: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700 },
-  input: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700 },
-  textarea: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700, resize: "vertical" },
-  error: { marginTop: 12, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  success: { marginTop: 12, border: "1px solid #a7f3d0", background: "#ecfdf5", color: "#047857", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  notice: { marginTop: 12, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  summaryDock: { position: "sticky", top: 0, zIndex: 5, marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12, background: "rgba(245, 247, 251, 0.92)", padding: "8px 0", backdropFilter: "blur(8px)" },
-  financialTile: { background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 14, display: "flex", flexDirection: "column", gap: 5, minHeight: 82 },
-  financialTileEmphasis: { borderColor: "#0f766e", background: "#f0fdfa" },
-  financialTileUpgrade: { borderColor: "#fed7aa", background: "#fff7ed" },
-  financialTileCredit: { borderColor: "#bbf7d0", background: "#f0fdf4" },
-  privatePanel: { marginTop: 16, background: "#ffffff", border: "1px solid #99f6e4", borderRadius: 8, padding: 16 },
-  privateHeader: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12, color: "#0f766e" },
-  privateGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 },
-  settingsGrid: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #ccfbf1", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end" },
-  privateAlert: { marginBottom: 12, display: "flex", alignItems: "center", gap: 8, border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  privateAlertDanger: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
-  layout: { marginTop: 16, display: "grid", gridTemplateColumns: "minmax(360px, 0.85fr) minmax(0, 1.15fr)", gap: 16, alignItems: "start" },
-  panel: { background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, marginBottom: 14 },
-  panelTitle: { margin: 0, fontSize: 19, lineHeight: 1.2, fontWeight: 850 },
-  panelText: { margin: "4px 0 0", color: "#64748b", fontSize: 14, fontWeight: 600 },
-  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-  calcStrip: { marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
-  createButton: { width: "100%", marginTop: 14, background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "12px 14px", fontWeight: 900, cursor: "pointer" },
-  disabledButton: { opacity: 0.55, cursor: "not-allowed" },
-  productGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 },
-  productCard: { border: "1px solid #d7dee8", borderRadius: 8, overflow: "hidden", background: "#ffffff", display: "flex", flexDirection: "column" },
-  productCardSelected: { borderColor: "#0f766e", boxShadow: "0 10px 30px rgba(15, 118, 110, 0.12)" },
-  productImageWrap: { position: "relative", aspectRatio: "16 / 10", background: "#e2e8f0", overflow: "hidden" },
-  productImage: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  impactBadge: { position: "absolute", right: 10, bottom: 10, borderRadius: 8, padding: "7px 9px", fontSize: 13, fontWeight: 900, border: "1px solid" },
-  badgeUpgrade: { background: "#fff7ed", color: "#9a3412", borderColor: "#fed7aa" },
-  badgeCredit: { background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" },
-  badgeIncluded: { background: "#f8fafc", color: "#334155", borderColor: "#cbd5e1" },
-  productBody: { padding: 13, display: "flex", flexDirection: "column", gap: 10, flex: 1 },
-  cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
-  cardTitle: { margin: 0, fontSize: 17, fontWeight: 900 },
-  cardMeta: { margin: "2px 0", color: "#64748b", fontSize: 13, fontWeight: 750 },
-  descriptionText: { margin: 0, color: "#334155", fontSize: 14, fontWeight: 600, lineHeight: 1.45 },
-  finishLine: { margin: 0, color: "#111827", fontSize: 13, fontWeight: 850 },
-  linkRow: { display: "flex", gap: 8, flexWrap: "wrap" },
-  docLink: { border: "1px solid #cbd5e1", borderRadius: 8, color: "#1d4ed8", textDecoration: "none", padding: "6px 8px", fontSize: 12, fontWeight: 850 },
-  disabledDoc: { border: "1px solid #e2e8f0", borderRadius: 8, color: "#94a3b8", padding: "6px 8px", fontSize: 12, fontWeight: 850 },
-  internalMini: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 },
-  productActions: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" },
-  selectButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer" },
-  utilityButton: { display: "inline-flex", alignItems: "center", gap: 6, background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 11px", fontWeight: 850, cursor: "pointer" },
-  primaryDarkButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
-  miniTotal: { border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 11px", background: "#f8fafc", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
-  miniTotalBad: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
-  miniTotalGood: { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" },
-  empty: { border: "1px dashed #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#475569", padding: 18, fontWeight: 700 },
-  summarySection: { marginTop: 16, background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
-  tableWrap: { overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 8 },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  bottomTotals: { marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 },
-  statusPill: { border: "1px solid", borderRadius: 999, padding: "4px 8px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" },
-  modalBackdrop: { position: "fixed", inset: 0, zIndex: 20, background: "rgba(17, 24, 39, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 },
-  modal: { width: "min(560px, 100%)", background: "#ffffff", borderRadius: 8, padding: 18, boxShadow: "0 25px 70px rgba(17, 24, 39, 0.25)" },
-  modalTitle: { margin: 0, fontSize: 22, fontWeight: 900 },
-  modalText: { margin: "10px 0 0", color: "#334155", fontSize: 15, fontWeight: 650 },
-  modalTotals: { marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
-  modalActions: { marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" },
-};
