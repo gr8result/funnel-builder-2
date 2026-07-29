@@ -107,12 +107,12 @@ export default function ConstructionHub() {
             action="Open Production Flow"
           />
           <ToolCard
-            href="/modules/builders/product-library"
-            accent="#0f766e"
-            icon="CS"
-            title="Client Selections Library"
-            description="A visual client-selections catalogue with pricing tiers (Classic, Premier, Premium), suppliers and categories — separate from the Estimate Builder materials library."
-            action="Open Client Selections Library"
+            accent="#64748b"
+            icon="IS"
+            title="Inclusions & Selections — Rebuilding"
+            description="This workspace is being rebuilt using a new room-based workflow. Historical records are preserved."
+            action="Unavailable"
+            disabled
           />
         </div>
 
@@ -182,20 +182,25 @@ export default function ConstructionHub() {
   );
 }
 
-function ToolCard({ href, accent, icon, title, description, action, badge = "", compact = false }) {
-  return (
-    <Link href={href} style={compact ? S.estimateCardLink : S.cardLink}>
-      <div
-        style={compact ? S.estimateCard : S.card}
-        onMouseEnter={(event) => {
-          event.currentTarget.style.borderColor = accent;
-          event.currentTarget.style.transform = "translateY(-2px)";
-        }}
-        onMouseLeave={(event) => {
-          event.currentTarget.style.borderColor = "#1e293b";
-          event.currentTarget.style.transform = "none";
-        }}
-      >
+function ToolCard({ href, accent, icon, title, description, action, badge = "", compact = false, disabled = false }) {
+  const card = (
+    <div
+      aria-disabled={disabled ? "true" : undefined}
+      style={{
+        ...(compact ? S.estimateCard : S.card),
+        ...(disabled ? S.disabledCard : {}),
+      }}
+      onMouseEnter={(event) => {
+        if (disabled) return;
+        event.currentTarget.style.borderColor = accent;
+        event.currentTarget.style.transform = "translateY(-2px)";
+      }}
+      onMouseLeave={(event) => {
+        if (disabled) return;
+        event.currentTarget.style.borderColor = "#1e293b";
+        event.currentTarget.style.transform = "none";
+      }}
+    >
         {badge ? <div style={S.cardBadge}>{badge}</div> : null}
         <div style={{ ...S.cardIconWrap, background: `${accent}14`, border: `1px solid ${accent}30` }}>
           <span style={S.cardEmoji}>{icon}</span>
@@ -204,8 +209,10 @@ function ToolCard({ href, accent, icon, title, description, action, badge = "", 
         <p style={S.cardDesc}>{description}</p>
         <div style={{ ...(compact ? S.estimateCardFooter : S.cardFooter), background: accent }}>{action}</div>
       </div>
-    </Link>
   );
+
+  if (disabled) return <div style={compact ? S.estimateCardLink : S.cardLink}>{card}</div>;
+  return <Link href={href} style={compact ? S.estimateCardLink : S.cardLink}>{card}</Link>;
 }
 
 const S = {
@@ -335,6 +342,10 @@ const S = {
     transition: "border-color 0.15s, transform 0.15s",
     overflow: "hidden",
     minWidth: 280,
+  },
+  disabledCard: {
+    opacity: 0.64,
+    cursor: "not-allowed",
   },
   estimateSection: {
     width: "100%",

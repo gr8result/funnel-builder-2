@@ -556,7 +556,7 @@ export default function BuilderProductLibraryPage() {
   return (
     <>
       <Head>
-        <title>Client Selections Library | Gr8 Result</title>
+        <title>Product Library | Gr8 Result</title>
       </Head>
       <main className="page">
         <ProductLibraryToolbar

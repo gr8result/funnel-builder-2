@@ -15,8 +15,8 @@ export function ProductLibraryToolbar({
     <header className="toolbar">
       <div>
         <p className="eyebrow">Builders Platform</p>
-        <h1>Client Selections Library</h1>
-        <p className="subtitle">A visual client-selections catalogue organised by room, category and product type — not the Estimate Builder materials library.</p>
+        <h1>Product Library</h1>
+        <p className="subtitle">A reusable product catalogue organised by category, supplier, brand and pricing tier.</p>
       </div>
       <div className="actions">
         <div className="view-toggle">

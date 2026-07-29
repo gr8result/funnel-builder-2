@@ -156,11 +156,6 @@ const CommercialProcurementSchedulePage = dynamic(() => import("../../pages/modu
   loading: () => <CommercialModuleLoading label="Procurement Schedule" />,
 });
 
-const CommercialClientSelectionsPage = dynamic(() => import("../../pages/modules/builders/selections-book"), {
-  ssr: false,
-  loading: () => <CommercialModuleLoading label="Selections Book" />,
-});
-
 const PremierInclusionsCanvasEditor = dynamic(() => import("./standard-inclusions/PremierInclusionsCanvasEditor"), {
   ssr: false,
   loading: () => <div style={{ padding: 28, color: "#475569", fontWeight: 900 }}>Loading editable Premier Inclusions page...</div>,
@@ -333,15 +328,6 @@ const WORKSPACE_VISUALS = {
     border: "#fbcfe8",
     gradient: "linear-gradient(135deg, #db2777 0%, #f472b6 100%)",
     Icon: RefreshCw,
-  },
-  clientSelections: {
-    title: "Client Selections",
-    subtitle: "Open the premium tablet-friendly Selections Book for finishes, fixtures, colours and client choices.",
-    color: "#4f46e5",
-    soft: "#eef2ff",
-    border: "#c7d2fe",
-    gradient: "linear-gradient(135deg, #4f46e5 0%, #818cf8 100%)",
-    Icon: Home,
   },
   clientPage: {
     title: "Estimate Pack",
@@ -749,7 +735,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             ) : sheet.lastSavedAt ? (
               <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
             ) : null}
-            {(sheet.workbook.page === "quotation" || sheet.workbook.page === "clientSelections") && (
+            {sheet.workbook.page === "quotation" && (
               <div style={styles.quoteSearchControls}>
                 {sheet.workbook.page === "quotation" ? (
                   <>
@@ -767,9 +753,6 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                       />
                       Hide unused
                     </label>
-                    <button type="button" style={styles.secondaryButton} onClick={() => exportQuoteSelectionsCsv(sheet)}>
-                      Export to Selections CSV
-                    </button>
                   </>
                 ) : null}
                 <button
@@ -871,7 +854,6 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
           {sheet.workbook.page === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
           {sheet.workbook.page === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "clientSelections" && <CommercialClientSelectionsPage {...commercialModuleContext} />}
           {sheet.workbook.page === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
           {sheet.workbook.page === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
           {sheet.workbook.page === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
@@ -1113,13 +1095,6 @@ const DASHBOARD_WORKSPACE_CARDS = [
     page: "variations",
     visualKey: "variations",
     badge: "Changes",
-  },
-  {
-    title: "Client Selections",
-    subtitle: "Open the premium tablet-friendly Selections Book for finishes, fixtures, colours and client choices.",
-    page: "clientSelections",
-    visualKey: "clientSelections",
-    badge: "Choices",
   },
   {
     title: "Quote Approvals",

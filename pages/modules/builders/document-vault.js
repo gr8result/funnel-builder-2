@@ -304,7 +304,7 @@ export default function BuilderDocumentVaultPage() {
           </div>
           <div style={styles.heroActions}>
             <Link href="/modules/builders/quote-approvals" style={styles.secondaryLink}>Quote Approvals</Link>
-            <Link href="/modules/builders/client-selections" style={styles.secondaryLink}>Selections</Link>
+            <span style={{ ...styles.secondaryLink, opacity: 0.55, cursor: "not-allowed" }}>Inclusions & Selections — Rebuilding</span>
             <Link href="/modules/builders/budget-vs-actual" style={styles.primaryLink}>Budget vs Actual</Link>
           </div>
         </header>
@@ -650,4 +650,3 @@ const styles = {
   notes: { margin: "10px 0 0", color: "#334155", fontSize: 14, fontWeight: 650 },
   statusPill: { border: "1px solid", borderRadius: 999, padding: "4px 8px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" },
 };
-

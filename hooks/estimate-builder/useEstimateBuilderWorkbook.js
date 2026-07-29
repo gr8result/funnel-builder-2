@@ -18,7 +18,6 @@ const ESTIMATE_BUILDER_PAGES = [
   { key: "projectEstimate", label: "Project Estimate" },
   { key: "supplierQuotations", label: "Supplier Quotations" },
   { key: "boq", label: "BOQ" },
-  { key: "clientSelections", label: "Client Selections" },
   { key: "variations", label: "Variations" },
   { key: "purchaseOrders", label: "Purchase Orders" },
   { key: "procurement", label: "Procurement" },
