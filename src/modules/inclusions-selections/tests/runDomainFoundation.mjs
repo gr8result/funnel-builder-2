@@ -37,4 +37,5 @@ for (const sourcePath of collectTypeScriptFiles(moduleRoot)) {
 }
 
 await import(pathToFileURL(path.join(outRoot, "tests", "domainFoundation.test.js")).href);
+await import(pathToFileURL(path.join(outRoot, "tests", "createAreasStage.test.js")).href);
 console.log("Inclusions selections domain foundation tests passed.");

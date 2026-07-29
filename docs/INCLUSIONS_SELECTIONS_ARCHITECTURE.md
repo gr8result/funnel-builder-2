@@ -29,12 +29,18 @@ The module must not import from:
 
 ## Non-Goals In This Phase
 
-- No visible UI.
+- No visible UI outside the approved stage-one Create Selection Areas route.
 - No API routes.
 - No database migrations.
 - No Estimate Builder integration.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
+
+## Stage-One Route
+
+`/inclusions-selections/areas` is the first visible replacement workflow. It creates the project area register from standard area groups, standard area types, project levels and optional custom areas. `/inclusions-selections/templates` exists only as the next-stage placeholder.
+
+The route writes through `ProjectAreaRegisterRepository`. Until a database migration is approved, the active repository is the in-memory implementation and drafts persist only for the current application lifecycle. The route must not import retired selections modules, Product Library modules, Supplier Library modules or Estimate Builder modules.
 
 ## Services
 

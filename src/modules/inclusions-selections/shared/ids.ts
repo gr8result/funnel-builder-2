@@ -2,6 +2,7 @@ export type OrganisationId = string;
 export type ProjectId = string;
 export type AreaGroupId = string;
 export type AreaTypeId = string;
+export type ProjectLevelId = string;
 export type ProjectAreaId = string;
 export type TemplateId = string;
 export type RequirementId = string;

@@ -9,8 +9,7 @@ Project -> Areas and rooms -> Area groups -> Area types -> Templates -> Requirem
 Current scope:
 
 - Domain entities, value objects, fixtures, repository interfaces, and pure services.
-- No visible UI.
-- No route wiring.
+- Stage-one Create Selection Areas UI and route wiring.
 - No Supabase migrations.
 - No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
 - No Product Library table ownership changes.
@@ -19,10 +18,20 @@ Current scope:
 Key files:
 
 - `areas/`, `area-groups/`, `area-types/`: project area structure and validation.
+- `levels/`: project level identities for generated areas.
+- `components/`: focused stage-one Create Selection Areas UI components.
 - `templates/`, `requirements/`, `tiers/`: generated room requirements and inclusion tiers.
 - `products/`, `selections/`: product references, inheritance, and apply-to previews.
 - `pricing/`, `approvals/`, `snapshots/`, `estimate-export/`: commercial lifecycle through locked estimate export.
 - `repositories/`: persistence contracts and an in-memory test implementation.
 - `tests/domainFoundation.test.ts`: focused unit coverage for validation, generation, compatibility, pricing, locking, snapshots, and export.
+- `tests/createAreasStage.test.ts`: focused coverage for stage-one project levels, area quantities, validation, persistence scope and route isolation.
+
+Active routes:
+
+- `/inclusions-selections/areas`
+- `/inclusions-selections/templates` placeholder only
+
+The stage-one route requires an existing `organisationId` and `projectId`. It uses in-memory persistence until an approved database repository is added.
 
 Development rules live in `docs/INCLUSIONS_SELECTIONS_DEVELOPMENT_RULES.md`.

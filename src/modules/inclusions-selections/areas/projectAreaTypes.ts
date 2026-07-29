@@ -1,6 +1,7 @@
-import type { AreaGroupId, AreaTypeId, ProjectAreaId, ProjectScopedEntity } from "../shared/ids";
+import type { AreaGroupId, AreaTypeId, ProjectAreaId, ProjectLevelId, ProjectScopedEntity } from "../shared/ids";
 
 export type ProjectAreaStatus = "draft" | "active" | "archived";
+export type ProjectAreaSource = "standard_area" | "quantity_generated" | "duplicated_area" | "custom_area";
 
 export type ProjectArea = ProjectScopedEntity & {
   areaTypeId: AreaTypeId;
@@ -8,9 +9,14 @@ export type ProjectArea = ProjectScopedEntity & {
   name: string;
   parentAreaId?: ProjectAreaId;
   level: number;
+  levelId?: ProjectLevelId;
   displayOrder: number;
   status: ProjectAreaStatus;
   notes?: string;
+  source?: ProjectAreaSource;
+  sourceAreaTypeId?: AreaTypeId;
+  generatedOrdinal?: number;
+  hasDownstreamLinks?: boolean;
 };
 
 export type ProjectAreaTreeNode = ProjectArea & {
