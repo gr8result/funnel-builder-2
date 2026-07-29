@@ -85,6 +85,7 @@ export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
  * @property {"automatic"|"manual"} source
  * @property {boolean} confirmed         true for manually-drawn segments; false for a fresh (unreviewed) automatic detection
  * @property {string|null} confidence    "high"|"medium"|"low"|null (automatic detections only)
+ * @property {boolean} locked            locked segments cannot be edited until unlocked
  */
 
 /**
@@ -277,8 +278,8 @@ export function createWallVertex({ id, x, y }) {
   return { id, x, y };
 }
 
-export function createWallSegment({ id, aId, bId, wallType = "exterior", thicknessMm = null, source = "manual", confirmed = source === "manual", confidence = null }) {
-  return { id, aId, bId, wallType, thicknessMm, source, confirmed, confidence };
+export function createWallSegment({ id, aId, bId, wallType = "exterior", thicknessMm = null, source = "manual", confirmed = source === "manual", confidence = null, locked = false }) {
+  return { id, aId, bId, wallType, thicknessMm, source, confirmed, confidence, locked };
 }
 
 export function createMeasurement({ id, pointA, pointB, lengthMm, label = "" }) {

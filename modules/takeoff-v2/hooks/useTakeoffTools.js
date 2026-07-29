@@ -74,6 +74,10 @@ function wallGraphList(page) {
   ];
 }
 
+function vertexTouchesLockedSegment(graph, vertexId) {
+  return Boolean(graph?.segments?.some((segment) => segment.locked && (segment.aId === vertexId || segment.bId === vertexId)));
+}
+
 export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) {
   const [activeTool, setActiveToolState] = useState("select");
 
@@ -524,6 +528,26 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       return;
     }
 
+    const toleranceDocUnits = VERTEX_HIT_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01);
+    const byId = new Map(page.exteriorWalls.vertices.map((v) => [v.id, v]));
+    let bestSegment = null;
+    let bestSegmentDistance = toleranceDocUnits;
+    page.exteriorWalls.segments.forEach((segment) => {
+      const a = byId.get(segment.aId);
+      const b = byId.get(segment.bId);
+      if (!a || !b) return;
+      const { point: projected } = projectOntoWall(rawPoint, a, b);
+      const d = distance(projected, rawPoint);
+      if (d <= bestSegmentDistance) { bestSegment = segment; bestSegmentDistance = d; }
+    });
+    if (bestSegment) {
+      setSelectedField("exteriorWalls");
+      setSelectedSegmentId(bestSegment.id);
+      setSelectedVertexId(null);
+      setSelectedOpeningId(null);
+      return;
+    }
+
     const planCandidate = bestSnapCandidate(rawPoint, { toleranceScreenPx: VERTEX_HIT_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
     const finalPoint = planCandidate ? planCandidate.point : point;
 
@@ -542,8 +566,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // generic Edit tool passes the field explicitly based on which graph the
   // hit vertex belongs to.
   const beginWallVertexDrag = useCallback((vertexId, field = "exteriorWalls") => {
-    const vertex = page?.[field]?.vertices.find((v) => v.id === vertexId);
+    const graph = page?.[field];
+    const vertex = graph?.vertices.find((v) => v.id === vertexId);
     if (!vertex) return;
+    if (vertexTouchesLockedSegment(graph, vertexId)) return;
     setSelectedField(field);
     setSelectedVertexId(vertexId);
     setSelectedSegmentId(null);
@@ -607,12 +633,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const deleteSelectedWallVertex = useCallback(() => {
     if (!selectedVertexId) return;
+    if (vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)) return;
     mutateWallField(selectedField, (graph) => deleteVertex(graph, selectedVertexId));
     setSelectedVertexId(null);
-  }, [selectedVertexId, selectedField, mutateWallField]);
+  }, [selectedVertexId, selectedField, page, mutateWallField]);
 
   const deleteSelectedWallSegment = useCallback(() => {
     if (!selectedSegmentId) return;
+    const segment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId);
+    if (segment?.locked) return;
     const priorOpenings = page?.openings || [];
     const remainingOpenings = priorOpenings.filter((o) => o.wallId !== selectedSegmentId);
     mutateWallField(
@@ -627,7 +656,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // submenu) — deletes whichever selection the Edit Exterior tool currently
   // has, vertex taking priority since deleting a vertex already implies
   // removing its connected segments.
-  const canDeleteWallSelection = !!(selectedVertexId || selectedSegmentId);
+  const selectedSegment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId) || null;
+  const canDeleteWallSelection = !!(
+    (selectedVertexId && !vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)) ||
+    (selectedSegmentId && !selectedSegment?.locked)
+  );
   const deleteSelectedWallItem = useCallback(() => {
     if (selectedVertexId) deleteSelectedWallVertex();
     else if (selectedSegmentId) deleteSelectedWallSegment();
@@ -715,24 +748,78 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // Wall-type / thickness edits (generic Edit tool's context panel).
   const changeSelectedSegmentWallType = useCallback((wallType) => {
     if (!selectedSegmentId) return;
+    const segment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId);
+    if (segment?.locked) return;
     mutateWallField(selectedField, (graph) => changeSegmentWallType(graph, selectedSegmentId, wallType));
-  }, [selectedSegmentId, selectedField, mutateWallField]);
+  }, [selectedSegmentId, selectedField, page, mutateWallField]);
 
   const setSelectedSegmentThickness = useCallback((thicknessMm) => {
     if (!selectedSegmentId) return;
+    const segment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId);
+    if (segment?.locked) return;
     mutateWallField(selectedField, (graph) => setSegmentThickness(graph, selectedSegmentId, thicknessMm));
+  }, [selectedSegmentId, selectedField, page, mutateWallField]);
+
+  const setSelectedSegmentLocked = useCallback((locked) => {
+    if (!selectedSegmentId) return;
+    mutateWallField(selectedField, (graph) => ({
+      vertices: graph.vertices,
+      segments: graph.segments.map((s) => (s.id === selectedSegmentId ? { ...s, locked: Boolean(locked) } : s)),
+    }));
   }, [selectedSegmentId, selectedField, mutateWallField]);
+
+  const moveSelectedSegmentToWallGraph = useCallback((targetField) => {
+    if (!selectedSegmentId || targetField === selectedField) return;
+    const sourceGraph = page?.[selectedField];
+    const targetGraph = page?.[targetField] || EMPTY_WALL_GRAPH;
+    const segment = sourceGraph?.segments.find((s) => s.id === selectedSegmentId);
+    if (!sourceGraph || !segment || segment.locked) return;
+    const a = sourceGraph.vertices.find((v) => v.id === segment.aId);
+    const b = sourceGraph.vertices.find((v) => v.id === segment.bId);
+    if (!a || !b) return;
+
+    const targetWallType = targetField === "exteriorWalls" ? "exterior" : "internal";
+    const nextA = createWallVertex({ id: generateId("wv"), x: a.x, y: a.y });
+    const nextB = createWallVertex({ id: generateId("wv"), x: b.x, y: b.y });
+    const movedSegment = { ...segment, aId: nextA.id, bId: nextB.id, wallType: targetWallType };
+    const nextSource = {
+      ...sourceGraph,
+      vertices: sourceGraph.vertices,
+      segments: sourceGraph.segments.filter((s) => s.id !== selectedSegmentId),
+    };
+    nextSource.isClosed = isPerimeterClosed(nextSource.vertices, nextSource.segments);
+    const nextTarget = {
+      ...targetGraph,
+      vertices: [...(targetGraph.vertices || []), nextA, nextB],
+      segments: [...(targetGraph.segments || []), movedSegment],
+    };
+    nextTarget.isClosed = isPerimeterClosed(nextTarget.vertices, nextTarget.segments);
+    const targetOpeningGraph = targetField === "exteriorWalls" ? "exterior" : "internal";
+    const openings = (page?.openings || []).map((opening) =>
+      opening.wallId === selectedSegmentId ? { ...opening, wallGraph: targetOpeningGraph } : opening
+    );
+
+    pushUndo(selectedField, page?.[selectedField] ?? null);
+    commitPage({
+      [selectedField]: nextSource,
+      [targetField]: nextTarget,
+      openings,
+    });
+    setSelectedField(targetField);
+  }, [selectedSegmentId, selectedField, page, commitPage, pushUndo]);
 
   // WallContextPanel's "Convert to Manual" — an unreviewed automatic
   // detection becomes a confirmed, user-owned segment, matching what
   // Confirm Exterior Walls would eventually require anyway.
   const convertSelectedSegmentToManual = useCallback(() => {
     if (!selectedSegmentId) return;
+    const segment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId);
+    if (segment?.locked) return;
     mutateWallField(selectedField, (graph) => ({
       vertices: graph.vertices,
       segments: graph.segments.map((s) => (s.id === selectedSegmentId ? { ...s, source: "manual", confirmed: true, confidence: null } : s)),
     }));
-  }, [selectedSegmentId, selectedField, mutateWallField]);
+  }, [selectedSegmentId, selectedField, page, mutateWallField]);
 
   // WallContextPanel's "Split" — splits the selected segment at its
   // midpoint; a specific split point isn't available from a single button,
@@ -742,6 +829,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     if (!selectedSegmentId) return;
     const graph = page?.[selectedField];
     const segment = graph?.segments.find((s) => s.id === selectedSegmentId);
+    if (segment?.locked) return;
     const a = segment && graph.vertices.find((v) => v.id === segment.aId);
     const b = segment && graph.vertices.find((v) => v.id === segment.bId);
     if (!a || !b) return;
@@ -1273,6 +1361,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     deleteSelectedWallVertex, deleteSelectedWallSegment,
     canDeleteWallSelection, deleteSelectedWallItem,
     changeSelectedSegmentWallType, setSelectedSegmentThickness,
+    setSelectedSegmentLocked, moveSelectedSegmentToWallGraph,
     convertSelectedSegmentToManual, splitSelectedSegment,
     closeWallPerimeter, closeShapeError, closeShapeSuccessMessage, canCloseShape,
     canClearExterior, clearExteriorConfirmOpen, requestClearExterior, cancelClearExterior, confirmClearExterior,

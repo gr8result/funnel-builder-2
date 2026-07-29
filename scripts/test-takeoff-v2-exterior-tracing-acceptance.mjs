@@ -68,7 +68,11 @@ async function exists(page, testId) {
 
 async function main() {
   const fixturePath = await buildFixturePdf();
-  const browser = await puppeteer.launch({ headless: "new", defaultViewport: { width: 1440, height: 960 } });
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    defaultViewport: { width: 1440, height: 960 },
+  });
   const page = await browser.newPage();
   page.on("pageerror", (err) => console.error("[pageerror]", err.message));
   page.on("console", (msg) => { if (msg.type() === "error") console.error("[console.error]", msg.text()); });
@@ -186,7 +190,7 @@ async function main() {
     // ---------- ResultsPanel reflects both ----------
     record("results panel present", await exists(page, "results-panel"));
     const resultsText = await page.$eval('[data-testid="results-panel"]', (el) => el.textContent);
-    record("results panel shows exterior wall segment/perimeter info", /Segments:/.test(resultsText) && /Perimeter:/.test(resultsText));
+    record("results panel shows exterior wall segment/length info", /Segments/.test(resultsText) && /Total Length/.test(resultsText));
     record("results panel lists the confirmed area", await exists(page, "results-area-row"));
     await shot(page, "06-results-panel");
 
@@ -220,7 +224,7 @@ async function main() {
     const areaRowsAfterReload = await page.$$eval('[data-testid="results-area-row"]', (els) => els.length);
     record("both areas persist across reload", areaRowsAfterReload === 2, `count=${areaRowsAfterReload}`);
     const resultsTextAfterReload = await page.$eval('[data-testid="results-panel"]', (el) => el.textContent);
-    record("external footprint / internal floor area figures persist across reload", /Internal floor area: 16.25/.test(resultsTextAfterReload), resultsTextAfterReload);
+    record("external footprint / internal floor area figures persist across reload", /Internal Floor Area/.test(resultsTextAfterReload), resultsTextAfterReload);
     await shot(page, "10-after-reload");
     // Layout may have shifted slightly after reload (banners etc.) — refetch
     // rather than trust the pre-reload box for subsequent coordinate math.

@@ -185,6 +185,10 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
     await tools.runWallDetection(snapshot);
   }, [tools]);
 
+  const handleZoomToGeometry = useCallback((points) => {
+    planViewerRef.current?.zoomToPoints(points);
+  }, []);
+
   const handleOpenJob = useCallback(async () => {
     const result = await jobFile.open();
     if (!result.ok && result.message) setJobFileError(result.message);
@@ -263,7 +267,7 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
                 />
               </div>
               <div style={S.resultsSidebar}>
-                <ResultsPanel page={selectedPage} tools={tools} />
+                <ResultsPanel page={selectedPage} tools={tools} onZoomToGeometry={handleZoomToGeometry} />
               </div>
               </div>
               <ScaleCalibrationDialog

@@ -190,6 +190,36 @@ const PlanViewer = forwardRef(function PlanViewer(
         viewport: view.viewport,
       };
     },
+    zoomToPoints: (points = []) => {
+      if (!view.viewport || !containerRef.current || !Array.isArray(points) || points.length === 0) return;
+      const projected = points
+        .filter((point) => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+        .map((point) => pageToScreenPoint({ viewport: view.viewport, panX: 0, panY: 0, zoomScale: 1 }, point.x, point.y));
+      if (projected.length === 0) return;
+      const minX = Math.min(...projected.map((p) => p.x));
+      const maxX = Math.max(...projected.map((p) => p.x));
+      const minY = Math.min(...projected.map((p) => p.y));
+      const maxY = Math.max(...projected.map((p) => p.y));
+      const width = Math.max(maxX - minX, 24);
+      const height = Math.max(maxY - minY, 24);
+      const padding = 72;
+      const container = containerRef.current;
+      const nextZoom = Math.min(
+        MAX_ZOOM,
+        Math.max(
+          MIN_ZOOM,
+          Math.min((container.clientWidth - padding * 2) / width, (container.clientHeight - padding * 2) / height)
+        )
+      );
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      setView((current) => ({
+        ...current,
+        zoomScale: nextZoom,
+        panX: container.clientWidth / 2 - centerX * nextZoom,
+        panY: container.clientHeight / 2 - centerY * nextZoom,
+      }));
+    },
   }), [view.viewport]);
 
   const eventToPagePoint = useCallback((event) => {

@@ -149,7 +149,7 @@ export function splitSegment(graph, segmentId, point) {
   const segment = graph.segments.find((s) => s.id === segmentId);
   if (!segment) return graph;
   const vertex = createWallVertex({ id: generateId("wv"), x: point.x, y: point.y });
-  const shared = { wallType: segment.wallType, thicknessMm: segment.thicknessMm, source: segment.source, confirmed: segment.confirmed, confidence: segment.confidence };
+  const shared = { wallType: segment.wallType, thicknessMm: segment.thicknessMm, source: segment.source, confirmed: segment.confirmed, confidence: segment.confidence, locked: Boolean(segment.locked) };
   const segments = graph.segments
     .filter((s) => s.id !== segmentId)
     .concat([
@@ -193,6 +193,7 @@ export function segmentToWallSegment(graph, segment, mmPerDocumentUnit) {
     source: segment.source,
     confirmed: segment.confirmed,
     confidence: segment.confidence,
+    locked: Boolean(segment.locked),
     start, end, lengthMm,
   };
 }
