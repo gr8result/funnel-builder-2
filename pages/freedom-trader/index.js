@@ -13,10 +13,37 @@ function formatCurrency(value, currency = "USD") {
     : "--";
 }
 
+function formatManualAccountCurrency(value, currency = "AUD") {
+  const formatted = formatCurrency(value, currency);
+  return currency === "AUD" && formatted.startsWith("$") ? `A${formatted}` : formatted;
+}
+
 function userFacingReportError(message = "") {
   if (!message) return "";
   if (/supabase|migration|database|persist|save/i.test(message)) return "Report history is unavailable right now. Today's answer can still be generated from the loaded account data.";
   return message;
+}
+
+function plannedCommittedValue(pendingOrders = []) {
+  return pendingOrders.reduce((total, order) => {
+    const price = Number(order.requested_price ?? order.requestedPrice);
+    const quantity = Number(order.quantity);
+    return total + (Number.isFinite(price) && Number.isFinite(quantity) ? price * quantity : 0);
+  }, 0);
+}
+
+function confidenceStars(score) {
+  const cleanScore = Number(score);
+  if (!Number.isFinite(cleanScore)) return "Not enough data";
+  const stars = Math.max(1, Math.min(5, Math.round(cleanScore / 20)));
+  return `${"★".repeat(stars)}${"☆".repeat(5 - stars)}`;
+}
+
+function dailyGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning Grant";
+  if (hour < 18) return "Good afternoon Grant";
+  return "Good evening Grant";
 }
 
 async function browserHashPassword(password) {
@@ -116,16 +143,6 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     };
   }, [unlocked]);
 
-  useEffect(() => {
-    if (!paperAccount) return;
-    setReportSettings((current) => ({
-      ...current,
-      tradingBalance: Number(paperAccount.startingBalance ?? paperAccount.tradingBalance) || current.tradingBalance,
-      availableCash: Number(paperAccount.availableCash) || current.availableCash,
-      accountCurrency: paperAccount.currency || current.accountCurrency,
-    }));
-  }, [paperAccount]);
-
   async function unlock(event) {
     event.preventDefault();
     const candidateHash = await browserHashPassword(password);
@@ -192,130 +209,156 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       <FreedomModuleNav module="trader" />
 
       <main className="assistantShell" id="dashboard">
-      <header className="todayHero">
-        <div>
-          <span>Today&apos;s decision</span>
-          <h1>What should Grant do today?</h1>
-          <p>Uses only loaded account, position, broker-journal, scanner and saved report data. Manual inputs below are labelled as manual settings.</p>
-        </div>
-        <button className="primaryReportButton" type="button" onClick={() => generateReport("now")} disabled={reportLoading}>
-          {reportLoading ? "Checking today..." : "Answer Now"}
-        </button>
-      </header>
-
-      <section className="decisionPanel">
-        <div className="reportControls">
-          <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading}>Morning Report</button>
-          <button type="button" onClick={() => generateReport("evening")} disabled={reportLoading}>Evening Report</button>
-          <button type="button" onClick={() => generateReport(report?.reportType || "now")} disabled={reportLoading}>Refresh</button>
-          <label><input checked={reportDetailsOpen} onChange={(event) => setReportDetailsOpen(event.target.checked)} type="checkbox" /> Show analysis details</label>
-        </div>
-        {reportError ? <div className="reportWarning">{reportError}</div> : null}
-        {report ? <ReportView report={report} showDetails={reportDetailsOpen} alerts={actionAlerts} recentReports={recentReports} /> : (
-          <div className="assistantEmpty">
-            <strong>No daily answer has been generated yet.</strong>
-            <p>Click Answer Now to assess the real data currently loaded for Grant&apos;s account.</p>
-          </div>
-        )}
-      </section>
-
-      <section className="panel accountPanel">
-        <div className="panelHeader">
-          <div>
-            <span>Real account inputs</span>
-            <h2>Grant&apos;s Account Today</h2>
-          </div>
-          <Link href="/freedom-trader/portfolio">Open Portfolio</Link>
-        </div>
-        <div className="summaryGrid">
-          <Card label="Available cash from account" value={paperAccount ? formatCurrency(paperAccount.availableCash, paperAccount.currency || "AUD") : "Account not connected"} />
-          <Card label="Trading balance from account" value={paperAccount ? formatCurrency(paperAccount.startingBalance ?? paperAccount.tradingBalance, paperAccount.currency || "AUD") : "Account not connected"} />
-          <Card label="Open positions loaded" value={positions.length} />
-          <Card label="Pending orders loaded" value={pendingOrders.length} />
-        </div>
-        {paperAccount ? <p className="accountNote">Account values above came from Grant&apos;s saved account record. Manual limits below still control the assistant&apos;s sizing and risk rules.</p> : <p className="accountNote">No saved account record was returned. The assistant can still run, but it will use the clearly labelled manual settings below.</p>}
-      </section>
-
-      <section className="panel manualPanel">
-        <div className="panelHeader">
-          <div>
-            <span>Manual settings</span>
-            <h2>Grant&apos;s Risk Limits</h2>
-          </div>
-        </div>
-        <div className="settingsGrid">
-          <label>Manual trading balance<input type="number" value={reportSettings.tradingBalance} onChange={(event) => updateReportSetting("tradingBalance", event.target.value)} /></label>
-          <label>Manual available cash<input type="number" value={reportSettings.availableCash} onChange={(event) => updateReportSetting("availableCash", event.target.value)} /></label>
-          <label>Manual max loss / trade<input type="number" value={reportSettings.maximumPlannedLossPerTrade} onChange={(event) => updateReportSetting("maximumPlannedLossPerTrade", event.target.value)} /></label>
-          <label>Manual max open positions<input type="number" value={reportSettings.maximumOpenPositions} onChange={(event) => updateReportSetting("maximumOpenPositions", event.target.value)} /></label>
-          <label>Manual max position value<input type="number" value={reportSettings.maximumPositionValue} onChange={(event) => updateReportSetting("maximumPositionValue", event.target.value)} /></label>
-          <label>Manual max committed<input type="number" value={reportSettings.maximumTotalMoneyCommitted} onChange={(event) => updateReportSetting("maximumTotalMoneyCommitted", event.target.value)} /></label>
-          <label>Manual max total loss<input type="number" value={reportSettings.maximumTotalPlannedLoss} onChange={(event) => updateReportSetting("maximumTotalPlannedLoss", event.target.value)} /></label>
-          <label>Manual take profit %<input type="number" value={reportSettings.takeSomeProfitPercent} onChange={(event) => updateReportSetting("takeSomeProfitPercent", event.target.value)} /></label>
-        </div>
-        <div className="managementSettings">
-          <label><input checked={reportSettings.moveSafetyExitToEntryAfterTakeProfit} onChange={(event) => toggleReportSetting("moveSafetyExitToEntryAfterTakeProfit", event.target.checked)} type="checkbox" /> After Take Some Profit, move Safety Exit to the original buy price</label>
-          <label><input checked={reportSettings.target1IsCompleteExit} onChange={(event) => toggleReportSetting("target1IsCompleteExit", event.target.checked)} type="checkbox" /> Treat Take Some Profit as the complete exit when no Final Exit is available</label>
-        </div>
-      </section>
-
-      <section className="panel inputPanel">
-        <div className="panelHeader">
-          <div>
-            <span>Loaded trading data</span>
-            <h2>What Freedom Checked</h2>
-          </div>
-          <Link href="/freedom-trader/market-opportunities">Open Scanner</Link>
-        </div>
-        {loading ? <div className="emptyState">Loading Grant&apos;s trading inputs...</div> : null}
-        <div className="supportGrid">
-          <article>
-            <span>Scanner opportunities</span>
-            <strong>{bestOpportunities.length}</strong>
-            <p>{scanSummary ? `${scanSummary.symbolsRequested} symbols checked in the latest loaded scan.` : "No scan summary returned."}</p>
-          </article>
-          <article>
-            <span>Developing setups</span>
-            <strong>{developingRows.length}</strong>
-            <p>{developingRows.length ? "These did not pass every rule yet." : "No developing setups were returned."}</p>
-          </article>
-          <article>
-            <span>Alerts loaded</span>
-            <strong>{alerts.length}</strong>
-            <p>{alerts.length ? "Recent saved alerts are available below." : "No saved alerts were returned."}</p>
-          </article>
-          <article>
-            <span>Journal trades loaded</span>
-            <strong>{journalTrades.length}</strong>
-            <p>{updatedAt ? `Last dashboard refresh: ${new Date(updatedAt).toLocaleString()}` : "No refresh timestamp returned."}</p>
-          </article>
-        </div>
-      </section>
-
-      {bestOpportunities.length ? (
-        <section className="panel">
-          <div className="panelHeader"><h2>Candidate Trades Checked Today</h2></div>
-          <div className="opportunityList">
-            {bestOpportunities.map((row, index) => (
-              <article key={row.symbol}>
-                <span>#{index + 1}</span>
-                <strong>{row.symbol} {row.companyName ? `- ${row.companyName}` : ""}</strong>
-                <p>{formatCurrency(row.currentPrice, row.currency || "USD")} current price. Score {Number.isFinite(row.tradingScore) ? row.tradingScore : "--"}.</p>
-                <Link href={traderCompanyHref(row.symbol)}>Open analysis</Link>
-              </article>
-            ))}
+        <section className="answerPanel">
+          <DailyAnswer report={report} loading={reportLoading} onGenerate={() => generateReport("now")} settings={reportSettings} positions={positions} pendingOrders={pendingOrders} />
+          {reportError ? <div className="reportWarning">{reportError}</div> : null}
+          <div className="reportControls">
+            <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading}>Morning</button>
+            <button type="button" onClick={() => generateReport("evening")} disabled={reportLoading}>Evening</button>
+            <button type="button" onClick={() => generateReport(report?.reportType || "now")} disabled={reportLoading}>Refresh</button>
           </div>
         </section>
-      ) : null}
 
+        <section className="todayStatus">
+          <Card label="Open trades" value={positions.length} note={positions.length ? "Review actions below." : "Nothing needs your attention."} />
+          <Card label="Cash available" value={formatManualAccountCurrency(reportSettings.availableCash, reportSettings.accountCurrency)} note="manual" />
+          <Card label="Money currently committed" value={formatManualAccountCurrency(plannedCommittedValue(pendingOrders), reportSettings.accountCurrency)} note={pendingOrders.length ? `${pendingOrders.length} pending order${pendingOrders.length === 1 ? "" : "s"}` : "manual / no pending orders loaded"} />
+          <Card label="Maximum planned loss today" value={formatManualAccountCurrency(reportSettings.maximumTotalPlannedLoss, reportSettings.accountCurrency)} note="manual limit" />
+        </section>
+
+        <section className="openTradesPanel">
+          <h2>Open Trades</h2>
+          {positions.length ? positions.map((position) => (
+            <article key={position.id || position.ticker || position.symbol}>
+              <strong>{position.companyName || position.company || position.ticker || position.symbol}</strong>
+              <span>{formatCurrency(position.unrealisedProfitLoss ?? position.unrealisedProfit ?? 0, position.currency || "AUD")} profit/loss</span>
+              <b>Hold</b>
+            </article>
+          )) : <p>You currently have 0 open trades. Nothing needs your attention.</p>}
+        </section>
+
+        <section className="detailDrawer">
+          <details>
+            <summary>Market Scanner</summary>
+            <p>{loading ? "Scanner is loading." : scanSummary ? `${scanSummary.symbolsRequested} symbols checked. ${bestOpportunities.length} candidates are loaded.` : "No scanner summary returned."}</p>
+            {bestOpportunities.length ? bestOpportunities.map((row) => <p key={row.symbol}>{row.symbol}: {row.companyName || "Company name unavailable"} - score {Number.isFinite(row.tradingScore) ? row.tradingScore : "--"}</p>) : <p>No candidate trades are ready on the dashboard.</p>}
+            <Link href="/freedom-trader/market-opportunities">Open scanner</Link>
+          </details>
+          <details>
+            <summary>Watchlist</summary>
+            <p>Use the scanner and company research pages for watchlist details.</p>
+            <Link href="/freedom-trader#watchlist">Open watchlist</Link>
+          </details>
+          <details>
+            <summary>Trade Journal</summary>
+            <p>{journalTrades.length ? `${journalTrades.length} recent broker-journal trade${journalTrades.length === 1 ? "" : "s"} loaded.` : "No broker-journal trades were returned."}</p>
+            <Link href="/freedom-trader/trade-journal">Open trade journal</Link>
+          </details>
+          <details>
+            <summary>Alerts</summary>
+            <p>{alerts.length ? `${alerts.length} saved alert${alerts.length === 1 ? "" : "s"} loaded.` : "No saved alerts were returned."}</p>
+            <Link href="/freedom-trader/alerts">Open alerts</Link>
+          </details>
+          <details>
+            <summary>Trading Settings</summary>
+            <div className="settingsGrid">
+              <label>Cash available manual<input type="number" value={reportSettings.availableCash} onChange={(event) => updateReportSetting("availableCash", event.target.value)} /></label>
+              <label>Trading balance manual<input type="number" value={reportSettings.tradingBalance} onChange={(event) => updateReportSetting("tradingBalance", event.target.value)} /></label>
+              <label>Max loss / trade<input type="number" value={reportSettings.maximumPlannedLossPerTrade} onChange={(event) => updateReportSetting("maximumPlannedLossPerTrade", event.target.value)} /></label>
+              <label>Max open positions<input type="number" value={reportSettings.maximumOpenPositions} onChange={(event) => updateReportSetting("maximumOpenPositions", event.target.value)} /></label>
+              <label>Max position value<input type="number" value={reportSettings.maximumPositionValue} onChange={(event) => updateReportSetting("maximumPositionValue", event.target.value)} /></label>
+              <label>Max committed<input type="number" value={reportSettings.maximumTotalMoneyCommitted} onChange={(event) => updateReportSetting("maximumTotalMoneyCommitted", event.target.value)} /></label>
+              <label>Max total loss<input type="number" value={reportSettings.maximumTotalPlannedLoss} onChange={(event) => updateReportSetting("maximumTotalPlannedLoss", event.target.value)} /></label>
+              <label>Take profit %<input type="number" value={reportSettings.takeSomeProfitPercent} onChange={(event) => updateReportSetting("takeSomeProfitPercent", event.target.value)} /></label>
+            </div>
+            <div className="managementSettings">
+              <label><input checked={reportSettings.moveSafetyExitToEntryAfterTakeProfit} onChange={(event) => toggleReportSetting("moveSafetyExitToEntryAfterTakeProfit", event.target.checked)} type="checkbox" /> After Take Some Profit, move Safety Exit to the original buy price</label>
+              <label><input checked={reportSettings.target1IsCompleteExit} onChange={(event) => toggleReportSetting("target1IsCompleteExit", event.target.checked)} type="checkbox" /> Treat Take Some Profit as the complete exit when no Final Exit is available</label>
+            </div>
+          </details>
+          <details>
+            <summary>Technical Analysis</summary>
+            {report ? <ReportView report={report} showDetails={reportDetailsOpen} alerts={actionAlerts} recentReports={recentReports} /> : <p>Generate today&apos;s answer to view the technical report.</p>}
+            <label className="detailsToggle"><input checked={reportDetailsOpen} onChange={(event) => setReportDetailsOpen(event.target.checked)} type="checkbox" /> Show analysis details</label>
+          </details>
+        </section>
       </main>
       <Styles />
     </div>
   );
 }
 
-function Card({ label, value }) {
-  return <article><span>{label}</span><strong>{value}</strong></article>;
+function Card({ label, value, note }) {
+  return <article><span>{label}</span><strong>{value}</strong>{note ? <p>{note}</p> : null}</article>;
+}
+
+function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders }) {
+  const ready = report?.recommendations?.find((item) => item.status === "READY TO BUY");
+  const firstRecommendation = report?.recommendations?.[0] || null;
+  const positionAction = report?.positionActions?.find((item) => item.action && item.action !== "HOLD");
+  const unavailable = report && (report.marketDataQuality === "unavailable" || firstRecommendation?.status === "DATA UNAVAILABLE");
+
+  if (!report) {
+    return (
+      <div className="dailyAnswer emptyAnswer">
+        <span>{dailyGreeting()}</span>
+        <h1>Today&apos;s Action</h1>
+        <strong>No answer yet.</strong>
+        <p>Click once and Freedom will check the data currently loaded for Grant.</p>
+        <button className="primaryReportButton" type="button" onClick={onGenerate} disabled={loading}>{loading ? "Checking..." : "Answer Now"}</button>
+      </div>
+    );
+  }
+
+  if (positionAction) {
+    return (
+      <div className="dailyAnswer actionAnswer">
+        <span>{dailyGreeting()}</span>
+        <h1>Today&apos;s Action</h1>
+        <strong>{positionAction.action}</strong>
+        <dl>
+          <div><dt>Trade</dt><dd>{positionAction.companyName || positionAction.symbol}</dd></div>
+          <div><dt>Current price</dt><dd>{formatCurrency(positionAction.currentPrice, positionAction.currency)}</dd></div>
+          <div><dt>Action</dt><dd>{positionAction.instruction}</dd></div>
+        </dl>
+      </div>
+    );
+  }
+
+  if (ready) {
+    return (
+      <div className="dailyAnswer actionAnswer">
+        <span>{dailyGreeting()}</span>
+        <h1>Today&apos;s Action</h1>
+        <strong>Prepare ONE order in CMC.</strong>
+        <dl>
+          <div><dt>Company</dt><dd>{ready.companyName} {ready.symbol ? `(${ready.symbol})` : ""}</dd></div>
+          <div><dt>Buy</dt><dd>{formatCurrency(ready.entryBuyPrice, ready.currency)}</dd></div>
+          <div><dt>Safety Exit</dt><dd>{formatCurrency(ready.safetyExit, ready.currency)}</dd></div>
+          <div><dt>Take Some Profit</dt><dd>{formatCurrency(ready.takeSomeProfit, ready.currency)}</dd></div>
+          <div><dt>Final Exit</dt><dd>{formatCurrency(ready.finalExit, ready.currency)}</dd></div>
+          <div><dt>Quantity</dt><dd>{ready.suggestedQuantity} share{ready.suggestedQuantity === 1 ? "" : "s"}</dd></div>
+          <div><dt>Maximum planned loss</dt><dd>{formatCurrency(ready.maximumPlannedLoss, ready.accountCurrency || settings.accountCurrency)}</dd></div>
+          <div><dt>Confidence</dt><dd>{confidenceStars(ready.technicalDetails?.score)}</dd></div>
+        </dl>
+        <Link href={traderCompanyHref(ready.symbol)}>Open analysis</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dailyAnswer noActionAnswer">
+      <span>{dailyGreeting()}</span>
+      <h1>Today&apos;s Action</h1>
+      <strong>{unavailable ? "Do not place a trade." : "Do nothing."}</strong>
+      <p>{unavailable ? "I can't recommend any trades because today's market data isn't available yet." : report.overallInstruction || "No trade currently meets the required rules."}</p>
+      <dl>
+        <div><dt>Open trades</dt><dd>{positions.length}</dd></div>
+        <div><dt>Cash</dt><dd>{formatManualAccountCurrency(settings.availableCash, settings.accountCurrency)} manual</dd></div>
+        <div><dt>Committed</dt><dd>{formatManualAccountCurrency(plannedCommittedValue(pendingOrders), settings.accountCurrency)}</dd></div>
+      </dl>
+    </div>
+  );
 }
 
 function ReportView({ report, showDetails, alerts, recentReports }) {
@@ -454,7 +497,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1540px}.todayHero,.decisionPanel,.panel,.gate{background:rgba(8,14,17,.94);border:1px solid rgba(29,155,255,.18);border-radius:8px}.todayHero{align-items:center;border-color:rgba(255,153,0,.42);display:grid;gap:22px;grid-template-columns:minmax(0,1fr) auto;padding:34px}.todayHero span,.panelHeader span,.summaryGrid span,.supportGrid span,.accountSummary span,.reportMeta span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,h3,h4,p{margin:0}h1{font-size:clamp(38px,5vw,76px);line-height:.96;max-width:920px}h2{font-size:22px}h3{font-size:16px}p{color:#aebdc4}.todayHero p{font-size:18px;max-width:820px}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;min-height:64px;padding:0 26px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.decisionPanel{border-color:rgba(255,153,0,.38);overflow:hidden}.assistantEmpty{background:rgba(255,153,0,.1);display:grid;gap:8px;padding:26px}.assistantEmpty strong{font-size:24px}.reportControls{align-items:center;display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button,.panelHeader a,.opportunityList a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;display:inline-flex;font-weight:950;min-height:38px;align-items:center;padding:0 12px;text-decoration:none}.reportControls button:hover,.panelHeader a:hover,.opportunityList a:hover{background:rgba(29,155,255,.22);border-color:rgba(94,189,255,.55)}.reportControls label{align-items:center;color:#d7efff;display:inline-flex;font-weight:850;gap:8px}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;gap:14px;justify-content:space-between;padding:16px 18px}.summaryGrid,.supportGrid,.opportunityList,.activityGrid{display:grid;gap:14px;padding:16px}.summaryGrid{grid-template-columns:repeat(4,minmax(0,1fr))}.supportGrid,.activityGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.summaryGrid article,.supportGrid article,.opportunityList article,.activityGrid article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;padding:16px}.summaryGrid strong,.supportGrid strong{display:block;font-size:24px}.supportGrid article strong{font-size:36px}.activityGrid>div{display:grid;gap:10px}.activityGrid span,.opportunityList span{color:#aebdc4}.settingsGrid{border-top:1px solid rgba(255,255,255,.08);display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));padding:14px 20px}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.managementSettings label{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.accountNote{padding:0 20px 16px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.emptyState{background:rgba(255,153,0,.12);border-bottom:1px solid rgba(255,153,0,.28);color:#ffd7a1;font-size:15px;font-weight:950;padding:20px;text-align:center}.reportBody{border-top:1px solid rgba(255,255,255,.08);display:grid;gap:16px;padding:18px 20px}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayHero{grid-template-columns:1fr}.primaryReportButton{width:100%}.summaryGrid,.supportGrid,.activityGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.summaryGrid,.supportGrid,.activityGrid,.settingsGrid{grid-template-columns:1fr}.panelHeader{align-items:flex-start;flex-direction:column}.managementSettings label{width:100%}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1180px}h1,h2,h3,h4,p{margin:0}p{color:#aebdc4}.answerPanel,.todayStatus,.openTradesPanel,.detailDrawer details,.gate{background:rgba(8,14,17,.95);border:1px solid rgba(29,155,255,.18);border-radius:8px}.answerPanel{border-color:rgba(255,153,0,.48);overflow:hidden}.dailyAnswer{display:grid;gap:18px;padding:34px}.dailyAnswer span,.todayStatus span,.reportMeta span,.accountSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer h1{color:#fff;font-size:clamp(28px,4vw,46px)}.dailyAnswer>strong{color:#fff;font-size:clamp(32px,5.5vw,72px);line-height:1}.dailyAnswer p{font-size:20px;max-width:820px}.dailyAnswer dl{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;max-width:900px}.dailyAnswer div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.dailyAnswer dt{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer dd{color:#fff;font-size:22px;font-weight:950;margin:5px 0 0}.dailyAnswer a,.detailDrawer a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:950;justify-self:start;min-height:40px;align-items:center;padding:0 12px;text-decoration:none}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;justify-self:start;min-height:58px;padding:0 24px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.reportControls{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:38px;padding:0 12px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.todayStatus{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.todayStatus article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:6px;padding:14px}.todayStatus strong{color:#fff;font-size:24px}.todayStatus p{font-size:13px}.openTradesPanel{display:grid;gap:12px;padding:20px}.openTradesPanel h2{font-size:26px}.openTradesPanel article{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;grid-template-columns:1fr auto auto;padding:14px}.openTradesPanel b{background:rgba(138,100,18,.8);border-radius:7px;color:#fff;padding:7px 10px}.detailDrawer{display:grid;gap:10px}.detailDrawer details{padding:0}.detailDrawer summary{cursor:pointer;font-size:18px;font-weight:950;list-style:none;padding:18px}.detailDrawer summary::-webkit-details-marker{display:none}.detailDrawer details[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}.detailDrawer details>*:not(summary){margin:14px 18px}.settingsGrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{display:flex;flex-wrap:wrap;gap:10px}.managementSettings label,.detailsToggle{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.reportBody{display:grid;gap:16px;padding:0}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayStatus{grid-template-columns:repeat(2,minmax(0,1fr))}.dailyAnswer dl{grid-template-columns:1fr}}@media(max-width:640px){.todayStatus,.settingsGrid{grid-template-columns:1fr}.dailyAnswer{padding:24px}.openTradesPanel article{grid-template-columns:1fr}.managementSettings label{width:100%}}
   `}</style>;
 }
 
