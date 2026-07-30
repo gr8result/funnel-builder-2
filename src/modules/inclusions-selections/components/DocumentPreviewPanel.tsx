@@ -1,0 +1,7 @@
+import type { DocumentProjection } from "../repositories/documentsExportRepository";
+
+const currency = new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" });
+
+export function DocumentPreviewPanel({ projection }: { projection: DocumentProjection }) {
+  return <section className="documentPreview"><header><div><span>{projection.finalStatusLabel}</span><h2>{projection.title}</h2></div><p>Snapshot v{projection.snapshotVersion} - {projection.approvalSummary.lockedAt}</p></header><div className="documentMeta"><span>{projection.projectName}</span><span>{projection.clientName}</span><span>{projection.siteAddress}</span><span>{projection.approvalSummary.fingerprint}</span></div>{projection.sections.map((section) => <article key={section.id} className="previewSection"><h3>{section.heading}</h3><div className="previewLines">{section.lines.map((line) => <div key={line.id} className="previewLine"><strong>{line.areaName} - {line.requirementName}</strong><span>{line.productName ?? "Not Applicable"}</span><span>{line.brand ?? ""} {line.model ?? ""} {line.colour ?? ""}</span><span>{line.quantity} {line.unit}</span><span>{line.allowance ? `Allowance ${currency.format(line.allowance.amount)}` : ""}</span><span>{line.selectedValue ? `Selected ${currency.format(line.selectedValue.amount)}` : ""}</span><span>{line.builderCost ? `Builder ${currency.format(line.builderCost.amount)}` : ""}</span><span>{line.notes.join("; ")}</span></div>)}</div></article>)}</section>;
+}

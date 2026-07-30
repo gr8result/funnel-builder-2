@@ -10,7 +10,7 @@ Estimate Builder is not changed in this phase. The new module only defines the f
 
 Draft selections cannot alter an approved estimate. Estimate integration must consume locked snapshots only.
 
-Stage 5 creates locked selection snapshots but does not export them to Estimate Builder. The `/inclusions-selections/documents-export` route remains a placeholder for the next stage.
+Stage 5 creates locked selection snapshots but does not export them to Estimate Builder. Stage 6 exports only from locked snapshot lines through an adapter boundary.
 
 ## Export Contract
 
@@ -33,4 +33,6 @@ Snapshot lines can be grouped when product, variant, supplier, unit, category, a
 
 ## Future Adapter Work
 
-Future integration should add an adapter at the Estimate Builder boundary. It should map `EstimateSelectionExportLine` into the current estimate row format without importing Estimate Builder internals back into this module.
+Stage 6 introduces the adapter-facing export service and an in-memory adapter for tests and development. A future real receiver should map `EstimateExportLine` into the current estimate row format without importing Estimate Builder internals back into this module.
+
+The selections module must not import `EstimateBuilderWorkbook`, workbook React components or Estimate Builder local UI stores.

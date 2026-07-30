@@ -19,7 +19,13 @@ This is a proposal only. No migrations are added in this phase.
 - `project_inclusion_selection_approvals`
 - `project_inclusion_snapshots`
 - `project_inclusion_snapshot_lines`
+- `project_inclusion_generated_documents`
+- `project_inclusion_document_projection_metadata`
+- `project_inclusion_estimate_mapping_overrides`
 - `project_inclusion_estimate_exports`
+- `project_inclusion_estimate_export_lines`
+- `project_inclusion_estimate_export_batches`
+- `project_inclusion_export_reconciliations`
 - `project_inclusion_audit_entries`
 
 ## Scoping

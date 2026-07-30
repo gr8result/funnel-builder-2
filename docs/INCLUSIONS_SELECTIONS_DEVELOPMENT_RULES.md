@@ -22,6 +22,7 @@ Date: 2026-07-29
 - Keep workspace compatibility, pricing, Apply To and validation behaviour in services, not React components.
 - Keep review pricing, issue generation, projections and readiness logic in services, not React components.
 - Keep approval fingerprints, stale approval detection, approval validation, snapshot readiness and snapshot locking in services, not React components.
+- Keep document projections, estimate mapping validation, export preview, aggregation, idempotency, adapter execution, retry and reconciliation in services, not React components.
 - Access products and suppliers through adapter/reference interfaces only.
 - Keep draft workspace and review persistence behind repository interfaces. In-memory repositories are acceptable until migrations are explicitly approved.
 
@@ -51,6 +52,13 @@ Minimum coverage for domain work:
 - locked snapshot readiness,
 - immutable snapshot creation,
 - snapshot version comparison,
+- approved document projections,
+- generated document records,
+- estimate mapping overrides,
+- export preview traceability,
+- safe aggregation,
+- adapter-based export and retry,
+- export reconciliation and history,
 - estimate export aggregation.
 
 ## Isolation Checks

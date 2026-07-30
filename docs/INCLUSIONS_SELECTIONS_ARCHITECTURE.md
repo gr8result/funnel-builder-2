@@ -34,7 +34,7 @@ The module must not import from:
 - No Estimate Builder integration.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
-- No final document, procurement export or Estimate Builder export workflow from the approvals stage.
+- No procurement export, supplier ordering or purchase schedule workflow.
 
 ## Stage-One Route
 
@@ -58,7 +58,11 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 
 `/inclusions-selections/approvals` is the fifth visible replacement workflow. It records client and builder approvals against a deterministic approval fingerprint, detects stale approvals after material selection changes and locks immutable selection snapshot versions only when both approvals match the same reviewed version.
 
-`/inclusions-selections/documents-export` exists only as the next-stage placeholder. Final documents and Estimate Builder export remain deferred.
+## Stage-Six Route
+
+`/inclusions-selections/documents-export` is the sixth visible replacement workflow. It loads locked snapshot versions, builds final document projections from immutable snapshot lines, validates estimate mappings, previews export lines, executes adapter-based Estimate Builder export, records history and reconciles totals.
+
+`/inclusions-selections/procurement` exists only as a future-stage placeholder. Supplier ordering, purchase schedules and procurement tracking remain deferred.
 
 ## Services
 
@@ -78,6 +82,7 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 - `buildClientVariationProjection` and `buildBuilderInternalProjection`: keep client-facing values separate from internal builder values.
 - `generateReviewIssues`, `validateReviewReadiness`, `acknowledgeReviewWarning`, `overrideAllowance`, `markReadyForApproval` and `saveSelectionReview`: manage review validation and metadata through repository interfaces.
 - `loadApprovalStage`, `recordClientApproval`, `recordBuilderApproval`, `recordClientChangesRequested`, `validateSnapshotReadiness`, `createLockedSelectionSnapshot`, `startNewDraftRevision` and `compareSelectionSnapshots`: manage Stage 5 approval and locked snapshot state through repository interfaces.
+- `loadDocumentsExportStage`, `buildClientSelectionSchedule`, `buildBuilderInternalSchedule`, `buildSiteSupervisorSchedule`, `buildRoomSchedule`, `buildCategorySchedule`, `buildTradeSchedule`, `buildSupplierSchedule`, `buildApprovedVariationSummary`, `generateSelectionDocument`, `validateEstimateMappings`, `createMappingOverride`, `buildEstimateExportPreview`, `aggregateEstimateExportLines`, `executeEstimateExport`, `retryFailedExportLines` and `reconcileEstimateExport`: manage Stage 6 approved document and estimate export state through repository and adapter interfaces.
 - `resolveEffectiveSelection`: applies default inheritance precedence.
 - `previewApplySelection`: previews bulk application without mutating records.
 - `calculateSelectionPricing`: computes commercial values.

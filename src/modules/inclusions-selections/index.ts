@@ -39,6 +39,7 @@ export * from "./repositories/templateStageRepository";
 export * from "./repositories/selectionWorkspaceRepository";
 export * from "./repositories/selectionReviewRepository";
 export * from "./repositories/approvalStageRepository";
+export * from "./repositories/documentsExportRepository";
 export * from "./services/domainServices";
 export * from "./shared/ids";
 export * from "./shared/money";

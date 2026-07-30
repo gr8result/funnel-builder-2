@@ -26,6 +26,12 @@ Date: 2026-07-29
 - `LockedSelectionSnapshot`: immutable locked record of selection lines, totals, approval references, source fingerprint and version metadata.
 - `LockedSelectionSnapshotLine`: frozen copy of the room, requirement, selection, location, pricing and note data that was approved.
 - `DraftRevision`: editable revision marker started after a locked snapshot.
+- `DocumentProjection`: generated view of locked snapshot lines for a specific audience and output type.
+- `GeneratedDocumentRecord`: traceable generated file record tied to a snapshot version and document projection type.
+- `EstimateMappingOverride`: authorised mapping correction stored separately from immutable snapshot lines.
+- `EstimateExportBatch`: adapter-facing export attempt with status, totals and history metadata.
+- `EstimateExportLine`: traceable export payload line sourced only from locked snapshot lines.
+- `ExportReconciliation`: comparison between snapshot totals and completed export totals.
 - `EstimateSelectionExport`: estimate-facing output generated from a locked snapshot.
 
 ## Identity Rules
@@ -73,3 +79,7 @@ Stage 4 ReviewLine, room review, category review, variation summary, client proj
 Stage 5 approvals are recorded against an approval fingerprint. The fingerprint ignores UI-only state and includes material selection data, pricing data, client-visible notes, locations and review readiness. Client and builder approvals must share the current fingerprint before a snapshot can be locked.
 
 Locked snapshots are append-only. New versions can supersede earlier versions, but previous locked versions remain readable and comparable.
+
+## Documents And Export
+
+Stage 6 document projections and export lines are derived only from `LockedSelectionSnapshotLine` records. Mapping overrides, generated document records and export history are separate project-scoped records. They do not mutate the snapshot, Product Library records, Supplier Library records or Estimate Builder UI state.

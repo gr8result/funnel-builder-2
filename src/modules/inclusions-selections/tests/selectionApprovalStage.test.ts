@@ -159,6 +159,6 @@ runSelectionApprovalStageTests().then(async () => {
   assert(approvalsSource.includes("Approvals and Locked Selection Version"), "Stage 5 approvals route title is present.");
   assert(approvalsSource.includes("Review and approve the completed selections. Client and builder approvals must match the same reviewed version before the selections can be locked."), "Stage 5 intro text is exact.");
   assert(actionsSource.includes("Back to Review") && approvalsSource.includes("/inclusions-selections/documents-export"), "Approval route has back and next navigation.");
-  assert(documentsSource.includes("Approved selection schedules, final documents and Estimate Builder export will be completed in the next stage."), "Documents/export placeholder text is exact.");
+  assert(documentsSource.includes("Approved Documents and Estimate Export"), "Documents/export route should now be the Stage 6 workspace.");
   assert(!approvalsSource.includes("createEstimateSelectionExport") && !approvalsSource.includes("procurement"), "Stage 5 route does not load final document, export or procurement code.");
 });

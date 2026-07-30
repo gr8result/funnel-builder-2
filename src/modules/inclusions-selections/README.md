@@ -14,11 +14,12 @@ Current scope:
 - Stage-three Selection Workspace UI and route wiring for Room View, Category View, draft product/custom selections, Apply To preview, SelectionLocations, notes, attachments, pricing display, validation and in-memory draft save/reload.
 - Stage-four Review, Pricing and Variations UI and route wiring for review summary, room/category review, variation calculations, client preview, internal builder projection, issue register, custom selection review, allowance overrides and Ready for Approval metadata.
 - Stage-five Approvals and Locked Selection Version UI and route wiring for client review state, client approval, builder approval, changes requested, approval fingerprints, stale approval detection, immutable locked snapshots, version history, comparisons and new draft revisions.
+- Stage-six Approved Documents and Estimate Export UI and route wiring for locked snapshot document projections, generated document records, estimate mapping validation, mapping overrides, export preview, aggregation, adapter-based export, retry, reconciliation and export history.
 - No Supabase migrations.
 - No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
 - No Product Library table ownership changes.
 - No Estimate Builder behaviour changes.
-- No generated documents, procurement export or Estimate Builder export from the approvals stage.
+- No procurement workflow, supplier ordering or purchase schedules.
 
 Key files:
 
@@ -31,9 +32,11 @@ Key files:
 - `repositories/selectionWorkspaceRepository.ts`: draft workspace repository interface and in-memory implementation.
 - `repositories/selectionReviewRepository.ts`: review metadata, issue, allowance override and audit repository interface with in-memory implementation.
 - `repositories/approvalStageRepository.ts`: approval, approval history, locked snapshot and draft revision repository interface with in-memory implementation.
+- `repositories/documentsExportRepository.ts`: generated document, mapping override, export batch, export line, reconciliation and audit repository interface with in-memory implementation.
 - `services/selectionWorkspaceService.ts`: Stage 3 application service for Room View, Category View, selection creation, variants, custom selections, Apply To, validation and save/reload.
 - `services/selectionReviewService.ts`: Stage 4 application service for review summaries, room/category projections, variation summaries, client/internal projections, issue generation, allowance overrides and Ready for Approval.
 - `services/approvalStageService.ts`: Stage 5 application service for approval fingerprints, client/builder approval, stale approval handling, snapshot readiness, immutable snapshot creation and snapshot comparison.
+- `services/documentsExportService.ts`: Stage 6 application service for document projections, generated documents, estimate mapping, mapping overrides, export preview, aggregation, adapter execution, retry and reconciliation.
 - `pricing/`, `approvals/`, `snapshots/`, `estimate-export/`: commercial lifecycle through locked estimate export.
 - `repositories/`: persistence contracts and an in-memory test implementation.
 - `tests/domainFoundation.test.ts`: focused unit coverage for validation, generation, compatibility, pricing, locking, snapshots, and export.
@@ -42,6 +45,7 @@ Key files:
 - `tests/selectionWorkspace.test.ts`: focused coverage for Stage 3 loading, views, product/variant/custom choices, Apply To, pricing, completion, persistence and route isolation.
 - `tests/selectionReview.test.ts`: focused coverage for Stage 4 review loading, summary totals, projections, pricing, issues, allowance overrides, Ready for Approval and route isolation.
 - `tests/selectionApprovalStage.test.ts`: focused coverage for Stage 5 approval readiness, fingerprints, stale approvals, locking, immutability, versioning, comparison and route isolation.
+- `tests/selectionDocumentsExport.test.ts`: focused coverage for Stage 6 documents, mappings, export preview, aggregation, adapter export, retry, reconciliation, history and route isolation.
 
 Active routes:
 
@@ -50,8 +54,9 @@ Active routes:
 - `/inclusions-selections/workspace`
 - `/inclusions-selections/review`
 - `/inclusions-selections/approvals`
-- `/inclusions-selections/documents-export` placeholder only
+- `/inclusions-selections/documents-export`
+- `/inclusions-selections/procurement` placeholder only
 
-The stage-one through stage-five routes require an existing `organisationId` and `projectId`. They use in-memory persistence until approved database repositories are added.
+The stage-one through stage-six routes require an existing `organisationId` and `projectId`. They use in-memory persistence until approved database repositories are added.
 
 Development rules live in `docs/INCLUSIONS_SELECTIONS_DEVELOPMENT_RULES.md`.
