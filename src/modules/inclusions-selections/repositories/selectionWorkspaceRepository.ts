@@ -1,7 +1,7 @@
 import type { ProjectSelection } from "../selections/selectionTypes";
 import type { SelectionLocation } from "../selections/selectionLocationTypes";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
-import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
+import { loadPersistedValue, projectStorageKey, removePersistedValue, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type RequirementNote = {
   id: string;
@@ -124,6 +124,18 @@ export class InMemorySelectionWorkspaceRepository implements SelectionWorkspaceR
     this.draftStates.set(key(saved.organisationId, saved.projectId), saved);
     savePersistedValue(storageKey("workspace-draft", saved), saved);
     return structuredClone(saved);
+  }
+
+  resetProject(context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): void {
+    const scopedKey = key(context.organisationId, context.projectId);
+    this.selections.delete(scopedKey);
+    this.locations.delete(scopedKey);
+    this.notes.delete(scopedKey);
+    this.attachments.delete(scopedKey);
+    this.draftStates.delete(scopedKey);
+    ["workspace-selections", "workspace-locations", "workspace-notes", "workspace-attachments", "workspace-draft"].forEach((bucket) => {
+      removePersistedValue(storageKey(bucket, context));
+    });
   }
 }
 

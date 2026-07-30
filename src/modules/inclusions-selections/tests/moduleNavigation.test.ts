@@ -20,9 +20,25 @@ export async function runModuleNavigationTests(): Promise<void> {
   const constructionHub = source("pages", "modules", "construction", "index.js");
   assert(constructionHub.includes('title="Inclusions & Selections"'), "Construction Hub should expose the active module title.");
   assert(constructionHub.includes('href="/inclusions-selections/areas"'), "Construction Hub should open the new Areas route.");
-  assert(!constructionHub.includes("Inclusions & Selections — Rebuilding"), "Construction Hub must not show the retired rebuilding placeholder.");
+  assert(!constructionHub.includes("Inclusions & Selections - Rebuilding") && !constructionHub.includes("Inclusions & Selections — Rebuilding"), "Construction Hub must not show the retired rebuilding placeholder.");
   assert(!constructionHub.includes('action="Unavailable"'), "Construction Hub module card must not be disabled.");
   assert(!constructionHub.includes("/modules/builders/client-selections") && !constructionHub.includes("/modules/builders/selections-book"), "Construction Hub must not link to retired selections routes.");
+
+  const builderEntryFiles = ["rfis.js", "quote-approvals.js", "document-vault.js"];
+  for (const fileName of builderEntryFiles) {
+    const builderPage = source("pages", "modules", "builders", fileName);
+    assert(builderPage.includes("inclusionsSelectionsHref(workspaceId, selectedProject)"), `${fileName} should build the selections URL from the selected project.`);
+    assert(builderPage.includes("<Link href={selectionsHref} style={styles.secondaryLink}>Inclusions & Selections</Link>"), `${fileName} should expose one active Inclusions & Selections link.`);
+    assert(!builderPage.includes("Inclusions & Selections - Rebuilding") && !builderPage.includes("Inclusions & Selections — Rebuilding"), `${fileName} should not expose the rebuilding label.`);
+    assert(!builderPage.includes("/modules/builders/selections-book"), `${fileName} should not link to the retired selections book.`);
+    assert(builderPage.includes('params.set("client", project.client_name)') && builderPage.includes('params.set("siteAddress", project.site_address)'), `${fileName} should preserve client and site address context.`);
+  }
+
+  const retiredPage = source("pages", "modules", "builders", "selections-book.js");
+  assert(retiredPage.includes("RetiredSelectionsBookPage"), "Retired compatibility route should remain available.");
+  assert(retiredPage.includes("Open New Inclusions & Selections"), "Retired route should include a button to the new workflow.");
+  assert(retiredPage.includes("/inclusions-selections/areas"), "Retired route button should open the new Areas route.");
+  assert(retiredPage.includes("router.query"), "Retired route button should preserve incoming query parameters.");
 
   const context = {
     organisationId: "org_nav",
@@ -34,8 +50,8 @@ export async function runModuleNavigationTests(): Promise<void> {
   };
   const query = queryForContext(context);
   assert(query.organisationId === context.organisationId && query.projectId === context.projectId, "Query helper should include required project scope.");
-  assert(query.clientName === context.clientName && query.siteAddress === context.siteAddress && query.jobNumber === context.jobNumber, "Query helper should preserve project metadata.");
-  assert(hrefForStage("review", context).includes("clientName=Client+One"), "Stage links should retain client context.");
+  assert(query.client === context.clientName && query.siteAddress === context.siteAddress && query.jobNumber === context.jobNumber, "Query helper should preserve project metadata.");
+  assert(hrefForStage("review", context).includes("client=Client+One"), "Stage links should retain client context.");
   assert(stageIndex("areas") === 0 && stageIndex("approvals") > stageIndex("review"), "Stage order should match the workflow.");
 
   for (const stage of INCLUSIONS_SELECTIONS_STAGES) {
@@ -44,6 +60,7 @@ export async function runModuleNavigationTests(): Promise<void> {
   const stageNav = source("src", "modules", "inclusions-selections", "components", "InclusionsSelectionsStageNav.tsx");
   assert(stageNav.includes("INCLUSIONS_SELECTIONS_STAGES"), "Stage nav should render the shared stage registry.");
   assert(stageNav.includes("maxAvailableStage"), "Stage nav should support blocked future stages.");
+  assert(stageNav.includes('maxAvailableStage = "documents-export"'), "Stage nav should expose all stages by default when project context exists.");
   assert(stageNav.includes("aria-current"), "Stage nav should identify the current stage.");
   assert(stageNav.includes("PROJECT_REQUIRED_MESSAGE"), "Stage nav should render the standard missing-project message.");
   assert(stageNav.includes("Back to Projects Hub"), "Stage nav should offer a route back to the project hub when context is missing.");

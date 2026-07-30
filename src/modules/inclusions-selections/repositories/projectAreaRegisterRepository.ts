@@ -2,7 +2,7 @@ import type { AreaType } from "../area-types/areaTypeTypes";
 import type { ProjectArea } from "../areas/projectAreaTypes";
 import type { ProjectLevel } from "../levels/projectLevelTypes";
 import type { OrganisationId, ProjectId } from "../shared/ids";
-import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
+import { loadPersistedValue, projectStorageKey, removePersistedValue, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ProjectSelectionContext = {
   organisationId: OrganisationId;
@@ -58,6 +58,11 @@ export class InMemoryProjectAreaRegisterRepository implements ProjectAreaRegiste
     this.registers.set(registerKey(saved.organisationId, saved.projectId), saved);
     savePersistedValue(persistedRegisterKey(saved.organisationId, saved.projectId), saved);
     return structuredClone(saved);
+  }
+
+  resetProject(context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): void {
+    this.registers.delete(registerKey(context.organisationId, context.projectId));
+    removePersistedValue(persistedRegisterKey(context.organisationId, context.projectId));
   }
 }
 

@@ -1,6 +1,6 @@
 import type { Money } from "../shared/money";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
-import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
+import { loadPersistedValue, projectStorageKey, removePersistedValue, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ReviewView = "summary" | "room" | "category" | "variations" | "issues" | "custom";
 export type ReviewStatus = "draft" | "review_required" | "pricing_incomplete" | "selection_incomplete" | "conflicts_present" | "ready_for_approval";
@@ -140,6 +140,17 @@ export class InMemorySelectionReviewRepository implements SelectionReviewReposit
     this.auditEvents.set(key(context.organisationId, context.projectId), structuredClone(scoped));
     savePersistedValue(storageKey("review-audit-events", context), scoped);
     return structuredClone(scoped);
+  }
+
+  resetProject(context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): void {
+    const scopedKey = key(context.organisationId, context.projectId);
+    this.states.delete(scopedKey);
+    this.issues.delete(scopedKey);
+    this.overrides.delete(scopedKey);
+    this.auditEvents.delete(scopedKey);
+    ["review-state", "review-issues", "review-overrides", "review-audit-events"].forEach((bucket) => {
+      removePersistedValue(storageKey(bucket, context));
+    });
   }
 }
 

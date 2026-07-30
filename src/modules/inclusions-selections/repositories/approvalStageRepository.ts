@@ -1,6 +1,6 @@
 import type { Money } from "../shared/money";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
-import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
+import { loadPersistedValue, projectStorageKey, removePersistedValue, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ApprovalParty = "client" | "builder";
 export type ApprovalMethod = "in_app" | "email_confirmation" | "signed_document" | "in_person" | "phone_confirmation" | "other";
@@ -247,6 +247,17 @@ export class InMemoryApprovalStageRepository implements ApprovalStageRepository 
     this.revisions.set(key(context.organisationId, context.projectId), structuredClone(scoped));
     savePersistedValue(storageKey("approval-draft-revisions", context), scoped);
     return structuredClone(scoped);
+  }
+
+  resetProject(context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): void {
+    const scopedKey = key(context.organisationId, context.projectId);
+    this.approvals.delete(scopedKey);
+    this.history.delete(scopedKey);
+    this.snapshots.delete(scopedKey);
+    this.revisions.delete(scopedKey);
+    ["approval-records", "approval-history", "approval-snapshots", "approval-draft-revisions"].forEach((bucket) => {
+      removePersistedValue(storageKey(bucket, context));
+    });
   }
 }
 

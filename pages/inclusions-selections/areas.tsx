@@ -8,6 +8,7 @@ import { GeneratedAreaRegister } from "../../src/modules/inclusions-selections/c
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ProjectLevelsEditor } from "../../src/modules/inclusions-selections/components/ProjectLevelsEditor";
 import { ProjectSelectionSummary } from "../../src/modules/inclusions-selections/components/ProjectSelectionSummary";
+import { DEMO_PROJECT_TYPE, loadDemonstrationProject, resetDemonstrationProject } from "../../src/modules/inclusions-selections/demo/demoProject";
 import type { ProjectAreaRegister, ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
 import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
@@ -103,6 +104,11 @@ export default function CreateSelectionAreasPage() {
     router.push(hrefForStage("templates", register));
   }
 
+  async function handleLoadDemo(reset = false) {
+    const demoContext = reset ? await resetDemonstrationProject() : await loadDemonstrationProject({ approvalState: "pending", reset: true });
+    await router.push(hrefForStage("areas", demoContext));
+  }
+
   if (router.isReady && !contextResult.ok) {
     return (
       <main className="createAreasPage">
@@ -110,6 +116,7 @@ export default function CreateSelectionAreasPage() {
         <section className="requiredState">
           <h1>Create Selection Areas</h1>
           <p>{PROJECT_REQUIRED_MESSAGE}</p>
+          <button type="button" className="primaryButton" onClick={() => void handleLoadDemo(false)}>Load Demonstration Project</button>
         </section>
         <style jsx global>{pageStyles}</style>
       </main>
@@ -135,6 +142,17 @@ export default function CreateSelectionAreasPage() {
   return (
     <main className="createAreasPage">
       <InclusionsSelectionsStageNav currentStage="areas" context={register} />
+      <section className="demoPanel">
+        <div>
+          <strong>Development demonstration data</strong>
+          <p>Load Johnson Residence to see a complete Stage 1-5 workflow with demo rooms, products, indicative AUD pricing, variations, review issues and approvals. Demonstration data is separate from real projects and is not live supplier pricing.</p>
+          <small>{DEMO_PROJECT_TYPE}</small>
+        </div>
+        <div className="demoActions">
+          <button type="button" className="primaryButton" onClick={() => void handleLoadDemo(false)}>Load Demonstration Project</button>
+          <button type="button" onClick={() => void handleLoadDemo(true)}>Reset Demonstration Project</button>
+        </div>
+      </section>
       <header className="pageHeader">
         <div>
           <h1>Create Selection Areas</h1>
@@ -193,6 +211,31 @@ const pageStyles = `
   .pageHeader, .requiredState {
     max-width: 1180px;
     margin: 0 auto 20px;
+  }
+  .demoPanel {
+    max-width: 1180px;
+    margin: 0 auto 18px;
+    background: #ecfeff;
+    border: 1px solid #a5f3fc;
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .demoPanel p {
+    margin: 5px 0;
+    color: #155e75;
+  }
+  .demoPanel small {
+    color: #475569;
+  }
+  .demoActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   h1 {
     margin: 0 0 10px;
@@ -428,6 +471,13 @@ const pageStyles = `
     }
     .summaryBar, .levelGrid, .workspace, .checklistGrid {
       grid-template-columns: 1fr;
+    }
+    .demoPanel {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .demoActions {
+      justify-content: flex-start;
     }
   }
   @media (max-width: 760px) {

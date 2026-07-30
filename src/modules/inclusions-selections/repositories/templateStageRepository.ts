@@ -2,7 +2,7 @@ import type { ProjectRequirement } from "../requirements/requirementTypes";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
 import type { SavedBuilderTemplate } from "../templates/savedBuilderTemplateTypes";
 import type { TemplateStageConfiguration } from "../templates/templateAssignmentTypes";
-import { loadPersistedValue, organisationStorageKey, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
+import { loadPersistedValue, organisationStorageKey, projectStorageKey, removePersistedValue, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type TemplateStageRepository = {
   loadConfiguration(context: ProjectSelectionContext): Promise<TemplateStageConfiguration | null>;
@@ -75,6 +75,14 @@ export class InMemoryTemplateStageRepository implements TemplateStageRepository 
     const templates = [...this.savedTemplates.values()].filter((item) => item.organisationId === template.organisationId);
     savePersistedValue(savedTemplatesStorageKey(template.organisationId), templates);
     return structuredClone(template);
+  }
+
+  resetProject(context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): void {
+    const key = projectKey(context.organisationId, context.projectId);
+    this.configurations.delete(key);
+    this.requirements.delete(key);
+    removePersistedValue(configurationStorageKey(context));
+    removePersistedValue(requirementsStorageKey(context));
   }
 }
 

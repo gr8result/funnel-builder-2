@@ -14,7 +14,7 @@ type Props = {
   maxAvailableStage?: InclusionsSelectionsStageId;
 };
 
-export function InclusionsSelectionsStageNav({ currentStage, context, maxAvailableStage = currentStage }: Props) {
+export function InclusionsSelectionsStageNav({ currentStage, context, maxAvailableStage = "documents-export" }: Props) {
   const currentIndex = stageIndex(currentStage);
   const maxAvailableIndex = Math.max(stageIndex(maxAvailableStage), currentIndex);
   const hasProject = Boolean(context.organisationId && context.projectId);

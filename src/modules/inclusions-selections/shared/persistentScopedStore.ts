@@ -33,3 +33,13 @@ export function savePersistedValue<T>(key: string, value: T): void {
     // Local storage is only a temporary browser draft layer for this module.
   }
 }
+
+export function removePersistedValue(key: string): void {
+  const localStorage = storage();
+  if (!localStorage) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Local storage is only a temporary browser draft layer for this module.
+  }
+}

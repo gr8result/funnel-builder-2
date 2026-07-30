@@ -17,6 +17,7 @@ import { SnapshotComparisonPanel } from "../../src/modules/inclusions-selections
 import { SnapshotReadinessChecklist } from "../../src/modules/inclusions-selections/components/SnapshotReadinessChecklist";
 import { SnapshotVersionHistory } from "../../src/modules/inclusions-selections/components/SnapshotVersionHistory";
 import { StaleApprovalWarning } from "../../src/modules/inclusions-selections/components/StaleApprovalWarning";
+import { loadDemonstrationProject, resetDemonstrationProject } from "../../src/modules/inclusions-selections/demo/demoProject";
 import { approvalStageRepository } from "../../src/modules/inclusions-selections/repositories/approvalStageRepository";
 import { selectionReviewRepository } from "../../src/modules/inclusions-selections/repositories/selectionReviewRepository";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
@@ -102,6 +103,14 @@ export default function SelectionApprovalsPage() {
     }
   };
 
+  async function loadDemoApprovalState(approvalState: "pending" | "approved" | "reset") {
+    const demoContext = approvalState === "reset"
+      ? await resetDemonstrationProject()
+      : await loadDemonstrationProject({ approvalState, reset: true });
+    setMessage(approvalState === "approved" ? "Fully approved demonstration state loaded. This is not a legal digital signature." : "Pending approval demonstration state loaded.");
+    await router.push(hrefForStage("approvals", demoContext));
+  }
+
   const snapshots = stage ? [...stage.snapshots].sort((a, b) => b.version - a.version) : [];
   const comparison = snapshots.length >= 2 ? compareSelectionSnapshots(snapshots[1], snapshots[0]) : [];
   const locked = Boolean(snapshots[0]?.status === "locked" && snapshots[0].sourceFingerprint === stage?.currentFingerprint);
@@ -120,6 +129,15 @@ export default function SelectionApprovalsPage() {
       {loading ? <section className="approvalCard">Loading approvals...</section> : null}
       {message ? <section className="validNotice">{message}</section> : null}
       <ApprovalValidationSummary issues={issues} />
+      <section className="demoApprovalPanel">
+        <div>
+          <strong>Development approval demos</strong>
+          <p>These actions load Johnson Residence demonstration approval states only. They do not create legal digital signatures.</p>
+        </div>
+        <button type="button" onClick={() => void loadDemoApprovalState("pending")}>Load Pending Approval Demo</button>
+        <button type="button" className="primaryButton" onClick={() => void loadDemoApprovalState("approved")}>Load Fully Approved Demo</button>
+        <button type="button" onClick={() => void loadDemoApprovalState("reset")}>Reset Demo Approval State</button>
+      </section>
       {stage ? (
         <>
           <ApprovalStatusBanner stage={stage} />
@@ -179,6 +197,9 @@ export default function SelectionApprovalsPage() {
         :global(.approvalSummary span), :global(.approvalStatus span) { display: block; color: #647082; font-size: 12px; }
         :global(.approvalSummary strong), :global(.approvalStatus strong) { display: block; margin-top: 4px; overflow-wrap: anywhere; }
         :global(.approvalActions), :global(.approvalButtons), :global(.approvalFields) { max-width: 1180px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .demoApprovalPanel { max-width: 1180px; margin: 0 auto 14px; background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .demoApprovalPanel div { flex: 1 1 360px; }
+        .demoApprovalPanel p { margin: 4px 0 0; color: #155e75; }
         :global(button), :global(input), :global(select) { border: 1px solid #cfd8e3; border-radius: 6px; min-height: 38px; padding: 8px 10px; background: #fff; color: #172033; font: inherit; }
         :global(button) { cursor: pointer; font-weight: 700; }
         :global(button:disabled) { color: #94a0af; cursor: not-allowed; }
@@ -196,6 +217,7 @@ export default function SelectionApprovalsPage() {
           .approvalHero h1 { font-size: 26px; }
           :global(.approvalSummary) { grid-template-columns: 1fr; }
           :global(.approvalActions), :global(.approvalButtons), :global(.approvalFields) { display: grid; grid-template-columns: 1fr; }
+          .demoApprovalPanel { display: grid; grid-template-columns: 1fr; }
           :global(.approvalRow) { grid-template-columns: 1fr; }
           :global(button), :global(input), :global(select) { width: 100%; }
         }

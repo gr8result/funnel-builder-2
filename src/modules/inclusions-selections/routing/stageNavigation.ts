@@ -47,7 +47,7 @@ export function queryForContext(context: Partial<ProjectSelectionContext>, extra
   if (context.organisationId) query.organisationId = context.organisationId;
   if (context.projectId) query.projectId = context.projectId;
   if (context.projectName) query.projectName = context.projectName;
-  if (context.clientName) query.clientName = context.clientName;
+  if (context.clientName) query.client = context.clientName;
   if (context.siteAddress) query.siteAddress = context.siteAddress;
   if (context.jobNumber) query.jobNumber = context.jobNumber;
   Object.entries(extra).forEach(([key, value]) => {

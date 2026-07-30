@@ -10,7 +10,7 @@ export function WorkspaceProgressSummary({ state }: { state: SelectionWorkspaceS
     <section className="workspaceSummary" aria-label="Project progress summary">
       <div><span>Project</span><strong>{state.context.projectName || state.context.projectId}</strong></div>
       <div><span>Project tier</span><strong>{tier?.name ?? "Not set"}</strong></div>
-      <div><span>ProjectAreas</span><strong>{progress.totalAreas}</strong></div>
+      <div><span>Rooms / Areas</span><strong>{progress.totalAreas}</strong></div>
       <div><span>Requirements</span><strong>{progress.totalRequirements}</strong></div>
       <div><span>Complete</span><strong>{progress.completedRequirements}</strong></div>
       <div><span>Incomplete</span><strong>{progress.incompleteRequirements}</strong></div>

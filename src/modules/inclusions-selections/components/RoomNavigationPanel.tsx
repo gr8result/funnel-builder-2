@@ -4,8 +4,8 @@ export function RoomNavigationPanel({ groups, selectedAreaId, search, onSearch, 
   const needle = search.toLowerCase();
   return (
     <aside className="navPanel">
-      <div className="panelHead"><h2>Rooms</h2><button type="button" onClick={onEditAreas}>Edit Project Areas</button></div>
-      <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search rooms" aria-label="Search ProjectAreas" />
+      <div className="panelHead"><h2>Rooms</h2><button type="button" onClick={onEditAreas}>Edit Areas</button></div>
+      <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search rooms" aria-label="Search rooms and areas" />
       {groups.map((group) => (
         <details open key={group.groupId}>
           <summary>{group.groupName}</summary>

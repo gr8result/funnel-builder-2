@@ -18,7 +18,7 @@ export async function resolve(specifier, context, defaultResolve) {
       ? specifier
       : path.resolve(parentDir, specifier);
 
-    for (const candidate of [`${basePath}.js`, `${basePath}.mjs`, `${basePath}.cjs`, path.join(basePath, "index.js")]) {
+    for (const candidate of [`${basePath}.js`, `${basePath}.mjs`, `${basePath}.cjs`, `${basePath}.ts`, `${basePath}.tsx`, path.join(basePath, "index.js"), path.join(basePath, "index.ts")]) {
       if (existsSync(candidate)) {
         return {
           url: pathToFileURL(candidate).href,

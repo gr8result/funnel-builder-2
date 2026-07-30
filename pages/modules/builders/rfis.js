@@ -186,6 +186,10 @@ export default function BuilderRfisPage() {
     () => projects.find((project) => project.id === selectedProjectId) || null,
     [projects, selectedProjectId]
   );
+  const selectionsHref = useMemo(
+    () => inclusionsSelectionsHref(workspaceId, selectedProject),
+    [workspaceId, selectedProject]
+  );
 
   const visibleBoqItems = useMemo(
     () => boqItems.filter((item) => !selectedSnapshotId || item.snapshot_id === selectedSnapshotId),
@@ -348,7 +352,7 @@ export default function BuilderRfisPage() {
           </div>
           <div style={styles.heroActions}>
             <Link href="/modules/builders/document-vault" style={styles.secondaryLink}>Document Vault</Link>
-            <span style={{ ...styles.secondaryLink, opacity: 0.55, cursor: "not-allowed" }}>Inclusions & Selections — Rebuilding</span>
+            <Link href={selectionsHref} style={styles.secondaryLink}>Inclusions & Selections</Link>
             <Link href="/modules/builders/budget-vs-actual" style={styles.primaryLink}>Budget vs Actual</Link>
           </div>
         </header>
@@ -618,6 +622,18 @@ function titleCase(value) {
   return String(value || "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function inclusionsSelectionsHref(workspaceId, project) {
+  if (!workspaceId || !project?.id) return "/inclusions-selections/areas";
+  const params = new URLSearchParams({
+    organisationId: workspaceId,
+    projectId: project.id,
+  });
+  if (project.project_name) params.set("projectName", project.project_name);
+  if (project.client_name) params.set("client", project.client_name);
+  if (project.site_address) params.set("siteAddress", project.site_address);
+  return `/inclusions-selections/areas?${params.toString()}`;
 }
 
 function priorityStyle(priority, overdue) {

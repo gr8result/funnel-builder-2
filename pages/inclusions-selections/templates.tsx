@@ -254,7 +254,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
         onSave={handleSave}
         onContinue={handleContinue}
       />
-      <p className="persistenceNote">Template assignments, saved builder templates and ProjectRequirements use browser-scoped repositories until approved database adapters are added.</p>
+      <p className="persistenceNote">Template assignments, saved builder templates and generated selection items use browser-scoped repositories until approved database adapters are added.</p>
       <style jsx global>{templateStyles}</style>
     </main>
   );

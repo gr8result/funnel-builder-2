@@ -72,7 +72,7 @@ export default function InclusionsSelectionsWorkspacePage() {
       if (cancelled) return;
       setState(loaded);
       setView(loaded.draftState.selectedView);
-      setSelectedAreaId(loaded.templateStage.areaRegister.areas[0]?.id ?? "");
+      setSelectedAreaId(loaded.draftState.selectedAreaId ?? loaded.templateStage.areaRegister.areas[0]?.id ?? "");
       setSelectedCategory(loaded.requirements[0]?.category ?? "");
       setIssues(validateSelectionWorkspace(loaded, true).issues);
     });
@@ -217,7 +217,7 @@ export default function InclusionsSelectionsWorkspacePage() {
         onReviewIncomplete={() => setIssues(validateSelectionWorkspace(state, false).issues)}
         onContinue={handleContinue}
       />
-      <p className="persistenceNote">Selections, SelectionLocations, notes, attachments and workspace draft state use browser-scoped repositories until approved database adapters are added.</p>
+      <p className="persistenceNote">Selections, room locations, notes, attachments and workspace draft state use browser-scoped repositories until approved database adapters are added.</p>
       <style jsx global>{workspaceStyles}</style>
     </main>
   );
@@ -246,6 +246,9 @@ const workspaceStyles = `
   .viewSwitcher { display: flex; gap: 8px; }
   .viewSwitcher .selected, .navItem.selected, .productResult.selected { background: #eaf2fc; border-color: #1c4f91; }
   .navItem, .productResult { display: grid; gap: 4px; width: 100%; margin: 8px 0; text-align: left; background: #f8fafc; }
+  .productResult { grid-template-columns: 42px minmax(0, 1fr); align-items: center; }
+  .productResult strong, .productResult span:not(.productThumb) { grid-column: 2; }
+  .productThumb { grid-row: 1 / span 4; display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 8px; background: #e9f3ef; color: #1e5f46; font-size: 12px; font-weight: 800; letter-spacing: 0; }
   .navItem span, .productResult span { color: #657186; font-size: 12px; }
   .workspaceFilters, .requirementHeader, .rowActions, .splitFields, .pricingSummary, .previewColumns { display: flex; gap: 8px; align-items: center; }
   .workspaceFilters { margin-bottom: 12px; }
@@ -269,5 +272,5 @@ const workspaceStyles = `
   .stageActions { display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: rgba(245,247,250,.95); padding: 14px 0; flex-wrap: wrap; }
   .persistenceNote { color: #657186; font-size: 13px; }
   @media (max-width: 1100px) { .workspaceLayout, .workspaceSummary { grid-template-columns: 1fr; } .workspaceSide { order: -1; } }
-  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields { grid-template-columns: 1fr; } .requirementCard { padding: 12px; } }
+  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields { grid-template-columns: 1fr; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .requirementCard { padding: 12px; } }
 `;

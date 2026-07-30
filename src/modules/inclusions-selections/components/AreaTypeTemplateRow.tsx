@@ -22,7 +22,7 @@ export function AreaTypeTemplateRow({ state, areaTypeId, areas, onTemplate, onTi
     <div className="areaTypeRow">
       <div>
         <strong>All {areaType?.name ?? areaTypeId}</strong>
-        <span>{areas.length} ProjectAreas</span>
+        <span>{areas.length} rooms / areas</span>
       </div>
       <TemplateSelector label="Template" value={firstEffective?.templateId} areaTypeId={areaTypeId} templates={state.templates} onChange={onTemplate} />
       <label className="fieldLabel compact">

@@ -44,9 +44,9 @@ export function ProjectAreaTemplateCard({ state, area, onTemplate, onTier, onCus
         <span className="statusPill">{status}</span>
       </div>
       <div className="areaControls">
-        <TemplateSelector label="AreaTemplate" value={effective.templateId} areaTypeId={area.areaTypeId} templates={state.templates} onChange={onTemplate} />
+        <TemplateSelector label="Room Template" value={effective.templateId} areaTypeId={area.areaTypeId} templates={state.templates} onChange={onTemplate} />
         <label className="fieldLabel">
-          <span>InclusionTier</span>
+          <span>Inclusion Tier</span>
           <select value={effective.tierId ?? ""} onChange={(event) => onTier(event.target.value)}>
             <option value="">Inherit tier</option>
             <option value="tier_classic">Classic</option>
