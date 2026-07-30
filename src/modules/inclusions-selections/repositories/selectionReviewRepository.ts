@@ -1,5 +1,6 @@
 import type { Money } from "../shared/money";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
+import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ReviewView = "summary" | "room" | "category" | "variations" | "issues" | "custom";
 export type ReviewStatus = "draft" | "review_required" | "pricing_incomplete" | "selection_incomplete" | "conflicts_present" | "ready_for_approval";
@@ -79,6 +80,10 @@ function key(organisationId: string, projectId: string): string {
   return `${organisationId}:${projectId}`;
 }
 
+function storageKey(bucket: string, context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): string {
+  return projectStorageKey(bucket, context.organisationId, context.projectId);
+}
+
 export class InMemorySelectionReviewRepository implements SelectionReviewRepository {
   private states = new Map<string, SelectionReviewState>();
   private issues = new Map<string, ReviewIssue[]>();
@@ -86,42 +91,54 @@ export class InMemorySelectionReviewRepository implements SelectionReviewReposit
   private auditEvents = new Map<string, ReviewAuditEvent[]>();
 
   async loadReviewState(context: ProjectSelectionContext): Promise<SelectionReviewState | null> {
-    return structuredClone(this.states.get(key(context.organisationId, context.projectId)) ?? null);
+    const state = this.states.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<SelectionReviewState>(storageKey("review-state", context));
+    if (state) this.states.set(key(context.organisationId, context.projectId), structuredClone(state));
+    return structuredClone(state ?? null);
   }
 
   async saveReviewState(state: SelectionReviewState): Promise<SelectionReviewState> {
     const saved = { ...structuredClone(state), savedStatus: "saved" as const, updatedAt: new Date().toISOString() };
     this.states.set(key(saved.organisationId, saved.projectId), saved);
+    savePersistedValue(storageKey("review-state", saved), saved);
     return structuredClone(saved);
   }
 
   async listIssues(context: ProjectSelectionContext): Promise<ReviewIssue[]> {
-    return structuredClone(this.issues.get(key(context.organisationId, context.projectId)) ?? []);
+    const issues = this.issues.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<ReviewIssue[]>(storageKey("review-issues", context)) ?? [];
+    this.issues.set(key(context.organisationId, context.projectId), structuredClone(issues));
+    return structuredClone(issues);
   }
 
   async saveIssues(context: ProjectSelectionContext, issues: ReviewIssue[]): Promise<ReviewIssue[]> {
     const scoped = issues.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.issues.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("review-issues", context), scoped);
     return structuredClone(scoped);
   }
 
   async listAllowanceOverrides(context: ProjectSelectionContext): Promise<AllowanceOverride[]> {
-    return structuredClone(this.overrides.get(key(context.organisationId, context.projectId)) ?? []);
+    const overrides = this.overrides.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<AllowanceOverride[]>(storageKey("review-overrides", context)) ?? [];
+    this.overrides.set(key(context.organisationId, context.projectId), structuredClone(overrides));
+    return structuredClone(overrides);
   }
 
   async saveAllowanceOverrides(context: ProjectSelectionContext, overrides: AllowanceOverride[]): Promise<AllowanceOverride[]> {
     const scoped = overrides.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.overrides.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("review-overrides", context), scoped);
     return structuredClone(scoped);
   }
 
   async listAuditEvents(context: ProjectSelectionContext): Promise<ReviewAuditEvent[]> {
-    return structuredClone(this.auditEvents.get(key(context.organisationId, context.projectId)) ?? []);
+    const events = this.auditEvents.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<ReviewAuditEvent[]>(storageKey("review-audit-events", context)) ?? [];
+    this.auditEvents.set(key(context.organisationId, context.projectId), structuredClone(events));
+    return structuredClone(events);
   }
 
   async saveAuditEvents(context: ProjectSelectionContext, events: ReviewAuditEvent[]): Promise<ReviewAuditEvent[]> {
     const scoped = events.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.auditEvents.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("review-audit-events", context), scoped);
     return structuredClone(scoped);
   }
 }

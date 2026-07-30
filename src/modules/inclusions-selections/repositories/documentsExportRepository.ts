@@ -1,5 +1,6 @@
 import type { Money } from "../shared/money";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
+import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type DocumentProjectionType = "client_selection_schedule" | "builder_internal_schedule" | "site_supervisor_schedule" | "room_by_room_schedule" | "category_schedule" | "trade_schedule" | "supplier_schedule" | "variation_summary" | "estimate_export_preview";
 export type DocumentAudience = "client" | "builder" | "site_supervisor" | "trade" | "supplier" | "internal";
@@ -250,6 +251,10 @@ function key(context: ProjectSelectionContext): string {
   return `${context.organisationId}:${context.projectId}`;
 }
 
+function storageKey(bucket: string, context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): string {
+  return projectStorageKey(bucket, context.organisationId, context.projectId);
+}
+
 export class InMemoryDocumentsExportRepository implements DocumentsExportRepository {
   private documents = new Map<string, GeneratedDocumentRecord[]>();
   private overrides = new Map<string, EstimateMappingOverride[]>();
@@ -259,62 +264,80 @@ export class InMemoryDocumentsExportRepository implements DocumentsExportReposit
   private auditEvents = new Map<string, DocumentsExportAuditEvent[]>();
 
   async listGeneratedDocuments(context: ProjectSelectionContext): Promise<GeneratedDocumentRecord[]> {
-    return structuredClone(this.documents.get(key(context)) ?? []);
+    const documents = this.documents.get(key(context)) ?? loadPersistedValue<GeneratedDocumentRecord[]>(storageKey("generated-documents", context)) ?? [];
+    this.documents.set(key(context), structuredClone(documents));
+    return structuredClone(documents);
   }
 
   async saveGeneratedDocuments(context: ProjectSelectionContext, documents: GeneratedDocumentRecord[]): Promise<GeneratedDocumentRecord[]> {
     const scoped = documents.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.documents.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("generated-documents", context), scoped);
     return structuredClone(scoped);
   }
 
   async listMappingOverrides(context: ProjectSelectionContext): Promise<EstimateMappingOverride[]> {
-    return structuredClone(this.overrides.get(key(context)) ?? []);
+    const overrides = this.overrides.get(key(context)) ?? loadPersistedValue<EstimateMappingOverride[]>(storageKey("export-mapping-overrides", context)) ?? [];
+    this.overrides.set(key(context), structuredClone(overrides));
+    return structuredClone(overrides);
   }
 
   async saveMappingOverrides(context: ProjectSelectionContext, overrides: EstimateMappingOverride[]): Promise<EstimateMappingOverride[]> {
     const scoped = overrides.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.overrides.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("export-mapping-overrides", context), scoped);
     return structuredClone(scoped);
   }
 
   async listExportBatches(context: ProjectSelectionContext): Promise<EstimateExportBatch[]> {
-    return structuredClone(this.batches.get(key(context)) ?? []);
+    const batches = this.batches.get(key(context)) ?? loadPersistedValue<EstimateExportBatch[]>(storageKey("export-batches", context)) ?? [];
+    this.batches.set(key(context), structuredClone(batches));
+    return structuredClone(batches);
   }
 
   async saveExportBatches(context: ProjectSelectionContext, batches: EstimateExportBatch[]): Promise<EstimateExportBatch[]> {
     const scoped = batches.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.batches.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("export-batches", context), scoped);
     return structuredClone(scoped);
   }
 
   async listExportLines(context: ProjectSelectionContext): Promise<EstimateExportLine[]> {
-    return structuredClone(this.lines.get(key(context)) ?? []);
+    const lines = this.lines.get(key(context)) ?? loadPersistedValue<EstimateExportLine[]>(storageKey("export-lines", context)) ?? [];
+    this.lines.set(key(context), structuredClone(lines));
+    return structuredClone(lines);
   }
 
   async saveExportLines(context: ProjectSelectionContext, lines: EstimateExportLine[]): Promise<EstimateExportLine[]> {
     const scoped = lines.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.lines.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("export-lines", context), scoped);
     return structuredClone(scoped);
   }
 
   async listReconciliations(context: ProjectSelectionContext): Promise<ExportReconciliation[]> {
-    return structuredClone(this.reconciliations.get(key(context)) ?? []);
+    const reconciliations = this.reconciliations.get(key(context)) ?? loadPersistedValue<ExportReconciliation[]>(storageKey("export-reconciliations", context)) ?? [];
+    this.reconciliations.set(key(context), structuredClone(reconciliations));
+    return structuredClone(reconciliations);
   }
 
   async saveReconciliations(context: ProjectSelectionContext, reconciliations: ExportReconciliation[]): Promise<ExportReconciliation[]> {
     const scoped = reconciliations.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.reconciliations.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("export-reconciliations", context), scoped);
     return structuredClone(scoped);
   }
 
   async listAuditEvents(context: ProjectSelectionContext): Promise<DocumentsExportAuditEvent[]> {
-    return structuredClone(this.auditEvents.get(key(context)) ?? []);
+    const events = this.auditEvents.get(key(context)) ?? loadPersistedValue<DocumentsExportAuditEvent[]>(storageKey("export-audit-events", context)) ?? [];
+    this.auditEvents.set(key(context), structuredClone(events));
+    return structuredClone(events);
   }
 
   async saveAuditEvents(context: ProjectSelectionContext, events: DocumentsExportAuditEvent[]): Promise<DocumentsExportAuditEvent[]> {
     const scoped = events.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.auditEvents.set(key(context), structuredClone(scoped));
+    savePersistedValue(storageKey("export-audit-events", context), scoped);
     return structuredClone(scoped);
   }
 }

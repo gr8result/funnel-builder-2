@@ -2,6 +2,7 @@ import type { AreaType } from "../area-types/areaTypeTypes";
 import type { ProjectArea } from "../areas/projectAreaTypes";
 import type { ProjectLevel } from "../levels/projectLevelTypes";
 import type { OrganisationId, ProjectId } from "../shared/ids";
+import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ProjectSelectionContext = {
   organisationId: OrganisationId;
@@ -34,12 +35,18 @@ function registerKey(organisationId: OrganisationId, projectId: ProjectId): stri
   return `${organisationId}:${projectId}`;
 }
 
+function persistedRegisterKey(organisationId: OrganisationId, projectId: ProjectId): string {
+  return projectStorageKey("area-register", organisationId, projectId);
+}
+
 export class InMemoryProjectAreaRegisterRepository implements ProjectAreaRegisterRepository {
   private registers = new Map<string, ProjectAreaRegister>();
 
   async load(context: ProjectSelectionContext): Promise<ProjectAreaRegister | null> {
-    const register = this.registers.get(registerKey(context.organisationId, context.projectId));
+    const key = registerKey(context.organisationId, context.projectId);
+    const register = this.registers.get(key) ?? loadPersistedValue<ProjectAreaRegister>(persistedRegisterKey(context.organisationId, context.projectId));
     if (!register || register.organisationId !== context.organisationId || register.projectId !== context.projectId) return null;
+    this.registers.set(key, structuredClone(register));
     return structuredClone(register);
   }
 
@@ -49,6 +56,7 @@ export class InMemoryProjectAreaRegisterRepository implements ProjectAreaRegiste
     }
     const saved = { ...structuredClone(register), updatedAt: new Date().toISOString() };
     this.registers.set(registerKey(saved.organisationId, saved.projectId), saved);
+    savePersistedValue(persistedRegisterKey(saved.organisationId, saved.projectId), saved);
     return structuredClone(saved);
   }
 }

@@ -9,8 +9,10 @@ import { SavedBuilderTemplatePanel } from "../../src/modules/inclusions-selectio
 import { TemplateStageActions } from "../../src/modules/inclusions-selections/components/TemplateStageActions";
 import { TemplateStageProjectSummary } from "../../src/modules/inclusions-selections/components/TemplateStageProjectSummary";
 import { TemplateStageValidationSummary } from "../../src/modules/inclusions-selections/components/TemplateStageValidationSummary";
+import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import type { RequirementCategory, RequirementDefinition } from "../../src/modules/inclusions-selections/requirements/requirementTypes";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
+import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   applyBuilderTemplate,
   archiveBuilderTemplate,
@@ -34,10 +36,6 @@ import {
 import type { RequirementReconciliationResult, TemplateStageState } from "../../src/modules/inclusions-selections/services/templateStageService";
 import type { SavedBuilderTemplate } from "../../src/modules/inclusions-selections/templates/savedBuilderTemplateTypes";
 import type { DomainIssue, DomainResult } from "../../src/modules/inclusions-selections/validation/errors";
-
-function queryValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 function groupAreas(state: TemplateStageState): Record<string, typeof state.areaRegister.areas> {
   return state.areaRegister.areas.reduce<Record<string, typeof state.areaRegister.areas>>((acc, area) => {
@@ -63,14 +61,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
   const [customTitle, setCustomTitle] = useState("");
   const [customCategory, setCustomCategory] = useState<RequirementCategory>("allowance");
 
-  const context = useMemo<Partial<ProjectSelectionContext>>(() => ({
-    organisationId: queryValue(router.query.organisationId) ?? queryValue(router.query.orgId),
-    projectId: queryValue(router.query.projectId),
-    projectName: queryValue(router.query.projectName),
-    clientName: queryValue(router.query.clientName) ?? queryValue(router.query.client),
-    siteAddress: queryValue(router.query.siteAddress),
-    jobNumber: queryValue(router.query.jobNumber),
-  }), [router.query]);
+  const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
 
   useEffect(() => {
     if (!router.isReady || !context.organisationId || !context.projectId) return;
@@ -118,19 +109,16 @@ export default function RoomTemplatesAndInclusionTiersPage() {
     const saved = await saveTemplateStage(reconciled.value);
     setSaving(false);
     if (!applyResult(saved)) return;
-    const params = new URLSearchParams();
-    params.set("organisationId", state.context.organisationId);
-    params.set("projectId", state.context.projectId);
-    if (state.context.projectName) params.set("projectName", state.context.projectName);
-    router.push(`/inclusions-selections/workspace?${params.toString()}`);
+    router.push(hrefForStage("workspace", state.context));
   }
 
   if (router.isReady && (!context.organisationId || !context.projectId)) {
     return (
       <main className="templateStagePage">
+        <InclusionsSelectionsStageNav currentStage="templates" context={context} />
         <section className="requiredState">
           <h1>Room Templates and Inclusion Tiers</h1>
-          <p>Open an existing project before configuring room templates.</p>
+          <p>{PROJECT_REQUIRED_MESSAGE}</p>
         </section>
         <style jsx global>{templateStyles}</style>
       </main>
@@ -140,6 +128,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
   if (!state) {
     return (
       <main className="templateStagePage">
+        <InclusionsSelectionsStageNav currentStage="templates" context={context} />
         <section className="requiredState">
           <h1>Room Templates and Inclusion Tiers</h1>
           <p>Loading room templates.</p>
@@ -156,12 +145,13 @@ export default function RoomTemplatesAndInclusionTiersPage() {
 
   return (
     <main className="templateStagePage">
+      <InclusionsSelectionsStageNav currentStage="templates" context={state.context} />
       <header className="pageHeader">
         <div>
           <h1>Room Templates and Inclusion Tiers</h1>
           <p>Choose the template and inclusion tier for each project area. Templates define what must be selected, while tiers define the standard of inclusions applied.</p>
         </div>
-        <button type="button" onClick={() => router.push(`/inclusions-selections/areas?organisationId=${encodeURIComponent(state.context.organisationId)}&projectId=${encodeURIComponent(state.context.projectId)}`)}>Edit Project Areas</button>
+        <button type="button" onClick={() => router.push(hrefForStage("areas", state.context))}>Edit Project Areas</button>
       </header>
       <TemplateStageProjectSummary state={state} requiringAttention={attentionCount(state)} />
       <div className="templateWorkspace">
@@ -258,13 +248,13 @@ export default function RoomTemplatesAndInclusionTiersPage() {
       <TemplateStageActions
         canContinue={validation.ok}
         saving={saving}
-        onBack={() => router.push(`/inclusions-selections/areas?organisationId=${encodeURIComponent(state.context.organisationId)}&projectId=${encodeURIComponent(state.context.projectId)}`)}
+        onBack={() => router.push(hrefForStage("areas", state.context))}
         onPreview={() => setPreview(previewRequirementGeneration(state))}
         onGenerate={() => applyResult(reconcileProjectRequirements(state))}
         onSave={handleSave}
         onContinue={handleContinue}
       />
-      <p className="persistenceNote">Template assignments, saved builder templates and ProjectRequirements use in-memory repositories until approved database adapters are added.</p>
+      <p className="persistenceNote">Template assignments, saved builder templates and ProjectRequirements use browser-scoped repositories until approved database adapters are added.</p>
       <style jsx global>{templateStyles}</style>
     </main>
   );

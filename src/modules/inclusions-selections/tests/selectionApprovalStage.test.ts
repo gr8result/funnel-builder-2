@@ -158,7 +158,7 @@ runSelectionApprovalStageTests().then(async () => {
   const actionsSource = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "components", "ApprovalStageActions.tsx"), "utf8");
   assert(approvalsSource.includes("Approvals and Locked Selection Version"), "Stage 5 approvals route title is present.");
   assert(approvalsSource.includes("Review and approve the completed selections. Client and builder approvals must match the same reviewed version before the selections can be locked."), "Stage 5 intro text is exact.");
-  assert(actionsSource.includes("Back to Review") && approvalsSource.includes("/inclusions-selections/documents-export"), "Approval route has back and next navigation.");
+  assert(actionsSource.includes("Back to Review") && approvalsSource.includes('hrefForStage("documents-export"'), "Approval route has back and context-preserving next navigation.");
   assert(documentsSource.includes("Approved Documents and Estimate Export"), "Documents/export route should now be the Stage 6 workspace.");
   assert(!approvalsSource.includes("createEstimateSelectionExport") && !approvalsSource.includes("procurement"), "Stage 5 route does not load final document, export or procurement code.");
 });

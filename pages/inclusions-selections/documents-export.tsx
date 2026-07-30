@@ -10,6 +10,7 @@ import { ExportAggregationSummary } from "../../src/modules/inclusions-selection
 import { ExportHistoryPanel } from "../../src/modules/inclusions-selections/components/ExportHistoryPanel";
 import { ExportReconciliationPanel } from "../../src/modules/inclusions-selections/components/ExportReconciliationPanel";
 import { GeneratedDocumentsPanel } from "../../src/modules/inclusions-selections/components/GeneratedDocumentsPanel";
+import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { OutputTypeSelector } from "../../src/modules/inclusions-selections/components/OutputTypeSelector";
 import { SnapshotVersionSelector } from "../../src/modules/inclusions-selections/components/SnapshotVersionSelector";
 import { BuilderSchedulePreview, ClientSelectionSchedulePreview, SiteSchedulePreview, SupplierSchedulePreview, TradeSchedulePreview, VariationSummaryPreview } from "../../src/modules/inclusions-selections/components/SchedulePreviewPanels";
@@ -25,14 +26,10 @@ import {
   type DocumentsExportStage,
 } from "../../src/modules/inclusions-selections/services/documentsExportService";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-
-function queryValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
+import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage, queryValue } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 
 export default function SelectionDocumentsExportPage() {
   const router = useRouter();
-  const projectId = queryValue(router.query.projectId);
   const [stage, setStage] = useState<DocumentsExportStage | null>(null);
   const [outputType, setOutputType] = useState<DocumentProjectionType>("client_selection_schedule");
   const [selectedLineId, setSelectedLineId] = useState<string | undefined>();
@@ -40,16 +37,11 @@ export default function SelectionDocumentsExportPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const context = useMemo<ProjectSelectionContext | null>(() => projectId ? {
-    organisationId: queryValue(router.query.organisationId) ?? "org_dev",
-    projectId,
-    projectName: queryValue(router.query.projectName) ?? "Selection Project",
-    clientName: queryValue(router.query.clientName) ?? "Client",
-    siteAddress: queryValue(router.query.siteAddress) ?? "Site address",
-  } : null, [projectId, router.query]);
+  const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
+  const hasProjectContext = Boolean(context.organisationId && context.projectId);
 
   const loadStage = useCallback(async (options: { snapshotVersion?: number; snapshotId?: string } = {}) => {
-    if (!context) {
+    if (!hasProjectContext) {
       setStage(null);
       setLoading(false);
       return;
@@ -57,13 +49,13 @@ export default function SelectionDocumentsExportPage() {
     setLoading(true);
     try {
       const querySnapshotVersion = Number(queryValue(router.query.snapshotVersion) || 0) || undefined;
-      setStage(await loadDocumentsExportStage(context, { ...options, snapshotId: options.snapshotId ?? queryValue(router.query.snapshotId), snapshotVersion: options.snapshotVersion ?? querySnapshotVersion }));
+      setStage(await loadDocumentsExportStage(context as ProjectSelectionContext, { ...options, snapshotId: options.snapshotId ?? queryValue(router.query.snapshotId), snapshotVersion: options.snapshotVersion ?? querySnapshotVersion }));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Documents and export stage could not be loaded.");
     } finally {
       setLoading(false);
     }
-  }, [context, router.query.snapshotId, router.query.snapshotVersion]);
+  }, [context, hasProjectContext, router.query.snapshotId, router.query.snapshotVersion]);
 
   useEffect(() => {
     void loadStage();
@@ -81,12 +73,13 @@ export default function SelectionDocumentsExportPage() {
 
   return (
     <main className="documentsExportPage">
+      <InclusionsSelectionsStageNav currentStage="documents-export" context={stage?.context ?? context} />
       <header className="documentsHero">
         <p>Inclusions and Selections</p>
         <h1>Approved Documents and Estimate Export</h1>
         <span>Generate approved selection schedules from the locked version and transfer validated selection costs into the Estimate Builder.</span>
       </header>
-      {!projectId ? <section className="issuePanel">Open an existing project before documents and export.</section> : null}
+      {!hasProjectContext ? <section className="issuePanel">{PROJECT_REQUIRED_MESSAGE}</section> : null}
       {loading ? <section className="documentsCard">Loading documents and export...</section> : null}
       {message ? <section className="validNotice">{message}</section> : null}
       {stage ? (
@@ -94,7 +87,7 @@ export default function SelectionDocumentsExportPage() {
           <DocumentsExportProjectSummary stage={stage} />
           <DocumentsExportStageActions
             canContinue={canContinue}
-            onBack={() => void router.push({ pathname: "/inclusions-selections/approvals", query: { projectId: stage.context.projectId, organisationId: stage.context.organisationId } })}
+            onBack={() => void router.push(hrefForStage("approvals", stage.context))}
             onGenerate={() => void generateSelectionDocument(stage, outputType, "builder", undefined, documentsExportRepository).then((result) => reloadWithMessage(result.ok ? "Document generated." : result.issues.map((item) => item.message).join("; ")))}
             onPrint={() => window.print()}
             onValidate={() => setMessage(stage.mappingSummary.unmappedLines ? "Estimate mappings need attention." : "Estimate mappings are ready.")}

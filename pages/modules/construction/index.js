@@ -107,12 +107,12 @@ export default function ConstructionHub() {
             action="Open Production Flow"
           />
           <ToolCard
-            accent="#64748b"
+            href="/inclusions-selections/areas"
+            accent="#155e75"
             icon="IS"
-            title="Inclusions & Selections — Rebuilding"
-            description="This workspace is being rebuilt using a new room-based workflow. Historical records are preserved."
-            action="Unavailable"
-            disabled
+            title="Inclusions & Selections"
+            description="Create project areas, apply room templates and inclusion tiers, complete selections, review variations and manage approvals."
+            action="Open Inclusions & Selections"
           />
         </div>
 

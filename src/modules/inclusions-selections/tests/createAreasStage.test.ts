@@ -96,8 +96,8 @@ export async function runCreateAreasStageTests(): Promise<void> {
 
   const pageSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "areas.tsx"), "utf8");
   const registerSource = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "components", "GeneratedAreaRegister.tsx"), "utf8");
-  assert(pageSource.includes("/inclusions-selections/templates"), "Continue action should route to the templates stage.");
-  assert(pageSource.includes("Open an existing project before creating selection areas."), "Missing project context should have a friendly blocking state.");
+  assert(pageSource.includes('hrefForStage("templates"'), "Continue action should route to the templates stage through shared stage navigation.");
+  assert(pageSource.includes("PROJECT_REQUIRED_MESSAGE"), "Missing project context should use the shared friendly blocking state.");
   assert(pageSource.includes("@media (max-width: 760px)") && registerSource.includes("areaCard"), "The register should include a responsive mobile card view.");
   assert(!pageSource.includes("lib/builders/selectionBudget") && !pageSource.includes("ProductLibrary") && !pageSource.includes("Estimate Builder"), "Create Areas page should stay isolated from retired selections, Product Library and Estimate Builder imports.");
 }

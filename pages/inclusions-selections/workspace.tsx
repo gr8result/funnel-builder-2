@@ -7,6 +7,7 @@ import type { CustomSelectionDraft } from "../../src/modules/inclusions-selectio
 import { RequirementWorkspace } from "../../src/modules/inclusions-selections/components/RequirementWorkspace";
 import { RoomNavigationPanel } from "../../src/modules/inclusions-selections/components/RoomNavigationPanel";
 import { SelectionWorkspaceHeader } from "../../src/modules/inclusions-selections/components/SelectionWorkspaceHeader";
+import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { WorkspaceProgressSummary } from "../../src/modules/inclusions-selections/components/WorkspaceProgressSummary";
 import { WorkspaceStageActions } from "../../src/modules/inclusions-selections/components/WorkspaceStageActions";
 import { WorkspaceValidationSummary } from "../../src/modules/inclusions-selections/components/WorkspaceValidationSummary";
@@ -14,6 +15,7 @@ import { WorkspaceViewSwitcher } from "../../src/modules/inclusions-selections/c
 import { InMemoryProductSelectionCatalogueAdapter } from "../../src/modules/inclusions-selections/products/inMemoryProductSelectionCatalogueAdapter";
 import type { ProductReference, ProductVariantReference } from "../../src/modules/inclusions-selections/products/productReferenceTypes";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
+import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   applySelectionToTargets,
   clearProjectSelection,
@@ -32,10 +34,6 @@ import {
 } from "../../src/modules/inclusions-selections/services/selectionWorkspaceService";
 import type { ApplyToPreview as ApplyToPreviewModel, ApplyToScope, RequirementSelectionStatus, SelectionWorkspaceState, WorkspaceView } from "../../src/modules/inclusions-selections/services/selectionWorkspaceService";
 import type { DomainIssue, DomainResult } from "../../src/modules/inclusions-selections/validation/errors";
-
-function queryValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 const productAdapter = new InMemoryProductSelectionCatalogueAdapter("org_dev");
 
@@ -65,14 +63,7 @@ export default function InclusionsSelectionsWorkspacePage() {
   const [applyPreview, setApplyPreview] = useState<ApplyToPreviewModel | null>(null);
   const [selectedApplyTargets, setSelectedApplyTargets] = useState<string[]>([]);
 
-  const context = useMemo<Partial<ProjectSelectionContext>>(() => ({
-    organisationId: queryValue(router.query.organisationId) ?? queryValue(router.query.orgId),
-    projectId: queryValue(router.query.projectId),
-    projectName: queryValue(router.query.projectName),
-    clientName: queryValue(router.query.clientName) ?? queryValue(router.query.client),
-    siteAddress: queryValue(router.query.siteAddress),
-    jobNumber: queryValue(router.query.jobNumber),
-  }), [router.query]);
+  const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
 
   useEffect(() => {
     if (!router.isReady || !context.organisationId || !context.projectId) return;
@@ -147,17 +138,14 @@ export default function InclusionsSelectionsWorkspacePage() {
     const saved = await saveWorkspaceDraft(state);
     setSaving(false);
     if (!applyResult(saved)) return;
-    const params = new URLSearchParams();
-    params.set("organisationId", state.context.organisationId);
-    params.set("projectId", state.context.projectId);
-    if (state.context.projectName) params.set("projectName", state.context.projectName);
-    router.push(`/inclusions-selections/review?${params.toString()}`);
+    router.push(hrefForStage("review", state.context));
   }
 
   if (router.isReady && (!context.organisationId || !context.projectId)) {
     return (
       <main className="selectionWorkspacePage">
-        <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>Open an existing project before completing selections.</p></section>
+        <InclusionsSelectionsStageNav currentStage="workspace" context={context} />
+        <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section>
         <style jsx global>{workspaceStyles}</style>
       </main>
     );
@@ -166,6 +154,7 @@ export default function InclusionsSelectionsWorkspacePage() {
   if (!state) {
     return (
       <main className="selectionWorkspacePage">
+        <InclusionsSelectionsStageNav currentStage="workspace" context={context} />
         <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>Loading selection workspace.</p></section>
         <style jsx global>{workspaceStyles}</style>
       </main>
@@ -179,7 +168,8 @@ export default function InclusionsSelectionsWorkspacePage() {
 
   return (
     <main className="selectionWorkspacePage">
-      <SelectionWorkspaceHeader onBackToTemplates={() => router.push(`/inclusions-selections/templates?organisationId=${encodeURIComponent(state.context.organisationId)}&projectId=${encodeURIComponent(state.context.projectId)}`)} />
+      <InclusionsSelectionsStageNav currentStage="workspace" context={state.context} />
+      <SelectionWorkspaceHeader onBackToTemplates={() => router.push(hrefForStage("templates", state.context))} />
       <WorkspaceProgressSummary state={state} />
       <WorkspaceViewSwitcher value={view} onChange={(nextView) => {
         setView(nextView);
@@ -187,7 +177,7 @@ export default function InclusionsSelectionsWorkspacePage() {
       }} />
       <div className="workspaceLayout">
         {view === "room" ? (
-          <RoomNavigationPanel groups={roomGroups} selectedAreaId={selectedAreaId} search={search} onSearch={setSearch} onSelectArea={setSelectedAreaId} onEditAreas={() => router.push(`/inclusions-selections/areas?organisationId=${encodeURIComponent(state.context.organisationId)}&projectId=${encodeURIComponent(state.context.projectId)}`)} />
+          <RoomNavigationPanel groups={roomGroups} selectedAreaId={selectedAreaId} search={search} onSearch={setSearch} onSelectArea={setSelectedAreaId} onEditAreas={() => router.push(hrefForStage("areas", state.context))} />
         ) : (
           <CategoryNavigationPanel categories={categoryGroups} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
         )}
@@ -223,11 +213,11 @@ export default function InclusionsSelectionsWorkspacePage() {
         saving={saving}
         canContinue={validation.ok}
         onSave={handleSave}
-        onBack={() => router.push(`/inclusions-selections/templates?organisationId=${encodeURIComponent(state.context.organisationId)}&projectId=${encodeURIComponent(state.context.projectId)}`)}
+        onBack={() => router.push(hrefForStage("templates", state.context))}
         onReviewIncomplete={() => setIssues(validateSelectionWorkspace(state, false).issues)}
         onContinue={handleContinue}
       />
-      <p className="persistenceNote">Selections, SelectionLocations, notes, attachments and workspace draft state use in-memory repositories until approved database adapters are added.</p>
+      <p className="persistenceNote">Selections, SelectionLocations, notes, attachments and workspace draft state use browser-scoped repositories until approved database adapters are added.</p>
       <style jsx global>{workspaceStyles}</style>
     </main>
   );

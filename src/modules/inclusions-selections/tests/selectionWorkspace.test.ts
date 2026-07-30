@@ -117,8 +117,8 @@ export async function runSelectionWorkspaceTests(): Promise<void> {
   const switcherSource = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "components", "WorkspaceViewSwitcher.tsx"), "utf8");
   assert(switcherSource.includes("Room View") && switcherSource.includes("Category View"), "Desktop room and category layouts render.");
   assert(pageSource.includes("@media (max-width: 760px)") && pageSource.includes("RequirementWorkspace"), "Mobile requirement cards render without fixed-width workspace dependency.");
-  assert(pageSource.includes("/inclusions-selections/templates"), "Back to Templates works.");
-  assert(pageSource.includes("/inclusions-selections/review"), "Valid workspace reaches Review placeholder.");
+  assert(pageSource.includes('hrefForStage("templates"'), "Back to Templates works through shared stage navigation.");
+  assert(pageSource.includes('hrefForStage("review"'), "Valid workspace reaches Review through shared stage navigation.");
   assert(reviewSource.includes("Review Selections and Variations"), "Review route should now be the Stage 4 review.");
   assert(!pageSource.includes("Estimate Builder") && !pageSource.includes("createSelectionSnapshot") && !pageSource.includes("approval"), "No approval, snapshot or Estimate Builder export code loads.");
 }

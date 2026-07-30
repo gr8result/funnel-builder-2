@@ -129,8 +129,8 @@ export async function runSelectionReviewTests(): Promise<void> {
   const reviewSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "review.tsx"), "utf8");
   const approvalsSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "approvals.tsx"), "utf8");
   assert(reviewSource.includes("Review Selections and Variations"), "Review route title is present.");
-  assert(reviewSource.includes("/inclusions-selections/workspace"), "Back to Workspace works.");
-  assert(reviewSource.includes("/inclusions-selections/approvals"), "Ready project reaches approvals stage.");
+  assert(reviewSource.includes('hrefForStage("workspace"'), "Back to Workspace works through shared stage navigation.");
+  assert(reviewSource.includes('hrefForStage("approvals"'), "Ready project reaches approvals stage through shared stage navigation.");
   assert(approvalsSource.includes("Approvals and Locked Selection Version"), "Approvals route should now be the Stage 5 approval workspace.");
   assert(reviewSource.includes("@media (max-width: 760px)") && reviewSource.includes("reviewRow"), "Mobile review rows become readable cards.");
   assert(!reviewSource.includes("createSelectionSnapshot") && !reviewSource.includes("Estimate Builder") && !reviewSource.includes("SelectionApproval"), "No approval, snapshot or Estimate Builder code loads.");

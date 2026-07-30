@@ -1,5 +1,6 @@
 import type { Money } from "../shared/money";
 import type { ProjectSelectionContext } from "./projectAreaRegisterRepository";
+import { loadPersistedValue, projectStorageKey, savePersistedValue } from "../shared/persistentScopedStore";
 
 export type ApprovalParty = "client" | "builder";
 export type ApprovalMethod = "in_app" | "email_confirmation" | "signed_document" | "in_person" | "phone_confirmation" | "other";
@@ -170,6 +171,10 @@ function key(organisationId: string, projectId: string): string {
   return `${organisationId}:${projectId}`;
 }
 
+function storageKey(bucket: string, context: Pick<ProjectSelectionContext, "organisationId" | "projectId">): string {
+  return projectStorageKey(bucket, context.organisationId, context.projectId);
+}
+
 export class InMemoryApprovalStageRepository implements ApprovalStageRepository {
   private approvals = new Map<string, ApprovalRecord[]>();
   private history = new Map<string, ApprovalHistoryEvent[]>();
@@ -177,27 +182,35 @@ export class InMemoryApprovalStageRepository implements ApprovalStageRepository 
   private revisions = new Map<string, DraftRevision[]>();
 
   async listApprovals(context: ProjectSelectionContext): Promise<ApprovalRecord[]> {
-    return structuredClone(this.approvals.get(key(context.organisationId, context.projectId)) ?? []);
+    const approvals = this.approvals.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<ApprovalRecord[]>(storageKey("approval-records", context)) ?? [];
+    this.approvals.set(key(context.organisationId, context.projectId), structuredClone(approvals));
+    return structuredClone(approvals);
   }
 
   async saveApprovals(context: ProjectSelectionContext, approvals: ApprovalRecord[]): Promise<ApprovalRecord[]> {
     const scoped = approvals.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.approvals.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("approval-records", context), scoped);
     return structuredClone(scoped);
   }
 
   async listHistory(context: ProjectSelectionContext): Promise<ApprovalHistoryEvent[]> {
-    return structuredClone(this.history.get(key(context.organisationId, context.projectId)) ?? []);
+    const history = this.history.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<ApprovalHistoryEvent[]>(storageKey("approval-history", context)) ?? [];
+    this.history.set(key(context.organisationId, context.projectId), structuredClone(history));
+    return structuredClone(history);
   }
 
   async saveHistory(context: ProjectSelectionContext, history: ApprovalHistoryEvent[]): Promise<ApprovalHistoryEvent[]> {
     const scoped = history.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.history.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("approval-history", context), scoped);
     return structuredClone(scoped);
   }
 
   async listSnapshots(context: ProjectSelectionContext): Promise<LockedSelectionSnapshot[]> {
-    return structuredClone(this.snapshots.get(key(context.organisationId, context.projectId)) ?? []);
+    const snapshots = this.snapshots.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<LockedSelectionSnapshot[]>(storageKey("approval-snapshots", context)) ?? [];
+    this.snapshots.set(key(context.organisationId, context.projectId), structuredClone(snapshots));
+    return structuredClone(snapshots);
   }
 
   async createSnapshot(context: ProjectSelectionContext, snapshot: LockedSelectionSnapshot): Promise<LockedSelectionSnapshot> {
@@ -205,7 +218,9 @@ export class InMemoryApprovalStageRepository implements ApprovalStageRepository 
     const existing = this.snapshots.get(key(context.organisationId, context.projectId)) ?? [];
     if (existing.some((item) => item.version === snapshot.version)) throw new Error("duplicate_snapshot_version");
     if (snapshot.lines.some((line) => line.organisationId !== context.organisationId || line.projectId !== context.projectId)) throw new Error("cross_scope_snapshot_line");
-    this.snapshots.set(key(context.organisationId, context.projectId), structuredClone([...existing, snapshot]));
+    const saved = [...existing, snapshot];
+    this.snapshots.set(key(context.organisationId, context.projectId), structuredClone(saved));
+    savePersistedValue(storageKey("approval-snapshots", context), saved);
     return structuredClone(snapshot);
   }
 
@@ -222,12 +237,15 @@ export class InMemoryApprovalStageRepository implements ApprovalStageRepository 
   }
 
   async listDraftRevisions(context: ProjectSelectionContext): Promise<DraftRevision[]> {
-    return structuredClone(this.revisions.get(key(context.organisationId, context.projectId)) ?? []);
+    const revisions = this.revisions.get(key(context.organisationId, context.projectId)) ?? loadPersistedValue<DraftRevision[]>(storageKey("approval-draft-revisions", context)) ?? [];
+    this.revisions.set(key(context.organisationId, context.projectId), structuredClone(revisions));
+    return structuredClone(revisions);
   }
 
   async saveDraftRevisions(context: ProjectSelectionContext, revisions: DraftRevision[]): Promise<DraftRevision[]> {
     const scoped = revisions.filter((item) => item.organisationId === context.organisationId && item.projectId === context.projectId);
     this.revisions.set(key(context.organisationId, context.projectId), structuredClone(scoped));
+    savePersistedValue(storageKey("approval-draft-revisions", context), scoped);
     return structuredClone(scoped);
   }
 }

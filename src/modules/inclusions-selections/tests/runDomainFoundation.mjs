@@ -43,4 +43,5 @@ await import(pathToFileURL(path.join(outRoot, "tests", "selectionWorkspace.test.
 await import(pathToFileURL(path.join(outRoot, "tests", "selectionReview.test.js")).href);
 await import(pathToFileURL(path.join(outRoot, "tests", "selectionApprovalStage.test.js")).href);
 await import(pathToFileURL(path.join(outRoot, "tests", "selectionDocumentsExport.test.js")).href);
+await import(pathToFileURL(path.join(outRoot, "tests", "moduleNavigation.test.js")).href);
 console.log("Inclusions selections domain foundation tests passed.");

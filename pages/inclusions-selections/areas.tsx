@@ -5,9 +5,11 @@ import { AreaRegisterValidationSummary } from "../../src/modules/inclusions-sele
 import { AreaTypeChecklist } from "../../src/modules/inclusions-selections/components/AreaTypeChecklist";
 import { CustomAreaDialog } from "../../src/modules/inclusions-selections/components/CustomAreaDialog";
 import { GeneratedAreaRegister } from "../../src/modules/inclusions-selections/components/GeneratedAreaRegister";
+import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ProjectLevelsEditor } from "../../src/modules/inclusions-selections/components/ProjectLevelsEditor";
 import { ProjectSelectionSummary } from "../../src/modules/inclusions-selections/components/ProjectSelectionSummary";
 import type { ProjectAreaRegister, ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
+import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   assignProjectAreaLevel,
   canContinueToTemplates,
@@ -25,10 +27,6 @@ import {
 } from "../../src/modules/inclusions-selections/services/projectAreaRegisterService";
 import type { DomainIssue, DomainResult } from "../../src/modules/inclusions-selections/validation/errors";
 
-function queryValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function firstActiveLevelId(register: ProjectAreaRegister | null): string {
   return register?.levels.find((level) => level.active)?.id ?? "";
 }
@@ -42,14 +40,7 @@ export default function CreateSelectionAreasPage() {
   const [pendingRemoval, setPendingRemoval] = useState<{ areaTypeId: string; quantity: number } | null>(null);
   const [customDraft, setCustomDraft] = useState({ name: "", groupId: "area_group_custom", levelId: "" });
 
-  const context = useMemo<Partial<ProjectSelectionContext>>(() => ({
-    organisationId: queryValue(router.query.organisationId) ?? queryValue(router.query.orgId),
-    projectId: queryValue(router.query.projectId),
-    projectName: queryValue(router.query.projectName),
-    clientName: queryValue(router.query.clientName) ?? queryValue(router.query.client),
-    siteAddress: queryValue(router.query.siteAddress),
-    jobNumber: queryValue(router.query.jobNumber),
-  }), [router.query]);
+  const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
 
   const contextResult = validateProjectContext(context);
 
@@ -109,19 +100,16 @@ export default function CreateSelectionAreasPage() {
     const saved = await saveProjectAreaRegister(register);
     setSaving(false);
     if (!applyResult(saved)) return;
-    const params = new URLSearchParams();
-    params.set("organisationId", register.organisationId);
-    params.set("projectId", register.projectId);
-    if (register.projectName) params.set("projectName", register.projectName);
-    router.push(`/inclusions-selections/templates?${params.toString()}`);
+    router.push(hrefForStage("templates", register));
   }
 
   if (router.isReady && !contextResult.ok) {
     return (
       <main className="createAreasPage">
+        <InclusionsSelectionsStageNav currentStage="areas" context={context} />
         <section className="requiredState">
           <h1>Create Selection Areas</h1>
-          <p>Open an existing project before creating selection areas.</p>
+          <p>{PROJECT_REQUIRED_MESSAGE}</p>
         </section>
         <style jsx global>{pageStyles}</style>
       </main>
@@ -131,6 +119,7 @@ export default function CreateSelectionAreasPage() {
   if (!register) {
     return (
       <main className="createAreasPage">
+        <InclusionsSelectionsStageNav currentStage="areas" context={context} />
         <section className="requiredState">
           <h1>Create Selection Areas</h1>
           <p>Loading project areas.</p>
@@ -145,6 +134,7 @@ export default function CreateSelectionAreasPage() {
 
   return (
     <main className="createAreasPage">
+      <InclusionsSelectionsStageNav currentStage="areas" context={register} />
       <header className="pageHeader">
         <div>
           <h1>Create Selection Areas</h1>
@@ -186,7 +176,7 @@ export default function CreateSelectionAreasPage() {
         onDeleteArea={(areaId) => applyResult(deleteProjectArea(register, areaId))}
       />
       <AreaStageActions canContinue={validation.ok} saving={saving} onSave={handleSave} onContinue={handleContinue} />
-      <p className="persistenceNote">Drafts use the new in-memory repository until the approved database migration exists.</p>
+      <p className="persistenceNote">Drafts use the new browser-scoped repository until the approved database migration exists.</p>
       <style jsx global>{pageStyles}</style>
     </main>
   );

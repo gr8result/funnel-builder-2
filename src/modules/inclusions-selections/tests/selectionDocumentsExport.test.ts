@@ -149,7 +149,7 @@ export async function runSelectionDocumentsExportTests(): Promise<void> {
   const procurementSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "procurement.tsx"), "utf8");
   assert(routeSource.includes("Approved Documents and Estimate Export"), "Documents route title is present.");
   assert(routeSource.includes("Generate approved selection schedules from the locked version and transfer validated selection costs into the Estimate Builder."), "Documents route intro is exact.");
-  assert(routeSource.includes("/inclusions-selections/approvals") && routeSource.includes("/inclusions-selections/procurement"), "Back and continue navigation are present.");
+  assert(routeSource.includes('hrefForStage("approvals"') && routeSource.includes("/inclusions-selections/procurement"), "Back and continue navigation are present.");
   assert(procurementSource.includes("Supplier ordering, procurement tracking and purchase schedules will be completed in a future stage."), "Procurement placeholder text is exact.");
   assert(!routeSource.includes("EstimateBuilderWorkbook") && !routeSource.includes("purchase order"), "No workbook internals or procurement code loads.");
   assert(routeSource.includes("@media (max-width: 760px)") && routeSource.includes("@media print"), "Responsive and print preview styles are present.");

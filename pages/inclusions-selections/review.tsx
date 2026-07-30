@@ -8,6 +8,7 @@ import { CustomSelectionReview } from "../../src/modules/inclusions-selections/c
 import { NotApplicableReview } from "../../src/modules/inclusions-selections/components/NotApplicableReview";
 import { ProductAvailabilityReview } from "../../src/modules/inclusions-selections/components/ProductAvailabilityReview";
 import { ReviewIssuesRegister } from "../../src/modules/inclusions-selections/components/ReviewIssuesRegister";
+import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ReviewProjectSummary } from "../../src/modules/inclusions-selections/components/ReviewProjectSummary";
 import { ReviewStageActions } from "../../src/modules/inclusions-selections/components/ReviewStageActions";
 import { ReviewStatusBanner } from "../../src/modules/inclusions-selections/components/ReviewStatusBanner";
@@ -16,6 +17,7 @@ import { ReviewViewSwitcher } from "../../src/modules/inclusions-selections/comp
 import { RoomReviewPanel } from "../../src/modules/inclusions-selections/components/RoomReviewPanel";
 import { VariationReviewTable } from "../../src/modules/inclusions-selections/components/VariationReviewTable";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
+import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import type { ReviewView } from "../../src/modules/inclusions-selections/repositories/selectionReviewRepository";
 import {
   acknowledgeReviewWarning,
@@ -34,21 +36,6 @@ import {
 } from "../../src/modules/inclusions-selections/services/selectionReviewService";
 import type { DomainIssue } from "../../src/modules/inclusions-selections/validation/errors";
 
-function queryValue(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function paramsFor(context: ProjectSelectionContext, extra: Record<string, string | undefined> = {}) {
-  const params = new URLSearchParams();
-  params.set("organisationId", context.organisationId);
-  params.set("projectId", context.projectId);
-  if (context.projectName) params.set("projectName", context.projectName);
-  Object.entries(extra).forEach(([key, value]) => {
-    if (value) params.set(key, value);
-  });
-  return params.toString();
-}
-
 export default function SelectionReviewPage() {
   const router = useRouter();
   const [review, setReview] = useState<SelectionReview | null>(null);
@@ -57,14 +44,7 @@ export default function SelectionReviewPage() {
   const [severity, setSeverity] = useState("all");
   const [saving, setSaving] = useState(false);
 
-  const context = useMemo<Partial<ProjectSelectionContext>>(() => ({
-    organisationId: queryValue(router.query.organisationId) ?? queryValue(router.query.orgId),
-    projectId: queryValue(router.query.projectId),
-    projectName: queryValue(router.query.projectName),
-    clientName: queryValue(router.query.clientName) ?? queryValue(router.query.client),
-    siteAddress: queryValue(router.query.siteAddress),
-    jobNumber: queryValue(router.query.jobNumber),
-  }), [router.query]);
+  const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
 
   useEffect(() => {
     if (!router.isReady || !context.organisationId || !context.projectId) return;
@@ -81,7 +61,7 @@ export default function SelectionReviewPage() {
 
   function workspace(areaId?: string, requirementId?: string) {
     if (!review) return;
-    router.push(`/inclusions-selections/workspace?${paramsFor(review.context, { areaId, requirementId })}`);
+    router.push(hrefForStage("workspace", review.context, { areaId, requirementId }));
   }
 
   async function save(next = review) {
@@ -105,7 +85,7 @@ export default function SelectionReviewPage() {
     setIssues(validation.issues);
     if (!validation.ok || !review.reviewState.readyForApproval) return;
     await save(review);
-    router.push(`/inclusions-selections/approvals?${paramsFor(review.context)}`);
+    router.push(hrefForStage("approvals", review.context));
   }
 
   async function acknowledge(issueId: string) {
@@ -124,11 +104,11 @@ export default function SelectionReviewPage() {
   }
 
   if (router.isReady && (!context.organisationId || !context.projectId)) {
-    return <main className="selectionReviewPage"><section className="requiredState"><h1>Review Selections and Variations</h1><p>Open an existing project before reviewing selections.</p></section><style jsx global>{reviewStyles}</style></main>;
+    return <main className="selectionReviewPage"><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section><style jsx global>{reviewStyles}</style></main>;
   }
 
   if (!review) {
-    return <main className="selectionReviewPage"><section className="requiredState"><h1>Review Selections and Variations</h1><p>Loading selection review.</p></section><style jsx global>{reviewStyles}</style></main>;
+    return <main className="selectionReviewPage"><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>Loading selection review.</p></section><style jsx global>{reviewStyles}</style></main>;
   }
 
   const rooms = calculateRoomReview(review);
@@ -139,6 +119,7 @@ export default function SelectionReviewPage() {
 
   return (
     <main className="selectionReviewPage">
+      <InclusionsSelectionsStageNav currentStage="review" context={review.context} />
       <header className="reviewHeader">
         <div>
           <h1>Review Selections and Variations</h1>
@@ -167,7 +148,7 @@ export default function SelectionReviewPage() {
         onReady={ready}
         onContinue={continueToApprovals}
       />
-      <p className="persistenceNote">Review state, issues, warning acknowledgements, allowance overrides and audit events use in-memory repositories until approved database adapters are added.</p>
+      <p className="persistenceNote">Review state, issues, warning acknowledgements, allowance overrides and audit events use browser-scoped repositories until approved database adapters are added.</p>
       <style jsx global>{reviewStyles}</style>
     </main>
   );
