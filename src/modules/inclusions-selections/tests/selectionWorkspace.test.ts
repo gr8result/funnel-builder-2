@@ -69,7 +69,7 @@ export async function runSelectionWorkspaceTests(): Promise<void> {
   assert(floorReq && doorReq && basinReq && kitchenMixerReq, "Seeded requirements should include flooring, door hardware, basin and kitchen mixer.");
 
   state = value(await createProjectSelection(state, floorReq.id, "product_dev_floor_covering", undefined, adapter), "Compatible product can be selected.");
-  assert(state.selections.find((selection) => selection.requirementId === floorReq.id)?.selectionStatus === "in_progress", "Required variant must be selected.");
+  assert(state.selections.find((selection) => selection.requirementId === floorReq.id)?.selectionStatus === "complete", "Product families without required variants can be completed.");
   state = value(await selectProductVariant(state, floorReq.id, "variant_dev_floor_oak", adapter), "Selected variant updates price and completion.");
   assert(state.selections.find((selection) => selection.requirementId === floorReq.id)?.selectedPrice?.amount === 450, "Variant price should update selected price.");
   assert(!(await createProjectSelection(state, floorReq.id, "product_dev_basin_mixer", "variant_dev_basin_chrome", adapter)).ok, "Incompatible product is rejected.");

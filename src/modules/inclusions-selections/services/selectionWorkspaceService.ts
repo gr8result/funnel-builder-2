@@ -5,6 +5,7 @@ import { calculateSelectionPricing as calculatePricing } from "../pricing/pricin
 import type { ProductReference, ProductVariantReference } from "../products/productReferenceTypes";
 import type { ProductSelectionCatalogueAdapter } from "../products/productSelectionCatalogueAdapter";
 import { InMemoryProductSelectionCatalogueAdapter } from "../products/inMemoryProductSelectionCatalogueAdapter";
+import { evaluateProductCompatibility } from "../products/requirementProductMatching";
 import type { ProjectRequirement, RequirementCategory } from "../requirements/requirementTypes";
 import type { ProjectSelectionContext } from "../repositories/projectAreaRegisterRepository";
 import type { RequirementAttachmentReference, RequirementNote, SelectionWorkspaceRepository, WorkspaceDraftState } from "../repositories/selectionWorkspaceRepository";
@@ -142,12 +143,11 @@ function requirementStatus(requirement: ProjectRequirement, selection?: ProjectS
 
 function isProductCompatible(requirement: ProjectRequirement, product: ProductReference | null, variant?: ProductVariantReference | null): string | null {
   if (!product) return "Product was not found.";
-  if (!product.active) return "Product is inactive.";
   if (product.organisationId !== "org_dev" && product.organisationId !== requirement.organisationId) return "Product belongs to another organisation.";
-  if (product.compatibility.category !== requirement.category) return "Product category does not match this requirement.";
-  if (product.compatibility.subtype && product.compatibility.subtype !== requirement.subtype) return "Product subtype does not match this requirement.";
   if (variant && !variant.active) return "Selected variant is inactive.";
-  if (product.defaultVariantId && !variant) return "Choose the required product variant.";
+  if (product.requiresVariant && !variant) return "Choose the required product variant.";
+  const result = evaluateProductCompatibility(requirement, product, variant ? [variant] : []);
+  if (!result.compatible) return result.reasons[0] ?? "Product is not compatible with this selection item.";
   return null;
 }
 
@@ -288,22 +288,28 @@ export async function createProjectSelection(
   if (!requirement) return fail("missing_project_requirement", "Choose an existing project requirement.");
   const product = await adapter.getProduct(productReferenceId);
   const variant = variantId ? await adapter.getVariant(productReferenceId, variantId) : null;
-  const compatibility = isProductCompatible(requirement, product, variant ?? (variantId ? null : ({ active: true } as ProductVariantReference)));
+  const compatibility = isProductCompatible(requirement, product, variant);
   if (compatibility) return fail("incompatible_product", compatibility, requirementId);
   const exactVariant = variant;
   const quantity = 1;
   const value: SelectionValue = {
     productReferenceId,
     variantId: exactVariant?.id,
-    allowance: money(requirementAllowance(requirement)),
+    requiresVariant: Boolean(product?.requiresVariant),
+    allowance: product?.allowance ?? money(requirementAllowance(requirement)),
     clientPrice: exactVariant?.unitCost ?? product?.unitCost,
     unit: product?.unit ?? "each",
+    productName: product?.name,
+    productImageUrl: product?.imageUrl,
+    productUrl: product?.productUrl,
     description: exactVariant?.description ?? product?.description,
     brand: product?.brand,
     model: product?.model,
     colour: exactVariant?.colour ?? product?.colour,
+    finish: exactVariant?.finish ?? product?.finish,
     supplierId: product?.supplierId,
-    supplierSku: exactVariant?.sku,
+    supplierName: product?.supplierName,
+    supplierSku: exactVariant?.sku ?? product?.supplierSku,
     builderCost: exactVariant?.builderCost ?? product?.builderCost,
     priceSource: product?.priceSource ? "catalogue" : "catalogue",
     priceEffectiveDate: exactVariant?.priceEffectiveDate ?? product?.priceEffectiveDate,
@@ -321,7 +327,7 @@ export async function createProjectSelection(
     source: "builder",
     status: "draft",
     revision: (state.selections.find((item) => item.requirementId === requirementId)?.revision ?? 0) + 1,
-    selectionStatus: exactVariant || !product?.defaultVariantId ? "complete" : "in_progress",
+    selectionStatus: exactVariant || !product?.requiresVariant ? "complete" : "in_progress",
     quantity,
     unit: product?.unit ?? "each",
     inheritedFrom: "draft_override",
@@ -452,7 +458,7 @@ export function validateSelectionWorkspace(state: SelectionWorkspaceState, allow
     if ((selection.quantity ?? 1) <= 0) issues.push(issue("invalid_quantity", "Selection quantity must be greater than zero.", selection.id));
     if (!selection.unit && selection.selectionStatus === "complete") issues.push(issue("invalid_unit", "Completed selections require a unit.", selection.id));
     if (!selection.selectedPrice && selection.selectionStatus === "complete") issues.push(issue("missing_price", "Completed selections need a selected price or explicit price pending handling.", selection.id));
-    if (selection.value.productReferenceId && !selection.value.variantId && selection.selectionStatus === "complete") issues.push(issue("missing_required_variant", "Choose the required product variant before completing this selection.", selection.id));
+    if (selection.value.productReferenceId && selection.value.requiresVariant && !selection.value.variantId && selection.selectionStatus === "complete") issues.push(issue("missing_required_variant", "Choose the required product variant before completing this selection.", selection.id));
     if (selection.selectionStatus === "not_applicable" && requirement?.required && !selection.notApplicableReason) issues.push(issue("missing_not_applicable_reason", "Required items need a reason before Not Applicable.", selection.id));
     if (selection.value.customSelectionId && !selection.value.description) issues.push(issue("missing_custom_selection_description", "Custom selections need a description.", selection.id));
     if (selection.value.customSelectionId && requirement && selection.value.customSelectionCategory && selection.value.customSelectionCategory !== requirement.category) issues.push(issue("invalid_category_for_custom_selection", "Custom selection category is invalid.", selection.id));

@@ -2,6 +2,7 @@ import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify } from "../../../lib/product-library/csv";
 import { PRODUCT_LIBRARY_SCOPES, normalizeLibraryScope } from "../../../lib/product-library/constants";
+import { validateSelectionsProductCsvRecord } from "../../../lib/product-library/selectionsClassification";
 import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
 
 async function handler(req, res) {
@@ -39,6 +40,11 @@ async function handler(req, res) {
       const productName = String(record.product_name || "").trim();
       if (!productName) {
         errors.push({ row: rowNumber, error: "product_name is required", record });
+        return;
+      }
+      const classification = validateSelectionsProductCsvRecord(record);
+      if (!classification.ok) {
+        errors.push({ row: rowNumber, error: classification.errors.join("; "), record });
         return;
       }
       const libraryScope = normalizeLibraryScope(record.library_scope, "CLIENT_SELECTION");

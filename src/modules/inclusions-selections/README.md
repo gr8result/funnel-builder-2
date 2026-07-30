@@ -11,7 +11,7 @@ Current scope:
 - Domain entities, value objects, fixtures, repository interfaces, and pure services.
 - Stage-one Create Selection Areas UI and route wiring.
 - Stage-two Room Templates and Inclusion Tiers UI and route wiring.
-- Stage-three Selection Workspace UI and route wiring for Room View, Category View, draft product/custom selections, Apply To preview, SelectionLocations, notes, attachments, pricing display, validation and in-memory draft save/reload.
+- Stage-three Selection Workspace UI and route wiring for Room View, Category View, one-click Product Library picker workflow, draft product/custom selections, Apply To preview, SelectionLocations, notes, attachments, pricing display, validation and in-memory draft save/reload.
 - Stage-four Review, Pricing and Variations UI and route wiring for review summary, room/category review, variation calculations, client preview, internal builder projection, issue register, custom selection review, allowance overrides and Ready for Approval metadata.
 - Stage-five Approvals and Locked Selection Version UI and route wiring for client review state, client approval, builder approval, changes requested, approval fingerprints, stale approval detection, immutable locked snapshots, version history, comparisons and new draft revisions.
 - Stage-six Approved Documents and Estimate Export UI and route wiring for locked snapshot document projections, generated document records, estimate mapping validation, mapping overrides, export preview, aggregation, adapter-based export, retry, reconciliation and export history.
@@ -29,6 +29,8 @@ Key files:
 - `templates/`, `requirements/`, `tiers/`: generated room requirements and inclusion tiers.
 - `products/`, `selections/`: product references, inheritance, and apply-to previews.
 - `products/productSelectionCatalogueAdapter.ts`: adapter boundary for shared product and supplier references.
+- `products/productTagTaxonomy.ts`: Product Library classification tags used to match requirements to compatible selections products.
+- `products/requirementProductMatching.ts`: compatibility scoring and filter logic for the Stage 3 product picker.
 - `repositories/selectionWorkspaceRepository.ts`: draft workspace repository interface and in-memory implementation.
 - `repositories/selectionReviewRepository.ts`: review metadata, issue, allowance override and audit repository interface with in-memory implementation.
 - `repositories/approvalStageRepository.ts`: approval, approval history, locked snapshot and draft revision repository interface with in-memory implementation.
@@ -43,6 +45,7 @@ Key files:
 - `tests/createAreasStage.test.ts`: focused coverage for stage-one project levels, area quantities, validation, persistence scope and route isolation.
 - `tests/templateStage.test.ts`: focused coverage for stage-two template/tier inheritance, requirement reconciliation, custom templates, saved builder templates, validation and persistence.
 - `tests/selectionWorkspace.test.ts`: focused coverage for Stage 3 loading, views, product/variant/custom choices, Apply To, pricing, completion, persistence and route isolation.
+- `tests/productPickerWorkflow.test.ts`: focused coverage for Product Library classification, product picker matching, variant enforcement, Apply To, persistence and client-safe projections.
 - `tests/selectionReview.test.ts`: focused coverage for Stage 4 review loading, summary totals, projections, pricing, issues, allowance overrides, Ready for Approval and route isolation.
 - `tests/selectionApprovalStage.test.ts`: focused coverage for Stage 5 approval readiness, fingerprints, stale approvals, locking, immutability, versioning, comparison and route isolation.
 - `tests/selectionDocumentsExport.test.ts`: focused coverage for Stage 6 documents, mappings, export preview, aggregation, adapter export, retry, reconciliation, history and route isolation.

@@ -19,6 +19,13 @@ const EMPTY_FORM = {
   product_name: "",
   sku: "",
   description: "",
+  product_type: "",
+  requirement_tags: "",
+  compatible_area_types: "",
+  fuel_type: "",
+  mounting_type: "",
+  installation_type: "",
+  availability_status: "available",
   pricing_tier: "CLASSIC",
   category_id: "",
   subcategory: "",
@@ -233,7 +240,45 @@ export default function ProductDetailDrawer({
                 Size / Dimensions
                 <input value={form.size_dimensions} onChange={(event) => update("size_dimensions", event.target.value)} placeholder="Optional" />
               </label>
+              <label>
+                Product Type
+                <input value={form.product_type} onChange={(event) => update("product_type", event.target.value)} placeholder="Built-in Oven, Bench-mounted Basin Mixer" />
+              </label>
+              <label>
+                Fuel Type
+                <input value={form.fuel_type} onChange={(event) => update("fuel_type", event.target.value)} placeholder="Electric, Gas, Induction" />
+              </label>
+              <label>
+                Mounting Type
+                <input value={form.mounting_type} onChange={(event) => update("mounting_type", event.target.value)} placeholder="Bench-mounted, wall-mounted" />
+              </label>
+              <label>
+                Installation Type
+                <input value={form.installation_type} onChange={(event) => update("installation_type", event.target.value)} placeholder="Built-in, freestanding, hinged" />
+              </label>
             </div>
+          </section>
+
+          <section>
+            <h3>Selections Compatibility</h3>
+            <label>
+              Requirement Tags
+              <input value={form.requirement_tags} onChange={(event) => update("requirement_tags", event.target.value)} placeholder="appliance, oven, 900mm" />
+            </label>
+            <label>
+              Compatible Room / Area Types
+              <input value={form.compatible_area_types} onChange={(event) => update("compatible_area_types", event.target.value)} placeholder="Kitchen, Butler's Pantry, Outdoor Kitchen" />
+            </label>
+            <label>
+              Availability
+              <select value={form.availability_status} onChange={(event) => update("availability_status", event.target.value)}>
+                <option value="available">Available</option>
+                <option value="supplier_quote_required">Supplier quote required</option>
+                <option value="unavailable">Unavailable</option>
+                <option value="discontinued">Discontinued</option>
+              </select>
+            </label>
+            <p className="hint">Use precise tags such as oven, basin-mixer, shower-mixer, sink-mixer, garage-door, floor-tile or cabinetry so Inclusions & Selections can show the right products.</p>
           </section>
 
           {canViewCosts && (

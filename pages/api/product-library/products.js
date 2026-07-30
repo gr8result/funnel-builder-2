@@ -7,6 +7,13 @@ const WRITABLE_FIELDS = [
   "product_name",
   "sku",
   "description",
+  "product_type",
+  "requirement_tags",
+  "compatible_area_types",
+  "fuel_type",
+  "mounting_type",
+  "installation_type",
+  "availability_status",
   "pricing_tier",
   "category_id",
   "subcategory",
@@ -45,7 +52,7 @@ const WRITABLE_FIELDS = [
 ];
 
 const NUMERIC_FIELDS = new Set(["cost_price", "base_allowance", "upgrade_cost", "retail_price", "sell_price", "markup_percent", "display_order"]);
-const TEXT_FIELDS = new Set(["sku", "description", "subcategory", "room_or_usage", "model", "colour", "finish", "size_dimensions", "product_url", "variant_label", "notes", "client_notes", "datasheet_pdf_url"]);
+const TEXT_FIELDS = new Set(["sku", "description", "product_type", "requirement_tags", "compatible_area_types", "fuel_type", "mounting_type", "installation_type", "availability_status", "subcategory", "room_or_usage", "model", "colour", "finish", "size_dimensions", "product_url", "variant_label", "notes", "client_notes", "datasheet_pdf_url"]);
 
 function buildPayload(body) {
   const payload = {};

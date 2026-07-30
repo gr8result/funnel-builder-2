@@ -6,6 +6,7 @@ export type SelectionSourceLevel = "builder_default" | "project_default" | "area
 export type SelectionValue = {
   productReferenceId?: ProductReferenceId;
   variantId?: ProductVariantId;
+  requiresVariant?: boolean;
   allowance?: Money;
   note?: string;
   tierId?: InclusionTierId;
@@ -13,10 +14,15 @@ export type SelectionValue = {
   customSelectionName?: string;
   customSelectionCategory?: string;
   description?: string;
+  productName?: string;
+  productImageUrl?: string;
+  productUrl?: string;
   brand?: string;
   model?: string;
   colour?: string;
+  finish?: string;
   supplierId?: string;
+  supplierName?: string;
   supplierSku?: string;
   clientPrice?: Money;
   builderCost?: Money;

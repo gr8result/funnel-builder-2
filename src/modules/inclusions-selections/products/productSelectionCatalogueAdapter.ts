@@ -8,6 +8,14 @@ export type ProductSearchFilters = {
   brand?: string;
   supplierId?: string;
   tierId?: string;
+  width?: string;
+  size?: string;
+  colour?: string;
+  finish?: string;
+  fuelType?: string;
+  installationType?: string;
+  availabilityStatus?: string;
+  includeInactive?: boolean;
   internalExternal?: "internal" | "external" | "both";
 };
 

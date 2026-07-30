@@ -2,6 +2,7 @@ import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify, normalizeMoney, truthyCsv, normalizePriceBand, normalizePricingTierCsv } from "../../../lib/product-library/csv";
 import { PRODUCT_LIBRARY_SCOPES, VERIFICATION_STATUSES, defaultRequiresImageForCategory, normalizeLibraryScope } from "../../../lib/product-library/constants";
+import { validateSelectionsProductCsvRecord } from "../../../lib/product-library/selectionsClassification";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
 import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
 
@@ -98,11 +99,13 @@ async function handler(req, res) {
       try {
         const productName = String(record.product_name || "").trim();
         if (!productName) throw new Error("product_name is required");
+        const classification = validateSelectionsProductCsvRecord(record);
+        if (!classification.ok) throw new Error(classification.errors.join("; "));
         const libraryScope = normalizeLibraryScope(record.library_scope, "CLIENT_SELECTION");
         if (!PRODUCT_LIBRARY_SCOPES.has(libraryScope)) {
           throw new Error("Product Library imports only accept CLIENT_SELECTION or BOTH records");
         }
-        const sku = String(record.internal_product_code || record.sku || "").trim();
+        const sku = String(record.product_code || record.internal_product_code || record.sku || "").trim();
         if (sku) {
           const skuKey = slugify(sku);
           if (seenSkusInFile.has(skuKey)) throw new Error(`Duplicate product code "${sku}" within this file`);
@@ -135,8 +138,8 @@ async function handler(req, res) {
         const isVisual = record.visual_product ? truthyCsv(record.visual_product) : defaultRequiresImageForCategory(category);
         const requiresImage = record.requires_image ? truthyCsv(record.requires_image) : isVisual;
 
-        const costPrice = normalizeMoney(record.cost);
-        const includedAllowance = normalizeMoney(record.included_allowance) ?? 0;
+        const costPrice = normalizeMoney(record.builder_cost) ?? normalizeMoney(record.cost);
+        const includedAllowance = normalizeMoney(record.allowance) ?? normalizeMoney(record.included_allowance) ?? 0;
         const manualUpgradeValue = normalizeMoney(record.upgrade_value);
         const upgradeValueMode = manualUpgradeValue !== null ? "manual" : "auto";
         const upgradeCost = upgradeValueMode === "manual"
@@ -146,9 +149,16 @@ async function handler(req, res) {
         const payload = {
           workspace_id: req.workspaceId,
           product_name: productName,
-          pricing_tier: normalizePricingTierCsv(record.pricing_tier),
+          pricing_tier: normalizePricingTierCsv(record.tier || record.pricing_tier),
           category_id: categoryId,
           subcategory: record.subcategory || null,
+          product_type: record.product_type || null,
+          requirement_tags: classification.tags.join(","),
+          compatible_area_types: record.compatible_area_types || null,
+          fuel_type: record.fuel_type || null,
+          mounting_type: record.mounting_type || null,
+          installation_type: record.installation_type || null,
+          availability_status: record.availability_status || "available",
           manufacturer_id: manufacturerId,
           supplier_id: supplierId,
           sku: sku || null,
@@ -168,14 +178,14 @@ async function handler(req, res) {
           upgrade_cost: upgradeCost,
           retail_price: normalizeMoney(record.rrp),
           gst_included: truthyCsv(record.gst_included, true),
-          sell_price: normalizeMoney(record.sell_price ?? record.rrp),
+          sell_price: normalizeMoney(record.client_price ?? record.sell_price ?? record.rrp),
           markup_percent: normalizeMoney(record.markup),
           pricing_mode: record.markup ? "markup" : "fixed_sell",
           price_band: normalizePriceBand(record.price_band),
           standard_included: truthyCsv(record.standard_included, false),
           available_for_selection: truthyCsv(record.available_for_selection, true),
           display_order: Number(record.display_order) || 0,
-          primary_image_url: record.image_url || null,
+          primary_image_url: record.image_url_or_reference || record.image_url || null,
           additional_image_urls: splitImageUrls(record.additional_image_urls),
           product_url: supplierUrlCheck.url || null,
           manufacturer_product_url: manufacturerUrlCheck.url || null,
