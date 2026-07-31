@@ -23,6 +23,9 @@ const WRITABLE_FIELDS = [
   "library_scope",
   "active",
   "available_for_selection",
+  "selection_visibility",
+  "active_status",
+  "discontinued_status",
   "display_order",
   "manufacturer_id",
   "supplier_id",
@@ -31,6 +34,8 @@ const WRITABLE_FIELDS = [
   "finish",
   "size_dimensions",
   "product_url",
+  "supplier_category_url",
+  "warranty_url",
   "cost_price",
   "base_allowance",
   "upgrade_value_mode",
@@ -52,7 +57,7 @@ const WRITABLE_FIELDS = [
 ];
 
 const NUMERIC_FIELDS = new Set(["cost_price", "base_allowance", "upgrade_cost", "retail_price", "sell_price", "markup_percent", "display_order"]);
-const TEXT_FIELDS = new Set(["sku", "description", "product_type", "requirement_tags", "compatible_area_types", "fuel_type", "mounting_type", "installation_type", "availability_status", "subcategory", "room_or_usage", "model", "colour", "finish", "size_dimensions", "product_url", "variant_label", "notes", "client_notes", "datasheet_pdf_url"]);
+const TEXT_FIELDS = new Set(["sku", "description", "product_type", "requirement_tags", "compatible_area_types", "fuel_type", "mounting_type", "installation_type", "availability_status", "selection_visibility", "active_status", "discontinued_status", "subcategory", "room_or_usage", "model", "colour", "finish", "size_dimensions", "product_url", "supplier_category_url", "warranty_url", "variant_label", "notes", "client_notes", "datasheet_pdf_url"]);
 
 function buildPayload(body) {
   const payload = {};

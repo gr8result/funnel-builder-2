@@ -2,6 +2,7 @@ import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify } from "../../../lib/product-library/csv";
 import { PRODUCT_LIBRARY_SCOPES, normalizeLibraryScope } from "../../../lib/product-library/constants";
+import { selectionVisibilityToLegacyScope } from "../../../lib/product-library/selectionVisibility";
 import { validateSelectionsProductCsvRecord } from "../../../lib/product-library/selectionsClassification";
 import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
 
@@ -47,12 +48,12 @@ async function handler(req, res) {
         errors.push({ row: rowNumber, error: classification.errors.join("; "), record });
         return;
       }
-      const libraryScope = normalizeLibraryScope(record.library_scope, "CLIENT_SELECTION");
+      const libraryScope = normalizeLibraryScope(record.library_scope, selectionVisibilityToLegacyScope(classification.selectionVisibility));
       if (!PRODUCT_LIBRARY_SCOPES.has(libraryScope)) {
-        errors.push({ row: rowNumber, error: "Product Library imports only accept CLIENT_SELECTION or BOTH records", record });
+        errors.push({ row: rowNumber, error: "Selections Product Catalogue imports only accept client_selectable or builder_selectable records", record });
         return;
       }
-      const sku = String(record.internal_product_code || record.sku || "").trim();
+      const sku = String(record.product_code || record.internal_product_code || record.sku || "").trim();
       if (sku) {
         const skuKey = slugify(sku);
         if (seenSkusInFile.has(skuKey)) {

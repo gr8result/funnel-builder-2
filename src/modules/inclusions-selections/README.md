@@ -11,13 +11,13 @@ Current scope:
 - Domain entities, value objects, fixtures, repository interfaces, and pure services.
 - Stage-one Create Selection Areas UI and route wiring.
 - Stage-two Room Templates and Inclusion Tiers UI and route wiring.
-- Stage-three Selection Workspace UI and route wiring for Room View, Category View, one-click Product Library picker workflow, draft product/custom selections, Apply To preview, SelectionLocations, notes, attachments, pricing display, validation and in-memory draft save/reload.
+- Stage-three Selection Workspace UI and route wiring for Room View, Category View, client-selectable Product Library picker workflow, product detail view, supplier links, variants, draft product/custom selections, Apply To preview, SelectionLocations, notes, attachments, pricing display, validation and in-memory draft save/reload.
 - Stage-four Review, Pricing and Variations UI and route wiring for review summary, room/category review, variation calculations, client preview, internal builder projection, issue register, custom selection review, allowance overrides and Ready for Approval metadata.
 - Stage-five Approvals and Locked Selection Version UI and route wiring for client review state, client approval, builder approval, changes requested, approval fingerprints, stale approval detection, immutable locked snapshots, version history, comparisons and new draft revisions.
 - Stage-six Approved Documents and Estimate Export UI and route wiring for locked snapshot document projections, generated document records, estimate mapping validation, mapping overrides, export preview, aggregation, adapter-based export, retry, reconciliation and export history.
 - No Supabase migrations.
 - No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
-- No Product Library table ownership changes.
+- Product Library remains the shared catalogue owner; selections consume only `client_selectable` and allowed `builder_selectable` products through the adapter.
 - No Estimate Builder behaviour changes.
 - No procurement workflow, supplier ordering or purchase schedules.
 

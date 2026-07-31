@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProductReference, ProductVariantReference } from "../products/productReferenceTypes";
 import type { SupplierReference, ProductSearchFilters } from "../products/productSelectionCatalogueAdapter";
 import { evaluateProductCompatibility } from "../products/requirementProductMatching";
@@ -50,8 +51,10 @@ function specLine(product: ProductReference, variant?: ProductVariantReference) 
 }
 
 export function ProductSelectionModal(props: Props) {
+  const [detailProductId, setDetailProductId] = useState<string | null>(null);
   const selectedProduct = props.products.find((product) => product.id === props.selectedProductId);
   const selectedVariant = props.variants.find((variant) => variant.id === props.selectedVariantId);
+  const detailProduct = props.products.find((product) => product.id === detailProductId);
   const brands = [...new Set(props.products.map((product) => product.brand).filter(Boolean))].sort() as string[];
   const suppliers = props.suppliers.filter((supplier) => props.products.some((product) => product.supplierId === supplier.id));
   const widths = [...new Set(props.products.map((product) => product.compatibility.width).filter(Boolean))].sort() as string[];
@@ -93,7 +96,20 @@ export function ProductSelectionModal(props: Props) {
           <div className="productGridPanel">
             {props.loading ? <p>Loading compatible products.</p> : null}
             {!props.loading && props.products.length === 0 ? <p>No compatible products found for this selection item.</p> : null}
-            <div className="modalProductGrid">
+            {detailProduct ? (
+              <ProductDetailView
+                product={detailProduct}
+                variants={props.selectedProductId === detailProduct.id ? props.variants : []}
+                selectedVariant={detailProduct.id === props.selectedProductId ? selectedVariant : undefined}
+                selectedVariantId={detailProduct.id === props.selectedProductId ? props.selectedVariantId : undefined}
+                row={props.row}
+                onBack={() => setDetailProductId(null)}
+                onChooseProduct={() => props.onChooseProduct(detailProduct.id)}
+                onChooseVariant={props.onChooseVariant}
+                onSelect={() => props.onSelect(detailProduct.id, detailProduct.id === props.selectedProductId ? props.selectedVariantId : undefined)}
+              />
+            ) : null}
+            <div className={detailProduct ? "modalProductGrid hidden" : "modalProductGrid"}>
               {props.products.map((product) => {
                 const productVariants = props.selectedProductId === product.id ? props.variants : [];
                 const variant = product.id === props.selectedProductId ? selectedVariant : undefined;
@@ -101,7 +117,9 @@ export function ProductSelectionModal(props: Props) {
                 const compatibility = evaluateProductCompatibility(props.row.requirement, product, productVariants, props.row.area, props.row.inheritedTierId);
                 return (
                   <article key={product.id} className={props.selectedProductId === product.id ? "modalProductCard selected" : "modalProductCard"}>
-                    <div className="modalProductImage">{product.imageUrl ? <span>{(product.brand || product.name).slice(0, 2).toUpperCase()}</span> : <span>No Image</span>}</div>
+                    <button type="button" className="modalProductImage" onClick={() => { props.onChooseProduct(product.id); setDetailProductId(product.id); }} aria-label={`View details for ${product.name}`}>
+                      {product.imageUrl ? <span>{(product.brand || product.name).slice(0, 2).toUpperCase()}</span> : <span>No Image</span>}
+                    </button>
                     <div className="modalProductContent">
                       <div className="modalProductTop">
                         <div>
@@ -124,10 +142,10 @@ export function ProductSelectionModal(props: Props) {
                         <label className="variantPicker"><span>Variant</span><select value={product.id === props.selectedProductId ? props.selectedVariantId ?? "" : ""} onChange={(event) => props.onChooseVariant(event.target.value)} onFocus={() => props.onChooseProduct(product.id)}><option value="">Choose variant</option>{productVariants.map((item) => <option key={item.id} value={item.id}>{item.name} / {aud(item.unitCost?.amount)}</option>)}</select></label>
                       ) : null}
                       <div className="modalProductActions">
-                        <button type="button" onClick={() => props.onChooseProduct(product.id)}>View Details</button>
+                        <button type="button" onClick={() => { props.onChooseProduct(product.id); setDetailProductId(product.id); }}>View Details</button>
                         <label><input type="checkbox" checked={props.compareIds.includes(product.id)} onChange={() => props.onToggleCompare(product.id)} /> Compare</label>
-                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noreferrer">Supplier Details</a> : null}
-                        <button type="button" className="primaryButton" disabled={Boolean(requiresVariant && props.selectedProductId === product.id && !props.selectedVariantId)} onClick={() => props.onSelect(product.id, product.id === props.selectedProductId ? props.selectedVariantId : undefined)}>Select</button>
+                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noopener noreferrer">View on Supplier Website</a> : null}
+                        <button type="button" className="primaryButton" disabled={Boolean(requiresVariant && !props.selectedVariantId)} onClick={() => props.onSelect(product.id, product.id === props.selectedProductId ? props.selectedVariantId : undefined)}>Select</button>
                       </div>
                     </div>
                   </article>
@@ -138,5 +156,60 @@ export function ProductSelectionModal(props: Props) {
         </div>
       </section>
     </div>
+  );
+}
+
+function ProductDetailView(props: {
+  product: ProductReference;
+  variants: ProductVariantReference[];
+  selectedVariant?: ProductVariantReference;
+  selectedVariantId?: string;
+  row: RequirementWorkspaceRow;
+  onBack: () => void;
+  onChooseProduct: () => void;
+  onChooseVariant: (variantId: string) => void;
+  onSelect: () => void;
+}) {
+  const variant = props.selectedVariant;
+  const productUrl = variant?.productUrl || props.product.productUrl;
+  const requiresVariant = Boolean(props.product.requiresVariant && props.variants.length > 0);
+  const canSelect = !requiresVariant || Boolean(props.selectedVariantId);
+  return (
+    <article className="productDetailView">
+      <button type="button" className="backButton" onClick={props.onBack}>Back to Products</button>
+      <div className="detailLayout">
+        <div className="detailMedia">
+          <div className="detailImage">{props.product.imageUrl ? <span>{(props.product.brand || props.product.name).slice(0, 2).toUpperCase()}</span> : <span>No Image</span>}</div>
+          <div className="detailGallery">
+            {(props.product.galleryImageUrls?.length ? props.product.galleryImageUrls : [props.product.imageUrl]).filter(Boolean).slice(0, 4).map((image, index) => (
+              <span key={`${image}-${index}`}>{index + 1}</span>
+            ))}
+          </div>
+        </div>
+        <div className="detailCopy">
+          <p className="modalEyebrow">{props.product.supplierName ?? "Supplier not recorded"}</p>
+          <h3>{props.product.name}</h3>
+          <p>{props.product.description}</p>
+          <dl className="productFacts detailFacts">
+            <div><dt>Brand</dt><dd>{props.product.brand ?? "Not recorded"}</dd></div>
+            <div><dt>Range</dt><dd>{props.product.range ?? "Not recorded"}</dd></div>
+            <div><dt>Model</dt><dd>{props.product.model ?? "Not recorded"}</dd></div>
+            <div><dt>Colour</dt><dd>{variant?.colour ?? props.product.colour ?? "Not recorded"}</dd></div>
+            <div><dt>Finish</dt><dd>{variant?.finish ?? props.product.finish ?? "Not recorded"}</dd></div>
+            <div><dt>Supplier SKU</dt><dd>{variant?.supplierSku ?? variant?.sku ?? props.product.supplierSku ?? "Not recorded"}</dd></div>
+            <div><dt>Client Price</dt><dd>{aud((variant?.unitCost ?? props.product.unitCost)?.amount)}</dd></div>
+            <div><dt>Allowance</dt><dd>{aud(props.product.allowance?.amount ?? props.row.selection?.allowance?.amount)}</dd></div>
+            <div><dt>Variation</dt><dd>{variationLabel(props.row, props.product, variant)}</dd></div>
+          </dl>
+          {requiresVariant ? (
+            <label className="variantPicker"><span>Variant</span><select value={props.selectedVariantId ?? ""} onChange={(event) => { props.onChooseProduct(); props.onChooseVariant(event.target.value); }}><option value="">Choose variant</option>{props.variants.map((item) => <option key={item.id} value={item.id}>{item.name} / {aud(item.unitCost?.amount)}</option>)}</select></label>
+          ) : null}
+          <div className="modalProductActions">
+            {productUrl ? <a href={productUrl} target="_blank" rel="noopener noreferrer">View on Supplier Website</a> : <span className="disabledLink">Supplier website not recorded</span>}
+            <button type="button" className="primaryButton" disabled={!canSelect} onClick={props.onSelect}>Select This Product</button>
+          </div>
+        </div>
+      </div>
+    </article>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PRICE_STATUS_OPTIONS, PRICING_TIERS } from "../../lib/product-library/constants";
+import { PRICE_STATUS_OPTIONS, PRICING_TIERS, SELECTION_VISIBILITY_VALUES } from "../../lib/product-library/constants";
 
 export function ProductLibraryToolbar({
   viewMode,
@@ -173,14 +173,33 @@ export function ProductLibraryFilters({
           <option value="visual">Visual products only</option>
           <option value="non_visual">Selections without images</option>
         </select>
+        <select value={filters.selectionVisibility} onChange={(event) => onChangeFilter("selectionVisibility", event.target.value)}>
+          <option value="all">All visibility</option>
+          {SELECTION_VISIBILITY_VALUES.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
         <select value={filters.missingImages} onChange={(event) => onChangeFilter("missingImages", event.target.value)}>
           <option value="all">All images</option>
           <option value="missing">Missing images</option>
+        </select>
+        <select value={filters.missingSupplierLink} onChange={(event) => onChangeFilter("missingSupplierLink", event.target.value)}>
+          <option value="all">All supplier links</option>
+          <option value="missing">Missing supplier link</option>
+        </select>
+        <select value={filters.missingTags} onChange={(event) => onChangeFilter("missingTags", event.target.value)}>
+          <option value="all">All tags</option>
+          <option value="missing">Missing requirement tags</option>
         </select>
         <select value={filters.active} onChange={(event) => onChangeFilter("active", event.target.value)}>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="all">All statuses</option>
+        </select>
+        <select value={filters.discontinued} onChange={(event) => onChangeFilter("discontinued", event.target.value)}>
+          <option value="current">Current products</option>
+          <option value="discontinued">Discontinued</option>
+          <option value="all">All discontinued statuses</option>
         </select>
         <input
           value={filters.room}

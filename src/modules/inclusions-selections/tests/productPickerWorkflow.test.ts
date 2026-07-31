@@ -30,6 +30,7 @@ export async function runProductPickerWorkflowTests(): Promise<void> {
   assert(requirementProductTags(oven).includes("oven"), "Oven requirement should map to oven tag.");
   const ovenProducts = await adapter.searchCompatibleProducts(oven);
   assert(ovenProducts.length >= 2, "Oven requirement should return oven products.");
+  assert(ovenProducts.every((product) => product.selectionVisibility === "client_selectable" || product.selectionVisibility === "builder_selectable"), "Selections picker should only return client/builder selectable products.");
   assert(ovenProducts.every((product) => product.compatibility.requirementTags?.includes("oven")), "Oven requirement should only return oven-tagged products.");
   assert(!ovenProducts.some((product) => product.compatibility.requirementTags?.includes("cooktop")), "Oven requirement should not return cooktops.");
   const filtered900 = ovenProducts.filter((product) => productMatchesFilters(product, { width: "900 mm" }));
@@ -42,6 +43,9 @@ export async function runProductPickerWorkflowTests(): Promise<void> {
   assert(!basinProducts.some((product) => product.compatibility.requirementTags?.includes("shower-mixer")), "Shower mixers should be excluded from basin mixer choices.");
   const inactiveTile = await adapter.getProduct("demo_feature_tile_unavailable");
   assert(inactiveTile && !evaluateProductCompatibility(oven, inactiveTile).compatible, "Inactive/unavailable products should be incompatible.");
+  const estimatingRate = await adapter.getProduct("estimating_concrete_slab_rate");
+  assert(estimatingRate?.selectionVisibility === "estimating_only", "Demo catalogue should include an estimating-only regression product.");
+  assert(!productMatchesFilters(estimatingRate, {}), "Estimating-only products should be excluded from default selections filtering.");
 
   const variantResult = await createProjectSelection(workspace, basinMixer.id, "demo_phoenix_vivid_basin_mixer", undefined, adapter);
   assert(!variantResult.ok, "Required variant should block selection until chosen.");
@@ -69,12 +73,17 @@ export async function runProductPickerWorkflowTests(): Promise<void> {
   const workspacePage = source("pages", "inclusions-selections", "workspace.tsx");
   assert(workspacePage.includes("Generate ProjectRequirements") && workspacePage.includes("handleGenerateRequirements"), "Workspace should expose the missing Stage 2 requirement generation step.");
   assert(workspacePage.includes('area.name.toLowerCase() === "kitchen"'), "Workspace should default to Kitchen when it is available.");
-  assert(workspacePage.includes("kitchenTileGrid") && workspacePage.includes("selectionTile"), "Workspace should render a screen-first room selection tile grid.");
-  assert(workspacePage.includes("openProductPicker(row.requirement.id)") && workspacePage.includes("tileProduct"), "Clicking a selection tile should open the product picker and selected products should render on the tile.");
+  assert(workspacePage.includes("selectionItemList") && workspacePage.includes("selectionItemRow") && workspacePage.includes("tileImage"), "Workspace should render a screen-first selection item list with thumbnails.");
+  assert(workspacePage.includes("openProductPicker(row.requirement.id)") && workspacePage.includes("tileProduct"), "Clicking a selection item should open the product picker and selected products should render on the row.");
   assert(workspacePage.includes("productModalBody") && workspacePage.includes("@media (max-width: 760px)"), "Modal should include desktop and mobile layout styles.");
+  assert(modalSource.includes("ProductDetailView") && modalSource.includes("Back to Products") && modalSource.includes("Select This Product"), "Product image/details flow should open a larger detail view.");
+  assert(modalSource.includes('rel="noopener noreferrer"') && modalSource.includes("View on Supplier Website"), "Supplier links should open exact stored URLs in a new tab.");
+  assert(!modalSource.includes("builderCost"), "Client picker must not render builder cost fields.");
+  const adapterSource = source("src", "modules", "inclusions-selections", "products", "inMemoryProductSelectionCatalogueAdapter.ts");
+  assert(!adapterSource.includes("product.productUrl ??"), "Demo adapter must not fabricate guessed supplier URLs.");
 
   const csvValidation = source("lib", "product-library", "selectionsClassification.js");
-  assert(csvValidation.includes("validateSelectionsProductCsvRecord") && csvValidation.includes("requirement_tags is required") && csvValidation.includes("category is required"), "CSV validation should detect missing tags and categories.");
+  assert(csvValidation.includes("validateSelectionsProductCsvRecord") && csvValidation.includes("requirement_tags is required") && csvValidation.includes("category is required") && csvValidation.includes("selection_visibility must be one of"), "CSV validation should detect missing tags, categories and invalid selection visibility.");
   const clientProjectionSource = source("src", "modules", "inclusions-selections", "services", "selectionReviewService.ts");
   const clientProjection = clientProjectionSource.slice(clientProjectionSource.indexOf("export function buildClientVariationProjection"), clientProjectionSource.indexOf("export function buildBuilderInternalProjection"));
   assert(!clientProjection.includes("builderCost"), "Client-facing variation projection should exclude builder cost.");

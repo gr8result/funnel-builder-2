@@ -271,7 +271,7 @@ export default function InclusionsSelectionsWorkspacePage() {
           <div className="roomToolbar">
             <div>
               <h2>{selectedArea?.name ?? "Room"} selections</h2>
-              <p>{selectedRows.length} items generated from the assigned template.</p>
+              <p>{selectedRows.length} items to choose from the assigned template. Completed: {selectedComplete} of {selectedRows.length}.</p>
             </div>
             <div className="roomToolbarActions">
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this room" />
@@ -279,7 +279,7 @@ export default function InclusionsSelectionsWorkspacePage() {
             </div>
           </div>
           {rows.length === 0 ? <p className="emptyRoomState">No selection items match this room/search.</p> : null}
-          <div className="kitchenTileGrid">
+          <div className="selectionItemList">
             {rows.map((row) => {
               const productName = row.selection?.value.productName ?? row.selection?.value.customSelectionName;
               const meta = [row.selection?.value.brand, row.selection?.value.model, row.selection?.value.supplierName].filter(Boolean).join(" / ");
@@ -287,13 +287,16 @@ export default function InclusionsSelectionsWorkspacePage() {
               const selected = row.selection?.selectedPrice?.amount ?? row.selection?.value.clientPrice?.amount;
               const variation = row.selection?.variation?.amount ?? 0;
               return (
-                <button type="button" key={row.requirement.id} className={productName ? "selectionTile selected" : "selectionTile"} onClick={() => openProductPicker(row.requirement.id)}>
+                <button type="button" key={row.requirement.id} className={productName ? "selectionItemRow selected" : "selectionItemRow"} onClick={() => openProductPicker(row.requirement.id)}>
                   <span className={`tileStatus status-${row.selection?.selectionStatus ?? "not_started"}`}>{row.selection?.selectionStatus === "complete" ? "Done" : "Select"}</span>
                   <span className="tileImage">{productName ? (row.selection?.value.brand ?? productName).slice(0, 2).toUpperCase() : row.requirement.title.slice(0, 2).toUpperCase()}</span>
-                  <strong>{row.requirement.title}</strong>
-                  <span className="tileProduct">{productName ?? "Choose product"}</span>
-                  <span className="tileMeta">{meta || row.requirement.category}</span>
-                  <span className="tilePrice">Allowance {allowance === undefined ? "not set" : `$${allowance.toFixed(0)}`} / Selected {selected === undefined ? "pending" : `$${selected.toFixed(0)}`}</span>
+                  <span className="selectionItemCopy">
+                    <strong>{row.requirement.title}</strong>
+                    <span className="tileProduct">{productName ?? "Choose product"}</span>
+                    <span className="tileMeta">{meta || row.requirement.category}</span>
+                  </span>
+                  <span className="tierBadge">{row.inheritedTierId?.replace("tier_", "").replace(/_/g, " ") ?? row.requirement.category}</span>
+                  <span className="tilePrice">Allowance {allowance === undefined ? "not set" : `$${allowance.toFixed(0)}`}<br />Selected {selected === undefined ? "pending" : `$${selected.toFixed(0)}`}</span>
                   <span className={variation > 0 ? "tileVariation upgrade" : variation < 0 ? "tileVariation credit" : "tileVariation"}>{variation > 0 ? `+$${variation.toFixed(0)} upgrade` : variation < 0 ? `$${variation.toFixed(0)} credit` : "Included"}</span>
                 </button>
               );
@@ -397,17 +400,18 @@ const workspaceStyles = `
   .roomToolbar p { margin: 4px 0 0; color: #657186; }
   .roomToolbarActions { display: flex; gap: 8px; align-items: center; }
   .roomToolbarActions input { width: 220px; }
-  .kitchenTileGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-  .selectionTile { position: relative; min-height: 250px; text-align: left; padding: 16px; display: grid; grid-template-rows: auto auto auto auto auto 1fr auto; gap: 8px; background: #fff; border-color: #dce4ef; overflow: hidden; }
-  .selectionTile:hover, .selectionTile:focus-visible { border-color: #1c4f91; box-shadow: 0 10px 24px rgba(21, 48, 84, .10); outline: none; }
-  .selectionTile.selected { background: #fbfefd; border-color: #b8d9ca; }
+  .selectionItemList { display: grid; gap: 9px; }
+  .selectionItemRow { position: relative; width: 100%; min-height: 86px; text-align: left; padding: 12px; display: grid; grid-template-columns: 74px 58px minmax(0, 1fr) auto 126px auto; gap: 12px; align-items: center; background: #fff; border-color: #dce4ef; overflow: hidden; }
+  .selectionItemRow:hover, .selectionItemRow:focus-visible { border-color: #1c4f91; box-shadow: 0 8px 20px rgba(21, 48, 84, .09); outline: none; }
+  .selectionItemRow.selected { background: #fbfefd; border-color: #b8d9ca; }
   .tileStatus { justify-self: start; min-height: 24px; border-radius: 999px; padding: 3px 9px; background: #eef3f8; color: #526072; font-size: 12px; font-weight: 800; }
   .tileStatus.status-complete { background: #dff7ec; color: #126344; }
-  .tileImage { display: grid; place-items: center; height: 86px; border-radius: 8px; background: #eaf2fc; color: #1c4f91; font-size: 24px; font-weight: 900; }
-  .selectionTile strong { font-size: 20px; }
+  .tileImage { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 8px; background: #eaf2fc; color: #1c4f91; font-size: 17px; font-weight: 900; }
+  .selectionItemCopy { display: grid; gap: 3px; min-width: 0; }
+  .selectionItemCopy strong { font-size: 16px; overflow-wrap: anywhere; }
   .tileProduct { font-weight: 850; color: #172033; }
   .tileMeta, .tilePrice { color: #657186; font-size: 13px; }
-  .tileVariation { align-self: end; justify-self: start; border-radius: 999px; padding: 5px 9px; background: #edf8f1; color: #126344; font-size: 13px; font-weight: 850; }
+  .tileVariation { justify-self: end; border-radius: 999px; padding: 5px 9px; background: #edf8f1; color: #126344; font-size: 13px; font-weight: 850; white-space: nowrap; }
   .tileVariation.upgrade { background: #fff3df; color: #925400; }
   .tileVariation.credit { background: #eaf2fc; color: #1c4f91; }
   .emptyRoomState, .generateRequirementsState p { color: #526072; }
@@ -445,6 +449,7 @@ const workspaceStyles = `
   .modalProductCard { border: 1px solid #dfe6ef; border-radius: 8px; padding: 12px; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; background: #fff; }
   .modalProductCard.selected { border-color: #1c4f91; box-shadow: 0 0 0 2px rgba(28, 79, 145, .12); }
   .modalProductImage { min-height: 92px; background: #eaf2fc; color: #1c4f91; }
+  button.modalProductImage { border: 0; padding: 0; width: 100%; cursor: zoom-in; }
   .modalProductContent { display: grid; gap: 9px; }
   .modalProductTop { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
   .modalProductTop h3 { font-size: 18px; margin: 2px 0; }
@@ -456,6 +461,18 @@ const workspaceStyles = `
   .productFacts dd { margin: 2px 0 0; font-weight: 750; }
   .modalProductActions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .modalProductActions a { color: #1c4f91; font-weight: 750; text-decoration: none; }
+  .disabledLink { color: #657186; font-weight: 750; }
+  .modalProductGrid.hidden { display: none; }
+  .productDetailView { display: grid; gap: 14px; }
+  .backButton { justify-self: start; }
+  .detailLayout { display: grid; grid-template-columns: minmax(220px, 360px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .detailMedia { display: grid; gap: 10px; }
+  .detailImage { min-height: 320px; border-radius: 8px; background: #eaf2fc; display: grid; place-items: center; color: #1c4f91; font-size: 42px; font-weight: 900; }
+  .detailGallery { display: flex; gap: 8px; }
+  .detailGallery span { width: 48px; height: 48px; border-radius: 6px; background: #eef3f8; display: grid; place-items: center; color: #526072; font-weight: 800; }
+  .detailCopy { display: grid; gap: 12px; }
+  .detailCopy h3 { font-size: 28px; }
+  .detailFacts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .successNotice, .errorNotice { margin: 14px 18px 0; border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
   .successNotice { background: #e9f8ef; color: #1d6d47; border: 1px solid #b7e2c6; }
   .errorNotice { background: #fff1f1; color: #9b2c25; border: 1px solid #ffd1d1; }
@@ -470,7 +487,7 @@ const workspaceStyles = `
   .validNotice { border-color: #b7e2c6; color: #1d6d47; background: #e9f8ef; }
   .stageActions { display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: rgba(245,247,250,.95); padding: 14px 0; flex-wrap: wrap; }
   .persistenceNote { color: #657186; font-size: 13px; }
-  @media (max-width: 1180px) { .kitchenTileGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 1180px) { .selectionItemRow { grid-template-columns: 70px 58px minmax(0, 1fr) 112px; } .selectionItemRow .tierBadge, .selectionItemRow .tilePrice { display: none; } }
   @media (max-width: 1100px) { .workspaceLayout, .builderWorkspaceLayout, .workspaceSummary { grid-template-columns: 1fr; } .workspaceSide { order: 2; } }
-  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .kitchenHero h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .kitchenHero, .roomToolbar, .roomToolbarActions { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .kitchenTileGrid { grid-template-columns: 1fr; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } .roomToolbarActions input { width: 100%; } }
+  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .kitchenHero h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .kitchenHero, .roomToolbar, .roomToolbarActions { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .selectionItemRow, .detailLayout, .detailFacts { grid-template-columns: 1fr; } .selectionItemRow { justify-items: start; } .tileVariation { justify-self: start; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } .roomToolbarActions input { width: 100%; } }
 `;

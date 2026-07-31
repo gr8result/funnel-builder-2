@@ -90,6 +90,7 @@ function ProductRow({ product, lookups, columns, widths, onOpen }) {
             return (
               <div key={column.key} className="cell actions-cell" style={style} onClick={(event) => event.stopPropagation()}>
                 <button type="button" onClick={() => onOpen(product)}>Edit</button>
+                {product.product_url ? <a href={product.product_url} target="_blank" rel="noopener noreferrer">Supplier</a> : null}
               </div>
             );
           default:
@@ -461,6 +462,17 @@ export default function ProductLibraryTable({ products, categoryById, supplierBy
           padding: 5px 10px;
           font-size: 12px;
           cursor: pointer;
+        }
+        .actions-cell {
+          gap: 6px;
+        }
+        .actions-cell a {
+          border: 1px solid rgba(148, 163, 184, 0.35);
+          color: #e5eefb;
+          border-radius: 6px;
+          padding: 5px 10px;
+          font-size: 12px;
+          text-decoration: none;
         }
         .empty-row {
           padding: 30px;

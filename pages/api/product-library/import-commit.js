@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { csvRecords, slugify, normalizeMoney, truthyCsv, normalizePriceBand, normalizePricingTierCsv } from "../../../lib/product-library/csv";
 import { PRODUCT_LIBRARY_SCOPES, VERIFICATION_STATUSES, defaultRequiresImageForCategory, normalizeLibraryScope } from "../../../lib/product-library/constants";
 import { validateSelectionsProductCsvRecord } from "../../../lib/product-library/selectionsClassification";
+import { selectionVisibilityToLegacyScope } from "../../../lib/product-library/selectionVisibility";
 import { roundMoney } from "../../../lib/builders/selectionBudget";
 import { isValidProductUrl } from "../../../lib/product-library/urlValidation";
 
@@ -101,9 +102,9 @@ async function handler(req, res) {
         if (!productName) throw new Error("product_name is required");
         const classification = validateSelectionsProductCsvRecord(record);
         if (!classification.ok) throw new Error(classification.errors.join("; "));
-        const libraryScope = normalizeLibraryScope(record.library_scope, "CLIENT_SELECTION");
+        const libraryScope = normalizeLibraryScope(record.library_scope, selectionVisibilityToLegacyScope(classification.selectionVisibility));
         if (!PRODUCT_LIBRARY_SCOPES.has(libraryScope)) {
-          throw new Error("Product Library imports only accept CLIENT_SELECTION or BOTH records");
+          throw new Error("Selections Product Catalogue imports only accept client_selectable or builder_selectable records");
         }
         const sku = String(record.product_code || record.internal_product_code || record.sku || "").trim();
         if (sku) {
@@ -130,8 +131,8 @@ async function handler(req, res) {
         const manufacturerId = record.brand || record.manufacturer
           ? await ensureLookup("builder_product_manufacturers", "manufacturer_name", record.brand || record.manufacturer, req.workspaceId, manufacturerCache)
           : null;
-        const supplierId = record.supplier
-          ? await ensureLookup("builder_product_suppliers", "supplier_name", record.supplier, req.workspaceId, supplierCache)
+        const supplierId = record.supplier || record.supplier_name
+          ? await ensureLookup("builder_product_suppliers", "supplier_name", record.supplier || record.supplier_name, req.workspaceId, supplierCache)
           : null;
 
         const category = categoryId ? categories?.find((entry) => entry.id === categoryId) || categoryByKey.get(slugify(record.category)) : null;
@@ -159,6 +160,9 @@ async function handler(req, res) {
           mounting_type: record.mounting_type || null,
           installation_type: record.installation_type || null,
           availability_status: record.availability_status || "available",
+          selection_visibility: classification.selectionVisibility,
+          active_status: record.active_status || (truthyCsv(record.active, true) ? "active" : "inactive"),
+          discontinued_status: record.discontinued_status || "current",
           manufacturer_id: manufacturerId,
           supplier_id: supplierId,
           sku: sku || null,
@@ -183,16 +187,18 @@ async function handler(req, res) {
           pricing_mode: record.markup ? "markup" : "fixed_sell",
           price_band: normalizePriceBand(record.price_band),
           standard_included: truthyCsv(record.standard_included, false),
-          available_for_selection: truthyCsv(record.available_for_selection, true),
+          available_for_selection: ["client_selectable", "builder_selectable"].includes(classification.selectionVisibility) && truthyCsv(record.available_for_selection, true),
           display_order: Number(record.display_order) || 0,
-          primary_image_url: record.image_url_or_reference || record.image_url || null,
-          additional_image_urls: splitImageUrls(record.additional_image_urls),
-          product_url: supplierUrlCheck.url || null,
+          primary_image_url: record.primary_image || record.image_url_or_reference || record.image_url || null,
+          additional_image_urls: splitImageUrls(record.gallery_images || record.additional_image_urls),
+          product_url: supplierUrlCheck.url || record.product_url || null,
+          supplier_category_url: record.supplier_category_url || null,
+          warranty_url: record.warranty_url || null,
           manufacturer_product_url: manufacturerUrlCheck.url || null,
           image_source_url: record.image_source_url || null,
           verification_status: VALID_VERIFICATION_STATUSES.has(record.image_verification_status) ? record.image_verification_status : "unverified",
           date_last_verified: record.date_last_verified || null,
-          datasheet_pdf_url: record.spec_pdf_url || null,
+          datasheet_pdf_url: record.specification_url || record.spec_pdf_url || null,
           active: truthyCsv(record.active, true),
           updated_at: new Date().toISOString(),
         };

@@ -20,7 +20,7 @@ Category View is only a presentation of existing ProjectRequirements. It does no
 
 ## Room View
 
-Room View groups ProjectAreas by AreaGroup and shows level, completion percentage, outstanding count and room variation. Selecting a room loads its ProjectRequirements without allowing edits to area name, area type, area group or project level.
+Room View groups ProjectAreas by AreaGroup and shows level, completion percentage, outstanding count and room variation. Selecting a room loads its ProjectRequirements as a dense selection item list with status, selected thumbnail, selected product, tier/category badge, allowance and variation.
 
 ## Category View
 
@@ -38,7 +38,7 @@ The current implementation includes `InMemoryProductSelectionCatalogueAdapter` w
 
 ## Product And Variant Selection
 
-Product selection is requirement-first. A product must match category, subtype, active state and organisation availability. Product families with required variants remain incomplete until a specific variant is selected. Variant changes update selected description, price, colour, supplier SKU and draft variation.
+Product selection is requirement-first. A product must match `selection_visibility`, category, subtype, active state and organisation availability. Product families with required variants remain incomplete until a specific variant is selected. Variant changes update selected description, price, colour, supplier SKU and draft variation.
 
 ## Manual Custom Selections
 

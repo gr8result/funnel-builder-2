@@ -1,7 +1,7 @@
 import { withWorkspace } from "../../../lib/withWorkspace";
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 
-const ALLOWED_UPDATE_FIELDS = ["category_id", "supplier_id", "active", "markup_percent", "requires_image", "library_scope", "pricing_tier", "available_for_selection"];
+const ALLOWED_UPDATE_FIELDS = ["category_id", "supplier_id", "active", "markup_percent", "requires_image", "library_scope", "pricing_tier", "available_for_selection", "selection_visibility", "active_status", "discontinued_status"];
 
 async function handler(req, res) {
   if (req.method !== "POST") {

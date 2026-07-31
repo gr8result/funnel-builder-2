@@ -3,6 +3,7 @@ import { money } from "../shared/money";
 import type { ProductReference, ProductVariantReference } from "./productReferenceTypes";
 import type { ProductSearchFilters, ProductSelectionCatalogueAdapter, SupplierReference } from "./productSelectionCatalogueAdapter";
 import { evaluateProductCompatibility, productMatchesFilters } from "./requirementProductMatching";
+import { isProductVisibleInSelections, normalizeSelectionVisibility } from "./selectionVisibility";
 
 const suppliers: SupplierReference[] = [
   { id: "supplier_dev_finishes", organisationId: "org_dev", name: "Development Finishes Supplier" },
@@ -20,12 +21,13 @@ const products: ProductReference[] = [
   { id: "product_dev_kitchen_mixer", organisationId: "org_dev", name: "Development Kitchen Sink Mixer", brand: "DevTap", supplierId: "supplier_dev_fixtures", defaultVariantId: "variant_dev_kitchen_chrome", unit: "each", active: true, compatibility: { category: "plumbing", subtype: "sink_mixer", internalExternal: "internal" }, builderCost: money(430), unitCost: money(640), priceSource: "catalogue", priceEffectiveDate: "2026-01-01", priceExpiresAt: "2027-01-01" },
   { id: "product_dev_laundry_mixer", organisationId: "org_dev", name: "Development Laundry Mixer", brand: "DevTap", supplierId: "supplier_dev_fixtures", defaultVariantId: "variant_dev_laundry_chrome", unit: "each", active: true, compatibility: { category: "plumbing", subtype: "laundry_mixer", internalExternal: "internal" }, builderCost: money(250), unitCost: money(360), priceSource: "catalogue", priceEffectiveDate: "2026-01-01", priceExpiresAt: "2027-01-01" },
   { id: "product_dev_inactive_tile", organisationId: "org_dev", name: "Inactive Development Tile", brand: "DevTile", supplierId: "supplier_dev_finishes", unit: "m2", active: false, compatibility: { category: "flooring", subtype: "floor_tiles", internalExternal: "both" }, unitCost: money(70) },
+  { id: "estimating_concrete_slab_rate", organisationId: "org_dev", name: "Concrete slab estimating rate", brand: "Internal Rate", supplierId: "supplier_dev_finishes", unit: "m2", active: true, selectionVisibility: "estimating_only", isEstimatingResource: true, compatibility: { category: "flooring", subtype: "floor_tiles", internalExternal: "both", requirementTags: ["floor-tile"] }, builderCost: money(115), unitCost: money(115), priceSource: "Internal estimating rate" },
   { id: "demo_phoenix_vivid_basin_mixer", organisationId: "org_dev", name: "Phoenix Vivid Slimline Basin Mixer", brand: "Phoenix", supplierId: "supplier_demo_reece", defaultVariantId: "demo_phoenix_basin_chrome", requiresVariant: true, unit: "each", active: true, compatibility: { category: "plumbing", subtype: "basin_mixer" }, builderCost: money(310), unitCost: money(450), priceSource: "Demonstration product and indicative price", imageUrl: "demo://tapware/basin-mixer" },
   { id: "demo_phoenix_vivid_shower_mixer", organisationId: "org_dev", name: "Phoenix Vivid Slimline Shower Mixer", brand: "Phoenix", supplierId: "supplier_demo_reece", defaultVariantId: "demo_phoenix_shower_chrome", unit: "each", active: true, compatibility: { category: "plumbing", subtype: "shower_mixer" }, builderCost: money(240), unitCost: money(390), priceSource: "Demonstration product and indicative price", imageUrl: "demo://tapware/shower-mixer" },
   { id: "demo_phoenix_vivid_sink_mixer", organisationId: "org_dev", name: "Phoenix Vivid Slimline Sink Mixer", brand: "Phoenix", supplierId: "supplier_demo_reece", defaultVariantId: "demo_phoenix_sink_chrome", unit: "each", active: true, compatibility: { category: "plumbing", subtype: "sink_mixer" }, builderCost: money(420), unitCost: money(590), priceSource: "Demonstration product and indicative price", imageUrl: "demo://tapware/sink-mixer" },
   { id: "demo_caesarstone_benchtop", organisationId: "org_dev", name: "Caesarstone 20 mm benchtop", brand: "Caesarstone", supplierId: "supplier_demo_tile", defaultVariantId: "demo_caesarstone_snowdrift", unit: "m2", active: true, compatibility: { category: "fixture", subtype: "benchtops" }, builderCost: money(690), unitCost: money(920), priceSource: "Demonstration product and indicative price", imageUrl: "demo://kitchen/stone" },
   { id: "demo_polytec_cabinetry", organisationId: "org_dev", name: "Polytec cabinetry", brand: "Polytec", supplierId: "supplier_demo_finishes", defaultVariantId: "demo_polytec_white_matt", unit: "m2", active: true, compatibility: { category: "fixture", subtype: "cabinetry" }, builderCost: money(520), unitCost: money(680), priceSource: "Demonstration product and indicative price", imageUrl: "demo://kitchen/cabinetry" },
-  { id: "demo_smeg_900_oven", organisationId: "org_dev", name: "Smeg 900 mm oven", brand: "Smeg", supplierId: "supplier_demo_appliance", unit: "each", active: true, compatibility: { category: "appliance", subtype: "oven" }, builderCost: money(1420), unitCost: money(1890), priceSource: "Demonstration product and indicative price", imageUrl: "demo://appliance/oven" },
+  { id: "demo_smeg_900_oven", organisationId: "org_dev", name: "Smeg 900 mm oven", brand: "Smeg", supplierId: "supplier_demo_appliance", unit: "each", active: true, compatibility: { category: "appliance", subtype: "oven" }, builderCost: money(1420), unitCost: money(1890), priceSource: "Demonstration product and indicative price", imageUrl: "demo://appliance/oven", productUrl: "https://example.com/supplier/demo-smeg-900-oven" },
   { id: "demo_westinghouse_900_oven", organisationId: "org_dev", name: "Westinghouse 900 mm oven", brand: "Westinghouse", supplierId: "supplier_demo_appliance", unit: "each", active: true, compatibility: { category: "appliance", subtype: "oven" }, builderCost: money(890), unitCost: money(1250), priceSource: "Demonstration product and indicative price", imageUrl: "demo://appliance/oven" },
   { id: "demo_westinghouse_600_oven", organisationId: "org_dev", name: "Westinghouse 600 mm built-in oven", brand: "Westinghouse", supplierId: "supplier_demo_appliance", unit: "each", active: true, compatibility: { category: "appliance", subtype: "oven" }, builderCost: money(690), unitCost: money(980), priceSource: "Demonstration product and indicative price", imageUrl: "demo://appliance/oven-600" },
   { id: "demo_smeg_gas_cooktop", organisationId: "org_dev", name: "Smeg gas cooktop", brand: "Smeg", supplierId: "supplier_demo_appliance", unit: "each", active: true, compatibility: { category: "appliance", subtype: "cooktop" }, builderCost: money(860), unitCost: money(1180), priceSource: "Demonstration product and indicative price", imageUrl: "demo://appliance/cooktop" },
@@ -130,7 +132,7 @@ function classifyProduct(product: ProductReference): ProductReference {
     productCode: product.productCode ?? product.id.replace(/^demo_/, "DEMO-").replace(/^product_dev_/, "DEV-").replace(/_/g, "-").toUpperCase(),
     supplierName: product.supplierName ?? supplierName(product.supplierId),
     supplierSku: product.supplierSku ?? product.id.replace(/_/g, "-").toUpperCase(),
-    productUrl: product.productUrl ?? "https://example.com/demo-product",
+    productUrl: product.productUrl,
     categoryName: product.categoryName ?? (product.compatibility.category === "appliance" ? "Kitchen Appliances" : product.compatibility.category),
     subcategoryName: product.subcategoryName ?? subtype.replace(/_/g, " "),
     productType: product.productType ?? (isOven ? "Built-in Oven" : subtype.replace(/_/g, " ")),
@@ -138,6 +140,12 @@ function classifyProduct(product: ProductReference): ProductReference {
     description: product.description ?? "Demonstration product and indicative price. Pricing is not current supplier pricing.",
     tierId: product.tierId ?? (product.name.toLowerCase().includes("premium") ? "tier_premium" : "tier_premier"),
     allowance: product.allowance ?? product.unitCost,
+    selectionVisibility: normalizeSelectionVisibility(product),
+    isClientSelectable: normalizeSelectionVisibility(product) === "client_selectable",
+    isBuilderSelectable: normalizeSelectionVisibility(product) === "builder_selectable",
+    isEstimatingResource: normalizeSelectionVisibility(product) === "estimating_only",
+    activeStatus: product.activeStatus ?? (product.active ? "active" : "inactive"),
+    discontinuedStatus: product.discontinuedStatus ?? (product.discontinued ? "discontinued" : "current"),
     availabilityStatus: product.discontinued ? "discontinued" : product.active ? "available" : "unavailable",
     compatibility: {
       ...product.compatibility,
@@ -164,6 +172,7 @@ export class InMemoryProductSelectionCatalogueAdapter implements ProductSelectio
     const search = normalise(filters.search);
     return catalogueProducts
       .filter((product) => product.organisationId === this.organisationId || product.organisationId === "org_dev")
+      .filter((product) => isProductVisibleInSelections(product))
       .filter((product) => evaluateProductCompatibility(requirement, product).compatible)
       .filter((product) => productMatchesFilters(product, filters))
       .filter((product) => !search || normalise([product.name, product.brand, product.id, product.compatibility.width, product.compatibility.fuelType].join(" ")).includes(search));

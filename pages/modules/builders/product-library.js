@@ -17,6 +17,7 @@ import {
   effectiveUpgradeValue,
   money,
   PRODUCT_CSV_HEADERS,
+  selectionVisibilityFlags,
 } from "../../../lib/product-library/helpers";
 import {
   LIBRARY_SCOPES,
@@ -39,6 +40,10 @@ const DEFAULT_FILTERS = {
   pricingTier: "all",
   standardInclusion: "all",
   availableForSelection: "all",
+  selectionVisibility: "client_selectable",
+  discontinued: "current",
+  missingSupplierLink: "all",
+  missingTags: "all",
 };
 
 const TABLE_PAGE_SIZE = 50;
@@ -153,8 +158,12 @@ export default function BuilderProductLibraryPage() {
       pricingTier: filters.pricingTier,
       active: filters.active,
       availableForSelection: filters.availableForSelection,
+      selectionVisibility: filters.selectionVisibility,
+      discontinued: filters.discontinued,
       standardInclusion: filters.standardInclusion,
       missingImages: filters.missingImages,
+      missingSupplierLink: filters.missingSupplierLink,
+      missingTags: filters.missingTags,
     });
     const response = await fetch(`/api/product-library/list?${params.toString()}`, {
       headers: {
@@ -248,6 +257,12 @@ export default function BuilderProductLibraryPage() {
       if (filters.standardInclusion === "no" && product.standard_included) return false;
       if (filters.availableForSelection === "yes" && product.available_for_selection === false) return false;
       if (filters.availableForSelection === "no" && product.available_for_selection !== false) return false;
+      const visibility = selectionVisibilityFlags(product);
+      if (filters.selectionVisibility !== "all" && visibility.selectionVisibility !== filters.selectionVisibility) return false;
+      if (filters.discontinued === "current" && visibility.discontinuedStatus === "discontinued") return false;
+      if (filters.discontinued === "discontinued" && visibility.discontinuedStatus !== "discontinued") return false;
+      if (filters.missingSupplierLink === "missing" && product.product_url) return false;
+      if (filters.missingTags === "missing" && String(product.requirement_tags || "").trim()) return false;
       return true;
     });
   }, [products, debouncedSearch, filters, categoryById, categoryObjectById, supplierById, manufacturerById]);
@@ -302,6 +317,9 @@ export default function BuilderProductLibraryPage() {
       is_visual_product: Boolean(form.is_visual_product),
       requires_image: Boolean(form.requires_image),
       library_scope: form.library_scope || "CLIENT_SELECTION",
+      selection_visibility: form.selection_visibility || "client_selectable",
+      active_status: form.active_status || (form.active ? "active" : "inactive"),
+      discontinued_status: form.discontinued_status || "current",
       active: Boolean(form.active),
       available_for_selection: Boolean(form.available_for_selection),
       display_order: form.display_order === "" ? 0 : Number(form.display_order),
@@ -312,6 +330,8 @@ export default function BuilderProductLibraryPage() {
       finish: form.finish,
       size_dimensions: form.size_dimensions,
       product_url: form.product_url,
+      supplier_category_url: form.supplier_category_url,
+      warranty_url: form.warranty_url,
       cost_price: form.cost_price === "" ? null : Number(form.cost_price),
       base_allowance: form.base_allowance === "" ? 0 : Number(form.base_allowance),
       upgrade_value_mode: form.upgrade_value_mode,

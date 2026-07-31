@@ -15,6 +15,7 @@ export type ProductSearchFilters = {
   fuelType?: string;
   installationType?: string;
   availabilityStatus?: string;
+  selectionVisibility?: "client_selectable" | "builder_selectable";
   includeInactive?: boolean;
   internalExternal?: "internal" | "external" | "both";
 };

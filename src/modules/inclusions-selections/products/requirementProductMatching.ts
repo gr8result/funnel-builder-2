@@ -4,6 +4,7 @@ import type { ProjectRequirement } from "../requirements/requirementTypes";
 import type { ProductReference, ProductVariantReference } from "./productReferenceTypes";
 import type { ProductSearchFilters } from "./productSelectionCatalogueAdapter";
 import { normalizeProductTags } from "./productTagTaxonomy";
+import { isProductVisibleInSelections, normalizeSelectionVisibility } from "./selectionVisibility";
 
 export type RequirementProductCompatibility = {
   compatible: boolean;
@@ -95,12 +96,15 @@ export function productMatchesFilters(product: ProductReference, filters: Produc
   if (filters.fuelType && product.compatibility.fuelType !== filters.fuelType) return false;
   if (filters.installationType && product.compatibility.installationType !== filters.installationType) return false;
   if (filters.availabilityStatus && (product.availabilityStatus ?? "available") !== filters.availabilityStatus) return false;
+  if (filters.selectionVisibility && normalizeSelectionVisibility(product) !== filters.selectionVisibility) return false;
+  if (!filters.includeInactive && !isProductVisibleInSelections(product)) return false;
   if (!filters.includeInactive && !product.active) return false;
   return true;
 }
 
 export function evaluateProductCompatibility(requirement: ProjectRequirement, product: ProductReference, variants: ProductVariantReference[] = [], area?: ProjectArea, tierId?: string): RequirementProductCompatibility {
   const reasons: string[] = [];
+  if (!isProductVisibleInSelections(product)) reasons.push("Product is not visible in the selections catalogue.");
   if (!product.active) reasons.push("Product is inactive.");
   if (product.discontinued || product.availabilityStatus === "discontinued") reasons.push("Product is discontinued.");
   if (product.compatibility.category !== requirement.category) reasons.push("Product category does not match this selection item.");

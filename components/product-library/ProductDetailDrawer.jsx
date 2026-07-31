@@ -8,6 +8,7 @@ import {
   PRICE_BANDS,
   PRICING_MODES,
   PRICING_TIERS,
+  SELECTION_VISIBILITY_VALUES,
   UPGRADE_VALUE_MODES,
   VERIFICATION_STATUSES,
   defaultRequiresImageForCategory,
@@ -33,6 +34,9 @@ const EMPTY_FORM = {
   is_visual_product: false,
   requires_image: false,
   library_scope: "CLIENT_SELECTION",
+  selection_visibility: "client_selectable",
+  active_status: "active",
+  discontinued_status: "current",
   active: true,
   available_for_selection: true,
   display_order: 0,
@@ -43,6 +47,8 @@ const EMPTY_FORM = {
   finish: "",
   size_dimensions: "",
   product_url: "",
+  supplier_category_url: "",
+  warranty_url: "",
   cost_price: "",
   base_allowance: "",
   upgrade_value_mode: "auto",
@@ -381,6 +387,16 @@ export default function ProductDetailDrawer({
               />
             </label>
             {!manufacturerUrlCheck.ok && <p className="field-error">{manufacturerUrlCheck.error}</p>}
+            <div className="grid two">
+              <label>
+                Supplier Category URL <span className="optional">(optional)</span>
+                <input value={form.supplier_category_url} onChange={(event) => update("supplier_category_url", event.target.value)} placeholder="https://www.supplier.com/category" />
+              </label>
+              <label>
+                Warranty URL <span className="optional">(optional)</span>
+                <input value={form.warranty_url} onChange={(event) => update("warranty_url", event.target.value)} placeholder="https://www.supplier.com/warranty" />
+              </label>
+            </div>
 
             <p className="field-label">Image Verification</p>
             <div className="grid two">
@@ -443,6 +459,32 @@ export default function ProductDetailDrawer({
               <label className="check">
                 <input type="checkbox" checked={form.active} onChange={(event) => update("active", event.target.checked)} />
                 Active
+              </label>
+            </div>
+            <div className="grid three">
+              <label>
+                Selection Visibility
+                <select value={form.selection_visibility} onChange={(event) => update("selection_visibility", event.target.value)}>
+                  {SELECTION_VISIBILITY_VALUES.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Active Status
+                <select value={form.active_status} onChange={(event) => update("active_status", event.target.value)}>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </label>
+              <label>
+                Discontinued Status
+                <select value={form.discontinued_status} onChange={(event) => update("discontinued_status", event.target.value)}>
+                  <option value="current">Current</option>
+                  <option value="discontinued">Discontinued</option>
+                  <option value="unknown">Unknown</option>
+                </select>
               </label>
             </div>
             <label>
