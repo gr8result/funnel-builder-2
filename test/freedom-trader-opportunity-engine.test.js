@@ -8,6 +8,7 @@ import {
   validateMarketData,
 } from "../lib/freedom-trader/opportunityEngine.js";
 import { DEFAULT_REPORT_SETTINGS, generateFreedomTraderReport } from "../lib/freedom-trader/actionReport.js";
+import { buildFreedomScanSummaryFromEngine } from "../lib/freedom-trader/scanSummary.js";
 
 const NOW = new Date("2026-07-30T22:00:00.000Z");
 
@@ -101,6 +102,27 @@ test("no opportunities returns a teaching summary", async () => {
   assert.equal(result.results.length, 2);
   assert.equal(result.summary.counts["READY TO BUY"], 0);
   assert.match(result.summary.plainEnglish, /No trade currently meets your rules/);
+});
+
+test("shared scan summary records complete, partial and ranked decision counts", () => {
+  const ready = buildOpportunityDecision(analysis("READY"), { now: NOW });
+  const missing = buildOpportunityDecision(analysis("MISS", {
+    dataStatus: { readyForScore: false, actualCandleCount: 12, latestTimestamp: "2026-07-30T21:30:00.000Z" },
+  }), { now: NOW });
+  const summary = buildFreedomScanSummaryFromEngine({
+    scanStartedAt: NOW.toISOString(),
+    scanCompletedAt: NOW.toISOString(),
+    scannedSymbols: ["READY", "MISS"],
+    supportedSymbols: ["READY", "MISS"],
+    decisions: [ready, missing],
+    results: [ready],
+  });
+  assert.equal(summary.status, "partial");
+  assert.equal(summary.requestedCount, 2);
+  assert.equal(summary.analysedCount, 1);
+  assert.equal(summary.unavailableCount, 1);
+  assert.equal(summary.qualifiedCount, 1);
+  assert.equal(summary.rankedResults[0].symbol, "READY");
 });
 
 test("multiple opportunities are ranked by action, confidence, reward/risk, liquidity and data quality", () => {

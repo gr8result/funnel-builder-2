@@ -1,6 +1,7 @@
 import { analyseSymbol } from "./analysis.js";
 import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
 import { OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
+import { buildFailedFreedomScanSummary, buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 
 const DEFAULT_SETTINGS = {
   markets: ["US"],
@@ -42,6 +43,7 @@ function legacyScannerStatus(result) {
 }
 
 function buildScanSummary(result) {
+  const shared = buildFreedomScanSummaryFromEngine(result);
   const decisions = result.decisions || [];
   const couldAnalyse = decisions.filter((item) => item.couldAnalyse);
   const couldNotAnalyse = decisions.filter((item) => !item.couldAnalyse);
@@ -54,6 +56,7 @@ function buildScanSummary(result) {
   }, {});
 
   return {
+    ...shared,
     engineVersion: OPPORTUNITY_ENGINE_VERSION,
     marketLabels: result.settings.markets,
     supportedUniverseCount: result.supportedSymbols.length,
@@ -70,7 +73,7 @@ function buildScanSummary(result) {
     noAction: counts["NO ACTION"] || 0,
     qualified: counts["READY TO BUY"] || 0,
     notQualified: Math.max(0, couldAnalyse.length - (counts["READY TO BUY"] || 0)),
-    scanCompletionStatus: couldNotAnalyse.length ? "incomplete-data" : "complete",
+    scanCompletionStatus: shared.status === "partial" ? "incomplete-data" : shared.status,
     symbolsRequested: result.scannedSymbols.length,
     symbolsSuccessfullyLoaded: couldAnalyse.length,
     symbolsRejectedMissingData: couldNotAnalyse.length,
@@ -80,8 +83,8 @@ function buildScanSummary(result) {
     dataUnavailableReasons: Array.from(new Set(couldNotAnalyse.map((item) => item.couldNotAnalyseReason).filter(Boolean))),
     disabledSymbols: result.disabledSymbols,
     plainEnglish: result.summary?.plainEnglish || null,
-    scanStartedAt: result.scanStartedAt,
-    scanCompletedAt: result.scanCompletedAt,
+    scanStartedAt: shared.startedAt,
+    scanCompletedAt: shared.completedAt,
     remainingSymbols: result.nextOffset === 0 ? 0 : Math.max(0, result.supportedSymbols.length - result.nextOffset),
   };
 }
@@ -123,9 +126,11 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("Freedom Trader Opportunity Engine scan failed:", error);
+    const scanSummary = buildFailedFreedomScanSummary({ error: "Opportunity Engine could not complete the scan." });
     return res.status(500).json({
       ok: false,
       engineVersion: OPPORTUNITY_ENGINE_VERSION,
+      scanSummary,
       results: [],
       decisions: [],
       error: "Opportunity Engine could not complete the scan.",

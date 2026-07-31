@@ -42,6 +42,7 @@ create table if not exists public.freedom_action_alerts (
 );
 
 alter table public.freedom_trader_reports add column if not exists account_summary jsonb not null default '{}'::jsonb;
+alter table public.freedom_trader_reports add column if not exists scan_summary jsonb;
 alter table public.freedom_action_alerts add column if not exists market_data_timestamp timestamptz;
 
 alter table public.freedom_action_alerts drop constraint if exists freedom_action_alerts_action_check;

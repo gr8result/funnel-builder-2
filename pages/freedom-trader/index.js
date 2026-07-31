@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
+import { isFreedomScanSummaryCurrent, scanActionText } from "../../lib/freedom-trader/scanSummary";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -20,8 +21,22 @@ function formatManualAccountCurrency(value, currency = "AUD") {
 
 function userFacingReportError(message = "") {
   if (!message) return "";
-  if (/supabase|migration|database|persist|save/i.test(message)) return "Report history is unavailable right now. Today's answer can still be generated from the loaded account data.";
+  if (/supabase|migration|database|persist|save/i.test(message)) return "Report generated, but history could not be saved. Apply supabase/migrations/20260729_freedom_trader_action_reports.sql if this is the first run.";
   return message;
+}
+
+function scannerSettingsFromReport(settings = {}) {
+  return {
+    markets: ["US"],
+    chunkSize: 20,
+    minimumScore: 82,
+    minimumDailyVolume: 1000000,
+    minimumRiskReward: 2,
+    maximumVolatility: 9,
+    maximumPlannedLossPerTrade: settings.maximumPlannedLossPerTrade,
+    maximumPositionValue: settings.maximumPositionValue,
+    availableCash: settings.availableCash,
+  };
 }
 
 function plannedCommittedValue(pendingOrders = []) {
@@ -46,6 +61,21 @@ function dailyGreeting() {
   return "Good evening Grant";
 }
 
+function formatDateTime(value) {
+  const timestamp = Date.parse(value || "");
+  return Number.isFinite(timestamp) ? new Date(timestamp).toLocaleString() : "unknown time";
+}
+
+function scanStatusMessage(summary = {}) {
+  const analysed = Number(summary.analysedCount ?? summary.symbolsAnalysed ?? summary.symbolsSuccessfullyLoaded ?? 0);
+  const requested = Number(summary.requestedCount ?? summary.symbolsRequested ?? analysed);
+  const unavailable = Number(summary.unavailableCount ?? summary.symbolsRejectedMissingData ?? Math.max(0, requested - analysed));
+  if (summary.status === "complete") return `Market check completed at ${formatDateTime(summary.completedAt || summary.scanCompletedAt)}. ${analysed} of ${requested} companies analysed. Data: ${summary.dataLabel || "Delayed by 15 minutes"}.`;
+  if (summary.status === "partial") return `Partial market check completed at ${formatDateTime(summary.completedAt || summary.scanCompletedAt)}. ${analysed} analysed, ${unavailable} unavailable.`;
+  if (summary.status === "failed") return "Market data is unavailable. Do not place a new trade from this report.";
+  return analysed ? `Market check loaded. ${analysed} of ${requested} companies analysed.` : "Market scanner has not completed yet.";
+}
+
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
@@ -64,8 +94,11 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [opportunityRows, setOpportunityRows] = useState([]);
+  const [scannerRows, setScannerRows] = useState([]);
   const [developingRows, setDevelopingRows] = useState([]);
   const [scanSummary, setScanSummary] = useState(null);
+  const [scanMessage, setScanMessage] = useState("");
+  const [scanLoading, setScanLoading] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [journalTrades, setJournalTrades] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -107,7 +140,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         fetch("/api/freedom-trader/scanner?offset=0", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ markets: ["US"], chunkSize: 10, minimumScore: 82, minimumDailyVolume: 1000000, minimumRiskReward: 2, maximumVolatility: 9 }),
+          body: JSON.stringify(scannerSettingsFromReport(reportSettings)),
         }),
         fetch("/api/freedom-trader/alerts"),
         fetch("/api/freedom-trader/trade-journal"),
@@ -122,9 +155,15 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       const positionsData = positionsResponse.status === "fulfilled" ? await positionsResponse.value.json().catch(() => null) : null;
       const paperData = paperResponse.status === "fulfilled" ? await paperResponse.value.json().catch(() => null) : null;
       const reportData = reportResponse.status === "fulfilled" ? await reportResponse.value.json().catch(() => null) : null;
-      setOpportunityRows(Array.isArray(scannerData?.results) ? scannerData.results.slice(0, 5) : []);
-      setDevelopingRows(Array.isArray(scannerData?.scannerStatus) ? scannerData.scannerStatus.filter((row) => row.rejectionReason).slice(0, 8) : []);
-      setScanSummary(scannerData?.scanSummary || null);
+      if (scannerData?.ok && scannerData?.scanSummary) {
+        setScannerRows(Array.isArray(scannerData.decisions) ? scannerData.decisions : []);
+        setOpportunityRows(Array.isArray(scannerData.results) ? scannerData.results.slice(0, 5) : []);
+        setDevelopingRows(Array.isArray(scannerData.scannerStatus) ? scannerData.scannerStatus.filter((row) => row.rejectionReason).slice(0, 8) : []);
+        setScanSummary(scannerData.scanSummary);
+        setScanMessage(scanStatusMessage(scannerData.scanSummary));
+      } else {
+        setScanMessage(scannerData?.scanSummary ? scanStatusMessage(scannerData.scanSummary) : "Market scanner could not load. The last valid scan will remain visible.");
+      }
       setAlerts(Array.isArray(alertsData?.alerts) ? alertsData.alerts.slice(0, 5) : []);
       setJournalTrades(Array.isArray(journalData?.trades) ? journalData.trades.slice(0, 5) : []);
       setPositions(Array.isArray(positionsData?.positions) ? positionsData.positions.filter((position) => position.status !== "closed").slice(0, 10) : []);
@@ -156,16 +195,70 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
   const bestOpportunities = useMemo(() => opportunityRows.slice(0, 5), [opportunityRows]);
 
+  function applyScannerData(scannerData) {
+    const summary = scannerData?.scanSummary || null;
+    if (scannerData?.ok && summary) {
+      const decisions = Array.isArray(scannerData.decisions) ? scannerData.decisions : [];
+      setScannerRows(decisions);
+      setOpportunityRows(Array.isArray(scannerData.results) ? scannerData.results.slice(0, 5) : []);
+      setDevelopingRows(Array.isArray(scannerData.scannerStatus) ? scannerData.scannerStatus.filter((row) => row.rejectionReason).slice(0, 8) : []);
+      setScanSummary(summary);
+      setUpdatedAt(scannerData.updatedAt || summary.completedAt || new Date().toISOString());
+      setScanMessage(scanStatusMessage(summary));
+      return { scannerRows: decisions, scanSummary: summary };
+    }
+    const failedSummary = scannerData?.scanSummary || {
+      status: "failed",
+      analysedCount: 0,
+      unavailableCount: 0,
+      qualifiedCount: 0,
+      completedAt: new Date().toISOString(),
+      dataLabel: "Unavailable",
+    };
+    setScanMessage(scanStatusMessage(failedSummary));
+    return { scannerRows, scanSummary: failedSummary };
+  }
+
+  async function runScanner({ force = false } = {}) {
+    if (scanLoading) return { scannerRows, scanSummary };
+    if (!force && scannerRows.length && isFreedomScanSummaryCurrent(scanSummary)) return { scannerRows, scanSummary };
+    setScanLoading(true);
+    setScanMessage("Checking the market... 0 of 20 companies analysed.");
+    try {
+      const response = await fetch("/api/freedom-trader/scanner?offset=0", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scannerSettingsFromReport(reportSettings)),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) throw new Error(data?.error || "Market scanner could not load.");
+      return applyScannerData(data);
+    } catch (error) {
+      const fallback = scanSummary && scannerRows.length ? { scannerRows, scanSummary } : {
+        scannerRows: [],
+        scanSummary: { status: "failed", analysedCount: 0, unavailableCount: 20, qualifiedCount: 0, requestedCount: 20, completedAt: new Date().toISOString(), dataLabel: "Unavailable" },
+      };
+      setScanMessage(scannerRows.length ? `Market scanner failed. Keeping the last valid scan from ${formatDateTime(scanSummary?.completedAt)}.` : "Market scanner failed. Do not place a new trade from this report.");
+      setReportError(userFacingReportError(error.message || ""));
+      return fallback;
+    } finally {
+      setScanLoading(false);
+    }
+  }
+
   async function generateReport(reportType) {
+    if (reportLoading || scanLoading) return;
     setReportLoading(true);
     setReportError("");
     try {
+      const latestScan = await runScanner({ force: true });
       const response = await fetch("/api/freedom-trader/action-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reportType,
-          scannerRows: bestOpportunities,
+          scannerRows: latestScan.scannerRows,
+          scanSummary: latestScan.scanSummary,
           positions,
           pendingOrders,
           trades: journalTrades,
@@ -208,12 +301,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
       <main className="assistantShell" id="dashboard">
         <section className="answerPanel">
-          <DailyAnswer report={report} loading={reportLoading} onGenerate={() => generateReport("now")} settings={reportSettings} positions={positions} pendingOrders={pendingOrders} />
+          <DailyAnswer report={report} loading={reportLoading || scanLoading} onGenerate={() => generateReport("now")} settings={reportSettings} positions={positions} pendingOrders={pendingOrders} scanSummary={scanSummary} scanMessage={scanMessage} />
           {reportError ? <div className="reportWarning">{reportError}</div> : null}
           <div className="reportControls">
-            <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading}>Morning</button>
-            <button type="button" onClick={() => generateReport("evening")} disabled={reportLoading}>Evening</button>
-            <button type="button" onClick={() => generateReport(report?.reportType || "now")} disabled={reportLoading}>Refresh</button>
+            <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading || scanLoading}>Morning</button>
+            <button type="button" onClick={() => generateReport("evening")} disabled={reportLoading || scanLoading}>Evening</button>
+            <button type="button" onClick={() => generateReport(report?.reportType || "now")} disabled={reportLoading || scanLoading}>Refresh</button>
           </div>
         </section>
 
@@ -238,7 +331,8 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         <section className="detailDrawer">
           <details>
             <summary>Market Scanner</summary>
-            <p>{loading ? "Scanner is loading." : scanSummary ? `${scanSummary.symbolsRequested} symbols checked. ${bestOpportunities.length} candidates are loaded.` : "No scanner summary returned."}</p>
+            <p>{loading || scanLoading ? scanMessage || "Scanner is loading." : scanSummary ? `${scanSummary.analysedCount || scanSummary.symbolsAnalysed || 0} of ${scanSummary.requestedCount || scanSummary.symbolsRequested || 0} companies analysed. Status: ${String(scanSummary.status || scanSummary.scanCompletionStatus || "unknown").toUpperCase()}. ${scanSummary.dataLabel || "Delayed by 15 minutes"}.` : "No scanner summary returned."}</p>
+            {scanMessage ? <p>{scanMessage}</p> : null}
             {bestOpportunities.length ? bestOpportunities.map((row) => <p key={row.symbol}>{row.symbol}: {row.companyName || "Company name unavailable"} - score {Number.isFinite(row.tradingScore) ? row.tradingScore : "--"}</p>) : <p>No candidate trades are ready on the dashboard.</p>}
             <Link href="/freedom-trader/market-opportunities">Open scanner</Link>
           </details>
@@ -290,11 +384,12 @@ function Card({ label, value, note }) {
   return <article><span>{label}</span><strong>{value}</strong>{note ? <p>{note}</p> : null}</article>;
 }
 
-function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders }) {
+function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders, scanSummary, scanMessage }) {
   const ready = report?.recommendations?.find((item) => item.status === "READY TO BUY");
   const firstRecommendation = report?.recommendations?.[0] || null;
   const positionAction = report?.positionActions?.find((item) => item.action && item.action !== "HOLD");
   const unavailable = report && (report.marketDataQuality === "unavailable" || firstRecommendation?.status === "DATA UNAVAILABLE");
+  const noActionText = scanActionText(report?.scanSummary || scanSummary);
 
   if (!report) {
     return (
@@ -302,7 +397,7 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
         <span>{dailyGreeting()}</span>
         <h1>Today&apos;s Action</h1>
         <strong>No answer yet.</strong>
-        <p>Click once and Freedom will check the data currently loaded for Grant.</p>
+        <p>{loading ? scanMessage || "Checking the market..." : "Click once and Freedom will check the current scanner before answering."}</p>
         <button className="primaryReportButton" type="button" onClick={onGenerate} disabled={loading}>{loading ? "Checking..." : "Answer Now"}</button>
       </div>
     );
@@ -336,9 +431,11 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
           <div><dt>Take Some Profit</dt><dd>{formatCurrency(ready.takeSomeProfit, ready.currency)}</dd></div>
           <div><dt>Final Exit</dt><dd>{formatCurrency(ready.finalExit, ready.currency)}</dd></div>
           <div><dt>Quantity</dt><dd>{ready.suggestedQuantity} share{ready.suggestedQuantity === 1 ? "" : "s"}</dd></div>
+          <div><dt>Estimated purchase value</dt><dd>{formatCurrency(ready.estimatedPurchaseValue, ready.currency)}</dd></div>
           <div><dt>Maximum planned loss</dt><dd>{formatCurrency(ready.maximumPlannedLoss, ready.accountCurrency || settings.accountCurrency)}</dd></div>
           <div><dt>Confidence</dt><dd>{confidenceStars(ready.technicalDetails?.score)}</dd></div>
         </dl>
+        <p>Freedom has not placed this order. Enter and confirm it through CMC.</p>
         <Link href={traderCompanyHref(ready.symbol)}>Open analysis</Link>
       </div>
     );
@@ -348,8 +445,8 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
     <div className="dailyAnswer noActionAnswer">
       <span>{dailyGreeting()}</span>
       <h1>Today&apos;s Action</h1>
-      <strong>{unavailable ? "Do not place a trade." : "Do nothing."}</strong>
-      <p>{unavailable ? "I can't recommend any trades because today's market data isn't available yet." : report.overallInstruction || "No trade currently meets the required rules."}</p>
+      <strong>{unavailable ? "Do not place a trade." : noActionText.bestAction || "Do nothing and wait."}</strong>
+      <p>{unavailable ? noActionText.body : report.overallInstruction || noActionText.body || "Do nothing and wait."}</p>
       <dl>
         <div><dt>Open trades</dt><dd>{positions.length}</dd></div>
         <div><dt>Cash</dt><dd>{formatManualAccountCurrency(settings.availableCash, settings.accountCurrency)} manual</dd></div>

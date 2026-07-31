@@ -3,6 +3,7 @@ import { developmentOwnerId } from "../../../lib/freedom-trader/paperTrading.js"
 import { DEFAULT_REPORT_SETTINGS, generateFreedomTraderReport } from "../../../lib/freedom-trader/actionReport.js";
 import { runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
 import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
+import { buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 import { analyseSymbol } from "./analysis.js";
 
 function getSupabase() {
@@ -35,6 +36,7 @@ function rowToReport(row) {
     accountSummary: row.account_summary || {},
     settings: row.settings || DEFAULT_REPORT_SETTINGS,
     summary: row.summary || null,
+    scanSummary: row.scan_summary || row.scanSummary || null,
     overallInstruction: row.overall_instruction,
     greeting: greetingFor(row.report_type),
   };
@@ -53,6 +55,7 @@ async function saveReport(supabase, report) {
     account_summary: report.accountSummary,
     settings: report.settings,
     summary: report.summary,
+    scan_summary: report.scanSummary || null,
     overall_instruction: report.overallInstruction,
   };
   const { data, error } = await supabase.from("freedom_trader_reports").insert(reportRow).select("*").single();
@@ -130,6 +133,7 @@ export default async function handler(req, res) {
 
   const reportType = ["now", "morning", "evening"].includes(req.body?.reportType) ? req.body.reportType : "now";
   let scannerRows = Array.isArray(req.body?.scannerRows) ? req.body.scannerRows : [];
+  let scanSummary = req.body?.scanSummary || null;
   let opportunityEngineResult = null;
   if (!scannerRows.length || req.body?.runOpportunityEngine === true) {
     opportunityEngineResult = await runOpportunityEngine({
@@ -137,7 +141,8 @@ export default async function handler(req, res) {
       analyser: analyseSymbol,
       marketSnapshotBatch: getMarketSnapshotBatch,
     });
-    scannerRows = opportunityEngineResult.results || [];
+    scannerRows = opportunityEngineResult.decisions || [];
+    scanSummary = buildFreedomScanSummaryFromEngine(opportunityEngineResult);
   }
   const report = generateFreedomTraderReport({
     reportType,
@@ -148,6 +153,7 @@ export default async function handler(req, res) {
     trades: Array.isArray(req.body?.trades) ? req.body.trades : [],
     account: req.body?.account || null,
     settings: req.body?.settings || {},
+    scanSummary,
   });
   report.opportunityEngine = opportunityEngineResult ? {
     engineVersion: opportunityEngineResult.engineVersion,

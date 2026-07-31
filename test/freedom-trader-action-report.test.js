@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULT_REPORT_SETTINGS, calculatePartialExit, classifyMarketData, generateFreedomTraderReport } from "../lib/freedom-trader/actionReport.js";
+import { buildFailedFreedomScanSummary, scanActionText } from "../lib/freedom-trader/scanSummary.js";
 
 const NOW = new Date("2026-07-29T22:00:00.000Z");
 
@@ -40,6 +41,7 @@ function report(input = {}) {
   return generateFreedomTraderReport({
     now: NOW,
     scannerRows: [row("AVGO")],
+    scanSummary: { status: "complete", requestedCount: 1, analysedCount: 1, unavailableCount: 0, qualifiedCount: 1, completedAt: NOW.toISOString(), dataLabel: "Delayed by 15 minutes" },
     positions: [],
     pendingOrders: [],
     trades: [],
@@ -79,9 +81,31 @@ test("ranks multiple opportunities to the best five", () => {
 });
 
 test("returns no suitable trades when scanner has no rows", () => {
-  const result = report({ scannerRows: [] });
+  const result = report({ scannerRows: [], scanSummary: { status: "complete", requestedCount: 4, analysedCount: 4, unavailableCount: 0, qualifiedCount: 0, completedAt: NOW.toISOString(), dataLabel: "Delayed by 15 minutes" } });
   assert.equal(result.recommendations[0].status, "NO ACTION");
-  assert.match(result.overallInstruction, /Do nothing/);
+  assert.match(result.overallInstruction, /Do nothing and wait/);
+  assert.doesNotMatch(result.overallInstruction, /No trade currently/);
+});
+
+test("does not claim no qualifying trades when zero symbols were analysed", () => {
+  const result = report({ scannerRows: [], scanSummary: buildFailedFreedomScanSummary({ requestedCount: 20, error: "market data unavailable" }) });
+  assert.equal(result.recommendations[0].status, "DATA UNAVAILABLE");
+  assert.match(result.overallInstruction, /Do not place a new trade/);
+  assert.doesNotMatch(`${result.overallInstruction}\n${result.recommendations[0].reason}`, /No trade currently/);
+});
+
+test("partial scans are reported separately from complete scans", () => {
+  const scanSummary = { status: "partial", requestedCount: 20, analysedCount: 12, unavailableCount: 8, qualifiedCount: 0, completedAt: NOW.toISOString(), dataLabel: "Delayed by 15 minutes" };
+  const result = report({ scannerRows: [], scanSummary });
+  assert.equal(result.recommendations[0].status, "NO ACTION");
+  assert.match(result.recommendations[0].reason, /could only analyse part of the market/i);
+  assert.match(result.overallInstruction, /Wait until market data is available/);
+});
+
+test("shared scan action text separates complete, partial and failed scans", () => {
+  assert.match(scanActionText({ status: "complete", analysedCount: 5, qualifiedCount: 0 }).body, /successfully analysed 5/);
+  assert.match(scanActionText({ status: "partial", analysedCount: 3, unavailableCount: 2, qualifiedCount: 0 }).body, /only analyse part/);
+  assert.match(scanActionText({ status: "failed", analysedCount: 0 }).body, /data is unavailable/);
 });
 
 test("missing quote data is DATA UNAVAILABLE", () => {
