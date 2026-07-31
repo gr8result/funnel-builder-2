@@ -34,7 +34,7 @@ import {
   sumSegmentLengthsMm,
   splitSegment,
 } from "../takeoff/wallGraph.js";
-import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallUnderPointer } from "../takeoff/wallSelection.js";
+import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, diagnoseWallSelection, findWallOrLocalRasterFallback, findWallUnderPointer } from "../takeoff/wallSelection.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import {
   validateExteriorWallsForConfirmation,
@@ -281,6 +281,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [wallDetectionStatus, setWallDetectionStatus] = useState("idle"); // "idle"|"detecting"|"unavailable"
   const [wallSelectionHover, setWallSelectionHover] = useState(null); // { wall, point, distance }
   const [nextWallSuggestions, setNextWallSuggestions] = useState([]);
+  const [wallClickDebug, setWallClickDebug] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
@@ -321,6 +322,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setWallDrawHoverPreview(null);
     setWallSelectionHover(null);
     setNextWallSuggestions([]);
+    setWallClickDebug(null);
     setPendingUnsupportedExteriorSegment(null);
     setOpeningHostWall(null);
     setOpeningStart(null);
@@ -1694,8 +1696,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const updateWallDrawHover = useCallback((rawPoint, options) => {
     if (activeTool === "exterior-wall") {
-      const hit = findWallUnderPointer(rawPoint, { walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
+      const hit = findWallOrLocalRasterFallback(rawPoint, { planGeometryIndex, page, walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
       setWallSelectionHover(hit);
+      const diagnosis = diagnoseWallSelection(rawPoint, {
+        planGeometryIndex,
+        page,
+        walls: detectedWalls,
+        zoomScale: options?.zoomScale || 1,
+      });
+      setWallClickDebug({ kind: "hover", pointer: options?.pointerDebug || null, ...diagnosis });
       if (hit) {
         const endpoint = activeExteriorEndpoint(page?.exteriorWalls);
         setNextWallSuggestions(connectedWallSuggestions(endpoint, {
@@ -1707,25 +1716,42 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
           detectedWall: hit.wall,
           point: hit.point,
           snap: { kind: "line" },
-          label: "Exterior wall found",
+          label: "Wall found - click to select",
           lengthMm,
         });
+        setWallDetectionMessage("Wall found - click to select");
+        setWallDetectionStatus("idle");
+        setWallDetectionCode(null);
         return;
       }
       setWallDrawHoverPreview(null);
+      setWallDetectionMessage("No wall detected here");
+      setWallDetectionStatus("incomplete");
+      setWallDetectionCode("NO_LOCAL_WALL_HOVER");
       return;
     }
     setWallDrawHoverPreview(resolveWallDrawPoint(rawPoint, options));
-  }, [activeTool, detectedWalls, page, resolveWallDrawPoint]);
+  }, [activeTool, detectedWalls, page, planGeometryIndex, resolveWallDrawPoint]);
 
   const handleWallDrawClick = useCallback((rawPoint, options) => {
     const field = wallFieldForTool(activeTool);
     if (!field) return;
     if (activeTool === "exterior-wall") {
-      const hit = findWallUnderPointer(rawPoint, { walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
+      const diagnosis = diagnoseWallSelection(rawPoint, {
+        planGeometryIndex,
+        page,
+        walls: detectedWalls,
+        zoomScale: options?.zoomScale || 1,
+      });
+      const debugPayload = { kind: "click", pointer: options?.pointerDebug || null, ...diagnosis };
+      setWallClickDebug(debugPayload);
+      if (typeof console !== "undefined" && process.env.NODE_ENV !== "production") {
+        console.info("[takeoff Trace Exterior wall click]", debugPayload);
+      }
+      const hit = findWallOrLocalRasterFallback(rawPoint, { planGeometryIndex, page, walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
       if (!hit) {
         setWallDetectionStatus("incomplete");
-        setWallDetectionMessage("No wall found under click. Click directly on a visible exterior wall.");
+        setWallDetectionMessage(debugPayload.failureReason || "No wall found under click. Click directly on a visible exterior wall.");
         setWallDetectionCode("NO_LOCAL_WALL");
         return;
       }
@@ -1843,7 +1869,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
-    suggestExteriorProposal, wallSelectionHover, nextWallSuggestions,
+    suggestExteriorProposal, wallSelectionHover, nextWallSuggestions, wallClickDebug,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
     acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates,

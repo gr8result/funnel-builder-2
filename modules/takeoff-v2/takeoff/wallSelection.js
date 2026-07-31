@@ -2,12 +2,15 @@ import { createWallSegment, createWallVertex, generateId } from "../types.js";
 import { distance, segmentIntersection, isSimplePolygon } from "./geometry.js";
 
 const DEFAULT_MAX_CLICK_DISTANCE = 16;
-const DEFAULT_MIN_WALL_LENGTH = 16;
+const DEFAULT_MIN_WALL_LENGTH = 10;
 const MIN_OVERLAP = 12;
 const MIN_THICKNESS = 2;
 const MAX_THICKNESS = 26;
 const JUNCTION_TOLERANCE = 10;
 const PARALLEL_TOLERANCE_DEG = 3;
+const COLLINEAR_TOLERANCE = 6;
+const FRAGMENT_GAP_TOLERANCE = 48;
+const DEFAULT_ASSUMED_WALL_THICKNESS = 8;
 const REJECTED_TAGS = new Set(["annotation", "dimension", "dimension-line", "extension-line", "text", "text-bound", "door-arc", "symbol", "page-border", "title-block", "title-block-rule", "leader"]);
 
 function lineTag(line) {
@@ -82,6 +85,13 @@ function orientedLine(line) {
   };
 }
 
+function rawWallSegments(planGeometryIndex) {
+  const raw = typeof planGeometryIndex?.getCandidateWallSegments === "function"
+    ? planGeometryIndex.getCandidateWallSegments()
+    : planGeometryIndex?.segments;
+  return Array.isArray(raw) ? raw : [];
+}
+
 function overlap(a, b) {
   return Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
 }
@@ -107,19 +117,26 @@ function wallDistanceToPoint(wall, point) {
   const centre = segmentDistance(point, wall.centreline.start, wall.centreline.end);
   const faceA = wall.faceA ? segmentDistance(point, wall.faceA.a, wall.faceA.b).distance : Infinity;
   const faceB = wall.faceB ? segmentDistance(point, wall.faceB.a, wall.faceB.b).distance : Infinity;
-  return { distance: Math.min(centre.distance, faceA, faceB), projected: centre.point };
+  const bandDistance = Math.max(0, centre.distance - (wall.thickness || 0) / 2);
+  return { distance: Math.min(bandDistance, faceA, faceB, centre.distance), projected: centre.point, centreDistance: centre.distance };
+}
+
+function lineRejectionReason(line, page = {}) {
+  if (!line?.a || !line?.b) return "missing endpoints";
+  const length = line.length || distance(line.a, line.b);
+  if (line.stroked === false) return "not stroked";
+  if (line.isText || line.isDimension || line.isPageBorder || line.isTitleBlock || line.isDoorArc || line.isSymbol) return "annotation metadata";
+  if (REJECTED_TAGS.has(lineTag(line))) return `rejected tag ${lineTag(line)}`;
+  if (Array.isArray(line.dashPattern) && line.dashPattern.length > 0) return "dashed annotation";
+  if (!colorLooksBlack(line.strokeColor)) return "non-wall color";
+  if (line.pathSegmentCount > 70 && length < 40) return "small complex symbol";
+  if (isLikelyPageBorder(line, page.sourceWidth || page.width || 0, page.sourceHeight || page.height || 0)) return "page border";
+  if (length < DEFAULT_MIN_WALL_LENGTH) return "too short";
+  return null;
 }
 
 function isEligibleLine(line, page = {}) {
-  if (!line?.a || !line?.b) return false;
-  if (line.stroked === false) return false;
-  if (line.isText || line.isDimension || line.isPageBorder || line.isTitleBlock || line.isDoorArc || line.isSymbol) return false;
-  if (REJECTED_TAGS.has(lineTag(line))) return false;
-  if (Array.isArray(line.dashPattern) && line.dashPattern.length > 0) return false;
-  if (!colorLooksBlack(line.strokeColor)) return false;
-  if (line.pathSegmentCount > 70 && line.length < 40) return false;
-  if (isLikelyPageBorder(line, page.sourceWidth || page.width || 0, page.sourceHeight || page.height || 0)) return false;
-  return (line.length || distance(line.a, line.b)) >= DEFAULT_MIN_WALL_LENGTH;
+  return !lineRejectionReason(line, page);
 }
 
 function wallKey(wall) {
@@ -160,6 +177,60 @@ function createDetectedWall(a, b, seq) {
   };
 }
 
+function createSingleStrokeWall(line, seq) {
+  const thickness = Math.max(MIN_THICKNESS, Number(line.lineWidth || line.strokeWidth || line.width || DEFAULT_ASSUMED_WALL_THICKNESS));
+  const start = pointOnAxisLine(line, line.start);
+  const end = pointOnAxisLine(line, line.end);
+  const length = distance(start, end);
+  if (length < DEFAULT_MIN_WALL_LENGTH) return null;
+  return {
+    id: `dw-single-${seq}`,
+    centreline: { start, end },
+    faceA: null,
+    faceB: null,
+    thickness,
+    orientation: Math.round(line.angleDeg * 10) / 10,
+    angle: line.angle,
+    ux: line.ux,
+    uy: line.uy,
+    nx: line.nx,
+    ny: line.ny,
+    fixed: line.fixed,
+    intersections: {},
+    confidence: Math.min(0.82, 0.42 + Math.min(0.28, length / 650) + (line.source === "raster" ? 0.02 : 0.08)),
+    source: line.source === "raster" ? "local-raster" : "pdf-vector-single",
+    length,
+    rawLineIds: line.rawLineIds || [line.id].filter(Boolean),
+  };
+}
+
+function mergeCollinearLines(lines) {
+  const merged = [];
+  lines
+    .slice()
+    .sort((a, b) => a.angle - b.angle || a.fixed - b.fixed || a.start - b.start)
+    .forEach((line) => {
+      const target = merged.find((candidate) => (
+        angleDiffDeg(candidate.angle, line.angle) <= PARALLEL_TOLERANCE_DEG &&
+        Math.abs(candidate.fixed - line.fixed) <= COLLINEAR_TOLERANCE &&
+        line.start <= candidate.end + FRAGMENT_GAP_TOLERANCE &&
+        line.end >= candidate.start - FRAGMENT_GAP_TOLERANCE
+      ));
+      if (!target) {
+        merged.push({ ...line, rawLineIds: [line.id].filter(Boolean) });
+        return;
+      }
+      target.start = Math.min(target.start, line.start);
+      target.end = Math.max(target.end, line.end);
+      target.fixed = (target.fixed + line.fixed) / 2;
+      target.rawLineIds = [...(target.rawLineIds || []), line.id].filter(Boolean);
+      target.a = pointOnAxisLine(target, target.start);
+      target.b = pointOnAxisLine(target, target.end);
+      target.length = distance(target.a, target.b);
+    });
+  return merged;
+}
+
 function trimWallToIntersections(wall, walls) {
   const values = [];
   walls.forEach((other) => {
@@ -191,10 +262,7 @@ function trimWallToIntersections(wall, walls) {
 }
 
 export function buildDetectedWalls(planGeometryIndex, page = {}) {
-  const raw = typeof planGeometryIndex?.getCandidateWallSegments === "function"
-    ? planGeometryIndex.getCandidateWallSegments()
-    : planGeometryIndex?.segments;
-  const lines = (Array.isArray(raw) ? raw : [])
+  const lines = rawWallSegments(planGeometryIndex)
     .filter((line) => isEligibleLine(line, page))
     .map(orientedLine)
     .filter(Boolean);
@@ -216,6 +284,12 @@ export function buildDetectedWalls(planGeometryIndex, page = {}) {
       if (wall) walls.push(wall);
     }
   }
+  mergeCollinearLines(lines).forEach((line) => {
+    seq += 1;
+    const wall = createSingleStrokeWall(line, seq);
+    if (wall) walls.push(wall);
+  });
+
   const unique = [];
   const seen = new Set();
   walls
@@ -223,6 +297,16 @@ export function buildDetectedWalls(planGeometryIndex, page = {}) {
     .forEach((wall) => {
       const key = wallKey(wall);
       if (seen.has(key)) return;
+      const duplicateStrongerWall = unique.some((candidate) => (
+        angleDiffDeg(candidate.angle, wall.angle) <= PARALLEL_TOLERANCE_DEG &&
+        Math.abs(candidate.fixed - wall.fixed) <= Math.max(candidate.thickness || 0, wall.thickness || 0, COLLINEAR_TOLERANCE) &&
+        candidate.length >= wall.length * 0.9 &&
+        overlap(
+          { start: candidate.centreline.start.x * candidate.ux + candidate.centreline.start.y * candidate.uy, end: candidate.centreline.end.x * candidate.ux + candidate.centreline.end.y * candidate.uy },
+          { start: wall.centreline.start.x * wall.ux + wall.centreline.start.y * wall.uy, end: wall.centreline.end.x * wall.ux + wall.centreline.end.y * wall.uy }
+        ) >= Math.min(candidate.length, wall.length) * 0.75
+      ));
+      if (duplicateStrongerWall) return;
       seen.add(key);
       unique.push(wall);
     });
@@ -234,11 +318,88 @@ export function findWallUnderPointer(point, { walls = [], zoomScale = 1, toleran
   let best = null;
   walls.forEach((wall) => {
     const hit = wallDistanceToPoint(wall, point);
-    if (hit.distance > tolerance + (wall.thickness || 0) / 2) return;
-    const score = wall.confidence * 100 + Math.min(25, wall.length / 12) - hit.distance * 4;
+    if (hit.distance > tolerance) return;
+    const score = wall.confidence * 100 + Math.min(25, wall.length / 12) - hit.distance * 4 - hit.centreDistance * 0.2;
     if (!best || score > best.score) best = { wall, point: hit.projected, distance: hit.distance, score };
   });
   return best;
+}
+
+export function buildLocalRasterFallbackWalls(point, { planGeometryIndex, page = {}, zoomScale = 1, toleranceScreenPx = DEFAULT_MAX_CLICK_DISTANCE } = {}) {
+  const tolerance = toleranceScreenPx / Math.max(zoomScale, 0.01);
+  const nearbyRaster = rawWallSegments(planGeometryIndex)
+    .filter((line) => line?.source === "raster")
+    .filter((line) => !lineRejectionReason(line, page))
+    .filter((line) => segmentDistance(point, line.a, line.b).distance <= tolerance * 3)
+    .map(orientedLine)
+    .filter(Boolean);
+  return mergeCollinearLines(nearbyRaster)
+    .map((line, index) => createSingleStrokeWall(line, `raster-${index + 1}`))
+    .filter(Boolean)
+    .map((wall) => ({ ...wall, source: "local-raster", confidence: Math.min(wall.confidence, 0.62), requiresConfirmation: true }));
+}
+
+export function findWallOrLocalRasterFallback(point, options = {}) {
+  const vectorHit = findWallUnderPointer(point, options);
+  if (vectorHit) return vectorHit;
+  const rasterWalls = buildLocalRasterFallbackWalls(point, options);
+  return findWallUnderPointer(point, { ...options, walls: rasterWalls, toleranceScreenPx: Math.max(options.toleranceScreenPx || DEFAULT_MAX_CLICK_DISTANCE, 20) });
+}
+
+export function diagnoseWallSelection(point, { planGeometryIndex, page = {}, walls = [], zoomScale = 1, toleranceScreenPx = DEFAULT_MAX_CLICK_DISTANCE } = {}) {
+  const tolerance = toleranceScreenPx / Math.max(zoomScale, 0.01);
+  const raw = rawWallSegments(planGeometryIndex);
+  const nearbyRaw = raw
+    .map((line) => {
+      const d = line?.a && line?.b ? segmentDistance(point, line.a, line.b).distance : Infinity;
+      return { line, distance: d, rejectionReason: lineRejectionReason(line, page) };
+    })
+    .filter((entry) => entry.distance <= tolerance * 3)
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 8);
+  const candidates = walls
+    .map((wall) => {
+      const hit = wallDistanceToPoint(wall, point);
+      return {
+        wall,
+        distance: hit.distance,
+        selected: hit.distance <= tolerance,
+        rejectionReason: hit.distance <= tolerance ? null : `outside search radius (${hit.distance.toFixed(2)} > ${tolerance.toFixed(2)})`,
+      };
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 8);
+  const rasterFallbackWalls = buildLocalRasterFallbackWalls(point, { planGeometryIndex, page, zoomScale, toleranceScreenPx });
+  const selected = findWallOrLocalRasterFallback(point, { planGeometryIndex, page, walls, zoomScale, toleranceScreenPx });
+  return {
+    point,
+    pageBounds: { width: page?.sourceWidth || page?.width || 0, height: page?.sourceHeight || page?.height || 0 },
+    toleranceDocUnits: tolerance,
+    toleranceScreenPx,
+    rawVectorSegmentCount: raw.length,
+    nearbyRawVectorSegmentCount: nearbyRaw.length,
+    wallBandCandidateCount: walls.length,
+    localRasterFallbackCandidateCount: rasterFallbackWalls.length,
+    nearbyWallBandCandidateCount: candidates.filter((candidate) => candidate.distance <= tolerance * 3).length,
+    nearestCandidateDistance: candidates[0]?.distance ?? nearbyRaw[0]?.distance ?? null,
+    topRawCandidates: nearbyRaw.map(({ line, distance, rejectionReason }) => ({
+      id: line?.id || null,
+      distance,
+      rejectionReason,
+      a: line?.a,
+      b: line?.b,
+    })),
+    topWallCandidates: candidates.map(({ wall, distance, rejectionReason }) => ({
+      id: wall.id,
+      source: wall.source,
+      distance,
+      rejectionReason,
+      start: wall.centreline.start,
+      end: wall.centreline.end,
+    })),
+    selectedWall: selected ? { id: selected.wall.id, source: selected.wall.source, distance: selected.distance, start: selected.wall.centreline.start, end: selected.wall.centreline.end } : null,
+    failureReason: selected ? null : (raw.length ? "no local wall candidate within search radius" : "vector data missing from spatial index"),
+  };
 }
 
 function samePoint(a, b, tolerance = JUNCTION_TOLERANCE) {

@@ -4,9 +4,10 @@ import { tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelFor
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
+import { documentToScreenPoint, screenToDocumentPoint } from "../viewer/rotationTransform.js";
 import { createWallSegment, createWallVertex } from "../types.js";
 import { deleteVertexAndReconnect, splitSegment } from "../takeoff/wallGraph.js";
-import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallUnderPointer, orderedPathPoints } from "../takeoff/wallSelection.js";
+import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallOrLocalRasterFallback, findWallUnderPointer, orderedPathPoints } from "../takeoff/wallSelection.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -200,6 +201,50 @@ function rectBands(x1, y1, x2, y2, thickness = 8) {
   ];
 }
 
+function rotatedViewport(width, height, rotation = 0, scale = 1) {
+  const r = ((rotation % 360) + 360) % 360;
+  return {
+    width: (r === 90 || r === 270 ? height : width) * scale,
+    height: (r === 90 || r === 270 ? width : height) * scale,
+    convertToViewportPoint: (x, y) => {
+      if (r === 90) return [y * scale, x * scale];
+      if (r === 180) return [(width - x) * scale, y * scale];
+      if (r === 270) return [(height - y) * scale, (width - x) * scale];
+      return [x * scale, y * scale];
+    },
+    convertToPdfPoint: (x, y) => {
+      const sx = x / scale;
+      const sy = y / scale;
+      if (r === 90) return [sy, sx];
+      if (r === 180) return [width - sx, sy];
+      if (r === 270) return [width - sy, height - sx];
+      return [sx, sy];
+    },
+  };
+}
+
+// ---- coordinate conversion remains invertible across rotations -------------
+{
+  [0, 90, 180, 270].forEach((rotation) => {
+    const viewport = rotatedViewport(500, 300, rotation, 2);
+    const view = { viewport, panX: 31, panY: 47, zoomScale: 1.75 };
+    const base = { x: 123, y: 210 };
+    const screen = documentToScreenPoint(view, base);
+    const roundTrip = screenToDocumentPoint(view, screen);
+    assert.ok(Math.abs(roundTrip.x - base.x) < 1e-9, `x round trip failed at ${rotation}`);
+    assert.ok(Math.abs(roundTrip.y - base.y) < 1e-9, `y round trip failed at ${rotation}`);
+    assert.deepEqual(screenToPagePoint(view, pageToScreenPoint(view, base.x, base.y).x, pageToScreenPoint(view, base.x, base.y).y), base);
+  });
+}
+
+// ---- click radius is constant in screen space as zoom changes --------------
+{
+  const walls = buildDetectedWalls({ source: "fixture", segments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })] }, { sourceWidth: 500, sourceHeight: 400 });
+  assert.ok(findWallUnderPointer({ x: 200, y: 116 }, { walls, zoomScale: 1, toleranceScreenPx: 16 }));
+  assert.ok(!findWallUnderPointer({ x: 200, y: 116 }, { walls, zoomScale: 2, toleranceScreenPx: 16 }));
+  assert.ok(findWallUnderPointer({ x: 200, y: 108 }, { walls, zoomScale: 2, toleranceScreenPx: 16 }));
+}
+
 // ---- click near wall selects full wall from junction to junction -----------
 {
   const walls = buildDetectedWalls({
@@ -212,6 +257,83 @@ function rectBands(x1, y1, x2, y2, thickness = 8) {
   assert.ok(hit.wall.centreline.start.x <= 110);
   assert.ok(hit.wall.centreline.end.x >= 350);
   assert.equal(hit.wall.source, "pdf-vector");
+}
+
+// ---- centreline, either face, band, and slightly outside all select --------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [
+      line({ x: 100, y: 100 }, { x: 300, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 300, y: 108 }),
+    ],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  assert.ok(findWallUnderPointer({ x: 180, y: 104 }, { walls, zoomScale: 1 }), "centre/band click selects");
+  assert.ok(findWallUnderPointer({ x: 180, y: 100 }, { walls, zoomScale: 1 }), "face A click selects");
+  assert.ok(findWallUnderPointer({ x: 180, y: 108 }, { walls, zoomScale: 1 }), "face B click selects");
+  assert.ok(findWallUnderPointer({ x: 180, y: 115 }, { walls, zoomScale: 1 }), "slightly outside click selects");
+}
+
+// ---- single visible vector stroke is selectable without paired face --------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const hit = findWallUnderPointer({ x: 200, y: 103 }, { walls, zoomScale: 1 });
+  assert.ok(hit, "single visible wall stroke should be selectable");
+  assert.equal(hit.wall.source, "pdf-vector-single");
+}
+
+// ---- fragmented/window-interrupted wall remains selectable -----------------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [
+      line({ x: 100, y: 100 }, { x: 180, y: 100 }),
+      line({ x: 220, y: 100 }, { x: 320, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 180, y: 108 }),
+      line({ x: 220, y: 108 }, { x: 320, y: 108 }),
+    ],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const hit = findWallUnderPointer({ x: 205, y: 104 }, { walls, zoomScale: 1, toleranceScreenPx: 20 });
+  assert.ok(hit, "fragmented wall band should bridge a local opening gap");
+  assert.ok(hit.wall.length >= 200);
+}
+
+// ---- valid wall near dimension line is not filtered out --------------------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [
+      line({ x: 100, y: 100 }, { x: 300, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 300, y: 108 }),
+      line({ x: 100, y: 125 }, { x: 300, y: 125 }, { isDimension: true }),
+      line({ x: 100, y: 130 }, { x: 300, y: 130 }, { classification: "dimension-line" }),
+    ],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const hit = findWallUnderPointer({ x: 200, y: 104 }, { walls, zoomScale: 1 });
+  assert.ok(hit);
+  assert.notEqual(hit.wall.source, "dimension-line");
+}
+
+// ---- local raster fallback can resolve a clicked raster wall ---------------
+{
+  const planGeometryIndex = {
+    source: "raster",
+    segments: [
+      line({ x: 100, y: 100 }, { x: 280, y: 100 }, { source: "raster" }),
+      line({ x: 400, y: 300 }, { x: 460, y: 300 }, { source: "raster" }),
+    ],
+  };
+  const hit = findWallOrLocalRasterFallback({ x: 160, y: 106 }, {
+    planGeometryIndex,
+    page: { sourceWidth: 500, sourceHeight: 400 },
+    walls: [],
+    zoomScale: 1,
+  });
+  assert.ok(hit, "local raster fallback should resolve a nearby raster line");
+  assert.equal(hit.wall.source, "local-raster");
 }
 
 // ---- angled vector wall faces are selectable as one wall ------------------

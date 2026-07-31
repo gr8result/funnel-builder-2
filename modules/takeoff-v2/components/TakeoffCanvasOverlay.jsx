@@ -53,6 +53,7 @@ function isAutomaticCandidate(segment) {
 export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeometryIndex, sourceCanvas }) {
   if (!viewport) return null;
   const project = (point) => pageToScreenPoint({ viewport, ...IDENTITY_VIEW }, point.x, point.y);
+  const showWallClickDebug = shouldShowWallClickDebug();
   const layers = page?.layerVisibility || {};
   const showLayer = (key) => layers[key] !== false;
   const shouldShowWallSegment = (segment) => !isAutomaticCandidate(segment) || showLayer("automaticCandidates");
@@ -199,6 +200,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         {isWallDraw && tools.nextWallSuggestions?.map((suggestion) => (
           <DetectedWallPreview key={suggestion.wall.id} wall={suggestion.wall} project={project} dashed testId="next-wall-suggestion" />
         ))}
+        {showWallClickDebug && isWallDraw && tools.wallClickDebug && (
+          <WallClickDebugOverlay debug={tools.wallClickDebug} project={project} />
+        )}
         {isWallDraw && tools.wallDrawHoverPreview?.point && !tools.wallDrawHoverPreview?.detectedWall && (
           <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
         )}
@@ -351,6 +355,59 @@ function DetectedWallPreview({ wall, project, dashed, testId }) {
       />
       <circle cx={a.x} cy={a.y} r={4} fill="#fff" stroke={dashed ? "#0d9488" : "#f97316"} strokeWidth={2} />
       <circle cx={b.x} cy={b.y} r={4} fill="#fff" stroke={dashed ? "#0d9488" : "#f97316"} strokeWidth={2} />
+    </g>
+  );
+}
+
+function shouldShowWallClickDebug() {
+  if (process.env.NODE_ENV === "production") return false;
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage?.getItem("takeoffWallClickDebug") === "1" || window.location.search.includes("takeoffWallDebug=1");
+  } catch {
+    return false;
+  }
+}
+
+function WallClickDebugOverlay({ debug, project }) {
+  const point = debug?.point ? project(debug.point) : null;
+  const radius = debug?.toleranceDocUnits || 0;
+  const raw = debug?.topRawCandidates || [];
+  const walls = debug?.topWallCandidates || [];
+  return (
+    <g data-testid="wall-click-debug-overlay">
+      {point && (
+        <>
+          <circle cx={point.x} cy={point.y} r={4} fill="#ef4444" />
+          <circle cx={point.x} cy={point.y} r={radius} fill="rgba(239,68,68,0.08)" stroke="#ef4444" strokeWidth={1} strokeDasharray="4 3" />
+        </>
+      )}
+      {raw.map((entry, index) => {
+        if (!entry.a || !entry.b) return null;
+        const a = project(entry.a);
+        const b = project(entry.b);
+        return (
+          <g key={`raw-${entry.id || index}`} data-testid="wall-click-debug-raw-line">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={entry.rejectionReason ? "#dc2626" : "#2563eb"} strokeWidth={1.5} opacity={0.75} />
+            <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 4} fontSize={9} fill={entry.rejectionReason ? "#991b1b" : "#1d4ed8"}>
+              {entry.rejectionReason || `raw ${entry.distance?.toFixed?.(1) ?? ""}`}
+            </text>
+          </g>
+        );
+      })}
+      {walls.map((entry, index) => {
+        if (!entry.start || !entry.end) return null;
+        const a = project(entry.start);
+        const b = project(entry.end);
+        return (
+          <g key={`candidate-${entry.id || index}`} data-testid="wall-click-debug-candidate">
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={entry.rejectionReason ? "#f97316" : "#22c55e"} strokeWidth={2} strokeDasharray={entry.rejectionReason ? "3 3" : undefined} />
+            <text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 10} fontSize={9} fill={entry.rejectionReason ? "#9a3412" : "#15803d"}>
+              {entry.rejectionReason || `${entry.source} ${entry.distance?.toFixed?.(1) ?? ""}`}
+            </text>
+          </g>
+        );
+      })}
     </g>
   );
 }
