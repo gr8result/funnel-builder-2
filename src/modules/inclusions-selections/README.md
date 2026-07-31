@@ -15,6 +15,7 @@ Current scope:
 - Stage-four Review, Pricing and Variations UI and route wiring for review summary, room/category review, variation calculations, client preview, internal builder projection, issue register, custom selection review, allowance overrides and Ready for Approval metadata.
 - Stage-five Approvals and Locked Selection Version UI and route wiring for client review state, client approval, builder approval, changes requested, approval fingerprints, stale approval detection, immutable locked snapshots, version history, comparisons and new draft revisions.
 - Stage-six Approved Documents and Estimate Export UI and route wiring for locked snapshot document projections, generated document records, estimate mapping validation, mapping overrides, export preview, aggregation, adapter-based export, retry, reconciliation and export history.
+- Shared project banner and file-management UI across every stage, backed by `projectFileManagementService` for open, save, Save As, builder template save, portable export/import and close-project routing.
 - No Supabase migrations.
 - No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
 - Product Library remains the shared catalogue owner; selections consume only `client_selectable` and allowed `builder_selectable` products through the adapter.
@@ -39,6 +40,7 @@ Key files:
 - `services/selectionReviewService.ts`: Stage 4 application service for review summaries, room/category projections, variation summaries, client/internal projections, issue generation, allowance overrides and Ready for Approval.
 - `services/approvalStageService.ts`: Stage 5 application service for approval fingerprints, client/builder approval, stale approval handling, snapshot readiness, immutable snapshot creation and snapshot comparison.
 - `services/documentsExportService.ts`: Stage 6 application service for document projections, generated documents, estimate mapping, mapping overrides, export preview, aggregation, adapter execution, retry and reconciliation.
+- `services/projectFileManagementService.ts`: shared application service for the project banner, project picker, stage save, Save As copy, builder template save and `.gr8selections.json` import/export.
 - `pricing/`, `approvals/`, `snapshots/`, `estimate-export/`: commercial lifecycle through locked estimate export.
 - `repositories/`: persistence contracts and an in-memory test implementation.
 - `tests/domainFoundation.test.ts`: focused unit coverage for validation, generation, compatibility, pricing, locking, snapshots, and export.
@@ -49,6 +51,7 @@ Key files:
 - `tests/selectionReview.test.ts`: focused coverage for Stage 4 review loading, summary totals, projections, pricing, issues, allowance overrides, Ready for Approval and route isolation.
 - `tests/selectionApprovalStage.test.ts`: focused coverage for Stage 5 approval readiness, fingerprints, stale approvals, locking, immutability, versioning, comparison and route isolation.
 - `tests/selectionDocumentsExport.test.ts`: focused coverage for Stage 6 documents, mappings, export preview, aggregation, adapter export, retry, reconciliation, history and route isolation.
+- `tests/projectBannerFileManagement.test.ts`: focused coverage for shared banner placement, dashboard/stage routes, project picker index, Save, Save As, builder template save and portable import/export validation.
 
 Active routes:
 
@@ -60,6 +63,6 @@ Active routes:
 - `/inclusions-selections/documents-export`
 - `/inclusions-selections/procurement` placeholder only
 
-The stage-one through stage-six routes require an existing `organisationId` and `projectId`. They use in-memory persistence until approved database repositories are added.
+The stage-one through stage-six routes require an existing `organisationId` and `projectId`. They use browser-scoped in-memory/local persisted repositories until approved database repositories are added; the banner reports this honestly in the file-management docs.
 
 Development rules live in `docs/INCLUSIONS_SELECTIONS_DEVELOPMENT_RULES.md`.

@@ -12,6 +12,7 @@ import { ClientApprovalActions } from "../../src/modules/inclusions-selections/c
 import { ClientApprovalPackage } from "../../src/modules/inclusions-selections/components/ClientApprovalPackage";
 import { ClientChangesRequestedPanel } from "../../src/modules/inclusions-selections/components/ClientChangesRequestedPanel";
 import { CreateSnapshotPanel } from "../../src/modules/inclusions-selections/components/CreateSnapshotPanel";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { SnapshotComparisonPanel } from "../../src/modules/inclusions-selections/components/SnapshotComparisonPanel";
 import { SnapshotReadinessChecklist } from "../../src/modules/inclusions-selections/components/SnapshotReadinessChecklist";
@@ -117,6 +118,7 @@ export default function SelectionApprovalsPage() {
 
   return (
     <main className="approvalPage">
+      <InclusionsSelectionsProjectBanner currentStage="approvals" context={stage?.context ?? context} locked={locked} />
       <InclusionsSelectionsStageNav currentStage="approvals" context={stage?.context ?? context} />
       <header className="approvalHero">
         <div>

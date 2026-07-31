@@ -8,6 +8,7 @@ import { CustomSelectionReview } from "../../src/modules/inclusions-selections/c
 import { NotApplicableReview } from "../../src/modules/inclusions-selections/components/NotApplicableReview";
 import { ProductAvailabilityReview } from "../../src/modules/inclusions-selections/components/ProductAvailabilityReview";
 import { ReviewIssuesRegister } from "../../src/modules/inclusions-selections/components/ReviewIssuesRegister";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ReviewProjectSummary } from "../../src/modules/inclusions-selections/components/ReviewProjectSummary";
 import { ReviewStageActions } from "../../src/modules/inclusions-selections/components/ReviewStageActions";
@@ -104,11 +105,11 @@ export default function SelectionReviewPage() {
   }
 
   if (router.isReady && (!context.organisationId || !context.projectId)) {
-    return <main className="selectionReviewPage"><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section><style jsx global>{reviewStyles}</style></main>;
+    return <main className="selectionReviewPage"><InclusionsSelectionsProjectBanner currentStage="review" context={context} /><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section><style jsx global>{reviewStyles}</style></main>;
   }
 
   if (!review) {
-    return <main className="selectionReviewPage"><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>Loading selection review.</p></section><style jsx global>{reviewStyles}</style></main>;
+    return <main className="selectionReviewPage"><InclusionsSelectionsProjectBanner currentStage="review" context={context} /><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>Loading selection review.</p></section><style jsx global>{reviewStyles}</style></main>;
   }
 
   const rooms = calculateRoomReview(review);
@@ -119,6 +120,7 @@ export default function SelectionReviewPage() {
 
   return (
     <main className="selectionReviewPage">
+      <InclusionsSelectionsProjectBanner currentStage="review" context={review.context} />
       <InclusionsSelectionsStageNav currentStage="review" context={review.context} />
       <header className="reviewHeader">
         <div>

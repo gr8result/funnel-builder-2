@@ -42,6 +42,14 @@ The module must not import from:
 
 The route writes through `ProjectAreaRegisterRepository`. Until a database migration is approved, the active repository is the in-memory implementation and drafts persist only for the current application lifecycle. The route must not import retired selections modules, Product Library modules, Supplier Library modules or Estimate Builder modules.
 
+## Project Banner and File Management
+
+All active stages render `InclusionsSelectionsProjectBanner` above `InclusionsSelectionsStageNav`. The banner displays project name, job number, client, site address, current stage and save status, and preserves project context when returning to `/modules/estimate-builder`.
+
+File operations are delegated to `projectFileManagementService`: open existing job, save, save as, save as builder template, portable `.gr8selections.json` export/import and close project. The banner must stay a UI shell around those services.
+
+Current persistence is browser-scoped through the existing repository adapters. The service boundary documents this limitation and is intended to be replaced by approved database repositories without moving persistence logic into the banner.
+
 ## Stage-Two Route
 
 `/inclusions-selections/templates` is the second visible replacement workflow. It assigns AreaTemplates and InclusionTiers to the Stage 1 ProjectAreas, previews generated ProjectRequirements, reconciles them safely and saves the template stage configuration.
@@ -78,6 +86,7 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 - `previewApplyTo` and `applySelectionToTargets`: preview and apply draft selections only to compatible requirements while retaining SelectionLocations.
 - `validateSelectionWorkspace` and `saveWorkspaceDraft`: validate and persist the draft workspace through the repository interface.
 - `loadSelectionReview`: loads Stage 3 workspace records plus review metadata.
+- `projectFileManagementService`: shared project banner/file operations, project index, Save, Save As, builder template save, portable export/import preview and close-project routing.
 - `calculateProjectReviewSummary`, `calculateRoomReview`, `calculateCategoryReview` and `calculateVariationSummary`: derive review totals without duplicating records.
 - `buildClientVariationProjection` and `buildBuilderInternalProjection`: keep client-facing values separate from internal builder values.
 - `generateReviewIssues`, `validateReviewReadiness`, `acknowledgeReviewWarning`, `overrideAllowance`, `markReadyForApproval` and `saveSelectionReview`: manage review validation and metadata through repository interfaces.

@@ -10,6 +10,7 @@ import { ExportAggregationSummary } from "../../src/modules/inclusions-selection
 import { ExportHistoryPanel } from "../../src/modules/inclusions-selections/components/ExportHistoryPanel";
 import { ExportReconciliationPanel } from "../../src/modules/inclusions-selections/components/ExportReconciliationPanel";
 import { GeneratedDocumentsPanel } from "../../src/modules/inclusions-selections/components/GeneratedDocumentsPanel";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { OutputTypeSelector } from "../../src/modules/inclusions-selections/components/OutputTypeSelector";
 import { SnapshotVersionSelector } from "../../src/modules/inclusions-selections/components/SnapshotVersionSelector";
@@ -73,6 +74,7 @@ export default function SelectionDocumentsExportPage() {
 
   return (
     <main className="documentsExportPage">
+      <InclusionsSelectionsProjectBanner currentStage="documents-export" context={stage?.context ?? context} locked={Boolean(stage?.selectedSnapshot?.status === "locked")} />
       <InclusionsSelectionsStageNav currentStage="documents-export" context={stage?.context ?? context} />
       <header className="documentsHero">
         <p>Inclusions and Selections</p>

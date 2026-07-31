@@ -5,6 +5,7 @@ import { ApplyToPreview } from "../../src/modules/inclusions-selections/componen
 import { CategoryNavigationPanel } from "../../src/modules/inclusions-selections/components/CategoryNavigationPanel";
 import { ProductSelectionModal } from "../../src/modules/inclusions-selections/components/ProductSelectionModal";
 import { RoomNavigationPanel } from "../../src/modules/inclusions-selections/components/RoomNavigationPanel";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { WorkspaceProgressSummary } from "../../src/modules/inclusions-selections/components/WorkspaceProgressSummary";
 import { WorkspaceStageActions } from "../../src/modules/inclusions-selections/components/WorkspaceStageActions";
@@ -201,6 +202,7 @@ export default function InclusionsSelectionsWorkspacePage() {
   if (router.isReady && (!context.organisationId || !context.projectId)) {
     return (
       <main className="selectionWorkspacePage">
+        <InclusionsSelectionsProjectBanner currentStage="workspace" context={context} />
         <InclusionsSelectionsStageNav currentStage="workspace" context={context} />
         <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section>
         <style jsx global>{workspaceStyles}</style>
@@ -211,6 +213,7 @@ export default function InclusionsSelectionsWorkspacePage() {
   if (!state) {
     return (
       <main className="selectionWorkspacePage">
+        <InclusionsSelectionsProjectBanner currentStage="workspace" context={context} />
         <InclusionsSelectionsStageNav currentStage="workspace" context={context} />
         <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>Loading selection workspace.</p></section>
         <style jsx global>{workspaceStyles}</style>
@@ -231,6 +234,7 @@ export default function InclusionsSelectionsWorkspacePage() {
     const hasAreas = state.templateStage.areaRegister.areas.length > 0;
     return (
       <main className="selectionWorkspacePage">
+        <InclusionsSelectionsProjectBanner currentStage="workspace" context={state.context} />
         <InclusionsSelectionsStageNav currentStage="workspace" context={state.context} />
         <section className="generateRequirementsState">
           <span className="modalEyebrow">{hasAreas ? "Stage 2 is not complete" : "Stage 1 is not complete"}</span>
@@ -249,6 +253,7 @@ export default function InclusionsSelectionsWorkspacePage() {
 
   return (
     <main className="selectionWorkspacePage">
+      <InclusionsSelectionsProjectBanner currentStage="workspace" context={state.context} />
       <InclusionsSelectionsStageNav currentStage="workspace" context={state.context} />
       <section className="kitchenHero">
         <div>

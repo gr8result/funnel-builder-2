@@ -9,6 +9,7 @@ import { SavedBuilderTemplatePanel } from "../../src/modules/inclusions-selectio
 import { TemplateStageActions } from "../../src/modules/inclusions-selections/components/TemplateStageActions";
 import { TemplateStageProjectSummary } from "../../src/modules/inclusions-selections/components/TemplateStageProjectSummary";
 import { TemplateStageValidationSummary } from "../../src/modules/inclusions-selections/components/TemplateStageValidationSummary";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import type { RequirementCategory, RequirementDefinition } from "../../src/modules/inclusions-selections/requirements/requirementTypes";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
@@ -115,6 +116,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
   if (router.isReady && (!context.organisationId || !context.projectId)) {
     return (
       <main className="templateStagePage">
+        <InclusionsSelectionsProjectBanner currentStage="templates" context={context} />
         <InclusionsSelectionsStageNav currentStage="templates" context={context} />
         <section className="requiredState">
           <h1>Room Templates and Inclusion Tiers</h1>
@@ -128,6 +130,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
   if (!state) {
     return (
       <main className="templateStagePage">
+        <InclusionsSelectionsProjectBanner currentStage="templates" context={context} />
         <InclusionsSelectionsStageNav currentStage="templates" context={context} />
         <section className="requiredState">
           <h1>Room Templates and Inclusion Tiers</h1>
@@ -145,6 +148,7 @@ export default function RoomTemplatesAndInclusionTiersPage() {
 
   return (
     <main className="templateStagePage">
+      <InclusionsSelectionsProjectBanner currentStage="templates" context={state.context} />
       <InclusionsSelectionsStageNav currentStage="templates" context={state.context} />
       <header className="pageHeader">
         <div>

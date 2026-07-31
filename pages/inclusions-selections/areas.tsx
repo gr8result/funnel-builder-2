@@ -5,6 +5,7 @@ import { AreaRegisterValidationSummary } from "../../src/modules/inclusions-sele
 import { AreaTypeChecklist } from "../../src/modules/inclusions-selections/components/AreaTypeChecklist";
 import { CustomAreaDialog } from "../../src/modules/inclusions-selections/components/CustomAreaDialog";
 import { GeneratedAreaRegister } from "../../src/modules/inclusions-selections/components/GeneratedAreaRegister";
+import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ProjectLevelsEditor } from "../../src/modules/inclusions-selections/components/ProjectLevelsEditor";
 import { ProjectSelectionSummary } from "../../src/modules/inclusions-selections/components/ProjectSelectionSummary";
@@ -27,6 +28,7 @@ import {
   validateProjectContext,
 } from "../../src/modules/inclusions-selections/services/projectAreaRegisterService";
 import type { DomainIssue, DomainResult } from "../../src/modules/inclusions-selections/validation/errors";
+import type { SelectionsSaveStatus } from "../../src/modules/inclusions-selections/services/projectFileManagementService";
 
 function firstActiveLevelId(register: ProjectAreaRegister | null): string {
   return register?.levels.find((level) => level.active)?.id ?? "";
@@ -37,6 +39,7 @@ export default function CreateSelectionAreasPage() {
   const [register, setRegister] = useState<ProjectAreaRegister | null>(null);
   const [issues, setIssues] = useState<DomainIssue[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SelectionsSaveStatus>("saved");
   const [levelDraft, setLevelDraft] = useState("");
   const [pendingRemoval, setPendingRemoval] = useState<{ areaTypeId: string; quantity: number } | null>(null);
   const [customDraft, setCustomDraft] = useState({ name: "", groupId: "area_group_custom", levelId: "" });
@@ -51,6 +54,7 @@ export default function CreateSelectionAreasPage() {
     loadProjectAreaRegister(contextResult.value).then((loaded) => {
       if (cancelled) return;
       setRegister(loaded);
+      setSaveStatus("saved");
       setCustomDraft((draft) => ({ ...draft, levelId: firstActiveLevelId(loaded) }));
       setIssues(canContinueToTemplates(loaded).issues);
     });
@@ -63,6 +67,7 @@ export default function CreateSelectionAreasPage() {
     setIssues(result.issues);
     if (result.ok && result.value) {
       setRegister(result.value);
+      setSaveStatus("unsaved");
       return true;
     }
     return false;
@@ -83,10 +88,18 @@ export default function CreateSelectionAreasPage() {
   async function handleSave() {
     if (!register) return;
     setSaving(true);
+    setSaveStatus("saving");
     try {
       const result = await saveProjectAreaRegister(register);
-      applyResult(result);
+      setIssues(result.issues);
+      if (result.ok && result.value) {
+        setRegister(result.value);
+        setSaveStatus("saved");
+      } else {
+        setSaveStatus("save_failed");
+      }
     } catch (_error) {
+      setSaveStatus("save_failed");
       setIssues([{ code: "save_failed", message: "The area register could not be saved. Please try again.", severity: "error" }]);
     } finally {
       setSaving(false);
@@ -112,6 +125,7 @@ export default function CreateSelectionAreasPage() {
   if (router.isReady && !contextResult.ok) {
     return (
       <main className="createAreasPage">
+        <InclusionsSelectionsProjectBanner currentStage="areas" context={context} saveStatus={saveStatus} onSave={handleSave} />
         <InclusionsSelectionsStageNav currentStage="areas" context={context} />
         <section className="requiredState">
           <h1>Create Selection Areas</h1>
@@ -126,6 +140,7 @@ export default function CreateSelectionAreasPage() {
   if (!register) {
     return (
       <main className="createAreasPage">
+        <InclusionsSelectionsProjectBanner currentStage="areas" context={context} saveStatus={saveStatus} onSave={handleSave} />
         <InclusionsSelectionsStageNav currentStage="areas" context={context} />
         <section className="requiredState">
           <h1>Create Selection Areas</h1>
@@ -141,6 +156,7 @@ export default function CreateSelectionAreasPage() {
 
   return (
     <main className="createAreasPage">
+      <InclusionsSelectionsProjectBanner currentStage="areas" context={register} saveStatus={saveStatus} onSave={handleSave} />
       <InclusionsSelectionsStageNav currentStage="areas" context={register} />
       <section className="demoPanel">
         <div>
