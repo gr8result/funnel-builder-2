@@ -107,6 +107,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [report, setReport] = useState(null);
   const [recentReports, setRecentReports] = useState([]);
   const [actionAlerts, setActionAlerts] = useState([]);
+  const [marketWatch, setMarketWatch] = useState({ plans: [], alerts: [], settings: { intervalSeconds: 60, maximumAlerts: 50, enableBuyAlerts: true, enableSellAlerts: true, enableStopAlerts: true, enableCancelAlerts: true }, answer: null });
   const [reportError, setReportError] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
@@ -136,7 +137,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     let cancelled = false;
     async function loadDashboard() {
       setLoading(true);
-      const [scannerResponse, alertsResponse, journalResponse, positionsResponse, paperResponse, reportResponse] = await Promise.allSettled([
+      const [scannerResponse, alertsResponse, journalResponse, positionsResponse, paperResponse, reportResponse, watchResponse] = await Promise.allSettled([
         fetch("/api/freedom-trader/scanner?offset=0", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -147,6 +148,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         fetch("/api/freedom-trader/positions"),
         fetch("/api/freedom-trader/paper-account"),
         fetch("/api/freedom-trader/action-report?reportType=now"),
+        fetch("/api/freedom-trader/market-watch"),
       ]);
       if (cancelled) return;
       const scannerData = scannerResponse.status === "fulfilled" ? await scannerResponse.value.json().catch(() => null) : null;
@@ -155,6 +157,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       const positionsData = positionsResponse.status === "fulfilled" ? await positionsResponse.value.json().catch(() => null) : null;
       const paperData = paperResponse.status === "fulfilled" ? await paperResponse.value.json().catch(() => null) : null;
       const reportData = reportResponse.status === "fulfilled" ? await reportResponse.value.json().catch(() => null) : null;
+      const watchData = watchResponse.status === "fulfilled" ? await watchResponse.value.json().catch(() => null) : null;
       if (scannerData?.ok && scannerData?.scanSummary) {
         setScannerRows(Array.isArray(scannerData.decisions) ? scannerData.decisions : []);
         setOpportunityRows(Array.isArray(scannerData.results) ? scannerData.results.slice(0, 5) : []);
@@ -172,6 +175,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       setReport(reportData?.report || null);
       setRecentReports(Array.isArray(reportData?.recentReports) ? reportData.recentReports.slice(0, 5) : []);
       setActionAlerts(Array.isArray(reportData?.alerts) ? reportData.alerts.slice(0, 8) : []);
+      if (watchData?.ok) setMarketWatch(watchData);
       setReportError(userFacingReportError(reportData?.error || ""));
       setUpdatedAt(scannerData?.updatedAt || new Date().toISOString());
       setLoading(false);
@@ -181,6 +185,21 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       cancelled = true;
     };
   }, [unlocked]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    const intervalSeconds = Math.max(10, Number(marketWatch?.settings?.intervalSeconds) || 60);
+    let cancelled = false;
+    async function cycle() {
+      const data = await runMarketWatchCycleRequest().catch(() => null);
+      if (!cancelled && data?.ok) setMarketWatch(data);
+    }
+    const timer = window.setInterval(cycle, intervalSeconds * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [unlocked, marketWatch?.settings?.intervalSeconds]);
 
   async function unlock(event) {
     event.preventDefault();
@@ -194,6 +213,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   }
 
   const bestOpportunities = useMemo(() => opportunityRows.slice(0, 5), [opportunityRows]);
+  const activeWatchAlert = marketWatch?.alerts?.find((alert) => !alert.acknowledgedAt && !alert.completedAt && !alert.dismissedAt);
 
   function applyScannerData(scannerData) {
     const summary = scannerData?.scanSummary || null;
@@ -271,12 +291,70 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       setReport(data.report);
       setRecentReports(Array.isArray(data.recentReports) ? data.recentReports.slice(0, 5) : [data.report]);
       setActionAlerts(Array.isArray(data.alerts) ? data.alerts.slice(0, 8) : []);
+      if (reportType === "morning") await registerMarketWatchPlans(data.report);
       setReportError(userFacingReportError(data.persistenceError || data.error || ""));
     } catch (error) {
       setReportError(userFacingReportError(error.message || "Freedom could not generate the report right now."));
     } finally {
       setReportLoading(false);
     }
+  }
+
+  async function runMarketWatchCycleRequest() {
+    const response = await fetch("/api/freedom-trader/market-watch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cycle" }),
+    });
+    if (!response.ok) return null;
+    return response.json().catch(() => null);
+  }
+
+  async function registerMarketWatchPlans(nextReport) {
+    const plans = (nextReport?.recommendations || [])
+      .filter((item) => item.status === "READY TO BUY")
+      .map((item) => ({
+        symbol: item.symbol,
+        companyName: item.companyName,
+        currency: item.currency,
+        entryPrice: item.entryBuyPrice,
+        safetyExit: item.safetyExit,
+        takeSomeProfit: item.takeSomeProfit,
+        finalExit: item.finalExit,
+        quantity: item.suggestedQuantity,
+        maximumPlannedLoss: item.maximumPlannedLoss,
+        reason: item.reason,
+        confidence: item.technicalDetails?.score,
+      }));
+    if (!plans.length) return;
+    const response = await fetch("/api/freedom-trader/market-watch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "register", plans }),
+    });
+    const data = await response.json().catch(() => null);
+    if (data?.ok) setMarketWatch(data);
+  }
+
+  async function updateWatchAlert(id, action) {
+    const response = await fetch("/api/freedom-trader/market-watch", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, action }),
+    });
+    const data = await response.json().catch(() => null);
+    if (data?.ok) setMarketWatch(data);
+  }
+
+  async function updateWatchSetting(key, value) {
+    const settings = { ...(marketWatch?.settings || {}), [key]: value };
+    const response = await fetch("/api/freedom-trader/market-watch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "settings", settings }),
+    });
+    const data = await response.json().catch(() => null);
+    if (data?.ok) setMarketWatch(data);
   }
 
   function updateReportSetting(key, value) {
@@ -301,7 +379,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
       <main className="assistantShell" id="dashboard">
         <section className="answerPanel">
-          <DailyAnswer report={report} loading={reportLoading || scanLoading} onGenerate={() => generateReport("now")} settings={reportSettings} positions={positions} pendingOrders={pendingOrders} scanSummary={scanSummary} scanMessage={scanMessage} />
+          <DailyAnswer report={report} loading={reportLoading || scanLoading} onGenerate={() => generateReport("now")} settings={reportSettings} positions={positions} pendingOrders={pendingOrders} scanSummary={scanSummary} scanMessage={scanMessage} marketWatch={marketWatch} />
           {reportError ? <div className="reportWarning">{reportError}</div> : null}
           <div className="reportControls">
             <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading || scanLoading}>Morning</button>
@@ -312,9 +390,9 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
         <section className="todayStatus">
           <Card label="Open trades" value={positions.length} note={positions.length ? "Review actions below." : "Nothing needs your attention."} />
+          <Card label="Market Watch" value={marketWatch?.plans?.filter((plan) => ["WAITING_FOR_ENTRY", "ACTIVE", "PARTIAL_PROFIT"].includes(plan.state)).length || 0} note={activeWatchAlert ? `${activeWatchAlert.action} required` : "No action required"} />
           <Card label="Cash available" value={formatManualAccountCurrency(reportSettings.availableCash, reportSettings.accountCurrency)} note="manual" />
           <Card label="Money currently committed" value={formatManualAccountCurrency(plannedCommittedValue(pendingOrders), reportSettings.accountCurrency)} note={pendingOrders.length ? `${pendingOrders.length} pending order${pendingOrders.length === 1 ? "" : "s"}` : "manual / no pending orders loaded"} />
-          <Card label="Maximum planned loss today" value={formatManualAccountCurrency(reportSettings.maximumTotalPlannedLoss, reportSettings.accountCurrency)} note="manual limit" />
         </section>
 
         <section className="openTradesPanel">
@@ -348,7 +426,21 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           </details>
           <details>
             <summary>Alerts</summary>
-            <p>{alerts.length ? `${alerts.length} saved alert${alerts.length === 1 ? "" : "s"} loaded.` : "No saved alerts were returned."}</p>
+            <p>{marketWatch?.answer?.message || (alerts.length ? `${alerts.length} saved alert${alerts.length === 1 ? "" : "s"} loaded.` : "No saved alerts were returned.")}</p>
+            {marketWatch?.alerts?.length ? marketWatch.alerts.slice(0, marketWatch.settings?.maximumAlerts || 50).map((alert) => (
+              <article className="instruction" key={alert.id}>
+                <strong>{alert.action} {alert.companyName || alert.symbol}</strong>
+                <span>Current price: {formatCurrency(alert.currentPrice, alert.currency || "USD")}</span>
+                <span>Trigger price: {formatCurrency(alert.triggerPrice, alert.currency || "USD")}</span>
+                <span>Created: {formatDateTime(alert.createdAt)}</span>
+                <div className="alertButtons">
+                  <Link href={traderCompanyHref(alert.symbol)}>Open Company</Link>
+                  <a href={alert.cmcUrl || "https://www.cmcmarketsstockbroking.com.au/"} target="_blank" rel="noreferrer">Open CMC</a>
+                  <button type="button" onClick={() => updateWatchAlert(alert.id, "acknowledge")}>Acknowledge</button>
+                  <button type="button" onClick={() => updateWatchAlert(alert.id, "dismiss")}>Dismiss</button>
+                </div>
+              </article>
+            )) : <p>No Market Watch alerts are active.</p>}
             <Link href="/freedom-trader/alerts">Open alerts</Link>
           </details>
           <details>
@@ -366,6 +458,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
             <div className="managementSettings">
               <label><input checked={reportSettings.moveSafetyExitToEntryAfterTakeProfit} onChange={(event) => toggleReportSetting("moveSafetyExitToEntryAfterTakeProfit", event.target.checked)} type="checkbox" /> After Take Some Profit, move Safety Exit to the original buy price</label>
               <label><input checked={reportSettings.target1IsCompleteExit} onChange={(event) => toggleReportSetting("target1IsCompleteExit", event.target.checked)} type="checkbox" /> Treat Take Some Profit as the complete exit when no Final Exit is available</label>
+              <label>Monitoring interval<input type="number" value={marketWatch?.settings?.intervalSeconds || 60} onChange={(event) => updateWatchSetting("intervalSeconds", Number(event.target.value) || 60)} /></label>
+              <label>Maximum alerts<input type="number" value={marketWatch?.settings?.maximumAlerts || 50} onChange={(event) => updateWatchSetting("maximumAlerts", Number(event.target.value) || 50)} /></label>
+              <label><input checked={marketWatch?.settings?.enableBuyAlerts !== false} onChange={(event) => updateWatchSetting("enableBuyAlerts", event.target.checked)} type="checkbox" /> Enable BUY alerts</label>
+              <label><input checked={marketWatch?.settings?.enableSellAlerts !== false} onChange={(event) => updateWatchSetting("enableSellAlerts", event.target.checked)} type="checkbox" /> Enable SELL alerts</label>
+              <label><input checked={marketWatch?.settings?.enableStopAlerts !== false} onChange={(event) => updateWatchSetting("enableStopAlerts", event.target.checked)} type="checkbox" /> Enable STOP alerts</label>
+              <label><input checked={marketWatch?.settings?.enableCancelAlerts !== false} onChange={(event) => updateWatchSetting("enableCancelAlerts", event.target.checked)} type="checkbox" /> Enable CANCEL alerts</label>
             </div>
           </details>
           <details>
@@ -384,20 +482,40 @@ function Card({ label, value, note }) {
   return <article><span>{label}</span><strong>{value}</strong>{note ? <p>{note}</p> : null}</article>;
 }
 
-function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders, scanSummary, scanMessage }) {
+function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders, scanSummary, scanMessage, marketWatch }) {
   const ready = report?.recommendations?.find((item) => item.status === "READY TO BUY");
   const firstRecommendation = report?.recommendations?.[0] || null;
   const positionAction = report?.positionActions?.find((item) => item.action && item.action !== "HOLD");
   const unavailable = report && (report.marketDataQuality === "unavailable" || firstRecommendation?.status === "DATA UNAVAILABLE");
   const noActionText = scanActionText(report?.scanSummary || scanSummary);
+  const watchAlert = marketWatch?.alerts?.find((alert) => !alert.acknowledgedAt && !alert.completedAt && !alert.dismissedAt);
+  const monitoredCount = marketWatch?.plans?.filter((plan) => ["WAITING_FOR_ENTRY", "ACTIVE", "PARTIAL_PROFIT"].includes(plan.state)).length || 0;
+
+  if (watchAlert) {
+    return (
+      <div className="dailyAnswer actionAnswer">
+        <span>{dailyGreeting()}</span>
+        <h1>Today&apos;s Action</h1>
+        <strong>ACTION REQUIRED</strong>
+        <dl>
+          <div><dt>Action</dt><dd>{watchAlert.action}</dd></div>
+          <div><dt>Trade</dt><dd>{watchAlert.companyName || watchAlert.symbol}</dd></div>
+          <div><dt>Current price</dt><dd>{formatCurrency(watchAlert.currentPrice, watchAlert.currency || "USD")}</dd></div>
+          <div><dt>Trigger price</dt><dd>{formatCurrency(watchAlert.triggerPrice, watchAlert.currency || "USD")}</dd></div>
+        </dl>
+        <p>{watchAlert.message}</p>
+        <Link href={traderCompanyHref(watchAlert.symbol)}>Open analysis</Link>
+      </div>
+    );
+  }
 
   if (!report) {
     return (
       <div className="dailyAnswer emptyAnswer">
         <span>{dailyGreeting()}</span>
         <h1>Today&apos;s Action</h1>
-        <strong>No answer yet.</strong>
-        <p>{loading ? scanMessage || "Checking the market..." : "Click once and Freedom will check the current scanner before answering."}</p>
+        <strong>{monitoredCount ? `Monitoring ${monitoredCount} active setup${monitoredCount === 1 ? "" : "s"}.` : "No answer yet."}</strong>
+        <p>{monitoredCount ? "No action required right now." : loading ? scanMessage || "Checking the market..." : "Click once and Freedom will check the current scanner before answering."}</p>
         <button className="primaryReportButton" type="button" onClick={onGenerate} disabled={loading}>{loading ? "Checking..." : "Answer Now"}</button>
       </div>
     );
@@ -445,8 +563,8 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
     <div className="dailyAnswer noActionAnswer">
       <span>{dailyGreeting()}</span>
       <h1>Today&apos;s Action</h1>
-      <strong>{unavailable ? "Do not place a trade." : noActionText.bestAction || "Do nothing and wait."}</strong>
-      <p>{unavailable ? noActionText.body : report.overallInstruction || noActionText.body || "Do nothing and wait."}</p>
+      <strong>{unavailable ? "Do not place a trade." : monitoredCount ? `Monitoring ${monitoredCount} active setup${monitoredCount === 1 ? "" : "s"}.` : noActionText.bestAction || "Do nothing and wait."}</strong>
+      <p>{unavailable ? noActionText.body : monitoredCount ? "No action required right now." : report.overallInstruction || noActionText.body || "Do nothing and wait."}</p>
       <dl>
         <div><dt>Open trades</dt><dd>{positions.length}</dd></div>
         <div><dt>Cash</dt><dd>{formatManualAccountCurrency(settings.availableCash, settings.accountCurrency)} manual</dd></div>
@@ -592,7 +710,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1180px}h1,h2,h3,h4,p{margin:0}p{color:#aebdc4}.answerPanel,.todayStatus,.openTradesPanel,.detailDrawer details,.gate{background:rgba(8,14,17,.95);border:1px solid rgba(29,155,255,.18);border-radius:8px}.answerPanel{border-color:rgba(255,153,0,.48);overflow:hidden}.dailyAnswer{display:grid;gap:18px;padding:34px}.dailyAnswer span,.todayStatus span,.reportMeta span,.accountSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer h1{color:#fff;font-size:clamp(28px,4vw,46px)}.dailyAnswer>strong{color:#fff;font-size:clamp(32px,5.5vw,72px);line-height:1}.dailyAnswer p{font-size:20px;max-width:820px}.dailyAnswer dl{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;max-width:900px}.dailyAnswer div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.dailyAnswer dt{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer dd{color:#fff;font-size:22px;font-weight:950;margin:5px 0 0}.dailyAnswer a,.detailDrawer a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:950;justify-self:start;min-height:40px;align-items:center;padding:0 12px;text-decoration:none}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;justify-self:start;min-height:58px;padding:0 24px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.reportControls{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:38px;padding:0 12px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.todayStatus{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.todayStatus article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:6px;padding:14px}.todayStatus strong{color:#fff;font-size:24px}.todayStatus p{font-size:13px}.openTradesPanel{display:grid;gap:12px;padding:20px}.openTradesPanel h2{font-size:26px}.openTradesPanel article{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;grid-template-columns:1fr auto auto;padding:14px}.openTradesPanel b{background:rgba(138,100,18,.8);border-radius:7px;color:#fff;padding:7px 10px}.detailDrawer{display:grid;gap:10px}.detailDrawer details{padding:0}.detailDrawer summary{cursor:pointer;font-size:18px;font-weight:950;list-style:none;padding:18px}.detailDrawer summary::-webkit-details-marker{display:none}.detailDrawer details[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}.detailDrawer details>*:not(summary){margin:14px 18px}.settingsGrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{display:flex;flex-wrap:wrap;gap:10px}.managementSettings label,.detailsToggle{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.reportBody{display:grid;gap:16px;padding:0}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayStatus{grid-template-columns:repeat(2,minmax(0,1fr))}.dailyAnswer dl{grid-template-columns:1fr}}@media(max-width:640px){.todayStatus,.settingsGrid{grid-template-columns:1fr}.dailyAnswer{padding:24px}.openTradesPanel article{grid-template-columns:1fr}.managementSettings label{width:100%}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1180px}h1,h2,h3,h4,p{margin:0}p{color:#aebdc4}.answerPanel,.todayStatus,.openTradesPanel,.detailDrawer details,.gate{background:rgba(8,14,17,.95);border:1px solid rgba(29,155,255,.18);border-radius:8px}.answerPanel{border-color:rgba(255,153,0,.48);overflow:hidden}.dailyAnswer{display:grid;gap:18px;padding:34px}.dailyAnswer span,.todayStatus span,.reportMeta span,.accountSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer h1{color:#fff;font-size:clamp(28px,4vw,46px)}.dailyAnswer>strong{color:#fff;font-size:clamp(32px,5.5vw,72px);line-height:1}.dailyAnswer p{font-size:20px;max-width:820px}.dailyAnswer dl{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;max-width:900px}.dailyAnswer div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.dailyAnswer dt{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer dd{color:#fff;font-size:22px;font-weight:950;margin:5px 0 0}.dailyAnswer a,.detailDrawer a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:950;justify-self:start;min-height:40px;align-items:center;padding:0 12px;text-decoration:none}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;justify-self:start;min-height:58px;padding:0 24px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.reportControls{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:38px;padding:0 12px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.todayStatus{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.todayStatus article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:6px;padding:14px}.todayStatus strong{color:#fff;font-size:24px}.todayStatus p{font-size:13px}.openTradesPanel{display:grid;gap:12px;padding:20px}.openTradesPanel h2{font-size:26px}.openTradesPanel article{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;grid-template-columns:1fr auto auto;padding:14px}.openTradesPanel b{background:rgba(138,100,18,.8);border-radius:7px;color:#fff;padding:7px 10px}.detailDrawer{display:grid;gap:10px}.detailDrawer details{padding:0}.detailDrawer summary{cursor:pointer;font-size:18px;font-weight:950;list-style:none;padding:18px}.detailDrawer summary::-webkit-details-marker{display:none}.detailDrawer details[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}.detailDrawer details>*:not(summary){margin:14px 18px}.settingsGrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{display:flex;flex-wrap:wrap;gap:10px}.managementSettings label,.detailsToggle{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.reportBody{display:grid;gap:16px;padding:0}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.alertButtons{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}.alertButtons button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:40px;padding:0 12px}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayStatus{grid-template-columns:repeat(2,minmax(0,1fr))}.dailyAnswer dl{grid-template-columns:1fr}}@media(max-width:640px){.todayStatus,.settingsGrid{grid-template-columns:1fr}.dailyAnswer{padding:24px}.openTradesPanel article{grid-template-columns:1fr}.managementSettings label{width:100%}}
   `}</style>;
 }
 
