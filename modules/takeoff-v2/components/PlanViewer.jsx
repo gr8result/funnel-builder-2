@@ -2,14 +2,27 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { clampSharpRenderScale, computeFitScale, createPageRenderer } from "../viewer/PdfViewport.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
+import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
 import WallContextPanel from "./WallContextPanel.jsx";
+import { orientationConfidenceLabel } from "../orientation/orientationState.js";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
 const CLICK_THRESHOLD_PX = 6;
 const WALL_DRAW_TOOLS = ["exterior-wall", "internal-wall"];
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
+
+function isEditableTarget(target) {
+  return Boolean(target?.closest?.("input, textarea, select, [contenteditable='true']"));
+}
+
+function orientationSourceLabel(page) {
+  if (page?.orientationSource === "manual") return "Manual";
+  if (page?.orientationState?.source === "manual") return "Manual";
+  if (page?.orientationSource === "metadata") return "Metadata";
+  return "Auto";
+}
 
 // Shift-constrains a raw page-space point to horizontal/vertical relative to
 // `anchor`, in *screen* space (what the user visually sees), then converts
@@ -39,6 +52,8 @@ const PlanViewer = forwardRef(function PlanViewer(
   const [activeCanvas, setActiveCanvas] = useState("a");
   const [view, setView] = useState({ viewport: null, baseScale: 1, renderScale: 1, zoomScale: 1, panX: 0, panY: 0 });
   const [status, setStatus] = useState("");
+  const [isSpacePanning, setIsSpacePanning] = useState(false);
+  const [dragMode, setDragMode] = useState(null);
 
   const getCanvas = useCallback((key) => (key === "a" ? canvasARef.current : canvasBRef.current), []);
 
@@ -120,7 +135,7 @@ const PlanViewer = forwardRef(function PlanViewer(
     const panY = Math.max(0, (container.clientHeight - baseViewport.height) / 2);
     setView((current) => ({ ...current, viewport: baseViewport, baseScale: fitScale, renderScale: fitScale, zoomScale: 1, panX, panY }));
     await renderSharpCanvas({ baseScale: fitScale, zoomScale: 1, baseViewport, panX, panY, generation });
-  }, [pdfDocument, page, renderSharpCanvas]);
+  }, [pdfDocument, page?.pageNumber, page?.rotation, page?.sourceHeight, page?.sourceWidth, renderSharpCanvas]);
 
   // Every rotation (or page switch) re-renders from scratch and re-fits, per spec.
   useEffect(() => {
@@ -129,7 +144,10 @@ const PlanViewer = forwardRef(function PlanViewer(
       renderGenerationRef.current += 1;
       cancelRenderers();
     };
-  }, [fitTo]);
+    // Deliberately excludes the full `page` object. Tracing mutates page
+    // geometry; it must not refit or recenter the viewport after every point.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pdfDocument, page?.id, page?.pageNumber, page?.rotation]);
 
   useEffect(() => {
     if (!view.viewport || !view.baseScale || !pdfDocument || !page) return undefined;
@@ -177,6 +195,25 @@ const PlanViewer = forwardRef(function PlanViewer(
     container.addEventListener("wheel", listener, { passive: false });
     return () => container.removeEventListener("wheel", listener);
   }, []);
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.code !== "Space" || isEditableTarget(event.target)) return;
+      if (tools?.activeTool === "pan" || WALL_DRAW_TOOLS.includes(tools?.activeTool)) {
+        event.preventDefault();
+        setIsSpacePanning(true);
+      }
+    }
+    function onKeyUp(event) {
+      if (event.code === "Space") setIsSpacePanning(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [tools?.activeTool]);
 
   useImperativeHandle(ref, () => ({
     captureSnapshot: () => {
@@ -261,6 +298,7 @@ const PlanViewer = forwardRef(function PlanViewer(
   const endDrag = useCallback(() => {
     const dragState = dragRef.current;
     dragRef.current = null;
+    setDragMode(null);
     if (!tools || !dragState) return;
     if (dragState.mode === "vertex") tools.endWallVertexDrag({ zoomScale: view.zoomScale });
     else if (dragState.mode === "opening") tools.endOpeningDrag();
@@ -294,8 +332,14 @@ const PlanViewer = forwardRef(function PlanViewer(
   useEffect(() => () => endDrag(), [endDrag]);
 
   const handlePointerDown = useCallback((event) => {
-    containerRef.current?.setPointerCapture?.(event.pointerId);
+    if (dragRef.current) return;
+    if (event.pointerId != null) containerRef.current?.setPointerCapture?.(event.pointerId);
     const tool = tools?.activeTool || "select";
+    if (tool === "pan" || isSpacePanning) {
+      dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
+      setDragMode("pan");
+      return;
+    }
     if (tool !== "select" && tool !== "pan" && tools) {
       const pagePoint = eventToPagePoint(event);
       if (tool === "edit-walls" && pagePoint) {
@@ -303,7 +347,27 @@ const PlanViewer = forwardRef(function PlanViewer(
         if (hit) {
           tools.beginWallVertexDrag(hit.id);
           dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+          setDragMode("vertex");
           return;
+        }
+        const selectedVertex = tools.selectedField === "exteriorWalls"
+          ? page?.exteriorWalls?.vertices.find((v) => v.id === tools.selectedVertexId)
+          : null;
+        if (selectedVertex) {
+          const selectedScreen = pageToScreenPoint(
+            { viewport: view.viewport, panX: view.panX, panY: view.panY, zoomScale: view.zoomScale },
+            selectedVertex.x,
+            selectedVertex.y
+          );
+          const rect = containerRef.current?.getBoundingClientRect();
+          const pointerScreen = rect ? { x: event.clientX - rect.left, y: event.clientY - rect.top } : null;
+          const screenDistance = pointerScreen ? Math.hypot(pointerScreen.x - selectedScreen.x, pointerScreen.y - selectedScreen.y) : Infinity;
+          if (screenDistance <= 18) {
+          tools.beginWallVertexDrag(tools.selectedVertexId, "exteriorWalls");
+          dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+          setDragMode("vertex");
+          return;
+          }
         }
       }
       if (tool === "edit" && pagePoint) {
@@ -311,14 +375,22 @@ const PlanViewer = forwardRef(function PlanViewer(
         if (vertexHit) {
           tools.beginWallVertexDrag(vertexHit.vertex.id, vertexHit.field);
           dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+          setDragMode("vertex");
           return;
         }
         const openingHit = tools.findOpeningHandleNear(pagePoint, { zoomScale: view.zoomScale });
         if (openingHit) {
           tools.beginOpeningDrag(openingHit.openingId, openingHit.handle);
           dragRef.current = { mode: "opening", startX: event.clientX, startY: event.clientY };
+          setDragMode("opening");
           return;
         }
+      }
+      if (tool === "area" && tools.areaMode === "rectangle" && pagePoint) {
+        tools.beginAreaRectangle(pagePoint);
+        dragRef.current = { mode: "area-rectangle", startX: event.clientX, startY: event.clientY, pagePoint };
+        setDragMode("area-rectangle");
+        return;
       }
       dragRef.current = {
         mode: "click-or-pan",
@@ -326,10 +398,12 @@ const PlanViewer = forwardRef(function PlanViewer(
         panX: view.panX, panY: view.panY,
         pagePoint,
       };
+      setDragMode("click-or-pan");
       return;
     }
     dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
-  }, [view.panX, view.panY, view.zoomScale, tools, eventToPagePoint]);
+    setDragMode("pan");
+  }, [view.panX, view.panY, view.zoomScale, tools, eventToPagePoint, isSpacePanning]);
 
   const handlePointerMove = useCallback((event) => {
     if (tools) {
@@ -347,6 +421,7 @@ const PlanViewer = forwardRef(function PlanViewer(
           tools.updateOpeningHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (activeTool === "area") {
           tools.updateAreaHover(pagePoint, { zoomScale: view.zoomScale });
+          if (tools.areaMode === "rectangle" && tools.areaSearchDraft) tools.updateAreaRectangle(pagePoint);
         } else if (activeTool === "plan-region") {
           tools.updatePlanRegionHover(pagePoint);
         } else {
@@ -378,16 +453,29 @@ const PlanViewer = forwardRef(function PlanViewer(
       return;
     }
 
+    if (dragState.mode === "area-rectangle") {
+      const pagePoint = eventToPagePoint(event);
+      if (pagePoint) tools.updateAreaRectangle(pagePoint);
+      return;
+    }
+
     const dx = event.clientX - dragState.startX;
     const dy = event.clientY - dragState.startY;
     setView((prev) => ({ ...prev, panX: dragState.panX + dx, panY: dragState.panY + dy }));
   }, [tools, eventToPagePoint, view, page]);
 
   const handlePointerUp = useCallback((event) => {
-    containerRef.current?.releasePointerCapture?.(event.pointerId);
+    if (event.pointerId != null) containerRef.current?.releasePointerCapture?.(event.pointerId);
     const dragState = dragRef.current;
     dragRef.current = null;
-    if (!dragState) return;
+    setDragMode(null);
+    if (!dragState) {
+      if (tools?.activeTool === "area" && tools.areaMode === "rectangle" && tools.areaSearchDraft) {
+        const pagePoint = eventToPagePoint(event);
+        if (pagePoint) tools.finishAreaRectangle(pagePoint);
+      }
+      return;
+    }
 
     if (dragState.mode === "vertex") {
       tools.endWallVertexDrag({ zoomScale: view.zoomScale });
@@ -396,6 +484,12 @@ const PlanViewer = forwardRef(function PlanViewer(
 
     if (dragState.mode === "opening") {
       tools.endOpeningDrag();
+      return;
+    }
+
+    if (dragState.mode === "area-rectangle") {
+      const pagePoint = eventToPagePoint(event);
+      tools.finishAreaRectangle(pagePoint || dragState.pagePoint, dragState.pagePoint);
       return;
     }
 
@@ -421,7 +515,7 @@ const PlanViewer = forwardRef(function PlanViewer(
         }
       }
     }
-  }, [tools, view.zoomScale, page]);
+  }, [tools, view.zoomScale, page, eventToPagePoint]);
 
   // Double-click finishes an in-progress manual wall-drawing run — the
   // alternative to the toolbar's Finish button, per spec.
@@ -437,6 +531,28 @@ const PlanViewer = forwardRef(function PlanViewer(
   // end the drag with no click/pan side effects — there's no valid gesture
   // left to interpret.
   const handlePointerCancel = useCallback(() => { endDrag(); }, [endDrag]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+    const onMouseDown = (event) => {
+      if (container.contains(event.target)) handlePointerDown(event);
+    };
+    const onMouseMove = (event) => {
+      if (dragRef.current || container.contains(event.target)) handlePointerMove(event);
+    };
+    const onMouseUp = (event) => {
+      if (dragRef.current || container.contains(event.target)) handlePointerUp(event);
+    };
+    document.addEventListener("mousedown", onMouseDown, true);
+    document.addEventListener("mousemove", onMouseMove, true);
+    document.addEventListener("mouseup", onMouseUp, true);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown, true);
+      document.removeEventListener("mousemove", onMouseMove, true);
+      document.removeEventListener("mouseup", onMouseUp, true);
+    };
+  }, [handlePointerDown, handlePointerMove, handlePointerUp]);
 
   return (
     <div style={S.wrap}>
@@ -458,21 +574,38 @@ const PlanViewer = forwardRef(function PlanViewer(
         >
           {redetecting ? "Detecting..." : "Re-detect Orientation"}
         </button>
-        <span style={S.rotationLabel} data-testid="current-rotation">{page?.rotation ?? 0}&deg;</span>
+        <span style={S.rotationLabel} data-testid="current-rotation">
+          Orientation: {orientationSourceLabel(page)} - {page?.rotation ?? 0}&deg;
+          {page?.orientationSource !== "manual" && (
+            <span style={S.confidenceLabel}> Confidence: {orientationConfidenceLabel(page?.orientationConfidence)}</span>
+          )}
+        </span>
       </div>
 
       {status && <div style={S.status}>{status}</div>}
 
       <div
         ref={containerRef}
-        style={S.viewport}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-        onLostPointerCapture={handlePointerCancel}
+        style={{
+          ...S.viewport,
+          cursor: cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode }),
+        }}
+        onPointerDownCapture={handlePointerDown}
+        onPointerMoveCapture={handlePointerMove}
+        onPointerUpCapture={handlePointerUp}
+        onPointerCancelCapture={handlePointerCancel}
+        onMouseDownCapture={handlePointerDown}
+        onMouseMoveCapture={handlePointerMove}
+        onMouseUpCapture={handlePointerUp}
         onDoubleClick={handleDoubleClick}
         data-testid="plan-viewport"
+        data-active-tool={tools?.activeTool || "select"}
+        data-cursor-mode={cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode })}
+        data-view-zoom={view.zoomScale}
+        data-view-pan-x={view.panX}
+        data-view-pan-y={view.panY}
+        data-area-mode={tools?.areaMode || ""}
+        data-area-search-draft={tools?.areaSearchDraft ? "true" : "false"}
       >
         <div
           style={{
@@ -523,6 +656,7 @@ const S = {
   button: { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" },
   divider: { width: 1, alignSelf: "stretch", background: "#e2e8f0", margin: "0 4px" },
   rotationLabel: { marginLeft: "auto", fontSize: 12, fontWeight: 800, color: "#1d4ed8" },
+  confidenceLabel: { color: "#475569", fontWeight: 700 },
   status: { padding: "4px 8px", fontSize: 12, color: "#b91c1c" },
   viewport: { position: "relative", flex: 1, overflow: "hidden", background: "#e2e8f0", cursor: "grab" },
   canvasLayer: { position: "absolute", left: 0, top: 0, transition: "opacity 80ms linear", background: "#ffffff" },

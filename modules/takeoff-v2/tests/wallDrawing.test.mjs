@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
+import { tracedSegmentHasWallEvidence } from "../hooks/useTakeoffTools.js";
+import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
+import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
+import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -68,6 +72,52 @@ for (const rotation of [0, 90, 180, 270]) {
   // cardinal regardless of how rotateDelta remaps it.
   assert.equal(result.locked, true, `rotation ${rotation} should still lock`);
   assert.ok(result.axis === "horizontal" || result.axis === "vertical");
+}
+
+// ---- traced exterior segments require nearby wall evidence ----------------
+{
+  const planGeometryIndex = {
+    segments: [
+      { id: "wall", a: { x: 0, y: 100 }, b: { x: 200, y: 100 } },
+    ],
+  };
+  assert.equal(
+    tracedSegmentHasWallEvidence({ x: 0, y: 100 }, { x: 200, y: 100 }, planGeometryIndex, 8),
+    true
+  );
+  assert.equal(
+    tracedSegmentHasWallEvidence({ x: 0, y: 0 }, { x: 200, y: 200 }, planGeometryIndex, 8),
+    false
+  );
+}
+
+// ---- tracing cursors stay precise, while pan keeps the hand cursor ---------
+{
+  assert.equal(cursorForPlanViewer({ activeTool: "select" }), "default");
+  assert.equal(cursorForPlanViewer({ activeTool: "pan" }), "grab");
+  assert.equal(cursorForPlanViewer({ activeTool: "pan", dragMode: "pan" }), "grabbing");
+  assert.equal(cursorForPlanViewer({ activeTool: "exterior-wall" }), "crosshair");
+  assert.equal(cursorForPlanViewer({ activeTool: "exterior-wall", isSpacePanning: true }), "grab");
+  assert.equal(cursorForPlanViewer({ activeTool: "edit-walls" }), "default");
+  assert.equal(cursorForPlanViewer({ activeTool: "edit-walls", dragMode: "vertex" }), "move");
+}
+
+// ---- traced points remain document-stable across zoom and pan --------------
+{
+  const viewport = {
+    width: 600,
+    height: 400,
+    convertToViewportPoint: (x, y) => [x, y],
+    convertToPdfPoint: (x, y) => [x, y],
+  };
+  const point = { x: 123.5, y: 87.25 };
+  const firstView = { viewport, panX: 10, panY: 20, zoomScale: 1 };
+  const zoomedView = { viewport, panX: -320, panY: 145, zoomScale: 4 };
+  const firstScreen = pageToScreenPoint(firstView, point.x, point.y);
+  const zoomedScreen = pageToScreenPoint(zoomedView, point.x, point.y);
+
+  assert.deepEqual(screenToPagePoint(firstView, firstScreen.x, firstScreen.y), point);
+  assert.deepEqual(screenToPagePoint(zoomedView, zoomedScreen.x, zoomedScreen.y), point);
 }
 
 console.log("wallDrawing.test.mjs passed");
