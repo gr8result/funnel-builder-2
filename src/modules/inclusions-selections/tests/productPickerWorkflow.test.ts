@@ -67,6 +67,10 @@ export async function runProductPickerWorkflowTests(): Promise<void> {
   assert(modalSource.includes("role=\"dialog\"") && modalSource.includes("ProductSelectionModal"), "Product picker modal should render as a dialog.");
   assert(modalSource.includes("Width") && modalSource.includes("Fuel type") && modalSource.includes("Select"), "Modal should expose filters and a Select button.");
   const workspacePage = source("pages", "inclusions-selections", "workspace.tsx");
+  assert(workspacePage.includes("Generate ProjectRequirements") && workspacePage.includes("handleGenerateRequirements"), "Workspace should expose the missing Stage 2 requirement generation step.");
+  assert(workspacePage.includes('area.name.toLowerCase() === "kitchen"'), "Workspace should default to Kitchen when it is available.");
+  assert(workspacePage.includes("kitchenTileGrid") && workspacePage.includes("selectionTile"), "Workspace should render a screen-first room selection tile grid.");
+  assert(workspacePage.includes("openProductPicker(row.requirement.id)") && workspacePage.includes("tileProduct"), "Clicking a selection tile should open the product picker and selected products should render on the tile.");
   assert(workspacePage.includes("productModalBody") && workspacePage.includes("@media (max-width: 760px)"), "Modal should include desktop and mobile layout styles.");
 
   const csvValidation = source("lib", "product-library", "selectionsClassification.js");
