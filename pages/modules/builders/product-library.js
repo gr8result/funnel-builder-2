@@ -1039,7 +1039,7 @@ function SelectionProductsView({
           const supplierName = supplierById.get(product.supplier_id) || "No supplier";
           const categoryName = categoryById.get(product.category_id) || "Uncategorised";
           const brandName = manufacturerById.get(product.manufacturer_id) || "No brand";
-          const priceStatus = product.sell_price != null || product.retail_price != null ? money(product.sell_price ?? product.retail_price) : "Price required";
+          const priceStatus = product.sell_price != null || product.retail_price != null ? money(product.sell_price ?? product.retail_price) : "Price on Request";
           const upgradePrice = canViewCosts ? money(effectiveUpgradeValue(product)) || "Included" : product.base_allowance ? money(product.base_allowance) : "Allowance TBC";
           const status = product.active === false ? "Inactive" : product.availability_status || "available";
           return (
@@ -1064,8 +1064,8 @@ function SelectionProductsView({
               <span>{upgradePrice}</span>
               <span><mark className={status === "available" || status === "Active" ? "available" : "unavailable"}>{status}</mark></span>
               <span className="row-actions">
-                <button type="button" onClick={() => onOpenProduct(product)}>Edit</button>
                 <button type="button" onClick={() => onOpenProduct(product)}>View Details</button>
+                <button type="button" onClick={() => onOpenProduct(product)}>Edit</button>
                 <button type="button" onClick={() => onDuplicateProduct(product)}>Duplicate</button>
                 <button type="button" onClick={() => onArchiveProduct(product.id)}>Archive</button>
                 {product.product_url ? <a href={product.product_url} target="_blank" rel="noopener noreferrer">Open Supplier Website</a> : <span className="muted">No supplier link</span>}

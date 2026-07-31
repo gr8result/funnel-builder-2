@@ -92,7 +92,7 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /empty-actions/);
   assert.doesNotMatch(page, /viewMode === "table" \?/);
   assert.match(toolbar, /SELECTION_VISIBILITY_VALUES/);
-  assert.match(toolbar, /Manage the products, finishes and fixtures available for project inclusions and client selections\./);
+  assert.match(toolbar, /Manage client-selectable products, finishes and fixtures used in project inclusions and selections\./);
   assert.match(toolbar, /Add Selection Product/);
   assert.match(constants, /Client Selectable/);
   assert.match(constants, /Builder Selectable/);
@@ -110,6 +110,11 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(dashboardCards, /title: "Estimating Catalogue"/);
   assert.match(dashboardCards, /page: "productLibrary"/);
   assert.equal((dashboardCards.match(/title: "Product Library"/g) ?? []).length, 1);
+  assert.match(workbook, /function dashboardHrefWithProjectContext\(href, sheet, workspaceId = "", activeProjectId = ""\)/);
+  assert.match(workbook, /dashboardHrefWithProjectContext\(card\.href, sheet, workspaceId, activeProjectId\)/);
+  assert.match(workbook, /organisationId: workspaceId/);
+  assert.match(workbook, /projectName: clientWorkbookDataValue\(sheet, "projectName"\)/);
+  assert.match(page, /Price on Request/);
   assert.match(workbook, /<h2 style=\{styles\.dashboardTitle\}>Internal Estimating Catalogue<\/h2>/);
   assert.match(workbook, /These items are not available for client selections\./);
   assert.doesNotMatch(dashboardCards, /\/modules\/builders\/selections-book/);

@@ -14,7 +14,7 @@ export function ProductLibraryToolbar({
       <div>
         <p className="eyebrow">Builders Platform</p>
         <h1>Product Library</h1>
-        <p className="subtitle">Manage the products, finishes and fixtures available for project inclusions and client selections.</p>
+        <p className="subtitle">Manage client-selectable products, finishes and fixtures used in project inclusions and selections.</p>
       </div>
       <div className="actions">
         <div className="view-toggle">
