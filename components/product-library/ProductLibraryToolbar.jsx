@@ -5,9 +5,7 @@ export function ProductLibraryToolbar({
   viewMode,
   onChangeViewMode,
   onAddProduct,
-  onImportCsv,
   onExportCsv,
-  onManageCategories,
   selectedCount,
   onBulkUpdate,
 }) {
@@ -16,21 +14,18 @@ export function ProductLibraryToolbar({
       <div>
         <p className="eyebrow">Builders Platform</p>
         <h1>Product Library</h1>
-        <p className="subtitle">A reusable product catalogue organised by category, supplier, brand and pricing tier.</p>
+        <p className="subtitle">Manage the products, finishes and fixtures available for project inclusions and client selections.</p>
       </div>
       <div className="actions">
         <div className="view-toggle">
-          <button type="button" className={viewMode === "catalogue" ? "active" : ""} onClick={() => onChangeViewMode("catalogue")}>Catalogue</button>
-          <button type="button" className={viewMode === "table" ? "active" : ""} onClick={() => onChangeViewMode("table")}>Table View</button>
+          <button type="button" className={viewMode === "catalogue" ? "active" : ""} onClick={() => onChangeViewMode("catalogue")}>List View</button>
           <button type="button" className={viewMode === "card" ? "active" : ""} onClick={() => onChangeViewMode("card")}>Card View</button>
         </div>
         {selectedCount > 0 && (
           <button type="button" className="bulk" onClick={onBulkUpdate}>Bulk Update ({selectedCount})</button>
         )}
-        <button type="button" onClick={onManageCategories}>Manage Categories</button>
-        <button type="button" onClick={onImportCsv}>Import CSV</button>
-        <button type="button" onClick={onExportCsv}>Export CSV</button>
-        <button type="button" className="primary" onClick={onAddProduct}>Add Product</button>
+        <button type="button" onClick={onExportCsv}>Export Selection Products</button>
+        <button type="button" className="primary" onClick={onAddProduct}>Add Selection Product</button>
       </div>
 
       <style jsx>{`
@@ -41,13 +36,13 @@ export function ProductLibraryToolbar({
           gap: 20px;
           flex-wrap: wrap;
           border: 1px solid rgba(148, 163, 184, 0.22);
-          background: rgba(15, 23, 42, 0.92);
-          border-radius: 10px;
+          background: #ffffff;
+          border-radius: 8px;
           padding: 20px;
         }
         .eyebrow {
           margin: 0 0 6px;
-          color: #38bdf8;
+          color: #2563eb;
           font-size: 12px;
           font-weight: 800;
           letter-spacing: 0.06em;
@@ -56,12 +51,12 @@ export function ProductLibraryToolbar({
         h1 {
           margin: 0 0 6px;
           font-size: 26px;
-          color: #e5eefb;
+          color: #172033;
         }
         .subtitle {
           margin: 0;
           max-width: 560px;
-          color: #a8bbd4;
+          color: #64748b;
           font-size: 13px;
         }
         .actions {
@@ -72,23 +67,24 @@ export function ProductLibraryToolbar({
         }
         .view-toggle {
           display: flex;
-          border: 1px solid rgba(148, 163, 184, 0.3);
+          border: 1px solid #d8e0ea;
           border-radius: 8px;
           overflow: hidden;
           margin-right: 4px;
         }
         .view-toggle button {
-          background: transparent;
+          background: #f8fafc;
           border: 0;
         }
         .view-toggle button.active {
           background: #2563eb;
+          color: #ffffff;
         }
         button {
           border: 0;
           border-radius: 8px;
-          background: rgba(148, 163, 184, 0.14);
-          color: #e5eefb;
+          background: #edf4fb;
+          color: #17406f;
           cursor: pointer;
           font-weight: 800;
           font-size: 12.5px;
@@ -241,16 +237,16 @@ export function ProductLibraryFilters({
         }
         .search {
           flex: 1;
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          border: 1px solid #d8e0ea;
           border-radius: 8px;
-          background: #0b1626;
-          color: #e5eefb;
+          background: #ffffff;
+          color: #172033;
           padding: 10px 12px;
           font: inherit;
         }
         .result-count {
           align-self: center;
-          color: #93a4bd;
+          color: #64748b;
           font-size: 12px;
           white-space: nowrap;
         }
@@ -258,8 +254,8 @@ export function ProductLibraryFilters({
           grid-column: 1 / -1;
           justify-self: start;
           background: transparent;
-          border: 1px solid rgba(148, 163, 184, 0.3);
-          color: #e5eefb;
+          border: 1px solid #d8e0ea;
+          color: #17406f;
           border-radius: 8px;
           padding: 8px 12px;
           font-size: 12px;
@@ -268,9 +264,9 @@ export function ProductLibraryFilters({
         }
         .filter-toggle {
           display: none;
-          border: 1px solid rgba(148, 163, 184, 0.3);
+          border: 1px solid #d8e0ea;
           background: transparent;
-          color: #e5eefb;
+          color: #17406f;
           border-radius: 8px;
           padding: 0 14px;
           font-weight: 800;
@@ -284,10 +280,10 @@ export function ProductLibraryFilters({
         }
         select,
         input {
-          border: 1px solid rgba(148, 163, 184, 0.25);
+          border: 1px solid #d8e0ea;
           border-radius: 8px;
-          background: #0b1626;
-          color: #e5eefb;
+          background: #ffffff;
+          color: #172033;
           padding: 9px 10px;
           font: inherit;
           font-size: 13px;

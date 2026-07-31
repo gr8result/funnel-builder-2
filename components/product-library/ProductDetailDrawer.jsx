@@ -372,7 +372,7 @@ export default function ProductDetailDrawer({
             {productUrlCheck.ok && productUrlCheck.warning && <p className="field-warning">{productUrlCheck.warning}</p>}
             {productUrlCheck.ok && !productUrlCheck.empty && (
               <a className="view-product-link" href={productUrlCheck.url} target="_blank" rel="noopener noreferrer">
-                <ExternalLink size={14} /> View Product Website
+                <ExternalLink size={14} /> View Official Product Page
               </a>
             )}
             {(productUrlCheck.empty || !productUrlCheck.ok) && (

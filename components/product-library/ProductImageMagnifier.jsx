@@ -67,7 +67,7 @@ export default function ProductImageMagnifier({
               </dl>
               {urlCheck.ok && !urlCheck.empty ? (
                 <a className="magnifier-website" href={urlCheck.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink size={14} /> View Product Website
+                  <ExternalLink size={14} /> View Official Product Page
                 </a>
               ) : (
                 <p className="magnifier-no-website">Product website not available.</p>

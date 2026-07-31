@@ -1,4 +1,5 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { useAuth } from "../../../context/AuthContext";
@@ -25,6 +26,7 @@ import {
   ROOM_AREA_OPTIONS,
   VIEW_MODE_STORAGE_KEY,
   COST_ROLES,
+  CLIENT_SELECTABLE_CATEGORY_GROUPS,
 } from "../../../lib/product-library/constants";
 
 const DEFAULT_FILTERS = {
@@ -47,8 +49,26 @@ const DEFAULT_FILTERS = {
 };
 
 const TABLE_PAGE_SIZE = 50;
+const PRODUCT_LIBRARY_TABS = [
+  { key: "selections", label: "Selection Products" },
+  { key: "estimating", label: "Estimating Catalogue" },
+  { key: "suppliers", label: "Suppliers" },
+  { key: "imports", label: "Import Products" },
+  { key: "categories", label: "Categories & Tags" },
+];
+const TAB_ALIASES = new Map([
+  ["selection-products", "selections"],
+  ["selection", "selections"],
+  ["client-selectable", "selections"],
+  ["import", "imports"],
+  ["import-products", "imports"],
+  ["estimating-catalogue", "estimating"],
+  ["categories-tags", "categories"],
+]);
+const ACTIVE_SELECTION_VISIBILITIES = new Set(["client_selectable", "builder_selectable"]);
 
 export default function BuilderProductLibraryPage() {
+  const router = useRouter();
   const { workspaceId, role } = useWorkspace();
   const { user } = useAuth();
   const canViewCosts = COST_ROLES.has(role);
@@ -60,11 +80,13 @@ export default function BuilderProductLibraryPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [activeTab, setActiveTab] = useState("selections");
 
   const [viewMode, setViewMode] = useState("catalogue");
   useEffect(() => {
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(VIEW_MODE_STORAGE_KEY) : null;
-    if (stored === "catalogue" || stored === "table" || stored === "card") setViewMode(stored);
+    if (stored === "card") setViewMode("card");
+    if (stored === "catalogue" || stored === "table") setViewMode("catalogue");
   }, []);
   function changeViewMode(mode) {
     setViewMode(mode);
@@ -101,6 +123,7 @@ export default function BuilderProductLibraryPage() {
   const [importFile, setImportFile] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [importMode, setImportMode] = useState("upsert");
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c.category_name])), [categories]);
   const categoryObjectById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -112,6 +135,21 @@ export default function BuilderProductLibraryPage() {
     loadLibrary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const rawTab = Array.isArray(router.query.tab) ? router.query.tab[0] : router.query.tab;
+    const normalized = String(rawTab || "selections").trim().toLowerCase();
+    const nextTab = TAB_ALIASES.get(normalized) || normalized;
+    if (PRODUCT_LIBRARY_TABS.some((tab) => tab.key === nextTab)) setActiveTab(nextTab);
+    else setActiveTab("selections");
+  }, [router.isReady, router.query.tab]);
+
+  function changeTab(tabKey) {
+    setActiveTab(tabKey);
+    const nextQuery = { ...router.query, tab: tabKey };
+    router.push({ pathname: router.pathname, query: nextQuery }, undefined, { shallow: true });
+  }
 
   async function loadLibrary() {
     setLoading(true);
@@ -156,10 +194,10 @@ export default function BuilderProductLibraryPage() {
       supplierId: filters.supplierId,
       manufacturerId: filters.manufacturerId,
       pricingTier: filters.pricingTier,
-      active: filters.active,
+      active: activeTab === "estimating" ? "all" : filters.active,
       availableForSelection: filters.availableForSelection,
-      selectionVisibility: filters.selectionVisibility,
-      discontinued: filters.discontinued,
+      selectionVisibility: activeTab === "estimating" ? "estimating_only" : filters.selectionVisibility,
+      discontinued: activeTab === "estimating" ? "all" : filters.discontinued,
       standardInclusion: filters.standardInclusion,
       missingImages: filters.missingImages,
       missingSupplierLink: filters.missingSupplierLink,
@@ -183,10 +221,10 @@ export default function BuilderProductLibraryPage() {
   }
 
   useEffect(() => {
-    if (viewMode !== "table" || !workspaceId) return;
+    if (activeTab !== "estimating" || !workspaceId) return;
     fetchTablePage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode, workspaceId, tablePage, tablePageSize, tableSort, debouncedSearch, filters]);
+  }, [activeTab, workspaceId, tablePage, tablePageSize, tableSort, debouncedSearch, filters]);
 
   useEffect(() => {
     setTablePage(1);
@@ -259,6 +297,7 @@ export default function BuilderProductLibraryPage() {
       if (filters.availableForSelection === "no" && product.available_for_selection !== false) return false;
       const visibility = selectionVisibilityFlags(product);
       if (filters.selectionVisibility !== "all" && visibility.selectionVisibility !== filters.selectionVisibility) return false;
+      if (filters.selectionVisibility === "all" && !ACTIVE_SELECTION_VISIBILITIES.has(visibility.selectionVisibility)) return false;
       if (filters.discontinued === "current" && visibility.discontinuedStatus === "discontinued") return false;
       if (filters.discontinued === "discontinued" && visibility.discontinuedStatus !== "discontinued") return false;
       if (filters.missingSupplierLink === "missing" && product.product_url) return false;
@@ -266,11 +305,6 @@ export default function BuilderProductLibraryPage() {
       return true;
     });
   }, [products, debouncedSearch, filters, categoryById, categoryObjectById, supplierById, manufacturerById]);
-
-  const catalogueTree = useMemo(
-    () => buildCatalogueTree(filteredProducts, { categoryById, categoryObjectById, manufacturerById, supplierById }),
-    [filteredProducts, categoryById, categoryObjectById, manufacturerById, supplierById]
-  );
 
   function openDrawerForNew() {
     setDrawerProduct(null);
@@ -559,7 +593,7 @@ export default function BuilderProductLibraryPage() {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
       },
-      body: JSON.stringify({ csvText: importPreview.csvText, applyMode: "upsert", fileName: importFile?.name }),
+      body: JSON.stringify({ csvText: importPreview.csvText, applyMode: importMode, fileName: importFile?.name }),
     });
     const payload = await response.json().catch(() => ({}));
     setImportBusy(false);
@@ -590,43 +624,76 @@ export default function BuilderProductLibraryPage() {
           viewMode={viewMode}
           onChangeViewMode={changeViewMode}
           onAddProduct={openDrawerForNew}
-          onImportCsv={() => setImportModalOpen(true)}
           onExportCsv={exportProductsCsv}
-          onManageCategories={() => setCategoriesModalOpen(true)}
           selectedCount={selectedIds.size}
           onBulkUpdate={() => setBulkModalOpen(true)}
         />
+        <ProductLibraryTabs activeTab={activeTab} onChangeTab={changeTab} />
 
         {error && <div className="alert error">{error}</div>}
         {success && <div className="alert success">{success}</div>}
 
-        <LibraryDashboard stats={libraryStats} canViewCosts={canViewCosts} />
-
-        <ProductLibraryFilters
-          search={search}
-          onSearch={setSearch}
-          categories={categories}
-          suppliers={suppliers}
-          manufacturers={manufacturers}
-          filters={filters}
-          onChangeFilter={updateFilter}
-          roomAreas={ROOM_AREA_OPTIONS}
-          resultCount={viewMode === "table" ? tableTotal : filteredProducts.length}
-        />
-
-        {products.length >= 1000 && (
-          <p className="cap-notice">Showing the most recently updated 1,000 products in Catalogue/Card view. Use Table View or narrow your filters to reach the rest of a larger library.</p>
+        {activeTab === "selections" && (
+          <>
+            <LibraryDashboard stats={libraryStats} canViewCosts={canViewCosts} />
+            <ProductLibraryFilters
+              search={search}
+              onSearch={setSearch}
+              categories={categories}
+              suppliers={suppliers}
+              manufacturers={manufacturers}
+              filters={filters}
+              onChangeFilter={updateFilter}
+              roomAreas={ROOM_AREA_OPTIONS}
+              resultCount={filteredProducts.length}
+            />
+            <section className="content">
+              {loading ? (
+                <p className="loading">Loading products...</p>
+              ) : viewMode === "card" ? (
+                <ProductLibraryCards
+                  products={filteredProducts}
+                  categoryById={categoryById}
+                  supplierById={supplierById}
+                  manufacturerById={manufacturerById}
+                  canViewCosts={canViewCosts}
+                  onOpenProduct={openDrawerForProduct}
+                />
+              ) : (
+                <SelectionProductsView
+                  products={filteredProducts}
+                  categoryById={categoryById}
+                  supplierById={supplierById}
+                  manufacturerById={manufacturerById}
+                  canViewCosts={canViewCosts}
+                  onOpenProduct={openDrawerForProduct}
+                  onDuplicateProduct={duplicateProductFromDrawer}
+                  onArchiveProduct={deleteProductFromDrawer}
+                />
+              )}
+            </section>
+          </>
         )}
 
-        <section className="content">
-          {loading ? (
-            <p className="loading">Loading products...</p>
-          ) : viewMode === "catalogue" ? (
-            <ProductLibraryCatalogue
-              tree={catalogueTree}
-              onOpenProduct={openDrawerForProduct}
+        {activeTab === "estimating" && (
+          <section className="content tab-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Internal Estimating Catalogue</h2>
+                <p>Internal labour, material, BOQ and rate items used by estimating and quotations. These items do not appear in client selections.</p>
+              </div>
+            </div>
+            <ProductLibraryFilters
+              search={search}
+              onSearch={setSearch}
+              categories={categories}
+              suppliers={suppliers}
+              manufacturers={manufacturers}
+              filters={filters}
+              onChangeFilter={updateFilter}
+              roomAreas={ROOM_AREA_OPTIONS}
+              resultCount={tableTotal}
             />
-          ) : viewMode === "table" ? (
             <ProductLibraryTable
               products={tableRows}
               categoryById={categoryById}
@@ -645,18 +712,39 @@ export default function BuilderProductLibraryPage() {
                 onSortChange: (key) => setTableSort((current) => ({ key, direction: current.key === key && current.direction === "asc" ? "desc" : "asc" })),
               }}
             />
-          ) : (
-            <ProductLibraryCards
-              products={filteredProducts}
-              categoryById={categoryById}
-              supplierById={supplierById}
-              manufacturerById={manufacturerById}
-              canViewCosts={canViewCosts}
-              onOpenProduct={openDrawerForProduct}
-            />
-          )}
-          {viewMode === "table" && tableLoading && <p className="loading">Loading...</p>}
-        </section>
+            {tableLoading && <p className="loading">Loading estimating catalogue...</p>}
+          </section>
+        )}
+
+        {activeTab === "suppliers" && (
+          <SuppliersTab
+            suppliers={suppliers}
+            products={products}
+            categoryById={categoryById}
+            onManageSuppliers={() => setCategoriesModalOpen(true)}
+          />
+        )}
+
+        {activeTab === "imports" && (
+          <ImportProductsTab
+            importFile={importFile}
+            importPreview={importPreview}
+            importBusy={importBusy}
+            importMode={importMode}
+            onSetImportMode={setImportMode}
+            onSetImportFile={(file) => { setImportFile(file); setImportPreview(null); }}
+            onDownloadTemplate={downloadCsvTemplate}
+            onPreview={runImportPreview}
+            onConfirm={confirmImport}
+          />
+        )}
+
+        {activeTab === "categories" && (
+          <CategoriesAndTagsTab
+            categories={categories}
+            onManageCategories={() => setCategoriesModalOpen(true)}
+          />
+        )}
       </main>
 
       <ProductDetailDrawer
@@ -730,8 +818,8 @@ export default function BuilderProductLibraryPage() {
       <style jsx>{`
         .page {
           min-height: 100vh;
-          background: #07111f;
-          color: #e5eefb;
+          background: #f6f8fb;
+          color: #172033;
           padding: 24px;
           display: grid;
           gap: 16px;
@@ -739,7 +827,7 @@ export default function BuilderProductLibraryPage() {
         }
         .alert {
           border: 1px solid rgba(148, 163, 184, 0.22);
-          background: rgba(15, 23, 42, 0.92);
+          background: #ffffff;
           border-radius: 8px;
           padding: 12px 14px;
         }
@@ -749,10 +837,30 @@ export default function BuilderProductLibraryPage() {
         }
         .alert.success {
           border-color: rgba(34, 197, 94, 0.45);
-          color: #bbf7d0;
+          color: #166534;
         }
         .content {
           min-width: 0;
+        }
+        .tab-panel {
+          display: grid;
+          gap: 14px;
+        }
+        .panel-heading {
+          border: 1px solid #d8e0ea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .panel-heading h2 {
+          margin: 0 0 4px;
+          color: #172033;
+          font-size: 20px;
+        }
+        .panel-heading p {
+          margin: 0;
+          color: #64748b;
+          font-size: 13px;
         }
         .loading {
           color: #93a4bd;
@@ -829,6 +937,651 @@ export default function BuilderProductLibraryPage() {
     </>
   );
 }
+
+function ProductLibraryTabs({ activeTab, onChangeTab }) {
+  return (
+    <nav className="module-tabs" aria-label="Product Library sections">
+      {PRODUCT_LIBRARY_TABS.map((tab) => (
+        <button key={tab.key} type="button" className={activeTab === tab.key ? "active" : ""} onClick={() => onChangeTab(tab.key)}>
+          {tab.label}
+        </button>
+      ))}
+      <style jsx>{`
+        .module-tabs {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          border-bottom: 1px solid #d8e0ea;
+          padding-bottom: 2px;
+        }
+        button {
+          border: 0;
+          border-radius: 8px 8px 0 0;
+          background: transparent;
+          color: #475569;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 800;
+          padding: 11px 14px;
+          white-space: nowrap;
+        }
+        button.active {
+          background: #ffffff;
+          color: #17406f;
+          box-shadow: inset 0 -3px 0 #2563eb;
+        }
+      `}</style>
+    </nav>
+  );
+}
+
+function SelectionProductsView({
+  products,
+  categoryById,
+  supplierById,
+  manufacturerById,
+  canViewCosts,
+  onOpenProduct,
+  onDuplicateProduct,
+  onArchiveProduct,
+}) {
+  if (!products.length) {
+    return (
+      <section className="selection-products empty">
+        <h2>Client Selectable Products</h2>
+        <p>No client-selectable products match the current filters.</p>
+        <style jsx>{selectionProductsCss}</style>
+      </section>
+    );
+  }
+
+  return (
+    <section className="selection-products">
+      <div className="list-heading">
+        <div>
+          <p className="active-filter">Client Selectable Products</p>
+          <h2>Selection Products</h2>
+        </div>
+        <span>{products.length} visible products</span>
+      </div>
+      <div className="catalogue-list" role="table" aria-label="Client selectable product catalogue">
+        <div className="catalogue-header" role="row">
+          <span>Product</span>
+          <span>Brand</span>
+          <span>Model</span>
+          <span>Code</span>
+          <span>Supplier</span>
+          <span>Category</span>
+          <span>Subcategory</span>
+          <span>Tier</span>
+          <span>Client Price</span>
+          <span>Upgrade</span>
+          <span>Availability</span>
+          <span>Actions</span>
+        </div>
+        {products.map((product) => {
+          const supplierName = supplierById.get(product.supplier_id) || "No supplier";
+          const categoryName = categoryById.get(product.category_id) || "Uncategorised";
+          const brandName = manufacturerById.get(product.manufacturer_id) || "No brand";
+          const priceStatus = product.sell_price != null || product.retail_price != null ? money(product.sell_price ?? product.retail_price) : "Price required";
+          const upgradePrice = canViewCosts ? money(effectiveUpgradeValue(product)) || "Included" : product.base_allowance ? money(product.base_allowance) : "Allowance TBC";
+          const status = product.active === false ? "Inactive" : product.availability_status || "available";
+          return (
+            <article key={product.id} className="catalogue-row" role="row">
+              <button type="button" className="product-cell" onClick={() => onOpenProduct(product)}>
+                <span className="thumb">
+                  {product.primary_image_url ? <img src={product.primary_image_url} alt={product.product_name || "Product"} loading="lazy" /> : <span>{(product.product_name || "P")[0]}</span>}
+                </span>
+                <span className="product-copy">
+                  <strong>{product.product_name}</strong>
+                  <small>{[product.colour, product.finish].filter(Boolean).join(" / ") || product.product_type || "Selection product"}</small>
+                </span>
+              </button>
+              <span>{brandName}</span>
+              <span>{product.model || "-"}</span>
+              <span>{product.sku || "-"}</span>
+              <span>{supplierName}</span>
+              <span>{categoryName}</span>
+              <span>{product.subcategory || product.product_type || "-"}</span>
+              <span>{product.pricing_tier || "CLASSIC"}</span>
+              <span>{priceStatus}</span>
+              <span>{upgradePrice}</span>
+              <span><mark className={status === "available" || status === "Active" ? "available" : "unavailable"}>{status}</mark></span>
+              <span className="row-actions">
+                <button type="button" onClick={() => onOpenProduct(product)}>Edit</button>
+                <button type="button" onClick={() => onOpenProduct(product)}>View Details</button>
+                <button type="button" onClick={() => onDuplicateProduct(product)}>Duplicate</button>
+                <button type="button" onClick={() => onArchiveProduct(product.id)}>Archive</button>
+                {product.product_url ? <a href={product.product_url} target="_blank" rel="noopener noreferrer">Open Supplier Website</a> : <span className="muted">No supplier link</span>}
+              </span>
+            </article>
+          );
+        })}
+      </div>
+      <style jsx>{selectionProductsCss}</style>
+    </section>
+  );
+}
+
+const selectionProductsCss = `
+  .selection-products {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+  .selection-products.empty {
+    border: 1px solid #d8e0ea;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 28px;
+    text-align: center;
+  }
+  .selection-products.empty h2 {
+    margin: 0 0 6px;
+  }
+  .selection-products.empty p {
+    margin: 0;
+    color: #64748b;
+  }
+  .list-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: end;
+    border: 1px solid #d8e0ea;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .active-filter {
+    margin: 0 0 4px;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  h2 {
+    margin: 0;
+    color: #172033;
+    font-size: 22px;
+  }
+  .list-heading span {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .catalogue-list {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+  .catalogue-header,
+  .catalogue-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.7fr) minmax(95px, 0.7fr) minmax(95px, 0.7fr) minmax(95px, 0.7fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr) 80px minmax(105px, 0.7fr) minmax(95px, 0.7fr) minmax(105px, 0.7fr) minmax(220px, 1.2fr);
+    gap: 10px;
+    align-items: center;
+  }
+  .catalogue-header {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .catalogue-row {
+    border: 1px solid #d8e0ea;
+    background: #ffffff;
+    border-radius: 8px;
+    color: #243044;
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+  .catalogue-row > span,
+  .catalogue-row a,
+  .catalogue-row button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .product-cell {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+  }
+  .thumb {
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #d8e0ea;
+    border-radius: 8px;
+    background: #edf4fb;
+    color: #2563eb;
+    font-weight: 900;
+  }
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .product-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+  .product-copy strong {
+    color: #172033;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .product-copy small {
+    color: #64748b;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  mark {
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 800;
+    padding: 3px 8px;
+  }
+  mark.available {
+    background: #dcfce7;
+    color: #166534;
+  }
+  mark.unavailable {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .row-actions button,
+  .row-actions a {
+    border: 1px solid #d8e0ea;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #17406f;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 6px 8px;
+    text-decoration: none;
+  }
+  .row-actions .muted {
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  @media (max-width: 1180px) {
+    .catalogue-header {
+      display: none;
+    }
+    .catalogue-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+    }
+    .product-cell,
+    .row-actions {
+      grid-column: 1 / -1;
+    }
+    .catalogue-row > span:not(.row-actions)::before {
+      display: block;
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 900;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+    .catalogue-row > span:nth-of-type(1)::before { content: "Brand"; }
+    .catalogue-row > span:nth-of-type(2)::before { content: "Model"; }
+    .catalogue-row > span:nth-of-type(3)::before { content: "Code"; }
+    .catalogue-row > span:nth-of-type(4)::before { content: "Supplier"; }
+    .catalogue-row > span:nth-of-type(5)::before { content: "Category"; }
+    .catalogue-row > span:nth-of-type(6)::before { content: "Subcategory"; }
+    .catalogue-row > span:nth-of-type(7)::before { content: "Tier"; }
+    .catalogue-row > span:nth-of-type(8)::before { content: "Client Price"; }
+    .catalogue-row > span:nth-of-type(9)::before { content: "Upgrade"; }
+    .catalogue-row > span:nth-of-type(10)::before { content: "Availability"; }
+  }
+  @media (max-width: 640px) {
+    .list-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+    .catalogue-row {
+      grid-template-columns: 1fr;
+    }
+    .product-cell {
+      grid-template-columns: 52px minmax(0, 1fr);
+    }
+    .thumb {
+      width: 52px;
+      height: 52px;
+    }
+  }
+`;
+
+function SuppliersTab({ suppliers, products, categoryById, onManageSuppliers }) {
+  const supplierRows = suppliers.map((supplier) => {
+    const supplierProducts = products.filter((product) => product.supplier_id === supplier.id);
+    const categories = Array.from(new Set(supplierProducts.map((product) => categoryById.get(product.category_id)).filter(Boolean)));
+    return {
+      supplier,
+      categories,
+      productCount: supplierProducts.length,
+      missingLinks: supplierProducts.filter((product) => !product.product_url).length,
+      missingImages: supplierProducts.filter((product) => product.requires_image && !product.primary_image_url).length,
+    };
+  });
+  return (
+    <section className="admin-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Suppliers</h2>
+          <p>Track supplier coverage, product links and image gaps for the selection catalogue.</p>
+        </div>
+        <button type="button" onClick={onManageSuppliers}>Edit Suppliers</button>
+      </div>
+      <div className="supplier-list">
+        <div className="supplier-header">
+          <span>Supplier</span><span>Categories</span><span>Status</span><span>Website</span><span>Products</span><span>Missing Links</span><span>Missing Images</span><span>Action</span>
+        </div>
+        {supplierRows.map(({ supplier, categories, productCount, missingLinks, missingImages }) => (
+          <div key={supplier.id} className="supplier-row">
+            <strong>{supplier.supplier_name}</strong>
+            <span>{categories.join(", ") || "No categories yet"}</span>
+            <span>{supplier.active === false ? "Inactive" : "Active"}</span>
+            <span>{supplier.website_url ? <a href={supplier.website_url} target="_blank" rel="noopener noreferrer">{supplier.website_url}</a> : "No website"}</span>
+            <span>{productCount}</span>
+            <span>{missingLinks}</span>
+            <span>{missingImages}</span>
+            <button type="button" onClick={onManageSuppliers}>Edit</button>
+          </div>
+        ))}
+      </div>
+      <style jsx>{adminPanelCss}</style>
+    </section>
+  );
+}
+
+function ImportProductsTab({
+  importFile,
+  importPreview,
+  importBusy,
+  importMode,
+  onSetImportMode,
+  onSetImportFile,
+  onDownloadTemplate,
+  onPreview,
+  onConfirm,
+}) {
+  return (
+    <section className="admin-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Import Products</h2>
+          <p>Upload client-selectable product CSVs, preview row-level validation, detect duplicates and choose how updates are applied.</p>
+        </div>
+        <button type="button" onClick={onDownloadTemplate}>Download CSV Template</button>
+      </div>
+      <div className="import-card">
+        <label>
+          CSV upload
+          <input type="file" accept=".csv,text/csv" onChange={(event) => onSetImportFile(event.target.files?.[0] || null)} />
+        </label>
+        <div className="mode-row">
+          <label><input type="radio" checked={importMode === "create_only"} onChange={() => onSetImportMode("create_only")} /> Add-new mode</label>
+          <label><input type="radio" checked={importMode === "update_only"} onChange={() => onSetImportMode("update_only")} /> Update-existing mode</label>
+          <label><input type="radio" checked={importMode === "upsert"} onChange={() => onSetImportMode("upsert")} /> Add or update</label>
+        </div>
+        <button type="button" disabled={!importFile || importBusy} onClick={onPreview}>{importBusy ? "Previewing..." : "Preview Import"}</button>
+        {importPreview && (
+          <div className="preview">
+            <h3>Import preview</h3>
+            <div className="preview-summary">
+              <span>{importPreview.summary.totalRows} rows</span>
+              <span>{importPreview.summary.new} new</span>
+              <span>{importPreview.summary.matched} matched / duplicates</span>
+              <span>{importPreview.summary.errors} row errors</span>
+            </div>
+            {importPreview.errors?.length ? (
+              <div className="errors-table">
+                {importPreview.errors.slice(0, 20).map((entry) => (
+                  <p key={`${entry.row}-${entry.error}`}><strong>Row {entry.row}:</strong> {entry.error}</p>
+                ))}
+              </div>
+            ) : <p className="ok">No row-level errors detected.</p>}
+            <button type="button" disabled={importBusy || importPreview.summary.errors > 0} onClick={onConfirm}>{importBusy ? "Importing..." : "Import Products"}</button>
+          </div>
+        )}
+      </div>
+      <style jsx>{adminPanelCss}</style>
+    </section>
+  );
+}
+
+function CategoriesAndTagsTab({ categories, onManageCategories }) {
+  const practicalGroups = [
+    "Kitchen Appliances", "Tapware", "Sanitaryware", "Bathroom Accessories", "Tiles", "Flooring", "Cabinetry", "Benchtops", "Doors", "Door Hardware", "Robe Fitouts", "Roofing", "Bricks and Cladding", "Garage Doors", "Pool Finishes", "Paint and Colours",
+  ];
+  return (
+    <section className="admin-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Categories &amp; Tags</h2>
+          <p>Manage selection categories, subcategories, requirement tags, compatible area types and inclusion tiers.</p>
+        </div>
+        <button type="button" onClick={onManageCategories}>Manage Categories</button>
+      </div>
+      <div className="taxonomy-grid">
+        <article>
+          <h3>Practical Groups</h3>
+          <ul>{practicalGroups.map((group) => <li key={group}>{group}</li>)}</ul>
+        </article>
+        <article>
+          <h3>Selection Category Groups</h3>
+          {CLIENT_SELECTABLE_CATEGORY_GROUPS.map((group) => (
+            <div key={group.group} className="tag-group">
+              <strong>{group.group}</strong>
+              <p>{group.categories.join(", ")}</p>
+            </div>
+          ))}
+        </article>
+        <article>
+          <h3>Active Categories</h3>
+          <ul>{categories.map((category) => <li key={category.id}>{category.category_name}{category.subcategory ? ` / ${category.subcategory}` : ""}</li>)}</ul>
+        </article>
+      </div>
+      <style jsx>{adminPanelCss}</style>
+    </section>
+  );
+}
+
+const adminPanelCss = `
+  .admin-panel {
+    display: grid;
+    gap: 14px;
+  }
+  .panel-heading,
+  .import-card,
+  .supplier-list,
+  .taxonomy-grid article {
+    border: 1px solid #d8e0ea;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .panel-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+  }
+  h2,
+  h3 {
+    margin: 0;
+    color: #172033;
+  }
+  .panel-heading p,
+  .tag-group p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 13px;
+  }
+  button {
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 800;
+    padding: 9px 12px;
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .supplier-list,
+  .import-card {
+    display: grid;
+    gap: 10px;
+  }
+  .supplier-header,
+  .supplier-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 0.7fr 1.3fr 0.55fr 0.7fr 0.7fr 0.55fr;
+    gap: 10px;
+    align-items: center;
+  }
+  .supplier-header {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .supplier-row {
+    border-top: 1px solid #e5eaf1;
+    padding-top: 10px;
+    color: #243044;
+    font-size: 13px;
+  }
+  .supplier-row a {
+    color: #2563eb;
+    overflow-wrap: anywhere;
+  }
+  label {
+    display: grid;
+    gap: 7px;
+    color: #243044;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  input[type="file"] {
+    border: 1px dashed #b7c3d2;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f8fafc;
+  }
+  .mode-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .mode-row label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preview {
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid #e5eaf1;
+    padding-top: 12px;
+  }
+  .preview-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .preview-summary span {
+    border-radius: 999px;
+    background: #edf4fb;
+    color: #17406f;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 5px 9px;
+  }
+  .errors-table {
+    display: grid;
+    gap: 5px;
+    color: #991b1b;
+  }
+  .errors-table p,
+  .ok {
+    margin: 0;
+    font-size: 13px;
+  }
+  .ok {
+    color: #166534;
+  }
+  .taxonomy-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr) minmax(0, 0.9fr);
+    gap: 14px;
+  }
+  ul {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 7px;
+    color: #243044;
+    font-size: 13px;
+  }
+  li {
+    border: 1px solid #e5eaf1;
+    border-radius: 7px;
+    padding: 7px 9px;
+    background: #f8fafc;
+  }
+  .tag-group {
+    border-top: 1px solid #e5eaf1;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  @media (max-width: 1000px) {
+    .supplier-header {
+      display: none;
+    }
+    .supplier-row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .taxonomy-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .panel-heading {
+      flex-direction: column;
+    }
+    .supplier-row {
+      grid-template-columns: 1fr;
+    }
+  }
+`;
 
 function LibraryDashboard({ stats, canViewCosts }) {
   const tiles = [
@@ -1031,37 +1784,6 @@ function BulkUpdateModal({ categories, suppliers, onApply, onClose, saving }) {
       </div>
     </div>
   );
-}
-
-function buildCatalogueTree(products, lookups) {
-  const areaMap = new Map();
-  products.forEach((product) => {
-    const category = lookups.categoryObjectById.get(product.category_id);
-    const areaName = roomAreaForProduct(product, category);
-    const categoryName = lookups.categoryById.get(product.category_id) || "Uncategorised";
-    const typeName = productTypeForProduct(product);
-    if (!areaMap.has(areaName)) areaMap.set(areaName, new Map());
-    const categoryMap = areaMap.get(areaName);
-    if (!categoryMap.has(categoryName)) categoryMap.set(categoryName, new Map());
-    const typeMap = categoryMap.get(categoryName);
-    if (!typeMap.has(typeName)) typeMap.set(typeName, []);
-    typeMap.get(typeName).push({
-      ...product,
-      manufacturerName: lookups.manufacturerById.get(product.manufacturer_id) || "",
-      supplierName: lookups.supplierById.get(product.supplier_id) || "",
-    });
-  });
-
-  return Array.from(areaMap, ([areaName, categoryMap]) => ({
-    areaName,
-    categories: Array.from(categoryMap, ([categoryName, typeMap]) => ({
-      categoryName,
-      types: Array.from(typeMap, ([typeName, items]) => ({
-        typeName,
-        products: items.sort((a, b) => String(a.product_name).localeCompare(String(b.product_name))),
-      })).sort((a, b) => a.typeName.localeCompare(b.typeName)),
-    })).sort((a, b) => a.categoryName.localeCompare(b.categoryName)),
-  })).sort((a, b) => a.areaName.localeCompare(b.areaName));
 }
 
 function ProductLibraryCatalogue({ tree, onOpenProduct }) {
