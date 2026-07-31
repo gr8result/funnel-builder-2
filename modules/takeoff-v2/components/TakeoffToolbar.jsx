@@ -1,7 +1,6 @@
 import { formatLength, formatArea } from "../takeoff/units.js";
 import { validateCalibrationShape } from "../takeoff/scaleCalibration.js";
 import { CONFIDENCE_HIGH } from "../orientation/analyzeOrientation.js";
-import { distance } from "../takeoff/geometry.js";
 
 // The takeoff toolbar: always visible above the plan viewer, never hidden in
 // a menu. The primary row is the spec's exact required tool/action list —
@@ -191,7 +190,7 @@ export default function TakeoffToolbar({ page, tools }) {
 
         {tools.activeTool === "exterior-wall" && (
           <span style={S.wallStatus} data-testid="trace-exterior-hint">
-            Click the actual outside corners of the building. Each point must snap to a visible wall corner or wall line.
+            Click anywhere along a visible exterior wall. The full wall will be selected from corner to corner.
           </span>
         )}
 
@@ -234,20 +233,6 @@ export default function TakeoffToolbar({ page, tools }) {
             Confirm Exterior
           </button>
         )}
-        {tools.exteriorProposal && (
-          <>
-            <span style={S.wallStatus} data-testid="exterior-proposal-status">Exterior proposal - review required</span>
-            <button type="button" style={S.miniButton} onClick={tools.acceptExteriorProposal} data-testid="accept-exterior-proposal">
-              Accept as Starting Trace
-            </button>
-            <button type="button" style={S.miniButton} onClick={tools.editExteriorProposal} data-testid="edit-exterior-proposal">
-              Edit Proposal
-            </button>
-            <button type="button" style={S.miniButton} onClick={tools.rejectExteriorProposal} data-testid="reject-exterior-proposal">
-              Reject Proposal
-            </button>
-          </>
-        )}
 
         {closeShapeFeedback(tools)}
 
@@ -271,10 +256,12 @@ export default function TakeoffToolbar({ page, tools }) {
       {tools.activeTool === "exterior-wall" && (
         <div style={S.traceStatusBar} data-testid="trace-exterior-status-bar">
           <strong>Trace Exterior active</strong>
-          <span>Points: {traceStatus.points}</span>
-          <span>Current segment: {traceStatus.currentSegment}</span>
+          <span>Selected walls: {traceStatus.selectedWalls}</span>
+          <span>Current endpoint: {traceStatus.currentEndpoint}</span>
+          <span>Suggested next wall: {traceStatus.suggestedNextWall}</span>
+          <span>{traceStatus.hoverWall}</span>
           <span>Total traced: {traceStatus.totalTraced}</span>
-          <span>Click: add point</span>
+          <span>Click: select wall</span>
           <span>Space + drag: pan</span>
           <span>Mouse wheel: zoom</span>
           <span>Esc: cancel preview</span>
@@ -301,14 +288,15 @@ function exteriorTraceStatus(page, tools) {
   const graph = page?.exteriorWalls || {};
   const vertices = graph.vertices || [];
   const currentVertex = vertices.find((v) => v.id === tools.wallDrawChainVertexId) || null;
-  const hoverPoint = tools.wallDrawHoverPreview?.point || null;
   const mmPerDocumentUnit = page?.calibration?.mmPerDocumentUnit || null;
-  const currentMm = currentVertex && hoverPoint && mmPerDocumentUnit
-    ? distance(currentVertex, hoverPoint) * mmPerDocumentUnit
-    : null;
+  const hoverMm = tools.wallDrawHoverPreview?.lengthMm ?? null;
+  const suggestion = tools.nextWallSuggestions?.[0]?.wall || null;
   return {
     points: vertices.length,
-    currentSegment: currentMm == null ? "-" : formatLength(currentMm),
+    selectedWalls: graph.segments?.length || 0,
+    currentEndpoint: currentVertex ? "active corner" : "-",
+    suggestedNextWall: suggestion ? "connected exterior wall" : "-",
+    hoverWall: hoverMm == null ? "Click a visible wall" : `Exterior wall found - Length: ${formatLength(hoverMm)} - From corner A to corner B`,
     totalTraced: formatLength(tools.totalExteriorWallLengthMm || tools.totalPerimeterMm || 0),
   };
 }

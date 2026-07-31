@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
-import { tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate, orderedVerticesFromGraph, exteriorProposalKey } from "../hooks/useTakeoffTools.js";
+import { tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate } from "../hooks/useTakeoffTools.js";
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { createWallSegment, createWallVertex } from "../types.js";
 import { deleteVertexAndReconnect, splitSegment } from "../takeoff/wallGraph.js";
-import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
+import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallUnderPointer, orderedPathPoints } from "../takeoff/wallSelection.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -200,34 +200,98 @@ function rectBands(x1, y1, x2, y2, thickness = 8) {
   ];
 }
 
-// ---- assisted proposal is a reviewable closed polygon, not legacy auto ----
+// ---- click near wall selects full wall from junction to junction -----------
 {
-  const result = detectExteriorWallsFromGeometry({
-    planGeometryIndex: { source: "fixture", segments: [...rectBands(100, 100, 360, 280), ...rectBands(360, 160, 450, 280)] },
-    page: { sourceWidth: 500, sourceHeight: 400, calibration: { mmPerDocumentUnit: 20 } },
-  });
-  assert.equal(result.isClosed, true);
-  assert.equal(result.exteriorPerimeter.closed, true);
-  assert.ok(orderedVerticesFromGraph(result).length >= 4);
-  assert.ok(exteriorProposalKey(result).length > 0);
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [...rectBands(100, 100, 360, 280), ...rectBands(360, 160, 450, 280)],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const hit = findWallUnderPointer({ x: 230, y: 104 }, { walls, zoomScale: 1 });
+  assert.ok(hit, "expected click near wall face to select a wall");
+  assert.equal(hit.wall.orientation, 0);
+  assert.ok(hit.wall.centreline.start.x <= 110);
+  assert.ok(hit.wall.centreline.end.x >= 350);
+  assert.equal(hit.wall.source, "pdf-vector");
 }
 
-// ---- disconnected/random candidates produce no geometry -------------------
+// ---- angled vector wall faces are selectable as one wall ------------------
 {
-  const result = detectExteriorWallsFromGeometry({
-    planGeometryIndex: {
-      source: "fixture",
-      segments: [
-        line({ x: 20, y: 20 }, { x: 120, y: 20 }),
-        line({ x: 300, y: 80 }, { x: 300, y: 220 }),
-        line({ x: 80, y: 300 }, { x: 180, y: 300 }),
-        line({ x: 410, y: 40 }, { x: 410, y: 180 }),
-      ],
-    },
-    page: { sourceWidth: 500, sourceHeight: 400, calibration: { mmPerDocumentUnit: 20 } },
-  });
-  assert.ok(!result || result.isClosed === false);
-  assert.equal((result?.segments || []).length, 0);
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [
+      line({ x: 100, y: 100 }, { x: 260, y: 180 }),
+      line({ x: 96.4, y: 107.2 }, { x: 256.4, y: 187.2 }),
+    ],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const hit = findWallUnderPointer({ x: 178, y: 142 }, { walls, zoomScale: 1 });
+  assert.ok(hit, "expected click near angled wall face to select a wall");
+  assert.ok(Math.abs(hit.wall.orientation - 26.6) < 1);
+  assert.ok(hit.wall.length > 170);
+}
+
+// ---- rejected annotation geometry is not selectable -----------------------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: [...rectBands(100, 100, 360, 280), ...rectBands(360, 160, 450, 280)],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const rejected = buildDetectedWalls({
+    source: "fixture",
+    segments: [
+      line({ x: 10, y: 10 }, { x: 490, y: 10 }, { isPageBorder: true }),
+      line({ x: 80, y: 40 }, { x: 420, y: 40 }, { isDimension: true }),
+      line({ x: 80, y: 48 }, { x: 420, y: 48 }, { isDimension: true }),
+      line({ x: 20, y: 350 }, { x: 240, y: 350 }, { classification: "title-block-rule" }),
+      line({ x: 20, y: 358 }, { x: 240, y: 358 }, { classification: "title-block-rule" }),
+    ],
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  assert.ok(walls.length > 0);
+  assert.equal(rejected.length, 0);
+}
+
+// ---- path appends only local connected walls and rejects distant jumps -----
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: rectBands(100, 100, 300, 250),
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  const first = findWallUnderPointer({ x: 160, y: 104 }, { walls });
+  const second = connectedWallSuggestions(first.wall.centreline.end, { walls, selectedWalls: [first.wall] })[0];
+  assert.ok(second, "expected one local next-wall suggestion");
+  const firstAppend = appendDetectedWallToExteriorGraph(null, first.wall);
+  assert.equal(firstAppend.accepted, true);
+  const secondAppend = appendDetectedWallToExteriorGraph(firstAppend.graph, second.wall);
+  assert.equal(secondAppend.accepted, true);
+  const distant = {
+    ...first.wall,
+    id: "distant",
+    centreline: { start: { x: 900, y: 900 }, end: { x: 1000, y: 900 } },
+  };
+  const rejected = appendDetectedWallToExteriorGraph(secondAppend.graph, distant);
+  assert.equal(rejected.accepted, false);
+}
+
+// ---- ordered path closes cleanly -----------------------------------------
+{
+  const walls = buildDetectedWalls({
+    source: "fixture",
+    segments: rectBands(100, 100, 300, 250),
+  }, { sourceWidth: 500, sourceHeight: 400 });
+  let graph = null;
+  let current = findWallUnderPointer({ x: 160, y: 104 }, { walls }).wall;
+  for (let i = 0; i < 4; i += 1) {
+    const result = appendDetectedWallToExteriorGraph(graph, current);
+    assert.equal(result.accepted, true);
+    graph = result.graph;
+    const suggestions = connectedWallSuggestions(result.activeEndpoint, {
+      walls,
+      selectedWalls: walls.filter((wall) => graph.segments.some((segment) => segment.detectedWallId === wall.id)),
+    });
+    current = suggestions[0]?.wall;
+    if (!current) break;
+  }
+  assert.equal(graph.isClosed, true);
+  assert.equal(orderedPathPoints(graph).length, 4);
 }
 
 console.log("wallDrawing.test.mjs passed");

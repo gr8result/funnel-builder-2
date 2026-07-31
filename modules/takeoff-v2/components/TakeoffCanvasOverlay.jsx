@@ -167,9 +167,6 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Exterior + internal wall segments */}
-        {tools.exteriorProposal && (
-          <ProposalOutline proposal={tools.exteriorProposal} project={project} />
-        )}
         {showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
@@ -196,13 +193,19 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
         {/* Manual Exterior/Internal Wall drawing: keep the canvas precise.
             Length/status text lives outside the drawing area in the toolbar. */}
-        {isWallDraw && tools.wallDrawHoverPreview?.point && (
+        {isWallDraw && tools.wallDrawHoverPreview?.detectedWall && (
+          <DetectedWallPreview wall={tools.wallDrawHoverPreview.detectedWall} project={project} testId="wall-hover-preview" />
+        )}
+        {isWallDraw && tools.nextWallSuggestions?.map((suggestion) => (
+          <DetectedWallPreview key={suggestion.wall.id} wall={suggestion.wall} project={project} dashed testId="next-wall-suggestion" />
+        ))}
+        {isWallDraw && tools.wallDrawHoverPreview?.point && !tools.wallDrawHoverPreview?.detectedWall && (
           <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
         )}
         {isEditTool && tools.wallEditSnapPreview?.point && (
           <SnapMarker point={tools.wallEditSnapPreview.point} snap={tools.wallEditSnapPreview.snap} label={tools.wallEditSnapPreview.label} project={project} />
         )}
-        {isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
+        {isWallDraw && !tools.wallDrawHoverPreview?.detectedWall && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
           const field = tools.activeTool === "exterior-wall" ? "exteriorWalls" : "internalWalls";
           const vertexById = field === "exteriorWalls" ? exteriorVertexById : internalVertexById;
           const chainStart = vertexById.get(tools.wallDrawChainVertexId);
@@ -330,41 +333,24 @@ function WallVertexDot({ vertex, index, project, selected }) {
   );
 }
 
-function ProposalOutline({ proposal, project }) {
-  const vertices = proposal?.vertices || [];
-  const segments = proposal?.segments || [];
-  const byId = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+function DetectedWallPreview({ wall, project, dashed, testId }) {
+  if (!wall?.centreline?.start || !wall?.centreline?.end) return null;
+  const a = project(wall.centreline.start);
+  const b = project(wall.centreline.end);
   return (
-    <g data-testid="exterior-proposal-outline">
-      {segments.map((segment) => {
-        const a = byId.get(segment.aId);
-        const b = byId.get(segment.bId);
-        if (!a || !b) return null;
-        const pa = project(a);
-        const pb = project(b);
-        return (
-          <line
-            key={segment.id}
-            x1={pa.x}
-            y1={pa.y}
-            x2={pb.x}
-            y2={pb.y}
-            stroke="#0891b2"
-            strokeWidth={2.5}
-            strokeDasharray="8 5"
-            data-testid="exterior-proposal-segment"
-          />
-        );
-      })}
-      {vertices.map((vertex, index) => {
-        const p = project(vertex);
-        return (
-          <g key={vertex.id} data-testid="exterior-proposal-handle" data-index={index}>
-            <circle cx={p.x} cy={p.y} r={4} fill="#fff" stroke="#0891b2" strokeWidth={2} />
-            <circle cx={p.x} cy={p.y} r={1.3} fill="#0891b2" />
-          </g>
-        );
-      })}
+    <g data-testid={testId}>
+      <line
+        x1={a.x}
+        y1={a.y}
+        x2={b.x}
+        y2={b.y}
+        stroke={dashed ? "#0d9488" : "#f97316"}
+        strokeWidth={dashed ? 2.5 : 4}
+        strokeDasharray={dashed ? "7 5" : undefined}
+        opacity={dashed ? 0.8 : 0.95}
+      />
+      <circle cx={a.x} cy={a.y} r={4} fill="#fff" stroke={dashed ? "#0d9488" : "#f97316"} strokeWidth={2} />
+      <circle cx={b.x} cy={b.y} r={4} fill="#fff" stroke={dashed ? "#0d9488" : "#f97316"} strokeWidth={2} />
     </g>
   );
 }

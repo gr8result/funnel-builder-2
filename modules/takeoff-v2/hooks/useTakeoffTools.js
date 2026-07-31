@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2, EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 } from "../types.js";
+import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -34,7 +34,7 @@ import {
   sumSegmentLengthsMm,
   splitSegment,
 } from "../takeoff/wallGraph.js";
-import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
+import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallUnderPointer } from "../takeoff/wallSelection.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import {
   validateExteriorWallsForConfirmation,
@@ -53,7 +53,7 @@ const SNAP_TOLERANCE_SCREEN_PX = 12; // spec: "10-14 screen pixels"
 const MANUAL_SNAP = { kind: "manual", lineId: null, lineIds: null };
 const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirmed: false, confirmedAt: null, detectionConfidence: null, detectedSnapshot: null };
 const AUTO_DETECTION_DISABLED_MESSAGE = "Automatic exterior detection is temporarily disabled because it is not reliable enough. Use Trace Exterior to select the outside building corners accurately.";
-const NO_EXTERIOR_PROPOSAL_MESSAGE = "No reliable exterior proposal found. Continue with Trace Exterior.";
+const NO_EXTERIOR_PROPOSAL_MESSAGE = "No reliable connected exterior wall path found. Use Trace Exterior and click directly on an exterior wall.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 
 function snapCandidateToMetadata(candidate) {
@@ -144,6 +144,22 @@ function distancePointToSegment(point, a, b) {
   return distance(point, { x: a.x + abx * t, y: a.y + aby * t });
 }
 
+function activeExteriorEndpoint(graph) {
+  if (!graph?.vertices?.length || !graph?.segments?.length) return null;
+  const degree = new Map(graph.vertices.map((vertex) => [vertex.id, 0]));
+  graph.segments.forEach((segment) => {
+    degree.set(segment.aId, (degree.get(segment.aId) || 0) + 1);
+    degree.set(segment.bId, (degree.get(segment.bId) || 0) + 1);
+  });
+  const open = graph.vertices.filter((vertex) => (degree.get(vertex.id) || 0) === 1);
+  return open[open.length - 1] || null;
+}
+
+function selectedDetectedWalls(graph, detectedWalls) {
+  const byId = new Map(detectedWalls.map((wall) => [wall.id, wall]));
+  return (graph?.segments || []).map((segment) => byId.get(segment.detectedWallId)).filter(Boolean);
+}
+
 export function snapLabelForCandidate(candidate) {
   if (!candidate) return "";
   if (candidate.type === "intersection" || candidate.kind === "intersection") return "Wall intersection";
@@ -211,11 +227,6 @@ export function validateEditedExteriorGraph(graph, movedVertexId = null) {
   return { valid: true, vertexId: null, message: "" };
 }
 
-export function exteriorProposalKey(proposal) {
-  const points = orderedVerticesFromGraph(proposal).map((point) => `${Math.round(point.x * 10) / 10},${Math.round(point.y * 10) / 10}`);
-  return points.join("|");
-}
-
 export function tracedSegmentHasWallEvidence(from, to, planGeometryIndex, toleranceDocUnits = 8) {
   if (!from || !to || !Array.isArray(planGeometryIndex?.segments)) return false;
   const traceLength = distance(from, to);
@@ -268,8 +279,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [wallDetectionMessage, setWallDetectionMessage] = useState("");
   const [wallDetectionCode, setWallDetectionCode] = useState(null); // "USER_AUTH_REQUIRED"|"PROVIDER_NOT_CONFIGURED"|"PROVIDER_AUTH_FAILED"|"PROVIDER_ERROR"|null
   const [wallDetectionStatus, setWallDetectionStatus] = useState("idle"); // "idle"|"detecting"|"unavailable"
-  const [exteriorProposal, setExteriorProposal] = useState(null);
-  const [rejectedProposalKeys, setRejectedProposalKeys] = useState(() => new Set());
+  const [wallSelectionHover, setWallSelectionHover] = useState(null); // { wall, point, distance }
+  const [nextWallSuggestions, setNextWallSuggestions] = useState([]);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
@@ -308,6 +319,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setWallEditValidation(null);
     setWallDrawChainVertexId(null);
     setWallDrawHoverPreview(null);
+    setWallSelectionHover(null);
+    setNextWallSuggestions([]);
     setPendingUnsupportedExteriorSegment(null);
     setOpeningHostWall(null);
     setOpeningStart(null);
@@ -592,92 +605,20 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     }
   }, []);
 
+  const detectedWalls = useMemo(() => buildDetectedWalls(planGeometryIndex, page || {}), [planGeometryIndex, page]);
+
   const suggestExteriorProposal = useCallback(async () => {
     setWallDetectionBusy(true);
-    setWallDetectionStatus("detecting");
-    setWallDetectionMessage("");
-    setWallDetectionCode(null);
-    setExteriorProposal(null);
+    setWallDetectionStatus("incomplete");
+    setWallDetectionMessage(NO_EXTERIOR_PROPOSAL_MESSAGE);
+    setWallDetectionCode("NO_CONNECTED_EXTERIOR_PATH");
     try {
-      const result = detectExteriorWallsFromGeometry({
-        planGeometryIndex,
-        page,
-        planRegion: page?.planRegion?.confirmed ? page.planRegion : null,
-        stitchToleranceDocUnits: 6,
-      });
-      const graph = result?.useful && result?.isClosed && result?.vertices?.length >= 4 && result?.segments?.length >= 4
-        ? { vertices: result.vertices, segments: result.segments, isClosed: result.isClosed }
-        : null;
-      const validation = graph ? validateEditedExteriorGraph(graph) : { valid: false };
-      const key = graph ? exteriorProposalKey(graph) : "";
-      if (!graph || !validation.valid || rejectedProposalKeys.has(key)) {
-        setWallDetectionStatus("incomplete");
-        setWallDetectionMessage(NO_EXTERIOR_PROPOSAL_MESSAGE);
-        setWallDetectionCode("NO_RELIABLE_EXTERIOR_PROPOSAL");
-        return null;
-      }
-      const proposal = {
-        ...graph,
-        source: EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1,
-        status: "proposal-review-required",
-        detectionDiagnostics: result.diagnostics || null,
-        detectionConfidence: result.detectionConfidence ?? null,
-        key,
-      };
-      setExteriorProposal(proposal);
-      setWallDetectionStatus("proposal");
-      setWallDetectionMessage("Exterior proposal - review required");
-      return proposal;
+      await Promise.resolve();
+      return null;
     } finally {
       setWallDetectionBusy(false);
     }
-  }, [planGeometryIndex, page, rejectedProposalKeys]);
-
-  const acceptExteriorProposal = useCallback(() => {
-    if (!exteriorProposal) return;
-    const vertices = exteriorProposal.vertices.map((vertex) => createWallVertex({ id: generateId("wv"), x: vertex.x, y: vertex.y }));
-    const idByOld = new Map(exteriorProposal.vertices.map((vertex, index) => [vertex.id, vertices[index].id]));
-    const segments = exteriorProposal.segments.map((segment) => ({
-      ...segment,
-      id: generateId("ws"),
-      aId: idByOld.get(segment.aId),
-      bId: idByOld.get(segment.bId),
-      wallType: "exterior",
-      source: "manual",
-      confirmed: true,
-      confidence: null,
-      locked: false,
-    })).filter((segment) => segment.aId && segment.bId && segment.aId !== segment.bId);
-    const accepted = {
-      ...exteriorGraphMetadata("exteriorWalls", page?.exteriorWalls || {}),
-      vertices,
-      segments,
-      isClosed: isPerimeterClosed(vertices, segments),
-      confirmed: false,
-      confirmedAt: null,
-      source: EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1,
-      status: "closed-needs-review",
-      proposalAcceptedAt: new Date().toISOString(),
-    };
-    pushUndo("exteriorWalls", page?.exteriorWalls ?? null);
-    commitPage({ exteriorWalls: accepted });
-    setExteriorProposal(null);
-    setWallDetectionStatus("proposal-accepted");
-    setWallDetectionMessage("Exterior proposal accepted as a starting trace. Review and Confirm Exterior when correct.");
-    setActiveToolState("edit-walls");
-  }, [exteriorProposal, page, commitPage, pushUndo]);
-
-  const rejectExteriorProposal = useCallback(() => {
-    if (exteriorProposal?.key) setRejectedProposalKeys((prev) => new Set([...prev, exteriorProposal.key]));
-    setExteriorProposal(null);
-    setWallDetectionStatus("idle");
-    setWallDetectionMessage("");
-    setWallDetectionCode(null);
-  }, [exteriorProposal]);
-
-  const editExteriorProposal = useCallback(() => {
-    acceptExteriorProposal();
-  }, [acceptExteriorProposal]);
+  }, []);
   // Results-panel/toolbar "Accept All High-Confidence Segments" — confirms
   // every unreviewed automatic segment whose per-segment confidence is
   // "high" in one action, without touching medium/low-confidence ones that
@@ -1752,12 +1693,77 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   }, [activeTool, wallDrawChainVertexId, page, forcedAxis, planGeometryIndex]);
 
   const updateWallDrawHover = useCallback((rawPoint, options) => {
+    if (activeTool === "exterior-wall") {
+      const hit = findWallUnderPointer(rawPoint, { walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
+      setWallSelectionHover(hit);
+      if (hit) {
+        const endpoint = activeExteriorEndpoint(page?.exteriorWalls);
+        setNextWallSuggestions(connectedWallSuggestions(endpoint, {
+          walls: detectedWalls,
+          selectedWalls: selectedDetectedWalls(page?.exteriorWalls, detectedWalls),
+        }));
+        const lengthMm = page?.calibration?.mmPerDocumentUnit ? hit.wall.length * page.calibration.mmPerDocumentUnit : null;
+        setWallDrawHoverPreview({
+          detectedWall: hit.wall,
+          point: hit.point,
+          snap: { kind: "line" },
+          label: "Exterior wall found",
+          lengthMm,
+        });
+        return;
+      }
+      setWallDrawHoverPreview(null);
+      return;
+    }
     setWallDrawHoverPreview(resolveWallDrawPoint(rawPoint, options));
-  }, [resolveWallDrawPoint]);
+  }, [activeTool, detectedWalls, page, resolveWallDrawPoint]);
 
   const handleWallDrawClick = useCallback((rawPoint, options) => {
     const field = wallFieldForTool(activeTool);
     if (!field) return;
+    if (activeTool === "exterior-wall") {
+      const hit = findWallUnderPointer(rawPoint, { walls: detectedWalls, zoomScale: options?.zoomScale || 1 });
+      if (!hit) {
+        setWallDetectionStatus("incomplete");
+        setWallDetectionMessage("No wall found under click. Click directly on a visible exterior wall.");
+        setWallDetectionCode("NO_LOCAL_WALL");
+        return;
+      }
+      const result = appendDetectedWallToExteriorGraph(page?.exteriorWalls, hit.wall);
+      if (!result.accepted) {
+        setWallDetectionStatus("incomplete");
+        setWallDetectionMessage(result.reason || "Selected wall is not connected to the current exterior path.");
+        setWallDetectionCode("WALL_NOT_CONNECTED");
+        return;
+      }
+      pushUndo("exteriorWalls", page?.exteriorWalls ?? null);
+      const current = page?.exteriorWalls || EMPTY_WALL_GRAPH;
+      const metadata = exteriorGraphMetadata("exteriorWalls", current);
+      const nextGraph = {
+        ...metadata,
+        ...current,
+        vertices: result.graph.vertices,
+        segments: result.graph.segments,
+        isClosed: result.graph.isClosed,
+        confirmed: false,
+        confirmedAt: null,
+        source: EXTERIOR_SOURCE_MANUAL_TRACE_V2,
+        status: result.closed ? "closed-needs-review" : "open-wall-selection",
+      };
+      commitPage({ exteriorWalls: nextGraph });
+      setWallSelectionHover(null);
+      setWallDrawHoverPreview(null);
+      setPendingUnsupportedExteriorSegment(null);
+      setWallDrawChainVertexId(result.activeEndpoint?.id || null);
+      setNextWallSuggestions(connectedWallSuggestions(result.activeEndpoint, {
+        walls: detectedWalls,
+        selectedWalls: [...selectedDetectedWalls(result.graph, detectedWalls), hit.wall],
+      }));
+      setWallDetectionStatus(result.closed ? "closed-needs-review" : "idle");
+      setWallDetectionMessage(result.closed ? "Exterior perimeter closed - review required" : "Exterior wall found");
+      setWallDetectionCode(null);
+      return;
+    }
     const resolved = resolveWallDrawPoint(rawPoint, options);
     if (!resolved) return;
 
@@ -1804,7 +1810,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setWallDetectionMessage(resolved.snap?.kind === "line" ? "Snapped to wall line" : resolved.snap ? "Snapped to wall corner" : "");
       setWallDetectionCode(null);
     }
-  }, [activeTool, page, wallDrawChainVertexId, resolveWallDrawPoint, mutateWallField, planGeometryIndex, pendingUnsupportedExteriorSegment]);
+  }, [activeTool, page, wallDrawChainVertexId, resolveWallDrawPoint, mutateWallField, planGeometryIndex, pendingUnsupportedExteriorSegment, detectedWalls, pushUndo, commitPage]);
 
   // Double-click or the toolbar's Finish button.
   const finishWallDrawing = useCallback(() => {
@@ -1837,7 +1843,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
-    exteriorProposal, suggestExteriorProposal, acceptExteriorProposal, editExteriorProposal, rejectExteriorProposal,
+    suggestExteriorProposal, wallSelectionHover, nextWallSuggestions,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
     acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates,
