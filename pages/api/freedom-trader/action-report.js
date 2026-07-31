@@ -154,6 +154,7 @@ export default async function handler(req, res) {
     account: req.body?.account || null,
     settings: req.body?.settings || {},
     scanSummary,
+    marketWatch: req.body?.marketWatch || null,
   });
   report.opportunityEngine = opportunityEngineResult ? {
     engineVersion: opportunityEngineResult.engineVersion,

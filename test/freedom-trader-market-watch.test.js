@@ -3,10 +3,14 @@ import test from "node:test";
 import {
   buildMarketWatchAnswer,
   evaluateWatchPlan,
+  normalizeMarketWatchSettings,
   normalizeTradePlan,
   runMarketWatchCycle,
   updateAlertState,
 } from "../lib/freedom-trader/marketWatchEngine.js";
+import { DesktopNotificationProvider } from "../lib/freedom-trader/notificationProvider.js";
+import { MarketWatchService } from "../lib/freedom-trader/marketWatchService.js";
+import { clearCompletedMarketWatchAlerts, writeMarketWatchStore } from "../lib/freedom-trader/marketWatchStore.js";
 
 const NOW = new Date("2026-08-01T09:00:00.000Z");
 
@@ -116,6 +120,8 @@ test("dashboard refresh prioritises active alert actions", async () => {
   assert.equal(result.answer.heading, "ACTION REQUIRED");
   assert.equal(result.answer.action, "BUY NOW");
   assert.match(result.answer.message, /Open CMC/);
+  assert.match(result.alerts[0].message, /^ACTION REQUIRED/);
+  assert.equal(result.alerts[0].notificationTitle, "ACTION REQUIRED");
 });
 
 test("acknowledgement removes an alert from the active dashboard answer", async () => {
@@ -146,4 +152,83 @@ test("alert ordering is newest first", async () => {
   });
   assert.equal(newer.alerts[0].action, "SAFETY EXIT");
   assert.equal(newer.alerts[1].action, "BUY NOW");
+});
+
+test("monitoring interval scheduling accepts only configured choices", () => {
+  assert.equal(normalizeMarketWatchSettings({ intervalSeconds: 30 }).intervalSeconds, 30);
+  assert.equal(normalizeMarketWatchSettings({ intervalSeconds: 120 }).intervalSeconds, 120);
+  assert.equal(normalizeMarketWatchSettings({ intervalSeconds: 17 }).intervalSeconds, 60);
+});
+
+test("failure recovery continues remaining symbols and logs errors", async () => {
+  const result = await runMarketWatchCycle({
+    plans: [plan({ id: "bad", symbol: "BAD" }), plan({ id: "good", symbol: "GOOD" })],
+    alerts: [],
+    fetchQuote: async (symbol) => {
+      if (symbol === "BAD") throw new Error("quote failed");
+      return { price: 381.18, dataQuality: "live" };
+    },
+    now: NOW,
+  });
+  assert.equal(result.evaluations.length, 2);
+  assert.equal(result.errors[0].symbol, "BAD");
+  assert.equal(result.newAlerts.length, 1);
+});
+
+test("desktop notification provider sends ACTION REQUIRED notifications", async () => {
+  const sent = [];
+  global.window = {
+    Notification: class {
+      static permission = "granted";
+      static async requestPermission() { return "granted"; }
+      constructor(title, options) {
+        sent.push({ title, options });
+      }
+    },
+    focus() {},
+    location: { href: "" },
+  };
+  global.Notification = global.window.Notification;
+  const provider = new DesktopNotificationProvider();
+  const result = await provider.send({ id: "alert-1", notificationTitle: "ACTION REQUIRED", notificationBody: "Buy Broadcom now.", companyUrl: "/freedom-trader/company/AVGO" });
+  assert.equal(result.ok, true);
+  assert.equal(sent[0].title, "ACTION REQUIRED");
+  assert.equal(sent[0].options.body, "Buy Broadcom now.");
+  delete global.window;
+  delete global.Notification;
+});
+
+test("monitoring service starts and pauses without overlapping ownership in the dashboard", async () => {
+  await writeMarketWatchStore({ settings: { intervalSeconds: 60 }, service: { enabled: false }, plans: [], alerts: [], cycles: [] });
+  const service = new MarketWatchService();
+  const started = await service.start();
+  assert.equal(started.service.enabled, true);
+  assert.ok(started.service.nextScheduledCheckAt);
+  const paused = await service.pause("test pause");
+  assert.equal(paused.service.enabled, false);
+  assert.equal(paused.pausedReason, "test pause");
+});
+
+test("manual Run Check Now does not enable paused monitoring", async () => {
+  await writeMarketWatchStore({ settings: { intervalSeconds: 60 }, service: { enabled: false }, plans: [], alerts: [], cycles: [] });
+  const service = new MarketWatchService();
+  const snapshot = await service.runNow();
+  assert.equal(snapshot.service.enabled, false);
+  assert.equal(snapshot.pausedReason, "Monitoring paused.");
+  assert.equal(snapshot.cycles.length, 1);
+});
+
+test("completed alert cleanup preserves pending alerts", async () => {
+  await writeMarketWatchStore({
+    settings: { intervalSeconds: 60 },
+    service: { enabled: false },
+    plans: [],
+    alerts: [
+      { id: "keep", action: "BUY NOW", createdAt: "2026-08-01T09:00:00.000Z" },
+      { id: "drop", action: "FINAL EXIT", createdAt: "2026-08-01T09:01:00.000Z", completedAt: "2026-08-01T09:02:00.000Z" },
+    ],
+    cycles: [],
+  });
+  const result = await clearCompletedMarketWatchAlerts();
+  assert.deepEqual(result.alerts.map((item) => item.id), ["keep"]);
 });

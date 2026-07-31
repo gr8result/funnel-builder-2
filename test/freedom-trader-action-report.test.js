@@ -234,10 +234,25 @@ test("Morning Report includes morning-focused sections", () => {
 });
 
 test("Evening Report includes evening-focused sections", () => {
-  const result = report({ reportType: "evening", scannerRows: [row("NVDA", { currentPrice: 110 })] });
+  const result = report({
+    reportType: "evening",
+    scannerRows: [row("NVDA", { currentPrice: 110 })],
+    marketWatch: {
+      alerts: [{ id: "alert-buy", action: "BUY NOW" }],
+      plans: [
+        { id: "completed", state: "COMPLETED" },
+        { id: "cancelled", state: "CANCELLED" },
+        { id: "remaining", state: "ACTIVE" },
+      ],
+    },
+  });
   assert.ok(result.summary.ordersThatDidNotTrigger);
   assert.ok(result.summary.ordersThatShouldNowBeCancelled);
   assert.ok(result.summary.positionsThatCanRemainOpen);
+  assert.equal(result.summary.marketWatch.alerts.length, 1);
+  assert.equal(result.summary.marketWatch.completedTrades.length, 1);
+  assert.equal(result.summary.marketWatch.cancelledSetups.length, 1);
+  assert.equal(result.summary.marketWatch.remainingMonitoredTrades.length, 1);
 });
 
 test("current report ends with one clear overall instruction", () => {

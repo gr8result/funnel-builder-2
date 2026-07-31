@@ -1,53 +1,35 @@
-import { getCurrentPrice } from "../../../lib/freedom-trader/marketDataService.js";
-import { runMarketWatchCycle } from "../../../lib/freedom-trader/marketWatchEngine.js";
+import { getMarketWatchService } from "../../../lib/freedom-trader/marketWatchService.js";
 import {
   addMarketWatchPlans,
-  marketWatchSnapshot,
-  readMarketWatchStore,
-  saveMarketWatchCycle,
+  clearCompletedMarketWatchAlerts,
   updateMarketWatchAlert,
   updateMarketWatchSettings,
 } from "../../../lib/freedom-trader/marketWatchStore.js";
 
-async function fetchQuote(symbol) {
-  const quote = await getCurrentPrice(symbol);
-  return {
-    price: quote?.price,
-    currentPrice: quote?.price,
-    dataQuality: quote?.dataQuality,
-    timestamp: quote?.timestamp,
-    error: quote?.error,
-  };
-}
-
-async function runCycle() {
-  const store = await readMarketWatchStore();
-  const result = await runMarketWatchCycle({
-    plans: store.plans,
-    alerts: store.alerts,
-    settings: store.settings,
-    fetchQuote,
-  });
-  return saveMarketWatchCycle(result);
-}
-
 export default async function handler(req, res) {
   try {
+    const service = getMarketWatchService();
     if (req.method === "GET") {
-      const store = await readMarketWatchStore();
-      return res.status(200).json(marketWatchSnapshot(store));
+      return res.status(200).json(await service.status());
     }
 
     if (req.method === "POST") {
-      const action = String(req.body?.action || "cycle").toLowerCase();
+      const action = String(req.body?.action || "status").toLowerCase();
       if (action === "register") {
         const plans = Array.isArray(req.body?.plans) ? req.body.plans : [];
-        return res.status(200).json(await addMarketWatchPlans(plans));
+        await addMarketWatchPlans(plans);
+        return res.status(200).json(await service.start());
       }
       if (action === "settings") {
-        return res.status(200).json(await updateMarketWatchSettings(req.body?.settings || {}));
+        await updateMarketWatchSettings(req.body?.settings || {});
+        const store = await service.status();
+        return res.status(200).json(store.service?.enabled ? await service.start() : store);
       }
-      return res.status(200).json(await runCycle());
+      if (action === "start") return res.status(200).json(await service.start());
+      if (action === "pause") return res.status(200).json(await service.pause());
+      if (action === "run-now") return res.status(200).json(await service.runNow());
+      if (action === "clear-completed") return res.status(200).json(await clearCompletedMarketWatchAlerts());
+      return res.status(200).json(await service.status());
     }
 
     if (req.method === "PATCH") {

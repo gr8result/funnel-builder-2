@@ -1,8 +1,9 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
+import { DesktopNotificationProvider } from "../../lib/freedom-trader/notificationProvider";
 import { isFreedomScanSummaryCurrent, scanActionText } from "../../lib/freedom-trader/scanSummary";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
@@ -108,6 +109,8 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [recentReports, setRecentReports] = useState([]);
   const [actionAlerts, setActionAlerts] = useState([]);
   const [marketWatch, setMarketWatch] = useState({ plans: [], alerts: [], settings: { intervalSeconds: 60, maximumAlerts: 50, enableBuyAlerts: true, enableSellAlerts: true, enableStopAlerts: true, enableCancelAlerts: true }, answer: null });
+  const notifiedAlertIds = useRef(new Set());
+  const [desktopNotificationMessage, setDesktopNotificationMessage] = useState("");
   const [reportError, setReportError] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
   const [reportDetailsOpen, setReportDetailsOpen] = useState(false);
@@ -188,18 +191,30 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
   useEffect(() => {
     if (!unlocked) return;
-    const intervalSeconds = Math.max(10, Number(marketWatch?.settings?.intervalSeconds) || 60);
     let cancelled = false;
-    async function cycle() {
-      const data = await runMarketWatchCycleRequest().catch(() => null);
+    async function refreshWatch() {
+      const data = await fetchMarketWatchStatus().catch(() => null);
       if (!cancelled && data?.ok) setMarketWatch(data);
     }
-    const timer = window.setInterval(cycle, intervalSeconds * 1000);
+    const timer = window.setInterval(refreshWatch, 15000);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [unlocked, marketWatch?.settings?.intervalSeconds]);
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (!unlocked || !marketWatch?.alerts?.length) return;
+    const provider = new DesktopNotificationProvider();
+    const active = marketWatch.alerts.filter((alert) => !alert.acknowledgedAt && !alert.completedAt && !alert.dismissedAt);
+    active.forEach((alert) => {
+      if (notifiedAlertIds.current.has(alert.id)) return;
+      notifiedAlertIds.current.add(alert.id);
+      provider.send(alert).then((result) => {
+        if (result?.reason === "Desktop notifications disabled.") setDesktopNotificationMessage("Desktop notifications disabled. Continue monitoring normally.");
+      }).catch(() => setDesktopNotificationMessage("Desktop notifications disabled. Continue monitoring normally."));
+    });
+  }, [unlocked, marketWatch?.alerts]);
 
   async function unlock(event) {
     event.preventDefault();
@@ -214,6 +229,8 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
   const bestOpportunities = useMemo(() => opportunityRows.slice(0, 5), [opportunityRows]);
   const activeWatchAlert = marketWatch?.alerts?.find((alert) => !alert.acknowledgedAt && !alert.completedAt && !alert.dismissedAt);
+  const activeWatchPlanCount = marketWatch?.plans?.filter((plan) => ["WAITING_FOR_ENTRY", "ACTIVE", "PARTIAL_PROFIT"].includes(plan.state)).length || 0;
+  const queuedAlertCount = marketWatch?.alerts?.filter((alert) => !alert.completedAt && !alert.dismissedAt).length || 0;
 
   function applyScannerData(scannerData) {
     const summary = scannerData?.scanSummary || null;
@@ -284,6 +301,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           trades: journalTrades,
           account: paperAccount,
           settings: reportSettings,
+          marketWatch,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -300,11 +318,17 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     }
   }
 
-  async function runMarketWatchCycleRequest() {
+  async function fetchMarketWatchStatus() {
+    const response = await fetch("/api/freedom-trader/market-watch");
+    if (!response.ok) return null;
+    return response.json().catch(() => null);
+  }
+
+  async function marketWatchCommand(action, extra = {}) {
     const response = await fetch("/api/freedom-trader/market-watch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cycle" }),
+      body: JSON.stringify({ action, ...extra }),
     });
     if (!response.ok) return null;
     return response.json().catch(() => null);
@@ -327,12 +351,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         confidence: item.technicalDetails?.score,
       }));
     if (!plans.length) return;
-    const response = await fetch("/api/freedom-trader/market-watch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "register", plans }),
-    });
-    const data = await response.json().catch(() => null);
+    const data = await marketWatchCommand("register", { plans });
     if (data?.ok) setMarketWatch(data);
   }
 
@@ -348,12 +367,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
   async function updateWatchSetting(key, value) {
     const settings = { ...(marketWatch?.settings || {}), [key]: value };
-    const response = await fetch("/api/freedom-trader/market-watch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "settings", settings }),
-    });
-    const data = await response.json().catch(() => null);
+    const data = await marketWatchCommand("settings", { settings });
+    if (data?.ok) setMarketWatch(data);
+  }
+
+  async function runWatchCommand(action) {
+    const data = await marketWatchCommand(action);
     if (data?.ok) setMarketWatch(data);
   }
 
@@ -385,14 +404,18 @@ export default function FreedomTraderDashboard({ passwordHash }) {
             <button type="button" onClick={() => generateReport("morning")} disabled={reportLoading || scanLoading}>Morning</button>
             <button type="button" onClick={() => generateReport("evening")} disabled={reportLoading || scanLoading}>Evening</button>
             <button type="button" onClick={() => generateReport(report?.reportType || "now")} disabled={reportLoading || scanLoading}>Refresh</button>
+            <button type="button" onClick={() => runWatchCommand("start")}>Start Monitoring</button>
+            <button type="button" onClick={() => runWatchCommand("pause")}>Pause Monitoring</button>
+            <button type="button" onClick={() => runWatchCommand("run-now")}>Run Check Now</button>
+            <button type="button" onClick={() => runWatchCommand("clear-completed")}>Clear Completed Alerts</button>
           </div>
         </section>
 
         <section className="todayStatus">
           <Card label="Open trades" value={positions.length} note={positions.length ? "Review actions below." : "Nothing needs your attention."} />
-          <Card label="Market Watch" value={marketWatch?.plans?.filter((plan) => ["WAITING_FOR_ENTRY", "ACTIVE", "PARTIAL_PROFIT"].includes(plan.state)).length || 0} note={activeWatchAlert ? `${activeWatchAlert.action} required` : "No action required"} />
-          <Card label="Cash available" value={formatManualAccountCurrency(reportSettings.availableCash, reportSettings.accountCurrency)} note="manual" />
-          <Card label="Money currently committed" value={formatManualAccountCurrency(plannedCommittedValue(pendingOrders), reportSettings.accountCurrency)} note={pendingOrders.length ? `${pendingOrders.length} pending order${pendingOrders.length === 1 ? "" : "s"}` : "manual / no pending orders loaded"} />
+          <Card label="Market Watch" value={marketWatch?.service?.enabled ? "Running" : "Paused"} note={activeWatchAlert ? `${activeWatchAlert.action} required` : marketWatch?.pausedReason || "No action required"} />
+          <Card label="Active watches" value={activeWatchPlanCount} note={`${queuedAlertCount} queued alert${queuedAlertCount === 1 ? "" : "s"}`} />
+          <Card label="Last check" value={marketWatch?.lastCheck ? formatDateTime(marketWatch.lastCheck) : "--"} note={marketWatch?.nextCheck ? `Next ${formatDateTime(marketWatch.nextCheck)}` : "No check scheduled"} />
         </section>
 
         <section className="openTradesPanel">
@@ -426,10 +449,14 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           </details>
           <details>
             <summary>Alerts</summary>
+            <p>{marketWatch?.monitoringLabel || "Monitoring paused"}. Last market update: {marketWatch?.lastSuccessfulMarketUpdate ? formatDateTime(marketWatch.lastSuccessfulMarketUpdate) : "--"}.</p>
+            <p>{activeWatchPlanCount} active watch plan{activeWatchPlanCount === 1 ? "" : "s"}. {queuedAlertCount} queued alert{queuedAlertCount === 1 ? "" : "s"}.</p>
+            {desktopNotificationMessage ? <p>{desktopNotificationMessage}</p> : null}
             <p>{marketWatch?.answer?.message || (alerts.length ? `${alerts.length} saved alert${alerts.length === 1 ? "" : "s"} loaded.` : "No saved alerts were returned.")}</p>
             {marketWatch?.alerts?.length ? marketWatch.alerts.slice(0, marketWatch.settings?.maximumAlerts || 50).map((alert) => (
               <article className="instruction" key={alert.id}>
-                <strong>{alert.action} {alert.companyName || alert.symbol}</strong>
+                <strong>ACTION REQUIRED</strong>
+                <span>{alert.action} {alert.companyName || alert.symbol}</span>
                 <span>Current price: {formatCurrency(alert.currentPrice, alert.currency || "USD")}</span>
                 <span>Trigger price: {formatCurrency(alert.triggerPrice, alert.currency || "USD")}</span>
                 <span>Created: {formatDateTime(alert.createdAt)}</span>
@@ -458,7 +485,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
             <div className="managementSettings">
               <label><input checked={reportSettings.moveSafetyExitToEntryAfterTakeProfit} onChange={(event) => toggleReportSetting("moveSafetyExitToEntryAfterTakeProfit", event.target.checked)} type="checkbox" /> After Take Some Profit, move Safety Exit to the original buy price</label>
               <label><input checked={reportSettings.target1IsCompleteExit} onChange={(event) => toggleReportSetting("target1IsCompleteExit", event.target.checked)} type="checkbox" /> Treat Take Some Profit as the complete exit when no Final Exit is available</label>
-              <label>Monitoring interval<input type="number" value={marketWatch?.settings?.intervalSeconds || 60} onChange={(event) => updateWatchSetting("intervalSeconds", Number(event.target.value) || 60)} /></label>
+              <label>Monitoring interval<select value={marketWatch?.settings?.intervalSeconds || 60} onChange={(event) => updateWatchSetting("intervalSeconds", Number(event.target.value) || 60)}><option value={30}>30 sec</option><option value={60}>60 sec</option><option value={120}>2 min</option><option value={300}>5 min</option><option value={600}>10 min</option></select></label>
               <label>Maximum alerts<input type="number" value={marketWatch?.settings?.maximumAlerts || 50} onChange={(event) => updateWatchSetting("maximumAlerts", Number(event.target.value) || 50)} /></label>
               <label><input checked={marketWatch?.settings?.enableBuyAlerts !== false} onChange={(event) => updateWatchSetting("enableBuyAlerts", event.target.checked)} type="checkbox" /> Enable BUY alerts</label>
               <label><input checked={marketWatch?.settings?.enableSellAlerts !== false} onChange={(event) => updateWatchSetting("enableSellAlerts", event.target.checked)} type="checkbox" /> Enable SELL alerts</label>
@@ -710,7 +737,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1180px}h1,h2,h3,h4,p{margin:0}p{color:#aebdc4}.answerPanel,.todayStatus,.openTradesPanel,.detailDrawer details,.gate{background:rgba(8,14,17,.95);border:1px solid rgba(29,155,255,.18);border-radius:8px}.answerPanel{border-color:rgba(255,153,0,.48);overflow:hidden}.dailyAnswer{display:grid;gap:18px;padding:34px}.dailyAnswer span,.todayStatus span,.reportMeta span,.accountSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer h1{color:#fff;font-size:clamp(28px,4vw,46px)}.dailyAnswer>strong{color:#fff;font-size:clamp(32px,5.5vw,72px);line-height:1}.dailyAnswer p{font-size:20px;max-width:820px}.dailyAnswer dl{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;max-width:900px}.dailyAnswer div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.dailyAnswer dt{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer dd{color:#fff;font-size:22px;font-weight:950;margin:5px 0 0}.dailyAnswer a,.detailDrawer a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:950;justify-self:start;min-height:40px;align-items:center;padding:0 12px;text-decoration:none}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;justify-self:start;min-height:58px;padding:0 24px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.reportControls{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:38px;padding:0 12px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.todayStatus{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.todayStatus article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:6px;padding:14px}.todayStatus strong{color:#fff;font-size:24px}.todayStatus p{font-size:13px}.openTradesPanel{display:grid;gap:12px;padding:20px}.openTradesPanel h2{font-size:26px}.openTradesPanel article{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;grid-template-columns:1fr auto auto;padding:14px}.openTradesPanel b{background:rgba(138,100,18,.8);border-radius:7px;color:#fff;padding:7px 10px}.detailDrawer{display:grid;gap:10px}.detailDrawer details{padding:0}.detailDrawer summary{cursor:pointer;font-size:18px;font-weight:950;list-style:none;padding:18px}.detailDrawer summary::-webkit-details-marker{display:none}.detailDrawer details[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}.detailDrawer details>*:not(summary){margin:14px 18px}.settingsGrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{display:flex;flex-wrap:wrap;gap:10px}.managementSettings label,.detailsToggle{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.reportBody{display:grid;gap:16px;padding:0}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.alertButtons{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}.alertButtons button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:40px;padding:0 12px}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayStatus{grid-template-columns:repeat(2,minmax(0,1fr))}.dailyAnswer dl{grid-template-columns:1fr}}@media(max-width:640px){.todayStatus,.settingsGrid{grid-template-columns:1fr}.dailyAnswer{padding:24px}.openTradesPanel article{grid-template-columns:1fr}.managementSettings label{width:100%}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.assistantShell{display:grid;gap:18px;margin:0 auto;max-width:1180px}h1,h2,h3,h4,p{margin:0}p{color:#aebdc4}.answerPanel,.todayStatus,.openTradesPanel,.detailDrawer details,.gate{background:rgba(8,14,17,.95);border:1px solid rgba(29,155,255,.18);border-radius:8px}.answerPanel{border-color:rgba(255,153,0,.48);overflow:hidden}.dailyAnswer{display:grid;gap:18px;padding:34px}.dailyAnswer span,.todayStatus span,.reportMeta span,.accountSummary span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer h1{color:#fff;font-size:clamp(28px,4vw,46px)}.dailyAnswer>strong{color:#fff;font-size:clamp(32px,5.5vw,72px);line-height:1}.dailyAnswer p{font-size:20px;max-width:820px}.dailyAnswer dl{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr));margin:0;max-width:900px}.dailyAnswer div{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.dailyAnswer dt{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.dailyAnswer dd{color:#fff;font-size:22px;font-weight:950;margin:5px 0 0}.dailyAnswer a,.detailDrawer a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:950;justify-self:start;min-height:40px;align-items:center;padding:0 12px;text-decoration:none}.primaryReportButton{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-size:20px;font-weight:950;justify-self:start;min-height:58px;padding:0 24px}.primaryReportButton:disabled,.reportControls button:disabled{cursor:not-allowed;opacity:.65}.reportControls{align-items:center;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-wrap:wrap;gap:10px;padding:14px 20px}.reportControls button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:38px;padding:0 12px}.reportWarning{background:rgba(255,90,70,.14);border-top:1px solid rgba(255,90,70,.28);color:#ffc7be;font-weight:850;padding:12px 20px}.todayStatus{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));padding:14px}.todayStatus article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:6px;padding:14px}.todayStatus strong{color:#fff;font-size:24px}.todayStatus p{font-size:13px}.openTradesPanel{display:grid;gap:12px;padding:20px}.openTradesPanel h2{font-size:26px}.openTradesPanel article{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:grid;gap:8px;grid-template-columns:1fr auto auto;padding:14px}.openTradesPanel b{background:rgba(138,100,18,.8);border-radius:7px;color:#fff;padding:7px 10px}.detailDrawer{display:grid;gap:10px}.detailDrawer details{padding:0}.detailDrawer summary{cursor:pointer;font-size:18px;font-weight:950;list-style:none;padding:18px}.detailDrawer summary::-webkit-details-marker{display:none}.detailDrawer details[open] summary{border-bottom:1px solid rgba(255,255,255,.08)}.detailDrawer details>*:not(summary){margin:14px 18px}.settingsGrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.settingsGrid label{color:#aebdc4;display:grid;font-size:12px;font-weight:900;gap:6px;text-transform:uppercase}.settingsGrid input,.settingsGrid select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:7px;color:#fff;height:38px;padding:0 10px}.managementSettings{display:flex;flex-wrap:wrap;gap:10px}.managementSettings label,.detailsToggle{align-items:center;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:7px;color:#d7efff;display:inline-flex;font-weight:850;gap:8px;min-height:38px;padding:0 12px}.reportBody{display:grid;gap:16px;padding:0}.reportMeta{align-items:center;display:flex;flex-wrap:wrap;gap:12px}.reportMeta strong{background:rgba(255,255,255,.08);border-radius:7px;padding:8px 10px}.reportMeta em{color:#ffd7a1;font-style:normal}.reportGreeting{color:#fff;font-size:20px;font-weight:900;white-space:pre-line}.accountSummary{background:rgba(7,101,61,.16);border:1px solid rgba(13,184,109,.28);border-radius:8px;display:grid;gap:6px;padding:14px}.accountSummary strong{color:#c8ffdf;font-size:18px}.reportItems{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.recommendation,.positionAction,.instruction{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:8px;display:grid;gap:8px;padding:14px}.recommendation h3{font-size:17px}.recommendation>span{color:#aebdc4;font-size:12px;font-weight:900}.statusPill{border-radius:7px;color:#fff;display:inline-flex;font-size:12px;font-weight:950;justify-self:start;padding:6px 8px}.statusPill.readytobuy{background:#0b8f56}.statusPill.wait,.statusPill.hold{background:#8a6412}.statusPill.dataunavailable,.statusPill.safetyexit{background:#8a2d24}.statusPill.takesomeprofit,.statusPill.finalexit{background:#0057d9}.statusPill.cancelorder{background:#7441a8}.statusPill.noaction{background:#42515a}.recommendation pre{background:#020405;border:1px solid rgba(255,255,255,.1);border-radius:7px;color:#d7efff;font-size:12px;overflow:auto;padding:10px;white-space:pre-wrap}.reportSubsection{display:grid;gap:10px}.reportSubsection h3{font-size:18px}.reportSubsection h4{color:#f5f7f8;font-size:14px;margin-top:6px}.positionAction span,.instruction span,.instruction small{color:#aebdc4}.alertButtons{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}.alertButtons button{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;color:#d7efff;cursor:pointer;font-weight:950;min-height:40px;padding:0 12px}.overallAction{background:rgba(255,153,0,.14);border:1px solid rgba(255,153,0,.35);border-radius:8px;display:grid;gap:6px;padding:16px}.overallAction span{color:#ffd7a1;font-weight:900}.overallAction strong{font-size:22px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.page{padding:88px 16px 16px}.todayStatus{grid-template-columns:repeat(2,minmax(0,1fr))}.dailyAnswer dl{grid-template-columns:1fr}}@media(max-width:640px){.todayStatus,.settingsGrid{grid-template-columns:1fr}.dailyAnswer{padding:24px}.openTradesPanel article{grid-template-columns:1fr}.managementSettings label{width:100%}}
   `}</style>;
 }
 
