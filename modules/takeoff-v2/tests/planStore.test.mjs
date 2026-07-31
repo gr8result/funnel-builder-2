@@ -26,6 +26,11 @@ const {
   setSelectedPageId,
   listAllPages,
 } = await import("../persistence/planStore.js");
+const {
+  withPlanPageDefaults,
+  EXTERIOR_SOURCE_MANUAL_TRACE_V2,
+  EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR,
+} = await import("../types.js");
 
 const jobId = "job-1";
 const doc = { id: "doc-1", jobId, fileName: "plan.pdf", originalFileUrl: "data:application/pdf;base64,AAAA", createdAt: new Date().toISOString() };
@@ -65,6 +70,43 @@ setSelectedPageId(jobId, "page-3");
 saveDocument({ ...doc2, fileName: "renamed.pdf" });
 assert.equal(getSelectedPageId(jobId), "page-3");
 assert.equal(listPages("doc-2").length, 1);
+
+// Legacy automatic exterior results are quarantined on load and never become
+// active canvas geometry again.
+{
+  const legacyAuto = withPlanPageDefaults({
+    ...pageA,
+    id: "legacy-auto",
+    exteriorWalls: {
+      vertices: [{ id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 }],
+      segments: [{ id: "s", aId: "a", bId: "b", source: "automatic", confirmed: true }],
+      isClosed: true,
+      confirmed: false,
+      detectedSnapshot: { vertices: [], segments: [] },
+      detectionConfidence: 88,
+    },
+  });
+  assert.equal(legacyAuto.exteriorWalls, null);
+  assert.equal(legacyAuto.legacyExteriorWalls.source, EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR);
+}
+
+// Genuine manual trace data is preserved and versioned as the active exterior
+// workflow schema.
+{
+  const manual = withPlanPageDefaults({
+    ...pageA,
+    id: "manual-trace",
+    exteriorWalls: {
+      vertices: [{ id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 }],
+      segments: [{ id: "s", aId: "a", bId: "b", source: "manual", confirmed: true }],
+      isClosed: false,
+      confirmed: false,
+    },
+  });
+  assert.equal(manual.exteriorWalls.source, EXTERIOR_SOURCE_MANUAL_TRACE_V2);
+  assert.equal(manual.exteriorWalls.vertices.length, 2);
+  assert.equal(manual.exteriorWalls.segments.length, 1);
+}
 
 // A full localStorage quota surfaces a clear, actionable message instead of
 // the raw browser DOMException text — this is what a real upload hits when

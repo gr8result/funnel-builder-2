@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { midpoint, distance } from "../takeoff/geometry.js";
 import { formatLength } from "../takeoff/units.js";
-import { findOpenEndpoints } from "../takeoff/wallGraph.js";
 import { normalizeRegionCorners } from "../takeoff/planRegion.js";
+import { rectFromCorners } from "../takeoff/roomBoundaryDetection.js";
 
 const IDENTITY_VIEW = { panX: 0, panY: 0, zoomScale: 1 };
 
@@ -19,19 +19,6 @@ const SNAP_STYLES = {
 // from a detected line endpoint/intersection/nearest-point-on-line, and
 // surfaces the H/V soft-lock as its own status when no geometry candidate
 // was found at all.
-function wallDrawSnapStatusLabel(hoverPreview, { vertexById } = {}) {
-  if (!hoverPreview) return null;
-  const snap = hoverPreview.snap;
-  if (snap) {
-    if (snap.kind === "intersection") return "Snap: Intersection";
-    if (snap.kind === "endpoint") return vertexById?.has(snap.lineId) ? "Snap: Corner" : "Snap: Wall endpoint";
-    if (snap.kind === "line") return "Snap: Wall line";
-    return null;
-  }
-  if (hoverPreview.locked) return hoverPreview.axis === "vertical" ? "Snap: Vertical" : "Snap: Horizontal";
-  return null;
-}
-
 // Suggested defaults from the spec, kept in one place so every marker/fill
 // agrees: exterior green, internal blue, windows cyan, doors orange, open
 // openings yellow, areas translucent purple, unconfirmed automatic
@@ -112,6 +99,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         height={viewport.height}
         style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none", overflow: "visible" }}
         data-testid="takeoff-overlay"
+        data-area-search-draft={tools.areaSearchDraft ? "true" : "false"}
       >
         {/* Confirmed calibration reference line (dim, small) */}
         {page?.calibration && (
@@ -155,12 +143,17 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
         {/* Confirmed area polygon fills */}
         {showLayer("areas") && (page?.areas || []).map((area) => {
-          const pts = area.vertices.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
-          const areaCenter = project(centroid(area.vertices));
+          const boundary = area.outerBoundary || area.vertices || [];
+          const pts = boundary.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
+          const areaCenter = project(centroid(boundary));
           return (
             <g key={area.id} data-testid="area-polygon">
               <polygon points={pts} fill="rgba(124,58,237,0.15)" stroke="#7c3aed" strokeWidth={1.5} opacity={area.included === false ? 0.4 : 1} />
               <text x={areaCenter.x} y={areaCenter.y} textAnchor="middle" fontSize={11} fontWeight={700} fill="#5b21b6">{area.name}</text>
+              {(area.holes || []).map((hole) => {
+                const holePts = hole.vertices.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
+                return <polygon key={hole.id} points={holePts} fill="rgba(249,115,22,0.20)" stroke="#f97316" strokeWidth={1.2} strokeDasharray="4 3" data-testid="area-exclusion-polygon" />;
+              })}
             </g>
           );
         })}
@@ -168,6 +161,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         {/* In-progress manual area trace */}
         {isAreaTool && tools.areaDraftVertices.length > 0 && (
           <ManualAreaDraft vertices={tools.areaDraftVertices} hoverPoint={tools.areaHoverPoint} project={project} />
+        )}
+        {isAreaTool && tools.areaSearchDraft?.start && tools.areaSearchDraft?.end && (
+          <AreaSearchRect rect={rectFromCorners(tools.areaSearchDraft.start, tools.areaSearchDraft.end)} project={project} />
         )}
 
         {/* Exterior + internal wall segments */}
@@ -195,38 +191,20 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
           <LiveLine from={exteriorVertexById.get(tools.selectedVertexId)} to={tools.hoverPoint} project={project} dashed />
         )}
 
-        {/* Manual Exterior/Internal Wall drawing: live calibrated length +
-            snap-status text, and a distinct "Click to close perimeter" hint
-            when hovering back over the trace's first (closable) corner. */}
+        {/* Manual Exterior/Internal Wall drawing: keep the canvas precise.
+            Length/status text lives outside the drawing area in the toolbar. */}
+        {isWallDraw && tools.wallDrawHoverPreview?.point && (
+          <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
+        )}
         {isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
           const field = tools.activeTool === "exterior-wall" ? "exteriorWalls" : "internalWalls";
-          const graph = field === "exteriorWalls" ? exteriorWalls : internalWalls;
           const vertexById = field === "exteriorWalls" ? exteriorVertexById : internalVertexById;
           const chainStart = vertexById.get(tools.wallDrawChainVertexId);
           if (!chainStart) return null;
 
-          const snap = tools.wallDrawHoverPreview.snap;
-          const openEndpoints = graph ? findOpenEndpoints(graph.vertices, graph.segments) : [];
-          const closableVertex = graph && graph.vertices.length >= 3
-            ? openEndpoints.find((v) => v.id !== tools.wallDrawChainVertexId) || null
-            : null;
-          const hoveringCloseVertex = !!(closableVertex && snap?.kind === "endpoint" && snap.lineId === closableVertex.id);
-          const statusLabel = hoveringCloseVertex
-            ? "Click to close perimeter"
-            : wallDrawSnapStatusLabel(tools.wallDrawHoverPreview, { vertexById });
-
           return (
             <g data-testid="wall-draw-preview">
               <LiveLine from={chainStart} to={tools.wallDrawHoverPreview.point} project={project} />
-              <WallDrawLengthLabel
-                from={chainStart}
-                to={tools.wallDrawHoverPreview.point}
-                angleDegrees={tools.wallDrawHoverPreview.locked ? tools.wallDrawHoverPreview.angleDegrees : null}
-                mmPerDocumentUnit={page?.calibration?.mmPerDocumentUnit || null}
-                statusLabel={statusLabel}
-                highlightClose={hoveringCloseVertex}
-                project={project}
-              />
             </g>
           );
         })()}
@@ -294,6 +272,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 }
 
 function centroid(vertices) {
+  if (!Array.isArray(vertices) || vertices.length === 0) return { x: 0, y: 0 };
   const sum = vertices.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
   return { x: sum.x / vertices.length, y: sum.y / vertices.length };
 }
@@ -323,17 +302,17 @@ function WallVertexDot({ vertex, index, project, selected }) {
   const isFirst = index === 0;
   return (
     <g data-testid="wall-vertex" data-first-corner={isFirst || undefined}>
-      {isFirst && !selected && (
-        <circle cx={p.x} cy={p.y} r={9} fill="none" stroke="#1d4ed8" strokeWidth={2} />
+      {(isFirst || selected) && (
+        <circle cx={p.x} cy={p.y} r={selected ? 8 : 7} fill="none" stroke={selected ? "#f97316" : "#1d4ed8"} strokeWidth={2} />
       )}
       <circle
         cx={p.x} cy={p.y}
-        r={selected ? 7 : isFirst ? 6 : 5}
-        fill={selected ? "#f97316" : isFirst ? "#fff" : "#1d4ed8"}
-        stroke={isFirst && !selected ? "#1d4ed8" : "#fff"}
-        strokeWidth={isFirst && !selected ? 2 : 1.5}
+        r={4}
+        fill="#fff"
+        stroke={selected ? "#f97316" : "#1d4ed8"}
+        strokeWidth={2}
       />
-      <text x={p.x + 8} y={p.y - 8} fontSize={10} fontWeight={700} fill="#1e3a8a">{index + 1}</text>
+      <circle cx={p.x} cy={p.y} r={1.3} fill={selected ? "#f97316" : "#1d4ed8"} />
     </g>
   );
 }
@@ -411,7 +390,27 @@ function PlanRegionRect({ region, project, dashed, testId }) {
   );
 }
 
+function AreaSearchRect({ rect, project }) {
+  if (!rect || !(rect.width > 0) || !(rect.height > 0)) return null;
+  const topLeft = project({ x: rect.x, y: rect.y });
+  const bottomRight = project({ x: rect.x + rect.width, y: rect.y + rect.height });
+  return (
+    <rect
+      x={Math.min(topLeft.x, bottomRight.x)}
+      y={Math.min(topLeft.y, bottomRight.y)}
+      width={Math.abs(bottomRight.x - topLeft.x)}
+      height={Math.abs(bottomRight.y - topLeft.y)}
+      fill="rgba(124,58,237,0.12)"
+      stroke="#7c3aed"
+      strokeWidth={1.5}
+      strokeDasharray="6 4"
+      data-testid="area-search-rect"
+    />
+  );
+}
+
 function CalibrationMark({ calibration, project }) {
+  if (!calibration?.pointA || !calibration?.pointB) return null;
   const a = project(calibration.pointA);
   const b = project(calibration.pointB);
   return (
@@ -444,6 +443,7 @@ function LiveLine({ from, to, project, dashed }) {
 // falls back to a plain document-unit readout only when no calibration has
 // been set yet. `statusLabel` is the snap-status text (e.g. "Snap: Corner",
 // "Click to close perimeter") shown near the moving endpoint.
+// eslint-disable-next-line no-unused-vars
 function WallDrawLengthLabel({ from, to, angleDegrees, mmPerDocumentUnit, project, statusLabel, highlightClose }) {
   const a = project(from);
   const b = project(to);
@@ -496,15 +496,12 @@ function SnapMarker({ point, snap, project }) {
   const style = SNAP_STYLES[kind] || SNAP_STYLES.manual;
   return (
     <g data-testid="snap-marker" data-snap-kind={kind}>
-      {kind === "intersection" ? (
-        <rect
-          x={p.x - 5} y={p.y - 5} width={10} height={10}
-          fill={style.fill} stroke="#fff" strokeWidth={1.5}
-          transform={`rotate(45 ${p.x} ${p.y})`}
-        />
-      ) : (
-        <circle cx={p.x} cy={p.y} r={style.radius} fill={style.fill} stroke="#fff" strokeWidth={1.5} />
-      )}
+      <circle cx={p.x} cy={p.y} r={kind === "manual" ? 5 : 6} fill="none" stroke={style.fill} strokeWidth={1.4} />
+      <line x1={p.x - 8} y1={p.y} x2={p.x - 3} y2={p.y} stroke={style.fill} strokeWidth={1.2} />
+      <line x1={p.x + 3} y1={p.y} x2={p.x + 8} y2={p.y} stroke={style.fill} strokeWidth={1.2} />
+      <line x1={p.x} y1={p.y - 8} x2={p.x} y2={p.y - 3} stroke={style.fill} strokeWidth={1.2} />
+      <line x1={p.x} y1={p.y + 3} x2={p.x} y2={p.y + 8} stroke={style.fill} strokeWidth={1.2} />
+      {kind !== "manual" && <circle cx={p.x} cy={p.y} r={1.5} fill={style.fill} />}
     </g>
   );
 }

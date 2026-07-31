@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility } from "../types.js";
+import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -34,7 +34,6 @@ import {
   splitSegment,
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
-import { detectExteriorWalls as runDetection } from "../takeoff/wallDetection.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -44,12 +43,14 @@ import {
 import { polygonAreaDocUnits2, isSimplePolygon } from "../takeoff/geometry.js";
 import { offsetPolygonInward, offsetPolygonOutward } from "../takeoff/polygonOffset.js";
 import { defaultPlanRegion, normalizeRegionCorners } from "../takeoff/planRegion.js";
+import { detectRoomBoundary, rectFromCorners } from "../takeoff/roomBoundaryDetection.js";
 
 const UNDO_LIMIT = 50;
 const VERTEX_HIT_TOLERANCE_SCREEN_PX = 10;
 const SNAP_TOLERANCE_SCREEN_PX = 12; // spec: "10-14 screen pixels"
 const MANUAL_SNAP = { kind: "manual", lineId: null, lineIds: null };
 const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirmed: false, confirmedAt: null, detectionConfidence: null, detectedSnapshot: null };
+const AUTO_DETECTION_DISABLED_MESSAGE = "Automatic exterior detection is temporarily disabled because it is not reliable enough. Use Trace Exterior to select the outside building corners accurately.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 
 function snapCandidateToMetadata(candidate) {
@@ -112,6 +113,51 @@ function pageWithActiveExteriorWalls(page) {
   return { ...page, exteriorWalls: activeWallGraph(page.exteriorWalls) };
 }
 
+function exteriorGraphMetadata(field, current = {}) {
+  if (field !== "exteriorWalls") return {};
+  return {
+    boundaryBasis: current.boundaryBasis || "outside",
+    wallThicknessMm: current.wallThicknessMm ?? 200,
+    schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
+    source: EXTERIOR_SOURCE_MANUAL_TRACE_V2,
+    detectionConfidence: null,
+    detectionCompleteness: null,
+    connectedComponents: null,
+    openGaps: null,
+    detectionWarnings: [],
+    detectionUseful: null,
+    detectionDiagnostics: null,
+    exteriorPerimeter: null,
+    detectedSnapshot: null,
+  };
+}
+
+function distancePointToSegment(point, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const lengthSquared = abx * abx + aby * aby;
+  if (lengthSquared === 0) return distance(point, a);
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / lengthSquared));
+  return distance(point, { x: a.x + abx * t, y: a.y + aby * t });
+}
+
+export function tracedSegmentHasWallEvidence(from, to, planGeometryIndex, toleranceDocUnits = 8) {
+  if (!from || !to || !Array.isArray(planGeometryIndex?.segments)) return false;
+  const traceLength = distance(from, to);
+  if (!(traceLength > 0)) return false;
+  return planGeometryIndex.segments.some((segment) => {
+    if (!segment?.a || !segment?.b) return false;
+    const supportLength = distance(segment.a, segment.b);
+    if (supportLength < Math.min(8, traceLength * 0.2)) return false;
+    const endpointsNearTrace = distancePointToSegment(segment.a, from, to) <= toleranceDocUnits && distancePointToSegment(segment.b, from, to) <= toleranceDocUnits;
+    const traceEndpointsNearLine = distancePointToSegment(from, segment.a, segment.b) <= toleranceDocUnits && distancePointToSegment(to, segment.a, segment.b) <= toleranceDocUnits;
+    const midTrace = midpoint(from, to);
+    const midSupport = midpoint(segment.a, segment.b);
+    const midSupported = distancePointToSegment(midTrace, segment.a, segment.b) <= toleranceDocUnits || distancePointToSegment(midSupport, from, to) <= toleranceDocUnits;
+    return midSupported && (endpointsNearTrace || traceEndpointsNearLine);
+  });
+}
+
 export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) {
   const [activeTool, setActiveToolState] = useState("select");
 
@@ -149,6 +195,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // Manual Exterior Wall / Internal Wall drawing (click-and-connect chain).
   const [wallDrawChainVertexId, setWallDrawChainVertexId] = useState(null);
   const [wallDrawHoverPreview, setWallDrawHoverPreview] = useState(null); // { point, axis, angleDegrees, locked, snap }
+  const [pendingUnsupportedExteriorSegment, setPendingUnsupportedExteriorSegment] = useState(null);
 
   // Window/Internal Door/External Door/Sliding Door/Garage Door/Open Opening
   // placement (click start, click end, both projected onto the hovered wall).
@@ -156,8 +203,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [openingStart, setOpeningStart] = useState(null); // Point | null — first click, awaiting the second
 
   // Manual Area tracing (click each corner, Finish/first-point closes it).
+  const [areaMode, setAreaMode] = useState("manual-polygon"); // "room-detect" | "rectangle" | "manual-polygon"
   const [areaDraftVertices, setAreaDraftVertices] = useState([]);
   const [areaHoverPoint, setAreaHoverPoint] = useState(null);
+  const [areaSearchDraft, setAreaSearchDraft] = useState(null); // { start, end } | null
 
   const [layerVisibility, setLayerVisibilityState] = useState(() => ({ ...createDefaultLayerVisibility(), ...(page?.layerVisibility || {}) }));
 
@@ -174,11 +223,13 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setDraggingVertex(null);
     setWallDrawChainVertexId(null);
     setWallDrawHoverPreview(null);
+    setPendingUnsupportedExteriorSegment(null);
     setOpeningHostWall(null);
     setOpeningStart(null);
     setDraggingOpening(null);
     setAreaDraftVertices([]);
     setAreaHoverPoint(null);
+    setAreaSearchDraft(null);
     setManualAreaDialogOpen(false);
     setCloseShapeError(null);
     setCloseShapeSuccessMessage("");
@@ -191,6 +242,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setActiveToolState(tool);
   }, [resetDrafts]);
 
+  const cancelWallDrawPreview = useCallback(() => {
+    setWallDrawHoverPreview(null);
+    setPendingUnsupportedExteriorSegment(null);
+    setForcedAxisState(null);
+    setWallDetectionCode(null);
+    setWallDetectionMessage("");
+    setWallDetectionStatus("idle");
+  }, []);
+
   // Esc cancels whatever is in progress without leaving the current tool
   // (including an unfinished wall-drawing segment, per spec — the run itself
   // is not discarded, only the segment still being placed); H/V force the
@@ -199,7 +259,22 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // exterior-only edit-walls tool, kept for backward compatibility).
   useEffect(() => {
     function onKeyDown(event) {
-      if (event.key === "Escape") { resetDrafts(); return; }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+        return;
+      }
+      if (event.key === "Escape") {
+        if (activeTool === "exterior-wall" || activeTool === "internal-wall") cancelWallDrawPreview();
+        else resetDrafts();
+        return;
+      }
+      if (event.key === "Enter" && activeTool === "exterior-wall") {
+        event.preventDefault();
+        if (canCloseShape) closeWallPerimeter("exteriorWalls");
+        else finishWallDrawing();
+        return;
+      }
       if ((activeTool === "set-scale" || activeTool === "measure" || activeTool === "exterior-wall" || activeTool === "internal-wall") && (pendingPoint || wallDrawChainVertexId)) {
         if (event.key === "h" || event.key === "H") { setForcedAxisState("horizontal"); return; }
         if (event.key === "v" || event.key === "V") { setForcedAxisState("vertical"); return; }
@@ -213,7 +288,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, pendingPoint, wallDrawChainVertexId, selectedVertexId, selectedSegmentId, selectedOpeningId, resetDrafts]);
+  }, [activeTool, pendingPoint, wallDrawChainVertexId, selectedVertexId, selectedSegmentId, selectedOpeningId, resetDrafts, cancelWallDrawPreview]);
 
   // Two-stack undo/redo: undo moves the current value onto redoStack before
   // applying the popped previous value; redo is the mirror image. Every
@@ -254,7 +329,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     pushUndo(field, page?.[field] ?? null);
     const graph = mutator({ vertices: current.vertices, segments: current.segments });
     const isClosed = isPerimeterClosed(graph.vertices, graph.segments);
-    commitPage({ [field]: { ...current, vertices: graph.vertices, segments: graph.segments, isClosed }, ...extraPatch });
+    const metadata = exteriorGraphMetadata(field, current);
+    commitPage({ [field]: { ...metadata, ...current, vertices: graph.vertices, segments: graph.segments, isClosed, ...metadata }, ...extraPatch });
   }, [page, commitPage, pushUndo]);
 
   // Kept for the existing exterior-only "edit-walls" tool/tests — identical
@@ -408,45 +484,22 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // wallDetectionStatus to "unavailable" with an honest message — every
   // manual tool keeps working regardless, and nothing already drawn/confirmed
   // is touched.
-  const runWallDetection = useCallback(async ({ imageDataUrl, imageWidth, imageHeight, viewport }) => {
+  const runWallDetection = useCallback(async ({ imageDataUrl, imageWidth, imageHeight, viewport, planGeometryIndex: snapshotPlanGeometryIndex = null } = {}) => {
+    void imageDataUrl;
+    void imageWidth;
+    void imageHeight;
+    void viewport;
+    void snapshotPlanGeometryIndex;
     setWallDetectionBusy(true);
-    setWallDetectionStatus("detecting");
-    setWallDetectionMessage("");
-    setWallDetectionCode(null);
+    setWallDetectionStatus("unavailable");
+    setWallDetectionMessage(AUTO_DETECTION_DISABLED_MESSAGE);
+    setWallDetectionCode("AUTO_DISABLED");
     try {
-      const result = await runDetection({ imageDataUrl, imageWidth, imageHeight, viewport, planRegion: page?.planRegion || null });
-      if (!result.connected) {
-        setWallDetectionStatus("unavailable");
-        setWallDetectionMessage(result.message);
-        setWallDetectionCode(result.code || "PROVIDER_ERROR");
-        return;
-      }
-      const snapshot = { vertices: result.vertices, segments: result.segments };
-      if (page?.exteriorWalls) pushUndo("exteriorWalls", page.exteriorWalls);
-      commitPage({
-        exteriorWalls: {
-          vertices: result.vertices,
-          segments: result.segments,
-          isClosed: result.isClosed,
-          confirmed: false,
-          confirmedAt: null,
-          detectionConfidence: result.detectionConfidence,
-          detectedSnapshot: snapshot,
-        },
-      });
-      setWallDetectionStatus("idle");
-      setWallDetectionMessage(result.message);
-      setWallDetectionCode("OK");
-      // Auto-transition into Edit Exterior so the just-detected perimeter is
-      // immediately reviewable/editable, rather than leaving the user on
-      // whatever tool they had active (per spec) — only when detection
-      // actually produced something to review.
-      if (result.segments.length > 0) setActiveTool("edit-walls");
+      await Promise.resolve();
     } finally {
       setWallDetectionBusy(false);
     }
-  }, [page, commitPage, pushUndo, setActiveTool]);
-
+  }, []);
   // Results-panel/toolbar "Accept All High-Confidence Segments" — confirms
   // every unreviewed automatic segment whose per-segment confidence is
   // "high" in one action, without touching medium/low-confidence ones that
@@ -478,6 +531,36 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       segments: g.segments.map((s) => (s.confidence === "high" ? { ...s, confirmed: true } : s)),
     }));
   }, [page, mutateWallField]);
+
+  const reviewAutomaticCandidates = useCallback(() => {
+    const next = { ...(page?.layerVisibility || layerVisibility), automaticCandidates: true };
+    setLayerVisibilityState(next);
+    commitPage({ layerVisibility: next });
+    setActiveTool("edit-walls");
+  }, [page, layerVisibility, commitPage, setActiveTool]);
+
+  const rejectAutomaticCandidates = useCallback((field = "exteriorWalls") => {
+    const graph = page?.[field];
+    if (!graph) return;
+    const candidateIds = new Set(graph.segments.filter(isAutomaticCandidateSegment).map((segment) => segment.id));
+    if (candidateIds.size === 0) return;
+    const next = { ...(page?.layerVisibility || layerVisibility), automaticCandidates: false };
+    mutateWallField(field, (g) => {
+      const segments = g.segments.filter((segment) => !candidateIds.has(segment.id));
+      const vertexIds = new Set();
+      segments.forEach((segment) => {
+        vertexIds.add(segment.aId);
+        vertexIds.add(segment.bId);
+      });
+      return {
+        vertices: g.vertices.filter((vertex) => vertexIds.has(vertex.id)),
+        segments,
+      };
+    }, { layerVisibility: next });
+    setLayerVisibilityState(next);
+    setWallDetectionStatus("idle");
+    setWallDetectionMessage("");
+  }, [page, mutateWallField, layerVisibility]);
 
   // ---- Plan region: marks the actual floor-plan area, excluding notes /
   // title block / legends / schedules / the sheet border from automatic
@@ -521,26 +604,19 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // the user is choosing to proceed with the manual tools, which never
   // called (and never need to call) this API at all.
   const continueManually = useCallback(() => {
+    const next = { ...(page?.layerVisibility || layerVisibility), automaticCandidates: false };
+    setLayerVisibilityState(next);
+    commitPage({ layerVisibility: next });
     setWallDetectionStatus("idle");
     setWallDetectionMessage("");
     setWallDetectionCode(null);
-  }, []);
+  }, [page, layerVisibility, commitPage]);
 
   const resetWallsToDetected = useCallback(() => {
-    if (!page?.exteriorWalls?.detectedSnapshot) return;
-    pushUndo("exteriorWalls", page.exteriorWalls);
-    const snapshot = page.exteriorWalls.detectedSnapshot;
-    commitPage({
-      exteriorWalls: {
-        ...page.exteriorWalls,
-        vertices: snapshot.vertices,
-        segments: snapshot.segments,
-        isClosed: isPerimeterClosed(snapshot.vertices, snapshot.segments),
-        confirmed: false,
-        confirmedAt: null,
-      },
-    });
-  }, [page, commitPage, pushUndo]);
+    setWallDetectionStatus("unavailable");
+    setWallDetectionMessage(AUTO_DETECTION_DISABLED_MESSAGE);
+    setWallDetectionCode("AUTO_DISABLED");
+  }, []);
 
   // ---- Exterior walls: manual editing -------------------------------------
 
@@ -1080,8 +1156,41 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   }, [page, planGeometryIndex]);
 
   const [manualAreaDialogOpen, setManualAreaDialogOpen] = useState(false);
+  const [detectedRoomCandidate, setDetectedRoomCandidate] = useState(null);
+
+  const applyDetectedRoomCandidate = useCallback((candidate) => {
+    setDetectedRoomCandidate(candidate);
+    setManualAreaDialogOpen(true);
+  }, []);
 
   const handleAreaCanvasClick = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+    if (areaMode === "room-detect") {
+      const candidate = detectRoomBoundary({
+        page,
+        seedPoint: rawPoint,
+        exclusionCandidates: page?.roomExclusionCandidates || [],
+        wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
+      });
+      applyDetectedRoomCandidate(candidate);
+      return;
+    }
+    if (areaMode === "rectangle") {
+      if (!areaSearchDraft?.start) {
+        setAreaSearchDraft({ start: rawPoint, end: rawPoint });
+        return;
+      }
+      const searchRect = rectFromCorners(areaSearchDraft.start, rawPoint || areaSearchDraft.end || areaSearchDraft.start);
+      const candidate = detectRoomBoundary({
+        page,
+        searchRect,
+        exclusionCandidates: page?.roomExclusionCandidates || [],
+        wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
+      });
+      setAreaSearchDraft(null);
+      applyDetectedRoomCandidate(candidate);
+      return;
+    }
+    if (areaMode !== "manual-polygon") return;
     const candidates = buildSnapCandidates(page);
     const { point } = snapPoint(rawPoint, candidates, { zoomScale });
     const planCandidate = bestSnapCandidate(rawPoint, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
@@ -1095,7 +1204,36 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       }
     }
     setAreaDraftVertices((prev) => [...prev, finalPoint]);
-  }, [page, planGeometryIndex, areaDraftVertices]);
+  }, [
+    areaMode,
+    areaSearchDraft,
+    page,
+    planGeometryIndex,
+    areaDraftVertices,
+    applyDetectedRoomCandidate,
+  ]);
+
+  const beginAreaRectangle = useCallback((rawPoint) => {
+    setAreaSearchDraft({ start: rawPoint, end: rawPoint });
+  }, []);
+
+  const updateAreaRectangle = useCallback((rawPoint) => {
+    setAreaSearchDraft((current) => (current ? { ...current, end: rawPoint } : current));
+  }, []);
+
+  const finishAreaRectangle = useCallback((rawPoint, startPoint = null) => {
+    const start = startPoint || areaSearchDraft?.start;
+    if (!start) return;
+    const searchRect = rectFromCorners(start, rawPoint || areaSearchDraft?.end || start);
+    const candidate = detectRoomBoundary({
+      page,
+      searchRect,
+      exclusionCandidates: page?.roomExclusionCandidates || [],
+      wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
+    });
+    setAreaSearchDraft(null);
+    applyDetectedRoomCandidate(candidate);
+  }, [areaSearchDraft, page, applyDetectedRoomCandidate]);
 
   // Toolbar's Finish action — closes the polygon without needing to click
   // back on the first point.
@@ -1107,23 +1245,42 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const cancelAreaTrace = useCallback(() => {
     setAreaDraftVertices([]);
     setAreaHoverPoint(null);
+    setAreaSearchDraft(null);
+    setDetectedRoomCandidate(null);
     setManualAreaDialogOpen(false);
   }, []);
 
   const manualAreaCandidate = useMemo(() => {
+    if (detectedRoomCandidate) return detectedRoomCandidate;
     if (areaDraftVertices.length < 3 || !page?.calibration) return { valid: false, reason: "Needs at least three points and a calibrated scale." };
     if (!isSimplePolygon(areaDraftVertices)) return { valid: false, reason: "This boundary crosses itself." };
     const areaDocUnits2 = polygonAreaDocUnits2(areaDraftVertices);
     if (!(areaDocUnits2 > 0)) return { valid: false, reason: "The calculated area is zero." };
     const mm2 = areaDocUnits2 * page.calibration.mmPerDocumentUnit * page.calibration.mmPerDocumentUnit;
     return { valid: true, reason: "", calculatedAreaM2: mm2 / 1_000_000 };
-  }, [areaDraftVertices, page]);
+  }, [detectedRoomCandidate, areaDraftVertices, page]);
 
   const confirmManualArea = useCallback(({ confirmedAreaM2, note, name = "Area", areaType = "Custom" } = {}) => {
     if (!manualAreaCandidate.valid) return;
-    const calculatedAreaM2 = manualAreaCandidate.calculatedAreaM2;
+    const calculatedAreaM2 = manualAreaCandidate.netAreaM2 ?? manualAreaCandidate.calculatedAreaM2;
     const finalConfirmed = Number.isFinite(confirmedAreaM2) ? confirmedAreaM2 : calculatedAreaM2;
-    const area = createArea({ id: generateId("area"), name, areaType, vertices: areaDraftVertices, calculatedAreaM2, source: "manual" });
+    const boundary = manualAreaCandidate.outerBoundary || areaDraftVertices;
+    const area = createArea({
+      id: generateId("area"),
+      name,
+      areaType,
+      vertices: boundary,
+      outerBoundary: boundary,
+      holes: manualAreaCandidate.holes || [],
+      calculatedAreaM2,
+      grossAreaM2: manualAreaCandidate.grossAreaM2 ?? calculatedAreaM2,
+      excludedAreaM2: manualAreaCandidate.excludedAreaM2 ?? 0,
+      netAreaM2: calculatedAreaM2,
+      source: manualAreaCandidate.source || "manual",
+      confidence: manualAreaCandidate.confidence ?? null,
+      seedPoint: manualAreaCandidate.seedPoint || null,
+      searchRect: manualAreaCandidate.searchRect || null,
+    });
     area.confirmedAreaM2 = finalConfirmed;
     area.confirmedNote = finalConfirmed !== calculatedAreaM2 ? (note || "") : "";
     area.confirmed = true;
@@ -1132,6 +1289,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     commitPage({ areas: [...(page?.areas || []), area] });
     setAreaDraftVertices([]);
     setAreaHoverPoint(null);
+    setAreaSearchDraft(null);
+    setDetectedRoomCandidate(null);
     setManualAreaDialogOpen(false);
   }, [manualAreaCandidate, areaDraftVertices, page, commitPage, pushUndo]);
 
@@ -1355,6 +1514,22 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       : null;
     let usedVertexId = reuseVertexId;
     const chainStart = wallDrawChainVertexId;
+    if (field === "exteriorWalls" && chainStart) {
+      const start = page?.[field]?.vertices.find((v) => v.id === chainStart);
+      const toleranceDocUnits = SNAP_TOLERANCE_SCREEN_PX / Math.max(options?.zoomScale || 1, 0.01);
+      const hasSnap = Boolean(resolved.snap?.kind && resolved.snap.kind !== "manual");
+      const hasSupport = hasSnap || tracedSegmentHasWallEvidence(start, resolved.point, planGeometryIndex, toleranceDocUnits);
+      const forced = pendingUnsupportedExteriorSegment &&
+        distance(pendingUnsupportedExteriorSegment.from, start) <= toleranceDocUnits &&
+        distance(pendingUnsupportedExteriorSegment.to, resolved.point) <= toleranceDocUnits;
+      if (!hasSupport && !forced) {
+        setPendingUnsupportedExteriorSegment({ from: start, to: resolved.point });
+        setWallDetectionStatus("incomplete");
+        setWallDetectionMessage("This segment does not appear to follow an exterior wall. Click again to force it, or choose another point.");
+        setWallDetectionCode("TRACE_SEGMENT_UNSUPPORTED");
+        return;
+      }
+    }
 
     mutateWallField(field, (graph) => {
       let nextGraph = graph;
@@ -1371,12 +1546,19 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
     setWallDrawChainVertexId(usedVertexId);
     setWallDrawHoverPreview(null);
-  }, [activeTool, page, wallDrawChainVertexId, resolveWallDrawPoint, mutateWallField]);
+    setPendingUnsupportedExteriorSegment(null);
+    setWallDetectionStatus("idle");
+    if (field === "exteriorWalls") {
+      setWallDetectionMessage(resolved.snap?.kind === "line" ? "Snapped to wall line" : resolved.snap ? "Snapped to wall corner" : "");
+      setWallDetectionCode(null);
+    }
+  }, [activeTool, page, wallDrawChainVertexId, resolveWallDrawPoint, mutateWallField, planGeometryIndex, pendingUnsupportedExteriorSegment]);
 
   // Double-click or the toolbar's Finish button.
   const finishWallDrawing = useCallback(() => {
     setWallDrawChainVertexId(null);
     setWallDrawHoverPreview(null);
+    setPendingUnsupportedExteriorSegment(null);
   }, []);
 
   // ---- Layer visibility ------------------------------------------------------
@@ -1405,7 +1587,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
-    acceptAllHighConfidenceSegments,
+    acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates,
     suggestedPlanRegion, planRegionDraftCorner, planRegionHoverPoint,
     updatePlanRegionHover, handlePlanRegionClick, acceptSuggestedPlanRegion, clearPlanRegion,
     findWallVertexNear, handleWallCanvasClick,
@@ -1437,7 +1619,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // Area — from a confirmed exterior perimeter (unchanged) and manual tracing (new)
     areaDialogOpen, setAreaDialogOpen, areaValidation, calculatedAreaM2, confirmArea,
     footprintAndInternalArea, setExteriorBoundaryBasis, setExteriorWallThicknessMm,
-    areaDraftVertices, areaHoverPoint, updateAreaHover, handleAreaCanvasClick, finishAreaTrace, cancelAreaTrace,
+    areaMode, setAreaMode,
+    areaDraftVertices, areaHoverPoint, areaSearchDraft,
+    updateAreaHover, handleAreaCanvasClick, beginAreaRectangle, updateAreaRectangle, finishAreaRectangle,
+    finishAreaTrace, cancelAreaTrace,
     manualAreaDialogOpen, setManualAreaDialogOpen, manualAreaCandidate, confirmManualArea,
     updateArea, deleteArea,
 

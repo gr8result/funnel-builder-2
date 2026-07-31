@@ -37,6 +37,7 @@ const page = {
   ]);
   const nearIntersectionPage = { exteriorWalls: { vertices: [{ id: "wv9", x: 500.05, y: 500 }], segments: [] }, measurements: [] };
   const candidates = findSnapCandidates({ x: 500, y: 500 }, { toleranceScreenPx: 10, zoomScale: 1, planGeometryIndex: crossingIndex, page: nearIntersectionPage });
+  assert.equal(candidates.length, 1);
   assert.equal(candidates[0].type, "intersection");
 }
 

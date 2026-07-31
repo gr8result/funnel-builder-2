@@ -12,6 +12,7 @@ import { segmentIntersection } from "../takeoff/geometry.js";
 
 const DEFAULT_CELL_SIZE = 50; // doc units (PDF points)
 const PRIORITY = { intersection: 0, endpoint: 1, line: 2 };
+const REJECTED_SEGMENT_TAGS = new Set(["annotation", "dimension", "dimension-line", "extension-line", "text", "text-bound", "door-arc", "symbol", "page-border", "title-block", "title-block-rule"]);
 
 function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -31,7 +32,34 @@ function cellKey(cx, cy) {
   return `${cx}:${cy}`;
 }
 
-export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_SIZE } = {}) {
+function segmentTag(segment) {
+  return String(segment?.geometryType || segment?.objectType || segment?.role || segment?.type || segment?.classification || "").toLowerCase();
+}
+
+function isLikelyPageBorder(segment, pageWidth, pageHeight) {
+  if (!(pageWidth > 0) || !(pageHeight > 0) || !segment?.a || !segment?.b) return false;
+  const minX = Math.min(segment.a.x, segment.b.x);
+  const maxX = Math.max(segment.a.x, segment.b.x);
+  const minY = Math.min(segment.a.y, segment.b.y);
+  const maxY = Math.max(segment.a.y, segment.b.y);
+  const marginX = pageWidth * 0.025;
+  const marginY = pageHeight * 0.025;
+  return (
+    (maxX - minX > pageWidth * 0.82 && (minY <= marginY || maxY >= pageHeight - marginY)) ||
+    (maxY - minY > pageHeight * 0.82 && (minX <= marginX || maxX >= pageWidth - marginX))
+  );
+}
+
+function isSnapEligibleSegment(segment, pageWidth, pageHeight) {
+  if (!segment?.a || !segment?.b) return false;
+  if (segment.isText || segment.isDimension || segment.isPageBorder || segment.isTitleBlock || segment.isDoorArc || segment.isSymbol) return false;
+  if (REJECTED_SEGMENT_TAGS.has(segmentTag(segment))) return false;
+  if (isLikelyPageBorder(segment, pageWidth, pageHeight)) return false;
+  return true;
+}
+
+export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_SIZE, pageWidth = 0, pageHeight = 0 } = {}) {
+  const snapSegments = segments.filter((segment) => isSnapEligibleSegment(segment, pageWidth, pageHeight));
   const grid = new Map();
   const cellsFor = (seg) => {
     const minX = Math.min(seg.a.x, seg.b.x);
@@ -47,7 +75,7 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
     return cells;
   };
 
-  segments.forEach((seg) => {
+  snapSegments.forEach((seg) => {
     cellsFor(seg).forEach(([cx, cy]) => {
       const key = cellKey(cx, cy);
       if (!grid.has(key)) grid.set(key, []);
@@ -56,7 +84,7 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
   });
 
   const endpoints = [];
-  segments.forEach((seg) => {
+  snapSegments.forEach((seg) => {
     endpoints.push({ point: seg.a, lineId: seg.id });
     endpoints.push({ point: seg.b, lineId: seg.id });
   });
@@ -66,7 +94,7 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
   const intersections = [];
   const seenPairs = new Set();
   const seenPoints = new Set();
-  segments.forEach((segA) => {
+  snapSegments.forEach((segA) => {
     const nearby = new Set();
     cellsFor(segA).forEach(([cx, cy]) => {
       for (let dx = -1; dx <= 1; dx += 1) {
@@ -120,16 +148,17 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
     });
 
     candidates.sort((a, b) => PRIORITY[a.type] - PRIORITY[b.type] || a.distance - b.distance);
-    return candidates;
+    return candidates.slice(0, 1);
   }
 
   return {
-    segments,
+    segments: snapSegments,
+    rawSegments: segments,
     endpoints,
     intersections,
     findSnapCandidates,
     // Explicit hook for a future exterior-wall detector to consume the same
     // extracted geometry — not wired to auto-detection in this pass.
-    getCandidateWallSegments: () => segments,
+    getCandidateWallSegments: () => snapSegments,
   };
 }

@@ -54,7 +54,31 @@ const index = buildPlanGeometryIndex(segments);
   assert.equal(loose.length, 1);
 }
 
-// ---- getCandidateWallSegments passes the raw segments through unchanged --
+// ---- getCandidateWallSegments exposes snap-eligible plan geometry ----------
 assert.equal(index.getCandidateWallSegments().length, 3);
+
+// ---- local snap search returns at most one best candidate -----------------
+{
+  const crowded = buildPlanGeometryIndex([
+    { id: "h2", a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, axis: "horizontal" },
+    { id: "v2", a: { x: 50, y: -50 }, b: { x: 50, y: 50 }, axis: "vertical" },
+  ]);
+  const candidates = crowded.findSnapCandidates({ x: 50, y: 0 }, 8);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].type, "intersection");
+}
+
+// ---- text, dimensions, title blocks, and page borders are rejected --------
+{
+  const filtered = buildPlanGeometryIndex([
+    { id: "text-bound", type: "text", a: { x: 10, y: 10 }, b: { x: 80, y: 10 }, axis: "horizontal" },
+    { id: "dimension", role: "dimension", a: { x: 20, y: 20 }, b: { x: 120, y: 20 }, axis: "horizontal" },
+    { id: "title", classification: "title-block-rule", a: { x: 30, y: 30 }, b: { x: 160, y: 30 }, axis: "horizontal" },
+    { id: "border", a: { x: 0, y: 0 }, b: { x: 900, y: 0 }, axis: "horizontal" },
+    { id: "wall", a: { x: 200, y: 200 }, b: { x: 300, y: 200 }, axis: "horizontal" },
+  ], { pageWidth: 900, pageHeight: 700 });
+  assert.deepEqual(filtered.getCandidateWallSegments().map((segment) => segment.id), ["wall"]);
+  assert.deepEqual(filtered.findSnapCandidates({ x: 45, y: 10 }, 10), []);
+}
 
 console.log("planGeometryIndex.test.mjs passed");

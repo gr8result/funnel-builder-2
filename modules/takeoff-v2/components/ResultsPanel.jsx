@@ -1,4 +1,6 @@
 import { formatLength, formatArea } from "../takeoff/units.js";
+import { validateCalibrationShape } from "../takeoff/scaleCalibration.js";
+import { validatePerimeterForArea } from "../takeoff/areaCalculation.js";
 
 const AREA_ORDER = ["Garage", "Patio", "Alfresco", "Balcony"];
 
@@ -24,6 +26,13 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
       .reduce((total, area) => total + (area.confirmedAreaM2 ?? area.calculatedAreaM2 ?? 0), 0);
     return acc;
   }, {});
+  const scaleStatus = validateCalibrationShape(page?.calibration);
+  const activeExteriorClosed = Boolean(tools?.activeExteriorWallsClosed);
+  const activeExteriorCount = tools?.activeExteriorWallSegmentCount || 0;
+  const canTrustExteriorQuantity = Boolean(scaleStatus.valid && activeExteriorClosed);
+  const exteriorQuantityLabel = exteriorWalls?.confirmed ? "Confirmed" : "Automatically detected - unconfirmed";
+  const perimeterAreaValidation = validatePerimeterForArea(page);
+  const canTrustArea = Boolean(scaleStatus.valid && perimeterAreaValidation.valid);
 
   const zoomToGraph = (graph) => {
     if (!graph?.vertices?.length) return;
@@ -35,8 +44,15 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
   return (
     <div style={S.panel} data-testid="results-panel">
       <SummarySection title="EXTERIOR WALLS" onSelect={() => zoomToGraph(exteriorWalls)}>
-        <Metric label="Segments" value={tools?.activeExteriorWallSegmentCount || 0} />
-        <Metric label="Total Length" value={formatLength(tools?.totalExteriorWallLengthMm || 0)} />
+        {activeExteriorCount > 0 ? (
+          <>
+            <Metric label="Segments" value={activeExteriorCount} />
+            <Metric label="Total Length" value={canTrustExteriorQuantity ? formatLength(tools?.totalExteriorWallLengthMm || 0) : "Exterior length unavailable"} />
+            {canTrustExteriorQuantity && <Metric label="Status" value={exteriorQuantityLabel} />}
+          </>
+        ) : (
+          <Metric label="Status" value="Not started" />
+        )}
         {tools?.automaticCandidateCount > 0 && (
           <Metric label="Candidate Segments" value={tools.automaticCandidateCount} />
         )}
@@ -61,8 +77,8 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
 
       <div style={S.section}>
         <div style={S.sectionTitle}>AREAS</div>
-        <Metric label="External Footprint" value={externalFootprintM2 > 0 ? formatArea(externalFootprintM2) : "Not set"} />
-        <Metric label="Internal Floor Area" value={internalFloorAreaM2 > 0 ? formatArea(internalFloorAreaM2) : "Not calculated"} />
+        <Metric label="External Footprint" value={canTrustArea && externalFootprintM2 > 0 ? formatArea(externalFootprintM2) : "Area unavailable"} />
+        <Metric label="Internal Floor Area" value={canTrustArea && internalFloorAreaM2 > 0 ? formatArea(internalFloorAreaM2) : "Area unavailable"} />
         {AREA_ORDER.map((areaType) => (
           <Metric key={areaType} label={areaType} value={areaRollup[areaType] > 0 ? formatArea(areaRollup[areaType]) : formatArea(0)} />
         ))}
@@ -77,6 +93,33 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
           </div>
         )}
       </div>
+
+      {areas.length > 0 && (
+        <div style={S.section} data-testid="results-room-areas">
+          <div style={S.sectionTitle}>ROOM AREAS</div>
+          <div style={S.itemList}>
+            {areas.map((area) => {
+              const gross = area.grossAreaM2 ?? area.calculatedAreaM2 ?? 0;
+              const excluded = area.excludedAreaM2 ?? 0;
+              const net = area.netAreaM2 ?? area.confirmedAreaM2 ?? area.calculatedAreaM2 ?? 0;
+              return (
+                <button key={area.id} type="button" style={S.itemButton} onClick={() => zoomToArea(area)} data-testid="results-room-area-row">
+                  <span style={S.itemName}>{area.name}</span>
+                  {excluded > 0 ? (
+                    <>
+                      <span style={S.itemMeta}>Gross: {formatArea(gross)}</span>
+                      <span style={S.itemMeta}>Excluded: {formatArea(excluded)}</span>
+                      <span style={S.itemMeta}>Net: {formatArea(net)}</span>
+                    </>
+                  ) : (
+                    <span style={S.itemMeta}>Net: {formatArea(net)}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

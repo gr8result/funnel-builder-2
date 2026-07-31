@@ -44,7 +44,7 @@ export function findSnapCandidates(point, { toleranceScreenPx = 12, zoomScale = 
   }
 
   results.sort((a, b) => PRIORITY[a.type] - PRIORITY[b.type] || a.distance - b.distance);
-  return results;
+  return results.slice(0, 1);
 }
 
 // The single best candidate, or null if nothing is within tolerance — this
