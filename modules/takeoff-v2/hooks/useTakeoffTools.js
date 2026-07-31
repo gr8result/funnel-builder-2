@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
+import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2, EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -22,6 +22,7 @@ import {
   addSegment,
   moveVertex,
   deleteVertex,
+  deleteVertexAndReconnect,
   deleteSegment,
   joinVertices,
   closePerimeter,
@@ -33,6 +34,7 @@ import {
   sumSegmentLengthsMm,
   splitSegment,
 } from "../takeoff/wallGraph.js";
+import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import {
   validateExteriorWallsForConfirmation,
@@ -46,11 +48,12 @@ import { defaultPlanRegion, normalizeRegionCorners } from "../takeoff/planRegion
 import { detectRoomBoundary, rectFromCorners } from "../takeoff/roomBoundaryDetection.js";
 
 const UNDO_LIMIT = 50;
-const VERTEX_HIT_TOLERANCE_SCREEN_PX = 10;
+const VERTEX_HIT_TOLERANCE_SCREEN_PX = 12;
 const SNAP_TOLERANCE_SCREEN_PX = 12; // spec: "10-14 screen pixels"
 const MANUAL_SNAP = { kind: "manual", lineId: null, lineIds: null };
 const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirmed: false, confirmedAt: null, detectionConfidence: null, detectedSnapshot: null };
 const AUTO_DETECTION_DISABLED_MESSAGE = "Automatic exterior detection is temporarily disabled because it is not reliable enough. Use Trace Exterior to select the outside building corners accurately.";
+const NO_EXTERIOR_PROPOSAL_MESSAGE = "No reliable exterior proposal found. Continue with Trace Exterior.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 
 function snapCandidateToMetadata(candidate) {
@@ -141,6 +144,78 @@ function distancePointToSegment(point, a, b) {
   return distance(point, { x: a.x + abx * t, y: a.y + aby * t });
 }
 
+export function snapLabelForCandidate(candidate) {
+  if (!candidate) return "";
+  if (candidate.type === "intersection" || candidate.kind === "intersection") return "Wall intersection";
+  if (candidate.type === "line" || candidate.kind === "line") return "Wall line";
+  return "Corner";
+}
+
+export function orderedVerticesFromGraph(graph) {
+  if (!graph?.vertices?.length) return [];
+  if (isPerimeterClosed(graph.vertices, graph.segments)) {
+    const byId = new Map(graph.vertices.map((v) => [v.id, v]));
+    const adjacency = new Map(graph.vertices.map((v) => [v.id, []]));
+    graph.segments.forEach((segment) => {
+      adjacency.get(segment.aId)?.push(segment.bId);
+      adjacency.get(segment.bId)?.push(segment.aId);
+    });
+    const ordered = [];
+    const seen = new Set();
+    let current = graph.vertices[0]?.id;
+    let previous = null;
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const vertex = byId.get(current);
+      if (vertex) ordered.push(vertex);
+      const neighbors = adjacency.get(current) || [];
+      const next = neighbors.find((id) => id !== previous) || neighbors[0];
+      previous = current;
+      current = next;
+    }
+    if (ordered.length === graph.vertices.length) return ordered;
+  }
+  return graph.vertices;
+}
+
+export function validateEditedExteriorGraph(graph, movedVertexId = null) {
+  const vertices = graph?.vertices || [];
+  const segments = graph?.segments || [];
+  const byId = new Map(vertices.map((v) => [v.id, v]));
+  for (const segment of segments) {
+    const a = byId.get(segment.aId);
+    const b = byId.get(segment.bId);
+    if (a && b && distance(a, b) < 1e-6) return { valid: false, vertexId: movedVertexId || segment.aId, message: "Exterior invalid - adjust the highlighted point." };
+  }
+  for (let i = 0; i < vertices.length; i += 1) {
+    for (let j = i + 1; j < vertices.length; j += 1) {
+      if (distance(vertices[i], vertices[j]) < 1e-6) return { valid: false, vertexId: movedVertexId || vertices[j].id, message: "Exterior invalid - adjust the highlighted point." };
+    }
+  }
+  if (isPerimeterClosed(vertices, segments)) {
+    const ordered = orderedVerticesFromGraph(graph);
+    if (ordered.length !== vertices.length || !isSimplePolygon(ordered)) return { valid: false, vertexId: movedVertexId, message: "Exterior invalid - adjust the highlighted point." };
+    const lengths = segments.map((segment) => {
+      const a = byId.get(segment.aId);
+      const b = byId.get(segment.bId);
+      return a && b ? distance(a, b) : 0;
+    }).filter((value) => value > 0).sort((a, b) => a - b);
+    const median = lengths[Math.floor(lengths.length / 2)] || 0;
+    const touchingMoved = movedVertexId ? segments.filter((segment) => segment.aId === movedVertexId || segment.bId === movedVertexId) : segments;
+    if (median > 0 && touchingMoved.some((segment) => {
+      const a = byId.get(segment.aId);
+      const b = byId.get(segment.bId);
+      return a && b && distance(a, b) > median * 8;
+    })) return { valid: false, vertexId: movedVertexId, message: "Exterior invalid - adjust the highlighted point." };
+  }
+  return { valid: true, vertexId: null, message: "" };
+}
+
+export function exteriorProposalKey(proposal) {
+  const points = orderedVerticesFromGraph(proposal).map((point) => `${Math.round(point.x * 10) / 10},${Math.round(point.y * 10) / 10}`);
+  return points.join("|");
+}
+
 export function tracedSegmentHasWallEvidence(from, to, planGeometryIndex, toleranceDocUnits = 8) {
   if (!from || !to || !Array.isArray(planGeometryIndex?.segments)) return false;
   const traceLength = distance(from, to);
@@ -178,8 +253,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [selectedField, setSelectedField] = useState("exteriorWalls"); // "exteriorWalls" | "internalWalls"
   const [selectedVertexId, setSelectedVertexId] = useState(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState(null);
+  const [selectedSegmentPoint, setSelectedSegmentPoint] = useState(null);
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
   const [draggingVertex, setDraggingVertex] = useState(null); // { id, x, y }
+  const [wallEditHoverTarget, setWallEditHoverTarget] = useState(null); // { type:"point"|"segment", id, field }
+  const [wallEditSnapPreview, setWallEditSnapPreview] = useState(null); // { point, snap, label }
+  const [wallEditValidation, setWallEditValidation] = useState(null);
   const [closeShapeError, setCloseShapeError] = useState(null);
   const [closeShapeSuccessMessage, setCloseShapeSuccessMessage] = useState("");
   const [clearExteriorConfirmOpen, setClearExteriorConfirmOpen] = useState(false);
@@ -189,6 +268,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [wallDetectionMessage, setWallDetectionMessage] = useState("");
   const [wallDetectionCode, setWallDetectionCode] = useState(null); // "USER_AUTH_REQUIRED"|"PROVIDER_NOT_CONFIGURED"|"PROVIDER_AUTH_FAILED"|"PROVIDER_ERROR"|null
   const [wallDetectionStatus, setWallDetectionStatus] = useState("idle"); // "idle"|"detecting"|"unavailable"
+  const [exteriorProposal, setExteriorProposal] = useState(null);
+  const [rejectedProposalKeys, setRejectedProposalKeys] = useState(() => new Set());
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
@@ -219,8 +300,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setHoverPoint(null);
     setSelectedVertexId(null);
     setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
     setSelectedOpeningId(null);
     setDraggingVertex(null);
+    setWallEditHoverTarget(null);
+    setWallEditSnapPreview(null);
+    setWallEditValidation(null);
     setWallDrawChainVertexId(null);
     setWallDrawHoverPreview(null);
     setPendingUnsupportedExteriorSegment(null);
@@ -262,6 +347,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === "y" || (event.key.toLowerCase() === "z" && event.shiftKey))) {
+        event.preventDefault();
+        redo();
         return;
       }
       if (event.key === "Escape") {
@@ -330,7 +420,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const graph = mutator({ vertices: current.vertices, segments: current.segments });
     const isClosed = isPerimeterClosed(graph.vertices, graph.segments);
     const metadata = exteriorGraphMetadata(field, current);
-    commitPage({ [field]: { ...metadata, ...current, vertices: graph.vertices, segments: graph.segments, isClosed, ...metadata }, ...extraPatch });
+    const reviewPatch = field === "exteriorWalls" ? { confirmed: false, confirmedAt: null } : {};
+    commitPage({ [field]: { ...metadata, ...current, vertices: graph.vertices, segments: graph.segments, isClosed, ...metadata, ...reviewPatch }, ...extraPatch });
   }, [page, commitPage, pushUndo]);
 
   // Kept for the existing exterior-only "edit-walls" tool/tests — identical
@@ -500,6 +591,93 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setWallDetectionBusy(false);
     }
   }, []);
+
+  const suggestExteriorProposal = useCallback(async () => {
+    setWallDetectionBusy(true);
+    setWallDetectionStatus("detecting");
+    setWallDetectionMessage("");
+    setWallDetectionCode(null);
+    setExteriorProposal(null);
+    try {
+      const result = detectExteriorWallsFromGeometry({
+        planGeometryIndex,
+        page,
+        planRegion: page?.planRegion?.confirmed ? page.planRegion : null,
+        stitchToleranceDocUnits: 6,
+      });
+      const graph = result?.useful && result?.isClosed && result?.vertices?.length >= 4 && result?.segments?.length >= 4
+        ? { vertices: result.vertices, segments: result.segments, isClosed: result.isClosed }
+        : null;
+      const validation = graph ? validateEditedExteriorGraph(graph) : { valid: false };
+      const key = graph ? exteriorProposalKey(graph) : "";
+      if (!graph || !validation.valid || rejectedProposalKeys.has(key)) {
+        setWallDetectionStatus("incomplete");
+        setWallDetectionMessage(NO_EXTERIOR_PROPOSAL_MESSAGE);
+        setWallDetectionCode("NO_RELIABLE_EXTERIOR_PROPOSAL");
+        return null;
+      }
+      const proposal = {
+        ...graph,
+        source: EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1,
+        status: "proposal-review-required",
+        detectionDiagnostics: result.diagnostics || null,
+        detectionConfidence: result.detectionConfidence ?? null,
+        key,
+      };
+      setExteriorProposal(proposal);
+      setWallDetectionStatus("proposal");
+      setWallDetectionMessage("Exterior proposal - review required");
+      return proposal;
+    } finally {
+      setWallDetectionBusy(false);
+    }
+  }, [planGeometryIndex, page, rejectedProposalKeys]);
+
+  const acceptExteriorProposal = useCallback(() => {
+    if (!exteriorProposal) return;
+    const vertices = exteriorProposal.vertices.map((vertex) => createWallVertex({ id: generateId("wv"), x: vertex.x, y: vertex.y }));
+    const idByOld = new Map(exteriorProposal.vertices.map((vertex, index) => [vertex.id, vertices[index].id]));
+    const segments = exteriorProposal.segments.map((segment) => ({
+      ...segment,
+      id: generateId("ws"),
+      aId: idByOld.get(segment.aId),
+      bId: idByOld.get(segment.bId),
+      wallType: "exterior",
+      source: "manual",
+      confirmed: true,
+      confidence: null,
+      locked: false,
+    })).filter((segment) => segment.aId && segment.bId && segment.aId !== segment.bId);
+    const accepted = {
+      ...exteriorGraphMetadata("exteriorWalls", page?.exteriorWalls || {}),
+      vertices,
+      segments,
+      isClosed: isPerimeterClosed(vertices, segments),
+      confirmed: false,
+      confirmedAt: null,
+      source: EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1,
+      status: "closed-needs-review",
+      proposalAcceptedAt: new Date().toISOString(),
+    };
+    pushUndo("exteriorWalls", page?.exteriorWalls ?? null);
+    commitPage({ exteriorWalls: accepted });
+    setExteriorProposal(null);
+    setWallDetectionStatus("proposal-accepted");
+    setWallDetectionMessage("Exterior proposal accepted as a starting trace. Review and Confirm Exterior when correct.");
+    setActiveToolState("edit-walls");
+  }, [exteriorProposal, page, commitPage, pushUndo]);
+
+  const rejectExteriorProposal = useCallback(() => {
+    if (exteriorProposal?.key) setRejectedProposalKeys((prev) => new Set([...prev, exteriorProposal.key]));
+    setExteriorProposal(null);
+    setWallDetectionStatus("idle");
+    setWallDetectionMessage("");
+    setWallDetectionCode(null);
+  }, [exteriorProposal]);
+
+  const editExteriorProposal = useCallback(() => {
+    acceptExteriorProposal();
+  }, [acceptExteriorProposal]);
   // Results-panel/toolbar "Accept All High-Confidence Segments" — confirms
   // every unreviewed automatic segment whose per-segment confidence is
   // "high" in one action, without touching medium/low-confidence ones that
@@ -634,6 +812,29 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return best;
   }, [page]);
 
+  const findWallSegmentNear = useCallback((point, { field = "exteriorWalls", zoomScale = 1, toleranceScreenPx = VERTEX_HIT_TOLERANCE_SCREEN_PX } = {}) => {
+    const graph = page?.[field];
+    if (!graph) return null;
+    const toleranceDocUnits = toleranceScreenPx / Math.max(zoomScale, 0.01);
+    const byId = new Map(graph.vertices.map((v) => [v.id, v]));
+    let best = null;
+    let bestPoint = null;
+    let bestDistance = toleranceDocUnits;
+    activeWallSegments(graph).forEach((segment) => {
+      const a = byId.get(segment.aId);
+      const b = byId.get(segment.bId);
+      if (!a || !b) return;
+      const { point: projected } = projectOntoWall(point, a, b);
+      const d = distance(projected, point);
+      if (d <= bestDistance) {
+        best = segment;
+        bestPoint = projected;
+        bestDistance = d;
+      }
+    });
+    return best ? { segment: best, point: bestPoint, distance: bestDistance } : null;
+  }, [page]);
+
   // Empty-space click while editing: extends the chain from the currently
   // selected vertex (if any) by adding a new vertex, or clicking an existing
   // vertex selects it as the new chain start / connects it to the prior one.
@@ -668,6 +869,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     if (bestSegment) {
       setSelectedField("exteriorWalls");
       setSelectedSegmentId(bestSegment.id);
+      setSelectedSegmentPoint(rawPoint);
       setSelectedVertexId(null);
       setSelectedOpeningId(null);
       return;
@@ -684,6 +886,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     });
     setSelectedVertexId(newVertex.id);
     setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
   }, [page, selectedVertexId, mutateWalls, planGeometryIndex]);
 
   // `field` defaults to "exteriorWalls" so the original exterior-only
@@ -698,17 +901,24 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setSelectedField(field);
     setSelectedVertexId(vertexId);
     setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
     setSelectedOpeningId(null);
     setDraggingVertex({ id: vertexId, field, x: vertex.x, y: vertex.y });
   }, [page]);
 
-  const updateWallVertexDrag = useCallback((point, { zoomScale = 1 } = {}) => {
+  const updateWallVertexDrag = useCallback((point, { zoomScale = 1, disableSnap = false } = {}) => {
     setDraggingVertex((prev) => {
       if (!prev) return prev;
+      if (disableSnap) {
+        setWallEditSnapPreview(null);
+        return { ...prev, x: point.x, y: point.y };
+      }
       const candidates = buildSnapCandidates(page, { excludeVertexId: prev.id });
-      const { point: snapped } = snapPoint(point, candidates, { zoomScale });
+      const { point: snapped, snappedTo } = snapPoint(point, candidates, { zoomScale });
       const planCandidate = bestSnapCandidate(point, { toleranceScreenPx: VERTEX_HIT_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
       const final = planCandidate && planCandidate.distance < distance(point, snapped) ? planCandidate.point : snapped;
+      const candidate = planCandidate || (snappedTo ? { type: snappedTo.kind === "intersection" ? "intersection" : "endpoint", point: snapped } : null);
+      setWallEditSnapPreview(candidate ? { point: final, snap: snapCandidateToMetadata(candidate), label: snapLabelForCandidate(candidate) } : null);
       return { ...prev, x: final.x, y: final.y };
     });
   }, [page, planGeometryIndex]);
@@ -749,18 +959,32 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         if (otherOpen && distance(finalPoint, otherOpen) <= joinTolerance) {
           moved = joinVertices(moved, otherOpen.id, current.id);
         }
+        const validation = field === "exteriorWalls" ? validateEditedExteriorGraph(moved, current.id) : { valid: true };
+        if (!validation.valid) {
+          setWallEditValidation(validation);
+          moved = { ...moved, confirmed: false };
+        } else {
+          setWallEditValidation(null);
+        }
         return moved;
       }, nextOpenings !== page.openings ? { openings: nextOpenings } : {});
 
+      setWallEditSnapPreview(null);
       return null;
     });
   }, [page, mutateWallField]);
 
   const deleteSelectedWallVertex = useCallback(() => {
     if (!selectedVertexId) return;
-    if (vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)) return;
-    mutateWallField(selectedField, (graph) => deleteVertex(graph, selectedVertexId));
+    const graph = page?.[selectedField];
+    if (vertexTouchesLockedSegment(graph, selectedVertexId)) return;
+    if (selectedField === "exteriorWalls" && isPerimeterClosed(graph?.vertices || [], graph?.segments || []) && (graph?.vertices?.length || 0) <= 3) {
+      setWallEditValidation({ valid: false, vertexId: selectedVertexId, message: "Exterior invalid - adjust the highlighted point." });
+      return;
+    }
+    mutateWallField(selectedField, (graph) => deleteVertexAndReconnect(graph, selectedVertexId));
     setSelectedVertexId(null);
+    setWallEditValidation(null);
   }, [selectedVertexId, selectedField, page, mutateWallField]);
 
   const deleteSelectedWallSegment = useCallback(() => {
@@ -775,21 +999,19 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       remainingOpenings.length !== priorOpenings.length ? { openings: remainingOpenings } : {}
     );
     setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
   }, [selectedSegmentId, selectedField, mutateWallField, page]);
 
   // Toolbar's single flat "Delete Segment" action (spec: never hidden in a
   // submenu) — deletes whichever selection the Edit Exterior tool currently
   // has, vertex taking priority since deleting a vertex already implies
   // removing its connected segments.
-  const selectedSegment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId) || null;
   const canDeleteWallSelection = !!(
-    (selectedVertexId && !vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)) ||
-    (selectedSegmentId && !selectedSegment?.locked)
+    selectedVertexId && !vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)
   );
   const deleteSelectedWallItem = useCallback(() => {
     if (selectedVertexId) deleteSelectedWallVertex();
-    else if (selectedSegmentId) deleteSelectedWallSegment();
-  }, [selectedVertexId, selectedSegmentId, deleteSelectedWallVertex, deleteSelectedWallSegment]);
+  }, [selectedVertexId, deleteSelectedWallVertex]);
 
   // ---- Generic Edit tool: hit-testing across both wall graphs + openings ---
 
@@ -809,6 +1031,26 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return best ? { field: bestField, vertex: best } : null;
   }, [page]);
 
+  const updateWallEditHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+    if (activeTool !== "edit-walls" && activeTool !== "edit") return;
+    const vertexHit = activeTool === "edit-walls"
+      ? (findWallVertexNear(rawPoint, { zoomScale }) ? { field: "exteriorWalls", vertex: findWallVertexNear(rawPoint, { zoomScale }) } : null)
+      : findWallVertexNearAny(rawPoint, { zoomScale });
+    if (vertexHit?.vertex) {
+      setWallEditHoverTarget({ type: "point", id: vertexHit.vertex.id, field: vertexHit.field });
+      return;
+    }
+    const fields = activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
+    for (const field of fields) {
+      const hit = findWallSegmentNear(rawPoint, { field, zoomScale });
+      if (hit) {
+        setWallEditHoverTarget({ type: "segment", id: hit.segment.id, field });
+        return;
+      }
+    }
+    setWallEditHoverTarget(null);
+  }, [activeTool, findWallVertexNear, findWallVertexNearAny, findWallSegmentNear]);
+
   // Click priority: vertex > segment > opening, across exterior+internal —
   // whichever is nearest within tolerance wins; empty space deselects.
   const handleEditToolClick = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
@@ -819,6 +1061,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setSelectedField(vertexHit.field);
       setSelectedVertexId(vertexHit.vertex.id);
       setSelectedSegmentId(null);
+      setSelectedSegmentPoint(null);
       setSelectedOpeningId(null);
       return;
     }
@@ -840,6 +1083,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       if (bestSegment) {
         setSelectedField(field);
         setSelectedSegmentId(bestSegment.id);
+        setSelectedSegmentPoint(rawPoint);
         setSelectedVertexId(null);
         setSelectedOpeningId(null);
         return;
@@ -862,12 +1106,14 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
     setSelectedVertexId(null);
     setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
     setSelectedOpeningId(null);
   }, [page, findWallVertexNearAny]);
 
   const selectWallSegment = useCallback((segmentId, field = "exteriorWalls") => {
     setSelectedField(field);
     setSelectedSegmentId(segmentId);
+    setSelectedSegmentPoint(null);
     setSelectedVertexId(null);
     setSelectedOpeningId(null);
   }, []);
@@ -960,10 +1206,16 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const a = segment && graph.vertices.find((v) => v.id === segment.aId);
     const b = segment && graph.vertices.find((v) => v.id === segment.bId);
     if (!a || !b) return;
-    const mid = midpoint(a, b);
-    mutateWallField(selectedField, (g) => splitSegment(g, selectedSegmentId, mid));
+    const basePoint = selectedSegmentPoint || midpoint(a, b);
+    const { point: projected } = projectOntoWall(basePoint, a, b);
+    const planCandidate = bestSnapCandidate(projected, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale: 1, planGeometryIndex, page });
+    const insertPoint = planCandidate ? planCandidate.point : projected;
+    mutateWallField(selectedField, (g) => splitSegment(g, selectedSegmentId, insertPoint));
     setSelectedSegmentId(null);
-  }, [selectedSegmentId, selectedField, page, mutateWallField]);
+    setSelectedSegmentPoint(null);
+  }, [selectedSegmentId, selectedField, selectedSegmentPoint, page, mutateWallField, planGeometryIndex]);
+
+  const insertPointOnSelectedSegment = splitSelectedSegment;
 
   // Validates *before* mutating — a failed close (e.g. the closing segment
   // would cross another wall) leaves the graph untouched and surfaces the
@@ -1585,6 +1837,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
+    exteriorProposal, suggestExteriorProposal, acceptExteriorProposal, editExteriorProposal, rejectExteriorProposal,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
     acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates,
@@ -1593,12 +1846,13 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     findWallVertexNear, handleWallCanvasClick,
     findWallVertexNearAny, handleEditToolClick,
     beginWallVertexDrag, updateWallVertexDrag, endWallVertexDrag, draggingVertex,
+    updateWallEditHover, wallEditHoverTarget, wallEditSnapPreview, wallEditValidation,
     selectedField, selectedVertexId, selectedSegmentId, selectWallSegment,
     deleteSelectedWallVertex, deleteSelectedWallSegment,
     canDeleteWallSelection, deleteSelectedWallItem,
     changeSelectedSegmentWallType, setSelectedSegmentThickness,
     setSelectedSegmentLocked, moveSelectedSegmentToWallGraph,
-    convertSelectedSegmentToManual, splitSelectedSegment,
+    convertSelectedSegmentToManual, splitSelectedSegment, insertPointOnSelectedSegment,
     closeWallPerimeter, closeShapeError, closeShapeSuccessMessage, canCloseShape,
     canClearExterior, clearExteriorConfirmOpen, requestClearExterior, cancelClearExterior, confirmClearExterior,
     wallValidation, confirmExteriorWalls, totalPerimeterMm,

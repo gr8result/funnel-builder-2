@@ -12,7 +12,7 @@ import { distance } from "../takeoff/geometry.js";
 // something. Confirm Exterior Walls / Confirm Area are one-time workflow
 // gates rather than persistent tools, so they live as contextual actions in
 // the status row below, alongside scale/detection/close-shape feedback.
-export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
+export default function TakeoffToolbar({ page, tools }) {
   const hasCalibration = Boolean(page?.calibration);
   const hasWalls = Boolean(page?.exteriorWalls?.vertices?.length);
   const wallsConfirmed = Boolean(page?.exteriorWalls?.confirmed);
@@ -37,10 +37,10 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
         <span style={S.divider} />
         <ToolButton
           disabled={tools.wallDetectionBusy}
-          onClick={onDetectExteriorWalls}
+          onClick={tools.suggestExteriorProposal}
           testId="tool-detect-exterior"
         >
-          {tools.wallDetectionBusy ? "Detecting..." : "Auto Detect Exterior - Experimental"}
+          {tools.wallDetectionBusy ? "Suggesting..." : "Suggest Exterior"}
         </ToolButton>
         <ToolButton active={tools.activeTool === "exterior-wall"} onClick={() => tools.setActiveTool("exterior-wall")} testId="tool-draw-exterior">
           Trace Exterior
@@ -55,6 +55,9 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
         </ToolButton>
         <ToolButton disabled={!tools.canDeleteWallSelection} onClick={tools.deleteSelectedWallItem} testId="tool-delete-segment">
           Delete Point
+        </ToolButton>
+        <ToolButton disabled={!tools.selectedSegmentId} onClick={tools.insertPointOnSelectedSegment} testId="tool-insert-point">
+          Insert Point
         </ToolButton>
         <ToolButton disabled={!tools.canCloseShape} onClick={() => tools.closeWallPerimeter("exteriorWalls")} testId="tool-close-shape">
           Complete Exterior
@@ -210,8 +213,8 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
             <button type="button" style={S.miniButton} onClick={() => tools.rejectAutomaticCandidates()} data-testid="reject-candidates">
               Reject Candidates
             </button>
-            <button type="button" style={S.miniButton} onClick={onDetectExteriorWalls} disabled={tools.wallDetectionBusy} data-testid="run-detection-again">
-              Run Detection Again
+            <button type="button" style={S.miniButton} onClick={tools.suggestExteriorProposal} disabled={tools.wallDetectionBusy} data-testid="run-detection-again">
+              Suggest Again
             </button>
             <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("plan-region")} data-testid="candidate-select-plan-region">
               Select Plan Region
@@ -230,6 +233,20 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
           <button type="button" style={S.miniButton} disabled={!tools.wallValidation.valid} onClick={tools.confirmExteriorWalls} data-testid="tool-confirm-walls">
             Confirm Exterior
           </button>
+        )}
+        {tools.exteriorProposal && (
+          <>
+            <span style={S.wallStatus} data-testid="exterior-proposal-status">Exterior proposal - review required</span>
+            <button type="button" style={S.miniButton} onClick={tools.acceptExteriorProposal} data-testid="accept-exterior-proposal">
+              Accept as Starting Trace
+            </button>
+            <button type="button" style={S.miniButton} onClick={tools.editExteriorProposal} data-testid="edit-exterior-proposal">
+              Edit Proposal
+            </button>
+            <button type="button" style={S.miniButton} onClick={tools.rejectExteriorProposal} data-testid="reject-exterior-proposal">
+              Reject Proposal
+            </button>
+          </>
         )}
 
         {closeShapeFeedback(tools)}
@@ -263,6 +280,16 @@ export default function TakeoffToolbar({ page, tools, onDetectExteriorWalls }) {
           <span>Esc: cancel preview</span>
         </div>
       )}
+      {tools.activeTool === "edit-walls" && (
+        <div style={S.traceStatusBar} data-testid="edit-exterior-status-bar">
+          <strong>Edit Exterior active</strong>
+          <span>Selected point: {selectedPointIndex(page, tools)}</span>
+          <span>Drag to reposition</span>
+          <span>Alt: disable snap</span>
+          <span>Delete: remove selected point</span>
+          {tools.wallEditValidation?.valid === false && <span style={S.invalidText}>{tools.wallEditValidation.message}</span>}
+        </div>
+      )}
       <div style={readiness.ready ? S.readyText : S.notReadyText} data-testid="measurement-readiness">
         {readiness.ready ? "Ready for measurement" : "Measurements locked until orientation, scale, and exterior walls are confirmed."}
       </div>
@@ -284,6 +311,13 @@ function exteriorTraceStatus(page, tools) {
     currentSegment: currentMm == null ? "-" : formatLength(currentMm),
     totalTraced: formatLength(tools.totalExteriorWallLengthMm || tools.totalPerimeterMm || 0),
   };
+}
+
+function selectedPointIndex(page, tools) {
+  if (!tools.selectedVertexId) return "-";
+  const vertices = page?.exteriorWalls?.vertices || [];
+  const index = vertices.findIndex((vertex) => vertex.id === tools.selectedVertexId);
+  return index >= 0 ? String(index + 1) : "-";
 }
 
 function SegmentedButton({ children, active, onClick, testId }) {
@@ -420,6 +454,7 @@ const S = {
     fontSize: 12,
     fontWeight: 700,
   },
+  invalidText: { color: "#b91c1c", fontWeight: 900 },
   progressItem: { display: "flex", alignItems: "center", gap: 6, fontWeight: 700 },
   progressDot: { width: 8, height: 8, borderRadius: "50%", display: "inline-block" },
   progressState: { fontWeight: 500, color: "#64748b" },

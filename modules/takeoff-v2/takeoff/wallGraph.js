@@ -69,6 +69,35 @@ export function isSingleConnectedComponent(vertices, segments) {
   return visited.size === vertices.length;
 }
 
+export function connectedComponents(vertices, segments) {
+  const adjacency = buildAdjacency(vertices, segments);
+  const byId = new Map(vertices.map((v) => [v.id, v]));
+  const seen = new Set();
+  const components = [];
+
+  vertices.forEach((vertex) => {
+    if (seen.has(vertex.id)) return;
+    const ids = [];
+    const stack = [vertex.id];
+    while (stack.length) {
+      const id = stack.pop();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+      (adjacency.get(id) || []).forEach((neighbor) => {
+        if (!seen.has(neighbor)) stack.push(neighbor);
+      });
+    }
+    const idSet = new Set(ids);
+    components.push({
+      vertices: ids.map((id) => byId.get(id)).filter(Boolean),
+      segments: segments.filter((segment) => idSet.has(segment.aId) || idSet.has(segment.bId)),
+    });
+  });
+
+  return components;
+}
+
 export function hasDisconnectedSegments(vertices, segments) {
   return !isSingleConnectedComponent(vertices, segments);
 }
@@ -138,6 +167,37 @@ export function deleteVertex(graph, vertexId) {
   return {
     vertices: graph.vertices.filter((v) => v.id !== vertexId),
     segments: graph.segments.filter((s) => s.aId !== vertexId && s.bId !== vertexId),
+  };
+}
+
+export function deleteVertexAndReconnect(graph, vertexId) {
+  const touching = graph.segments.filter((s) => s.aId === vertexId || s.bId === vertexId);
+  if (touching.length !== 2 || graph.vertices.length <= 3) return deleteVertex(graph, vertexId);
+  const neighborIds = touching.map((segment) => (segment.aId === vertexId ? segment.bId : segment.aId));
+  if (!neighborIds[0] || !neighborIds[1] || neighborIds[0] === neighborIds[1]) return deleteVertex(graph, vertexId);
+  const locked = touching.some((segment) => segment.locked);
+  const template = touching[0];
+  const remaining = graph.segments.filter((s) => s.aId !== vertexId && s.bId !== vertexId);
+  const exists = remaining.some((s) => (
+    (s.aId === neighborIds[0] && s.bId === neighborIds[1]) ||
+    (s.aId === neighborIds[1] && s.bId === neighborIds[0])
+  ));
+  const reconnect = exists ? [] : [
+    createWallSegment({
+      id: generateId("ws"),
+      aId: neighborIds[0],
+      bId: neighborIds[1],
+      wallType: template.wallType,
+      thicknessMm: template.thicknessMm,
+      source: "manual",
+      confirmed: true,
+      confidence: null,
+      locked,
+    }),
+  ];
+  return {
+    vertices: graph.vertices.filter((v) => v.id !== vertexId),
+    segments: [...remaining, ...reconnect],
   };
 }
 

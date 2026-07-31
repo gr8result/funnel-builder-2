@@ -167,6 +167,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Exterior + internal wall segments */}
+        {tools.exteriorProposal && (
+          <ProposalOutline proposal={tools.exteriorProposal} project={project} />
+        )}
         {showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
@@ -195,6 +198,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
             Length/status text lives outside the drawing area in the toolbar. */}
         {isWallDraw && tools.wallDrawHoverPreview?.point && (
           <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
+        )}
+        {isEditTool && tools.wallEditSnapPreview?.point && (
+          <SnapMarker point={tools.wallEditSnapPreview.point} snap={tools.wallEditSnapPreview.snap} label={tools.wallEditSnapPreview.label} project={project} />
         )}
         {isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
           const field = tools.activeTool === "exterior-wall" ? "exteriorWalls" : "internalWalls";
@@ -307,12 +313,58 @@ function WallVertexDot({ vertex, index, project, selected }) {
       )}
       <circle
         cx={p.x} cy={p.y}
+        r={12}
+        fill="transparent"
+        stroke="transparent"
+        data-testid="wall-vertex-hit-area"
+      />
+      <circle
+        cx={p.x} cy={p.y}
         r={4}
         fill="#fff"
         stroke={selected ? "#f97316" : "#1d4ed8"}
         strokeWidth={2}
       />
       <circle cx={p.x} cy={p.y} r={1.3} fill={selected ? "#f97316" : "#1d4ed8"} />
+    </g>
+  );
+}
+
+function ProposalOutline({ proposal, project }) {
+  const vertices = proposal?.vertices || [];
+  const segments = proposal?.segments || [];
+  const byId = new Map(vertices.map((vertex) => [vertex.id, vertex]));
+  return (
+    <g data-testid="exterior-proposal-outline">
+      {segments.map((segment) => {
+        const a = byId.get(segment.aId);
+        const b = byId.get(segment.bId);
+        if (!a || !b) return null;
+        const pa = project(a);
+        const pb = project(b);
+        return (
+          <line
+            key={segment.id}
+            x1={pa.x}
+            y1={pa.y}
+            x2={pb.x}
+            y2={pb.y}
+            stroke="#0891b2"
+            strokeWidth={2.5}
+            strokeDasharray="8 5"
+            data-testid="exterior-proposal-segment"
+          />
+        );
+      })}
+      {vertices.map((vertex, index) => {
+        const p = project(vertex);
+        return (
+          <g key={vertex.id} data-testid="exterior-proposal-handle" data-index={index}>
+            <circle cx={p.x} cy={p.y} r={4} fill="#fff" stroke="#0891b2" strokeWidth={2} />
+            <circle cx={p.x} cy={p.y} r={1.3} fill="#0891b2" />
+          </g>
+        );
+      })}
     </g>
   );
 }
@@ -489,7 +541,7 @@ function AxisLockedPreviewLine({ from, to, angleDegrees, project }) {
   );
 }
 
-function SnapMarker({ point, snap, project }) {
+function SnapMarker({ point, snap, label, project }) {
   if (!point) return null;
   const p = project(point);
   const kind = snap?.kind || "manual";
@@ -502,6 +554,11 @@ function SnapMarker({ point, snap, project }) {
       <line x1={p.x} y1={p.y - 8} x2={p.x} y2={p.y - 3} stroke={style.fill} strokeWidth={1.2} />
       <line x1={p.x} y1={p.y + 3} x2={p.x} y2={p.y + 8} stroke={style.fill} strokeWidth={1.2} />
       {kind !== "manual" && <circle cx={p.x} cy={p.y} r={1.5} fill={style.fill} />}
+      {label && (
+        <text x={p.x + 10} y={p.y - 8} fontSize={10} fontWeight={800} fill={style.fill} data-testid="snap-marker-label">
+          {label}
+        </text>
+      )}
     </g>
   );
 }

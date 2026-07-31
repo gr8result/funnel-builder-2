@@ -342,8 +342,23 @@ const PlanViewer = forwardRef(function PlanViewer(
     }
     if (tool !== "select" && tool !== "pan" && tools) {
       const pagePoint = eventToPagePoint(event);
+      if (tool === "edit-walls" && tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.field === "exteriorWalls") {
+        tools.beginWallVertexDrag(tools.wallEditHoverTarget.id, "exteriorWalls");
+        dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+        setDragMode("vertex");
+        return;
+      }
+      if (tool === "edit" && tools.wallEditHoverTarget?.type === "point") {
+        tools.beginWallVertexDrag(tools.wallEditHoverTarget.id, tools.wallEditHoverTarget.field);
+        dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+        setDragMode("vertex");
+        return;
+      }
       if (tool === "edit-walls" && pagePoint) {
-        const hit = tools.findWallVertexNear(pagePoint, { zoomScale: view.zoomScale });
+        const hoverPointHit = tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.field === "exteriorWalls"
+          ? { id: tools.wallEditHoverTarget.id }
+          : null;
+        const hit = hoverPointHit || tools.findWallVertexNear(pagePoint, { zoomScale: view.zoomScale });
         if (hit) {
           tools.beginWallVertexDrag(hit.id);
           dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
@@ -371,7 +386,10 @@ const PlanViewer = forwardRef(function PlanViewer(
         }
       }
       if (tool === "edit" && pagePoint) {
-        const vertexHit = tools.findWallVertexNearAny(pagePoint, { zoomScale: view.zoomScale });
+        const hoverPointHit = tools.wallEditHoverTarget?.type === "point"
+          ? { field: tools.wallEditHoverTarget.field, vertex: { id: tools.wallEditHoverTarget.id } }
+          : null;
+        const vertexHit = hoverPointHit || tools.findWallVertexNearAny(pagePoint, { zoomScale: view.zoomScale });
         if (vertexHit) {
           tools.beginWallVertexDrag(vertexHit.vertex.id, vertexHit.field);
           dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
@@ -424,6 +442,8 @@ const PlanViewer = forwardRef(function PlanViewer(
           if (tools.areaMode === "rectangle" && tools.areaSearchDraft) tools.updateAreaRectangle(pagePoint);
         } else if (activeTool === "plan-region") {
           tools.updatePlanRegionHover(pagePoint);
+        } else if (activeTool === "edit-walls" || activeTool === "edit") {
+          tools.updateWallEditHover?.(pagePoint, { zoomScale: view.zoomScale });
         } else {
           let constrained = pagePoint;
           if (event.shiftKey && activeTool === "edit-walls" && tools.selectedVertexId) {
@@ -439,11 +459,19 @@ const PlanViewer = forwardRef(function PlanViewer(
     // reference below (including inside the deferred setView updater) uses
     // this local snapshot, never a second live read of dragRef.current.
     const dragState = dragRef.current;
+    if (!dragState && (event.buttons & 1) && tools?.wallEditHoverTarget?.type === "point" && (tools.activeTool === "edit-walls" || tools.activeTool === "edit")) {
+      tools.beginWallVertexDrag(tools.wallEditHoverTarget.id, tools.wallEditHoverTarget.field || "exteriorWalls");
+      dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
+      setDragMode("vertex");
+      const pagePoint = eventToPagePoint(event);
+      if (pagePoint) tools.updateWallVertexDrag(pagePoint, { zoomScale: view.zoomScale, disableSnap: event.altKey });
+      return;
+    }
     if (!dragState) return;
 
     if (dragState.mode === "vertex") {
       const pagePoint = eventToPagePoint(event);
-      if (pagePoint) tools.updateWallVertexDrag(pagePoint, { zoomScale: view.zoomScale });
+      if (pagePoint) tools.updateWallVertexDrag(pagePoint, { zoomScale: view.zoomScale, disableSnap: event.altKey });
       return;
     }
 
@@ -531,6 +559,7 @@ const PlanViewer = forwardRef(function PlanViewer(
   // end the drag with no click/pan side effects — there's no valid gesture
   // left to interpret.
   const handlePointerCancel = useCallback(() => { endDrag(); }, [endDrag]);
+  const effectiveDragMode = dragMode || (tools?.draggingVertex ? "vertex" : null);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -588,7 +617,7 @@ const PlanViewer = forwardRef(function PlanViewer(
         ref={containerRef}
         style={{
           ...S.viewport,
-          cursor: cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode }),
+          cursor: cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode: effectiveDragMode, editHoverTarget: tools?.wallEditHoverTarget }),
         }}
         onPointerDownCapture={handlePointerDown}
         onPointerMoveCapture={handlePointerMove}
@@ -600,7 +629,7 @@ const PlanViewer = forwardRef(function PlanViewer(
         onDoubleClick={handleDoubleClick}
         data-testid="plan-viewport"
         data-active-tool={tools?.activeTool || "select"}
-        data-cursor-mode={cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode })}
+        data-cursor-mode={cursorForPlanViewer({ activeTool: tools?.activeTool || "select", isSpacePanning, dragMode: effectiveDragMode, editHoverTarget: tools?.wallEditHoverTarget })}
         data-view-zoom={view.zoomScale}
         data-view-pan-x={view.panX}
         data-view-pan-y={view.panY}

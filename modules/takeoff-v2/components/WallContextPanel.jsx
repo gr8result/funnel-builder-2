@@ -48,7 +48,7 @@ export default function WallContextPanel({ page, tools }) {
         </label>
         <Field label="State" value={locked ? "Locked" : "Unlocked"} />
         <div style={S.actions}>
-          <button type="button" style={S.button} disabled={locked} onClick={tools.splitSelectedSegment} data-testid="wall-context-split">Split</button>
+          <button type="button" style={S.button} disabled={locked} onClick={tools.insertPointOnSelectedSegment} data-testid="wall-context-split">Insert Point</button>
           <button type="button" style={S.buttonDanger} disabled={locked} onClick={tools.deleteSelectedWallSegment} data-testid="wall-context-delete">Delete</button>
           <button
             type="button"
