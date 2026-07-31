@@ -12,6 +12,7 @@ import {
   Handshake,
   Home,
   LayoutDashboard,
+  ListChecks,
   Package,
   Presentation,
   RefreshCw,
@@ -36,8 +37,6 @@ import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
-import { importPdfAsStandardDocumentPreview } from "../../lib/standard-inclusions/pdfImport";
-import PdfImportReview from "../document-engine/import/PdfImportReview";
 import JobFileMenu from "./JobFileMenu.jsx";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
@@ -254,6 +253,15 @@ const WORKSPACE_VISUALS = {
     border: "#bbf7d0",
     gradient: "linear-gradient(135deg, #166534 0%, #22c55e 100%)",
     Icon: FileText,
+  },
+  inclusionsSelections: {
+    title: "Inclusions & Selections",
+    subtitle: "Set up project areas, apply inclusion templates and complete client product selections.",
+    color: "#2563eb",
+    soft: "#eff6ff",
+    border: "#bfdbfe",
+    gradient: "linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%)",
+    Icon: ListChecks,
   },
   productLibrary: {
     title: "Product Library",
@@ -634,6 +642,24 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           transform: translateY(-6px);
           box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
         }
+        @media (max-width: 1180px) {
+          .project-dashboard-card-grid {
+            grid-template-columns: repeat(3, minmax(190px, 1fr)) !important;
+          }
+        }
+        @media (max-width: 780px) {
+          .project-dashboard-card-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 560px) {
+          .project-dashboard-card-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .project-workspace-card {
+            min-height: 150px !important;
+          }
+        }
       `}</style>
       <aside style={styles.nav}>
         <div style={styles.navBrand}>
@@ -828,7 +854,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
             {sheet.workbook.page === "projectDashboard" && (
-              <ProjectDashboardSheet sheet={sheet} />
+              <ProjectDashboardSheet sheet={sheet} workspaceId={workspaceId} activeProjectId={commercialSyncStatus.projectId} />
             )}
             {sheet.workbook.page === "dataInput" && (
               <DataInputSheet
@@ -1048,6 +1074,13 @@ const DASHBOARD_WORKSPACE_CARDS = [
     badge: "Base",
   },
   {
+    title: "Inclusions & Selections",
+    subtitle: "Set up project areas, apply inclusion templates and complete client product selections.",
+    href: "/inclusions-selections/areas",
+    visualKey: "inclusionsSelections",
+    badge: "Select",
+  },
+  {
     title: "Product Library",
     subtitle: "Manage client-selectable products, finishes, fixtures, images, variants, suppliers and pricing.",
     href: "/modules/builders/product-library?tab=selections",
@@ -1147,10 +1180,13 @@ const DASHBOARD_WORKSPACE_CARDS = [
   },
 ];
 
-function ProjectDashboardSheet({ sheet }) {
+function ProjectDashboardSheet({ sheet, workspaceId = "", activeProjectId = "" }) {
   function openCard(card) {
     if (card.href) {
-      window.location.assign(card.href);
+      const destination = card.href === "/inclusions-selections/areas"
+        ? inclusionsSelectionsDashboardHref(sheet, workspaceId, activeProjectId)
+        : dashboardHrefWithProjectContext(card.href, sheet, workspaceId, activeProjectId);
+      window.location.assign(destination);
       return;
     }
     sheet.setPage(card.page);
@@ -6885,8 +6921,10 @@ export function StandardInclusionsSheet({ sheet }) {
   const [savedScheduleLoading, setSavedScheduleLoading] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [pendingPdfFile, setPendingPdfFile] = useState(null);
-  const [pdfImportReview, setPdfImportReview] = useState(null);
-  const [pdfImportReviewBusy, setPdfImportReviewBusy] = useState(false);
+  const [canvaStatus, setCanvaStatus] = useState(null);
+  const [canvaDesigns, setCanvaDesigns] = useState([]);
+  const [canvaDesignSearch, setCanvaDesignSearch] = useState("");
+  const [finishedPdfPageCount, setFinishedPdfPageCount] = useState(0);
   const onlyOfficeAuthToken = "";
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
   const pages = normalisePremierPdfPages(standard.pdfPages);
@@ -6898,8 +6936,28 @@ export function StandardInclusionsSheet({ sheet }) {
   const activeDocument = !standard.scheduleDeleted && Array.isArray(standard.documentBuilder?.pages) && standard.documentBuilder.pages.length
     ? standard.documentBuilder
     : null;
+  const activeSourceType = standard.editorMode || standard.pdfEditorMode || standard.activeDocumentSource || "";
+  const activeFinishedPdf = !standard.scheduleDeleted && activeSourceType === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF;
+  const activeCanvaDocument = !standard.scheduleDeleted && activeSourceType === STANDARD_INCLUSIONS_EDITOR_MODES.CANVA;
   const activeOnlyOfficeDocumentId = !standard.scheduleDeleted ? standard.onlyOfficeDocumentId || "" : "";
   const activeSummary = standardScheduleSummary(activeDocument, standard);
+  const latestRestorableRevision = findLatestRestorableStandardRevision(standard.revisionHistory || []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStatus() {
+      try {
+        const headers = await standardAuthHeaders(workspaceId);
+        const response = await fetch(`/api/standard-inclusions/canva/status?workspace_id=${encodeURIComponent(workspaceId || "")}`, { headers });
+        const payload = await response.json().catch(() => ({}));
+        if (!cancelled) setCanvaStatus(payload);
+      } catch (error) {
+        if (!cancelled) setCanvaStatus({ ok: false, connected: false, error: error?.message || "Could not check Canva connection." });
+      }
+    }
+    if (workspaceId) loadStatus();
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   async function saveStandard(next, options = {}) {
     const nextEditorMode = next.editorMode || next.pdfEditorMode || standard.editorMode || standard.pdfEditorMode || STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE;
@@ -6964,7 +7022,165 @@ export function StandardInclusionsSheet({ sheet }) {
     setImportPreview(null);
     setPendingPdfFile(null);
     setManagementMode("replace-options");
-    setStandardStatus("Choose how you want to replace the Standard Inclusions schedule.");
+    setStandardStatus("Choose a Standard Inclusions workflow.");
+  }
+
+  async function handleConnectCanvaAccount() {
+    setStandardStatus("Opening Canva OAuth...");
+    try {
+      const headers = await standardAuthHeaders(workspaceId);
+      const response = await fetch("/api/standard-inclusions/canva/start", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspace_id: workspaceId, returnTo: window.location.pathname }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start Canva OAuth.");
+      const popup = window.open(payload.authorizationUrl, "gr8-canva-oauth", "width=980,height=760,noopener,noreferrer");
+      if (!popup) {
+        window.location.href = payload.authorizationUrl;
+        return;
+      }
+      setStandardStatus("Complete the Canva connection in the popup, then return here.");
+      const listener = async (event) => {
+        if (event.origin !== window.location.origin || event.data?.type !== "gr8-canva-oauth") return;
+        window.removeEventListener("message", listener);
+        setStandardStatus(event.data?.message || "Canva OAuth completed.");
+        await refreshCanvaStatus();
+      };
+      window.addEventListener("message", listener);
+    } catch (error) {
+      setStandardStatus(error?.message || "Canva connection failed.");
+    }
+  }
+
+  async function handleDisconnectCanvaAccount() {
+    setStandardStatus("Disconnecting Canva...");
+    try {
+      const headers = await standardAuthHeaders(workspaceId);
+      const response = await fetch("/api/standard-inclusions/canva/disconnect", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not disconnect Canva.");
+      await refreshCanvaStatus();
+      setStandardStatus("Canva disconnected.");
+    } catch (error) {
+      setStandardStatus(error?.message || "Canva disconnect failed.");
+    }
+  }
+
+  async function refreshCanvaStatus() {
+    const headers = await standardAuthHeaders(workspaceId);
+    const response = await fetch(`/api/standard-inclusions/canva/status?workspace_id=${encodeURIComponent(workspaceId || "")}`, { headers });
+    const payload = await response.json().catch(() => ({}));
+    setCanvaStatus(payload);
+    return payload;
+  }
+
+  async function handleImportExistingCanvaDesign() {
+    setManagementMode("canva-design-picker");
+    await loadCanvaDesigns();
+  }
+
+  async function loadCanvaDesigns(query = canvaDesignSearch) {
+    setStandardStatus("Loading Canva designs...");
+    try {
+      const headers = await standardAuthHeaders(workspaceId);
+      const params = new URLSearchParams({ workspace_id: workspaceId || "" });
+      if (query) params.set("query", query);
+      const response = await fetch(`/api/standard-inclusions/canva/designs?${params}`, { headers });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load Canva designs.");
+      setCanvaDesigns(payload.items || payload.designs || []);
+      setStandardStatus("Choose a Canva design to use as Standard Inclusions.");
+    } catch (error) {
+      setCanvaDesigns([]);
+      setStandardStatus(error?.message || "Could not load Canva designs.");
+    }
+  }
+
+  async function attachCanvaDesign(designId) {
+    const headers = await standardAuthHeaders(workspaceId);
+    const response = await fetch("/api/standard-inclusions/canva/import-design", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ workspace_id: workspaceId, designId, projectId: proposalProjectId(sheet) || "" }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not import Canva design.");
+    const document = payload.document;
+    await saveStandardWithRevision({
+      documentBuilder: null,
+      source: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      scheduleDeleted: false,
+      isDeleted: false,
+      deletedAt: null,
+      activeDocumentId: document.id,
+      activeDocumentName: document.source_file_name || "Canva Standard Inclusions",
+      activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      activeDocumentLastSavedAt: document.updated_at || new Date().toISOString(),
+      canvaDocumentId: document.id,
+      canvaTemplateId: document.template_id || payload.template?.id || "",
+      canvaDesignId: document.canva_design_id,
+      canvaEditUrl: payload.editUrl || document.metadata?.canvaDesign?.urls?.edit_url || "",
+      canvaThumbnailUrl: document.thumbnail_url || "",
+      canvaExportedPdfUrl: "",
+      canvaExportedPdfStorageKey: "",
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+    }, "import-canva-design", document.canva_design_id, { persist: true });
+    setManagementMode("");
+    setStandardStatus("Canva design saved as the active Standard Inclusions template.");
+  }
+
+  function handleOpenInCanva() {
+    const editUrl = standard.canvaEditUrl || standard.canva?.editUrl || activeDocument?.metadata?.canvaEditUrl || "";
+    if (editUrl) {
+      try {
+        window.localStorage.setItem("gr8-standard-inclusions-canva-return", JSON.stringify({
+          workspaceId,
+          documentId: standard.canvaDocumentId || standard.activeDocumentId || "",
+          designId: standard.canvaDesignId || "",
+          at: new Date().toISOString(),
+        }));
+      } catch {}
+      window.open(editUrl, "_blank", "noopener,noreferrer");
+      setStandardStatus("Opening Standard Inclusions schedule in Canva.");
+      return;
+    }
+    setStandardStatus("Open in Canva selected. No Canva design is attached to this schedule yet.");
+  }
+
+  async function handleGenerateCanvaPdf() {
+    if (!standard.canvaDocumentId || !standard.canvaDesignId) {
+      setStandardStatus("Select or create a Canva design before generating a PDF.");
+      return;
+    }
+    setStandardStatus("Generating PDF from Canva...");
+    try {
+      const headers = await standardAuthHeaders(workspaceId);
+      const response = await fetch("/api/standard-inclusions/canva/export-pdf", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspace_id: workspaceId, documentId: standard.canvaDocumentId, designId: standard.canvaDesignId }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Canva PDF export failed.");
+      await saveStandardWithRevision({
+        canvaExportedPdfUrl: payload.pdfUrl || "",
+        canvaExportedPdfStorageKey: payload.storageKey || "",
+        activeDocumentLastSavedAt: new Date().toISOString(),
+      }, "canva-export-pdf", standard.canvaDesignId, { persist: true });
+      setStandardStatus("Canva PDF generated and stored permanently in Gr8 Result.");
+    } catch (error) {
+      setStandardStatus(error?.message || "Canva PDF export failed.");
+    }
   }
 
   function replaceWithCandidate(candidate) {
@@ -7011,6 +7227,17 @@ export function StandardInclusionsSheet({ sheet }) {
       selectedPdfPageId: "",
       pdfSourceName: "",
       pptxSourceName: "",
+      canvaDocumentId: "",
+      canvaTemplateId: "",
+      canvaDesignId: "",
+      canvaEditUrl: "",
+      canvaThumbnailUrl: "",
+      canvaExportedPdfUrl: "",
+      canvaExportedPdfStorageKey: "",
+      finishedPdfDocumentId: "",
+      finishedPdfStorageKey: "",
+      finishedPdfUrl: "",
+      finishedPdfPageCount: 0,
       editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
       pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
     }, "delete", activeSummary.source || "active-document");
@@ -7019,101 +7246,107 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus("Current Standard Inclusions schedule deleted. A backup was retained in revision history.");
   }
 
-  function startBlankSchedule() {
-    if (!window.confirm("Start a new blank Standard Inclusions Schedule? A backup of the current schedule will be retained.")) return;
-    const document = createBlankStandardScheduleDocument();
-    saveStandardWithRevision({
-      documentBuilder: document,
-      source: "blank-schedule",
-      scheduleDeleted: false,
-      isDeleted: false,
-      deletedAt: null,
-      activeDocumentId: document.id,
-      activeDocumentName: document.name,
-      activeDocumentSource: "blank-schedule",
-      activeDocumentLastSavedAt: new Date().toISOString(),
-      pdfPages: [],
-      selectedPdfPageId: "",
-      pdfSourceName: "",
-      pptxSourceName: "",
-      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-    }, "start-blank", "blank-schedule");
-    setStandardStatus("Started a new blank Standard Inclusions schedule.");
-  }
-
-  async function usePremierTemplate() {
-    if (!window.confirm("Load the Premier Template? This will only happen because you explicitly selected it. A backup of the current schedule will be retained.")) return;
+  async function usePremierTemplate({ confirmFirst = true } = {}) {
+    if (confirmFirst && !window.confirm("Load the approved default Standard Inclusions Template? A backup of the current schedule will be retained.")) return;
+    setStandardStatus("Loading default Standard Inclusions template...");
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData?.session?.access_token || "";
-    const document = await resolveBaseStandardInclusionsTemplate({
-      builderId: sheet.workbook?.builderId || "local-builder",
-      workbookId,
-      workspaceId,
-      authHeaders: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
-      },
-    });
-    const saved = markStandardDocumentSaved({
-      ...document,
-      name: standard.packages?.find((item) => item.id === standard.selectedPackageId)?.name || "Premier Inclusions Schedule",
-      metadata: {
-        ...(document.metadata || {}),
-        documentSource: "premier-template",
-        templateLoadedByUser: true,
-      },
-    }, standard);
-    saveStandardWithRevision({
-      documentBuilder: saved,
-      source: "premier-template",
-      scheduleDeleted: false,
-      isDeleted: false,
-      deletedAt: null,
-      activeDocumentId: saved.id,
-      activeDocumentName: saved.name,
-      activeDocumentSource: "premier-template",
-      activeDocumentLastSavedAt: new Date().toISOString(),
-      pdfPages: [],
-      selectedPdfPageId: "",
-      pdfSourceName: "",
-      pptxSourceName: "",
-      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-    }, "use-premier-template", "premier-template");
-    setStandardStatus("Premier Template loaded by explicit request.");
+    try {
+      const document = await resolveBaseStandardInclusionsTemplate({
+        builderId: sheet.workbook?.builderId || "local-builder",
+        workbookId,
+        workspaceId,
+        authHeaders: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+        },
+      });
+      const saved = markStandardDocumentSaved({
+        ...document,
+        name: "Standard Inclusions",
+        metadata: {
+          ...(document.metadata || {}),
+          documentSource: "default-standard-inclusions-template",
+          templateLoadedByUser: true,
+        },
+      }, standard);
+      const persisted = await saveStandardWithRevision({
+        documentBuilder: saved,
+        source: "default-standard-inclusions-template",
+        scheduleDeleted: false,
+        isDeleted: false,
+        deletedAt: null,
+        activeDocumentId: saved.id,
+        activeDocumentName: saved.name,
+        activeDocumentSource: "default-standard-inclusions-template",
+        activeDocumentLastSavedAt: new Date().toISOString(),
+        pdfPages: [],
+        selectedPdfPageId: "",
+        pdfSourceName: "",
+        pptxSourceName: "",
+        editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+        pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
+      }, "load-default-template", "default-standard-inclusions-template");
+      if (!persisted?.documentBuilder?.pages?.length) throw new Error("Default template restore failed validation: no pages were saved.");
+      setManagementMode("");
+      setStandardStatus("Default Standard Inclusions template loaded successfully.");
+    } catch (error) {
+      console.error("Default Standard Inclusions template load failed", error);
+      setStandardStatus(`Restore failed - view details. ${error?.message || "Default template could not be loaded."}`);
+    }
   }
 
   function restorePreviousVersion() {
     setManagementMode("restore");
   }
 
-  function restoreRevision(revision) {
-    if (!revision?.snapshot?.documentBuilder) return;
-    if (!window.confirm("Restore this previous Standard Inclusions Schedule version? A backup of the current schedule will be retained first.")) return;
-    const document = cloneStandardDocumentForActiveUse(revision.snapshot.documentBuilder, {
-      source: `revision:${revision.revisionId}`,
-      name: revision.snapshot.documentBuilder.name || "Restored Standard Inclusions Schedule",
-    });
-    saveStandardWithRevision({
-      documentBuilder: document,
-      source: document.metadata?.documentSource || "restored-revision",
-      scheduleDeleted: false,
-      isDeleted: false,
-      deletedAt: null,
-      activeDocumentId: document.id,
-      activeDocumentName: document.name,
-      activeDocumentSource: document.metadata?.documentSource || "restored-revision",
-      activeDocumentLastSavedAt: new Date().toISOString(),
-      pdfPages: [],
-      selectedPdfPageId: "",
-      pdfSourceName: "",
-      pptxSourceName: "",
-      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE,
-    }, "restore", `revision:${revision.revisionId}`);
-    setManagementMode("");
-    setStandardStatus("Previous Standard Inclusions schedule restored.");
+  async function restoreLatestVersion() {
+    if (!latestRestorableRevision) {
+      setStandardStatus("No valid previous Standard Inclusions version is available to restore.");
+      return;
+    }
+    await restoreRevision(latestRestorableRevision, { confirmFirst: false, latest: true });
+  }
+
+  async function restoreRevision(revision, { confirmFirst = true, latest = false } = {}) {
+    if (!revision?.snapshot) {
+      setStandardStatus("Restore failed - view details. This previous version is invalid.");
+      return;
+    }
+    if (!isRestorableStandardRevision(revision)) {
+      setStandardStatus("Restore failed - view details. This previous version has no page data or stored PDF reference.");
+      return;
+    }
+    if (confirmFirst && !window.confirm("Restore this previous Standard Inclusions Schedule version? A backup of the current schedule will be retained first.")) return;
+    setStandardStatus("Restoring...");
+    try {
+      const document = revision.snapshot.documentBuilder ? cloneStandardDocumentForActiveUse(revision.snapshot.documentBuilder, {
+        source: `revision:${revision.revisionId}`,
+        name: revision.snapshot.documentBuilder.name || "Restored Standard Inclusions Schedule",
+      }) : null;
+      const restoredMode = restoredModeForStandardRevision(revision);
+      const persisted = await saveStandardWithRevision({
+        ...revision.snapshot,
+        documentBuilder: document,
+        source: restoredMode,
+        scheduleDeleted: false,
+        isDeleted: false,
+        deletedAt: null,
+        activeDocumentId: document?.id || revision.snapshot.finishedPdfDocumentId || revision.snapshot.onlyOfficeDocumentId || revision.snapshot.activeDocumentId || "",
+        activeDocumentName: document?.name || revision.snapshot.activeDocumentName || "Restored Standard Inclusions Schedule",
+        activeDocumentSource: restoredMode,
+        activeDocumentLastSavedAt: new Date().toISOString(),
+        editorMode: restoredMode,
+        pdfEditorMode: restoredMode,
+      }, latest ? "restore-latest-version" : "restore", `revision:${revision.revisionId}`);
+      if (persisted?.scheduleDeleted) throw new Error("The restored schedule was still marked deleted after save.");
+      if (!hasActiveStandardSchedule(persisted)) throw new Error("The restored schedule did not contain document pages or a stored file reference.");
+      setManagementMode("");
+      setStandardStatus("Schedule restored successfully.");
+    } catch (error) {
+      console.error("Standard Inclusions restore failed", error);
+      setStandardStatus(`Restore failed - view details. ${error?.message || "The previous version could not be restored."}`);
+    }
   }
 
   async function preparePowerPointImport(event) {
@@ -7209,8 +7442,8 @@ export function StandardInclusionsSheet({ sheet }) {
     event.target.value = "";
     if (!file || (file.type !== "application/pdf" && !/\.pdf$/i.test(String(file.name || "")))) return;
     setPendingPdfFile(file);
-    setManagementMode("pdf-import-options");
-    setStandardStatus("Ready to import this PDF as a fixed-page schedule.");
+    setManagementMode("");
+    await importPendingPdfNow(file);
   }
 
   async function prepareDocxImport(event) {
@@ -7302,122 +7535,71 @@ export function StandardInclusionsSheet({ sheet }) {
     }
   }
 
-  // Processes the uploaded PDF and hands the result to the review screen —
-  // nothing is saved/replaces the live schedule until the user explicitly
-  // accepts it there. Previously this saved immediately on processing with no
-  // review step at all.
-  async function importPendingPdfNow() {
-    const file = pendingPdfFile;
+  async function importPendingPdfNow(fileOverride = null) {
+    const file = fileOverride || pendingPdfFile;
     if (!file) return;
     const previousStatus = standardStatus;
-    setStandardStatus("Loading PDF...");
+    setStandardStatus("Uploading finished PDF...");
     try {
-      const preview = await importPdfAsStandardDocumentPreview(file, {
-        onProgress: ({ pageNumber, pageCount }) => {
-          setStandardStatus(`Importing page ${pageNumber} of ${pageCount}`);
-        },
+      const dataUrl = await readFileAsDataUrl(file);
+      const pageCount = await readPdfPageCount(file).catch(() => 0);
+      const headers = await standardAuthHeaders(workspaceId);
+      const response = await fetch("/api/standard-inclusions/finished-pdf/upload", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ workspace_id: workspaceId, projectId: proposalProjectId(sheet) || "", fileName: file.name, dataUrl }),
       });
-      const previewPages = Array.isArray(preview.document?.pages) ? preview.document.pages : [];
-      if (!previewPages.length) throw new Error("Import failed: the PDF did not render any pages.");
-      setPdfImportReview(preview);
-      setStandardStatus(`Processed ${previewPages.length} page${previewPages.length === 1 ? "" : "s"} — review before saving.`);
-    } catch (error) {
-      console.error("Standard Inclusions PDF import failed", error);
-      setStandardStatus(error?.message || previousStatus || "PDF import failed.");
-    }
-  }
-
-  function cancelPdfImportReview() {
-    setPdfImportReview(null);
-    setPendingPdfFile(null);
-    setManagementMode("");
-    setStandardStatus("PDF import cancelled.");
-  }
-
-  async function confirmPdfImportReview(finalDocument) {
-    const preview = pdfImportReview;
-    if (!preview) return;
-    setPdfImportReviewBusy(true);
-    try {
-      const finalPages = Array.isArray(finalDocument?.pages) ? finalDocument.pages : [];
-      if (!finalPages.length) throw new Error("At least one page must be kept to save this import.");
-      const importSource = preview.source || finalDocument.metadata?.documentSource || "pdf-import";
-      const document = markStandardDocumentSaved({
-        ...finalDocument,
-        activePageId: finalPages[0]?.id || finalDocument.activePageId || "",
-        metadata: {
-          ...(finalDocument.metadata || {}),
-          documentSource: importSource,
-          sourceFileName: preview.fileName || finalDocument.metadata?.sourceFileName || "",
-        },
-      }, { ...standard, activeDocumentSource: importSource });
-      const persistedStandard = await saveStandardWithRevision({
-        documentBuilder: document,
-        source: importSource,
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Finished PDF upload failed.");
+      const document = payload.document;
+      await saveStandardWithRevision({
+        documentBuilder: null,
+        source: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
         scheduleDeleted: false,
         isDeleted: false,
         deletedAt: null,
         activeDocumentId: document.id,
-        activeDocumentName: document.name,
-        activeDocumentSource: importSource,
-        activeDocumentLastSavedAt: document.metadata?.lastSavedAt || new Date().toISOString(),
+        activeDocumentName: document.source_file_name || file.name,
+        activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
+        activeDocumentLastSavedAt: document.updated_at || new Date().toISOString(),
         pdfPages: [],
         selectedPdfPageId: "",
-        pdfSourceName: preview.fileName,
-        pptxSourceName: "",
+        pdfSourceName: file.name,
+        finishedPdfDocumentId: document.id,
+        finishedPdfStorageKey: payload.storageKey,
+        finishedPdfUrl: payload.pdfUrl,
+        finishedPdfPageCount: pageCount,
         editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
         pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF,
         onlyOfficeDocumentId: "",
         onlyOfficeVersion: 0,
         onlyOfficePptxAssetId: "",
         onlyOfficeExportedPdfAssetId: "",
-      }, "import-pdf", preview.fileName, { persist: true });
-      const persistedDocument = persistedStandard?.documentBuilder || document;
-      const persistedPageCount = Array.isArray(persistedDocument.pages) ? persistedDocument.pages.length : finalPages.length;
-      setPdfImportReview(null);
+      }, "attach-finished-pdf", file.name, { persist: true });
       setImportPreview(null);
       setPendingPdfFile(null);
       setManagementMode("");
       setSelectedElementId("");
-      setStandardStatus(`Imported and saved ${persistedPageCount} Standard Inclusions page${persistedPageCount === 1 ? "" : "s"}.`);
+      setStandardStatus("Finished PDF attached unchanged. Finished PDF - not editable inside Gr8 Result.");
     } catch (error) {
-      console.error("Standard Inclusions PDF import save failed", error);
-      setStandardStatus(error?.message || "Could not save the reviewed import.");
+      console.error("Standard Inclusions PDF upload failed", error);
+      setStandardStatus(error?.message || previousStatus || "Finished PDF upload failed.");
     }
-    setPdfImportReviewBusy(false);
   }
 
-  // Promotes the reviewed import to the shared system-base template (used by
-  // every new builder account) in addition to saving it as this builder's own
-  // live schedule — the person doing the import is usually the one
-  // maintaining the canonical company schedule.
-  async function saveReviewedPdfAsBaseTemplate(finalDocument) {
-    setPdfImportReviewBusy(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token || "";
-      const response = await fetch("/api/standard-inclusions/base-template", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
-        },
-        body: JSON.stringify({
-          documentJson: finalDocument,
-          sourceFileName: pdfImportReview?.fileName || "",
-          importReport: { warnings: pdfImportReview?.warnings || [], fontSubstitutions: pdfImportReview?.fontSubstitutions || [] },
-          autoActivate: true,
-        }),
+  function cancelPendingPdfAttachment() {
+    setPendingPdfFile(null);
+    setManagementMode("");
+    setStandardStatus("Finished PDF attachment cancelled.");
+  }
+
+  function handleFinishedPdfPageCount(count) {
+    const pageCount = Number(count || 0);
+    setFinishedPdfPageCount(pageCount);
+    if (pageCount && pageCount !== Number(standard.finishedPdfPageCount || 0)) {
+      saveStandard({ finishedPdfPageCount: pageCount }, { persist: true }).catch((error) => {
+        console.warn("Could not persist finished PDF page count", error?.message || error);
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not save this as the base template.");
-      setStandardStatus("Saved as the new shared base template (v" + payload.template.version + ") — every new builder account will now receive it. Also saving to your own schedule...");
-      await confirmPdfImportReview(finalDocument);
-    } catch (error) {
-      console.error("Save as base template failed", error);
-      setStandardStatus(error?.message || "Could not save this as the base template.");
-      setPdfImportReviewBusy(false);
     }
   }
 
@@ -7509,15 +7691,6 @@ export function StandardInclusionsSheet({ sheet }) {
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
       <input ref={docxUploadRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{ display: "none" }} onChange={prepareDocxImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
-      {pdfImportReview ? (
-        <PdfImportReview
-          preview={pdfImportReview}
-          onCancel={pdfImportReviewBusy ? () => {} : cancelPdfImportReview}
-          onConfirm={pdfImportReviewBusy ? () => {} : confirmPdfImportReview}
-          onSaveAsBaseTemplate={pdfImportReviewBusy ? () => {} : saveReviewedPdfAsBaseTemplate}
-          canSaveAsBaseTemplate
-        />
-      ) : null}
       {activeOnlyOfficeDocumentId ? (
         <OnlyOfficePresentationEditor
           key={`${activeOnlyOfficeDocumentId}-v${standard.onlyOfficeVersion || 1}`}
@@ -7527,12 +7700,32 @@ export function StandardInclusionsSheet({ sheet }) {
           onClose={() => setStandardStatus("ONLYOFFICE editor closed.")}
           onDocumentUpdated={handleOnlyOfficeDocumentUpdated}
         />
-      ) : activeDocument ? (
-        <StandardScheduleLoadedEditor
+      ) : activeFinishedPdf ? (
+        <FinishedPdfLockedViewer
           readonly={readonly}
-          activeSummary={activeSummary}
-          document={activeDocument}
-          workbook={sheet.workbook}
+          summary={activeSummary}
+          pdfUrl={standard.finishedPdfUrl}
+          documentId={standard.finishedPdfDocumentId || standard.activeDocumentId}
+          workspaceId={workspaceId}
+          onReplace={() => pdfUploadRef.current?.click()}
+          onDelete={deleteCurrentSchedule}
+          onVersionHistory={restorePreviousVersion}
+          onPageCount={handleFinishedPdfPageCount}
+        />
+      ) : activeCanvaDocument ? (
+        <CanvaStandardInclusionsViewer
+          readonly={readonly}
+          standard={standard}
+          canvaStatus={canvaStatus}
+          onConnectCanva={handleConnectCanvaAccount}
+          onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+          onOpenCanva={handleOpenInCanva}
+          onGeneratePdf={handleGenerateCanvaPdf}
+          onDisconnectCanva={handleDisconnectCanvaAccount}
+          onRefresh={() => refreshCanvaStatus().then(() => setStandardStatus("Canva design information refreshed."))}
+          onVersionHistory={restorePreviousVersion}
+          onReplace={openReplaceScheduleDialog}
+          onDelete={deleteCurrentSchedule}
           contextPanel={(
             <StandardScheduleContextPanel
               readonly={readonly}
@@ -7542,10 +7735,61 @@ export function StandardInclusionsSheet({ sheet }) {
               savedScheduleLoading={savedScheduleLoading}
               importPreview={importPreview}
               pendingPdfFile={pendingPdfFile}
-              onUploadDocx={() => docxUploadRef.current?.click()}
+              canvaStatus={canvaStatus}
+              canvaDesigns={canvaDesigns}
+              canvaDesignSearch={canvaDesignSearch}
+              onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
+              onSearchCanvaDesigns={loadCanvaDesigns}
+              onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
               onUploadPdf={() => pdfUploadRef.current?.click()}
-              onUploadPptx={() => pptxUploadRef.current?.click()}
-              onUsePremierTemplate={usePremierTemplate}
+              onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
+              onConnectCanva={handleConnectCanvaAccount}
+              onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+              onOpenCanva={handleOpenInCanva}
+              onGeneratePdf={handleGenerateCanvaPdf}
+              onVersionHistory={restorePreviousVersion}
+              onChooseSavedSchedule={loadSavedSchedules}
+              onChoosePdfMode={importPendingPdfNow}
+              onSelectCandidate={replaceWithCandidate}
+              onRestoreRevision={restoreRevision}
+              onCancelManagement={() => {
+                setManagementMode("");
+                setImportPreview(null);
+                setPendingPdfFile(null);
+              }}
+              onConfirmImport={confirmImportPreview}
+            />
+          )}
+        />
+      ) : activeDocument ? (
+        <StandardScheduleLoadedEditor
+          readonly={readonly}
+          activeSummary={activeSummary}
+          document={activeDocument}
+          workbook={sheet.workbook}
+          canvaStatus={canvaStatus}
+          contextPanel={(
+            <StandardScheduleContextPanel
+              readonly={readonly}
+              revisionHistory={standard.revisionHistory || []}
+              managementMode={managementMode}
+              savedScheduleCandidates={savedScheduleCandidates}
+              savedScheduleLoading={savedScheduleLoading}
+              importPreview={importPreview}
+              pendingPdfFile={pendingPdfFile}
+              canvaStatus={canvaStatus}
+              canvaDesigns={canvaDesigns}
+              canvaDesignSearch={canvaDesignSearch}
+              onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
+              onSearchCanvaDesigns={loadCanvaDesigns}
+              onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
+              onUploadPdf={() => pdfUploadRef.current?.click()}
+              onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
+              onConnectCanva={handleConnectCanvaAccount}
+              onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+              onOpenCanva={handleOpenInCanva}
+              onGeneratePdf={handleGenerateCanvaPdf}
+              onVersionHistory={restorePreviousVersion}
               onChooseSavedSchedule={loadSavedSchedules}
               onChoosePdfMode={importPendingPdfNow}
               onSelectCandidate={replaceWithCandidate}
@@ -7560,6 +7804,11 @@ export function StandardInclusionsSheet({ sheet }) {
           )}
           onReplace={openReplaceScheduleDialog}
           onDelete={deleteCurrentSchedule}
+          onConnectCanva={handleConnectCanvaAccount}
+          onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+          onOpenCanva={handleOpenInCanva}
+          onGeneratePdf={handleGenerateCanvaPdf}
+          onVersionHistory={restorePreviousVersion}
           onChange={saveDocumentBuilder}
           onStatus={setStandardStatus}
         />
@@ -7572,12 +7821,22 @@ export function StandardInclusionsSheet({ sheet }) {
           savedScheduleLoading={savedScheduleLoading}
           importPreview={importPreview}
           pendingPdfFile={pendingPdfFile}
-          onUploadDocx={() => docxUploadRef.current?.click()}
-          onUploadPptx={() => pptxUploadRef.current?.click()}
+          canvaStatus={canvaStatus}
+          latestRestorableRevision={latestRestorableRevision}
+          canvaDesigns={canvaDesigns}
+          canvaDesignSearch={canvaDesignSearch}
+          onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
+          onSearchCanvaDesigns={loadCanvaDesigns}
+          onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
           onUploadPdf={() => pdfUploadRef.current?.click()}
+          onRestoreLatest={restoreLatestVersion}
+          onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
+          onConnectCanva={handleConnectCanvaAccount}
+          onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+          onOpenCanva={handleOpenInCanva}
+          onGeneratePdf={handleGenerateCanvaPdf}
+          onVersionHistory={restorePreviousVersion}
           onRestore={restorePreviousVersion}
-          onStartBlank={startBlankSchedule}
-          onUsePremierTemplate={usePremierTemplate}
           onChoosePdfMode={importPendingPdfNow}
           onSelectCandidate={replaceWithCandidate}
           onRestoreRevision={restoreRevision}
@@ -7974,19 +8233,21 @@ export function StandardInclusionsSheet({ sheet }) {
     <div style={styles.standardPdfShell}>
       <section style={styles.standardPdfToolbar}>
         <div>
-          <div style={styles.eyebrow}>Editable Standard Inclusions</div>
+          <div style={styles.eyebrow}>Canva Standard Inclusions</div>
           <h2 style={styles.cashflowTitle}>Premier Inclusions Schedule</h2>
-          <p style={styles.dashboardPanelSubtitle}>Page 1 is rebuilt as independent editable text, image, logo and shape objects. Imported PDF pages remain visual references until each page is rebuilt.</p>
+          <p style={styles.dashboardPanelSubtitle}>Use Canva as the native editor. PDF attachment remains available only as a legacy fallback.</p>
         </div>
         <div style={styles.proposalMiniActions}>
-          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={() => pdfUploadRef.current?.click()}>Upload Premier Inclusions PDF</button>
-          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pptxUploadRef.current?.click()}>Import Editable PowerPoint (.pptx)</button>
-          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Replace Entire PDF</button>
+          <button type="button" disabled={readonly || canvaStatus?.setupRequired || (canvaStatus?.connected && canvaStatus?.ready)} style={styles.primaryButton} onClick={handleConnectCanvaAccount}>{canvaStatus?.ready ? "Connected to Canva" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Setup required" : "Connect Canva"}</button>
+          <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleImportExistingCanvaDesign}>Choose Existing Canva Design</button>
+          <button type="button" disabled={!standard.canvaEditUrl || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleOpenInCanva}>Open in Canva</button>
+          <button type="button" disabled={!standard.canvaDesignId || !canvaStatus?.ready} style={styles.primaryButton} onClick={handleGenerateCanvaPdf}>Export latest PDF</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => setStandardStatus("Version History is available from the Standard Inclusions replacement panel.")}>Version History</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Attach Finished PDF</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
           <button type="button" disabled={!pages.length} style={styles.secondaryButton} onClick={() => setStandardStatus("Use the Up and Down controls in the page list to reorder pages.")}>Reorder Pages</button>
           <button type="button" disabled={readonly || !pages.length} style={styles.secondaryButton} onClick={saveAsMasterTemplate}>Save as Master Template</button>
           <button type="button" disabled={readonly || !pages.length} style={styles.secondaryButton} onClick={createBuilderCopy}>Create Builder Copy</button>
-          <button type="button" disabled={!pages.length} style={styles.primaryButton} onClick={downloadPremierInclusionsPdf}>Download Premier Inclusions PDF</button>
         </div>
         {standardStatus ? <div style={styles.proposalBuilderStatus}>{standardStatus}</div> : null}
       </section>
@@ -8013,7 +8274,7 @@ export function StandardInclusionsSheet({ sheet }) {
           {selectedPage ? (
             <PremierInclusionsCanvasEditor page={selectedPage} pageIndex={selectedPageIndex} readonly={readonly} onSavePage={saveEditablePage} />
           ) : (
-            <div style={styles.standardPdfEmptyState}>Upload Premier Inclusions PDF</div>
+            <div style={styles.standardPdfEmptyState}>Attach legacy PDF or create from Canva</div>
           )}
         </main>
 
@@ -8086,14 +8347,80 @@ export function StandardInclusionsSheet({ sheet }) {
   );
 }
 
+function CanvaScheduleActions({
+  readonly,
+  hasActiveSchedule = false,
+  canvaStatus = null,
+  onConnectCanva,
+  onImportExistingCanvaDesign,
+  onOpenCanva,
+  onGeneratePdf,
+  onVersionHistory,
+}) {
+  const setupRequired = Boolean(!canvaStatus || canvaStatus?.setupRequired || canvaStatus?.configured === false);
+  const connected = Boolean(canvaStatus?.connected);
+  const ready = Boolean(canvaStatus?.ready);
+  const cannotUseCanva = readonly || setupRequired;
+  const needsReconnect = connected && !ready && !setupRequired;
+  return (
+    <div style={styles.canvaScheduleActions}>
+      <button type="button" disabled={cannotUseCanva || (connected && ready)} style={styles.primaryButton} onClick={onConnectCanva}>{ready ? "Connected to Canva" : needsReconnect ? "Reconnect Canva" : setupRequired ? "Canva setup required" : "Connect Canva"}</button>
+      <button type="button" disabled={cannotUseCanva || !ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Choose Existing Canva Design</button>
+      <button type="button" disabled={!hasActiveSchedule || !ready} style={styles.secondaryButton} onClick={onOpenCanva}>Open in Canva</button>
+      <button type="button" disabled={!hasActiveSchedule || !ready} style={styles.secondaryButton} onClick={onGeneratePdf}>Export latest PDF</button>
+      <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
+      {setupRequired ? <small style={styles.dashboardPanelSubtitle}>Connect and configure Canva before using Canva designs. You can still restore a previous version or attach a finished PDF now.</small> : null}
+    </div>
+  );
+}
+
+function dashboardProjectContextParams(sheet, workspaceId = "", activeProjectId = "") {
+  const params = new URLSearchParams();
+  const registeredJob = sheet?.workbook?.registeredJob || {};
+  const registeredSiteAddress = [registeredJob.siteAddress || registeredJob.address, registeredJob.suburb, registeredJob.state, registeredJob.postcode].filter(Boolean).join(", ");
+  const projectId = proposalProjectId(sheet) || activeProjectId || registeredJob.jobId || "";
+  const values = {
+    organisationId: workspaceId || "",
+    projectId,
+    projectName: clientWorkbookDataValue(sheet, "projectName") || registeredJob.jobName || "",
+    client: clientWorkbookDataValue(sheet, "clientName") || registeredJob.clientName || "",
+    siteAddress: clientWorkbookDataValue(sheet, "projectAddress") || registeredSiteAddress,
+    jobNumber: clientWorkbookDataValue(sheet, "jobNumber") || registeredJob.jobNumber || "",
+  };
+  Object.entries(values).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  return params;
+}
+
+function dashboardHrefWithProjectContext(href, sheet, workspaceId = "", activeProjectId = "") {
+  const [pathname, queryString = ""] = String(href || "").split("?");
+  const params = new URLSearchParams(queryString);
+  dashboardProjectContextParams(sheet, workspaceId, activeProjectId).forEach((value, key) => {
+    if (!params.has(key)) params.set(key, value);
+  });
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ""}`;
+}
+
+function inclusionsSelectionsDashboardHref(sheet, workspaceId = "", activeProjectId = "") {
+  return dashboardHrefWithProjectContext("/inclusions-selections/areas", sheet, workspaceId, activeProjectId);
+}
+
 function StandardScheduleLoadedEditor({
   readonly,
   activeSummary,
   document,
   workbook,
+  canvaStatus,
   contextPanel,
   onReplace,
   onDelete,
+  onConnectCanva,
+  onImportExistingCanvaDesign,
+  onOpenCanva,
+  onGeneratePdf,
+  onVersionHistory,
   onChange,
   onStatus,
 }) {
@@ -8101,11 +8428,21 @@ function StandardScheduleLoadedEditor({
     <section style={styles.standardScheduleLoadedEditor}>
       <StandardScheduleActiveSummary summary={activeSummary} />
       <div style={styles.standardScheduleEditorToolbar}>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace Schedule</button>
+        <CanvaScheduleActions
+          readonly={readonly}
+          hasActiveSchedule
+          canvaStatus={canvaStatus}
+          onConnectCanva={onConnectCanva}
+          onImportExistingCanvaDesign={onImportExistingCanvaDesign}
+          onOpenCanva={onOpenCanva}
+          onGeneratePdf={onGeneratePdf}
+          onVersionHistory={onVersionHistory}
+        />
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>More Options</button>
         <button type="button" disabled={readonly} style={styles.dangerButton} onClick={onDelete}>Delete Schedule</button>
-        <span style={styles.dashboardPanelSubtitle}>Save, Preview and Export PDF are available in the editor toolbar below.</span>
       </div>
       {contextPanel}
+      <CanvaSetupDiagnosticsPanel canvaStatus={canvaStatus} />
       <DocumentPageBuilder
         document={document}
         workbook={workbook}
@@ -8118,16 +8455,163 @@ function StandardScheduleLoadedEditor({
 }
 
 function StandardScheduleActiveSummary({ summary }) {
+  const isFinishedPdf = summary.source === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF || summary.source === "finished_pdf";
   return (
     <div style={styles.standardScheduleSummaryCard}>
-      <strong>Active Schedule</strong>
-      <span>Name: {summary.name || "No schedule attached"}</span>
+      <strong>Template status: Active</strong>
+      <span>Template name: {summary.name || "Standard Inclusions"}</span>
+      <span>Number of pages: {summary.pageCount}</span>
+      <span>Last saved: {formatShortDateTime(summary.lastSavedAt)}</span>
       <span>Document ID: {summary.documentId || "-"}</span>
       <span>Source: {summary.source || "-"}</span>
-      <span>Pages: {summary.pageCount}</span>
-      <span>Editable blocks: {summary.editableBlockCount || 0}</span>
-      <span>Last saved: {formatShortDateTime(summary.lastSavedAt)}</span>
+      {isFinishedPdf ? <span>Finished PDF - not editable inside Gr8 Result.</span> : <span>Editable blocks: {summary.editableBlockCount || 0}</span>}
     </div>
+  );
+}
+
+function FinishedPdfLockedViewer({ readonly, summary, pdfUrl, documentId, workspaceId, onReplace, onDelete, onVersionHistory, onPageCount }) {
+  const [pages, setPages] = useState([]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function renderPdf() {
+      setError("");
+      setPages([]);
+      if (!documentId && !pdfUrl) {
+        setError("Missing original PDF. Upload the source PDF again.");
+        return;
+      }
+      try {
+        const pdfjsLib = await loadPdfJs();
+        const source = pdfUrl
+          ? { url: pdfUrl }
+          : {
+              url: `/api/standard-inclusions/finished-pdf/file?workspace_id=${encodeURIComponent(workspaceId || "")}&documentId=${encodeURIComponent(documentId || "")}`,
+              httpHeaders: await standardAuthHeaders(workspaceId, { includeContentType: false }),
+            };
+        const pdf = await pdfjsLib.getDocument(source).promise;
+        const rendered = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.4 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext("2d", { alpha: false });
+          await page.render({ canvasContext: context, viewport }).promise;
+          rendered.push({ pageNumber, width: viewport.width, height: viewport.height, imageUrl: canvas.toDataURL("image/png") });
+        }
+        if (cancelled) return;
+        setPages(rendered);
+        onPageCount?.(rendered.length);
+      } catch (renderError) {
+        if (!cancelled) setError(renderError?.message || "Corrupt PDF or PDF rendering failed.");
+      }
+    }
+    renderPdf();
+    return () => { cancelled = true; };
+  }, [documentId, pdfUrl, workspaceId]);
+
+  const activePage = pages[pageIndex] || null;
+  const downloadUrl = pdfUrl || `/api/standard-inclusions/finished-pdf/file?workspace_id=${encodeURIComponent(workspaceId || "")}&documentId=${encodeURIComponent(documentId || "")}`;
+
+  return (
+    <section style={styles.standardScheduleLoadedEditor}>
+      <StandardScheduleActiveSummary summary={{ ...summary, pageCount: pages.length || summary.pageCount }} />
+      <div style={styles.standardScheduleEditorToolbar}>
+        <button type="button" style={styles.secondaryButton} onClick={() => setPageIndex(Math.max(0, pageIndex - 1))} disabled={pageIndex <= 0}>Previous</button>
+        <button type="button" style={styles.secondaryButton} onClick={() => setPageIndex(Math.min(pages.length - 1, pageIndex + 1))} disabled={!pages.length || pageIndex >= pages.length - 1}>Next</button>
+        <button type="button" style={styles.secondaryButton} onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}>Zoom Out</button>
+        <button type="button" style={styles.secondaryButton} onClick={() => setZoom(Math.min(2.5, zoom + 0.1))}>Zoom In</button>
+        <a style={styles.secondaryButton} href={downloadUrl} target="_blank" rel="noreferrer">Export PDF</a>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace PDF</button>
+        <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
+        <button type="button" disabled={readonly} style={styles.dangerButton} onClick={onDelete}>Delete Schedule</button>
+      </div>
+      <div style={styles.standardLockedNotice}>Finished PDF - not editable inside Gr8 Result.</div>
+      {error ? <div style={styles.errorText}>{error}</div> : null}
+      <div style={styles.standardLockedPdfFrame}>
+        {activePage ? (
+          <img
+            src={activePage.imageUrl}
+            alt={`Standard Inclusions PDF page ${activePage.pageNumber}`}
+            style={{ ...styles.standardLockedPdfPage, width: `${Math.round(activePage.width * zoom)}px` }}
+          />
+        ) : !error ? (
+          <p style={styles.dashboardPanelSubtitle}>Rendering locked PDF pages...</p>
+        ) : null}
+      </div>
+      <div style={styles.dashboardPanelSubtitle}>Page {pages.length ? pageIndex + 1 : 0} of {pages.length}</div>
+    </section>
+  );
+}
+
+function CanvaStandardInclusionsViewer({ readonly, standard, canvaStatus, contextPanel, onConnectCanva, onImportExistingCanvaDesign, onOpenCanva, onGeneratePdf, onDisconnectCanva, onRefresh, onVersionHistory, onReplace, onDelete }) {
+  return (
+    <section style={styles.standardScheduleLoadedEditor}>
+      <div style={styles.standardScheduleSummaryCard}>
+        <strong>Canva Standard Inclusions</strong>
+        <span>Name: {standard.activeDocumentName || "Canva Standard Inclusions"}</span>
+        <span>Canva design ID: {standard.canvaDesignId || "-"}</span>
+        <span>Status: {canvaStatus?.connected ? "Connected" : "Not connected"}</span>
+        <span>Latest PDF: {standard.canvaExportedPdfStorageKey ? "Stored in Gr8 Result" : "Not generated yet"}</span>
+      </div>
+      <div style={styles.standardScheduleEditorToolbar}>
+        <button type="button" disabled={readonly || canvaStatus?.setupRequired || (canvaStatus?.connected && canvaStatus?.ready)} style={styles.primaryButton} onClick={onConnectCanva}>{canvaStatus?.ready ? "Connected to Canva" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Setup required" : "Connect Canva"}</button>
+        <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Choose Existing Canva Design</button>
+        <button type="button" disabled={!standard.canvaEditUrl || !canvaStatus?.ready} style={styles.secondaryButton} onClick={onOpenCanva}>Open in Canva</button>
+        <button type="button" style={styles.secondaryButton} onClick={onRefresh}>Refresh from Canva</button>
+        <button type="button" disabled={!standard.canvaDesignId || !canvaStatus?.ready} style={styles.primaryButton} onClick={onGeneratePdf}>Export latest PDF</button>
+        <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace Template</button>
+        <button type="button" disabled={readonly || !canvaStatus?.connected} style={styles.secondaryButton} onClick={onDisconnectCanva}>Disconnect Canva</button>
+        <button type="button" disabled={readonly} style={styles.dangerButton} onClick={onDelete}>Delete Schedule</button>
+      </div>
+      {contextPanel}
+      <CanvaSetupDiagnosticsPanel canvaStatus={canvaStatus} />
+      <div style={styles.standardCanvaPreview}>
+        {standard.canvaThumbnailUrl ? <img src={standard.canvaThumbnailUrl} alt="" style={styles.standardScheduleThumbnailLarge} /> : <div style={styles.standardScheduleThumbnailPlaceholder}>No Canva preview</div>}
+        {standard.canvaExportedPdfUrl ? <a style={styles.secondaryButton} href={standard.canvaExportedPdfUrl} target="_blank" rel="noreferrer">Preview PDF</a> : <span style={styles.dashboardPanelSubtitle}>Generate PDF to preview the exact exported document.</span>}
+      </div>
+    </section>
+  );
+}
+
+function CanvaSetupDiagnosticsPanel({ canvaStatus }) {
+  const diagnostics = canvaStatus?.diagnostics || null;
+  const shouldShow = process.env.NODE_ENV !== "production" || canvaStatus?.setupRequired || canvaStatus?.error;
+  if (!shouldShow || !canvaStatus) return null;
+  const missing = Array.isArray(canvaStatus.missing) ? canvaStatus.missing : [];
+  return (
+    <section style={styles.canvaDiagnosticsPanel}>
+      <div style={styles.proposalMiniActions}>
+        <strong>Canva integration</strong>
+        <span style={canvaStatus.setupRequired ? styles.warningPill : styles.okPill}>{canvaStatus.setupRequired ? "Setup required" : canvaStatus.connected ? "Connected" : "Not connected"}</span>
+      </div>
+      {canvaStatus.setupRequired ? (
+        <div style={styles.errorText}>
+          Canva setup is incomplete.
+          {missing.length ? ` Missing: ${missing.join(", ")}.` : ""}
+        </div>
+      ) : null}
+      <div style={styles.canvaDiagnosticsGrid}>
+        <span>Client ID: {diagnostics?.clientId || "Unknown"}</span>
+        <span>Client secret: {diagnostics?.clientSecret || "Unknown"}</span>
+        <span>Redirect URI: {diagnostics?.redirectUri || "-"}</span>
+        <span>Return URL: {diagnostics?.returnUrl || "-"}</span>
+        <span>Database tables: {diagnostics?.databaseTables || "Unknown"}</span>
+        <span>Canva connection: {diagnostics?.connection || "Unknown"}</span>
+        <span>Token status: {diagnostics?.tokenStatus || "Unknown"}</span>
+        <span>Required scopes: {diagnostics?.requiredScopes || "Unknown"}</span>
+        <span>Brand-template scopes: {diagnostics?.brandTemplateScopes || "Unknown"}</span>
+      </div>
+      {diagnostics?.missingScopes?.length ? <small style={styles.dashboardPanelSubtitle}>Missing scopes: {diagnostics.missingScopes.join(", ")}</small> : null}
+      {diagnostics?.missingBrandTemplateScopes?.length ? <small style={styles.dashboardPanelSubtitle}>Brand Templates unavailable unless granted: {diagnostics.missingBrandTemplateScopes.join(", ")}</small> : null}
+      {diagnostics?.connectionError ? <small style={styles.errorText}>{diagnostics.connectionError}</small> : null}
+    </section>
   );
 }
 
@@ -8139,12 +8623,21 @@ function StandardScheduleContextPanel({
   savedScheduleLoading,
   importPreview,
   pendingPdfFile,
-  onUploadDocx,
+  canvaStatus,
+  canvaDesigns = [],
+  canvaDesignSearch = "",
   onUploadPdf,
-  onUploadPptx,
-  onUsePremierTemplate,
+  onLoadDefaultTemplate,
+  onConnectCanva,
+  onImportExistingCanvaDesign,
+  onOpenCanva,
+  onGeneratePdf,
+  onVersionHistory,
   onChooseSavedSchedule,
   onChoosePdfMode,
+  onCanvaDesignSearch,
+  onSearchCanvaDesigns,
+  onSelectCanvaDesign,
   onSelectCandidate,
   onRestoreRevision,
   onCancelManagement,
@@ -8153,6 +8646,7 @@ function StandardScheduleContextPanel({
   const hasPanel = (
     (managementMode === "pdf-import-options" && pendingPdfFile) ||
     managementMode === "replace-options" ||
+    managementMode === "canva-design-picker" ||
     managementMode === "replace" ||
     managementMode === "restore" ||
     (managementMode === "import-preview" && importPreview)
@@ -8163,44 +8657,81 @@ function StandardScheduleContextPanel({
       {managementMode === "replace-options" ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Replace Standard Inclusions Schedule</strong>
+            <strong>Canva Standard Inclusions Workflow</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
           </div>
+          <CanvaScheduleActions
+            readonly={readonly}
+            hasActiveSchedule
+            canvaStatus={canvaStatus}
+            onConnectCanva={onConnectCanva}
+            onImportExistingCanvaDesign={onImportExistingCanvaDesign}
+            onOpenCanva={onOpenCanva}
+            onGeneratePdf={onGeneratePdf}
+            onVersionHistory={onVersionHistory}
+          />
           <div style={styles.standardSchedulePdfChoiceGrid}>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadDocx}>
-              <strong>Import Editable Word Document (.docx)</strong>
-              <span>Open and save the native Word file in ONLYOFFICE so text boxes, drawings, images, headers, footers, and page breaks stay intact.</span>
-            </button>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPptx}>
-              <strong>Import Editable PowerPoint (.pptx)</strong>
-              <span>Open and save the native PowerPoint file in ONLYOFFICE.</span>
-            </button>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPdf}>
               <strong>Attach Finished PDF</strong>
-              <span>Use when the schedule is already final and should stay as finished PDF pages.</span>
+              <span>Stores the original PDF unchanged as locked pages.</span>
             </button>
-            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUsePremierTemplate}>
-              <strong>Use Premier Base Template</strong>
-              <span>Load the current system base template into this workbook as an editable schedule.</span>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onLoadDefaultTemplate}>
+              <strong>Load Default Standard Inclusions Template</strong>
+              <span>Copies the approved base template into this workbook.</span>
             </button>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onChooseSavedSchedule}>
-              <strong>Choose Saved Schedule</strong>
+              <strong>Restore Previous Version</strong>
               <span>Reuse a Standard Inclusions document already saved in this workbook or related estimates.</span>
             </button>
+          </div>
+        </div>
+      ) : null}
+      {managementMode === "canva-design-picker" ? (
+        <div style={styles.standardSchedulePanel}>
+          <div style={styles.proposalMiniActions}>
+            <strong>Import Existing Canva Design</strong>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
+          </div>
+          <div style={styles.standardScheduleSearchRow}>
+            <input
+              type="search"
+              value={canvaDesignSearch}
+              onChange={(event) => onCanvaDesignSearch?.(event.target.value)}
+              placeholder="Search Canva designs"
+              style={styles.standardScheduleSearchInput}
+            />
+            <button type="button" style={styles.secondaryButton} onClick={() => onSearchCanvaDesigns?.(canvaDesignSearch)}>Search</button>
+          </div>
+          <p style={styles.dashboardPanelSubtitle}>Canva Connect exposes accessible designs from the connected account. Select one to save its Canva design ID as the reusable Standard Inclusions template.</p>
+          <div style={styles.standardScheduleCandidateGrid}>
+            {canvaDesigns.map((design) => {
+              const item = design.design || design;
+              const designId = item.id || design.id;
+              const thumbnail = item.thumbnail?.url || item.thumbnail_url || design.thumbnail?.url || "";
+              return (
+                <article key={designId} style={styles.standardScheduleCandidateCard}>
+                  {thumbnail ? <img src={thumbnail} alt="" style={styles.standardScheduleThumbnail} /> : <div style={styles.standardScheduleThumbnailPlaceholder}>No preview</div>}
+                  <strong>{item.title || item.name || "Untitled Canva design"}</strong>
+                  <small>ID: {designId}</small>
+                  <button type="button" disabled={readonly || !designId} style={styles.primaryButton} onClick={() => onSelectCanvaDesign?.(designId)}>Use this design</button>
+                </article>
+              );
+            })}
+            {!canvaDesigns.length ? <p style={styles.dashboardPanelSubtitle}>No Canva designs are available from the current search.</p> : null}
           </div>
         </div>
       ) : null}
       {managementMode === "pdf-import-options" && pendingPdfFile ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Attach Finished PDF</strong>
+            <strong>Attach Legacy PDF</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
           </div>
           <p style={styles.dashboardPanelSubtitle}>{pendingPdfFile.name}</p>
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
-              <strong>Attach PDF Now</strong>
-              <span>The PDF remains a finished fixed-page schedule and is inserted into Project Estimate as pages.</span>
+              <strong>Attach Finished PDF Now</strong>
+              <span>The PDF remains a fixed-page legacy schedule and is inserted into Project Estimate as pages.</span>
             </button>
           </div>
         </div>
@@ -8235,15 +8766,19 @@ function StandardScheduleContextPanel({
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
           </div>
           {!revisionHistory.length ? <p style={styles.dashboardPanelSubtitle}>No previous versions are available yet.</p> : null}
-          {revisionHistory.slice().reverse().map((revision) => (
-            <article key={revision.revisionId} style={styles.standardScheduleRevisionRow}>
-              <span>{formatShortDateTime(revision.timestamp)} - {revision.action}</span>
-              <small>ID: {revision.documentId || "-"}</small>
-              <small>Pages: {revision.pageCount || 0}</small>
-              <small>Source: {revision.source || "-"}</small>
-              <button type="button" disabled={readonly || !revision.snapshot?.documentBuilder} style={styles.secondaryButton} onClick={() => onRestoreRevision(revision)}>Restore</button>
-            </article>
-          ))}
+          {revisionHistory.length && !revisionHistory.some((revision) => isRestorableStandardRevision(revision)) ? <p style={styles.errorText}>No valid restorable Standard Inclusions versions were found.</p> : null}
+          {revisionHistory.slice().reverse().map((revision) => {
+            const restorable = isRestorableStandardRevision(revision);
+            return (
+              <article key={revision.revisionId} style={styles.standardScheduleRevisionRow}>
+                <span>{formatShortDateTime(revision.timestamp)} - {revision.action}</span>
+                <small>ID: {revision.documentId || "-"}</small>
+                <small>Pages: {revision.pageCount || 0}</small>
+                <small>Source: {revision.source || "-"}</small>
+                <button type="button" disabled={readonly || !restorable} style={styles.secondaryButton} onClick={() => onRestoreRevision(revision)}>{restorable ? "Restore" : "Unavailable"}</button>
+              </article>
+            );
+          })}
         </div>
       ) : null}
       {managementMode === "import-preview" && importPreview ? (
@@ -8286,28 +8821,46 @@ function StandardScheduleEmptyState({
   savedScheduleLoading,
   importPreview,
   pendingPdfFile,
-  onUploadDocx,
-  onUploadPptx,
+  canvaStatus,
+  latestRestorableRevision,
   onUploadPdf,
+  onRestoreLatest,
+  onLoadDefaultTemplate,
+  onConnectCanva,
+  onImportExistingCanvaDesign,
+  onOpenCanva,
+  onGeneratePdf,
+  onVersionHistory,
   onRestore,
-  onStartBlank,
-  onUsePremierTemplate,
   onChoosePdfMode,
   onSelectCandidate,
   onRestoreRevision,
   onCancelManagement,
   onConfirmImport,
 }) {
+  const canvaReady = Boolean(canvaStatus?.ready);
+  const canvaSetupRequired = !canvaReady;
   return (
     <section style={styles.standardScheduleEmptyState}>
-      <h3>No Standard Inclusions Schedule is currently loaded.</h3>
-      <div style={styles.proposalMiniActions}>
-        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadDocx}>Import Editable Word Document (.docx)</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Attach Finished PDF</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUsePremierTemplate}>Use Premier Base Template</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Create Blank Schedule</button>
-        <button type="button" disabled={readonly || !revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPptx}>Import Editable PowerPoint (.pptx)</button>
+      <div style={styles.standardRecoveryPanel}>
+        <div>
+          <h3>Your Standard Inclusions Schedule was deleted.</h3>
+          {latestRestorableRevision ? (
+            <p style={styles.dashboardPanelSubtitle}>A previous version is available from {formatShortDateTime(latestRestorableRevision.timestamp)}.</p>
+          ) : (
+            <p style={styles.dashboardPanelSubtitle}>No valid previous version was found. Load the approved default template or attach a finished PDF now.</p>
+          )}
+        </div>
+        <div style={styles.standardRecoveryActions}>
+          <button type="button" disabled={readonly || !latestRestorableRevision} style={styles.primaryButton} onClick={onRestoreLatest}>Restore Latest Version</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onLoadDefaultTemplate}>Load Default Standard Inclusions Template</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Attach Finished PDF</button>
+          <button type="button" disabled={readonly || canvaSetupRequired} style={styles.secondaryButton} onClick={onConnectCanva}>{canvaSetupRequired ? "Canva setup required" : "Configure Canva"}</button>
+        </div>
+        {canvaSetupRequired ? (
+          <p style={styles.dashboardPanelSubtitle}>Connect and configure Canva before using Canva designs. You can still restore a previous version or attach a finished PDF now.</p>
+        ) : null}
+        <button type="button" disabled={!revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>View Version History</button>
       </div>
       <StandardScheduleContextPanel
         readonly={readonly}
@@ -8317,10 +8870,14 @@ function StandardScheduleEmptyState({
         savedScheduleLoading={savedScheduleLoading}
         importPreview={importPreview}
         pendingPdfFile={pendingPdfFile}
-        onUploadDocx={onUploadDocx}
+        canvaStatus={canvaStatus}
         onUploadPdf={onUploadPdf}
-        onUploadPptx={onUploadPptx}
-        onUsePremierTemplate={onUsePremierTemplate}
+        onLoadDefaultTemplate={onLoadDefaultTemplate}
+        onConnectCanva={onConnectCanva}
+        onImportExistingCanvaDesign={onImportExistingCanvaDesign}
+        onOpenCanva={onOpenCanva}
+        onGeneratePdf={onGeneratePdf}
+        onVersionHistory={onVersionHistory || onRestore}
         onChooseSavedSchedule={() => {}}
         onChoosePdfMode={onChoosePdfMode}
         onSelectCandidate={onSelectCandidate}
@@ -8334,11 +8891,13 @@ function StandardScheduleEmptyState({
 
 function standardScheduleSummary(document, standard = {}) {
   const documentPages = Array.isArray(document?.pages) ? document.pages : [];
+  const source = document?.metadata?.documentSource || standard.activeDocumentSource || standard.editorMode || "";
+  const lockedPdfPageCount = Number(standard.finishedPdfPageCount || 0);
   return {
     name: document?.name || standard.activeDocumentName || "",
     documentId: document?.id || standard.activeDocumentId || "",
-    source: document?.metadata?.documentSource || standard.activeDocumentSource || "",
-    pageCount: documentPages.length,
+    source,
+    pageCount: source === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF ? lockedPdfPageCount : documentPages.length,
     editableBlockCount: documentPages.reduce((sum, page) => sum + (Array.isArray(page?.objects) ? page.objects.length : 0), 0),
     lastSavedAt: document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "",
   };
@@ -8347,6 +8906,54 @@ function standardScheduleSummary(document, standard = {}) {
 function cloneJson(value) {
   if (value === undefined) return undefined;
   return JSON.parse(JSON.stringify(value));
+}
+
+async function standardAuthHeaders(workspaceId = "", { includeContentType = true } = {}) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token || "";
+  if (!token) throw new Error("You must be signed in to manage Standard Inclusions.");
+  return {
+    ...(includeContentType ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${token}`,
+    ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+  };
+}
+
+async function readPdfPageCount(file) {
+  const pdfjsLib = await loadPdfJs();
+  const bytes = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  return Number(pdf.numPages || 0);
+}
+
+function hasActiveStandardSchedule(standard = {}) {
+  if (!standard || standard.scheduleDeleted || standard.isDeleted) return false;
+  if (Array.isArray(standard.documentBuilder?.pages) && standard.documentBuilder.pages.length > 0) return true;
+  if (standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF && (standard.finishedPdfDocumentId || standard.finishedPdfStorageKey || standard.finishedPdfUrl)) return true;
+  if ((standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX || standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX) && standard.onlyOfficeDocumentId) return true;
+  return false;
+}
+
+function isRestorableStandardRevision(revision = {}) {
+  const snapshot = revision.snapshot || {};
+  if (!snapshot || snapshot.scheduleDeleted) return false;
+  if (Array.isArray(snapshot.documentBuilder?.pages) && snapshot.documentBuilder.pages.length > 0) return true;
+  if (snapshot.finishedPdfDocumentId || snapshot.finishedPdfStorageKey || snapshot.finishedPdfUrl) return true;
+  if (snapshot.onlyOfficeDocumentId) return true;
+  return false;
+}
+
+function restoredModeForStandardRevision(revision = {}) {
+  const snapshot = revision.snapshot || {};
+  if (snapshot.editorMode) return snapshot.editorMode;
+  if (snapshot.finishedPdfDocumentId || snapshot.finishedPdfStorageKey || snapshot.finishedPdfUrl) return STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF;
+  if (snapshot.onlyOfficeDocumentId && snapshot.onlyOfficeFileType === "docx") return STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_DOCX;
+  if (snapshot.onlyOfficeDocumentId) return STANDARD_INCLUSIONS_EDITOR_MODES.ONLYOFFICE_PPTX;
+  return STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE;
+}
+
+function findLatestRestorableStandardRevision(revisionHistory = []) {
+  return revisionHistory.slice().reverse().find((revision) => isRestorableStandardRevision(revision)) || null;
 }
 
 function markStandardDocumentSaved(document, standard = {}) {
@@ -8372,7 +8979,7 @@ function createStandardScheduleRevision(standard = {}, action = "update", source
     timestamp,
     action,
     documentId: document?.id || standard.activeDocumentId || "",
-    pageCount: Array.isArray(document?.pages) ? document.pages.length : 0,
+    pageCount: standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF ? Number(standard.finishedPdfPageCount || 0) : Array.isArray(document?.pages) ? document.pages.length : 0,
     userId: "local-user",
     source: source || document?.metadata?.documentSource || standard.activeDocumentSource || "",
     previousRevisionId: "",
@@ -8385,6 +8992,25 @@ function createStandardScheduleRevision(standard = {}, action = "update", source
       activeDocumentLastSavedAt: standard.activeDocumentLastSavedAt || document?.metadata?.lastSavedAt || "",
       pdfSourceName: standard.pdfSourceName || "",
       pptxSourceName: standard.pptxSourceName || "",
+      onlyOfficeDocumentId: standard.onlyOfficeDocumentId || "",
+      onlyOfficeVersion: Number(standard.onlyOfficeVersion || 0),
+      onlyOfficePptxAssetId: standard.onlyOfficePptxAssetId || "",
+      onlyOfficeOfficeAssetId: standard.onlyOfficeOfficeAssetId || standard.onlyOfficePptxAssetId || "",
+      onlyOfficeFileType: standard.onlyOfficeFileType || "",
+      onlyOfficeExportedPdfAssetId: standard.onlyOfficeExportedPdfAssetId || "",
+      canvaDocumentId: standard.canvaDocumentId || "",
+      canvaTemplateId: standard.canvaTemplateId || "",
+      canvaDesignId: standard.canvaDesignId || "",
+      canvaEditUrl: standard.canvaEditUrl || "",
+      canvaThumbnailUrl: standard.canvaThumbnailUrl || "",
+      canvaExportedPdfUrl: standard.canvaExportedPdfUrl || "",
+      canvaExportedPdfStorageKey: standard.canvaExportedPdfStorageKey || "",
+      finishedPdfDocumentId: standard.finishedPdfDocumentId || "",
+      finishedPdfStorageKey: standard.finishedPdfStorageKey || "",
+      finishedPdfUrl: standard.finishedPdfUrl || "",
+      finishedPdfPageCount: standard.finishedPdfPageCount || 0,
+      editorMode: standard.editorMode || "",
+      pdfEditorMode: standard.pdfEditorMode || "",
     }),
   };
 }
@@ -8401,23 +9027,6 @@ function cloneStandardDocumentForActiveUse(document, { source = "saved-schedule"
       documentSource: source,
       sourceDocumentId: document?.id || "",
       importedAt: timestamp,
-      lastSavedAt: timestamp,
-    },
-  });
-}
-
-function createBlankStandardScheduleDocument() {
-  const timestamp = new Date().toISOString();
-  const page = createA4Page({ name: "Blank Page" });
-  return createDocument({
-    id: `standard-inclusions-blank-${Date.now()}`,
-    name: "Blank Standard Inclusions Schedule",
-    pages: [page],
-    activePageId: page.id,
-    metadata: {
-      documentType: "standardInclusions",
-      documentSource: "blank-schedule",
-      createdAt: timestamp,
       lastSavedAt: timestamp,
     },
   });
@@ -8545,10 +9154,7 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
   return slideImages;
 }
 
-// PDF import (text/image/shape extraction, coordinate + font mapping) lives in
-// lib/standard-inclusions/pdfImport.js — see importPdfAsStandardDocumentPreview
-// imported above. Kept out of this file so it's testable and reusable the
-// same way lib/standard-inclusions/powerpointImport.js already is.
+// Finished PDFs are stored and previewed as locked originals. Editable imports remain limited to document-engine sources such as PowerPoint/Word.
 
 async function importPptxAsStandardDocumentPreview(file) {
   const [{ default: JSZip }] = await Promise.all([import("jszip")]);
@@ -11972,24 +12578,28 @@ function JobPickerModal({ jobs = [], message = "", busy = false, onRefresh, onOp
 
 function StandardInclusionsTemplateBanner({ standard = {} }) {
   const document = standard.documentBuilder || null;
-  const pageCount = Array.isArray(document?.pages)
+  const isLoaded = !standard.scheduleDeleted && !standard.isDeleted && Boolean(
+    (Array.isArray(document?.pages) && document.pages.length)
+      || standard.finishedPdfDocumentId
+      || standard.onlyOfficeDocumentId
+      || standard.canvaDocumentId
+  );
+  const pageCount = isLoaded && Array.isArray(document?.pages)
     ? document.pages.length
-    : Array.isArray(standard.pdfPages)
+    : isLoaded && standard.finishedPdfPageCount
+      ? Number(standard.finishedPdfPageCount || 0)
+      : isLoaded && Array.isArray(standard.pdfPages)
       ? standard.pdfPages.length
       : 0;
-  const templateName = document?.name || standard.activeDocumentName || "Builder inclusions template";
+  const templateName = isLoaded ? document?.name || standard.activeDocumentName || "Standard Inclusions" : "None";
   const lastSaved = document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "";
-  const status = standard.scheduleDeleted || standard.isDeleted
-    ? "No active template"
-    : pageCount
-      ? "Active template"
-      : "Ready";
+  const status = isLoaded ? "Active" : "Not loaded";
   return (
     <div style={styles.standardTemplateBannerInfo}>
-      <span><strong>Template name</strong><span>{templateName}</span></span>
-      <span><strong>Number of pages</strong><span>{pageCount}</span></span>
-      <span><strong>Last saved</strong><span>{formatShortDateTime(lastSaved)}</span></span>
-      <span><strong>Template status</strong><span>{status}</span></span>
+      <span><strong>Template name:</strong><span>{templateName}</span></span>
+      <span><strong>Number of pages:</strong><span>{pageCount}</span></span>
+      <span><strong>Last saved:</strong><span>{isLoaded ? formatShortDateTime(lastSaved) : "-"}</span></span>
+      <span><strong>Template status:</strong><span>{status}</span></span>
     </div>
   );
 }
@@ -14980,6 +15590,7 @@ const styles = {
   sectionTitle: { margin: "2px 0 0", color: "#0f172a", fontSize: 20, fontWeight: 900 },
   standardScheduleLoadedEditor: { display: "grid", gap: 12 },
   standardScheduleEditorToolbar: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 12, padding: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", boxShadow: "0 10px 24px rgba(15,23,42,0.06)" },
+  canvaScheduleActions: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" },
   standardScheduleSummaryCard: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#0f172a", borderRadius: 12, padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, fontSize: 13, fontWeight: 800 },
   standardScheduleContextPanel: { display: "grid", gap: 12 },
   standardSchedulePanel: { border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 12, padding: 12, display: "grid", gap: 10 },
@@ -14988,7 +15599,18 @@ const styles = {
   standardScheduleCandidateGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 },
   standardScheduleCandidateCard: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gap: 6, color: "#0f172a", fontSize: 13 },
   standardScheduleThumbnail: { width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc" },
+  standardScheduleThumbnailLarge: { width: "min(440px, 100%)", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc" },
   standardScheduleThumbnailPlaceholder: { width: "100%", aspectRatio: "4 / 3", display: "grid", placeItems: "center", borderRadius: 8, border: "1px dashed #cbd5e1", color: "#64748b", background: "#f8fafc", fontWeight: 900 },
+  standardScheduleSearchRow: { display: "grid", gridTemplateColumns: "minmax(180px, 1fr) auto", gap: 8, alignItems: "center" },
+  standardScheduleSearchInput: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 10px", fontWeight: 800, color: "#0f172a", background: "#ffffff" },
+  standardLockedNotice: { border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: 10, padding: "10px 12px", fontWeight: 900 },
+  standardLockedPdfFrame: { minHeight: 720, maxHeight: "78vh", overflow: "auto", border: "1px solid #cbd5e1", background: "#e5e7eb", borderRadius: 12, padding: 18, display: "grid", justifyItems: "center", alignItems: "start" },
+  standardLockedPdfPage: { maxWidth: "100%", height: "auto", background: "#ffffff", boxShadow: "0 12px 35px rgba(15,23,42,0.18)" },
+  standardCanvaPreview: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 12, padding: 14, display: "grid", gap: 12, justifyItems: "start" },
+  canvaDiagnosticsPanel: { border: "1px solid #fed7aa", background: "#fff7ed", color: "#0f172a", borderRadius: 12, padding: 12, display: "grid", gap: 10 },
+  canvaDiagnosticsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, fontSize: 13, fontWeight: 800 },
+  standardRecoveryPanel: { border: "1px solid #bae6fd", background: "#f0f9ff", color: "#0f172a", borderRadius: 12, padding: 16, display: "grid", gap: 12, width: "100%" },
+  standardRecoveryActions: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8, alignItems: "stretch" },
   standardScheduleRevisionRow: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) repeat(3, auto)", gap: 8, alignItems: "center", color: "#0f172a" },
   standardScheduleWarningList: { margin: 0, paddingLeft: 18, color: "#92400e", fontWeight: 800 },
   standardSchedulePreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
@@ -14996,6 +15618,7 @@ const styles = {
   standardSchedulePreviewPage: { position: "relative", width: "100%", aspectRatio: "1 / 1.414", border: "1px solid #cbd5e1", borderRadius: 6, background: "#ffffff", overflow: "hidden", display: "grid", placeItems: "center" },
   standardSchedulePreviewImage: { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" },
   standardScheduleEmptyState: { border: "1px dashed #94a3b8", background: "#f8fafc", borderRadius: 14, padding: 22, display: "grid", gap: 12, placeItems: "start", color: "#0f172a" },
+  standardScheduleLegacyRow: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", borderTop: "1px solid #e2e8f0", paddingTop: 10 },
   standardPdfLayout: { display: "grid", gridTemplateColumns: "240px minmax(0, 1fr) 320px", gap: 14, alignItems: "start" },
   standardPdfLayoutEditable: { gridTemplateColumns: "240px minmax(0, 1fr)" },
   standardPdfPageList: { position: "sticky", top: 90, maxHeight: "calc(100vh - 120px)", overflow: "auto", display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10 },
@@ -15273,3 +15896,6 @@ const styles = {
   windowLevelWarning: { margin: 10, display: "flex", flexDirection: "column", gap: 4, background: "#fff7ed", border: "1px solid #fb923c", color: "#9a3412", borderRadius: 8, padding: "10px 12px", fontSize: 16, fontWeight: 700 },
   okPill: { background: "#dcfce7", border: "1px solid #86efac", color: "#166534", borderRadius: 999, padding: "5px 8px", fontSize: 16, fontWeight: 600 },
 };
+
+
+
