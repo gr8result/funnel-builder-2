@@ -67,6 +67,11 @@ const TAB_ALIASES = new Map([
 ]);
 const ACTIVE_SELECTION_VISIBILITIES = new Set(["client_selectable", "builder_selectable"]);
 
+function explicitSelectionVisibility(product) {
+  const value = String(product?.selection_visibility ?? product?.selectionVisibility ?? "").trim().toLowerCase();
+  return ACTIVE_SELECTION_VISIBILITIES.has(value) || value === "estimating_only" || value === "hidden" || value === "archived" ? value : "";
+}
+
 export default function BuilderProductLibraryPage() {
   const router = useRouter();
   const { workspaceId, role } = useWorkspace();
@@ -295,9 +300,11 @@ export default function BuilderProductLibraryPage() {
       if (filters.standardInclusion === "no" && product.standard_included) return false;
       if (filters.availableForSelection === "yes" && product.available_for_selection === false) return false;
       if (filters.availableForSelection === "no" && product.available_for_selection !== false) return false;
+      const explicitVisibility = explicitSelectionVisibility(product);
       const visibility = selectionVisibilityFlags(product);
-      if (filters.selectionVisibility !== "all" && visibility.selectionVisibility !== filters.selectionVisibility) return false;
-      if (filters.selectionVisibility === "all" && !ACTIVE_SELECTION_VISIBILITIES.has(visibility.selectionVisibility)) return false;
+      if (!explicitVisibility) return false;
+      if (filters.selectionVisibility !== "all" && explicitVisibility !== filters.selectionVisibility) return false;
+      if (filters.selectionVisibility === "all" && !ACTIVE_SELECTION_VISIBILITIES.has(explicitVisibility)) return false;
       if (filters.discontinued === "current" && visibility.discontinuedStatus === "discontinued") return false;
       if (filters.discontinued === "discontinued" && visibility.discontinuedStatus !== "discontinued") return false;
       if (filters.missingSupplierLink === "missing" && product.product_url) return false;
@@ -669,6 +676,8 @@ export default function BuilderProductLibraryPage() {
                   onOpenProduct={openDrawerForProduct}
                   onDuplicateProduct={duplicateProductFromDrawer}
                   onArchiveProduct={deleteProductFromDrawer}
+                  onAddProduct={openDrawerForNew}
+                  onOpenImports={() => changeTab("imports")}
                 />
               )}
             </section>
@@ -984,12 +993,19 @@ function SelectionProductsView({
   onOpenProduct,
   onDuplicateProduct,
   onArchiveProduct,
+  onAddProduct,
+  onOpenImports,
 }) {
   if (!products.length) {
     return (
       <section className="selection-products empty">
         <h2>Client Selectable Products</h2>
-        <p>No client-selectable products match the current filters.</p>
+        <p>No client-selectable products have been added yet.</p>
+        <div className="empty-actions">
+          <button type="button" onClick={onAddProduct}>Add Selection Product</button>
+          <button type="button" onClick={onOpenImports}>Import Products</button>
+          <button type="button" onClick={onOpenImports}>View Import Instructions</button>
+        </div>
         <style jsx>{selectionProductsCss}</style>
       </section>
     );
@@ -1082,6 +1098,26 @@ const selectionProductsCss = `
   .selection-products.empty p {
     margin: 0;
     color: #64748b;
+  }
+  .empty-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .empty-actions button {
+    border: 1px solid #d8e0ea;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 800;
+    padding: 9px 12px;
+  }
+  .empty-actions button + button {
+    background: #ffffff;
+    color: #17406f;
   }
   .list-heading {
     display: flex;

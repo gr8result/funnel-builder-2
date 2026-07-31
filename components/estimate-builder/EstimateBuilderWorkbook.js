@@ -257,7 +257,16 @@ const WORKSPACE_VISUALS = {
   },
   productLibrary: {
     title: "Product Library",
-    subtitle: "Manage reusable product records imported from the Quote Sheet CSV.",
+    subtitle: "Manage client-selectable products, finishes, fixtures, images, variants, suppliers and pricing.",
+    color: "#2563eb",
+    soft: "#eff6ff",
+    border: "#bfdbfe",
+    gradient: "linear-gradient(135deg, #1d4ed8 0%, #38bdf8 100%)",
+    Icon: Package,
+  },
+  estimatingCatalogue: {
+    title: "Internal Estimating Catalogue",
+    subtitle: "Internal labour, materials, BOQ and rate items used by estimating and quotations. These items are not available for client selections.",
     color: "#0f766e",
     soft: "#ecfdf5",
     border: "#99f6e4",
@@ -1040,10 +1049,17 @@ const DASHBOARD_WORKSPACE_CARDS = [
   },
   {
     title: "Product Library",
-    subtitle: "Download, edit, re-upload and manage reusable products converted from the Quote Sheet.",
-    page: "productLibrary",
+    subtitle: "Manage client-selectable products, finishes, fixtures, images, variants, suppliers and pricing.",
+    href: "/modules/builders/product-library?tab=selections",
     visualKey: "productLibrary",
-    badge: "CSV",
+    badge: "Products",
+  },
+  {
+    title: "Estimating Catalogue",
+    subtitle: "Open the internal labour, material, BOQ and rate catalogue used by estimating and quotations.",
+    page: "productLibrary",
+    visualKey: "estimatingCatalogue",
+    badge: "Rates",
   },
   {
     title: "Project Estimate",
@@ -1132,6 +1148,14 @@ const DASHBOARD_WORKSPACE_CARDS = [
 ];
 
 function ProjectDashboardSheet({ sheet }) {
+  function openCard(card) {
+    if (card.href) {
+      window.location.assign(card.href);
+      return;
+    }
+    sheet.setPage(card.page);
+  }
+
   return (
     <div style={styles.dashboardShell}>
       <section style={styles.dashboardTopGrid}>
@@ -1151,17 +1175,17 @@ function ProjectDashboardSheet({ sheet }) {
         </div>
       </section>
 
-      <section style={styles.dashboardCardGrid}>
+      <section className="project-dashboard-card-grid" style={styles.dashboardCardGrid}>
         {DASHBOARD_WORKSPACE_CARDS.map((card) => {
           const visual = workspaceVisual(card.visualKey || card.page);
           const CardIcon = visual.Icon;
           return (
           <button
-            key={`${card.title}-${card.page}`}
+            key={`${card.title}-${card.page || card.href}`}
             type="button"
             className="project-workspace-card"
             style={{ ...styles.dashboardWorkspaceCard, background: visual.soft, borderColor: visual.border }}
-            onClick={() => sheet.setPage(card.page)}
+            onClick={() => openCard(card)}
           >
             <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: visual.color, borderColor: visual.color }}>
               <CardIcon size={30} strokeWidth={2.3} />
@@ -6637,13 +6661,13 @@ function ProductLibrarySheet({ sheet }) {
 
   function addProduct() {
     saveProducts([blankProductLibraryRecord(products.length + 1), ...products]);
-    setMessage("Added a blank product row.");
+    setMessage("Added a blank estimating catalogue row.");
   }
 
   function seedFromQuoteSheet() {
     const nextProducts = deriveProductLibraryFromQuoteSheet(sheet);
     saveProducts(nextProducts, { importedAt: new Date().toISOString() });
-    setMessage(`Seeded Product Library from ${nextProducts.length} Quote Sheet rows.`);
+    setMessage(`Seeded Internal Estimating Catalogue from ${nextProducts.length} Quote Sheet rows.`);
   }
 
   function handleImportFile(event) {
@@ -6659,7 +6683,7 @@ function ProductLibrarySheet({ sheet }) {
         setMessage(`Import preview ready: ${nextPreview.newProducts.length} new, ${nextPreview.updatedProducts.length} updated, ${nextPreview.removedProducts.length} removed/deactivated, ${nextPreview.unchangedProducts.length} unchanged, ${nextPreview.invalidRows.length} invalid.`);
       } catch (error) {
         setPreview(null);
-        setMessage(error?.message || "Product Library CSV could not be imported.");
+        setMessage(error?.message || "Internal Estimating Catalogue CSV could not be imported.");
       }
     };
     reader.readAsText(file);
@@ -6668,7 +6692,7 @@ function ProductLibrarySheet({ sheet }) {
   function confirmImport() {
     if (!preview) return;
     saveProducts(applyProductLibraryImport(products, preview), { importedAt: new Date().toISOString() });
-    setMessage(`Product Library updated: ${preview.newProducts.length} new, ${preview.updatedProducts.length} updated, ${preview.removedProducts.length} deactivated.`);
+    setMessage(`Internal Estimating Catalogue updated: ${preview.newProducts.length} new, ${preview.updatedProducts.length} updated, ${preview.removedProducts.length} deactivated.`);
     setPreview(null);
   }
 
@@ -6689,23 +6713,23 @@ function ProductLibrarySheet({ sheet }) {
 
   return (
     <div style={styles.productLibraryShell}>
-      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.productLibrary.gradient }}>
+      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.estimatingCatalogue.gradient }}>
         <div style={styles.dashboardHeroCopy}>
           <span style={styles.dashboardHeroIcon}><Package size={38} strokeWidth={2.4} /></span>
           <div>
-            <div style={styles.dashboardEyebrow}>Builder Catalogue</div>
-            <h2 style={styles.dashboardTitle}>Product Library</h2>
-            <p style={styles.dashboardSubtitle}>Start from the current Quote Sheet, then export, edit, re-upload, add, update or deactivate product records.</p>
+            <div style={styles.dashboardEyebrow}>Internal Estimating Catalogue</div>
+            <h2 style={styles.dashboardTitle}>Internal Estimating Catalogue</h2>
+            <p style={styles.dashboardSubtitle}>Internal labour, materials, BOQ and rate items used by estimating and quotations. These items are not available for client selections.</p>
           </div>
         </div>
         <div style={styles.dashboardTotalCard}>
-          <span>{savedCount ? "Saved products" : "Quote Sheet starter rows"}</span>
+          <span>{savedCount ? "Saved estimating items" : "Quote Sheet starter rows"}</span>
           <strong>{products.length}</strong>
         </div>
       </section>
 
       <section style={styles.productLibraryToolbar}>
-        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, supplier, brand, notes" />
+        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search estimating items, supplier, brand, notes" />
         <select style={styles.productLibrarySelect} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
           <option value="all">All categories</option>
           {categories.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -6719,7 +6743,7 @@ function ProductLibrarySheet({ sheet }) {
           <option value="inactive">Inactive</option>
           <option value="all">Active & inactive</option>
         </select>
-        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={addProduct}>Add product</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={addProduct}>Add estimating item</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={seedFromQuoteSheet}>Seed from Quote Sheet</button>
       </section>
 

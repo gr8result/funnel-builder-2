@@ -60,6 +60,10 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   const listApi = fs.readFileSync(path.join(process.cwd(), "pages", "api", "product-library", "list.js"), "utf8");
   const drawer = fs.readFileSync(path.join(process.cwd(), "components", "product-library", "ProductDetailDrawer.jsx"), "utf8");
   const productPicker = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "products", "selectionVisibility.ts"), "utf8");
+  const workbook = fs.readFileSync(path.join(process.cwd(), "components", "estimate-builder", "EstimateBuilderWorkbook.js"), "utf8");
+  const cardsStart = workbook.indexOf("const DASHBOARD_WORKSPACE_CARDS");
+  const cardsEnd = workbook.indexOf("function ProjectDashboardSheet");
+  const dashboardCards = workbook.slice(cardsStart, cardsEnd);
 
   assert.match(page, /selectionVisibility: "client_selectable"/);
   assert.match(page, /const \[activeTab, setActiveTab\] = useState\("selections"\)/);
@@ -78,7 +82,14 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /update_only/);
   assert.match(page, /upsert/);
   assert.match(page, /ACTIVE_SELECTION_VISIBILITIES/);
+  assert.match(page, /function explicitSelectionVisibility\(product\)/);
+  assert.match(page, /if \(!explicitVisibility\) return false/);
   assert.match(page, /filters\.selectionVisibility !== "all"/);
+  assert.match(page, /No client-selectable products have been added yet\./);
+  assert.match(page, /Add Selection Product/);
+  assert.match(page, /Import Products/);
+  assert.match(page, /View Import Instructions/);
+  assert.match(page, /empty-actions/);
   assert.doesNotMatch(page, /viewMode === "table" \?/);
   assert.match(toolbar, /SELECTION_VISIBILITY_VALUES/);
   assert.match(toolbar, /Manage the products, finishes and fixtures available for project inclusions and client selections\./);
@@ -94,4 +105,12 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(productPicker, /includeBuilderSelectable/);
   assert.match(productPicker, /client_selectable/);
   assert.match(productPicker, /builder_selectable/);
+  assert.match(dashboardCards, /title: "Product Library"/);
+  assert.match(dashboardCards, /href: "\/modules\/builders\/product-library\?tab=selections"/);
+  assert.match(dashboardCards, /title: "Estimating Catalogue"/);
+  assert.match(dashboardCards, /page: "productLibrary"/);
+  assert.equal((dashboardCards.match(/title: "Product Library"/g) ?? []).length, 1);
+  assert.match(workbook, /<h2 style=\{styles\.dashboardTitle\}>Internal Estimating Catalogue<\/h2>/);
+  assert.match(workbook, /These items are not available for client selections\./);
+  assert.doesNotMatch(dashboardCards, /\/modules\/builders\/selections-book/);
 });
