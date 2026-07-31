@@ -1,6 +1,9 @@
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin.js";
 import { developmentOwnerId } from "../../../lib/freedom-trader/paperTrading.js";
 import { DEFAULT_REPORT_SETTINGS, generateFreedomTraderReport } from "../../../lib/freedom-trader/actionReport.js";
+import { runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
+import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
+import { analyseSymbol } from "./analysis.js";
 
 function getSupabase() {
   try {
@@ -126,16 +129,32 @@ export default async function handler(req, res) {
   }
 
   const reportType = ["now", "morning", "evening"].includes(req.body?.reportType) ? req.body.reportType : "now";
+  let scannerRows = Array.isArray(req.body?.scannerRows) ? req.body.scannerRows : [];
+  let opportunityEngineResult = null;
+  if (!scannerRows.length || req.body?.runOpportunityEngine === true) {
+    opportunityEngineResult = await runOpportunityEngine({
+      settings: req.body?.scannerSettings || req.body?.settings || {},
+      analyser: analyseSymbol,
+      marketSnapshotBatch: getMarketSnapshotBatch,
+    });
+    scannerRows = opportunityEngineResult.results || [];
+  }
   const report = generateFreedomTraderReport({
     reportType,
     userId,
-    scannerRows: Array.isArray(req.body?.scannerRows) ? req.body.scannerRows : [],
+    scannerRows,
     positions: Array.isArray(req.body?.positions) ? req.body.positions : [],
     pendingOrders: Array.isArray(req.body?.pendingOrders) ? req.body.pendingOrders : [],
     trades: Array.isArray(req.body?.trades) ? req.body.trades : [],
     account: req.body?.account || null,
     settings: req.body?.settings || {},
   });
+  report.opportunityEngine = opportunityEngineResult ? {
+    engineVersion: opportunityEngineResult.engineVersion,
+    scanStartedAt: opportunityEngineResult.scanStartedAt,
+    scanCompletedAt: opportunityEngineResult.scanCompletedAt,
+    summary: opportunityEngineResult.summary,
+  } : null;
 
   if (!supabase) {
     return res.status(200).json({

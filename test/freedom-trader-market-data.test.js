@@ -24,7 +24,7 @@ test("classifies an unrecognised error as generic", () => {
 function buildCandles({ days = 220, startPrice = 100, drift = 0.15, finalPullbackPercent = 0 } = {}) {
   const candles = [];
   let price = startPrice;
-  const start = new Date("2025-01-01T00:00:00Z");
+  const start = new Date("2026-01-01T00:00:00Z");
   for (let i = 0; i < days; i += 1) {
     const wobble = Math.sin(i / 5) * 0.6;
     price = Math.max(1, price + drift + wobble);
@@ -121,7 +121,7 @@ test("evaluateOpportunity produces a breakdown that sums to the total score and 
   const total = Object.values(opportunity.scoreBreakdown).reduce((sum, item) => sum + item.points, 0);
   assert.equal(Math.round(total), opportunity.score);
   assert.ok(opportunity.reasonsFor.length > 0);
-  assert.ok(["STRONG BUY", "BUY", "WATCH", "AVOID", "WAIT FOR ENTRY"].includes(opportunity.overallStatus));
+  assert.ok(["READY TO BUY", "DEVELOPING", "WAIT", "NO ACTION", "DATA UNAVAILABLE"].includes(opportunity.overallStatus));
 });
 
 test("evaluateOpportunity rejects a setup below the minimum risk/reward with a clear reason", () => {

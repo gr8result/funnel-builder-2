@@ -154,9 +154,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     setUnlocked(true);
   }
 
-  const bestOpportunities = useMemo(() => opportunityRows
-    .sort((a, b) => (b.tradingScore || 0) - (a.tradingScore || 0))
-    .slice(0, 5), [opportunityRows]);
+  const bestOpportunities = useMemo(() => opportunityRows.slice(0, 5), [opportunityRows]);
 
   async function generateReport(reportType) {
     setReportLoading(true);
