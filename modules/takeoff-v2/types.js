@@ -7,6 +7,8 @@ export const ROTATIONS = [0, 90, 180, 270];
 export const CURRENT_ORIENTATION_STATE_VERSION = 2;
 export const CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION = 2;
 export const EXTERIOR_SOURCE_MANUAL_TRACE_V2 = "manual-trace-v2";
+export const EXTERIOR_SOURCE_ASSISTED_WALL_SELECTION = "assisted-wall-selection";
+export const EXTERIOR_SOURCE_CONNECTED_WALL_SUGGESTION = "connected-wall-suggestion";
 export const EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 = "assisted-proposal-v1";
 export const EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR = "legacy-auto-detector";
 export const EXTERIOR_SOURCE_FUTURE_AUTO_DETECTOR = "future-auto-detector";
@@ -112,7 +114,7 @@ export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
  * @property {number|null} detectionConfidence   0-100, null if never detected/manual only
  * @property {{vertices:WallVertex[],segments:WallSegment[]}|null} detectedSnapshot   for "Reset to Detected"
  * @property {number} schemaVersion
- * @property {"manual-trace-v2"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"} source
+ * @property {"manual-trace-v2"|"assisted-wall-selection"|"connected-wall-suggestion"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"} source
  */
 
 /**
@@ -337,19 +339,29 @@ function normalizePageOrientationState(page) {
 export function isLegacyAutomaticExteriorWalls(exteriorWalls) {
   if (!exteriorWalls || typeof exteriorWalls !== "object") return false;
   if (exteriorWalls.source === EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR) return true;
-  if (exteriorWalls.source === EXTERIOR_SOURCE_FUTURE_AUTO_DETECTOR || exteriorWalls.source === EXTERIOR_SOURCE_MANUAL_TRACE_V2 || exteriorWalls.source === EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1) return false;
-  if (exteriorWalls.schemaVersion >= CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION) return false;
+  if (
+    exteriorWalls.source === EXTERIOR_SOURCE_FUTURE_AUTO_DETECTOR ||
+    exteriorWalls.source === EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 ||
+    exteriorWalls.source === EXTERIOR_SOURCE_ASSISTED_WALL_SELECTION ||
+    exteriorWalls.source === EXTERIOR_SOURCE_CONNECTED_WALL_SUGGESTION
+  ) return true;
   const segments = Array.isArray(exteriorWalls.segments) ? exteriorWalls.segments : [];
-  const hasAutomaticSegments = segments.some((segment) => segment?.source === "automatic");
+  if (segments.some((segment) => (
+    segment?.detectedWallId ||
+    segment?.source === "assisted-wall-selection" ||
+    segment?.source === "connected-wall-suggestion" ||
+    segment?.source === "automatic"
+  ))) return true;
+  if (exteriorWalls.source === EXTERIOR_SOURCE_MANUAL_TRACE_V2) return false;
+  if (exteriorWalls.schemaVersion >= CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION) return false;
   const hasManualSegments = segments.some((segment) => segment?.source === "manual");
   return Boolean(
-    hasAutomaticSegments ||
-    (!hasManualSegments && (
+    !hasManualSegments && (
       exteriorWalls.detectedSnapshot ||
       exteriorWalls.exteriorPerimeter ||
       exteriorWalls.detectionConfidence != null ||
       exteriorWalls.detectionUseful != null
-    ))
+    )
   );
 }
 

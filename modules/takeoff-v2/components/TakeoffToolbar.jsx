@@ -1,6 +1,7 @@
 import { formatLength, formatArea } from "../takeoff/units.js";
 import { validateCalibrationShape } from "../takeoff/scaleCalibration.js";
 import { CONFIDENCE_HIGH } from "../orientation/analyzeOrientation.js";
+import { distance } from "../takeoff/geometry.js";
 
 // The takeoff toolbar: always visible above the plan viewer, never hidden in
 // a menu. The primary row is the spec's exact required tool/action list —
@@ -256,12 +257,10 @@ export default function TakeoffToolbar({ page, tools }) {
       {tools.activeTool === "exterior-wall" && (
         <div style={S.traceStatusBar} data-testid="trace-exterior-status-bar">
           <strong>Trace Exterior active</strong>
-          <span>Selected walls: {traceStatus.selectedWalls}</span>
-          <span>Current endpoint: {traceStatus.currentEndpoint}</span>
-          <span>Suggested next wall: {traceStatus.suggestedNextWall}</span>
-          <span>{traceStatus.hoverWall}</span>
+          <span>Points: {traceStatus.points}</span>
+          <span>Current segment: {traceStatus.currentSegment}</span>
           <span>Total traced: {traceStatus.totalTraced}</span>
-          <span>Click: select wall</span>
+          <span>Click: add point</span>
           <span>Space + drag: pan</span>
           <span>Mouse wheel: zoom</span>
           <span>Esc: cancel preview</span>
@@ -289,14 +288,13 @@ function exteriorTraceStatus(page, tools) {
   const vertices = graph.vertices || [];
   const currentVertex = vertices.find((v) => v.id === tools.wallDrawChainVertexId) || null;
   const mmPerDocumentUnit = page?.calibration?.mmPerDocumentUnit || null;
-  const hoverMm = tools.wallDrawHoverPreview?.lengthMm ?? null;
-  const suggestion = tools.nextWallSuggestions?.[0]?.wall || null;
+  const hoverPoint = tools.wallDrawHoverPreview?.point || null;
+  const currentMm = currentVertex && hoverPoint && mmPerDocumentUnit
+    ? distance(currentVertex, hoverPoint) * mmPerDocumentUnit
+    : null;
   return {
     points: vertices.length,
-    selectedWalls: graph.segments?.length || 0,
-    currentEndpoint: currentVertex ? "active corner" : "-",
-    suggestedNextWall: suggestion ? "connected exterior wall" : "-",
-    hoverWall: hoverMm == null ? "Click a visible wall" : `Exterior wall found - Length: ${formatLength(hoverMm)} - From corner A to corner B`,
+    currentSegment: currentMm == null ? "-" : formatLength(currentMm),
     totalTraced: formatLength(tools.totalExteriorWallLengthMm || tools.totalPerimeterMm || 0),
   };
 }

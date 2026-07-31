@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
-import { tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate } from "../hooks/useTakeoffTools.js";
+import { resolveManualTracePoint, tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate } from "../hooks/useTakeoffTools.js";
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { documentToScreenPoint, screenToDocumentPoint } from "../viewer/rotationTransform.js";
-import { createWallSegment, createWallVertex } from "../types.js";
-import { deleteVertexAndReconnect, splitSegment } from "../takeoff/wallGraph.js";
-import { appendDetectedWallToExteriorGraph, buildDetectedWalls, connectedWallSuggestions, findWallOrLocalRasterFallback, findWallUnderPointer, orderedPathPoints } from "../takeoff/wallSelection.js";
+import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
+import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -170,37 +169,6 @@ function graphFromPoints(points) {
   assert.equal(snapLabelForCandidate({ type: "line" }), "Wall line");
 }
 
-let lineSeq = 0;
-function line(a, b, extra = {}) {
-  lineSeq += 1;
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  return {
-    id: `proposal-line-${lineSeq}`,
-    source: "vector",
-    stroked: true,
-    strokeColor: "#000000",
-    axis: Math.abs(dx) >= Math.abs(dy) ? "horizontal" : "vertical",
-    a,
-    b,
-    length: Math.hypot(dx, dy),
-    ...extra,
-  };
-}
-
-function rectBands(x1, y1, x2, y2, thickness = 8) {
-  return [
-    line({ x: x1, y: y1 }, { x: x2, y: y1 }),
-    line({ x: x1, y: y1 + thickness }, { x: x2, y: y1 + thickness }),
-    line({ x: x1, y: y2 }, { x: x2, y: y2 }),
-    line({ x: x1, y: y2 - thickness }, { x: x2, y: y2 - thickness }),
-    line({ x: x1, y: y1 }, { x: x1, y: y2 }),
-    line({ x: x1 + thickness, y: y1 }, { x: x1 + thickness, y: y2 }),
-    line({ x: x2, y: y1 }, { x: x2, y: y2 }),
-    line({ x: x2 - thickness, y: y1 }, { x: x2 - thickness, y: y2 }),
-  ];
-}
-
 function rotatedViewport(width, height, rotation = 0, scale = 1) {
   const r = ((rotation % 360) + 360) % 360;
   return {
@@ -237,183 +205,73 @@ function rotatedViewport(width, height, rotation = 0, scale = 1) {
   });
 }
 
-// ---- click radius is constant in screen space as zoom changes --------------
+// ---- manual trace places raw point when no close snap exists ---------------
 {
-  const walls = buildDetectedWalls({ source: "fixture", segments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })] }, { sourceWidth: 500, sourceHeight: 400 });
-  assert.ok(findWallUnderPointer({ x: 200, y: 116 }, { walls, zoomScale: 1, toleranceScreenPx: 16 }));
-  assert.ok(!findWallUnderPointer({ x: 200, y: 116 }, { walls, zoomScale: 2, toleranceScreenPx: 16 }));
-  assert.ok(findWallUnderPointer({ x: 200, y: 108 }, { walls, zoomScale: 2, toleranceScreenPx: 16 }));
+  const raw = { x: 220.25, y: 118.75 };
+  const result = resolveManualTracePoint(raw);
+  assert.deepEqual(result.point, raw);
+  assert.equal(result.snap, null);
 }
 
-// ---- click near wall selects full wall from junction to junction -----------
+// ---- close local corner snaps, distant/line candidates do not --------------
 {
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [...rectBands(100, 100, 360, 280), ...rectBands(360, 160, 450, 280)],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const hit = findWallUnderPointer({ x: 230, y: 104 }, { walls, zoomScale: 1 });
-  assert.ok(hit, "expected click near wall face to select a wall");
-  assert.equal(hit.wall.orientation, 0);
-  assert.ok(hit.wall.centreline.start.x <= 110);
-  assert.ok(hit.wall.centreline.end.x >= 350);
-  assert.equal(hit.wall.source, "pdf-vector");
+  const raw = { x: 100, y: 100 };
+  const closeCorner = { type: "intersection", point: { x: 102, y: 99 }, distance: 2 };
+  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner }).point, closeCorner.point);
+  const lineCandidate = { type: "line", point: { x: 100, y: 80 }, distance: 1 };
+  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: lineCandidate }).point, raw);
+  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner, disableSnap: true }).point, raw);
 }
 
-// ---- centreline, either face, band, and slightly outside all select --------
+// ---- no automatic wall extension: two clicks create one exact segment ------
 {
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [
-      line({ x: 100, y: 100 }, { x: 300, y: 100 }),
-      line({ x: 100, y: 108 }, { x: 300, y: 108 }),
-    ],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  assert.ok(findWallUnderPointer({ x: 180, y: 104 }, { walls, zoomScale: 1 }), "centre/band click selects");
-  assert.ok(findWallUnderPointer({ x: 180, y: 100 }, { walls, zoomScale: 1 }), "face A click selects");
-  assert.ok(findWallUnderPointer({ x: 180, y: 108 }, { walls, zoomScale: 1 }), "face B click selects");
-  assert.ok(findWallUnderPointer({ x: 180, y: 115 }, { walls, zoomScale: 1 }), "slightly outside click selects");
+  const first = createWallVertex({ id: "v0", x: 10, y: 20 });
+  const second = createWallVertex({ id: "v1", x: 110, y: 55 });
+  const graph = addSegment({ vertices: [first, second], segments: [] }, first.id, second.id, { wallType: "exterior" });
+  assert.equal(graph.segments.length, 1);
+  assert.equal(graph.segments[0].aId, "v0");
+  assert.equal(graph.segments[0].bId, "v1");
+  assert.deepEqual(graph.vertices[0], first);
+  assert.deepEqual(graph.vertices[1], second);
 }
 
-// ---- single visible vector stroke is selectable without paired face --------
+// ---- manual trace preview can axis-lock, but never replaces endpoints ------
 {
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const hit = findWallUnderPointer({ x: 200, y: 103 }, { walls, zoomScale: 1 });
-  assert.ok(hit, "single visible wall stroke should be selectable");
-  assert.equal(hit.wall.source, "pdf-vector-single");
+  const last = { x: 0, y: 0 };
+  const raw = { x: 100, y: 3 };
+  const result = resolveManualTracePoint(raw, { lastVertex: last, rotation: 0 });
+  assert.deepEqual(result.point, { x: 100, y: 0 });
+  const free = resolveManualTracePoint({ x: 100, y: 20 }, { lastVertex: last, rotation: 0 });
+  assert.deepEqual(free.point, { x: 100, y: 20 });
 }
 
-// ---- fragmented/window-interrupted wall remains selectable -----------------
+// ---- dragging a point changes only the shared vertex/adjacent segments -----
 {
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [
-      line({ x: 100, y: 100 }, { x: 180, y: 100 }),
-      line({ x: 220, y: 100 }, { x: 320, y: 100 }),
-      line({ x: 100, y: 108 }, { x: 180, y: 108 }),
-      line({ x: 220, y: 108 }, { x: 320, y: 108 }),
-    ],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const hit = findWallUnderPointer({ x: 205, y: 104 }, { walls, zoomScale: 1, toleranceScreenPx: 20 });
-  assert.ok(hit, "fragmented wall band should bridge a local opening gap");
-  assert.ok(hit.wall.length >= 200);
+  const rect = graphFromPoints([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 80 }, { x: 0, y: 80 }]);
+  const moved = moveVertex(rect, "v1", { x: 110, y: 10 });
+  assert.deepEqual(moved.vertices.find((v) => v.id === "v1"), { id: "v1", x: 110, y: 10 });
+  assert.equal(moved.segments.length, rect.segments.length);
+  assert.deepEqual(moved.segments.map((s) => [s.aId, s.bId]), rect.segments.map((s) => [s.aId, s.bId]));
 }
 
-// ---- valid wall near dimension line is not filtered out --------------------
+// ---- stale assisted geometry is quarantined, manual trace persists ---------
 {
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [
-      line({ x: 100, y: 100 }, { x: 300, y: 100 }),
-      line({ x: 100, y: 108 }, { x: 300, y: 108 }),
-      line({ x: 100, y: 125 }, { x: 300, y: 125 }, { isDimension: true }),
-      line({ x: 100, y: 130 }, { x: 300, y: 130 }, { classification: "dimension-line" }),
-    ],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const hit = findWallUnderPointer({ x: 200, y: 104 }, { walls, zoomScale: 1 });
-  assert.ok(hit);
-  assert.notEqual(hit.wall.source, "dimension-line");
-}
-
-// ---- local raster fallback can resolve a clicked raster wall ---------------
-{
-  const planGeometryIndex = {
-    source: "raster",
-    segments: [
-      line({ x: 100, y: 100 }, { x: 280, y: 100 }, { source: "raster" }),
-      line({ x: 400, y: 300 }, { x: 460, y: 300 }, { source: "raster" }),
-    ],
+  const assisted = {
+    source: "manual-trace-v2",
+    vertices: [{ id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 }],
+    segments: [{ id: "s", aId: "a", bId: "b", source: "manual", detectedWallId: "dw-1" }],
   };
-  const hit = findWallOrLocalRasterFallback({ x: 160, y: 106 }, {
-    planGeometryIndex,
-    page: { sourceWidth: 500, sourceHeight: 400 },
-    walls: [],
-    zoomScale: 1,
-  });
-  assert.ok(hit, "local raster fallback should resolve a nearby raster line");
-  assert.equal(hit.wall.source, "local-raster");
-}
+  assert.equal(isLegacyAutomaticExteriorWalls(assisted), true);
+  const normalizedAssisted = withPlanPageDefaults({ id: "p1", exteriorWalls: assisted });
+  assert.equal(normalizedAssisted.exteriorWalls, null);
 
-// ---- angled vector wall faces are selectable as one wall ------------------
-{
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [
-      line({ x: 100, y: 100 }, { x: 260, y: 180 }),
-      line({ x: 96.4, y: 107.2 }, { x: 256.4, y: 187.2 }),
-    ],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const hit = findWallUnderPointer({ x: 178, y: 142 }, { walls, zoomScale: 1 });
-  assert.ok(hit, "expected click near angled wall face to select a wall");
-  assert.ok(Math.abs(hit.wall.orientation - 26.6) < 1);
-  assert.ok(hit.wall.length > 170);
-}
-
-// ---- rejected annotation geometry is not selectable -----------------------
-{
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: [...rectBands(100, 100, 360, 280), ...rectBands(360, 160, 450, 280)],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const rejected = buildDetectedWalls({
-    source: "fixture",
-    segments: [
-      line({ x: 10, y: 10 }, { x: 490, y: 10 }, { isPageBorder: true }),
-      line({ x: 80, y: 40 }, { x: 420, y: 40 }, { isDimension: true }),
-      line({ x: 80, y: 48 }, { x: 420, y: 48 }, { isDimension: true }),
-      line({ x: 20, y: 350 }, { x: 240, y: 350 }, { classification: "title-block-rule" }),
-      line({ x: 20, y: 358 }, { x: 240, y: 358 }, { classification: "title-block-rule" }),
-    ],
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  assert.ok(walls.length > 0);
-  assert.equal(rejected.length, 0);
-}
-
-// ---- path appends only local connected walls and rejects distant jumps -----
-{
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: rectBands(100, 100, 300, 250),
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  const first = findWallUnderPointer({ x: 160, y: 104 }, { walls });
-  const second = connectedWallSuggestions(first.wall.centreline.end, { walls, selectedWalls: [first.wall] })[0];
-  assert.ok(second, "expected one local next-wall suggestion");
-  const firstAppend = appendDetectedWallToExteriorGraph(null, first.wall);
-  assert.equal(firstAppend.accepted, true);
-  const secondAppend = appendDetectedWallToExteriorGraph(firstAppend.graph, second.wall);
-  assert.equal(secondAppend.accepted, true);
-  const distant = {
-    ...first.wall,
-    id: "distant",
-    centreline: { start: { x: 900, y: 900 }, end: { x: 1000, y: 900 } },
+  const manual = {
+    source: "manual-trace-v2",
+    vertices: [{ id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 }],
+    segments: [{ id: "s", aId: "a", bId: "b", source: "manual" }],
   };
-  const rejected = appendDetectedWallToExteriorGraph(secondAppend.graph, distant);
-  assert.equal(rejected.accepted, false);
-}
-
-// ---- ordered path closes cleanly -----------------------------------------
-{
-  const walls = buildDetectedWalls({
-    source: "fixture",
-    segments: rectBands(100, 100, 300, 250),
-  }, { sourceWidth: 500, sourceHeight: 400 });
-  let graph = null;
-  let current = findWallUnderPointer({ x: 160, y: 104 }, { walls }).wall;
-  for (let i = 0; i < 4; i += 1) {
-    const result = appendDetectedWallToExteriorGraph(graph, current);
-    assert.equal(result.accepted, true);
-    graph = result.graph;
-    const suggestions = connectedWallSuggestions(result.activeEndpoint, {
-      walls,
-      selectedWalls: walls.filter((wall) => graph.segments.some((segment) => segment.detectedWallId === wall.id)),
-    });
-    current = suggestions[0]?.wall;
-    if (!current) break;
-  }
-  assert.equal(graph.isClosed, true);
-  assert.equal(orderedPathPoints(graph).length, 4);
+  const normalizedManual = withPlanPageDefaults({ id: "p2", exteriorWalls: manual });
+  assert.equal(normalizedManual.exteriorWalls.segments.length, 1);
 }
 
 console.log("wallDrawing.test.mjs passed");

@@ -269,31 +269,6 @@ const PlanViewer = forwardRef(function PlanViewer(
     );
   }, [view.viewport, view.panX, view.panY, view.zoomScale]);
 
-  const pointerDebugForEvent = useCallback((event, pagePoint) => {
-    if (!containerRef.current || !view.viewport) return null;
-    const rect = containerRef.current.getBoundingClientRect();
-    const canvas = activeCanvasRef.current === "a" ? canvasARef.current : canvasBRef.current;
-    const canvasRect = canvas?.getBoundingClientRect?.();
-    const screenPoint = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    const rotatedPoint = {
-      x: (screenPoint.x - view.panX) / Math.max(view.zoomScale, 0.01),
-      y: (screenPoint.y - view.panY) / Math.max(view.zoomScale, 0.01),
-    };
-    return {
-      browserClient: { x: event.clientX, y: event.clientY },
-      containerScreen: screenPoint,
-      canvasCss: canvasRect ? { width: canvasRect.width, height: canvasRect.height } : null,
-      canvasBacking: canvas ? { width: canvas.width, height: canvas.height } : null,
-      viewport: { width: view.viewport.width, height: view.viewport.height },
-      rotatedPagePoint: rotatedPoint,
-      baseDocumentPoint: pagePoint,
-      pan: { x: view.panX, y: view.panY },
-      zoomScale: view.zoomScale,
-      devicePixelRatio: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
-      pageBounds: { width: page?.sourceWidth || 0, height: page?.sourceHeight || 0, rotation: page?.rotation ?? 0 },
-    };
-  }, [view.viewport, view.panX, view.panY, view.zoomScale, page]);
-
   // Default (no active tool / Select tool): byte-for-byte identical to the
   // original pan-only behavior. With a takeoff tool active: pointerdown either
   // starts a vertex-drag (if it lands on an existing wall vertex while
@@ -453,14 +428,13 @@ const PlanViewer = forwardRef(function PlanViewer(
       const pagePoint = eventToPagePoint(event);
       if (pagePoint) {
         const activeTool = tools.activeTool;
-        const pointerDebug = activeTool === "exterior-wall" ? pointerDebugForEvent(event, pagePoint) : null;
         if (activeTool === "set-scale" || activeTool === "measure") {
           // Axis-lock + snapping is mandatory here (see useTakeoffTools.js) —
           // Shift is deliberately not used to escape it for these two tools,
           // per spec ("free diagonal scale lines must not be allowed").
           tools.updatePointerHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale });
         } else if (WALL_DRAW_TOOLS.includes(activeTool)) {
-          tools.updateWallDrawHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, pointerDebug });
+          tools.updateWallDrawHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, disableSnap: event.altKey });
         } else if (OPENING_TOOLS.includes(activeTool)) {
           tools.updateOpeningHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (activeTool === "area") {
@@ -516,7 +490,7 @@ const PlanViewer = forwardRef(function PlanViewer(
     const dx = event.clientX - dragState.startX;
     const dy = event.clientY - dragState.startY;
     setView((prev) => ({ ...prev, panX: dragState.panX + dx, panY: dragState.panY + dy }));
-  }, [tools, eventToPagePoint, view, page, pointerDebugForEvent]);
+  }, [tools, eventToPagePoint, view, page]);
 
   const handlePointerUp = useCallback((event) => {
     if (event.pointerId != null) containerRef.current?.releasePointerCapture?.(event.pointerId);
@@ -559,7 +533,7 @@ const PlanViewer = forwardRef(function PlanViewer(
         } else if (tool === "edit") {
           tools.handleEditToolClick(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (WALL_DRAW_TOOLS.includes(tool)) {
-          tools.handleWallDrawClick(dragState.pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, pointerDebug: pointerDebugForEvent(event, dragState.pagePoint) });
+          tools.handleWallDrawClick(dragState.pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, disableSnap: event.altKey });
         } else if (OPENING_TOOLS.includes(tool)) {
           tools.handleOpeningCanvasClick(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (tool === "area") {
