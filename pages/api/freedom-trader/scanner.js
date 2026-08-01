@@ -82,7 +82,7 @@ function buildScanSummary(result) {
     rejectionCounts,
     dataUnavailableReasons: Array.from(new Set(couldNotAnalyse.map((item) => item.couldNotAnalyseReason).filter(Boolean))),
     disabledSymbols: result.disabledSymbols,
-    plainEnglish: result.summary?.plainEnglish || null,
+    plainEnglish: result.summary?.plainEnglish || shared.plainEnglish,
     scanStartedAt: shared.startedAt,
     scanCompletedAt: shared.completedAt,
     remainingSymbols: result.nextOffset === 0 ? 0 : Math.max(0, result.supportedSymbols.length - result.nextOffset),
