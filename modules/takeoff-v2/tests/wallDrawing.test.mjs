@@ -7,6 +7,7 @@ import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { documentToScreenPoint, screenToDocumentPoint } from "../viewer/rotationTransform.js";
 import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
+import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -191,6 +192,36 @@ function rotatedViewport(width, height, rotation = 0, scale = 1) {
   };
 }
 
+let lineSeq = 0;
+function line(a, b, extra = {}) {
+  lineSeq += 1;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  return {
+    id: `wall-line-${lineSeq}`,
+    source: "vector",
+    stroked: true,
+    strokeColor: "#000000",
+    a,
+    b,
+    length: Math.hypot(dx, dy),
+    ...extra,
+  };
+}
+
+function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
+  return [
+    line({ x: x1, y: y1 }, { x: x2, y: y1 }),
+    line({ x: x1, y: y1 + thickness }, { x: x2, y: y1 + thickness }),
+    line({ x: x1, y: y2 }, { x: x2, y: y2 }),
+    line({ x: x1, y: y2 - thickness }, { x: x2, y: y2 - thickness }),
+    line({ x: x1, y: y1 }, { x: x1, y: y2 }),
+    line({ x: x1 + thickness, y: y1 }, { x: x1 + thickness, y: y2 }),
+    line({ x: x2, y: y1 }, { x: x2, y: y2 }),
+    line({ x: x2 - thickness, y: y1 }, { x: x2 - thickness, y: y2 }),
+  ];
+}
+
 // ---- coordinate conversion remains invertible across rotations -------------
 {
   [0, 90, 180, 270].forEach((rotation) => {
@@ -272,6 +303,55 @@ function rotatedViewport(width, height, rotation = 0, scale = 1) {
   };
   const normalizedManual = withPlanPageDefaults({ id: "p2", exteriorWalls: manual });
   assert.equal(normalizedManual.exteriorWalls.segments.length, 1);
+}
+
+// ---- wall-object detection creates independent classified wall objects -----
+{
+  const result = detectWallObjects({
+    planGeometryIndex: {
+      source: "fixture",
+      segments: [
+        ...rectWallFaces(100, 100, 300, 240),
+        line({ x: 150, y: 112 }, { x: 150, y: 228 }),
+        line({ x: 158, y: 112 }, { x: 158, y: 228 }),
+      ],
+    },
+    page: { sourceWidth: 400, sourceHeight: 320, planRegion: { x: 90, y: 90, width: 230, height: 170, confirmed: true } },
+  });
+  assert.ok(result.summary.total >= 5);
+  assert.ok(result.summary.exterior >= 4);
+  assert.ok(result.summary.interior >= 1);
+  assert.ok(result.walls.every((wall) => Array.isArray(wall.openings) && Array.isArray(wall.connectedWalls)));
+}
+
+// ---- dimension/title/page geometry is rejected before becoming walls -------
+{
+  const result = detectWallObjects({
+    planGeometryIndex: {
+      source: "fixture",
+      segments: [
+        line({ x: 100, y: 100 }, { x: 300, y: 100 }),
+        line({ x: 100, y: 108 }, { x: 300, y: 108 }),
+        line({ x: 50, y: 40 }, { x: 350, y: 40 }, { isDimension: true }),
+        line({ x: 20, y: 300 }, { x: 360, y: 300 }, { classification: "title-block-rule" }),
+      ],
+    },
+    page: { sourceWidth: 400, sourceHeight: 320 },
+  });
+  assert.equal(result.summary.total, 1);
+  assert.equal(result.diagnostics.rejectedSegments, 2);
+}
+
+// ---- detected wall objects persist through page defaults ------------------
+{
+  const page = withPlanPageDefaults({
+    id: "page-wall-objects",
+    detectedWalls: [{ id: "w1", type: "unknown", start: { x: 1, y: 2 }, end: { x: 3, y: 4 }, confidence: 0.54 }],
+  });
+  assert.equal(page.detectedWalls.length, 1);
+  assert.equal(page.detectedWalls[0].type, "unknown");
+  assert.deepEqual(page.detectedWalls[0].openings, []);
+  assert.deepEqual(page.detectedWalls[0].connectedWalls, []);
 }
 
 console.log("wallDrawing.test.mjs passed");

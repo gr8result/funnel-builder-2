@@ -27,6 +27,7 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
     return acc;
   }, {});
   const scaleStatus = validateCalibrationShape(page?.calibration);
+  const detectedWallSummary = tools?.detectedWallSummary || { total: 0, exterior: 0, interior: 0, unknown: 0, lowConfidence: 0, averageConfidence: 0 };
   const activeExteriorClosed = Boolean(tools?.activeExteriorWallsClosed);
   const activeExteriorCount = tools?.activeExteriorWallSegmentCount || 0;
   const canTrustExteriorQuantity = Boolean(scaleStatus.valid && activeExteriorClosed);
@@ -43,6 +44,14 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
 
   return (
     <div style={S.panel} data-testid="results-panel">
+      <SummarySection title="DETECTED WALLS">
+        <Metric label="Total" value={detectedWallSummary.total || 0} />
+        <Metric label="Exterior" value={detectedWallSummary.exterior || 0} />
+        <Metric label="Interior" value={detectedWallSummary.interior || 0} />
+        <Metric label="Unknown" value={detectedWallSummary.unknown || 0} />
+        <Metric label="Low Confidence" value={detectedWallSummary.lowConfidence || 0} />
+      </SummarySection>
+
       <SummarySection title="EXTERIOR WALLS" onSelect={() => zoomToGraph(exteriorWalls)}>
         {activeExteriorCount > 0 ? (
           <>

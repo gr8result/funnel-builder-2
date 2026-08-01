@@ -5,7 +5,7 @@ import { distance } from "../takeoff/geometry.js";
 
 // The takeoff toolbar: always visible above the plan viewer, never hidden in
 // a menu. The primary row is the spec's exact required tool/action list —
-// Select, Pan, Set Scale, Auto Detect Exterior, Draw Exterior, Edit Exterior,
+// Select, Pan, Set Scale, Detect Walls, Draw Exterior, Edit Exterior,
 // Delete Segment, Close Shape, Clear Exterior, Area Tool, Undo, Redo — with
 // Delete Segment and Close Shape as flat, always-visible action buttons
 // (never tucked into a submenu), enabled only when they'd actually do
@@ -37,10 +37,10 @@ export default function TakeoffToolbar({ page, tools }) {
         <span style={S.divider} />
         <ToolButton
           disabled={tools.wallDetectionBusy}
-          onClick={tools.suggestExteriorProposal}
-          testId="tool-detect-exterior"
+          onClick={tools.runWallDetection}
+          testId="tool-detect-walls"
         >
-          {tools.wallDetectionBusy ? "Suggesting..." : "Suggest Exterior"}
+          {tools.wallDetectionBusy ? "Detecting..." : "Detect Walls"}
         </ToolButton>
         <ToolButton active={tools.activeTool === "exterior-wall"} onClick={() => tools.setActiveTool("exterior-wall")} testId="tool-draw-exterior">
           Trace Exterior
@@ -191,7 +191,12 @@ export default function TakeoffToolbar({ page, tools }) {
 
         {tools.activeTool === "exterior-wall" && (
           <span style={S.wallStatus} data-testid="trace-exterior-hint">
-            Click anywhere along a visible exterior wall. The full wall will be selected from corner to corner.
+            Click exterior corner points manually. Snapping is local and optional.
+          </span>
+        )}
+        {tools.detectedWallSummary?.total > 0 && (
+          <span style={S.wallStatus} data-testid="detected-wall-summary">
+            Walls detected: {tools.detectedWallSummary.total} - Exterior {tools.detectedWallSummary.exterior} - Interior {tools.detectedWallSummary.interior} - Unknown {tools.detectedWallSummary.unknown}
           </span>
         )}
 
@@ -213,8 +218,8 @@ export default function TakeoffToolbar({ page, tools }) {
             <button type="button" style={S.miniButton} onClick={() => tools.rejectAutomaticCandidates()} data-testid="reject-candidates">
               Reject Candidates
             </button>
-            <button type="button" style={S.miniButton} onClick={tools.suggestExteriorProposal} disabled={tools.wallDetectionBusy} data-testid="run-detection-again">
-              Suggest Again
+            <button type="button" style={S.miniButton} onClick={tools.runWallDetection} disabled={tools.wallDetectionBusy} data-testid="run-detection-again">
+              Detect Walls Again
             </button>
             <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("plan-region")} data-testid="candidate-select-plan-region">
               Select Plan Region

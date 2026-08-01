@@ -24,6 +24,7 @@ const SNAP_STYLES = {
 // openings yellow, areas translucent purple, unconfirmed automatic
 // candidates dashed red.
 const WALL_COLOR = { exterior: "#16a34a", internal: "#2563eb" };
+const DETECTED_WALL_COLOR = { exterior: "#16a34a", interior: "#2563eb", unknown: "#64748b" };
 const OPENING_COLOR = {
   window: "#06b6d4",
   "internal-door": "#f97316",
@@ -59,6 +60,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
   const exteriorWalls = page?.exteriorWalls;
   const internalWalls = page?.internalWalls;
+  const detectedWalls = page?.detectedWalls || [];
   const visibleExteriorSegments = exteriorWalls?.segments.filter(shouldShowWallSegment) || [];
   const visibleInternalSegments = internalWalls?.segments.filter(shouldShowWallSegment) || [];
 
@@ -167,6 +169,9 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Exterior + internal wall segments */}
+        {detectedWalls.map((wall) => (
+          <DetectedWallObject key={wall.id} wall={wall} project={project} />
+        ))}
         {showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
@@ -278,6 +283,27 @@ function centroid(vertices) {
   if (!Array.isArray(vertices) || vertices.length === 0) return { x: 0, y: 0 };
   const sum = vertices.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
   return { x: sum.x / vertices.length, y: sum.y / vertices.length };
+}
+
+function DetectedWallObject({ wall, project }) {
+  if (!wall?.start || !wall?.end) return null;
+  const a = project(wall.start);
+  const b = project(wall.end);
+  const color = DETECTED_WALL_COLOR[wall.type] || DETECTED_WALL_COLOR.unknown;
+  return (
+    <g data-testid="detected-wall-object" data-wall-type={wall.type} data-wall-id={wall.id}>
+      <line
+        x1={a.x}
+        y1={a.y}
+        x2={b.x}
+        y2={b.y}
+        stroke={color}
+        strokeWidth={wall.type === "unknown" ? 2.5 : 3}
+        strokeDasharray={wall.type === "unknown" ? "5 4" : undefined}
+        opacity={0.55}
+      />
+    </g>
+  );
 }
 
 function WallSegmentLine({ segment, vertexById, project, selected }) {

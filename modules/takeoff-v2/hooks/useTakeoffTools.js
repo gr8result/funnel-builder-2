@@ -35,6 +35,7 @@ import {
   splitSegment,
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
+import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -52,8 +53,8 @@ const SNAP_TOLERANCE_SCREEN_PX = 12; // spec: "10-14 screen pixels"
 const WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX = 8;
 const MANUAL_SNAP = { kind: "manual", lineId: null, lineIds: null };
 const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirmed: false, confirmedAt: null, detectionConfidence: null, detectedSnapshot: null };
-const AUTO_DETECTION_DISABLED_MESSAGE = "Automatic exterior detection is temporarily disabled because it is not reliable enough. Use Trace Exterior to select the outside building corners accurately.";
-const NO_EXTERIOR_PROPOSAL_MESSAGE = "Automatic exterior suggestions are disabled. Use Trace Exterior to place exterior corner points manually.";
+const AUTO_DETECTION_DISABLED_MESSAGE = "No wall objects could be detected from this page yet. Use Trace Exterior manually, or review the PDF/vector extraction.";
+const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until wall-object review is complete.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 
 function snapCandidateToMetadata(candidate) {
@@ -569,7 +570,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     commitPage({ measurements: [] });
   }, [page, commitPage, pushUndo]);
 
-  // ---- Exterior walls: detection -----------------------------------------
+  // ---- Wall-object detection ---------------------------------------------
 
   // Automatic detection is a strict accelerator: a failure here (missing
   // session, 401, missing OPENAI_API_KEY, network error) only ever sets
@@ -581,17 +582,34 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     void imageWidth;
     void imageHeight;
     void viewport;
-    void snapshotPlanGeometryIndex;
     setWallDetectionBusy(true);
-    setWallDetectionStatus("unavailable");
-    setWallDetectionMessage(AUTO_DETECTION_DISABLED_MESSAGE);
-    setWallDetectionCode("AUTO_DISABLED");
+    setWallDetectionStatus("detecting");
+    setWallDetectionMessage("Detecting walls...");
+    setWallDetectionCode(null);
     try {
-      await Promise.resolve();
+      const result = detectWallObjects({
+        planGeometryIndex: snapshotPlanGeometryIndex || planGeometryIndex,
+        page,
+      });
+      if (!result.walls.length) {
+        commitPage({ detectedWalls: [], wallDetectionDiagnostics: result.diagnostics, wallDetectionSummary: result.summary });
+        setWallDetectionStatus("unavailable");
+        setWallDetectionMessage(AUTO_DETECTION_DISABLED_MESSAGE);
+        setWallDetectionCode("NO_WALL_OBJECTS");
+        return;
+      }
+      commitPage({
+        detectedWalls: result.walls,
+        wallDetectionDiagnostics: result.diagnostics,
+        wallDetectionSummary: result.summary,
+      });
+      setWallDetectionStatus("walls-detected");
+      setWallDetectionMessage(`Walls detected: ${result.summary.total} (${result.summary.exterior} exterior, ${result.summary.interior} interior, ${result.summary.unknown} unknown).`);
+      setWallDetectionCode(null);
     } finally {
       setWallDetectionBusy(false);
     }
-  }, []);
+  }, [planGeometryIndex, page, commitPage]);
 
   const suggestExteriorProposal = useCallback(async () => {
     setWallDetectionBusy(true);
@@ -623,6 +641,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const activeExteriorWallSegmentCount = useMemo(() => activeWallSegments(page?.exteriorWalls).length, [page]);
   const activeInternalWallSegmentCount = useMemo(() => activeWallSegments(page?.internalWalls).length, [page]);
+  const detectedWallSummary = useMemo(() => page?.wallDetectionSummary || summarizeDetectedWalls(page?.detectedWalls || []), [page]);
   const activeExteriorWallsClosed = useMemo(() => {
     const graph = activeWallGraph(page?.exteriorWalls);
     return Boolean(graph?.isClosed);
@@ -1755,6 +1774,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
+    detectedWallSummary,
     suggestExteriorProposal,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,

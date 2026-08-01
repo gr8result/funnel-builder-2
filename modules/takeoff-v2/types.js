@@ -85,6 +85,20 @@ export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
  */
 
 /**
+ * @typedef {Object} DetectedWall
+ * @property {string} id
+ * @property {"exterior"|"interior"|"unknown"} type
+ * @property {Point} start
+ * @property {Point} end
+ * @property {number|null} thickness
+ * @property {number} confidence
+ * @property {string[]} openings
+ * @property {string[]} connectedWalls
+ * @property {"pdf-vector"|"pdf-vector-single"|"raster"} source
+ * @property {string[]} sourceSegmentIds
+ */
+
+/**
  * @typedef {Object} WallVertex
  * @property {string} id
  * @property {number} x   page-space
@@ -294,12 +308,32 @@ export function withPlanPageDefaults(rawPage) {
     legacyExteriorWalls: safe(() => (
       page.legacyExteriorWalls || (isLegacyAutomaticExteriorWalls(page.exteriorWalls) ? quarantineLegacyExteriorWalls(page.exteriorWalls) : null)
     ), null),
+    detectedWalls: safe(() => (Array.isArray(page.detectedWalls) ? page.detectedWalls.map(withDetectedWallDefaults).filter(Boolean) : []), []),
     internalWalls: safe(() => page.internalWalls, null),
     openings: safe(() => (Array.isArray(page.openings) ? page.openings : []), []),
     areas: safe(() => (Array.isArray(page.areas) ? page.areas.map(withAreaDefaults) : []), []),
     measurements: safe(() => (Array.isArray(page.measurements) ? page.measurements : []), []),
     layerVisibility: safe(() => ({ ...createDefaultLayerVisibility(), ...(page.layerVisibility || {}) }), createDefaultLayerVisibility()),
     planRegion: safe(() => page.planRegion, null),
+  };
+}
+
+function withDetectedWallDefaults(rawWall) {
+  if (!rawWall || typeof rawWall !== "object" || !rawWall.start || !rawWall.end) return null;
+  const type = ["exterior", "interior", "unknown"].includes(rawWall.type) ? rawWall.type : "unknown";
+  const start = { x: Number(rawWall.start.x) || 0, y: Number(rawWall.start.y) || 0 };
+  const end = { x: Number(rawWall.end.x) || 0, y: Number(rawWall.end.y) || 0 };
+  return {
+    id: rawWall.id || `wall-${Math.round(start.x)}-${Math.round(start.y)}-${Math.round(end.x)}-${Math.round(end.y)}`,
+    type,
+    start,
+    end,
+    thickness: Number.isFinite(rawWall.thickness) ? rawWall.thickness : null,
+    confidence: Number.isFinite(rawWall.confidence) ? rawWall.confidence : 0,
+    openings: Array.isArray(rawWall.openings) ? rawWall.openings : [],
+    connectedWalls: Array.isArray(rawWall.connectedWalls) ? rawWall.connectedWalls : [],
+    source: rawWall.source || "pdf-vector",
+    sourceSegmentIds: Array.isArray(rawWall.sourceSegmentIds) ? rawWall.sourceSegmentIds : [],
   };
 }
 
