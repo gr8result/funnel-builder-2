@@ -54,15 +54,17 @@ test("creates one valid READY TO BUY trade with exact CMC instructions", () => {
   const result = report();
   const trade = result.recommendations[0];
   assert.equal(trade.status, "READY TO BUY");
-  assert.equal(trade.suggestedQuantity, 12);
-  assert.equal(trade.maximumPlannedLoss, 60);
+  assert.equal(trade.suggestedQuantity, 10);
+  assert.equal(trade.maximumPlannedLoss, 50);
+  assert.equal(trade.expectedProfit, 200);
+  assert.equal(trade.rewardRisk, 4);
   assert.equal(trade.entryBuyPrice, 101);
   assert.equal(trade.safetyExit, 96);
   assert.equal(trade.takeSomeProfit, 113);
   assert.equal(trade.finalExit, 121);
   assert.match(result.greeting, /^Hi Grant/);
   assert.equal(result.orderInstructions.approvedTrades[0].symbol, "AVGO");
-  assert.match(result.orderInstructions.approvedTrades[0].conditionalBuy, /12 AVGO shares/);
+  assert.match(result.orderInstructions.approvedTrades[0].conditionalBuy, /10 AVGO shares/);
   assert.match(result.overallInstruction, /Prepare one conditional AVGO order in CMC/);
 });
 
@@ -147,15 +149,15 @@ test("minimum reward-to-risk failure is rejected", () => {
 });
 
 test("quantity below one is rejected", () => {
-  const result = report({ settings: { ...BASE_SETTINGS, maximumPlannedLossPerTrade: 1 } });
+  const result = report({ settings: { ...BASE_SETTINGS, defaultMaximumLoss: 1, maximumPlannedLossPerTrade: 1 } });
   assert.equal(result.recommendations[0].status, "WAIT");
-  assert.match(result.recommendations[0].technicalDetails.failedReason, /quantity/);
+  assert.match(result.recommendations[0].technicalDetails.failedReason, /one whole share|buying power|quantity/);
 });
 
 test("insufficient cash prevents a recommendation", () => {
   const result = report({ settings: { ...BASE_SETTINGS, availableCash: 50, maximumPositionValue: 50, maximumTotalMoneyCommitted: 50 } });
   assert.equal(result.recommendations[0].status, "WAIT");
-  assert.match(result.recommendations[0].technicalDetails.failedReason, /cash|quantity/);
+  assert.match(result.recommendations[0].technicalDetails.failedReason, /buying power|cash|quantity/);
 });
 
 test("maximum planned loss exceeded prevents additional approved trades", () => {

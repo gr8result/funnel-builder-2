@@ -119,6 +119,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     tradingBalance: 5000,
     availableCash: 5000,
     accountCurrency: "AUD",
+    currentTradeBudget: 1250,
+    defaultMaximumLoss: 50,
+    minimumAcceptableExpectedProfit: 25,
+    maximumCapitalPerTrade: 1250,
+    currencyPreference: "AUD",
+    brokerageEstimate: 0,
     maximumPlannedLossPerTrade: 75,
     maximumOpenPositions: 3,
     maximumTotalMoneyCommitted: 2500,
@@ -476,6 +482,11 @@ export default function FreedomTraderDashboard({ passwordHash }) {
             <div className="settingsGrid">
               <label>Cash available manual<input type="number" value={reportSettings.availableCash} onChange={(event) => updateReportSetting("availableCash", event.target.value)} /></label>
               <label>Trading balance manual<input type="number" value={reportSettings.tradingBalance} onChange={(event) => updateReportSetting("tradingBalance", event.target.value)} /></label>
+              <label>Current trade budget<input type="number" value={reportSettings.currentTradeBudget} onChange={(event) => updateReportSetting("currentTradeBudget", event.target.value)} /></label>
+              <label>Default maximum loss<input type="number" value={reportSettings.defaultMaximumLoss} onChange={(event) => updateReportSetting("defaultMaximumLoss", event.target.value)} /></label>
+              <label>Minimum expected profit<input type="number" value={reportSettings.minimumAcceptableExpectedProfit} onChange={(event) => updateReportSetting("minimumAcceptableExpectedProfit", event.target.value)} /></label>
+              <label>Maximum capital / trade<input type="number" value={reportSettings.maximumCapitalPerTrade} onChange={(event) => updateReportSetting("maximumCapitalPerTrade", event.target.value)} /></label>
+              <label>Brokerage estimate<input type="number" value={reportSettings.brokerageEstimate} onChange={(event) => updateReportSetting("brokerageEstimate", event.target.value)} /></label>
               <label>Max loss / trade<input type="number" value={reportSettings.maximumPlannedLossPerTrade} onChange={(event) => updateReportSetting("maximumPlannedLossPerTrade", event.target.value)} /></label>
               <label>Max open positions<input type="number" value={reportSettings.maximumOpenPositions} onChange={(event) => updateReportSetting("maximumOpenPositions", event.target.value)} /></label>
               <label>Max position value<input type="number" value={reportSettings.maximumPositionValue} onChange={(event) => updateReportSetting("maximumPositionValue", event.target.value)} /></label>
@@ -559,12 +570,14 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
           <div><dt>Safety Exit</dt><dd>{formatCurrency(ready.safetyExit, ready.currency)}</dd></div>
           <div><dt>Take Some Profit</dt><dd>{formatCurrency(ready.takeSomeProfit, ready.currency)}</dd></div>
           <div><dt>Final Exit</dt><dd>{formatCurrency(ready.finalExit, ready.currency)}</dd></div>
-          <div><dt>Quantity</dt><dd>{ready.suggestedQuantity} share{ready.suggestedQuantity === 1 ? "" : "s"}</dd></div>
-          <div><dt>Estimated purchase value</dt><dd>{formatCurrency(ready.estimatedPurchaseValue, ready.currency)}</dd></div>
-          <div><dt>Maximum planned loss</dt><dd>{formatCurrency(ready.maximumPlannedLoss, ready.accountCurrency || settings.accountCurrency)}</dd></div>
+          <div><dt>Recommended Position</dt><dd>{ready.recommendedPosition || ready.suggestedQuantity} share{(ready.recommendedPosition || ready.suggestedQuantity) === 1 ? "" : "s"}</dd></div>
+          <div><dt>Capital required</dt><dd>{formatCurrency(ready.capitalRequired ?? ready.estimatedAccountPurchaseValue, ready.accountCurrency || settings.accountCurrency)}</dd></div>
+          <div><dt>Maximum loss</dt><dd>{formatCurrency(ready.maximumPlannedLoss, ready.accountCurrency || settings.accountCurrency)}</dd></div>
+          <div><dt>Expected profit</dt><dd>{formatCurrency(ready.expectedProfit, ready.accountCurrency || settings.accountCurrency)}</dd></div>
+          <div><dt>Reward</dt><dd>{Number.isFinite(Number(ready.rewardRisk)) ? `${Number(ready.rewardRisk).toFixed(2)} : 1` : "--"}</dd></div>
           <div><dt>Confidence</dt><dd>{decision.confidence?.level || confidenceStars(ready.technicalDetails?.score)}</dd></div>
         </dl>
-        <p>{decision.message}</p>
+        <p>{ready.positionSizing?.explanation || decision.message}</p>
         <p>Because: {(decision.confidence?.reasons || decision.evidence || []).join(" ")}</p>
         <Link href={traderCompanyHref(ready.symbol)}>Open analysis</Link>
       </div>
@@ -665,9 +678,12 @@ function RecommendationCard({ item, index, showDetails }) {
           <p>Safety Exit: {formatCurrency(item.safetyExit, item.currency)}</p>
           <p>Take Some Profit: {formatCurrency(item.takeSomeProfit, item.currency)}</p>
           <p>Final Exit: {formatCurrency(item.finalExit, item.currency)}</p>
-          <p>Suggested quantity: {item.suggestedQuantity} shares</p>
-          <p>Estimated purchase value: {formatCurrency(item.estimatedPurchaseValue, item.currency)}</p>
-          <p>Maximum planned loss: {formatCurrency(item.maximumPlannedLoss, accountCurrency)} plus costs</p>
+          <p>Recommended position: {item.recommendedPosition || item.suggestedQuantity} shares</p>
+          <p>Capital required: {formatCurrency(item.capitalRequired ?? item.estimatedAccountPurchaseValue, accountCurrency)}</p>
+          <p>Maximum loss: {formatCurrency(item.maximumPlannedLoss, accountCurrency)}</p>
+          <p>Expected profit: {formatCurrency(item.expectedProfit, accountCurrency)}</p>
+          <p>Reward: {Number.isFinite(Number(item.rewardRisk)) ? `${Number(item.rewardRisk).toFixed(2)} : 1` : "--"}</p>
+          {item.positionSizing?.warnings?.length ? <p>{item.positionSizing.warnings.join(" ")}</p> : null}
         </>
       ) : item.status === "WAIT" ? (
         <>
