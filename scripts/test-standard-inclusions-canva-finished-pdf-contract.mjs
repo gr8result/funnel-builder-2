@@ -23,6 +23,12 @@ assert(workbook.includes("/api/standard-inclusions/canva/designs"), "Choose Exis
 assert(workbook.includes("/api/standard-inclusions/canva/export-pdf"), "Generate PDF must call the Canva export endpoint");
 assert(!workbook.includes("Create from Canva Template"), "UI must not advertise Canva templates when it only supports existing design selection");
 assert(workbook.includes("CanvaSetupDiagnosticsPanel"), "Development diagnostics panel must be visible for Canva setup failures");
+assert(workbook.includes("CanvaSetupModal"), "Canva setup required must open a setup modal");
+assert(workbook.includes("D:\\dev\\funnel-builder-clean\\.env.local"), "Canva setup modal must tell developers where to add credentials");
+assert(workbook.includes("CANVA_REDIRECT_URI=http://127.0.0.1:3000/api/standard-inclusions/canva/callback"), "Setup modal must show the exact local redirect URI");
+assert(workbook.includes("CANVA_RETURN_URI=http://127.0.0.1:3000/api/standard-inclusions/canva/return"), "Setup modal must show the exact local return URI");
+assert(workbook.includes("window.location.assign(payload.authorizationUrl)"), "Connect Canva must redirect the browser to Canva");
+assert(workbook.includes("http://127.0.0.1:3000/modules/estimate-builder"), "OAuth return target must use the exact 127.0.0.1 estimate-builder URL");
 assert(workbook.includes("Choose Existing Canva Design"), "UI must provide a truthful existing-design workflow");
 assert(workbook.includes("Reconnect Canva"), "UI must provide reconnect state for missing scopes/expired connection");
 
@@ -44,6 +50,7 @@ assert(canvaConnect.includes("CANVA_RETURN_URI || process.env.CANVA_RETURN_URL")
 assert(canvaExportRoute.includes('"/exports"') && canvaExportRoute.includes("storeCanvaExportedPdf"), "Canva export flow must use Canva exports API");
 assert(canvaConnect.includes("storeCanvaExportedPdf"), "Canva exported PDFs must be downloaded and stored permanently");
 assert(canvaStatusRoute.includes("missingScopes") && canvaStatusRoute.includes("databaseTables"), "Status route must report scopes and migration readiness");
+assert(canvaStatusRoute.includes("returnUriStatus"), "Status route must report Canva Return URI readiness");
 assert(canvaReturnRoute.includes("connect/keys") && canvaReturnRoute.includes("crypto.verify"), "Return route must validate Canva correlation JWT against Canva keys");
 assert(canvaReturnRoute.includes("redirectCanvaReturnGet") && canvaReturnRoute.includes("/standard-inclusions/canva-return"), "Canva API return URL must redirect browser GET returns to the authenticated return page");
 assert(canvaReturnPage.includes("correlation_jwt") && canvaReturnPage.includes("/api/standard-inclusions/canva/return"), "Browser return page must forward Canva correlation JWT to backend validation");

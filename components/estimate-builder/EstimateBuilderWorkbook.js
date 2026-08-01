@@ -6924,6 +6924,7 @@ export function StandardInclusionsSheet({ sheet }) {
   const [canvaStatus, setCanvaStatus] = useState(null);
   const [canvaDesigns, setCanvaDesigns] = useState([]);
   const [canvaDesignSearch, setCanvaDesignSearch] = useState("");
+  const [canvaSetupOpen, setCanvaSetupOpen] = useState(false);
   const [finishedPdfPageCount, setFinishedPdfPageCount] = useState(0);
   const onlyOfficeAuthToken = "";
   const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
@@ -6958,6 +6959,18 @@ export function StandardInclusionsSheet({ sheet }) {
     if (workspaceId) loadStatus();
     return () => { cancelled = true; };
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("canva_connected")) {
+      setStandardStatus("Canva connected.");
+      window.history.replaceState(null, "", window.location.pathname);
+    } else if (params.get("canva_error")) {
+      setStandardStatus(`Canva connection failed: ${params.get("canva_error")}`);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
 
   async function saveStandard(next, options = {}) {
     const nextEditorMode = next.editorMode || next.pdfEditorMode || standard.editorMode || standard.pdfEditorMode || STANDARD_INCLUSIONS_EDITOR_MODES.DOCUMENT_ENGINE;
@@ -7029,26 +7042,18 @@ export function StandardInclusionsSheet({ sheet }) {
     setStandardStatus("Opening Canva OAuth...");
     try {
       const headers = await standardAuthHeaders(workspaceId);
+      const returnTo = "http://127.0.0.1:3000/modules/estimate-builder";
       const response = await fetch("/api/standard-inclusions/canva/start", {
         method: "POST",
         headers,
-        body: JSON.stringify({ workspace_id: workspaceId, returnTo: window.location.pathname }),
+        body: JSON.stringify({ workspace_id: workspaceId, returnTo }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not start Canva OAuth.");
-      const popup = window.open(payload.authorizationUrl, "gr8-canva-oauth", "width=980,height=760,noopener,noreferrer");
-      if (!popup) {
-        window.location.href = payload.authorizationUrl;
-        return;
+      if (!response.ok || !payload?.ok) {
+        setCanvaSetupOpen(true);
+        throw new Error(formatCanvaSetupError(payload, "Could not start Canva OAuth."));
       }
-      setStandardStatus("Complete the Canva connection in the popup, then return here.");
-      const listener = async (event) => {
-        if (event.origin !== window.location.origin || event.data?.type !== "gr8-canva-oauth") return;
-        window.removeEventListener("message", listener);
-        setStandardStatus(event.data?.message || "Canva OAuth completed.");
-        await refreshCanvaStatus();
-      };
-      window.addEventListener("message", listener);
+      window.location.assign(payload.authorizationUrl);
     } catch (error) {
       setStandardStatus(error?.message || "Canva connection failed.");
     }
@@ -7078,6 +7083,13 @@ export function StandardInclusionsSheet({ sheet }) {
     const payload = await response.json().catch(() => ({}));
     setCanvaStatus(payload);
     return payload;
+  }
+
+  function openCanvaSetupModal() {
+    setCanvaSetupOpen(true);
+    refreshCanvaStatus().catch((error) => {
+      setStandardStatus(error?.message || "Could not refresh Canva setup status.");
+    });
   }
 
   async function handleImportExistingCanvaDesign() {
@@ -7691,6 +7703,16 @@ export function StandardInclusionsSheet({ sheet }) {
       <input ref={pptxUploadRef} type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" style={{ display: "none" }} onChange={preparePowerPointImport} />
       <input ref={docxUploadRef} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{ display: "none" }} onChange={prepareDocxImport} />
       <input ref={pdfUploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={preparePdfImport} />
+      {canvaSetupOpen ? (
+        <CanvaSetupModal
+          canvaStatus={canvaStatus}
+          readonly={readonly}
+          onClose={() => setCanvaSetupOpen(false)}
+          onRefresh={refreshCanvaStatus}
+          onConnect={handleConnectCanvaAccount}
+          onDisconnect={handleDisconnectCanvaAccount}
+        />
+      ) : null}
       {activeOnlyOfficeDocumentId ? (
         <OnlyOfficePresentationEditor
           key={`${activeOnlyOfficeDocumentId}-v${standard.onlyOfficeVersion || 1}`}
@@ -7717,7 +7739,7 @@ export function StandardInclusionsSheet({ sheet }) {
           readonly={readonly}
           standard={standard}
           canvaStatus={canvaStatus}
-          onConnectCanva={handleConnectCanvaAccount}
+          onConnectCanva={openCanvaSetupModal}
           onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
           onOpenCanva={handleOpenInCanva}
           onGeneratePdf={handleGenerateCanvaPdf}
@@ -7743,7 +7765,7 @@ export function StandardInclusionsSheet({ sheet }) {
               onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
               onUploadPdf={() => pdfUploadRef.current?.click()}
               onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
-              onConnectCanva={handleConnectCanvaAccount}
+              onConnectCanva={openCanvaSetupModal}
               onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
               onOpenCanva={handleOpenInCanva}
               onGeneratePdf={handleGenerateCanvaPdf}
@@ -7785,7 +7807,7 @@ export function StandardInclusionsSheet({ sheet }) {
               onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
               onUploadPdf={() => pdfUploadRef.current?.click()}
               onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
-              onConnectCanva={handleConnectCanvaAccount}
+              onConnectCanva={openCanvaSetupModal}
               onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
               onOpenCanva={handleOpenInCanva}
               onGeneratePdf={handleGenerateCanvaPdf}
@@ -7804,7 +7826,7 @@ export function StandardInclusionsSheet({ sheet }) {
           )}
           onReplace={openReplaceScheduleDialog}
           onDelete={deleteCurrentSchedule}
-          onConnectCanva={handleConnectCanvaAccount}
+          onConnectCanva={openCanvaSetupModal}
           onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
           onOpenCanva={handleOpenInCanva}
           onGeneratePdf={handleGenerateCanvaPdf}
@@ -7831,7 +7853,7 @@ export function StandardInclusionsSheet({ sheet }) {
           onUploadPdf={() => pdfUploadRef.current?.click()}
           onRestoreLatest={restoreLatestVersion}
           onLoadDefaultTemplate={() => usePremierTemplate({ confirmFirst: false })}
-          onConnectCanva={handleConnectCanvaAccount}
+          onConnectCanva={openCanvaSetupModal}
           onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
           onOpenCanva={handleOpenInCanva}
           onGeneratePdf={handleGenerateCanvaPdf}
@@ -8238,7 +8260,7 @@ export function StandardInclusionsSheet({ sheet }) {
           <p style={styles.dashboardPanelSubtitle}>Use Canva as the native editor. PDF attachment remains available only as a legacy fallback.</p>
         </div>
         <div style={styles.proposalMiniActions}>
-          <button type="button" disabled={readonly || canvaStatus?.setupRequired || (canvaStatus?.connected && canvaStatus?.ready)} style={styles.primaryButton} onClick={handleConnectCanvaAccount}>{canvaStatus?.ready ? "Connected to Canva" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Setup required" : "Connect Canva"}</button>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={openCanvaSetupModal}>{canvaStatus?.ready ? "Canva connected" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Canva setup required" : "Connect Canva"}</button>
           <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleImportExistingCanvaDesign}>Choose Existing Canva Design</button>
           <button type="button" disabled={!standard.canvaEditUrl || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleOpenInCanva}>Open in Canva</button>
           <button type="button" disabled={!standard.canvaDesignId || !canvaStatus?.ready} style={styles.primaryButton} onClick={handleGenerateCanvaPdf}>Export latest PDF</button>
@@ -8360,12 +8382,11 @@ function CanvaScheduleActions({
   const setupRequired = Boolean(!canvaStatus || canvaStatus?.setupRequired || canvaStatus?.configured === false);
   const connected = Boolean(canvaStatus?.connected);
   const ready = Boolean(canvaStatus?.ready);
-  const cannotUseCanva = readonly || setupRequired;
   const needsReconnect = connected && !ready && !setupRequired;
   return (
     <div style={styles.canvaScheduleActions}>
-      <button type="button" disabled={cannotUseCanva || (connected && ready)} style={styles.primaryButton} onClick={onConnectCanva}>{ready ? "Connected to Canva" : needsReconnect ? "Reconnect Canva" : setupRequired ? "Canva setup required" : "Connect Canva"}</button>
-      <button type="button" disabled={cannotUseCanva || !ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Choose Existing Canva Design</button>
+      <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConnectCanva}>{ready ? "Canva connected" : needsReconnect ? "Reconnect Canva" : setupRequired ? "Canva setup required" : "Connect Canva"}</button>
+      <button type="button" disabled={readonly || !ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Choose Existing Canva Design</button>
       <button type="button" disabled={!hasActiveSchedule || !ready} style={styles.secondaryButton} onClick={onOpenCanva}>Open in Canva</button>
       <button type="button" disabled={!hasActiveSchedule || !ready} style={styles.secondaryButton} onClick={onGeneratePdf}>Export latest PDF</button>
       <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
@@ -8577,6 +8598,89 @@ function CanvaStandardInclusionsViewer({ readonly, standard, canvaStatus, contex
         {standard.canvaExportedPdfUrl ? <a style={styles.secondaryButton} href={standard.canvaExportedPdfUrl} target="_blank" rel="noreferrer">Preview PDF</a> : <span style={styles.dashboardPanelSubtitle}>Generate PDF to preview the exact exported document.</span>}
       </div>
     </section>
+  );
+}
+
+function CanvaSetupModal({ canvaStatus, readonly, onClose, onRefresh, onConnect, onDisconnect }) {
+  const [busy, setBusy] = useState(false);
+  const diagnostics = canvaStatus?.diagnostics || {};
+  const missing = Array.isArray(canvaStatus?.missing) ? canvaStatus.missing : [];
+  const database = diagnostics.database || {};
+  const databaseReady = diagnostics.databaseTables === "Ready";
+  const redirectStatus = diagnostics.redirectUriStatus === "OK" ? "Configured" : diagnostics.redirectUriStatus === "Missing" ? "Missing" : "Incorrect";
+  const returnStatus = diagnostics.returnUriStatus || "Missing";
+  const connected = Boolean(canvaStatus?.connected);
+  const ready = Boolean(canvaStatus?.ready);
+  const setupRequired = Boolean(canvaStatus?.setupRequired || !canvaStatus?.configured || !databaseReady);
+  const canStartOAuth = !readonly && !setupRequired;
+  const migrationName = database.migration || "supabase/migrations/20260801_standard_inclusions_canva_finished_pdf.sql";
+
+  async function run(action) {
+    setBusy(true);
+    try {
+      await action?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={styles.canvaSetupModalOverlay} role="dialog" aria-modal="true" aria-label="Canva setup">
+      <section style={styles.canvaSetupModal}>
+        <div style={styles.proposalMiniActions}>
+          <div>
+            <div style={styles.eyebrow}>Canva setup</div>
+            <h3 style={{ margin: "4px 0 0" }}>{ready ? "Canva connected" : "Connect Canva"}</h3>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
+        </div>
+
+        <div style={styles.canvaSetupStatusGrid}>
+          <CanvaSetupStatus label="Client ID" value={diagnostics.clientId || "Unknown"} ok={diagnostics.clientId === "Configured"} />
+          <CanvaSetupStatus label="Client secret" value={diagnostics.clientSecret || "Unknown"} ok={diagnostics.clientSecret === "Configured"} />
+          <CanvaSetupStatus label="Redirect URI" value={redirectStatus} ok={diagnostics.redirectUriStatus === "OK"} />
+          <CanvaSetupStatus label="Return URI" value={returnStatus} ok={returnStatus === "Configured"} />
+          <CanvaSetupStatus label="Database tables" value={diagnostics.databaseTables || "Unknown"} ok={databaseReady} />
+          <CanvaSetupStatus label="Connection" value={diagnostics.connection || "Not connected"} ok={connected} />
+          <CanvaSetupStatus label="Token status" value={diagnostics.tokenStatus || "Missing"} ok={diagnostics.tokenStatus === "Valid"} />
+        </div>
+
+        {setupRequired ? (
+          <div style={styles.canvaSetupInstructions}>
+            <strong>{databaseReady ? "Canva credentials required" : "Database setup required"}</strong>
+            <span>Add the Canva credentials to D:\dev\funnel-builder-clean\.env.local, then restart the dev server.</span>
+            <code>CANVA_CLIENT_ID=your_real_client_id</code>
+            <code>CANVA_CLIENT_SECRET=your_real_client_secret</code>
+            <code>CANVA_REDIRECT_URI=http://127.0.0.1:3000/api/standard-inclusions/canva/callback</code>
+            <code>CANVA_RETURN_URI=http://127.0.0.1:3000/api/standard-inclusions/canva/return</code>
+            {!databaseReady ? <span>Run migration: {migrationName}</span> : null}
+            {missing.length ? <span>Missing: {missing.join(", ")}</span> : null}
+          </div>
+        ) : (
+          <p style={styles.dashboardPanelSubtitle}>OAuth will redirect this browser to Canva and return to http://127.0.0.1:3000/modules/estimate-builder after approval.</p>
+        )}
+
+        {diagnostics.connectionError ? <div style={styles.errorText}>{diagnostics.connectionError}</div> : null}
+        {canvaStatus?.error ? <div style={styles.errorText}>{canvaStatus.error}</div> : null}
+
+        <div style={styles.projectEstimateAdminModalActions}>
+          <button type="button" style={styles.secondaryButton} disabled={busy} onClick={() => run(onRefresh)}>Refresh status</button>
+          {connected ? <button type="button" style={styles.secondaryButton} disabled={busy || readonly} onClick={() => run(onDisconnect)}>Disconnect Canva</button> : null}
+          {connected ? <button type="button" style={styles.primaryButton} disabled={busy || !canStartOAuth} onClick={() => run(onConnect)}>Reconnect Canva</button> : (
+            <button type="button" style={styles.primaryButton} disabled={busy || !canStartOAuth} onClick={() => run(onConnect)}>Connect Canva</button>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function CanvaSetupStatus({ label, value, ok }) {
+  return (
+    <div style={styles.canvaSetupStatusItem}>
+      <strong>{label}</strong>
+      <span style={ok ? styles.okPill : styles.warningPill}>{value}</span>
+    </div>
   );
 }
 
@@ -8855,7 +8959,7 @@ function StandardScheduleEmptyState({
           <button type="button" disabled={readonly || !latestRestorableRevision} style={styles.primaryButton} onClick={onRestoreLatest}>Restore Latest Version</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onLoadDefaultTemplate}>Load Default Standard Inclusions Template</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Attach Finished PDF</button>
-          <button type="button" disabled={readonly || canvaSetupRequired} style={styles.secondaryButton} onClick={onConnectCanva}>{canvaSetupRequired ? "Canva setup required" : "Configure Canva"}</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onConnectCanva}>{canvaSetupRequired ? "Canva setup required" : "Configure Canva"}</button>
         </div>
         {canvaSetupRequired ? (
           <p style={styles.dashboardPanelSubtitle}>Connect and configure Canva before using Canva designs. You can still restore a previous version or attach a finished PDF now.</p>
@@ -8924,6 +9028,13 @@ async function readPdfPageCount(file) {
   const bytes = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
   return Number(pdf.numPages || 0);
+}
+
+function formatCanvaSetupError(error, fallback = "Canva setup failed.") {
+  const code = error?.code ? `${error.code}: ` : "";
+  const message = error?.error || error?.message || fallback;
+  const missing = Array.isArray(error?.missing) && error.missing.length ? ` Missing: ${error.missing.join(", ")}.` : "";
+  return `${code}${message}${missing}`;
 }
 
 function hasActiveStandardSchedule(standard = {}) {
@@ -15609,6 +15720,11 @@ const styles = {
   standardCanvaPreview: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 12, padding: 14, display: "grid", gap: 12, justifyItems: "start" },
   canvaDiagnosticsPanel: { border: "1px solid #fed7aa", background: "#fff7ed", color: "#0f172a", borderRadius: 12, padding: 12, display: "grid", gap: 10 },
   canvaDiagnosticsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, fontSize: 13, fontWeight: 800 },
+  canvaSetupModalOverlay: { position: "fixed", inset: 0, zIndex: 2800, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 18 },
+  canvaSetupModal: { width: "min(720px, 96vw)", maxHeight: "88vh", overflow: "auto", background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 10, padding: 18, display: "grid", gap: 14, boxShadow: "0 24px 70px rgba(15,23,42,0.34)" },
+  canvaSetupStatusGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 },
+  canvaSetupStatusItem: { border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 8, padding: 10, display: "grid", gap: 7 },
+  canvaSetupInstructions: { border: "1px solid #fed7aa", background: "#fff7ed", color: "#0f172a", borderRadius: 8, padding: 12, display: "grid", gap: 7, fontSize: 13, fontWeight: 800 },
   standardRecoveryPanel: { border: "1px solid #bae6fd", background: "#f0f9ff", color: "#0f172a", borderRadius: 12, padding: 16, display: "grid", gap: 12, width: "100%" },
   standardRecoveryActions: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8, alignItems: "stretch" },
   standardScheduleRevisionRow: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) repeat(3, auto)", gap: 8, alignItems: "center", color: "#0f172a" },

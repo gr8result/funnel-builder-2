@@ -41,9 +41,10 @@ async function handler(req, res) {
     diagnostics: {
       clientId: cfg.envStatus.checks.CANVA_CLIENT_ID ? "Configured" : "Missing",
       clientSecret: cfg.envStatus.checks.CANVA_CLIENT_SECRET ? "Configured" : "Missing",
-      redirectUri: cfg.redirectUri || "",
+      redirectUri: cfg.envStatus.checks.CANVA_REDIRECT_URI ? cfg.redirectUri || "" : "",
       returnUrl: canvaReturnUrl(req),
-      redirectUriStatus: cfg.redirectUses127 ? "OK" : "Must use 127.0.0.1 for local development",
+      redirectUriStatus: !cfg.envStatus.checks.CANVA_REDIRECT_URI ? "Missing" : cfg.redirectUses127 ? "OK" : "Must use 127.0.0.1 for local development",
+      returnUriStatus: cfg.envStatus.checks.CANVA_RETURN_URI ? "Configured" : "Missing",
       databaseTables: database.ready ? "Ready" : "Migration required",
       database,
       connection: connection ? "Connected" : "Not connected",

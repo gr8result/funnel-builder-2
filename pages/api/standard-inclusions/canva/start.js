@@ -29,7 +29,13 @@ async function handler(req, res) {
     return_to: oauth.record.returnTo,
     expires_at: new Date(oauth.record.expiresAt).toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    return res.status(500).json({
+      ok: false,
+      code: "CANVA_OAUTH_STATE_SAVE_FAILED",
+      error: `Could not save Canva OAuth state: ${error.message}`,
+    });
+  }
   return res.status(200).json({ ok: true, authorizationUrl: canvaAuthorizationUrl({ req, state: oauth.state, challenge: oauth.challenge }) });
 }
 
