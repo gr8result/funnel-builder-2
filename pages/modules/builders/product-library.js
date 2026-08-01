@@ -689,7 +689,7 @@ export default function BuilderProductLibraryPage() {
             <div className="panel-heading">
               <div>
                 <h2>Internal Estimating Catalogue</h2>
-                <p>Internal labour, material, BOQ and rate items used by estimating and quotations. These items do not appear in client selections.</p>
+                <p>Internal labour, materials, BOQ and rate items used for estimating and quotations. These items are not available for client selections.</p>
               </div>
             </div>
             <ProductLibraryFilters

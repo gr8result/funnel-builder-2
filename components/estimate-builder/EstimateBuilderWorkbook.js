@@ -274,7 +274,7 @@ const WORKSPACE_VISUALS = {
   },
   estimatingCatalogue: {
     title: "Internal Estimating Catalogue",
-    subtitle: "Internal labour, materials, BOQ and rate items used by estimating and quotations. These items are not available for client selections.",
+    subtitle: "Internal labour, materials, BOQ and rate items used for estimating and quotations. These items are not available for client selections.",
     color: "#0f766e",
     soft: "#ecfdf5",
     border: "#99f6e4",
@@ -1089,7 +1089,7 @@ const DASHBOARD_WORKSPACE_CARDS = [
   },
   {
     title: "Estimating Catalogue",
-    subtitle: "Open the internal labour, material, BOQ and rate catalogue used by estimating and quotations.",
+    subtitle: "Manage internal labour, material, BOQ and rate items used by estimating and quotations.",
     page: "productLibrary",
     visualKey: "estimatingCatalogue",
     badge: "Rates",
@@ -6755,7 +6755,7 @@ function ProductLibrarySheet({ sheet }) {
           <div>
             <div style={styles.dashboardEyebrow}>Internal Estimating Catalogue</div>
             <h2 style={styles.dashboardTitle}>Internal Estimating Catalogue</h2>
-            <p style={styles.dashboardSubtitle}>Internal labour, materials, BOQ and rate items used by estimating and quotations. These items are not available for client selections.</p>
+            <p style={styles.dashboardSubtitle}>Internal labour, materials, BOQ and rate items used for estimating and quotations. These items are not available for client selections.</p>
           </div>
         </div>
         <div style={styles.dashboardTotalCard}>
