@@ -1004,7 +1004,6 @@ function SelectionProductsView({
         <div className="empty-actions">
           <button type="button" onClick={onAddProduct}>Add Selection Product</button>
           <button type="button" onClick={onOpenImports}>Import Products</button>
-          <button type="button" onClick={onOpenImports}>View Import Instructions</button>
         </div>
         <style jsx>{selectionProductsCss}</style>
       </section>

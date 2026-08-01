@@ -14,7 +14,7 @@ const ESTIMATE_BUILDER_PAGES = [
   { key: "windowsDoors", label: "Windows & Doors" },
   { key: "quotation", label: "Quotation Builder" },
   { key: "standardInclusions", label: "Standard Inclusions" },
-  { key: "productLibrary", label: "Product Library" },
+  { key: "productLibrary", label: "Estimating Catalogue" },
   { key: "projectEstimate", label: "Project Estimate" },
   { key: "supplierQuotations", label: "Supplier Quotations" },
   { key: "boq", label: "BOQ" },

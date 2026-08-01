@@ -61,6 +61,7 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   const drawer = fs.readFileSync(path.join(process.cwd(), "components", "product-library", "ProductDetailDrawer.jsx"), "utf8");
   const productPicker = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "products", "selectionVisibility.ts"), "utf8");
   const workbook = fs.readFileSync(path.join(process.cwd(), "components", "estimate-builder", "EstimateBuilderWorkbook.js"), "utf8");
+  const workbookHook = fs.readFileSync(path.join(process.cwd(), "hooks", "estimate-builder", "useEstimateBuilderWorkbook.js"), "utf8");
   const cardsStart = workbook.indexOf("const DASHBOARD_WORKSPACE_CARDS");
   const cardsEnd = workbook.indexOf("function ProjectDashboardSheet");
   const dashboardCards = workbook.slice(cardsStart, cardsEnd);
@@ -88,8 +89,9 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /No client-selectable products have been added yet\./);
   assert.match(page, /Add Selection Product/);
   assert.match(page, /Import Products/);
-  assert.match(page, /View Import Instructions/);
+  assert.doesNotMatch(page, /View Import Instructions/);
   assert.match(page, /empty-actions/);
+  assert.doesNotMatch(page, /EstimateBuilderWorkbook/);
   assert.doesNotMatch(page, /viewMode === "table" \?/);
   assert.match(toolbar, /SELECTION_VISIBILITY_VALUES/);
   assert.match(toolbar, /Manage client-selectable products, finishes and fixtures used in project inclusions and selections\./);
@@ -117,5 +119,7 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /Price on Request/);
   assert.match(workbook, /<h2 style=\{styles\.dashboardTitle\}>Internal Estimating Catalogue<\/h2>/);
   assert.match(workbook, /These items are not available for client selections\./);
+  assert.match(workbookHook, /\{ key: "productLibrary", label: "Estimating Catalogue" \}/);
+  assert.doesNotMatch(workbookHook, /\{ key: "productLibrary", label: "Product Library" \}/);
   assert.doesNotMatch(dashboardCards, /\/modules\/builders\/selections-book/);
 });
