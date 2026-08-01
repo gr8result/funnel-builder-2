@@ -34,6 +34,12 @@ function value<T>(result: { ok: boolean; value?: T; issues: unknown[] }, message
   return result.value;
 }
 
+function templateTitles(areaTypeId: string): string[] {
+  const template = STANDARD_AREA_TEMPLATES.find((item) => item.areaTypeId === areaTypeId);
+  assert(template, `${areaTypeId} should have a standard template.`);
+  return template.requirementDefinitions.map((definition) => definition.title);
+}
+
 async function seedAreas() {
   const context = { organisationId: "org_stage_2", projectId: "project_stage_2", projectName: "Stage 2 Test" };
   let register = await import("../services/projectAreaRegisterService").then((module) => module.loadProjectAreaRegister(context));
@@ -79,6 +85,16 @@ export async function runTemplateStageTests(): Promise<void> {
   assert(preview.added.some((requirement) => requirement.category === "flooring"), "Bedroom template generates floor covering requirements.");
   assert(preview.added.some((requirement) => requirement.title === "Basin Mixer"), "Bathroom/Ensuite templates generate wet-area requirements.");
   assert(preview.added.some((requirement) => requirement.category === "appliance"), "Kitchen template generates appliance requirements.");
+  const balconyTitles = templateTitles("area_type_balcony");
+  assert(balconyTitles.includes("Balustrade") && balconyTitles.includes("Waterproofing"), "Balcony has its own balcony-specific template.");
+  assert(!["House Numbers", "External Doors", "Brick or Cladding", "Windows"].some((title) => balconyTitles.includes(title)), "Balcony must not inherit exterior wall/door/house-number selections.");
+  const drivewayTitles = templateTitles("area_type_driveway");
+  assert(drivewayTitles.includes("Surface Type") && drivewayTitles.includes("Crossover") && drivewayTitles.includes("Expansion Joints"), "Driveway has driveway-specific concrete requirements.");
+  assert(!["House Numbers", "External Doors", "Windows"].some((title) => drivewayTitles.includes(title)), "Driveway must not inherit exterior house/door/window selections.");
+  const ensuiteTitles = templateTitles("area_type_ensuite");
+  assert(["Floor Tile", "Wall Tile", "Feature Tile", "Waterproofing"].every((title) => ensuiteTitles.includes(title)), "Ensuite exposes wet-area tile and waterproofing requirements.");
+  const masterBedroomTitles = templateTitles("area_type_master_bedroom");
+  assert(["Carpet", "Hybrid Flooring", "Timber Flooring"].every((title) => masterBedroomTitles.includes(title)), "Master Bedroom exposes bedroom flooring choices.");
   state = value(reconcileProjectRequirements(state), "Requirements should generate.");
   const requirementIds = state.requirements.map((requirement) => requirement.id).join("|");
   state = value(reconcileProjectRequirements(state), "Repeated generation should not duplicate requirements.");
@@ -123,11 +139,20 @@ export async function runTemplateStageTests(): Promise<void> {
 
   const pageSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "templates.tsx"), "utf8");
   const workspaceSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "workspace.tsx"), "utf8");
-  assert(pageSource.includes("Room Templates and Inclusion Tiers"), "Stage 2 route should render the page title.");
-  assert(pageSource.includes('hrefForStage("areas"'), "Back to Areas returns to Stage 1 through shared stage navigation.");
+  assert(pageSource.includes("Choose an Area"), "Stage 2 route should render the area navigator title.");
+  assert(pageSource.includes("Select the area of the home you want to complete."), "Stage 2 should explain the area-first workflow.");
+  assert(pageSource.includes("Exterior") && pageSource.includes("Interior"), "Stage 2 should start with Exterior and Interior choices.");
+  assert(pageSource.includes("Bricks") && pageSource.includes("Cladding") && pageSource.includes("Driveway"), "Exterior should expose product-type tiles.");
+  assert(pageSource.includes("Kitchen") && pageSource.includes("Bathrooms") && pageSource.includes("Bedrooms"), "Interior should expose room tiles.");
+  assert(pageSource.includes("Oven") && pageSource.includes("Cooktop") && pageSource.includes("Dishwasher"), "Kitchen should expose product picker tiles.");
+  assert(!pageSource.includes("Room Templates and Inclusion Tiers"), "Stage 2 should not expose the retired template page title.");
+  assert(!pageSource.includes("Generate ProjectRequirements") && !pageSource.includes("Preview") && !pageSource.includes("Reset"), "Stage 2 should not show backend generation controls.");
+  assert(pageSource.includes('currentStage="templates"'), "Stage 2 should remain connected to shared stage navigation.");
   assert(pageSource.includes('hrefForStage("workspace"'), "Valid stage reaches workspace through shared stage navigation.");
   assert(workspaceSource.includes("Inclusions and Selections Workspace"), "Workspace route should now be the Stage 3 workspace.");
-  assert(pageSource.includes("@media (max-width: 760px)") && pageSource.includes("projectAreaCards"), "Responsive mobile cards should be present.");
+  assert(workspaceSource.includes("Prepare Selection Items") && !workspaceSource.includes("Generate ProjectRequirements"), "Workspace fallback should use user-facing selection language.");
+  assert(workspaceSource.includes("queryValue(router.query.productType)") && workspaceSource.includes("openProductPicker(matchingRow.requirement.id)"), "Stage 2 product-type choices should open the matching picker in Stage 3.");
+  assert(pageSource.includes("@media (max-width: 560px)") && pageSource.includes("tileGrid"), "Responsive mobile tiles should be present.");
   assert(!pageSource.includes("ProductLibrary") && !pageSource.includes("Estimate Builder") && !pageSource.includes("selectionBudget"), "No product selection or Estimate Builder code is loaded.");
 }
 

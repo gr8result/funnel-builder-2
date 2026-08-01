@@ -36,6 +36,28 @@ import type { DomainIssue, DomainResult } from "../../src/modules/inclusions-sel
 
 const productAdapter = new InMemoryProductSelectionCatalogueAdapter("org_dev");
 
+function queryValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function normalizedNavText(value: string): string {
+  return value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function navigatorAreaMatches(areaName: string, requestedArea: string): boolean {
+  if (!requestedArea) return false;
+  const area = normalizedNavText(areaName);
+  const requested = normalizedNavText(requestedArea).replace(/\bs\b$/, "");
+  return area.includes(requested) || requested.includes(area.replace(/\bs\b$/, ""));
+}
+
+function navigatorRequirementMatches(title: string, productType: string): boolean {
+  if (!productType) return false;
+  const requirement = normalizedNavText(title);
+  const requested = normalizedNavText(productType).replace(/\bs\b$/, "");
+  return requirement.includes(requested) || requested.includes(requirement.replace(/\bs\b$/, ""));
+}
+
 export default function InclusionsSelectionsWorkspacePage() {
   const router = useRouter();
   const [state, setState] = useState<SelectionWorkspaceState | null>(null);
@@ -54,12 +76,12 @@ export default function InclusionsSelectionsWorkspacePage() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerMessage, setPickerMessage] = useState("");
   const [pickerError, setPickerError] = useState("");
-  const [compareIds, setCompareIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [applyScope, setApplyScope] = useState<ApplyToScope>("this_requirement");
   const [applySourceRequirementId, setApplySourceRequirementId] = useState("");
   const [applyPreview, setApplyPreview] = useState<ApplyToPreviewModel | null>(null);
   const [selectedApplyTargets, setSelectedApplyTargets] = useState<string[]>([]);
+  const [navigatorRequestKey, setNavigatorRequestKey] = useState("");
 
   const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
 
@@ -70,15 +92,30 @@ export default function InclusionsSelectionsWorkspacePage() {
       if (cancelled) return;
       setState(loaded);
       setView(loaded.draftState.selectedView);
+      const requestedArea = queryValue(router.query.area);
+      const areaFromNavigator = loaded.templateStage.areaRegister.areas.find((area) => navigatorAreaMatches(area.name, requestedArea));
       const kitchen = loaded.templateStage.areaRegister.areas.find((area) => area.name.toLowerCase() === "kitchen");
-      setSelectedAreaId(loaded.draftState.selectedAreaId ?? kitchen?.id ?? loaded.templateStage.areaRegister.areas[0]?.id ?? "");
+      setSelectedAreaId(areaFromNavigator?.id ?? loaded.draftState.selectedAreaId ?? kitchen?.id ?? loaded.templateStage.areaRegister.areas[0]?.id ?? "");
       setSelectedCategory(loaded.requirements[0]?.category ?? "");
       setIssues(validateSelectionWorkspace(loaded, true).issues);
     });
     return () => {
       cancelled = true;
     };
-  }, [router.isReady, context.organisationId, context.projectId]);
+  }, [router.isReady, context.organisationId, context.projectId, router.query.area]);
+
+  useEffect(() => {
+    if (!router.isReady || !state || !selectedAreaId || pickerRequirementId) return;
+    const productType = queryValue(router.query.productType);
+    if (!productType) return;
+    const requestKey = `${queryValue(router.query.area)}|${productType}`;
+    if (navigatorRequestKey === requestKey) return;
+    const rows = getRequirementWorkspaceRows(state, { areaId: selectedAreaId });
+    const matchingRow = rows.find((row) => navigatorRequirementMatches(row.requirement.title, productType));
+    if (!matchingRow) return;
+    setNavigatorRequestKey(requestKey);
+    openProductPicker(matchingRow.requirement.id);
+  }, [router.isReady, router.query.area, router.query.productType, state, selectedAreaId, pickerRequirementId, navigatorRequestKey]);
 
   function applyResult(result: DomainResult<SelectionWorkspaceState>) {
     setIssues(result.issues);
@@ -109,7 +146,6 @@ export default function InclusionsSelectionsWorkspacePage() {
     setPickerVariantId(currentSelection?.value.variantId ?? "");
     setPickerMessage("");
     setPickerError("");
-    setCompareIds([]);
     setVariants(currentSelection?.value.productReferenceId ? await productAdapter.listVariants(currentSelection.value.productReferenceId) : []);
     await loadPickerProducts(requirementId, {});
   }
@@ -237,13 +273,13 @@ export default function InclusionsSelectionsWorkspacePage() {
         <InclusionsSelectionsProjectBanner currentStage="workspace" context={state.context} />
         <InclusionsSelectionsStageNav currentStage="workspace" context={state.context} />
         <section className="generateRequirementsState">
-          <span className="modalEyebrow">{hasAreas ? "Stage 2 is not complete" : "Stage 1 is not complete"}</span>
-          <h1>{hasAreas ? "Generate ProjectRequirements" : "Create Areas First"}</h1>
-          <p>{hasAreas ? "Stage 3 needs generated selection items before the room workspace can show Kitchen, Oven, Cooktop, Mixer and the rest of the builder-facing checklist." : "Create or load project areas before opening the selection workspace. Once areas exist, assign templates and generate ProjectRequirements."}</p>
+          <span className="modalEyebrow">{hasAreas ? "Selections are being prepared" : "Create areas first"}</span>
+          <h1>{hasAreas ? "Prepare Selection Items" : "Create Areas First"}</h1>
+          <p>{hasAreas ? "Choose an area first, then the system will prepare the product choices for that room or exterior item." : "Create or load project areas before opening the selection workspace."}</p>
           <div>
             <button type="button" onClick={() => router.push(hrefForStage("areas", state.context))}>Back to Areas</button>
-            {hasAreas ? <button type="button" onClick={() => router.push(hrefForStage("templates", state.context))}>Back to Templates</button> : null}
-            {hasAreas ? <button type="button" className="primaryButton" disabled={saving} onClick={handleGenerateRequirements}>{saving ? "Generating" : "Generate ProjectRequirements"}</button> : null}
+            {hasAreas ? <button type="button" onClick={() => router.push(hrefForStage("templates", state.context))}>Choose Area</button> : null}
+            {hasAreas ? <button type="button" className="primaryButton" disabled={saving} onClick={handleGenerateRequirements}>{saving ? "Preparing" : "Prepare Selection Items"}</button> : null}
           </div>
         </section>
         <style jsx global>{workspaceStyles}</style>
@@ -337,7 +373,6 @@ export default function InclusionsSelectionsWorkspacePage() {
           filters={pickerFilters}
           selectedProductId={pickerProductId}
           selectedVariantId={pickerVariantId}
-          compareIds={compareIds}
           loading={pickerLoading}
           successMessage={pickerMessage}
           errorMessage={pickerError}
@@ -345,7 +380,6 @@ export default function InclusionsSelectionsWorkspacePage() {
           onChooseProduct={choosePickerProduct}
           onChooseVariant={setPickerVariantId}
           onSelect={(productId, variantId) => selectProduct(pickerRequirementId, productId, variantId)}
-          onToggleCompare={(productId) => setCompareIds((current) => current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId])}
           onApplyToOtherRooms={() => {
             setApplySourceRequirementId(pickerRequirementId);
             setPickerRequirementId("");
@@ -446,16 +480,22 @@ const workspaceStyles = `
   .productModalHeader { position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 18px 20px; border-bottom: 1px solid #e3e9f2; background: #fff; }
   .modalEyebrow { display: block; color: #526072; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0; }
   .productModalHeader h2 { margin: 4px 0; font-size: 26px; }
-  .productModalBody { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; padding: 18px; align-items: start; }
+  .simplePickerControls { display: grid; gap: 12px; padding: 16px 18px 0; }
+  .simplePickerControls input { width: 100%; min-height: 42px; }
+  .brandPills, .quickFilters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .brandPills button, .quickFilters button { border-color: #d8e2ee; background: #fff; color: #17406f; }
+  .brandPills button.active, .quickFilters button.active { border-color: #1c4f91; background: #1c4f91; color: #fff; }
+  .productModalBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 18px; align-items: start; }
   .productFilters { display: grid; gap: 10px; position: sticky; top: 92px; }
   .productFilters label, .variantPicker { display: grid; gap: 5px; color: #526072; font-size: 13px; font-weight: 700; }
   .productGridPanel { min-width: 0; }
-  .modalProductGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .modalProductCard { border: 1px solid #dfe6ef; border-radius: 8px; padding: 12px; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; background: #fff; }
+  .modalProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .modalProductCard { border: 1px solid #dfe6ef; border-radius: 8px; overflow: hidden; display: grid; background: #fff; }
   .modalProductCard.selected { border-color: #1c4f91; box-shadow: 0 0 0 2px rgba(28, 79, 145, .12); }
-  .modalProductImage { min-height: 92px; background: #eaf2fc; color: #1c4f91; }
+  .modalProductImage { min-height: 180px; aspect-ratio: 4 / 3; background: #eaf2fc; color: #1c4f91; overflow: hidden; }
   button.modalProductImage { border: 0; padding: 0; width: 100%; cursor: zoom-in; }
-  .modalProductContent { display: grid; gap: 9px; }
+  .modalProductImage img, .detailImage img, .detailGallery img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .modalProductContent { display: grid; gap: 10px; padding: 14px; }
   .modalProductTop { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
   .modalProductTop h3 { font-size: 18px; margin: 2px 0; }
   .modalProductTop p, .modalProductContent p { margin: 0; color: #657186; font-size: 13px; }
@@ -472,9 +512,9 @@ const workspaceStyles = `
   .backButton { justify-self: start; }
   .detailLayout { display: grid; grid-template-columns: minmax(220px, 360px) minmax(0, 1fr); gap: 18px; align-items: start; }
   .detailMedia { display: grid; gap: 10px; }
-  .detailImage { min-height: 320px; border-radius: 8px; background: #eaf2fc; display: grid; place-items: center; color: #1c4f91; font-size: 42px; font-weight: 900; }
+  .detailImage { min-height: 320px; border-radius: 8px; background: #eaf2fc; display: grid; place-items: center; color: #1c4f91; font-size: 42px; font-weight: 900; overflow: hidden; }
   .detailGallery { display: flex; gap: 8px; }
-  .detailGallery span { width: 48px; height: 48px; border-radius: 6px; background: #eef3f8; display: grid; place-items: center; color: #526072; font-weight: 800; }
+  .detailGallery span { width: 48px; height: 48px; border-radius: 6px; background: #eef3f8; display: grid; place-items: center; color: #526072; font-weight: 800; overflow: hidden; }
   .detailCopy { display: grid; gap: 12px; }
   .detailCopy h3 { font-size: 28px; }
   .detailFacts { grid-template-columns: repeat(3, minmax(0, 1fr)); }

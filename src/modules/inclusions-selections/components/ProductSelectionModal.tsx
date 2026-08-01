@@ -12,7 +12,6 @@ type Props = {
   filters: ProductSearchFilters;
   selectedProductId?: string;
   selectedVariantId?: string;
-  compareIds: string[];
   loading?: boolean;
   successMessage?: string;
   errorMessage?: string;
@@ -20,7 +19,6 @@ type Props = {
   onChooseProduct: (productId: string) => void;
   onChooseVariant: (variantId: string) => void;
   onSelect: (productId: string, variantId?: string) => void;
-  onToggleCompare: (productId: string) => void;
   onApplyToOtherRooms: () => void;
   onClose: () => void;
 };
@@ -56,16 +54,8 @@ export function ProductSelectionModal(props: Props) {
   const selectedVariant = props.variants.find((variant) => variant.id === props.selectedVariantId);
   const detailProduct = props.products.find((product) => product.id === detailProductId);
   const brands = [...new Set(props.products.map((product) => product.brand).filter(Boolean))].sort() as string[];
-  const suppliers = props.suppliers.filter((supplier) => props.products.some((product) => product.supplierId === supplier.id));
   const widths = [...new Set(props.products.map((product) => product.compatibility.width).filter(Boolean))].sort() as string[];
   const fuelTypes = [...new Set(props.products.map((product) => product.compatibility.fuelType).filter(Boolean))].sort() as string[];
-  const tiers = [
-    ["tier_classic", "Classic"],
-    ["tier_premier", "Premier"],
-    ["tier_premium", "Premium"],
-    ["tier_optional_upgrade", "Optional Upgrade"],
-    ["tier_custom_only", "Custom Only"],
-  ];
 
   return (
     <div className="productModalBackdrop" role="presentation">
@@ -74,7 +64,7 @@ export function ProductSelectionModal(props: Props) {
           <div>
             <span className="modalEyebrow">{props.row.area.name}</span>
             <h2 id="product-modal-title">{props.row.requirement.title}</h2>
-            <p>{props.row.inheritedTierId?.replace("tier_", "") ?? "No tier"} Inclusion / Allowance: {aud(props.row.selection?.allowance?.amount ?? selectedProduct?.allowance?.amount ?? 0)}</p>
+            <p>Choose a product, finish or fixture for this selection.</p>
           </div>
           <button type="button" onClick={props.onClose} aria-label="Close product picker">Close</button>
         </header>
@@ -82,20 +72,30 @@ export function ProductSelectionModal(props: Props) {
         {props.successMessage ? <div className="successNotice">{props.successMessage}<button type="button" onClick={props.onApplyToOtherRooms}>Apply to Other Rooms</button></div> : null}
         {props.errorMessage ? <div className="errorNotice">{props.errorMessage}</div> : null}
 
-        <div className="productModalBody">
-          <aside className="productFilters">
-            <label><span>Search</span><input value={props.filters.search ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, search: event.target.value })} placeholder="Search products" /></label>
-            <label><span>Brand</span><select value={props.filters.brand ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, brand: event.target.value || undefined })}><option value="">All brands</option>{brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}</select></label>
-            <label><span>Supplier</span><select value={props.filters.supplierId ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, supplierId: event.target.value || undefined })}><option value="">All suppliers</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
-            <label><span>Tier</span><select value={props.filters.tierId ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, tierId: event.target.value || undefined })}><option value="">All tiers</option>{tiers.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-            <label><span>Width</span><select value={props.filters.width ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, width: event.target.value || undefined })}><option value="">All widths</option>{widths.map((width) => <option key={width} value={width}>{width}</option>)}</select></label>
-            <label><span>Fuel type</span><select value={props.filters.fuelType ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, fuelType: event.target.value || undefined })}><option value="">All fuel types</option>{fuelTypes.map((fuel) => <option key={fuel} value={fuel}>{fuel}</option>)}</select></label>
-            <label><span>Availability</span><select value={props.filters.availabilityStatus ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, availabilityStatus: event.target.value || undefined })}><option value="">Available products</option><option value="supplier_quote_required">Supplier quote required</option><option value="unavailable">Unavailable</option></select></label>
-          </aside>
+        <div className="simplePickerControls">
+          <input value={props.filters.search ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, search: event.target.value })} placeholder="Search products" aria-label="Search products" />
+          <div className="brandPills" aria-label="Brands">
+            <button type="button" className={!props.filters.brand ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, brand: undefined })}>All Brands</button>
+            {brands.map((brand) => (
+              <button key={brand} type="button" className={props.filters.brand === brand ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, brand })}>{brand}</button>
+            ))}
+          </div>
+          {(widths.length || fuelTypes.length) ? (
+            <div className="quickFilters" aria-label="Product filters">
+              {widths.map((width) => (
+                <button key={width} type="button" className={props.filters.width === width ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, width: props.filters.width === width ? undefined : width })}>{width}</button>
+              ))}
+              {fuelTypes.map((fuel) => (
+                <button key={fuel} type="button" className={props.filters.fuelType === fuel ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, fuelType: props.filters.fuelType === fuel ? undefined : fuel })}>{fuel}</button>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
+        <div className="productModalBody">
           <div className="productGridPanel">
             {props.loading ? <p>Loading compatible products.</p> : null}
-            {!props.loading && props.products.length === 0 ? <p>No compatible products found for this selection item.</p> : null}
+            {!props.loading && props.products.length === 0 ? <p>No products have been added for this category yet.</p> : null}
             {detailProduct ? (
               <ProductDetailView
                 product={detailProduct}
@@ -118,7 +118,7 @@ export function ProductSelectionModal(props: Props) {
                 return (
                   <article key={product.id} className={props.selectedProductId === product.id ? "modalProductCard selected" : "modalProductCard"}>
                     <button type="button" className="modalProductImage" onClick={() => { props.onChooseProduct(product.id); setDetailProductId(product.id); }} aria-label={`View details for ${product.name}`}>
-                      {product.imageUrl ? <span>{(product.brand || product.name).slice(0, 2).toUpperCase()}</span> : <span>No Image</span>}
+                      {product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : <span>{(product.brand || product.name).slice(0, 2).toUpperCase()}</span>}
                     </button>
                     <div className="modalProductContent">
                       <div className="modalProductTop">
@@ -132,19 +132,18 @@ export function ProductSelectionModal(props: Props) {
                       <p>{product.description}</p>
                       <dl className="productFacts">
                         <div><dt>Supplier</dt><dd>{product.supplierName ?? product.supplierId ?? "Not recorded"}</dd></div>
-                        <div><dt>Code</dt><dd>{product.productCode ?? product.supplierSku ?? "Not recorded"}</dd></div>
-                        <div><dt>Allowance</dt><dd>{aud(product.allowance?.amount)}</dd></div>
-                        <div><dt>Selected</dt><dd>{aud((variant?.unitCost ?? product.unitCost)?.amount)}</dd></div>
+                        <div><dt>Model</dt><dd>{product.model ?? product.productCode ?? "Not recorded"}</dd></div>
+                        <div><dt>Colour</dt><dd>{variant?.colour ?? product.colour ?? "Not recorded"}</dd></div>
+                        <div><dt>Price</dt><dd>{aud((variant?.unitCost ?? product.unitCost)?.amount)}</dd></div>
                         <div><dt>Variation</dt><dd>{variationLabel(props.row, product, variant)}</dd></div>
-                        <div><dt>Status</dt><dd>{compatibility.priceStatus.replace(/_/g, " ")}</dd></div>
+                        <div><dt>Availability</dt><dd>{compatibility.priceStatus === "price_missing" ? "Price pending" : "Available"}</dd></div>
                       </dl>
                       {requiresVariant ? (
                         <label className="variantPicker"><span>Variant</span><select value={product.id === props.selectedProductId ? props.selectedVariantId ?? "" : ""} onChange={(event) => props.onChooseVariant(event.target.value)} onFocus={() => props.onChooseProduct(product.id)}><option value="">Choose variant</option>{productVariants.map((item) => <option key={item.id} value={item.id}>{item.name} / {aud(item.unitCost?.amount)}</option>)}</select></label>
                       ) : null}
                       <div className="modalProductActions">
                         <button type="button" onClick={() => { props.onChooseProduct(product.id); setDetailProductId(product.id); }}>View Details</button>
-                        <label><input type="checkbox" checked={props.compareIds.includes(product.id)} onChange={() => props.onToggleCompare(product.id)} /> Compare</label>
-                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noopener noreferrer">View on Supplier Website</a> : null}
+                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noopener noreferrer">View Supplier Website</a> : null}
                         <button type="button" className="primaryButton" disabled={Boolean(requiresVariant && !props.selectedVariantId)} onClick={() => props.onSelect(product.id, product.id === props.selectedProductId ? props.selectedVariantId : undefined)}>Select</button>
                       </div>
                     </div>
@@ -177,12 +176,12 @@ function ProductDetailView(props: {
   return (
     <article className="productDetailView">
       <button type="button" className="backButton" onClick={props.onBack}>Back to Products</button>
-      <div className="detailLayout">
-        <div className="detailMedia">
-          <div className="detailImage">{props.product.imageUrl ? <span>{(props.product.brand || props.product.name).slice(0, 2).toUpperCase()}</span> : <span>No Image</span>}</div>
+        <div className="detailLayout">
+          <div className="detailMedia">
+          <div className="detailImage">{props.product.imageUrl ? <img src={props.product.imageUrl} alt={props.product.name} /> : <span>{(props.product.brand || props.product.name).slice(0, 2).toUpperCase()}</span>}</div>
           <div className="detailGallery">
             {(props.product.galleryImageUrls?.length ? props.product.galleryImageUrls : [props.product.imageUrl]).filter(Boolean).slice(0, 4).map((image, index) => (
-              <span key={`${image}-${index}`}>{index + 1}</span>
+              <span key={`${image}-${index}`}>{typeof image === "string" ? <img src={image} alt="" /> : index + 1}</span>
             ))}
           </div>
         </div>
@@ -205,8 +204,8 @@ function ProductDetailView(props: {
             <label className="variantPicker"><span>Variant</span><select value={props.selectedVariantId ?? ""} onChange={(event) => { props.onChooseProduct(); props.onChooseVariant(event.target.value); }}><option value="">Choose variant</option>{props.variants.map((item) => <option key={item.id} value={item.id}>{item.name} / {aud(item.unitCost?.amount)}</option>)}</select></label>
           ) : null}
           <div className="modalProductActions">
-            {productUrl ? <a href={productUrl} target="_blank" rel="noopener noreferrer">View on Supplier Website</a> : <span className="disabledLink">Supplier website not recorded</span>}
-            <button type="button" className="primaryButton" disabled={!canSelect} onClick={props.onSelect}>Select This Product</button>
+            {productUrl ? <a href={productUrl} target="_blank" rel="noopener noreferrer">View Supplier Website</a> : <span className="disabledLink">Supplier product page not available.</span>}
+            <button type="button" className="primaryButton" disabled={!canSelect} onClick={props.onSelect}>Select</button>
           </div>
         </div>
       </div>

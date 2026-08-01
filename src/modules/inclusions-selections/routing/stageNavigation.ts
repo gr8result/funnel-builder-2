@@ -10,7 +10,7 @@ export type InclusionsSelectionsStage = {
 
 export const INCLUSIONS_SELECTIONS_STAGES: InclusionsSelectionsStage[] = [
   { id: "areas", label: "Areas", route: "/inclusions-selections/areas" },
-  { id: "templates", label: "Templates & Tiers", route: "/inclusions-selections/templates" },
+  { id: "templates", label: "Select Area", route: "/inclusions-selections/templates" },
   { id: "workspace", label: "Selections", route: "/inclusions-selections/workspace" },
   { id: "review", label: "Review", route: "/inclusions-selections/review" },
   { id: "approvals", label: "Approvals", route: "/inclusions-selections/approvals" },
