@@ -1,11 +1,13 @@
 import { distance } from "./geometry.js";
 
-const MIN_WALL_LENGTH = 12;
-const MIN_THICKNESS = 2;
-const MAX_THICKNESS = 34;
-const MIN_OVERLAP = 10;
+const MIN_WALL_LENGTH = 28;
+const MIN_THICKNESS = 3;
+const MAX_THICKNESS = 30;
+const MIN_OVERLAP = 24;
+const MIN_OVERLAP_RATIO = 0.58;
 const PARALLEL_TOLERANCE_DEG = 3;
-const CONNECT_TOLERANCE = 10;
+const CONNECT_TOLERANCE = 16;
+const ROOM_CLOSURE_TOLERANCE = 22;
 const REJECTED_TAGS = new Set(["annotation", "dimension", "dimension-line", "extension-line", "text", "text-bound", "door-arc", "symbol", "page-border", "title-block", "title-block-rule", "leader", "hatch", "hatching", "furniture", "note", "arrow"]);
 
 function rawSegments(planGeometryIndex) {
@@ -95,6 +97,19 @@ function overlap(a, b) {
   return Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
 }
 
+function nearestPointOnSegment(point, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const len2 = abx * abx + aby * aby;
+  if (len2 === 0) return a;
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / len2));
+  return { x: a.x + abx * t, y: a.y + aby * t };
+}
+
+function pointToWallDistance(point, wall) {
+  return distance(point, nearestPointOnSegment(point, wall.start, wall.end));
+}
+
 function pointOn(line, along, fixed = line.fixed) {
   return { x: line.ux * along + line.nx * fixed, y: line.uy * along + line.ny * fixed };
 }
@@ -110,6 +125,8 @@ function createWallFromPair(a, b, seq, page) {
   if (thickness < MIN_THICKNESS || thickness > MAX_THICKNESS) return null;
   const shared = overlap(a, b);
   if (shared < MIN_OVERLAP) return null;
+  const overlapRatio = shared / Math.min(a.length, b.length);
+  if (overlapRatio < MIN_OVERLAP_RATIO) return null;
   const startAlong = Math.max(a.start, b.start);
   const endAlong = Math.min(a.end, b.end);
   if (endAlong - startAlong < MIN_WALL_LENGTH) return null;
@@ -122,7 +139,7 @@ function createWallFromPair(a, b, seq, page) {
     start,
     end,
     thickness,
-    confidence: Math.min(0.98, 0.72 + Math.min(0.18, distance(start, end) / 900) + Math.min(0.08, shared / Math.max(a.length, b.length))),
+    confidence: Math.min(0.98, 0.66 + Math.min(0.16, distance(start, end) / 900) + Math.min(0.12, overlapRatio * 0.12)),
     openings: [],
     connectedWalls: [],
     source: a.source === "raster" || b.source === "raster" ? "raster" : "pdf-vector",
@@ -131,6 +148,9 @@ function createWallFromPair(a, b, seq, page) {
 }
 
 function createWallFromSingle(line, seq, page) {
+  const thickness = Number(line.lineWidth || line.strokeWidth || 0) || null;
+  if (!(thickness >= MIN_THICKNESS && thickness <= MAX_THICKNESS)) return null;
+  if (line.length < MIN_WALL_LENGTH * 1.5) return null;
   const start = pointOn(line, line.start);
   const end = pointOn(line, line.end);
   return {
@@ -138,8 +158,8 @@ function createWallFromSingle(line, seq, page) {
     type: classifyWall({ start, end }, page),
     start,
     end,
-    thickness: Number(line.lineWidth || line.strokeWidth || 0) || null,
-    confidence: Math.min(0.74, 0.42 + Math.min(0.22, line.length / 900) + (line.source === "raster" ? 0.02 : 0.08)),
+    thickness,
+    confidence: Math.min(0.62, 0.36 + Math.min(0.18, line.length / 900) + (line.source === "raster" ? 0.02 : 0.04)),
     openings: [],
     connectedWalls: [],
     source: line.source === "raster" ? "raster" : "pdf-vector-single",
@@ -160,19 +180,128 @@ function classifyWall(wall, page = {}) {
   return "interior";
 }
 
+function endpointTouchesWall(point, wall) {
+  return (
+    distance(point, wall.start) <= CONNECT_TOLERANCE ||
+    distance(point, wall.end) <= CONNECT_TOLERANCE ||
+    pointToWallDistance(point, wall) <= CONNECT_TOLERANCE
+  );
+}
+
+function wallsTouch(a, b) {
+  return (
+    endpointTouchesWall(a.start, b) ||
+    endpointTouchesWall(a.end, b) ||
+    endpointTouchesWall(b.start, a) ||
+    endpointTouchesWall(b.end, a)
+  );
+}
+
 function addConnectivity(walls) {
   return walls.map((wall) => {
     const connectedWalls = walls
       .filter((other) => other.id !== wall.id)
-      .filter((other) => (
-        distance(wall.start, other.start) <= CONNECT_TOLERANCE ||
-        distance(wall.start, other.end) <= CONNECT_TOLERANCE ||
-        distance(wall.end, other.start) <= CONNECT_TOLERANCE ||
-        distance(wall.end, other.end) <= CONNECT_TOLERANCE
-      ))
+      .filter((other) => wallsTouch(wall, other))
       .map((other) => other.id);
     return { ...wall, connectedWalls };
   });
+}
+
+function wallAxis(wall) {
+  return Math.abs(wall.end.x - wall.start.x) >= Math.abs(wall.end.y - wall.start.y) ? "horizontal" : "vertical";
+}
+
+function componentBounds(walls) {
+  const points = walls.flatMap((wall) => [wall.start, wall.end]);
+  return {
+    minX: Math.min(...points.map((p) => p.x)),
+    maxX: Math.max(...points.map((p) => p.x)),
+    minY: Math.min(...points.map((p) => p.y)),
+    maxY: Math.max(...points.map((p) => p.y)),
+  };
+}
+
+function endpointKey(point) {
+  const q = ROOM_CLOSURE_TOLERANCE;
+  return `${Math.round(point.x / q)}:${Math.round(point.y / q)}`;
+}
+
+function hasRoomLikeClosure(walls) {
+  if (walls.length < 4) return false;
+  const axes = new Set(walls.map(wallAxis));
+  if (!(axes.has("horizontal") && axes.has("vertical"))) return false;
+  const b = componentBounds(walls);
+  if (b.maxX - b.minX < MIN_WALL_LENGTH * 2 || b.maxY - b.minY < MIN_WALL_LENGTH * 2) return false;
+  const wellConnectedWalls = walls.filter((wall) => wall.connectedWalls?.length >= 2).length;
+  if (wellConnectedWalls >= 4) return true;
+  const nodeDegree = new Map();
+  walls.forEach((wall) => {
+    const a = endpointKey(wall.start);
+    const bKey = endpointKey(wall.end);
+    nodeDegree.set(a, (nodeDegree.get(a) || 0) + 1);
+    nodeDegree.set(bKey, (nodeDegree.get(bKey) || 0) + 1);
+  });
+  const closedNodes = [...nodeDegree.values()].filter((degree) => degree >= 2).length;
+  return closedNodes >= 4 || walls.length >= nodeDegree.size;
+}
+
+function structuralComponents(walls) {
+  const byId = new Map(walls.map((wall) => [wall.id, wall]));
+  const seen = new Set();
+  const components = [];
+  walls.forEach((wall) => {
+    if (seen.has(wall.id)) return;
+    const stack = [wall.id];
+    const ids = [];
+    seen.add(wall.id);
+    while (stack.length) {
+      const id = stack.pop();
+      ids.push(id);
+      const current = byId.get(id);
+      current.connectedWalls.forEach((connectedId) => {
+        if (seen.has(connectedId)) return;
+        seen.add(connectedId);
+        stack.push(connectedId);
+      });
+    }
+    components.push(ids.map((id) => byId.get(id)).filter(Boolean));
+  });
+  return components;
+}
+
+function filterStructuralWalls(walls) {
+  const connected = addConnectivity(walls);
+  const structuralIds = new Set();
+  structuralComponents(connected).forEach((component) => {
+    const connectedEnough = component.length >= 2 && component.some((wall) => wall.connectedWalls.length > 0);
+    const roomLike = hasRoomLikeClosure(component);
+    if (!connectedEnough || !roomLike) return;
+    component.forEach((wall) => structuralIds.add(wall.id));
+  });
+  return connected
+    .filter((wall) => structuralIds.has(wall.id))
+    .map((wall) => ({
+      ...wall,
+      confidence: Math.round((wall.confidence + (wall.connectedWalls.length ? 0.08 : 0)) * 100) / 100,
+    }));
+}
+
+function wallPairCandidates(lines, page) {
+  const candidates = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const a = lines[i];
+      const b = lines[j];
+      if (angleDiffDeg(a.angle, b.angle) > PARALLEL_TOLERANCE_DEG) continue;
+      const wall = createWallFromPair(a, b, candidates.length + 1, page);
+      if (!wall) continue;
+      const shared = overlap(a, b);
+      const overlapRatio = shared / Math.min(a.length, b.length);
+      const score = overlapRatio * 3 - Math.abs(wall.thickness - 8) / 20 + Math.min(distance(wall.start, wall.end) / 500, 0.5);
+      candidates.push({ wall, aId: a.id, bId: b.id, score });
+    }
+  }
+  return candidates.sort((a, b) => b.score - a.score);
 }
 
 export function summarizeDetectedWalls(walls = []) {
@@ -191,6 +320,18 @@ export function summarizeDetectedWalls(walls = []) {
 export function detectWallObjects({ planGeometryIndex, page = {} } = {}) {
   const sourceSegments = rawSegments(planGeometryIndex);
   const rejected = [];
+  const diagnostics = {
+    source: planGeometryIndex?.source || "unknown",
+    rawSegments: sourceSegments.length,
+    eligibleSegments: 0,
+    rejectedSegments: 0,
+    rejected,
+    candidatePairs: 0,
+    acceptedPairs: 0,
+    singleStrokeCandidates: 0,
+    structuralWalls: 0,
+    rejectedCandidateWalls: 0,
+  };
   const lines = sourceSegments
     .map((segment) => {
       const reason = rejectionReason(segment, page);
@@ -198,28 +339,31 @@ export function detectWallObjects({ planGeometryIndex, page = {} } = {}) {
       return reason ? null : oriented(segment);
     })
     .filter(Boolean);
+  diagnostics.eligibleSegments = lines.length;
+  diagnostics.rejectedSegments = rejected.length;
 
   const walls = [];
   let seq = 0;
   const pairedSegmentIds = new Set();
-  for (let i = 0; i < lines.length; i += 1) {
-    for (let j = i + 1; j < lines.length; j += 1) {
-      const a = lines[i];
-      const b = lines[j];
-      if (angleDiffDeg(a.angle, b.angle) > PARALLEL_TOLERANCE_DEG) continue;
-      const wall = createWallFromPair(a, b, seq + 1, page);
-      if (!wall) continue;
-      seq += 1;
-      wall.sourceSegmentIds.forEach((id) => pairedSegmentIds.add(id));
-      walls.push(wall);
-    }
-  }
+  const candidates = wallPairCandidates(lines, page);
+  diagnostics.candidatePairs = candidates.length;
+  candidates.forEach((candidate) => {
+    if (pairedSegmentIds.has(candidate.aId) || pairedSegmentIds.has(candidate.bId)) return;
+    seq += 1;
+    const wall = { ...candidate.wall, id: `wall-${seq}` };
+    wall.sourceSegmentIds.forEach((id) => pairedSegmentIds.add(id));
+    walls.push(wall);
+  });
+  diagnostics.acceptedPairs = walls.length;
 
   lines
     .filter((line) => !pairedSegmentIds.has(line.id))
     .forEach((line) => {
       seq += 1;
-      walls.push(createWallFromSingle(line, seq, page));
+      const wall = createWallFromSingle(line, seq, page);
+      if (!wall) return;
+      diagnostics.singleStrokeCandidates += 1;
+      walls.push(wall);
     });
 
   const unique = [];
@@ -234,20 +378,16 @@ export function detectWallObjects({ planGeometryIndex, page = {} } = {}) {
       unique.push(wall);
     });
 
-  const detectedWalls = addConnectivity(unique).map((wall) => ({
+  const detectedWalls = filterStructuralWalls(unique).map((wall) => ({
     ...wall,
-    confidence: Math.round(wall.confidence * 100) / 100,
+    confidence: Math.min(0.99, Math.round(wall.confidence * 100) / 100),
   }));
+  diagnostics.structuralWalls = detectedWalls.length;
+  diagnostics.rejectedCandidateWalls = Math.max(0, unique.length - detectedWalls.length);
 
   return {
     walls: detectedWalls,
     summary: summarizeDetectedWalls(detectedWalls),
-    diagnostics: {
-      source: planGeometryIndex?.source || "unknown",
-      rawSegments: sourceSegments.length,
-      eligibleSegments: lines.length,
-      rejectedSegments: rejected.length,
-      rejected,
-    },
+    diagnostics,
   };
 }

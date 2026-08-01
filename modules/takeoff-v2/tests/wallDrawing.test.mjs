@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
 import { resolveManualTracePoint, tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate } from "../hooks/useTakeoffTools.js";
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { documentToScreenPoint, screenToDocumentPoint } from "../viewer/rotationTransform.js";
+import { extractVectorSegmentsFromOperatorList } from "../geometry/planVectorExtraction.js";
+import { buildPlanGeometryIndex } from "../geometry/planGeometryIndex.js";
 import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
 import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
@@ -338,8 +342,9 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
     },
     page: { sourceWidth: 400, sourceHeight: 320 },
   });
-  assert.equal(result.summary.total, 1);
+  assert.equal(result.summary.total, 0);
   assert.equal(result.diagnostics.rejectedSegments, 2);
+  assert.equal(result.diagnostics.rejectedCandidateWalls, 1);
 }
 
 // ---- detected wall objects persist through page defaults ------------------
@@ -352,6 +357,39 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   assert.equal(page.detectedWalls[0].type, "unknown");
   assert.deepEqual(page.detectedWalls[0].openings, []);
   assert.deepEqual(page.detectedWalls[0].connectedWalls, []);
+}
+
+// ---- real sample plan rejects parallel annotation clutter -----------------
+{
+  const localSamplePath = process.env.TAKEOFF_SAMPLE_PLANS_PDF || "C:/Users/grant/Downloads/SAMPLES PLANS W DIMS.pdf";
+  if (fs.existsSync(localSamplePath)) {
+    const data = new Uint8Array(fs.readFileSync(localSamplePath));
+    const pdf = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
+    const pdfPage = await pdf.getPage(1);
+    const viewport = pdfPage.getViewport({ scale: 1, rotation: 0 });
+    const operatorList = await pdfPage.getOperatorList();
+    const vectorSegments = extractVectorSegmentsFromOperatorList(
+      { fnArray: operatorList.fnArray, argsArray: operatorList.argsArray, OPS: pdfjsLib.OPS },
+      { pageWidth: viewport.width, pageHeight: viewport.height }
+    );
+    const planGeometryIndex = {
+      ...buildPlanGeometryIndex(vectorSegments, { pageWidth: viewport.width, pageHeight: viewport.height }),
+      source: "vector",
+      segmentCount: vectorSegments.length,
+    };
+    const result = detectWallObjects({
+      planGeometryIndex,
+      page: { sourceWidth: viewport.width, sourceHeight: viewport.height },
+    });
+    assert.ok(result.diagnostics.rawSegments > 3000, "sample plan should expose dense vector geometry");
+    assert.ok(result.diagnostics.candidatePairs > result.summary.total, "parallel clutter must be filtered after pairing");
+    assert.ok(result.diagnostics.rejectedCandidateWalls > 0, "non-structural candidate walls should be rejected");
+    assert.ok(result.summary.total >= 12 && result.summary.total <= 40, `sample page 1 should produce structural walls only, got ${result.summary.total}`);
+    assert.ok(result.summary.exterior >= 2, "sample should classify some perimeter-adjacent walls as exterior");
+    assert.ok(result.summary.interior >= 8, "sample should keep connected interior structural walls");
+  } else {
+    console.warn(`Skipping real sample wall-object detection test; copy it to ${localSamplePath} or set TAKEOFF_SAMPLE_PLANS_PDF.`);
+  }
 }
 
 console.log("wallDrawing.test.mjs passed");
