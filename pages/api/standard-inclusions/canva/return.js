@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../../../../utils/supabase-admin";
 import { withWorkspace } from "../../../../lib/withWorkspace";
 import { canvaConfig, canvaFetch, loadCanvaConnection } from "../../../../lib/standard-inclusions/canvaConnect";
 
-async function handler(req, res) {
+async function authenticatedReturnHandler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Method not allowed" });
   const correlationJwt = String(req.body?.correlationJwt || "");
   if (!correlationJwt) return res.status(400).json({ ok: false, code: "CANVA_RETURN_JWT_MISSING", error: "Missing Canva return-navigation JWT." });
@@ -26,6 +26,15 @@ async function handler(req, res) {
     .eq("organisation_id", req.workspaceId)
     .eq("canva_design_id", designId);
   return res.status(200).json({ ok: true, design, correlation: payload });
+}
+
+function redirectCanvaReturnGet(req, res) {
+  const correlationJwt = String(req.query?.correlation_jwt || "");
+  const params = new URLSearchParams();
+  if (correlationJwt) params.set("correlation_jwt", correlationJwt);
+  const target = `/standard-inclusions/canva-return${params.toString() ? `?${params.toString()}` : ""}`;
+  res.writeHead(302, { Location: target });
+  res.end();
 }
 
 async function verifyCanvaCorrelationJwt(token, audience) {
@@ -51,4 +60,9 @@ function invalidJwt() {
   return error;
 }
 
-export default withWorkspace(handler);
+const withWorkspaceReturnHandler = withWorkspace(authenticatedReturnHandler);
+
+export default function handler(req, res) {
+  if (req.method === "GET") return redirectCanvaReturnGet(req, res);
+  return withWorkspaceReturnHandler(req, res);
+}

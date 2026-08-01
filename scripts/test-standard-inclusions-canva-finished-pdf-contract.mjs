@@ -39,10 +39,13 @@ assert(standardInclusions.includes("canvaDesignId"), "Standard Inclusions state 
 assert(canvaConnect.includes("code_challenge_method") && canvaConnect.includes("s256"), "Canva OAuth must use PKCE S256");
 assert(canvaConnect.includes("/oauth/token"), "Canva token exchange/refresh must happen server-side");
 assert(canvaConnect.includes("canvaEnvironmentStatus") && canvaConnect.includes("canvaDatabaseStatus"), "Canva helper must expose safe setup diagnostics");
+assert(canvaConnect.includes('"design:content:write"'), "Canva OAuth must request the design write scope configured in the Developer Portal");
+assert(canvaConnect.includes("CANVA_RETURN_URI || process.env.CANVA_RETURN_URL"), "Canva helper must accept CANVA_RETURN_URI and the older CANVA_RETURN_URL alias");
 assert(canvaExportRoute.includes('"/exports"') && canvaExportRoute.includes("storeCanvaExportedPdf"), "Canva export flow must use Canva exports API");
 assert(canvaConnect.includes("storeCanvaExportedPdf"), "Canva exported PDFs must be downloaded and stored permanently");
 assert(canvaStatusRoute.includes("missingScopes") && canvaStatusRoute.includes("databaseTables"), "Status route must report scopes and migration readiness");
 assert(canvaReturnRoute.includes("connect/keys") && canvaReturnRoute.includes("crypto.verify"), "Return route must validate Canva correlation JWT against Canva keys");
+assert(canvaReturnRoute.includes("redirectCanvaReturnGet") && canvaReturnRoute.includes("/standard-inclusions/canva-return"), "Canva API return URL must redirect browser GET returns to the authenticated return page");
 assert(canvaReturnPage.includes("correlation_jwt") && canvaReturnPage.includes("/api/standard-inclusions/canva/return"), "Browser return page must forward Canva correlation JWT to backend validation");
 
 for (const table of ["canva_templates", "standard_inclusions_documents", "standard_inclusions_versions", "canva_connections"]) {
