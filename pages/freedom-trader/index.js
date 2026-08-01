@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 import { DesktopNotificationProvider } from "../../lib/freedom-trader/notificationProvider";
-import { isFreedomScanSummaryCurrent, scanActionText } from "../../lib/freedom-trader/scanSummary";
+import { buildAssistantDecision } from "../../lib/freedom-trader/assistantDecisionEngine";
+import { isFreedomScanSummaryCurrent } from "../../lib/freedom-trader/scanSummary";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -510,65 +511,48 @@ function Card({ label, value, note }) {
 }
 
 function DailyAnswer({ report, loading, onGenerate, settings, positions, pendingOrders, scanSummary, scanMessage, marketWatch }) {
-  const ready = report?.recommendations?.find((item) => item.status === "READY TO BUY");
-  const firstRecommendation = report?.recommendations?.[0] || null;
-  const positionAction = report?.positionActions?.find((item) => item.action && item.action !== "HOLD");
-  const unavailable = report && (report.marketDataQuality === "unavailable" || firstRecommendation?.status === "DATA UNAVAILABLE");
-  const noActionText = scanActionText(report?.scanSummary || scanSummary);
-  const watchAlert = marketWatch?.alerts?.find((alert) => !alert.acknowledgedAt && !alert.completedAt && !alert.dismissedAt);
-  const monitoredCount = marketWatch?.plans?.filter((plan) => ["WAITING_FOR_ENTRY", "ACTIVE", "PARTIAL_PROFIT"].includes(plan.state)).length || 0;
+  const decision = buildAssistantDecision({ report, scanSummary, marketWatch, loading, scanMessage });
 
-  if (watchAlert) {
+  if (["ACTION REQUIRED", "TAKE SOME PROFIT", "FINAL EXIT", "SAFETY EXIT"].includes(decision.state)) {
     return (
       <div className="dailyAnswer actionAnswer">
         <span>{dailyGreeting()}</span>
         <h1>Today&apos;s Action</h1>
-        <strong>ACTION REQUIRED</strong>
+        <strong>{decision.headline}</strong>
         <dl>
-          <div><dt>Action</dt><dd>{watchAlert.action}</dd></div>
-          <div><dt>Trade</dt><dd>{watchAlert.companyName || watchAlert.symbol}</dd></div>
-          <div><dt>Current price</dt><dd>{formatCurrency(watchAlert.currentPrice, watchAlert.currency || "USD")}</dd></div>
-          <div><dt>Trigger price</dt><dd>{formatCurrency(watchAlert.triggerPrice, watchAlert.currency || "USD")}</dd></div>
+          <div><dt>Action</dt><dd>{decision.action}</dd></div>
+          <div><dt>Trade</dt><dd>{decision.companyName || decision.symbol}</dd></div>
+          <div><dt>Current price</dt><dd>{formatCurrency(decision.currentPrice, decision.alert?.currency || "USD")}</dd></div>
+          <div><dt>Trigger price</dt><dd>{formatCurrency(decision.triggerPrice, decision.alert?.currency || "USD")}</dd></div>
+          <div><dt>Confidence</dt><dd>{decision.confidence?.level || "HIGH"}</dd></div>
         </dl>
-        <p>{watchAlert.message}</p>
-        <Link href={traderCompanyHref(watchAlert.symbol)}>Open analysis</Link>
+        <p>{decision.message}</p>
+        <p>Because: {(decision.confidence?.reasons || decision.evidence || []).join(" ")}</p>
+        <Link href={traderCompanyHref(decision.symbol)}>Open analysis</Link>
       </div>
     );
   }
 
-  if (!report) {
+  if (decision.state === "CHECKING MARKET" || decision.state === "MARKET UNAVAILABLE" || (!report && decision.state !== "MONITORING")) {
     return (
       <div className="dailyAnswer emptyAnswer">
         <span>{dailyGreeting()}</span>
         <h1>Today&apos;s Action</h1>
-        <strong>{monitoredCount ? `Monitoring ${monitoredCount} active setup${monitoredCount === 1 ? "" : "s"}.` : "No answer yet."}</strong>
-        <p>{monitoredCount ? "No action required right now." : loading ? scanMessage || "Checking the market..." : "Click once and Freedom will check the current scanner before answering."}</p>
+        <strong>{decision.headline}</strong>
+        <p>{decision.message}</p>
+        <p>Recommendation confidence: {decision.confidence?.level || "LOW"}. {(decision.confidence?.reasons || []).join(" ")}</p>
         <button className="primaryReportButton" type="button" onClick={onGenerate} disabled={loading}>{loading ? "Checking..." : "Answer Now"}</button>
       </div>
     );
   }
 
-  if (positionAction) {
+  if (decision.state === "READY TO PREPARE") {
+    const ready = decision.recommendation;
     return (
       <div className="dailyAnswer actionAnswer">
         <span>{dailyGreeting()}</span>
         <h1>Today&apos;s Action</h1>
-        <strong>{positionAction.action}</strong>
-        <dl>
-          <div><dt>Trade</dt><dd>{positionAction.companyName || positionAction.symbol}</dd></div>
-          <div><dt>Current price</dt><dd>{formatCurrency(positionAction.currentPrice, positionAction.currency)}</dd></div>
-          <div><dt>Action</dt><dd>{positionAction.instruction}</dd></div>
-        </dl>
-      </div>
-    );
-  }
-
-  if (ready) {
-    return (
-      <div className="dailyAnswer actionAnswer">
-        <span>{dailyGreeting()}</span>
-        <h1>Today&apos;s Action</h1>
-        <strong>Prepare ONE order in CMC.</strong>
+        <strong>{decision.headline}</strong>
         <dl>
           <div><dt>Company</dt><dd>{ready.companyName} {ready.symbol ? `(${ready.symbol})` : ""}</dd></div>
           <div><dt>Buy</dt><dd>{formatCurrency(ready.entryBuyPrice, ready.currency)}</dd></div>
@@ -578,9 +562,10 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
           <div><dt>Quantity</dt><dd>{ready.suggestedQuantity} share{ready.suggestedQuantity === 1 ? "" : "s"}</dd></div>
           <div><dt>Estimated purchase value</dt><dd>{formatCurrency(ready.estimatedPurchaseValue, ready.currency)}</dd></div>
           <div><dt>Maximum planned loss</dt><dd>{formatCurrency(ready.maximumPlannedLoss, ready.accountCurrency || settings.accountCurrency)}</dd></div>
-          <div><dt>Confidence</dt><dd>{confidenceStars(ready.technicalDetails?.score)}</dd></div>
+          <div><dt>Confidence</dt><dd>{decision.confidence?.level || confidenceStars(ready.technicalDetails?.score)}</dd></div>
         </dl>
-        <p>Freedom has not placed this order. Enter and confirm it through CMC.</p>
+        <p>{decision.message}</p>
+        <p>Because: {(decision.confidence?.reasons || decision.evidence || []).join(" ")}</p>
         <Link href={traderCompanyHref(ready.symbol)}>Open analysis</Link>
       </div>
     );
@@ -590,8 +575,9 @@ function DailyAnswer({ report, loading, onGenerate, settings, positions, pending
     <div className="dailyAnswer noActionAnswer">
       <span>{dailyGreeting()}</span>
       <h1>Today&apos;s Action</h1>
-      <strong>{unavailable ? "Do not place a trade." : monitoredCount ? `Monitoring ${monitoredCount} active setup${monitoredCount === 1 ? "" : "s"}.` : noActionText.bestAction || "Do nothing and wait."}</strong>
-      <p>{unavailable ? noActionText.body : monitoredCount ? "No action required right now." : report.overallInstruction || noActionText.body || "Do nothing and wait."}</p>
+      <strong>{decision.headline}</strong>
+      <p>{decision.message}</p>
+      <p>Recommendation confidence: {decision.confidence?.level || "HIGH"}. {(decision.confidence?.reasons || []).join(" ")}</p>
       <dl>
         <div><dt>Open trades</dt><dd>{positions.length}</dd></div>
         <div><dt>Cash</dt><dd>{formatManualAccountCurrency(settings.availableCash, settings.accountCurrency)} manual</dd></div>
