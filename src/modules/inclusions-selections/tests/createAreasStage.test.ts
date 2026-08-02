@@ -96,7 +96,12 @@ export async function runCreateAreasStageTests(): Promise<void> {
 
   const pageSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "areas.tsx"), "utf8");
   const registerSource = fs.readFileSync(path.join(process.cwd(), "src", "modules", "inclusions-selections", "components", "GeneratedAreaRegister.tsx"), "utf8");
+  const advancedSection = pageSource.slice(pageSource.indexOf('<details className="advancedSettings"'), pageSource.indexOf("<AreaStageActions"));
   assert(pageSource.includes('hrefForStage("templates"'), "Continue action should route to the templates stage through shared stage navigation.");
+  assert(pageSource.includes("Create House") && pageSource.includes("Tick the parts of the home"), "Stage 1 should use the simple Create House language.");
+  assert(advancedSection.includes("Advanced Settings") && advancedSection.includes("ProjectLevelsEditor"), "Technical area controls should sit behind Advanced Settings.");
+  assert(!pageSource.includes("Drafts use the new browser-scoped repository"), "Normal Stage 1 view should not expose repository concepts.");
+  assert(registerSource.includes("Selected Areas") && !registerSource.includes("Project Area Register"), "Advanced area list should use user-facing wording.");
   assert(pageSource.includes("PROJECT_REQUIRED_MESSAGE"), "Missing project context should use the shared friendly blocking state.");
   assert(pageSource.includes("@media (max-width: 760px)") && registerSource.includes("areaCard"), "The register should include a responsive mobile card view.");
   assert(!pageSource.includes("lib/builders/selectionBudget") && !pageSource.includes("ProductLibrary") && !pageSource.includes("Estimate Builder"), "Create Areas page should stay isolated from retired selections, Product Library and Estimate Builder imports.");

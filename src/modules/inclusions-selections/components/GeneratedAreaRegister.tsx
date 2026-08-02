@@ -17,7 +17,7 @@ export function GeneratedAreaRegister({ register, onRenameArea, onAssignLevel, o
   return (
     <section className="panel" aria-labelledby="register-title">
       <div className="panelHead">
-        <h2 id="register-title">Project Area Register</h2>
+        <h2 id="register-title">Selected Areas</h2>
         <span>{register.areas.length} areas</span>
       </div>
       <div className="areaTableWrap">

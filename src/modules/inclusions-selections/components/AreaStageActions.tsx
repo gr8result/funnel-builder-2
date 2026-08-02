@@ -9,7 +9,7 @@ export function AreaStageActions({ canContinue, saving, onSave, onContinue }: Pr
   return (
     <footer className="stageActions">
       <button type="button" onClick={onSave} disabled={saving}>{saving ? "Saving" : "Save Draft"}</button>
-      <button type="button" className="primaryButton" onClick={onContinue} disabled={!canContinue || saving}>Continue to Templates</button>
+      <button type="button" className="primaryButton" onClick={onContinue} disabled={!canContinue || saving}>Choose Area</button>
     </footer>
   );
 }

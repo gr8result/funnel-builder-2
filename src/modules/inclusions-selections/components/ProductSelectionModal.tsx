@@ -143,8 +143,8 @@ export function ProductSelectionModal(props: Props) {
                       ) : null}
                       <div className="modalProductActions">
                         <button type="button" onClick={() => { props.onChooseProduct(product.id); setDetailProductId(product.id); }}>View Details</button>
-                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noopener noreferrer">View Supplier Website</a> : null}
-                        <button type="button" className="primaryButton" disabled={Boolean(requiresVariant && !props.selectedVariantId)} onClick={() => props.onSelect(product.id, product.id === props.selectedProductId ? props.selectedVariantId : undefined)}>Select</button>
+                        {product.productUrl ? <a href={product.productUrl} target="_blank" rel="noopener noreferrer">View Official Product Page</a> : null}
+                        <button type="button" className="primaryButton" disabled={Boolean(requiresVariant && !props.selectedVariantId)} onClick={() => props.onSelect(product.id, product.id === props.selectedProductId ? props.selectedVariantId : undefined)}>Add To Selections</button>
                       </div>
                     </div>
                   </article>
@@ -204,8 +204,8 @@ function ProductDetailView(props: {
             <label className="variantPicker"><span>Variant</span><select value={props.selectedVariantId ?? ""} onChange={(event) => { props.onChooseProduct(); props.onChooseVariant(event.target.value); }}><option value="">Choose variant</option>{props.variants.map((item) => <option key={item.id} value={item.id}>{item.name} / {aud(item.unitCost?.amount)}</option>)}</select></label>
           ) : null}
           <div className="modalProductActions">
-            {productUrl ? <a href={productUrl} target="_blank" rel="noopener noreferrer">View Supplier Website</a> : <span className="disabledLink">Supplier product page not available.</span>}
-            <button type="button" className="primaryButton" disabled={!canSelect} onClick={props.onSelect}>Select</button>
+            {productUrl ? <a href={productUrl} target="_blank" rel="noopener noreferrer">View Official Product Page</a> : <span className="disabledLink">Supplier product page not available.</span>}
+            <button type="button" className="primaryButton" disabled={!canSelect} onClick={props.onSelect}>Add To Selections</button>
           </div>
         </div>
       </div>

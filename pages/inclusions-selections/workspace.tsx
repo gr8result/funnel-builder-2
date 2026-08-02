@@ -303,20 +303,22 @@ export default function InclusionsSelectionsWorkspacePage() {
         </div>
       </section>
       <div className="builderWorkspaceLayout">
-        {view === "room" ? (
-          <RoomNavigationPanel groups={roomGroups} rows={allRows} selectedAreaId={selectedAreaId} search={search} onSearch={setSearch} onSelectArea={setSelectedAreaId} onSelectRequirement={openProductPicker} onEditAreas={() => router.push(hrefForStage("areas", state.context))} />
-        ) : (
-          <CategoryNavigationPanel categories={categoryGroups} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
-        )}
         <section className="kitchenSelectionSurface">
+          <div className="areaRibbon" aria-label="Areas">
+            {state.templateStage.areaRegister.areas.map((area) => (
+              <button key={area.id} type="button" className={selectedAreaId === area.id ? "selected" : ""} onClick={() => setSelectedAreaId(area.id)}>
+                {area.name}
+              </button>
+            ))}
+          </div>
           <div className="roomToolbar">
             <div>
-              <h2>{selectedArea?.name ?? "Room"} selections</h2>
-              <p>{selectedRows.length} items to choose from the assigned template. Completed: {selectedComplete} of {selectedRows.length}.</p>
+              <h2>{selectedArea?.name ?? "Room"}</h2>
+              <p>Choose the next product type.</p>
             </div>
             <div className="roomToolbarActions">
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this room" />
-              <button type="button" onClick={() => setSearch("")}>Reset</button>
+              <button type="button" onClick={() => setSearch("")}>Clear</button>
             </div>
           </div>
           {rows.length === 0 ? <p className="emptyRoomState">No selection items match this room/search.</p> : null}
@@ -344,7 +346,16 @@ export default function InclusionsSelectionsWorkspacePage() {
             })}
           </div>
         </section>
-        <aside className="workspaceSide compactSide">
+      </div>
+      <details className="advancedSettings">
+        <summary>Advanced Settings</summary>
+        <div className="advancedWorkspaceGrid">
+          {view === "room" ? (
+            <RoomNavigationPanel groups={roomGroups} rows={allRows} selectedAreaId={selectedAreaId} search={search} onSearch={setSearch} onSelectArea={setSelectedAreaId} onSelectRequirement={openProductPicker} onEditAreas={() => router.push(hrefForStage("areas", state.context))} />
+          ) : (
+            <CategoryNavigationPanel categories={categoryGroups} selectedCategory={selectedCategory} onSelectCategory={setSelectedCategory} />
+          )}
+          <aside className="workspaceSide compactSide">
           <WorkspaceViewSwitcher value={view} onChange={(nextView) => {
             setView(nextView);
             setState({ ...state, draftState: { ...state.draftState, selectedView: nextView, savedStatus: "unsaved" } });
@@ -354,7 +365,8 @@ export default function InclusionsSelectionsWorkspacePage() {
           <ApplyToPreview preview={applyPreview} selectedTargets={selectedApplyTargets} onToggleTarget={(requirementId) => setSelectedApplyTargets((current) => current.includes(requirementId) ? current.filter((id) => id !== requirementId) : [...current, requirementId])} onConfirm={handleApplyConfirm} />
           <WorkspaceValidationSummary issues={issues.length ? issues : validation.issues} />
         </aside>
-      </div>
+        </div>
+      </details>
       <WorkspaceStageActions
         saving={saving}
         canContinue={validation.ok}
@@ -363,7 +375,6 @@ export default function InclusionsSelectionsWorkspacePage() {
         onReviewIncomplete={() => setIssues(validateSelectionWorkspace(state, false).issues)}
         onContinue={handleContinue}
       />
-      <p className="persistenceNote">Selections, room locations, notes, attachments and workspace draft state use browser-scoped repositories until approved database adapters are added.</p>
       {pickerRequirementId ? (
         <ProductSelectionModal
           row={getRequirementWorkspaceRows(state).find((row) => row.requirement.id === pickerRequirementId)!}
@@ -406,7 +417,7 @@ const workspaceStyles = `
   .workspaceSummary div { padding: 12px; }
   .workspaceSummary span { display: block; color: #657186; font-size: 12px; margin-bottom: 4px; }
   .workspaceLayout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
-  .builderWorkspaceLayout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
+  .builderWorkspaceLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
   .navPanel, .workspaceMain, .workspaceSide { padding: 16px; }
   .workspaceSide, .requirementWorkspace, .navPanel { display: grid; gap: 12px; }
   input, select, button { min-height: 36px; border-radius: 6px; border: 1px solid #cfd8e5; background: #fff; color: #172033; font: inherit; }
@@ -435,28 +446,35 @@ const workspaceStyles = `
   .kitchenHeroStats strong { display: block; font-size: 32px; }
   .kitchenHeroStats span { color: #526072; font-weight: 750; }
   .kitchenSelectionSurface { padding: 18px; min-width: 0; }
+  .areaRibbon { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .areaRibbon button { border-color: #d8e2ee; background: #fff; color: #17406f; }
+  .areaRibbon button.selected { border-color: #1c4f91; background: #1c4f91; color: #fff; }
   .roomToolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; }
   .roomToolbar p { margin: 4px 0 0; color: #657186; }
   .roomToolbarActions { display: flex; gap: 8px; align-items: center; }
   .roomToolbarActions input { width: 220px; }
-  .selectionItemList { display: grid; gap: 9px; }
-  .selectionItemRow { position: relative; width: 100%; min-height: 86px; text-align: left; padding: 12px; display: grid; grid-template-columns: 74px 58px minmax(0, 1fr) auto 126px auto; gap: 12px; align-items: center; background: #fff; border-color: #dce4ef; overflow: hidden; }
+  .selectionItemList { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .selectionItemRow { position: relative; width: 100%; min-height: 230px; text-align: left; padding: 14px; display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; background: #fff; border-color: #dce4ef; overflow: hidden; }
   .selectionItemRow:hover, .selectionItemRow:focus-visible { border-color: #1c4f91; box-shadow: 0 8px 20px rgba(21, 48, 84, .09); outline: none; }
   .selectionItemRow.selected { background: #fbfefd; border-color: #b8d9ca; }
   .tileStatus { justify-self: start; min-height: 24px; border-radius: 999px; padding: 3px 9px; background: #eef3f8; color: #526072; font-size: 12px; font-weight: 800; }
   .tileStatus.status-complete { background: #dff7ec; color: #126344; }
-  .tileImage { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 8px; background: #eaf2fc; color: #1c4f91; font-size: 17px; font-weight: 900; }
+  .tileImage { display: grid; place-items: center; width: 100%; min-height: 104px; border-radius: 8px; background: #eaf2fc; color: #1c4f91; font-size: 28px; font-weight: 900; }
   .selectionItemCopy { display: grid; gap: 3px; min-width: 0; }
   .selectionItemCopy strong { font-size: 16px; overflow-wrap: anywhere; }
   .tileProduct { font-weight: 850; color: #172033; }
   .tileMeta, .tilePrice { color: #657186; font-size: 13px; }
-  .tileVariation { justify-self: end; border-radius: 999px; padding: 5px 9px; background: #edf8f1; color: #126344; font-size: 13px; font-weight: 850; white-space: nowrap; }
+  .tileVariation { justify-self: start; border-radius: 999px; padding: 5px 9px; background: #edf8f1; color: #126344; font-size: 13px; font-weight: 850; white-space: nowrap; }
   .tileVariation.upgrade { background: #fff3df; color: #925400; }
   .tileVariation.credit { background: #eaf2fc; color: #1c4f91; }
   .emptyRoomState, .generateRequirementsState p { color: #526072; }
   .generateRequirementsState { padding: 28px; display: grid; gap: 14px; }
   .generateRequirementsState div { display: flex; gap: 10px; flex-wrap: wrap; }
   .compactSide { display: grid; gap: 14px; }
+  .advancedSettings { max-width: 1320px; margin: 0 auto 16px; background: #fff; border: 1px solid #dfe6ef; border-radius: 8px; padding: 12px; }
+  .advancedSettings summary { cursor: pointer; font-weight: 850; color: #17406f; }
+  .advancedSettings[open] summary { margin-bottom: 14px; }
+  .advancedWorkspaceGrid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; align-items: start; }
   .workspaceFilters, .requirementHeader, .rowActions, .splitFields, .pricingSummary, .previewColumns { display: flex; gap: 8px; align-items: center; }
   .workspaceFilters { margin-bottom: 12px; }
   .workspaceFilters input { flex: 1; }
@@ -532,7 +550,7 @@ const workspaceStyles = `
   .validNotice { border-color: #b7e2c6; color: #1d6d47; background: #e9f8ef; }
   .stageActions { display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: rgba(245,247,250,.95); padding: 14px 0; flex-wrap: wrap; }
   .persistenceNote { color: #657186; font-size: 13px; }
-  @media (max-width: 1180px) { .selectionItemRow { grid-template-columns: 70px 58px minmax(0, 1fr) 112px; } .selectionItemRow .tierBadge, .selectionItemRow .tilePrice { display: none; } }
-  @media (max-width: 1100px) { .workspaceLayout, .builderWorkspaceLayout, .workspaceSummary { grid-template-columns: 1fr; } .workspaceSide { order: 2; } }
+  @media (max-width: 1180px) { .selectionItemRow .tierBadge, .selectionItemRow .tilePrice { display: none; } }
+  @media (max-width: 1100px) { .workspaceLayout, .builderWorkspaceLayout, .workspaceSummary, .advancedWorkspaceGrid { grid-template-columns: 1fr; } .workspaceSide { order: 2; } }
   @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .kitchenHero h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .kitchenHero, .roomToolbar, .roomToolbarActions { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .selectionItemRow, .detailLayout, .detailFacts { grid-template-columns: 1fr; } .selectionItemRow { justify-items: start; } .tileVariation { justify-self: start; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } .roomToolbarActions input { width: 100%; } }
 `;

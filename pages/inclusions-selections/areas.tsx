@@ -158,59 +158,63 @@ export default function CreateSelectionAreasPage() {
     <main className="createAreasPage">
       <InclusionsSelectionsProjectBanner currentStage="areas" context={register} saveStatus={saveStatus} onSave={handleSave} />
       <InclusionsSelectionsStageNav currentStage="areas" context={register} />
-      <section className="demoPanel">
-        <div>
-          <strong>Development demonstration data</strong>
-          <p>Load Johnson Residence to see a complete Stage 1-5 workflow with demo rooms, products, indicative AUD pricing, variations, review issues and approvals. Demonstration data is separate from real projects and is not live supplier pricing.</p>
-          <small>{DEMO_PROJECT_TYPE}</small>
-        </div>
-        <div className="demoActions">
-          <button type="button" className="primaryButton" onClick={() => void handleLoadDemo(false)}>Load Demonstration Project</button>
-          <button type="button" onClick={() => void handleLoadDemo(true)}>Reset Demonstration Project</button>
-        </div>
-      </section>
       <header className="pageHeader">
         <div>
-          <h1>Create Selection Areas</h1>
-          <p>Select every internal and external area included in this project. This creates the room structure used for templates, inclusions, product selections, pricing and estimating.</p>
+          <h1>Create House</h1>
+          <p>Tick the parts of the home that need inclusions and selections.</p>
         </div>
       </header>
-      <ProjectSelectionSummary register={register} />
-      <ProjectLevelsEditor
-        register={register}
-        levelDraft={levelDraft}
-        onLevelDraftChange={setLevelDraft}
-        onAddLevel={() => {
-          const result = createCustomProjectLevel(register, levelDraft);
-          if (applyResult(result)) setLevelDraft("");
-        }}
-        onRenameLevel={(levelId, name) => applyResult(renameProjectLevel(register, levelId, name))}
-        onToggleLevel={(levelId, active) => applyResult(setProjectLevelActive(register, levelId, active))}
-      />
-      <div className="workspace">
+      <div className="houseChecklist">
         <AreaTypeChecklist register={register} pendingRemoval={pendingRemoval} onQuantityChange={handleQuantityChange} />
-        <div className="rightColumn">
-          <CustomAreaDialog
-            register={register}
-            draft={customAreaDraft}
-            onDraftChange={setCustomDraft}
-            onAdd={() => {
-              const result = createCustomProjectArea(register, customAreaDraft);
-              if (applyResult(result)) setCustomDraft({ name: "", groupId: "area_group_custom", levelId: firstActiveLevelId(register) });
-            }}
-          />
-          <AreaRegisterValidationSummary issues={issues.length ? issues : validation.issues} />
-        </div>
       </div>
-      <GeneratedAreaRegister
-        register={register}
-        onRenameArea={(areaId, name) => applyResult(renameProjectArea(register, areaId, name))}
-        onAssignLevel={(areaId, levelId) => applyResult(assignProjectAreaLevel(register, areaId, levelId))}
-        onDuplicateArea={(areaId) => applyResult(duplicateProjectArea(register, areaId))}
-        onDeleteArea={(areaId) => applyResult(deleteProjectArea(register, areaId))}
-      />
+      <details className="advancedSettings">
+        <summary>Advanced Settings</summary>
+        <section className="demoPanel">
+          <div>
+            <strong>Demonstration project</strong>
+            <p>Load Johnson Residence to see a complete workflow with demo rooms and products.</p>
+            <small>{DEMO_PROJECT_TYPE}</small>
+          </div>
+          <div className="demoActions">
+            <button type="button" className="primaryButton" onClick={() => void handleLoadDemo(false)}>Load Demonstration Project</button>
+            <button type="button" onClick={() => void handleLoadDemo(true)}>Reset Demonstration Project</button>
+          </div>
+        </section>
+        <ProjectSelectionSummary register={register} />
+        <ProjectLevelsEditor
+          register={register}
+          levelDraft={levelDraft}
+          onLevelDraftChange={setLevelDraft}
+          onAddLevel={() => {
+            const result = createCustomProjectLevel(register, levelDraft);
+            if (applyResult(result)) setLevelDraft("");
+          }}
+          onRenameLevel={(levelId, name) => applyResult(renameProjectLevel(register, levelId, name))}
+          onToggleLevel={(levelId, active) => applyResult(setProjectLevelActive(register, levelId, active))}
+        />
+        <div className="workspace">
+          <div className="rightColumn">
+            <CustomAreaDialog
+              register={register}
+              draft={customAreaDraft}
+              onDraftChange={setCustomDraft}
+              onAdd={() => {
+                const result = createCustomProjectArea(register, customAreaDraft);
+                if (applyResult(result)) setCustomDraft({ name: "", groupId: "area_group_custom", levelId: firstActiveLevelId(register) });
+              }}
+            />
+            <AreaRegisterValidationSummary issues={issues.length ? issues : validation.issues} />
+          </div>
+        </div>
+        <GeneratedAreaRegister
+          register={register}
+          onRenameArea={(areaId, name) => applyResult(renameProjectArea(register, areaId, name))}
+          onAssignLevel={(areaId, levelId) => applyResult(assignProjectAreaLevel(register, areaId, levelId))}
+          onDuplicateArea={(areaId) => applyResult(duplicateProjectArea(register, areaId))}
+          onDeleteArea={(areaId) => applyResult(deleteProjectArea(register, areaId))}
+        />
+      </details>
       <AreaStageActions canContinue={validation.ok} saving={saving} onSave={handleSave} onContinue={handleContinue} />
-      <p className="persistenceNote">Drafts use the new browser-scoped repository until the approved database migration exists.</p>
       <style jsx global>{pageStyles}</style>
     </main>
   );
@@ -224,9 +228,27 @@ const pageStyles = `
     padding: 32px;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
-  .pageHeader, .requiredState {
+  .pageHeader, .requiredState, .houseChecklist, .advancedSettings {
     max-width: 1180px;
     margin: 0 auto 20px;
+  }
+  .houseChecklist .panel {
+    max-width: none;
+    margin-bottom: 0;
+  }
+  .advancedSettings {
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .advancedSettings summary {
+    cursor: pointer;
+    font-weight: 850;
+    color: #17406f;
+  }
+  .advancedSettings[open] summary {
+    margin-bottom: 14px;
   }
   .demoPanel {
     max-width: 1180px;
@@ -364,9 +386,9 @@ const pageStyles = `
   }
   .workspace {
     max-width: 1180px;
-    margin: 0 auto;
+    margin: 0 auto 16px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .rightColumn {

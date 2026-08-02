@@ -17,10 +17,7 @@ export function AreaTypeChecklist({ register, pendingRemoval, onQuantityChange }
   return (
     <section className="panel" aria-labelledby="checklist-title">
       <div className="panelHead">
-        <h2 id="checklist-title">Area Checklist</h2>
-        <button type="button" className="ghostButton" onClick={() => onQuantityChange("area_type_whole_project", selectedQuantity(register, "area_type_whole_project") ? 0 : 1)}>
-          Whole Project
-        </button>
+        <h2 id="checklist-title">Tick the areas in this house</h2>
       </div>
       <div className="checklistGrid">
         {CREATE_AREAS_CHECKLIST.map((group) => (

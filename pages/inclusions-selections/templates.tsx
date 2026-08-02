@@ -22,12 +22,12 @@ type NavigatorTile = {
 const EXTERIOR_PRODUCT_TYPES: NavigatorTile[] = [
   { key: "bricks", label: "Bricks" },
   { key: "cladding", label: "Cladding" },
+  { key: "render", label: "Render" },
   { key: "roof", label: "Roof" },
+  { key: "roof-colour", label: "Roof Colour" },
   { key: "windows", label: "Windows" },
   { key: "entry-door", label: "Entry Door" },
   { key: "garage-door", label: "Garage Door" },
-  { key: "roof-colour", label: "Roof Colour" },
-  { key: "roof-material", label: "Roof Material" },
   { key: "fascia", label: "Fascia" },
   { key: "gutters", label: "Gutters" },
   { key: "downpipes", label: "Downpipes" },
@@ -54,6 +54,8 @@ const INTERIOR_ROOMS: NavigatorTile[] = [
 const ROOM_PRODUCT_TYPES: Record<string, NavigatorTile[]> = {
   kitchen: [
     { key: "cabinetry", label: "Cabinetry" },
+    { key: "cabinet-finish", label: "Cabinet Finish" },
+    { key: "handles", label: "Handles" },
     { key: "benchtops", label: "Benchtops" },
     { key: "splashback", label: "Splashback" },
     { key: "sink", label: "Sink" },
@@ -63,8 +65,9 @@ const ROOM_PRODUCT_TYPES: Record<string, NavigatorTile[]> = {
     { key: "rangehood", label: "Rangehood" },
     { key: "dishwasher", label: "Dishwasher" },
     { key: "microwave", label: "Microwave" },
-    { key: "handles", label: "Handles" },
     { key: "lighting", label: "Lighting" },
+    { key: "flooring", label: "Flooring" },
+    { key: "paint", label: "Paint" },
   ],
   bathroom: [
     { key: "vanity", label: "Vanity" },
