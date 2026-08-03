@@ -36,31 +36,19 @@ export default function TakeoffToolbar({ page, tools }) {
         </ToolButton>
         <span style={S.divider} />
         <ToolButton
+          active={tools.activeTool === "exterior-highlighter"}
           disabled={tools.wallDetectionBusy}
-          onClick={tools.runWallDetection}
-          testId="tool-detect-walls"
+          onClick={() => tools.setActiveTool("exterior-highlighter")}
+          testId="tool-exterior-highlighter"
         >
-          {tools.wallDetectionBusy ? "Detecting..." : "Detect Walls"}
-        </ToolButton>
-        <ToolButton active={tools.activeTool === "exterior-wall"} onClick={() => tools.setActiveTool("exterior-wall")} testId="tool-draw-exterior">
-          Trace Exterior
+          {tools.wallDetectionBusy ? "Detecting Walls..." : "Exterior Highlighter"}
         </ToolButton>
         <ToolButton
-          active={tools.activeTool === "edit-walls"}
-          disabled={!hasWalls}
-          onClick={() => tools.setActiveTool("edit-walls")}
-          testId="tool-edit-exterior"
+          disabled={(tools.exteriorHighlightedWalls?.length || tools.exteriorHighlightedWallIds?.length || 0) < 3}
+          onClick={tools.finishHighlightedExterior}
+          testId="tool-finish-exterior"
         >
-          Edit Exterior
-        </ToolButton>
-        <ToolButton disabled={!tools.canDeleteWallSelection} onClick={tools.deleteSelectedWallItem} testId="tool-delete-segment">
-          Delete Point
-        </ToolButton>
-        <ToolButton disabled={!tools.selectedSegmentId} onClick={tools.insertPointOnSelectedSegment} testId="tool-insert-point">
-          Insert Point
-        </ToolButton>
-        <ToolButton disabled={!tools.canCloseShape} onClick={() => tools.closeWallPerimeter("exteriorWalls")} testId="tool-close-shape">
-          Complete Exterior
+          Finish Exterior
         </ToolButton>
         <ToolButton disabled={!tools.canClearExterior} onClick={tools.requestClearExterior} testId="tool-clear-exterior">
           Clear Exterior
@@ -71,7 +59,7 @@ export default function TakeoffToolbar({ page, tools }) {
         </ToolButton>
         <span style={S.divider} />
         <ToolButton disabled={!tools.canUndo} onClick={tools.undo} testId="tool-undo">
-          {tools.activeTool === "exterior-wall" ? "Undo Last Point" : "Undo"}
+          Undo
         </ToolButton>
         <ToolButton disabled={!tools.canRedo} onClick={tools.redo} testId="tool-redo">
           Redo
@@ -189,14 +177,14 @@ export default function TakeoffToolbar({ page, tools }) {
           </>
         )}
 
-        {tools.activeTool === "exterior-wall" && (
-          <span style={S.wallStatus} data-testid="trace-exterior-hint">
-            Click exterior corner points manually. Snapping is local and optional.
+        {tools.activeTool === "exterior-highlighter" && (
+          <span style={S.wallStatus} data-testid="exterior-highlighter-hint">
+            Hover a wall. Click the blue preview to highlight or unhighlight it.
           </span>
         )}
-        {tools.detectedWallSummary?.total > 0 && (
+        {tools.activeTool === "exterior-highlighter" && (
           <span style={S.wallStatus} data-testid="detected-wall-summary">
-            Walls detected: {tools.detectedWallSummary.total} - Exterior {tools.detectedWallSummary.exterior} - Interior {tools.detectedWallSummary.interior} - Unknown {tools.detectedWallSummary.unknown}
+            Highlighted: {tools.exteriorHighlightedWalls?.length || tools.exteriorHighlightedWallIds?.length || 0}
           </span>
         )}
 
@@ -210,38 +198,6 @@ export default function TakeoffToolbar({ page, tools }) {
         {tools.wallDetectionMessage && (
           <span style={tools.wallDetectionStatus === "incomplete" ? S.wallWarning : S.wallMessage} data-testid="wall-detection-message">{tools.wallDetectionMessage}</span>
         )}
-        {tools.automaticCandidateCount > 0 && (
-          <>
-            <button type="button" style={S.miniButton} onClick={tools.reviewAutomaticCandidates} data-testid="review-candidates">
-              Review Candidates
-            </button>
-            <button type="button" style={S.miniButton} onClick={() => tools.rejectAutomaticCandidates()} data-testid="reject-candidates">
-              Reject Candidates
-            </button>
-            <button type="button" style={S.miniButton} onClick={tools.runWallDetection} disabled={tools.wallDetectionBusy} data-testid="run-detection-again">
-              Detect Walls Again
-            </button>
-            <button type="button" style={S.miniButton} onClick={() => tools.setActiveTool("plan-region")} data-testid="candidate-select-plan-region">
-              Select Plan Region
-            </button>
-            <button type="button" style={S.miniButton} onClick={tools.continueManually} data-testid="continue-manually">
-              Continue Manually
-            </button>
-          </>
-        )}
-        {tools.highConfidenceUnconfirmedCount > 0 && (
-          <button type="button" style={S.miniButton} onClick={() => tools.acceptAllHighConfidenceSegments()} data-testid="accept-high-confidence-segments">
-            Accept All High-Confidence Segments ({tools.highConfidenceUnconfirmedCount})
-          </button>
-        )}
-        {hasWalls && !wallsConfirmed && (
-          <button type="button" style={S.miniButton} disabled={!tools.wallValidation.valid} onClick={tools.confirmExteriorWalls} data-testid="tool-confirm-walls">
-            Confirm Exterior
-          </button>
-        )}
-
-        {closeShapeFeedback(tools)}
-
         {wallsConfirmed && tools.areaValidation.valid && (
           <button type="button" style={S.miniButton} onClick={() => tools.setAreaDialogOpen(true)} data-testid="tool-confirm-area">
             Confirm Area

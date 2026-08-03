@@ -11,6 +11,7 @@ const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
 const CLICK_THRESHOLD_PX = 6;
 const WALL_DRAW_TOOLS = ["exterior-wall", "internal-wall"];
+const WALL_HIGHLIGHT_TOOLS = ["exterior-highlighter"];
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 
 function isEditableTarget(target) {
@@ -199,7 +200,7 @@ const PlanViewer = forwardRef(function PlanViewer(
   useEffect(() => {
     function onKeyDown(event) {
       if (event.code !== "Space" || isEditableTarget(event.target)) return;
-      if (tools?.activeTool === "pan" || WALL_DRAW_TOOLS.includes(tools?.activeTool)) {
+      if (tools?.activeTool === "pan" || WALL_DRAW_TOOLS.includes(tools?.activeTool) || WALL_HIGHLIGHT_TOOLS.includes(tools?.activeTool)) {
         event.preventDefault();
         setIsSpacePanning(true);
       }
@@ -435,6 +436,8 @@ const PlanViewer = forwardRef(function PlanViewer(
           tools.updatePointerHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale });
         } else if (WALL_DRAW_TOOLS.includes(activeTool)) {
           tools.updateWallDrawHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, disableSnap: event.altKey });
+        } else if (activeTool === "exterior-highlighter") {
+          tools.updateExteriorHighlighterHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (OPENING_TOOLS.includes(activeTool)) {
           tools.updateOpeningHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (activeTool === "area") {
@@ -534,6 +537,8 @@ const PlanViewer = forwardRef(function PlanViewer(
           tools.handleEditToolClick(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (WALL_DRAW_TOOLS.includes(tool)) {
           tools.handleWallDrawClick(dragState.pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, disableSnap: event.altKey });
+        } else if (tool === "exterior-highlighter") {
+          tools.toggleExteriorHighlightedWall(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (OPENING_TOOLS.includes(tool)) {
           tools.handleOpeningCanvasClick(dragState.pagePoint, { zoomScale: view.zoomScale });
         } else if (tool === "area") {

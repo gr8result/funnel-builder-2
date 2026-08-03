@@ -12,6 +12,7 @@ export const EXTERIOR_SOURCE_CONNECTED_WALL_SUGGESTION = "connected-wall-suggest
 export const EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 = "assisted-proposal-v1";
 export const EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR = "legacy-auto-detector";
 export const EXTERIOR_SOURCE_FUTURE_AUTO_DETECTOR = "future-auto-detector";
+export const EXTERIOR_SOURCE_HIGHLIGHTER_V1 = "exterior-highlighter-v1";
 
 export function isValidRotation(value) {
   return ROTATIONS.includes(value);
@@ -128,7 +129,7 @@ export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
  * @property {number|null} detectionConfidence   0-100, null if never detected/manual only
  * @property {{vertices:WallVertex[],segments:WallSegment[]}|null} detectedSnapshot   for "Reset to Detected"
  * @property {number} schemaVersion
- * @property {"manual-trace-v2"|"assisted-wall-selection"|"connected-wall-suggestion"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"} source
+ * @property {"manual-trace-v2"|"assisted-wall-selection"|"connected-wall-suggestion"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"|"exterior-highlighter-v1"} source
  */
 
 /**
@@ -240,6 +241,8 @@ export function createDefaultLayerVisibility() {
  * @property {PageOrientationState|null} orientationState
  * @property {Calibration|null} calibration
  * @property {ExteriorWalls|null} exteriorWalls
+ * @property {HighlightableWall[]} exteriorHighlightedWalls
+ * @property {string[]} exteriorHighlightedWallIds
  * @property {WallGraph|null} internalWalls
  * @property {WallOpening[]} openings
  * @property {TakeoffArea[]} areas
@@ -270,6 +273,8 @@ export function createPlanPage({ id, documentId, pageNumber, sourceWidth, source
     orientationState: null,
     calibration: null,
     exteriorWalls: null,
+    exteriorHighlightedWalls: [],
+    exteriorHighlightedWallIds: [],
     internalWalls: null,
     openings: [],
     areas: [],
@@ -309,12 +314,52 @@ export function withPlanPageDefaults(rawPage) {
       page.legacyExteriorWalls || (isLegacyAutomaticExteriorWalls(page.exteriorWalls) ? quarantineLegacyExteriorWalls(page.exteriorWalls) : null)
     ), null),
     detectedWalls: safe(() => (Array.isArray(page.detectedWalls) ? page.detectedWalls.map(withDetectedWallDefaults).filter(Boolean) : []), []),
+    exteriorHighlightedWalls: safe(() => (Array.isArray(page.exteriorHighlightedWalls) ? page.exteriorHighlightedWalls.map(withHighlightableWallDefaults).filter(Boolean) : []), []),
+    exteriorHighlightedWallIds: safe(() => {
+      const ids = Array.isArray(page.exteriorHighlightedWallIds) ? page.exteriorHighlightedWallIds.filter((id) => typeof id === "string") : [];
+      if (ids.length) return ids;
+      return (Array.isArray(page.exteriorHighlightedWalls) ? page.exteriorHighlightedWalls : []).map((wall) => wall?.id).filter((id) => typeof id === "string");
+    }, []),
     internalWalls: safe(() => page.internalWalls, null),
     openings: safe(() => (Array.isArray(page.openings) ? page.openings : []), []),
     areas: safe(() => (Array.isArray(page.areas) ? page.areas.map(withAreaDefaults) : []), []),
     measurements: safe(() => (Array.isArray(page.measurements) ? page.measurements : []), []),
     layerVisibility: safe(() => ({ ...createDefaultLayerVisibility(), ...(page.layerVisibility || {}) }), createDefaultLayerVisibility()),
     planRegion: safe(() => page.planRegion, null),
+  };
+}
+
+function withLineSegmentDefaults(rawLine) {
+  if (!rawLine?.start || !rawLine?.end) return null;
+  return {
+    start: { x: Number(rawLine.start.x) || 0, y: Number(rawLine.start.y) || 0 },
+    end: { x: Number(rawLine.end.x) || 0, y: Number(rawLine.end.y) || 0 },
+  };
+}
+
+function withHighlightableWallDefaults(rawWall) {
+  if (!rawWall || typeof rawWall !== "object") return null;
+  const centreline = withLineSegmentDefaults(rawWall.centreline) || (
+    rawWall.start && rawWall.end
+      ? { start: { x: Number(rawWall.start.x) || 0, y: Number(rawWall.start.y) || 0 }, end: { x: Number(rawWall.end.x) || 0, y: Number(rawWall.end.y) || 0 } }
+      : null
+  );
+  if (!centreline) return null;
+  return {
+    id: rawWall.id || `hl-wall-${Math.round(centreline.start.x)}-${Math.round(centreline.start.y)}-${Math.round(centreline.end.x)}-${Math.round(centreline.end.y)}`,
+    centreline,
+    faceA: withLineSegmentDefaults(rawWall.faceA),
+    faceB: withLineSegmentDefaults(rawWall.faceB),
+    thickness: Number.isFinite(Number(rawWall.thickness)) ? Number(rawWall.thickness) : null,
+    startJunction: rawWall.startJunction
+      ? { x: Number(rawWall.startJunction.x) || 0, y: Number(rawWall.startJunction.y) || 0 }
+      : centreline.start,
+    endJunction: rawWall.endJunction
+      ? { x: Number(rawWall.endJunction.x) || 0, y: Number(rawWall.endJunction.y) || 0 }
+      : centreline.end,
+    confidence: Number.isFinite(Number(rawWall.confidence)) ? Number(rawWall.confidence) : 0,
+    source: rawWall.source || "local-vector-wall-band",
+    sourceSegmentIds: Array.isArray(rawWall.sourceSegmentIds) ? rawWall.sourceSegmentIds.filter((id) => typeof id === "string") : [],
   };
 }
 

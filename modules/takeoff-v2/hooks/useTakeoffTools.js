@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
+import { generateId, createWallVertex, createWallSegment, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -36,6 +36,7 @@ import {
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
+import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -56,6 +57,7 @@ const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirme
 const AUTO_DETECTION_DISABLED_MESSAGE = "No wall objects could be detected from this page yet. Use Trace Exterior manually, or review the PDF/vector extraction.";
 const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until wall-object review is complete.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
+const EXTERIOR_HIGHLIGHT_SEARCH_SCREEN_PX = 12;
 
 function snapCandidateToMetadata(candidate) {
   if (!candidate) return MANUAL_SNAP;
@@ -275,6 +277,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [wallDetectionMessage, setWallDetectionMessage] = useState("");
   const [wallDetectionCode, setWallDetectionCode] = useState(null); // "USER_AUTH_REQUIRED"|"PROVIDER_NOT_CONFIGURED"|"PROVIDER_AUTH_FAILED"|"PROVIDER_ERROR"|null
   const [wallDetectionStatus, setWallDetectionStatus] = useState("idle"); // "idle"|"detecting"|"unavailable"
+  const [exteriorHighlightHoverWallId, setExteriorHighlightHoverWallId] = useState(null);
+  const [exteriorHighlightPreview, setExteriorHighlightPreview] = useState(null);
+  const [exteriorHighlightDiagnostics, setExteriorHighlightDiagnostics] = useState([]);
+  const [exteriorHighlightGap, setExteriorHighlightGap] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
@@ -323,6 +329,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setCloseShapeSuccessMessage("");
     setPlanRegionDraftCorner(null);
     setPlanRegionHoverPoint(null);
+    setExteriorHighlightHoverWallId(null);
+    setExteriorHighlightPreview(null);
+    setExteriorHighlightDiagnostics([]);
+    setExteriorHighlightGap(null);
   }, []);
 
   const setActiveTool = useCallback((tool) => {
@@ -610,6 +620,61 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setWallDetectionBusy(false);
     }
   }, [planGeometryIndex, page, commitPage]);
+
+  const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+    if (activeTool !== "exterior-highlighter") return;
+    const diagnosticsEnabled = typeof window !== "undefined" && window.localStorage?.getItem("takeoffHighlighterDebug") === "1";
+    const result = findHighlightableWallAtPoint({
+      point: rawPoint,
+      planGeometryIndex,
+      page,
+      searchRadiusDocUnits: EXTERIOR_HIGHLIGHT_SEARCH_SCREEN_PX / Math.max(zoomScale, 0.01),
+      diagnosticsEnabled,
+    });
+    setExteriorHighlightPreview(result.wall);
+    setExteriorHighlightHoverWallId(result.wall?.id || null);
+    setExteriorHighlightDiagnostics(result.diagnostics || []);
+    if (diagnosticsEnabled && result.diagnostics?.length) {
+      console.table(result.diagnostics.slice(-3));
+    }
+    setWallDetectionStatus(result.wall ? "wall-found" : "idle");
+    setWallDetectionMessage(result.wall ? "Wall found — click to highlight" : "No structural wall detected here");
+    setWallDetectionCode(result.wall ? null : "NO_STRUCTURAL_WALL_UNDER_CURSOR");
+  }, [activeTool, page, planGeometryIndex]);
+
+  const toggleExteriorHighlightedWall = useCallback(() => {
+    if (activeTool !== "exterior-highlighter") return;
+    if (!exteriorHighlightPreview?.id) {
+      setWallDetectionStatus("idle");
+      setWallDetectionMessage("No structural wall detected here");
+      setWallDetectionCode("NO_STRUCTURAL_WALL_UNDER_CURSOR");
+      return;
+    }
+    const currentWalls = page?.exteriorHighlightedWalls || [];
+    const exists = currentWalls.some((wall) => wall.id === exteriorHighlightPreview.id);
+    const nextWalls = exists
+      ? currentWalls.filter((wall) => wall.id !== exteriorHighlightPreview.id)
+      : [...currentWalls, exteriorHighlightPreview];
+    const nextIds = nextWalls.map((wall) => wall.id);
+    pushUndo("exteriorHighlightedWalls", currentWalls);
+    commitPage({
+      exteriorHighlightedWalls: nextWalls,
+      exteriorHighlightedWallIds: nextIds,
+      exteriorWalls: null,
+    });
+    setExteriorHighlightHoverWallId(exteriorHighlightPreview.id);
+    setExteriorHighlightGap(null);
+    setWallDetectionStatus("idle");
+    setWallDetectionMessage("");
+    setWallDetectionCode(null);
+  }, [activeTool, exteriorHighlightPreview, page, commitPage, pushUndo]);
+
+  const finishHighlightedExterior = useCallback(() => {
+    setExteriorHighlightGap(null);
+    setWallDetectionStatus("incomplete");
+    setWallDetectionMessage("Wall highlighting is being verified. Exterior generation will be enabled after full-wall selection is reliable.");
+    setWallDetectionCode("EXTERIOR_GENERATION_DISABLED");
+  }, []);
 
   const suggestExteriorProposal = useCallback(async () => {
     setWallDetectionBusy(true);
@@ -1199,7 +1264,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // back to a pristine, unconfirmed state and drops any openings hosted on
   // it — a destructive, whole-perimeter action, so it goes through an
   // explicit confirm step rather than firing on a single click.
-  const canClearExterior = !!(page?.exteriorWalls && (page.exteriorWalls.vertices.length > 0 || page.exteriorWalls.segments.length > 0));
+  const canClearExterior = !!(
+    (page?.exteriorWalls && (page.exteriorWalls.vertices.length > 0 || page.exteriorWalls.segments.length > 0)) ||
+    (page?.exteriorHighlightedWalls || []).length > 0 ||
+    (page?.exteriorHighlightedWallIds || []).length > 0
+  );
 
   const requestClearExterior = useCallback(() => {
     if (!canClearExterior) return;
@@ -1214,6 +1283,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const remainingOpenings = priorOpenings.filter((o) => o.wallGraph !== "exterior");
     commitPage({
       exteriorWalls: null,
+      exteriorHighlightedWalls: [],
+      exteriorHighlightedWallIds: [],
       ...(remainingOpenings.length !== priorOpenings.length ? { openings: remainingOpenings } : {}),
     });
     resetDrafts();
@@ -1775,6 +1846,13 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     hoverPoint, setHoverPoint,
     wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
     detectedWallSummary,
+    exteriorHighlightHoverWallId,
+    exteriorHighlightPreview,
+    exteriorHighlightDiagnostics,
+    exteriorHighlightedWalls: page?.exteriorHighlightedWalls || [],
+    exteriorHighlightedWallIds: page?.exteriorHighlightedWallIds || [],
+    exteriorHighlightGap,
+    updateExteriorHighlighterHover, toggleExteriorHighlightedWall, finishHighlightedExterior,
     suggestExteriorProposal,
     highConfidenceUnconfirmedCount, automaticCandidateCount,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,

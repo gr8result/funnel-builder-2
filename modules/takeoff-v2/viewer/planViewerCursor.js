@@ -5,6 +5,7 @@ export function cursorForPlanViewer({ activeTool = "select", isSpacePanning = fa
   if (dragMode === "vertex") return "grabbing";
   if (activeTool === "pan" || isSpacePanning) return "grab";
   if (WALL_DRAW_TOOLS.includes(activeTool)) return "crosshair";
+  if (activeTool === "exterior-highlighter") return "pointer";
   if (activeTool === "edit-walls" || activeTool === "edit") {
     if (editHoverTarget?.type === "point") return "grab";
     if (editHoverTarget?.type === "segment") return "pointer";

@@ -12,6 +12,7 @@ import { buildPlanGeometryIndex } from "../geometry/planGeometryIndex.js";
 import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
 import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
+import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -357,6 +358,105 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   assert.equal(page.detectedWalls[0].type, "unknown");
   assert.deepEqual(page.detectedWalls[0].openings, []);
   assert.deepEqual(page.detectedWalls[0].connectedWalls, []);
+}
+
+// ---- local highlighter finds one complete wall under the cursor -----------
+{
+  const planGeometryIndex = { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) };
+  const result = findHighlightableWallAtPoint({
+    point: { x: 200, y: 104 },
+    planGeometryIndex,
+    page: { sourceWidth: 400, sourceHeight: 320 },
+    searchRadiusDocUnits: 12,
+  });
+  assert.ok(result.wall, "clear external wall should preview");
+  assert.equal(Math.round(result.wall.thickness), 8);
+  assert.ok(Math.abs(result.wall.centreline.start.x - 100) < 0.01);
+  assert.ok(Math.abs(result.wall.centreline.end.x - 300) < 0.01);
+}
+
+// ---- clicking either face or the centre band resolves to the same wall ----
+{
+  const planGeometryIndex = { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) };
+  const faceA = findHighlightableWallAtPoint({ point: { x: 180, y: 100 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 320 }, searchRadiusDocUnits: 12 }).wall;
+  const centre = findHighlightableWallAtPoint({ point: { x: 180, y: 104 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 320 }, searchRadiusDocUnits: 12 }).wall;
+  const faceB = findHighlightableWallAtPoint({ point: { x: 180, y: 108 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 320 }, searchRadiusDocUnits: 12 }).wall;
+  assert.ok(faceA && centre && faceB);
+  assert.equal(faceA.id, centre.id);
+  assert.equal(faceB.id, centre.id);
+}
+
+// ---- fragmented vector strokes merge into one highlightable wall ----------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 185, y: 100 }),
+      line({ x: 215, y: 100 }, { x: 300, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 185, y: 108 }),
+      line({ x: 215, y: 108 }, { x: 300, y: 108 }),
+    ],
+  };
+  const result = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.ok(result.wall, "fragmented wall should still preview");
+  assert.ok(result.wall.centreline.end.x - result.wall.centreline.start.x >= 198);
+}
+
+// ---- window/door-sized interruptions remain one wall when both faces match -
+for (const gap of [30, 40]) {
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 200 - gap / 2, y: 100 }),
+      line({ x: 200 + gap / 2, y: 100 }, { x: 300, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 200 - gap / 2, y: 108 }),
+      line({ x: 200 + gap / 2, y: 108 }, { x: 300, y: 108 }),
+    ],
+  };
+  const result = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.ok(result.wall, `gap ${gap} should merge where continuity is proven`);
+  assert.ok(result.wall.centreline.end.x - result.wall.centreline.start.x >= 198);
+}
+
+// ---- annotation-like geometry is rejected by the local highlighter ---------
+for (const extra of [
+  { isDimension: true },
+  { dashPattern: [6, 4] },
+  { classification: "title-block-rule" },
+  { classification: "cabinetry" },
+  { classification: "furniture" },
+]) {
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 300, y: 100 }, extra),
+      line({ x: 100, y: 108 }, { x: 300, y: 108 }, extra),
+    ],
+  };
+  const result = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.equal(result.wall, null, `${JSON.stringify(extra)} should not highlight`);
+}
+
+// ---- a lone line and a distant pointer do not snap to nonexistent walls ----
+{
+  const planGeometryIndex = { source: "fixture", rawSegments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })] };
+  assert.equal(findHighlightableWallAtPoint({ point: { x: 200, y: 100 }, planGeometryIndex, page: { sourceWidth: 400, sourceHeight: 220 }, searchRadiusDocUnits: 12 }).wall, null);
+  const wallIndex = { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) };
+  assert.equal(findHighlightableWallAtPoint({ point: { x: 50, y: 50 }, planGeometryIndex: wallIndex, page: { sourceWidth: 400, sourceHeight: 320 }, searchRadiusDocUnits: 12 }).wall, null);
+}
+
+// ---- highlighted wall objects persist through page defaults ---------------
+{
+  const wall = findHighlightableWallAtPoint({
+    point: { x: 200, y: 104 },
+    planGeometryIndex: { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) },
+    page: { sourceWidth: 400, sourceHeight: 320 },
+    searchRadiusDocUnits: 12,
+  }).wall;
+  const page = withPlanPageDefaults({ id: "page-highlighted-wall", exteriorHighlightedWalls: [wall] });
+  assert.equal(page.exteriorHighlightedWalls.length, 1);
+  assert.equal(page.exteriorHighlightedWallIds[0], wall.id);
+  assert.deepEqual(page.exteriorHighlightedWalls[0].centreline, wall.centreline);
 }
 
 // ---- real sample plan rejects parallel annotation clutter -----------------

@@ -24,7 +24,12 @@ const SNAP_STYLES = {
 // openings yellow, areas translucent purple, unconfirmed automatic
 // candidates dashed red.
 const WALL_COLOR = { exterior: "#16a34a", internal: "#2563eb" };
-const DETECTED_WALL_COLOR = { exterior: "#16a34a", interior: "#2563eb", unknown: "#64748b" };
+const HIGHLIGHTER_WALL_COLOR = {
+  normal: "#6b7280",
+  hover: "#0284c7",
+  selected: "#facc15",
+  gap: "#dc2626",
+};
 const OPENING_COLOR = {
   window: "#06b6d4",
   "internal-door": "#f97316",
@@ -60,7 +65,8 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
   const exteriorWalls = page?.exteriorWalls;
   const internalWalls = page?.internalWalls;
-  const detectedWalls = page?.detectedWalls || [];
+  const highlightedWalls = tools.exteriorHighlightedWalls || page?.exteriorHighlightedWalls || [];
+  const highlightedWallIds = new Set(highlightedWalls.map((wall) => wall.id));
   const visibleExteriorSegments = exteriorWalls?.segments.filter(shouldShowWallSegment) || [];
   const visibleInternalSegments = internalWalls?.segments.filter(shouldShowWallSegment) || [];
 
@@ -84,6 +90,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
   const isScaleOrMeasure = tools.activeTool === "set-scale" || tools.activeTool === "measure";
   const isWallDraw = tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall";
+  const isExteriorHighlighter = tools.activeTool === "exterior-highlighter";
   const isOpeningTool = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool);
   const isAreaTool = tools.activeTool === "area";
   const isPlanRegionTool = tools.activeTool === "plan-region";
@@ -104,12 +111,12 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         data-area-search-draft={tools.areaSearchDraft ? "true" : "false"}
       >
         {/* Confirmed calibration reference line (dim, small) */}
-        {page?.calibration && (
+        {!isExteriorHighlighter && page?.calibration && (
           <CalibrationMark calibration={page.calibration} project={project} />
         )}
 
         {/* Saved measurements */}
-        {(page?.measurements || []).map((measurement) => {
+        {!isExteriorHighlighter && (page?.measurements || []).map((measurement) => {
           const a = project(measurement.pointA);
           const b = project(measurement.pointB);
           const mid = project(midpoint(measurement.pointA, measurement.pointB));
@@ -128,13 +135,13 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
         {/* Plan region is an explicit region-edit overlay only. It is not wall
             geometry and must not appear during normal wall editing/delete. */}
-        {isPlanRegionTool && page?.planRegion?.confirmed && (
+        {!isExteriorHighlighter && isPlanRegionTool && page?.planRegion?.confirmed && (
           <PlanRegionRect region={page.planRegion} project={project} dashed={false} testId="plan-region-confirmed" />
         )}
-        {isPlanRegionTool && !page?.planRegion?.confirmed && tools.suggestedPlanRegion && !tools.planRegionDraftCorner && (
+        {!isExteriorHighlighter && isPlanRegionTool && !page?.planRegion?.confirmed && tools.suggestedPlanRegion && !tools.planRegionDraftCorner && (
           <PlanRegionRect region={tools.suggestedPlanRegion} project={project} dashed testId="plan-region-suggested" />
         )}
-        {isPlanRegionTool && tools.planRegionDraftCorner && tools.planRegionHoverPoint && (
+        {!isExteriorHighlighter && isPlanRegionTool && tools.planRegionDraftCorner && tools.planRegionHoverPoint && (
           <PlanRegionRect
             region={normalizeRegionCorners(tools.planRegionDraftCorner, tools.planRegionHoverPoint)}
             project={project}
@@ -144,7 +151,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Confirmed area polygon fills */}
-        {showLayer("areas") && (page?.areas || []).map((area) => {
+        {!isExteriorHighlighter && showLayer("areas") && (page?.areas || []).map((area) => {
           const boundary = area.outerBoundary || area.vertices || [];
           const pts = boundary.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
           const areaCenter = project(centroid(boundary));
@@ -161,50 +168,67 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         })}
 
         {/* In-progress manual area trace */}
-        {isAreaTool && tools.areaDraftVertices.length > 0 && (
+        {!isExteriorHighlighter && isAreaTool && tools.areaDraftVertices.length > 0 && (
           <ManualAreaDraft vertices={tools.areaDraftVertices} hoverPoint={tools.areaHoverPoint} project={project} />
         )}
-        {isAreaTool && tools.areaSearchDraft?.start && tools.areaSearchDraft?.end && (
+        {!isExteriorHighlighter && isAreaTool && tools.areaSearchDraft?.start && tools.areaSearchDraft?.end && (
           <AreaSearchRect rect={rectFromCorners(tools.areaSearchDraft.start, tools.areaSearchDraft.end)} project={project} />
         )}
 
-        {/* Exterior + internal wall segments */}
-        {detectedWalls.map((wall) => (
-          <DetectedWallObject key={wall.id} wall={wall} project={project} />
+        {/* Exterior highlighter: one blue local preview, yellow clicked walls. */}
+        {isExteriorHighlighter && highlightedWalls.map((wall) => (
+          <HighlightableWallObject
+            key={wall.id}
+            wall={wall}
+            project={project}
+            selected
+          />
         ))}
-        {showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
+        {isExteriorHighlighter && tools.exteriorHighlightPreview && !highlightedWallIds.has(tools.exteriorHighlightPreview.id) && (
+          <HighlightableWallObject
+            wall={tools.exteriorHighlightPreview}
+            project={project}
+            hovered
+          />
+        )}
+        {tools.exteriorHighlightGap && (
+          <GapLine gap={tools.exteriorHighlightGap} project={project} />
+        )}
+
+        {/* Exterior + internal wall segments */}
+        {!isExteriorHighlighter && showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
         ))}
-        {showLayer("internalWalls") && visibleInternalSegments.map((segment) => (
+        {!isExteriorHighlighter && showLayer("internalWalls") && visibleInternalSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={internalVertexById} project={project}
             selected={tools.selectedField === "internalWalls" && tools.selectedSegmentId === segment.id} />
         ))}
 
         {/* Wall vertices, numbered — shown while editing or drawing that graph */}
-        {(isEditTool || tools.activeTool === "exterior-wall") && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
+        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "exterior-wall") && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
           <WallVertexDot key={vertex.id} vertex={vertex} index={index} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedVertexId === vertex.id} />
         ))}
-        {(isEditTool || tools.activeTool === "internal-wall") && internalWalls && internalDisplayVertices.map((vertex, index) => (
+        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "internal-wall") && internalWalls && internalDisplayVertices.map((vertex, index) => (
           <WallVertexDot key={vertex.id} vertex={vertex} index={index} project={project}
             selected={tools.selectedField === "internalWalls" && tools.selectedVertexId === vertex.id} />
         ))}
 
         {/* Chain-draw preview while editing walls (legacy exterior-only tool) */}
-        {tools.activeTool === "edit-walls" && tools.selectedVertexId && tools.hoverPoint && exteriorVertexById.get(tools.selectedVertexId) && (
+        {!isExteriorHighlighter && tools.activeTool === "edit-walls" && tools.selectedVertexId && tools.hoverPoint && exteriorVertexById.get(tools.selectedVertexId) && (
           <LiveLine from={exteriorVertexById.get(tools.selectedVertexId)} to={tools.hoverPoint} project={project} dashed />
         )}
 
         {/* Manual Exterior/Internal Wall drawing: keep the canvas precise.
             Length/status text lives outside the drawing area in the toolbar. */}
-        {isWallDraw && tools.wallDrawHoverPreview?.point && tools.wallDrawHoverPreview?.snap && (
+        {!isExteriorHighlighter && isWallDraw && tools.wallDrawHoverPreview?.point && tools.wallDrawHoverPreview?.snap && (
           <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
         )}
-        {isEditTool && tools.wallEditSnapPreview?.point && (
+        {!isExteriorHighlighter && isEditTool && tools.wallEditSnapPreview?.point && (
           <SnapMarker point={tools.wallEditSnapPreview.point} snap={tools.wallEditSnapPreview.snap} label={tools.wallEditSnapPreview.label} project={project} />
         )}
-        {isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
+        {!isExteriorHighlighter && isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
           const field = tools.activeTool === "exterior-wall" ? "exteriorWalls" : "internalWalls";
           const vertexById = field === "exteriorWalls" ? exteriorVertexById : internalVertexById;
           const chainStart = vertexById.get(tools.wallDrawChainVertexId);
@@ -218,7 +242,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         })()}
 
         {/* Wall openings: Window / Internal Door / External Door / Sliding Door / Garage Door / Open Opening */}
-        {openings.map((opening) => {
+        {!isExteriorHighlighter && openings.map((opening) => {
           const layer = openingLayerFor(opening.openingType);
           if (!showLayer(layer)) return null;
           const selected = tools.selectedOpeningId === opening.id;
@@ -226,18 +250,18 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         })}
 
         {/* Opening placement in progress: highlight host wall + live span */}
-        {isOpeningTool && tools.openingHostWall && (
+        {!isExteriorHighlighter && isOpeningTool && tools.openingHostWall && (
           <HighlightedSegmentPoints start={tools.openingHostWall.start} end={tools.openingHostWall.end} project={project} />
         )}
-        {isOpeningTool && tools.openingStart && tools.openingHostWall && (
+        {!isExteriorHighlighter && isOpeningTool && tools.openingStart && tools.openingHostWall && (
           <LiveLine from={tools.openingStart} to={tools.openingHostWall.point} project={project} />
         )}
-        {isOpeningTool && tools.openingHostWall && !tools.openingStart && (
+        {!isExteriorHighlighter && isOpeningTool && tools.openingHostWall && !tools.openingStart && (
           <SnapMarker point={tools.openingHostWall.point} snap={{ kind: "line" }} project={project} />
         )}
 
         {/* Set Scale / Measure Length: snapped, axis-locked preview */}
-        {isScaleOrMeasure && preview && (
+        {!isExteriorHighlighter && isScaleOrMeasure && preview && (
           <>
             {preview.snap?.lineId && (
               <HighlightedPlanLine lineId={preview.snap.lineId} planGeometryIndex={planGeometryIndex} project={project} />
@@ -272,7 +296,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
       </svg>
 
-      {isScaleOrMeasure && preview && sourceCanvas && (
+      {!isExteriorHighlighter && isScaleOrMeasure && preview && sourceCanvas && (
         <Magnifier point={preview.valid ? preview.point : preview.rawPoint} project={project} viewport={viewport} sourceCanvas={sourceCanvas} />
       )}
     </>
@@ -285,24 +309,58 @@ function centroid(vertices) {
   return { x: sum.x / vertices.length, y: sum.y / vertices.length };
 }
 
-function DetectedWallObject({ wall, project }) {
-  if (!wall?.start || !wall?.end) return null;
-  const a = project(wall.start);
-  const b = project(wall.end);
-  const color = DETECTED_WALL_COLOR[wall.type] || DETECTED_WALL_COLOR.unknown;
+function wallLine(wall) {
+  if (wall?.centreline?.start && wall?.centreline?.end) return wall.centreline;
+  if (wall?.startJunction && wall?.endJunction) return { start: wall.startJunction, end: wall.endJunction };
+  if (wall?.start && wall?.end) return { start: wall.start, end: wall.end };
+  return null;
+}
+
+function HighlightableWallObject({ wall, project, selected, hovered }) {
+  const line = wallLine(wall);
+  if (!line) return null;
+  const a = project(line.start);
+  const b = project(line.end);
+  const color = selected ? HIGHLIGHTER_WALL_COLOR.selected : hovered ? HIGHLIGHTER_WALL_COLOR.hover : HIGHLIGHTER_WALL_COLOR.normal;
+  const strokeWidth = selected ? 9 : hovered ? 8 : 4;
   return (
-    <g data-testid="detected-wall-object" data-wall-type={wall.type} data-wall-id={wall.id}>
+    <g
+      data-testid={selected ? "highlighted-exterior-wall" : "highlightable-wall-preview"}
+      data-wall-id={wall.id}
+      data-highlighted={selected ? "true" : "false"}
+      data-hovered={hovered ? "true" : "false"}
+    >
       <line
         x1={a.x}
         y1={a.y}
         x2={b.x}
         y2={b.y}
         stroke={color}
-        strokeWidth={wall.type === "unknown" ? 2.5 : 3}
-        strokeDasharray={wall.type === "unknown" ? "5 4" : undefined}
-        opacity={0.55}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        opacity={selected ? 0.84 : hovered ? 0.92 : 0.35}
       />
     </g>
+  );
+}
+
+function GapLine({ gap, project }) {
+  if (!gap?.from || !gap?.to) return null;
+  const a = project(gap.from);
+  const b = project(gap.to);
+  return (
+    <line
+      x1={a.x}
+      y1={a.y}
+      x2={b.x}
+      y2={b.y}
+      stroke={HIGHLIGHTER_WALL_COLOR.gap}
+      strokeWidth={6}
+      strokeLinecap="round"
+      strokeDasharray="8 6"
+      opacity={0.75}
+      data-testid="exterior-highlight-gap"
+    />
   );
 }
 
