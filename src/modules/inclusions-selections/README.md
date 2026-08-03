@@ -15,7 +15,7 @@ Current scope:
 - Stage-four Review, Pricing and Variations UI and route wiring for review summary, room/category review, variation calculations, client preview, internal builder projection, issue register, custom selection review, allowance overrides and Ready for Approval metadata.
 - Stage-five Approvals and Locked Selection Version UI and route wiring for client review state, client approval, builder approval, changes requested, approval fingerprints, stale approval detection, immutable locked snapshots, version history, comparisons and new draft revisions.
 - Stage-six Approved Documents and Estimate Export UI and route wiring for locked snapshot document projections, generated document records, estimate mapping validation, mapping overrides, export preview, aggregation, adapter-based export, retry, reconciliation and export history.
-- Shared local-file-first project banner across every stage, backed by `projectFileManagementService` for portable `.gr8selections.json` serialisation, Open File validation, Save, Save As, Export Backup and close-file routing.
+- Shared local-file-first standard page banner across every stage, backed by `projectFileManagementService` for portable `.gr8select` serialisation, Open File validation, Save, Save As, Recent Files, Export Backup and close-file routing.
 - No Supabase migrations.
 - No imports from the retired Client Selections, Guided Selections, Selections Book, or Inclusions Schedule implementation.
 - Product Library remains the shared catalogue owner; selections consume only `client_selectable` and allowed `builder_selectable` products through the adapter.
@@ -40,7 +40,9 @@ Key files:
 - `services/selectionReviewService.ts`: Stage 4 application service for review summaries, room/category projections, variation summaries, client/internal projections, issue generation, allowance overrides and Ready for Approval.
 - `services/approvalStageService.ts`: Stage 5 application service for approval fingerprints, client/builder approval, stale approval handling, snapshot readiness, immutable snapshot creation and snapshot comparison.
 - `services/documentsExportService.ts`: Stage 6 application service for document projections, generated documents, estimate mapping, mapping overrides, export preview, aggregation, adapter execution, retry and reconciliation.
-- `services/projectFileManagementService.ts`: shared application service for the project banner, local file serialisation, stage save, `.gr8selections.json` open/export validation and close-file routing.
+- `components/InclusionsSelectionsProjectBanner.tsx`: shared `InclusionsSelectionsPageBanner` with module banner, project details, native local-file controls and truthful save status.
+- `components/InclusionsSelectionsNoFileState.tsx`: focused no-file-open state used by all main stage routes.
+- `services/projectFileManagementService.ts`: shared application service for the project banner, local file serialisation, stage save, `.gr8select` open/export validation and close-file routing.
 - `pricing/`, `approvals/`, `snapshots/`, `estimate-export/`: commercial lifecycle through locked estimate export.
 - `repositories/`: persistence contracts and an in-memory test implementation.
 - `tests/domainFoundation.test.ts`: focused unit coverage for validation, generation, compatibility, pricing, locking, snapshots, and export.
@@ -63,6 +65,6 @@ Active routes:
 - `/inclusions-selections/documents-export`
 - `/inclusions-selections/procurement` placeholder only
 
-The stage-one through stage-six routes require an existing `organisationId` and `projectId`. If none is present, the shared banner shows New, Open File and Back to Project Dashboard actions without rendering an empty workflow beneath it. The module uses browser-scoped repositories as temporary working state while the builder's durable source of truth remains their local `.gr8selections.json` file.
+The stage-one through stage-six routes require an existing `organisationId` and `projectId`. If none is present, the shared banner shows New, Open File and Back to Project Dashboard actions and the shared no-file state hides the workflow editor. The module uses browser-scoped repositories as temporary working state while the builder's durable source of truth remains their local `.gr8select` file.
 
 Development rules live in `docs/INCLUSIONS_SELECTIONS_DEVELOPMENT_RULES.md`.

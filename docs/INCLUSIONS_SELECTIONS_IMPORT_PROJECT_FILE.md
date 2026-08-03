@@ -4,7 +4,8 @@ Open File is the action for browsing the user's computer. It uses the File Syste
 
 Supported extensions:
 
-- `.gr8selections.json`
+- `.gr8select`
+- `.json` for compatibility
 - `.json`
 
 The module does not accept executable files, unknown binary formats, HTML/script content or unsupported future schemas. File selection only creates a preview; it never opens immediately.

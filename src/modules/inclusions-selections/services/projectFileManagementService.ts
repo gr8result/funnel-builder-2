@@ -15,6 +15,9 @@ import { hrefForStage, queryForContext, type InclusionsSelectionsStageId } from 
 
 export type SelectionsSaveStatus = "saved" | "unsaved" | "saving" | "save_failed" | "read_only" | "locked_version";
 
+export const SELECTIONS_FILE_EXTENSION = ".gr8select";
+export const SELECTIONS_LEGACY_FILE_EXTENSION = ".gr8selections.json";
+
 export type ProjectFileSummary = ProjectSelectionContext & {
   currentStage: InclusionsSelectionsStageId;
   lastModified?: string;
@@ -39,9 +42,11 @@ export type PortableSelectionsFile = {
   fileId: string;
   sourceFileId?: string;
   copiedFrom?: string;
+  copiedFromFileId?: string;
   createdAt: string;
   updatedAt: string;
   exportedAt: string;
+  contentFingerprint: string;
   sourceApplication: "gr8-result";
   organisationReference: string;
   projectSummary: ProjectSelectionContext;
@@ -105,7 +110,7 @@ function readJson<T>(key: string, fallback: T): T {
 }
 
 function requiredContext(context: Partial<ProjectSelectionContext>): ProjectSelectionContext {
-  if (!context.organisationId || !context.projectId) throw new Error("Open an existing project before using file management.");
+  if (!context.organisationId || !context.projectId) throw new Error("Create or open a selections file before using file management.");
   return context as ProjectSelectionContext;
 }
 
@@ -114,6 +119,10 @@ function checksum(value: unknown): string {
   let hash = 0;
   for (let index = 0; index < text.length; index += 1) hash = Math.imul(31, hash) + text.charCodeAt(index) | 0;
   return Math.abs(hash).toString(16);
+}
+
+function fileFingerprint(file: PortableSelectionsFile): string {
+  return checksum({ ...file, checksums: undefined, contentFingerprint: undefined });
 }
 
 export function projectDashboardHref(context: Partial<ProjectSelectionContext>): string {
@@ -338,6 +347,7 @@ export async function exportSelectionsProjectFile(contextInput: Partial<ProjectS
     createdAt: timestamp,
     updatedAt: timestamp,
     exportedAt: timestamp,
+    contentFingerprint: "",
     sourceApplication: "gr8-result",
     organisationReference: context.organisationId,
     projectSummary: context,
@@ -357,9 +367,10 @@ export async function exportSelectionsProjectFile(contextInput: Partial<ProjectS
     },
     checksums: { project: "" },
   };
-  file.checksums.project = checksum({ ...file, checksums: undefined });
+  file.contentFingerprint = fileFingerprint(file);
+  file.checksums.project = file.contentFingerprint;
   const safeName = `${context.projectName ?? context.projectId}-${context.jobNumber ?? "selections"}-selections-v1`.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
-  return { fileName: `${safeName}.gr8selections.json`, file };
+  return { fileName: `${safeName}${SELECTIONS_FILE_EXTENSION}`, file };
 }
 
 export function preparePortableSelectionsFileForLocalSave(file: PortableSelectionsFile, mode: "save" | "save_as" = "save"): PortableSelectionsFile {
@@ -369,9 +380,11 @@ export function preparePortableSelectionsFileForLocalSave(file: PortableSelectio
     fileId: mode === "save_as" ? makeScopedId("selections_file", [file.projectSummary.projectId, timestamp]) : file.fileId,
     sourceFileId: mode === "save_as" ? file.fileId : file.sourceFileId,
     copiedFrom: mode === "save_as" ? file.fileId : file.copiedFrom,
+    copiedFromFileId: mode === "save_as" ? file.fileId : file.copiedFromFileId,
     createdAt: mode === "save_as" ? timestamp : file.createdAt,
     updatedAt: timestamp,
     exportedAt: timestamp,
+    contentFingerprint: "",
     checksums: { project: "" },
   };
   next.auditMetadata = {
@@ -379,7 +392,8 @@ export function preparePortableSelectionsFileForLocalSave(file: PortableSelectio
     generatedAt: timestamp,
     containsCredentials: false,
   };
-  next.checksums.project = checksum({ ...next, checksums: undefined });
+  next.contentFingerprint = fileFingerprint(next);
+  next.checksums.project = next.contentFingerprint;
   return next;
 }
 
@@ -390,8 +404,9 @@ export function previewSelectionsProjectImport(input: unknown, organisationId: s
   if (!file.projectSummary?.projectId || !file.projectSummary?.organisationId) return { ok: false, error: "Selections file is missing project identity." };
   if (!file.projectSummary.projectName && !file.projectSummary.jobNumber) return { ok: false, error: "Selections file is missing project name or job number." };
   if (JSON.stringify(file).match(/<script|<\/script>|javascript:|data:text\/html/i)) return { ok: false, error: "This file could not be imported." };
-  const expected = checksum({ ...file, checksums: undefined });
-  if (file.checksums?.project !== expected) return { ok: false, error: "Selections file checksum does not match." };
+  const expected = fileFingerprint(file);
+  if (file.contentFingerprint && file.contentFingerprint !== expected) return { ok: false, error: "Selections file content fingerprint does not match." };
+  if (!file.contentFingerprint && file.checksums?.project !== expected) return { ok: false, error: "Selections file checksum does not match." };
   const duplicate = loadProjectFileMenu(organisationId).some((project) => project.projectId === file.projectSummary.projectId || (project.jobNumber && file.projectSummary.jobNumber && project.jobNumber === file.projectSummary.jobNumber));
   const warnings = [
     ...(duplicate ? ["Duplicate project or job number detected. Import as New Project or confirm an explicit update preview."] : []),

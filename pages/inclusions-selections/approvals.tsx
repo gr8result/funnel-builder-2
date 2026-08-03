@@ -12,6 +12,7 @@ import { ClientApprovalActions } from "../../src/modules/inclusions-selections/c
 import { ClientApprovalPackage } from "../../src/modules/inclusions-selections/components/ClientApprovalPackage";
 import { ClientChangesRequestedPanel } from "../../src/modules/inclusions-selections/components/ClientChangesRequestedPanel";
 import { CreateSnapshotPanel } from "../../src/modules/inclusions-selections/components/CreateSnapshotPanel";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { SnapshotComparisonPanel } from "../../src/modules/inclusions-selections/components/SnapshotComparisonPanel";
@@ -22,7 +23,7 @@ import { loadDemonstrationProject, resetDemonstrationProject } from "../../src/m
 import { approvalStageRepository } from "../../src/modules/inclusions-selections/repositories/approvalStageRepository";
 import { selectionReviewRepository } from "../../src/modules/inclusions-selections/repositories/selectionReviewRepository";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import type { DomainIssue } from "../../src/modules/inclusions-selections/validation/errors";
 import {
   compareSelectionSnapshots,
@@ -120,6 +121,9 @@ export default function SelectionApprovalsPage() {
     <main className="approvalPage">
       <InclusionsSelectionsProjectBanner currentStage="approvals" context={stage?.context ?? context} locked={locked} />
       <InclusionsSelectionsStageNav currentStage="approvals" context={stage?.context ?? context} />
+      {!hasProjectContext ? <InclusionsSelectionsNoFileState context={context} /> : null}
+      {hasProjectContext ? (
+      <>
       <header className="approvalHero">
         <div>
           <p>Inclusions and Selections</p>
@@ -127,7 +131,6 @@ export default function SelectionApprovalsPage() {
           <span>Review and approve the completed selections. Client and builder approvals must match the same reviewed version before the selections can be locked.</span>
         </div>
       </header>
-      {!hasProjectContext ? <section className="issuePanel">{PROJECT_REQUIRED_MESSAGE}</section> : null}
       {loading ? <section className="approvalCard">Loading approvals...</section> : null}
       {message ? <section className="validNotice">{message}</section> : null}
       <ApprovalValidationSummary issues={issues} />
@@ -184,6 +187,8 @@ export default function SelectionApprovalsPage() {
           {comparison.length ? <SnapshotComparisonPanel changes={comparison} /> : null}
           <ApprovalHistoryTimeline stage={stage} />
         </>
+      ) : null}
+      </>
       ) : null}
       <style jsx>{`
         .approvalPage { min-height: 100vh; background: #f6f7f9; color: #172033; padding: 28px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }

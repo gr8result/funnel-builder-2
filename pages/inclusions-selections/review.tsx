@@ -8,6 +8,7 @@ import { CustomSelectionReview } from "../../src/modules/inclusions-selections/c
 import { NotApplicableReview } from "../../src/modules/inclusions-selections/components/NotApplicableReview";
 import { ProductAvailabilityReview } from "../../src/modules/inclusions-selections/components/ProductAvailabilityReview";
 import { ReviewIssuesRegister } from "../../src/modules/inclusions-selections/components/ReviewIssuesRegister";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ReviewProjectSummary } from "../../src/modules/inclusions-selections/components/ReviewProjectSummary";
@@ -18,7 +19,7 @@ import { ReviewViewSwitcher } from "../../src/modules/inclusions-selections/comp
 import { RoomReviewPanel } from "../../src/modules/inclusions-selections/components/RoomReviewPanel";
 import { VariationReviewTable } from "../../src/modules/inclusions-selections/components/VariationReviewTable";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import type { ReviewView } from "../../src/modules/inclusions-selections/repositories/selectionReviewRepository";
 import {
   acknowledgeReviewWarning,
@@ -105,7 +106,7 @@ export default function SelectionReviewPage() {
   }
 
   if (router.isReady && (!context.organisationId || !context.projectId)) {
-    return <main className="selectionReviewPage"><InclusionsSelectionsProjectBanner currentStage="review" context={context} /><InclusionsSelectionsStageNav currentStage="review" context={context} /><section className="requiredState"><h1>Review Selections and Variations</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section><style jsx global>{reviewStyles}</style></main>;
+    return <main className="selectionReviewPage"><InclusionsSelectionsProjectBanner currentStage="review" context={context} /><InclusionsSelectionsStageNav currentStage="review" context={context} /><InclusionsSelectionsNoFileState context={context} /><style jsx global>{reviewStyles}</style></main>;
   }
 
   if (!review) {

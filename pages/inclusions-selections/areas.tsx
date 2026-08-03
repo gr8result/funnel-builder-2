@@ -5,13 +5,14 @@ import { AreaRegisterValidationSummary } from "../../src/modules/inclusions-sele
 import { AreaTypeChecklist } from "../../src/modules/inclusions-selections/components/AreaTypeChecklist";
 import { CustomAreaDialog } from "../../src/modules/inclusions-selections/components/CustomAreaDialog";
 import { GeneratedAreaRegister } from "../../src/modules/inclusions-selections/components/GeneratedAreaRegister";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { ProjectLevelsEditor } from "../../src/modules/inclusions-selections/components/ProjectLevelsEditor";
 import { ProjectSelectionSummary } from "../../src/modules/inclusions-selections/components/ProjectSelectionSummary";
 import { DEMO_PROJECT_TYPE, loadDemonstrationProject, resetDemonstrationProject } from "../../src/modules/inclusions-selections/demo/demoProject";
 import type { ProjectAreaRegister, ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   assignProjectAreaLevel,
   canContinueToTemplates,
@@ -127,11 +128,7 @@ export default function CreateSelectionAreasPage() {
       <main className="createAreasPage">
         <InclusionsSelectionsProjectBanner currentStage="areas" context={context} saveStatus={saveStatus} onSave={handleSave} />
         <InclusionsSelectionsStageNav currentStage="areas" context={context} />
-        <section className="requiredState">
-          <h1>Create Selection Areas</h1>
-          <p>{PROJECT_REQUIRED_MESSAGE}</p>
-          <button type="button" className="primaryButton" onClick={() => void handleLoadDemo(false)}>Load Demonstration Project</button>
-        </section>
+        <InclusionsSelectionsNoFileState context={context} />
         <style jsx global>{pageStyles}</style>
       </main>
     );

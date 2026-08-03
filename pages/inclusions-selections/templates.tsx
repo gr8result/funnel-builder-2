@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   loadTemplateStage,
   reconcileProjectRequirements,
@@ -186,10 +187,7 @@ export default function AreaNavigatorStagePage() {
       <main className="areaNavigatorPage">
         <InclusionsSelectionsProjectBanner currentStage="templates" context={context} />
         <InclusionsSelectionsStageNav currentStage="templates" context={context} />
-        <section className="requiredState">
-          <h1>Choose an Area</h1>
-          <p>{PROJECT_REQUIRED_MESSAGE}</p>
-        </section>
+        <InclusionsSelectionsNoFileState context={context} />
         <style jsx global>{areaNavigatorStyles}</style>
       </main>
     );

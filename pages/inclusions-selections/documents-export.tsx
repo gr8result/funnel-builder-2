@@ -10,6 +10,7 @@ import { ExportAggregationSummary } from "../../src/modules/inclusions-selection
 import { ExportHistoryPanel } from "../../src/modules/inclusions-selections/components/ExportHistoryPanel";
 import { ExportReconciliationPanel } from "../../src/modules/inclusions-selections/components/ExportReconciliationPanel";
 import { GeneratedDocumentsPanel } from "../../src/modules/inclusions-selections/components/GeneratedDocumentsPanel";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { OutputTypeSelector } from "../../src/modules/inclusions-selections/components/OutputTypeSelector";
@@ -27,7 +28,7 @@ import {
   type DocumentsExportStage,
 } from "../../src/modules/inclusions-selections/services/documentsExportService";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage, queryValue } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage, queryValue } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 
 export default function SelectionDocumentsExportPage() {
   const router = useRouter();
@@ -76,12 +77,14 @@ export default function SelectionDocumentsExportPage() {
     <main className="documentsExportPage">
       <InclusionsSelectionsProjectBanner currentStage="documents-export" context={stage?.context ?? context} locked={Boolean(stage?.selectedSnapshot?.status === "locked")} />
       <InclusionsSelectionsStageNav currentStage="documents-export" context={stage?.context ?? context} />
+      {!hasProjectContext ? <InclusionsSelectionsNoFileState context={context} /> : null}
+      {hasProjectContext ? (
+      <>
       <header className="documentsHero">
         <p>Inclusions and Selections</p>
         <h1>Approved Documents and Estimate Export</h1>
         <span>Generate approved selection schedules from the locked version and transfer validated selection costs into the Estimate Builder.</span>
       </header>
-      {!hasProjectContext ? <section className="issuePanel">{PROJECT_REQUIRED_MESSAGE}</section> : null}
       {loading ? <section className="documentsCard">Loading documents and export...</section> : null}
       {message ? <section className="validNotice">{message}</section> : null}
       {stage ? (
@@ -115,6 +118,8 @@ export default function SelectionDocumentsExportPage() {
           <div id="export-history"><ExportHistoryPanel batches={stage.exportBatches} /></div>
           <ExportReconciliationPanel reconciliations={stage.reconciliations} />
         </>
+      ) : null}
+      </>
       ) : null}
       <style jsx>{`
         .documentsExportPage { min-height: 100vh; background: #f6f7f9; color: #172033; padding: 28px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }

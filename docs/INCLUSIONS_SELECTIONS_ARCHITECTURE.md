@@ -46,7 +46,7 @@ The route writes through `ProjectAreaRegisterRepository`. Until a database migra
 
 All active stages render `InclusionsSelectionsProjectBanner` above `InclusionsSelectionsStageNav`. The banner displays project name, job number, client, site address, current stage and save status, and preserves project context when returning to `/modules/estimate-builder`.
 
-File operations are delegated to `projectFileManagementService`: open existing job, save, save as, save as builder template, portable `.gr8selections.json` export/import and close project. The banner must stay a UI shell around those services.
+File operations are delegated to `projectFileManagementService`: new file, open local file, save, save as, export backup, recent files, portable `.gr8select` export/import and close file. The banner must stay a UI shell around those services.
 
 Current persistence is browser-scoped through the existing repository adapters. The service boundary documents this limitation and is intended to be replaced by approved database repositories without moving persistence logic into the banner.
 

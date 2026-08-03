@@ -5,6 +5,7 @@ import { ApplyToPreview } from "../../src/modules/inclusions-selections/componen
 import { CategoryNavigationPanel } from "../../src/modules/inclusions-selections/components/CategoryNavigationPanel";
 import { ProductSelectionModal } from "../../src/modules/inclusions-selections/components/ProductSelectionModal";
 import { RoomNavigationPanel } from "../../src/modules/inclusions-selections/components/RoomNavigationPanel";
+import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsNoFileState";
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { WorkspaceProgressSummary } from "../../src/modules/inclusions-selections/components/WorkspaceProgressSummary";
@@ -15,7 +16,7 @@ import { InMemoryProductSelectionCatalogueAdapter } from "../../src/modules/incl
 import type { ProductReference, ProductVariantReference } from "../../src/modules/inclusions-selections/products/productReferenceTypes";
 import type { ProductSearchFilters, SupplierReference } from "../../src/modules/inclusions-selections/products/productSelectionCatalogueAdapter";
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
-import { PROJECT_REQUIRED_MESSAGE, contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
+import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
   reconcileProjectRequirements,
   saveTemplateStage,
@@ -240,7 +241,7 @@ export default function InclusionsSelectionsWorkspacePage() {
       <main className="selectionWorkspacePage">
         <InclusionsSelectionsProjectBanner currentStage="workspace" context={context} />
         <InclusionsSelectionsStageNav currentStage="workspace" context={context} />
-        <section className="requiredState"><h1>Inclusions and Selections Workspace</h1><p>{PROJECT_REQUIRED_MESSAGE}</p></section>
+        <InclusionsSelectionsNoFileState context={context} />
         <style jsx global>{workspaceStyles}</style>
       </main>
     );
