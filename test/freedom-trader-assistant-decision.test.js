@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DAILY_DASHBOARD_STATES,
   buildAssistantDecision,
+  buildDailyAssistantAnswer,
   validateAssistantRecommendation,
 } from "../lib/freedom-trader/assistantDecisionEngine.js";
 
@@ -142,4 +144,31 @@ test("invalid states are rejected", () => {
   const validation = validateAssistantRecommendation({ state: "ACTION REQUIRED", action: "BUY NOW", alert: { action: "BUY NOW" } }, { report: report(), scanSummary: COMPLETE_SCAN, marketWatch: watch({ service: { enabled: false }, plans: [] }) });
   assert.equal(validation.valid, false);
   assert.ok(validation.errors.length >= 5);
+});
+
+test("daily dashboard answer exposes only four Grant-facing states", () => {
+  const samples = [
+    buildDailyAssistantAnswer(buildAssistantDecision({ loading: true }), { scanSummary: COMPLETE_SCAN }),
+    buildDailyAssistantAnswer(buildAssistantDecision({ report: report(), marketWatch: watch({ service: { enabled: false }, alerts: [], plans: [] }) }), { scanSummary: COMPLETE_SCAN }),
+    buildDailyAssistantAnswer(buildAssistantDecision({ report: report(), marketWatch: watch() }), { scanSummary: COMPLETE_SCAN }),
+    buildDailyAssistantAnswer(buildAssistantDecision({ report: report(), marketWatch: watch({ alerts: [{ ...watch().alerts[0], action: "TAKE SOME PROFIT", currentPrice: 389.5, triggerPrice: 389.5 }] }) }), { scanSummary: COMPLETE_SCAN }),
+  ];
+  samples.forEach((answer) => assert.ok(DAILY_DASHBOARD_STATES.includes(answer.state), answer.state));
+  assert.deepEqual(samples.map((answer) => answer.state), ["NOTHING", "PREPARE_ONE_TRADE", "BUY_NOW", "SELL_NOW"]);
+  assert.equal(samples.some((answer) => /checking|scanner|monitoring|paused|running/i.test(`${answer.headline} ${answer.primaryInstruction}`)), false);
+});
+
+test("daily dashboard answer explains no-action and prepare trade in plain English", () => {
+  const nothing = buildDailyAssistantAnswer(buildAssistantDecision({
+    report: report({ scanSummary: { ...COMPLETE_SCAN, requestedCount: 180, analysedCount: 180, qualifiedCount: 0 }, recommendations: [] }),
+    marketWatch: watch({ service: { enabled: false }, alerts: [], plans: [] }),
+  }), { scanSummary: { ...COMPLETE_SCAN, requestedCount: 180, analysedCount: 180, qualifiedCount: 0 } });
+  assert.equal(nothing.state, "NOTHING");
+  assert.match(nothing.primaryInstruction, /Enjoy your day/);
+  assert.match(nothing.why, /I checked 180 companies/);
+
+  const prepare = buildDailyAssistantAnswer(buildAssistantDecision({ report: report({ scanSummary: { ...COMPLETE_SCAN, requestedCount: 180, qualifiedCount: 1 } }), marketWatch: watch({ service: { enabled: false }, alerts: [], plans: [] }) }), { scanSummary: { ...COMPLETE_SCAN, requestedCount: 180, qualifiedCount: 1 } });
+  assert.equal(prepare.state, "PREPARE_ONE_TRADE");
+  assert.equal(prepare.companyName, "Broadcom");
+  assert.match(prepare.primaryInstruction, /CMC/);
 });
