@@ -1,14 +1,14 @@
-# Inclusions & Selections Import Project File
+# Inclusions & Selections Open File Preview
 
-Import Project File is the action for browsing the user's computer. It uses a real browser file input.
+Open File is the action for browsing the user's computer. It uses the File System Access API where supported and a real browser file input fallback.
 
 Supported extensions:
 
 - `.gr8selections.json`
 - `.json`
 
-The module does not accept executable files, unknown binary formats, HTML/script content or unsupported future schemas. File selection only creates a preview; it never imports immediately.
+The module does not accept executable files, unknown binary formats, HTML/script content or unsupported future schemas. File selection only creates a preview; it never opens immediately.
 
-The preview shows file name, file size, detected format, schema version, project name, job number, client, site address, area count, selection count, warnings and validation errors.
+The preview shows file name, file size, detected format, file version, project name, job number, client, site address, warnings and validation errors.
 
-Import as New Project creates a new project identity in the current organisation and opens the imported copy. Update Existing Project must use a reconciliation preview before records are changed; locked snapshots remain immutable.
+Open Project hydrates the local file into browser working state, updates the banner filename and routes to the selections Areas page for that project.

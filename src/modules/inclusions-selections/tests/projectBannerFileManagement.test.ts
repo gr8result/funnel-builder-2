@@ -3,14 +3,12 @@ import path from "node:path";
 import { loadProjectAreaRegister, saveProjectAreaRegister, setAreaQuantity } from "../services/projectAreaRegisterService";
 import {
   exportSelectionsProjectFile,
-  loadProjectFileMenu,
+  preparePortableSelectionsFileForLocalSave,
   previewSelectionsProjectImport,
   projectDashboardHref,
   registerProjectOpen,
   routeForProject,
   saveSelectionsProject,
-  saveSelectionsProjectAs,
-  saveSelectionsBuilderTemplate,
 } from "../services/projectFileManagementService";
 import type { ProjectSelectionContext } from "../repositories/projectAreaRegisterRepository";
 
@@ -46,15 +44,16 @@ export async function runProjectBannerFileManagementTests(): Promise<void> {
   }
 
   const banner = source("src", "modules", "inclusions-selections", "components", "InclusionsSelectionsProjectBanner.tsx");
-  ["Back to Project Dashboard", "Open Existing Job", "Import Project File", "Export Project File", "Save as Builder Template", "Close Project", "Unsaved Changes", "Locked Version"].forEach((label) => {
+  ["Back to Project Dashboard", "New", "Open File", "Save", "Save As", "File", "Export Backup", "Close File", "Unsaved File", "Saved to file.", "Updated Copy Downloaded", "Unsaved Changes", "Locked Version"].forEach((label) => {
     assert(banner.includes(label), `Banner should include ${label}.`);
   });
-  assert(banner.includes('type="file"') && banner.includes(".gr8selections.json,.json,application/json"), "Import Project File should use a real file input with supported extensions.");
-  assert(banner.includes("No saved projects were found for this organisation.") && banner.includes("No projects match your search."), "Open Existing Job should distinguish empty organisation and search-empty states.");
-  assert(banner.includes("Active") && banner.includes("Archived") && banner.includes("Recently Opened"), "Open Existing Job should expose status filters.");
-  assert(banner.includes("Most Recently Modified") && banner.includes("Project Name") && banner.includes("Job Number"), "Open Existing Job should expose supported sort options.");
-  assert(banner.includes("Project Name") && banner.includes("Site Address") && banner.includes("Current Selections Stage") && banner.includes("Last Modified"), "Open Existing Job should show project metadata columns.");
-  assert(banner.includes("This file could not be imported.") && banner.includes("A project with this job number already exists."), "Import Project File should show user-facing invalid and duplicate messages.");
+  assert(!banner.includes("Open Existing Job"), "Normal selections users should not see the database project picker action.");
+  assert(!banner.includes("Import Project File"), "Open File should replace the old import-first action.");
+  assert(banner.includes("showOpenFilePicker") && banner.includes("showSaveFilePicker"), "Open File and Save As should prefer the File System Access API.");
+  assert(banner.includes('type="file"') && banner.includes(".gr8selections.json,.json,application/json"), "Open File should have a real file input fallback with supported extensions.");
+  assert(banner.includes("Open Project") && banner.includes("File Version") && banner.includes("Warnings"), "Open File should preview validated local file metadata before replacing the working project.");
+  assert(banner.includes("Project Name") && banner.includes("Job Number") && banner.includes("Client") && banner.includes("Site Address") && banner.includes("Builder") && banner.includes("Estimator"), "New should require the visible project details.");
+  assert(banner.includes("The original file was not overwritten."), "Download fallback should not claim the original local file was overwritten.");
   assert(banner.includes("window.addEventListener(\"keydown\"") && banner.includes("event.preventDefault()"), "Ctrl+S should trigger module save and prevent browser Save Page.");
   assert(banner.includes("@media (max-width: 560px)") && banner.includes(".saveButton"), "Mobile banner should keep Save visible.");
 
@@ -75,32 +74,20 @@ export async function runProjectBannerFileManagementTests(): Promise<void> {
 
   assert(projectDashboardHref(context).includes("/modules/estimate-builder") && projectDashboardHref(context).includes("projectId=project_banner_original"), "Back route should preserve project context.");
   assert(routeForProject(context, "workspace").includes("/inclusions-selections/workspace") && routeForProject(context, "workspace").includes("jobNumber=BANNER-001"), "Stage route should preserve project context.");
-  assert(loadProjectFileMenu(context.organisationId).some((project) => project.projectId === context.projectId), "Open Existing Job menu should list recently opened projects.");
-  window.localStorage.setItem("estimate-builder-registered-jobs", JSON.stringify([
-    { workspaceId: context.organisationId, jobId: "sample_job_001", jobName: "Sample Project", clientName: "Sample Client", jobNumber: "SAMPLE-001", siteAddress: "10 Sample Street", registeredAt: "2026-01-01T00:00:00.000Z", status: "registered" },
-    { workspaceId: "other_org", jobId: "other_job", jobName: "Other Organisation Project", jobNumber: "OTHER-001" },
-  ]));
-  const appProjects = loadProjectFileMenu(context.organisationId);
-  assert(appProjects.some((project) => project.projectId === "sample_job_001" && project.projectName === "Sample Project"), "Open Existing Job should list registered Estimate Builder sample projects immediately.");
-  assert(!appProjects.some((project) => project.projectId === "other_job"), "Open Existing Job should not mix projects from another organisation.");
-  assert(appProjects.some((project) => [project.projectName, project.jobNumber, project.clientName, project.siteAddress].join(" ").includes("Sample")), "Project search fields should include name, job number, client and site address.");
 
   const saved = await saveSelectionsProject(context, "areas");
   assert(saved.status === "saved" && saved.savedAt, "Save should persist through the area repository.");
 
-  const copyContext: ProjectSelectionContext = { ...context, projectId: "project_banner_copy", projectName: "Banner Test Copy", jobNumber: "BANNER-002" };
-  await saveSelectionsProjectAs(context, copyContext, { projectAreas: true, templatesAndTiers: true, productSelections: true, pricingAndAllowances: true, notesAndAttachments: true, reviewState: true });
-  const original = await loadProjectAreaRegister(context);
-  const copy = await loadProjectAreaRegister(copyContext);
-  assert(original.projectId !== copy.projectId && copy.projectName === "Banner Test Copy", "Save As should create a separate project and leave the original unchanged.");
-
-  const templateId = await saveSelectionsBuilderTemplate(context, "Banner Test Template");
-  assert(Boolean(templateId), "Save as Builder Template should return a saved template id.");
-
   const exported = await exportSelectionsProjectFile(context);
   assert(exported.fileName.endsWith(".gr8selections.json"), "Export should create a versioned .gr8selections.json file name.");
   const exportedText = JSON.stringify(exported.file);
-  assert(exported.file.schemaVersion === 1 && exported.file.checksums.project, "Exported file should include schema version and checksum.");
+  assert(exported.file.schemaVersion === 1 && exported.file.applicationVersion && exported.file.fileId && exported.file.createdAt && exported.file.updatedAt && exported.file.checksums.project, "Exported file should include local file metadata, schema version and checksum.");
+  assert(exported.file.projectDetails.projectName === context.projectName && exported.file.areasAndLevels && exported.file.templatesAndTiers && exported.file.workspace && exported.file.review && exported.file.approvals, "Exported file should contain the complete editable selections project.");
+  assert(Array.isArray(exported.file.attachmentsMetadata) && Array.isArray(exported.file.variations) && Array.isArray(exported.file.lockedSnapshotData), "Exported file should include attachments, variations and locked snapshot containers.");
+  const savedCopy = preparePortableSelectionsFileForLocalSave(exported.file, "save");
+  assert(savedCopy.fileId === exported.file.fileId && previewSelectionsProjectImport(savedCopy, context.organisationId).ok, "Save should preserve file identity while refreshing valid metadata and checksum.");
+  const savedAsCopy = preparePortableSelectionsFileForLocalSave(exported.file, "save_as");
+  assert(savedAsCopy.fileId !== exported.file.fileId && savedAsCopy.sourceFileId === exported.file.fileId && savedAsCopy.copiedFrom === exported.file.fileId, "Save As should create a new file identity and preserve copied-from metadata.");
   assert(!/password|access_token|secret|connection string/i.test(exportedText), "Exported selections file should not contain credentials.");
   assert(previewSelectionsProjectImport(exported.file, context.organisationId).ok, "Import preview should accept a valid exported file.");
   assert(!previewSelectionsProjectImport({ schema: "bad" }, context.organisationId).ok, "Import preview should reject invalid files.");

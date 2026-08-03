@@ -17,7 +17,7 @@ export const INCLUSIONS_SELECTIONS_STAGES: InclusionsSelectionsStage[] = [
   { id: "documents-export", label: "Documents & Export", route: "/inclusions-selections/documents-export" },
 ];
 
-export const PROJECT_REQUIRED_MESSAGE = "Select, open or import a project before starting Inclusions & Selections.";
+export const PROJECT_REQUIRED_MESSAGE = "Create a new selections file or open a local .gr8selections.json file before starting Inclusions & Selections.";
 
 export function queryValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;

@@ -35,15 +35,33 @@ export type SaveAsOptions = {
 export type PortableSelectionsFile = {
   schema: "gr8.selections.project";
   schemaVersion: 1;
+  applicationVersion: string;
+  fileId: string;
+  sourceFileId?: string;
+  copiedFrom?: string;
+  createdAt: string;
+  updatedAt: string;
   exportedAt: string;
   sourceApplication: "gr8-result";
   organisationReference: string;
   projectSummary: ProjectSelectionContext;
+  projectDetails: ProjectSelectionContext & {
+    builder?: string;
+    estimator?: string;
+  };
   areasAndLevels: Awaited<ReturnType<typeof loadProjectAreaRegister>>;
   templatesAndTiers: Awaited<ReturnType<typeof loadTemplateStage>>;
   workspace: Awaited<ReturnType<typeof loadSelectionWorkspace>>;
   review: Awaited<ReturnType<typeof loadSelectionReview>>;
   approvals: Awaited<ReturnType<typeof loadApprovalStage>>;
+  attachmentsMetadata: unknown[];
+  variations: unknown[];
+  lockedSnapshotData: Awaited<ReturnType<typeof loadApprovalStage>>["snapshots"];
+  auditMetadata: {
+    generatedBy: "gr8-result";
+    generatedAt: string;
+    containsCredentials: false;
+  };
   checksums: { project: string };
 };
 
@@ -310,23 +328,59 @@ export async function saveSelectionsBuilderTemplate(contextInput: Partial<Projec
 
 export async function exportSelectionsProjectFile(contextInput: Partial<ProjectSelectionContext>): Promise<{ fileName: string; file: PortableSelectionsFile }> {
   const context = requiredContext(contextInput);
+  const timestamp = now();
+  const approvals = await loadApprovalStage(context);
   const file: PortableSelectionsFile = {
     schema: "gr8.selections.project",
     schemaVersion: 1,
-    exportedAt: now(),
+    applicationVersion: "inclusions-selections-local-file-v1",
+    fileId: makeScopedId("selections_file", [context.organisationId, context.projectId, context.jobNumber ?? context.projectName ?? timestamp]),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    exportedAt: timestamp,
     sourceApplication: "gr8-result",
     organisationReference: context.organisationId,
     projectSummary: context,
+    projectDetails: context,
     areasAndLevels: await loadProjectAreaRegister(context),
     templatesAndTiers: await loadTemplateStage(context),
     workspace: await loadSelectionWorkspace(context),
     review: await loadSelectionReview(context),
-    approvals: await loadApprovalStage(context),
+    approvals,
+    attachmentsMetadata: [],
+    variations: [],
+    lockedSnapshotData: approvals.snapshots,
+    auditMetadata: {
+      generatedBy: "gr8-result",
+      generatedAt: timestamp,
+      containsCredentials: false,
+    },
     checksums: { project: "" },
   };
   file.checksums.project = checksum({ ...file, checksums: undefined });
   const safeName = `${context.projectName ?? context.projectId}-${context.jobNumber ?? "selections"}-selections-v1`.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
   return { fileName: `${safeName}.gr8selections.json`, file };
+}
+
+export function preparePortableSelectionsFileForLocalSave(file: PortableSelectionsFile, mode: "save" | "save_as" = "save"): PortableSelectionsFile {
+  const timestamp = now();
+  const next: PortableSelectionsFile = {
+    ...clone(file),
+    fileId: mode === "save_as" ? makeScopedId("selections_file", [file.projectSummary.projectId, timestamp]) : file.fileId,
+    sourceFileId: mode === "save_as" ? file.fileId : file.sourceFileId,
+    copiedFrom: mode === "save_as" ? file.fileId : file.copiedFrom,
+    createdAt: mode === "save_as" ? timestamp : file.createdAt,
+    updatedAt: timestamp,
+    exportedAt: timestamp,
+    checksums: { project: "" },
+  };
+  next.auditMetadata = {
+    ...next.auditMetadata,
+    generatedAt: timestamp,
+    containsCredentials: false,
+  };
+  next.checksums.project = checksum({ ...next, checksums: undefined });
+  return next;
 }
 
 export function previewSelectionsProjectImport(input: unknown, organisationId: string): { ok: true; file: PortableSelectionsFile; warnings: string[] } | { ok: false; error: string } {
@@ -335,12 +389,15 @@ export function previewSelectionsProjectImport(input: unknown, organisationId: s
   if (file.schemaVersion !== 1) return { ok: false, error: "Unsupported selections file schema version." };
   if (!file.projectSummary?.projectId || !file.projectSummary?.organisationId) return { ok: false, error: "Selections file is missing project identity." };
   if (!file.projectSummary.projectName && !file.projectSummary.jobNumber) return { ok: false, error: "Selections file is missing project name or job number." };
-  if (file.organisationReference !== organisationId) return { ok: false, error: "Cross-organisation imports require authorised import support." };
   if (JSON.stringify(file).match(/<script|<\/script>|javascript:|data:text\/html/i)) return { ok: false, error: "This file could not be imported." };
   const expected = checksum({ ...file, checksums: undefined });
   if (file.checksums?.project !== expected) return { ok: false, error: "Selections file checksum does not match." };
   const duplicate = loadProjectFileMenu(organisationId).some((project) => project.projectId === file.projectSummary.projectId || (project.jobNumber && file.projectSummary.jobNumber && project.jobNumber === file.projectSummary.jobNumber));
-  return { ok: true, file, warnings: duplicate ? ["Duplicate project or job number detected. Import as New Project or confirm an explicit update preview."] : [] };
+  const warnings = [
+    ...(duplicate ? ["Duplicate project or job number detected. Import as New Project or confirm an explicit update preview."] : []),
+    ...(organisationId && file.organisationReference !== organisationId ? ["This file was created for a different organisation reference."] : []),
+  ];
+  return { ok: true, file, warnings };
 }
 
 export async function importSelectionsProjectFile(file: PortableSelectionsFile, target: ProjectSelectionContext): Promise<ProjectSelectionContext> {

@@ -8,9 +8,12 @@ Save persists the current selections stage through the existing stage repository
 - Save Failed
 - Read Only
 - Locked Version
+- Updated Copy Downloaded
 
 Ctrl+S is captured while the module is active and routes through the same Save handler, preventing the browser's Save Page action.
 
-Save As creates a separate project copy with a new project ID and new project context. It requires project name, job number, client and site address. Copy options cover areas, templates and tiers, product selections, pricing and allowances, notes and attachments, and review state.
+Where the browser provides a writable File System Access API handle, Save writes the serialised `.gr8selections.json` payload back to the selected local file and the banner can show `Saved`.
 
-Client approvals, builder approvals, locked snapshots and export history are excluded by default from Save As.
+Where direct overwrite is unsupported, Save downloads an updated copy using the current filename and shows `Updated Copy Downloaded`. The app must not claim the original local file was overwritten in this fallback path.
+
+Save As creates a separate local file. It uses `window.showSaveFilePicker()` where supported, otherwise it downloads the selected filename as a `.gr8selections.json` copy. The original file handle remains unchanged until the new file is successfully created.
