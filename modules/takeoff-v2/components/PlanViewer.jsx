@@ -343,8 +343,8 @@ const PlanViewer = forwardRef(function PlanViewer(
     }
     if (tool !== "select" && tool !== "pan" && tools) {
       const pagePoint = eventToPagePoint(event);
-      if (tool === "edit-walls" && tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.field === "exteriorWalls") {
-        tools.beginWallVertexDrag(tools.wallEditHoverTarget.id, "exteriorWalls");
+      if (tool === "edit-walls" && tools.wallEditHoverTarget?.type === "point" && (tools.wallEditHoverTarget.field === "exteriorWalls" || tools.wallEditHoverTarget.field === "exteriorHighlightedWalls")) {
+        tools.beginWallVertexDrag(tools.wallEditHoverTarget.id, tools.wallEditHoverTarget.field);
         dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
         setDragMode("vertex");
         return;
@@ -356,12 +356,12 @@ const PlanViewer = forwardRef(function PlanViewer(
         return;
       }
       if (tool === "edit-walls" && pagePoint) {
-        const hoverPointHit = tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.field === "exteriorWalls"
-          ? { id: tools.wallEditHoverTarget.id }
+        const hoverPointHit = tools.wallEditHoverTarget?.type === "point" && (tools.wallEditHoverTarget.field === "exteriorWalls" || tools.wallEditHoverTarget.field === "exteriorHighlightedWalls")
+          ? { id: tools.wallEditHoverTarget.id, field: tools.wallEditHoverTarget.field }
           : null;
         const hit = hoverPointHit || tools.findWallVertexNear(pagePoint, { zoomScale: view.zoomScale });
         if (hit) {
-          tools.beginWallVertexDrag(hit.id);
+          tools.beginWallVertexDrag(hit.id, hit.field || "exteriorWalls");
           dragRef.current = { mode: "vertex", startX: event.clientX, startY: event.clientY };
           setDragMode("vertex");
           return;

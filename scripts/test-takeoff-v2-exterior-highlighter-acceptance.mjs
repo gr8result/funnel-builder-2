@@ -23,6 +23,10 @@ async function highlightedCount(page) {
   return page.$$eval('[data-testid="highlighted-exterior-wall"]', (nodes) => nodes.length);
 }
 
+async function highlightedStrokeWidths(page) {
+  return page.$$eval('[data-testid="highlighted-exterior-wall"] line', (nodes) => nodes.map((node) => Number(node.getAttribute("stroke-width") || node.getAttribute("strokeWidth") || node.style.strokeWidth || 0)));
+}
+
 async function previewState(page) {
   return page.$eval('[data-testid="highlightable-wall-preview"]', (node) => {
     const line = node.querySelector("line");
@@ -100,6 +104,7 @@ async function savedState(page) {
     return {
       highlightedWalls: planPage?.exteriorHighlightedWalls?.length || 0,
       highlightedWallIds: planPage?.exteriorHighlightedWallIds?.length || 0,
+      junctionIds: [...new Set((planPage?.exteriorHighlightedWalls || []).flatMap((wall) => [wall.startJunction?.id, wall.endJunction?.id]).filter(Boolean))].length,
       exteriorGenerated: Boolean(planPage?.exteriorWalls),
     };
   });
@@ -167,22 +172,53 @@ try {
   }
 
   await moveAndReadPreview(page, targets.right.x, targets.right.y);
-  await screenshot(page, "01-right-wall-hover-full-length");
+  await screenshot(page, "01-trimmed-wall-endpoints");
   record("right-hand wall hover shows one preview", await page.$$eval('[data-testid="highlightable-wall-preview"]', (nodes) => nodes.length) === 1);
   await clickPreview(page, targets.right);
-  await screenshot(page, "02-right-wall-highlighted");
   record("right-hand wall click highlights one wall", await highlightedCount(page) === 1);
   await clickPreview(page, targets.right);
   record("clicking same preview toggles it off", await highlightedCount(page) === 0);
   await clickPreview(page, targets.right);
 
   await clickPreview(page, targets.alfresco);
-  await screenshot(page, "03-alfresco-wall-highlighted");
   await clickPreview(page, targets.garage);
-  await screenshot(page, "04-garage-wall-highlighted");
   await clickPreview(page, targets.studyReturn);
   record("repeat clicks add independent highlighted walls", await highlightedCount(page) >= 3);
+  await screenshot(page, "02-clean-shared-corner");
+  const widths = await highlightedStrokeWidths(page);
+  record("yellow highlights render thin", widths.length >= 3 && widths.every((width) => width <= 3), JSON.stringify(widths));
+  await screenshot(page, "04-thinner-yellow-highlights");
 
+  await page.click('[data-testid="tool-edit-exterior"]');
+  await page.waitForSelector('[data-testid="exterior-highlight-junction"]', { timeout: 10000 });
+  const firstJunction = await page.$eval('[data-testid="exterior-highlight-junction"]', (node) => {
+    const circle = node.querySelector('circle:not([data-testid])');
+    const box = circle.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  });
+  await page.mouse.move(firstJunction.x, firstJunction.y);
+  await page.mouse.down();
+  await page.mouse.move(firstJunction.x + 14, firstJunction.y + 8, { steps: 4 });
+  await page.mouse.up();
+  await screenshot(page, "03-exterior-corner-drag");
+  record("edit exterior exposes draggable highlighted junction handles", await page.$$eval('[data-testid="exterior-highlight-junction"]', (nodes) => nodes.length) > 0);
+
+  await page.click('[data-testid="tool-area"]');
+  const canvasRectForArea = await page.$eval('[data-testid="plan-canvas"]', (canvas) => {
+    const box = canvas.getBoundingClientRect();
+    return { left: box.left, top: box.top, width: box.width, height: box.height };
+  });
+  const areaPoints = [
+    [canvasRectForArea.left + canvasRectForArea.width * 0.38, canvasRectForArea.top + canvasRectForArea.height * 0.36],
+    [canvasRectForArea.left + canvasRectForArea.width * 0.52, canvasRectForArea.top + canvasRectForArea.height * 0.36],
+    [canvasRectForArea.left + canvasRectForArea.width * 0.52, canvasRectForArea.top + canvasRectForArea.height * 0.48],
+    [canvasRectForArea.left + canvasRectForArea.width * 0.38, canvasRectForArea.top + canvasRectForArea.height * 0.48],
+  ];
+  for (const [x, y] of areaPoints) await page.mouse.click(x, y);
+  await screenshot(page, "05-smaller-area-points");
+  record("area draft points render small visible handles", await page.$$eval('[data-testid="area-draft-point"]', (nodes) => nodes.length) >= 4);
+
+  await page.click('[data-testid="tool-exterior-highlighter"]');
   const beforeRejectClicks = await highlightedCount(page);
   const canvasRect = await page.$eval('[data-testid="plan-canvas"]', (canvas) => {
     const box = canvas.getBoundingClientRect();
@@ -190,10 +226,10 @@ try {
   });
   await page.mouse.move(canvasRect.left + canvasRect.width * 0.5, canvasRect.top + 25);
   await page.mouse.click(canvasRect.left + canvasRect.width * 0.5, canvasRect.top + 25);
-  await screenshot(page, "05-dimension-line-rejected");
+  await screenshot(page, "07-dimension-line-rejected");
   await page.mouse.move(canvasRect.right - 60, canvasRect.bottom - 60);
   await page.mouse.click(canvasRect.right - 60, canvasRect.bottom - 60);
-  await screenshot(page, "06-title-block-line-rejected");
+  await screenshot(page, "08-title-block-line-rejected");
   record("dimension/title-block clicks do not add highlights", await highlightedCount(page) === beforeRejectClicks);
 
   await page.click('[data-testid="tool-finish-exterior"]');
@@ -204,6 +240,11 @@ try {
   const finalState = await savedState(page);
   record("highlight state persists in page storage", finalState.highlightedWalls >= 3 && finalState.highlightedWalls === finalState.highlightedWallIds, JSON.stringify(finalState));
   record("finish exterior does not generate a polygon", finalState.exteriorGenerated === false, JSON.stringify(finalState));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector('[data-testid="plan-canvas"]', { timeout: 30000 });
+  await page.click('[data-testid="tool-edit-exterior"]');
+  await page.waitForSelector('[data-testid="highlighted-exterior-wall"]', { timeout: 10000 });
+  await screenshot(page, "06-persisted-after-refresh");
 } finally {
   await browser.close();
 }

@@ -58,6 +58,8 @@ const AUTO_DETECTION_DISABLED_MESSAGE = "No wall objects could be detected from 
 const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until wall-object review is complete.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
 const EXTERIOR_HIGHLIGHT_SEARCH_SCREEN_PX = 12;
+const EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS = 18;
+const MIN_HIGHLIGHTED_WALL_LENGTH_DOC_UNITS = 12;
 
 function snapCandidateToMetadata(candidate) {
   if (!candidate) return MANUAL_SNAP;
@@ -145,6 +147,157 @@ function distancePointToSegment(point, a, b) {
   if (lengthSquared === 0) return distance(point, a);
   const t = Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / lengthSquared));
   return distance(point, { x: a.x + abx * t, y: a.y + aby * t });
+}
+
+function highlightedWallLine(wall) {
+  if (wall?.centreline?.start && wall?.centreline?.end) return wall.centreline;
+  if (wall?.startJunction && wall?.endJunction) return { start: wall.startJunction.point || wall.startJunction, end: wall.endJunction.point || wall.endJunction };
+  if (wall?.start && wall?.end) return { start: wall.start, end: wall.end };
+  return null;
+}
+
+function stableHighlightJunctionId(point) {
+  return `hlj-${Math.round(point.x)}-${Math.round(point.y)}`;
+}
+
+function infiniteLineIntersection(lineA, lineB) {
+  const ax = lineA.end.x - lineA.start.x;
+  const ay = lineA.end.y - lineA.start.y;
+  const bx = lineB.end.x - lineB.start.x;
+  const by = lineB.end.y - lineB.start.y;
+  const denom = ax * by - ay * bx;
+  if (Math.abs(denom) < 0.0001) return null;
+  const cx = lineB.start.x - lineA.start.x;
+  const cy = lineB.start.y - lineA.start.y;
+  const t = (cx * by - cy * bx) / denom;
+  return { x: lineA.start.x + ax * t, y: lineA.start.y + ay * t };
+}
+
+function highlightEndpointRecords(walls = []) {
+  return walls.flatMap((wall) => {
+    const line = highlightedWallLine(wall);
+    if (!line) return [];
+    return [
+      { wallId: wall.id, endKey: "start", point: line.start, line },
+      { wallId: wall.id, endKey: "end", point: line.end, line },
+    ];
+  });
+}
+
+export function normalizeHighlightedWallJunctions(walls = []) {
+  const usableWalls = walls.filter((wall) => highlightedWallLine(wall));
+  const records = highlightEndpointRecords(usableWalls);
+  const parent = records.map((_, index) => index);
+  const forcedPoints = new Map();
+  const find = (index) => {
+    while (parent[index] !== index) {
+      parent[index] = parent[parent[index]];
+      index = parent[index];
+    }
+    return index;
+  };
+  const union = (a, b, point = null) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra === rb) return;
+    parent[rb] = ra;
+    if (point) forcedPoints.set(ra, point);
+  };
+
+  for (let i = 0; i < records.length; i += 1) {
+    for (let j = i + 1; j < records.length; j += 1) {
+      if (records[i].wallId === records[j].wallId) continue;
+      const intersection = infiniteLineIntersection(records[i].line, records[j].line);
+      const intersectsNearBoth = intersection &&
+        distance(intersection, records[i].point) <= EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS &&
+        distance(intersection, records[j].point) <= EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS;
+      if (intersectsNearBoth || distance(records[i].point, records[j].point) <= EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS) {
+        union(i, j, intersectsNearBoth ? intersection : null);
+      }
+    }
+  }
+
+  const clusters = new Map();
+  records.forEach((record, index) => {
+    const root = find(index);
+    if (!clusters.has(root)) clusters.set(root, []);
+    clusters.get(root).push({ ...record, index });
+  });
+
+  const endpointByWall = new Map();
+  const junctions = [];
+  clusters.forEach((cluster, root) => {
+    const forced = forcedPoints.get(root);
+    const point = forced || {
+      x: cluster.reduce((sum, record) => sum + record.point.x, 0) / cluster.length,
+      y: cluster.reduce((sum, record) => sum + record.point.y, 0) / cluster.length,
+    };
+    const connectedWallIds = [...new Set(cluster.map((record) => record.wallId))];
+    const id = stableHighlightJunctionId(point);
+    const junction = {
+      id,
+      point,
+      connectedWallIds,
+      confidence: connectedWallIds.length > 1 ? 0.9 : 0.72,
+      source: connectedWallIds.length > 1 ? "vector" : "face-termination",
+    };
+    junctions.push(junction);
+    cluster.forEach((record) => {
+      if (!endpointByWall.has(record.wallId)) endpointByWall.set(record.wallId, {});
+      endpointByWall.get(record.wallId)[record.endKey] = junction;
+    });
+  });
+
+  const normalizedWalls = usableWalls.map((wall) => {
+    const endpoints = endpointByWall.get(wall.id) || {};
+    const line = highlightedWallLine(wall);
+    const startJunction = endpoints.start || { id: stableHighlightJunctionId(line.start), point: line.start, connectedWallIds: [wall.id], confidence: 0.7, source: "face-termination" };
+    const endJunction = endpoints.end || { id: stableHighlightJunctionId(line.end), point: line.end, connectedWallIds: [wall.id], confidence: 0.7, source: "face-termination" };
+    return {
+      ...wall,
+      centreline: { start: startJunction.point, end: endJunction.point },
+      startJunction,
+      endJunction,
+      endpointReview: wall.endpointReview || (startJunction.connectedWallIds.length < 2 || endJunction.connectedWallIds.length < 2 ? "Needs endpoint review" : null),
+    };
+  });
+  return { walls: normalizedWalls, junctions };
+}
+
+export function moveHighlightedWallJunction(walls = [], junctionId, point) {
+  let changed = false;
+  const nextWalls = walls.map((wall) => {
+    const line = highlightedWallLine(wall);
+    if (!line) return wall;
+    const startMatches = wall.startJunction?.id === junctionId;
+    const endMatches = wall.endJunction?.id === junctionId;
+    if (!startMatches && !endMatches) return wall;
+    changed = true;
+    const startJunction = startMatches
+      ? { ...(wall.startJunction || {}), id: junctionId, point, confidence: 1, source: "manual" }
+      : wall.startJunction;
+    const endJunction = endMatches
+      ? { ...(wall.endJunction || {}), id: junctionId, point, confidence: 1, source: "manual" }
+      : wall.endJunction;
+    return {
+      ...wall,
+      centreline: {
+        start: startMatches ? point : line.start,
+        end: endMatches ? point : line.end,
+      },
+      startJunction,
+      endJunction,
+      endpointReview: null,
+    };
+  });
+  return changed ? nextWalls : walls;
+}
+
+export function highlightedWallsAreValid(walls = []) {
+  return walls.every((wall) => {
+    const line = highlightedWallLine(wall);
+    return line && distance(line.start, line.end) >= MIN_HIGHLIGHTED_WALL_LENGTH_DOC_UNITS;
+  });
 }
 
 export function snapLabelForCandidate(candidate) {
@@ -652,9 +805,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     }
     const currentWalls = page?.exteriorHighlightedWalls || [];
     const exists = currentWalls.some((wall) => wall.id === exteriorHighlightPreview.id);
-    const nextWalls = exists
+    const rawNextWalls = exists
       ? currentWalls.filter((wall) => wall.id !== exteriorHighlightPreview.id)
       : [...currentWalls, exteriorHighlightPreview];
+    const { walls: nextWalls } = normalizeHighlightedWallJunctions(rawNextWalls);
     const nextIds = nextWalls.map((wall) => wall.id);
     pushUndo("exteriorHighlightedWalls", currentWalls);
     commitPage({
@@ -707,6 +861,20 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const activeExteriorWallSegmentCount = useMemo(() => activeWallSegments(page?.exteriorWalls).length, [page]);
   const activeInternalWallSegmentCount = useMemo(() => activeWallSegments(page?.internalWalls).length, [page]);
   const detectedWallSummary = useMemo(() => page?.wallDetectionSummary || summarizeDetectedWalls(page?.detectedWalls || []), [page]);
+  const exteriorHighlightJunctionState = useMemo(
+    () => normalizeHighlightedWallJunctions(page?.exteriorHighlightedWalls || []),
+    [page?.exteriorHighlightedWalls]
+  );
+  const exteriorHighlightJunctions = exteriorHighlightJunctionState.junctions;
+  useEffect(() => {
+    const currentWalls = page?.exteriorHighlightedWalls || [];
+    if (!currentWalls.length) return;
+    if (JSON.stringify(currentWalls) === JSON.stringify(exteriorHighlightJunctionState.walls)) return;
+    commitPage({
+      exteriorHighlightedWalls: exteriorHighlightJunctionState.walls,
+      exteriorHighlightedWallIds: exteriorHighlightJunctionState.walls.map((wall) => wall.id),
+    });
+  }, [page?.exteriorHighlightedWalls, exteriorHighlightJunctionState.walls, commitPage]);
   const activeExteriorWallsClosed = useMemo(() => {
     const graph = activeWallGraph(page?.exteriorWalls);
     return Boolean(graph?.isClosed);
@@ -823,6 +991,20 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return best;
   }, [page]);
 
+  const findExteriorHighlightJunctionNear = useCallback((point, { zoomScale = 1, toleranceScreenPx = 10 } = {}) => {
+    const toleranceDocUnits = toleranceScreenPx / Math.max(zoomScale, 0.01);
+    let best = null;
+    let bestDistance = toleranceDocUnits;
+    exteriorHighlightJunctions.forEach((junction) => {
+      const d = distance(junction.point, point);
+      if (d <= bestDistance) {
+        best = junction;
+        bestDistance = d;
+      }
+    });
+    return best;
+  }, [exteriorHighlightJunctions]);
+
   const findWallSegmentNear = useCallback((point, { field = "exteriorWalls", zoomScale = 1, toleranceScreenPx = VERTEX_HIT_TOLERANCE_SCREEN_PX } = {}) => {
     const graph = page?.[field];
     if (!graph) return null;
@@ -905,6 +1087,17 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // generic Edit tool passes the field explicitly based on which graph the
   // hit vertex belongs to.
   const beginWallVertexDrag = useCallback((vertexId, field = "exteriorWalls") => {
+    if (field === "exteriorHighlightedWalls") {
+      const junction = exteriorHighlightJunctions.find((candidate) => candidate.id === vertexId);
+      if (!junction) return;
+      setSelectedField(field);
+      setSelectedVertexId(vertexId);
+      setSelectedSegmentId(null);
+      setSelectedSegmentPoint(null);
+      setSelectedOpeningId(null);
+      setDraggingVertex({ id: vertexId, field, x: junction.point.x, y: junction.point.y });
+      return;
+    }
     const graph = page?.[field];
     const vertex = graph?.vertices.find((v) => v.id === vertexId);
     if (!vertex) return;
@@ -915,7 +1108,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setSelectedSegmentPoint(null);
     setSelectedOpeningId(null);
     setDraggingVertex({ id: vertexId, field, x: vertex.x, y: vertex.y });
-  }, [page]);
+  }, [page, exteriorHighlightJunctions]);
 
   const updateWallVertexDrag = useCallback((point, { zoomScale = 1, disableSnap = false } = {}) => {
     setDraggingVertex((prev) => {
@@ -942,6 +1135,25 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setDraggingVertex((current) => {
       if (!current) return null;
       const field = current.field || "exteriorWalls";
+      if (field === "exteriorHighlightedWalls") {
+        const previousWalls = page?.exteriorHighlightedWalls || [];
+        const movedWalls = moveHighlightedWallJunction(previousWalls, current.id, { x: current.x, y: current.y });
+        if (!highlightedWallsAreValid(movedWalls)) {
+          setWallEditValidation({ valid: false, vertexId: current.id, message: "Exterior invalid - adjust the highlighted point." });
+          setWallEditSnapPreview(null);
+          return null;
+        }
+        const nextIds = movedWalls.map((wall) => wall.id);
+        pushUndo("exteriorHighlightedWalls", previousWalls);
+        commitPage({
+          exteriorHighlightedWalls: movedWalls,
+          exteriorHighlightedWallIds: nextIds,
+          exteriorWalls: null,
+        });
+        setWallEditValidation(null);
+        setWallEditSnapPreview(null);
+        return null;
+      }
       const graph = page?.[field];
       if (!graph) return null;
       const finalPoint = { x: current.x, y: current.y };
@@ -983,7 +1195,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setWallEditSnapPreview(null);
       return null;
     });
-  }, [page, mutateWallField]);
+  }, [page, mutateWallField, commitPage, pushUndo]);
 
   const deleteSelectedWallVertex = useCallback(() => {
     if (!selectedVertexId) return;
@@ -1031,6 +1243,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     let best = null;
     let bestField = null;
     let bestDistance = toleranceDocUnits;
+    const highlightedHit = findExteriorHighlightJunctionNear(point, { zoomScale, toleranceScreenPx: 10 });
+    if (highlightedHit) {
+      best = { id: highlightedHit.id, x: highlightedHit.point.x, y: highlightedHit.point.y, connectedWallIds: highlightedHit.connectedWallIds };
+      bestField = "exteriorHighlightedWalls";
+      bestDistance = distance(highlightedHit.point, point);
+    }
     ["exteriorWalls", "internalWalls"].forEach((field) => {
       const activeIds = activeWallVertexIds(page?.[field]);
       (page?.[field]?.vertices || []).forEach((vertex) => {
@@ -1040,12 +1258,17 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       });
     });
     return best ? { field: bestField, vertex: best } : null;
-  }, [page]);
+  }, [page, findExteriorHighlightJunctionNear]);
 
   const updateWallEditHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
     if (activeTool !== "edit-walls" && activeTool !== "edit") return;
     const vertexHit = activeTool === "edit-walls"
-      ? (findWallVertexNear(rawPoint, { zoomScale }) ? { field: "exteriorWalls", vertex: findWallVertexNear(rawPoint, { zoomScale }) } : null)
+      ? (() => {
+        const highlightedHit = findExteriorHighlightJunctionNear(rawPoint, { zoomScale, toleranceScreenPx: 10 });
+        if (highlightedHit) return { field: "exteriorHighlightedWalls", vertex: { id: highlightedHit.id } };
+        const wallHit = findWallVertexNear(rawPoint, { zoomScale });
+        return wallHit ? { field: "exteriorWalls", vertex: wallHit } : null;
+      })()
       : findWallVertexNearAny(rawPoint, { zoomScale });
     if (vertexHit?.vertex) {
       setWallEditHoverTarget({ type: "point", id: vertexHit.vertex.id, field: vertexHit.field });
@@ -1060,7 +1283,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       }
     }
     setWallEditHoverTarget(null);
-  }, [activeTool, findWallVertexNear, findWallVertexNearAny, findWallSegmentNear]);
+  }, [activeTool, findWallVertexNear, findExteriorHighlightJunctionNear, findWallVertexNearAny, findWallSegmentNear]);
 
   // Click priority: vertex > segment > opening, across exterior+internal —
   // whichever is nearest within tolerance wins; empty space deselects.
@@ -1849,8 +2072,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     exteriorHighlightHoverWallId,
     exteriorHighlightPreview,
     exteriorHighlightDiagnostics,
-    exteriorHighlightedWalls: page?.exteriorHighlightedWalls || [],
+    exteriorHighlightedWalls: exteriorHighlightJunctionState.walls,
     exteriorHighlightedWallIds: page?.exteriorHighlightedWallIds || [],
+    exteriorHighlightJunctions,
     exteriorHighlightGap,
     updateExteriorHighlighterHover, toggleExteriorHighlightedWall, finishHighlightedExterior,
     suggestExteriorProposal,

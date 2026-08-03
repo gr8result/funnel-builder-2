@@ -9,6 +9,14 @@ const CONFIDENCE_LABEL = { high: "High", medium: "Medium", low: "Low" };
 // item is on screen.
 export default function WallContextPanel({ page, tools }) {
   const field = tools.selectedField || "exteriorWalls";
+  if (field === "exteriorHighlightedWalls" && tools.selectedVertexId) {
+    return (
+      <div style={S.panel} data-testid="wall-context-panel" onPointerDown={stopPanelEvent} onPointerUp={stopPanelEvent} onClick={stopPanelEvent}>
+        <div style={S.title}>Exterior highlighted corner</div>
+        <Field label="State" value="Editable" />
+      </div>
+    );
+  }
   const graph = page?.[field];
   if (!graph) return null;
 

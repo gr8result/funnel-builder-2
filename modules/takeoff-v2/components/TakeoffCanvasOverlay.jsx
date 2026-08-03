@@ -176,7 +176,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Exterior highlighter: one blue local preview, yellow clicked walls. */}
-        {isExteriorHighlighter && highlightedWalls.map((wall) => (
+        {(isExteriorHighlighter || isEditTool) && highlightedWalls.map((wall) => (
           <HighlightableWallObject
             key={wall.id}
             wall={wall}
@@ -194,6 +194,17 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         {tools.exteriorHighlightGap && (
           <GapLine gap={tools.exteriorHighlightGap} project={project} />
         )}
+        {isEditTool && (tools.exteriorHighlightJunctions || []).map((junction) => (
+          <ExteriorHighlightJunctionHandle
+            key={junction.id}
+            junction={tools.draggingVertex?.id === junction.id && tools.draggingVertex.field === "exteriorHighlightedWalls"
+              ? { ...junction, point: { x: tools.draggingVertex.x, y: tools.draggingVertex.y } }
+              : junction}
+            project={project}
+            selected={tools.selectedField === "exteriorHighlightedWalls" && tools.selectedVertexId === junction.id}
+            hovered={tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.id === junction.id && tools.wallEditHoverTarget.field === "exteriorHighlightedWalls"}
+          />
+        ))}
 
         {/* Exterior + internal wall segments */}
         {!isExteriorHighlighter && showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
@@ -322,7 +333,7 @@ function HighlightableWallObject({ wall, project, selected, hovered }) {
   const a = project(line.start);
   const b = project(line.end);
   const color = selected ? HIGHLIGHTER_WALL_COLOR.selected : hovered ? HIGHLIGHTER_WALL_COLOR.hover : HIGHLIGHTER_WALL_COLOR.normal;
-  const strokeWidth = selected ? 9 : hovered ? 8 : 4;
+  const strokeWidth = selected ? 3 : hovered ? 3 : 3;
   return (
     <g
       data-testid={selected ? "highlighted-exterior-wall" : "highlightable-wall-preview"}
@@ -338,8 +349,27 @@ function HighlightableWallObject({ wall, project, selected, hovered }) {
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        opacity={selected ? 0.84 : hovered ? 0.92 : 0.35}
+        strokeDasharray={hovered ? "7 5" : undefined}
+        opacity={selected ? 0.68 : hovered ? 0.86 : 0.35}
       />
+    </g>
+  );
+}
+
+function ExteriorHighlightJunctionHandle({ junction, project, selected, hovered }) {
+  if (!junction?.point) return null;
+  const p = project(junction.point);
+  return (
+    <g
+      data-testid="exterior-highlight-junction"
+      data-junction-id={junction.id}
+      data-selected={selected ? "true" : "false"}
+      data-hovered={hovered ? "true" : "false"}
+    >
+      <circle cx={p.x} cy={p.y} r={10} fill="transparent" stroke="transparent" data-testid="exterior-highlight-junction-hit-area" />
+      {(selected || hovered) && <circle cx={p.x} cy={p.y} r={6} fill="none" stroke="#0f172a" strokeWidth={1.2} opacity={0.65} />}
+      <circle cx={p.x} cy={p.y} r={hovered ? 4.5 : 4} fill="#fff7ed" stroke={selected ? "#f97316" : "#0f172a"} strokeWidth={1.5} />
+      <path d={`M ${p.x - 2} ${p.y} L ${p.x + 2} ${p.y} M ${p.x} ${p.y - 2} L ${p.x} ${p.y + 2}`} stroke="#0f172a" strokeWidth={1} />
     </g>
   );
 }
@@ -460,7 +490,12 @@ function ManualAreaDraft({ vertices, hoverPoint, project }) {
         <line x1={screenPoints[screenPoints.length - 1].x} y1={screenPoints[screenPoints.length - 1].y} x2={hoverScreen.x} y2={hoverScreen.y} stroke="#7c3aed" strokeWidth={2} strokeDasharray="6 4" />
       )}
       {screenPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={i === 0 ? 6 : 4} fill={i === 0 ? "#fff" : "#7c3aed"} stroke="#7c3aed" strokeWidth={2} />
+        <g key={i} data-testid="area-draft-point">
+          <circle cx={p.x} cy={p.y} r={10} fill="transparent" stroke="transparent" data-testid="area-draft-point-hit-area" />
+          {i === 0 && <circle cx={p.x} cy={p.y} r={5} fill="none" stroke="#7c3aed" strokeWidth={1.2} opacity={0.55} />}
+          <circle cx={p.x} cy={p.y} r={i === 0 ? 3.8 : 3.2} fill={i === 0 ? "#fff" : "#7c3aed"} stroke="#7c3aed" strokeWidth={1.4} />
+          <circle cx={p.x} cy={p.y} r={0.9} fill={i === 0 ? "#7c3aed" : "#fff"} />
+        </g>
       ))}
     </g>
   );

@@ -50,6 +50,14 @@ export default function TakeoffToolbar({ page, tools }) {
         >
           Finish Exterior
         </ToolButton>
+        <ToolButton
+          active={tools.activeTool === "edit-walls"}
+          disabled={!hasWalls && !(tools.exteriorHighlightedWalls?.length || tools.exteriorHighlightedWallIds?.length)}
+          onClick={() => tools.setActiveTool("edit-walls")}
+          testId="tool-edit-exterior"
+        >
+          Edit Exterior
+        </ToolButton>
         <ToolButton disabled={!tools.canClearExterior} onClick={tools.requestClearExterior} testId="tool-clear-exterior">
           Clear Exterior
         </ToolButton>

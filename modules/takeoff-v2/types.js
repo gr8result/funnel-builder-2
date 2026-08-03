@@ -337,6 +337,21 @@ function withLineSegmentDefaults(rawLine) {
   };
 }
 
+function withWallJunctionDefaults(rawJunction, fallbackPoint, fallbackWallId) {
+  if (!rawJunction && !fallbackPoint) return null;
+  const rawPoint = rawJunction?.point || rawJunction || fallbackPoint;
+  const point = { x: Number(rawPoint.x) || 0, y: Number(rawPoint.y) || 0 };
+  return {
+    id: rawJunction?.id || `hlj-${Math.round(point.x)}-${Math.round(point.y)}`,
+    point,
+    connectedWallIds: Array.isArray(rawJunction?.connectedWallIds)
+      ? rawJunction.connectedWallIds.filter((id) => typeof id === "string")
+      : (fallbackWallId ? [fallbackWallId] : []),
+    confidence: Number.isFinite(Number(rawJunction?.confidence)) ? Number(rawJunction.confidence) : 0.7,
+    source: rawJunction?.source || "face-termination",
+  };
+}
+
 function withHighlightableWallDefaults(rawWall) {
   if (!rawWall || typeof rawWall !== "object") return null;
   const centreline = withLineSegmentDefaults(rawWall.centreline) || (
@@ -345,19 +360,18 @@ function withHighlightableWallDefaults(rawWall) {
       : null
   );
   if (!centreline) return null;
+  const startJunction = withWallJunctionDefaults(rawWall.startJunction, centreline.start, rawWall.id);
+  const endJunction = withWallJunctionDefaults(rawWall.endJunction, centreline.end, rawWall.id);
   return {
     id: rawWall.id || `hl-wall-${Math.round(centreline.start.x)}-${Math.round(centreline.start.y)}-${Math.round(centreline.end.x)}-${Math.round(centreline.end.y)}`,
-    centreline,
+    centreline: { start: startJunction.point, end: endJunction.point },
     faceA: withLineSegmentDefaults(rawWall.faceA),
     faceB: withLineSegmentDefaults(rawWall.faceB),
     thickness: Number.isFinite(Number(rawWall.thickness)) ? Number(rawWall.thickness) : null,
-    startJunction: rawWall.startJunction
-      ? { x: Number(rawWall.startJunction.x) || 0, y: Number(rawWall.startJunction.y) || 0 }
-      : centreline.start,
-    endJunction: rawWall.endJunction
-      ? { x: Number(rawWall.endJunction.x) || 0, y: Number(rawWall.endJunction.y) || 0 }
-      : centreline.end,
+    startJunction,
+    endJunction,
     confidence: Number.isFinite(Number(rawWall.confidence)) ? Number(rawWall.confidence) : 0,
+    endpointReview: rawWall.endpointReview || null,
     source: rawWall.source || "local-vector-wall-band",
     sourceSegmentIds: Array.isArray(rawWall.sourceSegmentIds) ? rawWall.sourceSegmentIds.filter((id) => typeof id === "string") : [],
   };

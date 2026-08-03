@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
-import { resolveManualTracePoint, tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate } from "../hooks/useTakeoffTools.js";
+import { resolveManualTracePoint, tracedSegmentHasWallEvidence, validateEditedExteriorGraph, snapLabelForCandidate, normalizeHighlightedWallJunctions, moveHighlightedWallJunction, highlightedWallsAreValid } from "../hooks/useTakeoffTools.js";
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
@@ -457,6 +457,73 @@ for (const extra of [
   assert.equal(page.exteriorHighlightedWalls.length, 1);
   assert.equal(page.exteriorHighlightedWallIds[0], wall.id);
   assert.deepEqual(page.exteriorHighlightedWalls[0].centreline, wall.centreline);
+}
+
+// ---- overextended highlighted wall endpoints trim to structural junctions -
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 80, y: 100 }, { x: 320, y: 100 }),
+      line({ x: 80, y: 108 }, { x: 320, y: 108 }),
+      line({ x: 100, y: 80 }, { x: 100, y: 140 }),
+      line({ x: 108, y: 80 }, { x: 108, y: 140 }),
+      line({ x: 300, y: 80 }, { x: 300, y: 140 }),
+      line({ x: 292, y: 80 }, { x: 292, y: 140 }),
+    ],
+  };
+  const result = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 420, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.ok(result.wall);
+  assert.equal(Math.round(result.wall.centreline.start.x), 100);
+  assert.equal(Math.round(result.wall.centreline.end.x), 300);
+  assert.equal(result.wall.endpointReview, null);
+}
+
+// ---- dimension-line intersections are not accepted as wall endpoints -------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 80, y: 100 }, { x: 320, y: 100 }),
+      line({ x: 80, y: 108 }, { x: 320, y: 108 }),
+      line({ x: 100, y: 80 }, { x: 100, y: 140 }, { isDimension: true }),
+      line({ x: 300, y: 80 }, { x: 300, y: 140 }, { isDimension: true }),
+    ],
+  };
+  const result = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 420, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.ok(result.wall);
+  assert.equal(Math.round(result.wall.centreline.start.x), 80);
+  assert.equal(Math.round(result.wall.centreline.end.x), 320);
+  assert.equal(result.wall.endpointReview, "Needs endpoint review");
+}
+
+// ---- adjoining highlighted walls share one editable junction --------------
+{
+  const walls = [
+    { id: "h", centreline: { start: { x: 100, y: 100 }, end: { x: 202, y: 100 } }, confidence: 0.9 },
+    { id: "v", centreline: { start: { x: 200, y: 98 }, end: { x: 200, y: 220 } }, confidence: 0.9 },
+  ];
+  const { walls: normalized, junctions } = normalizeHighlightedWallJunctions(walls);
+  const shared = junctions.find((junction) => junction.connectedWallIds.includes("h") && junction.connectedWallIds.includes("v"));
+  assert.ok(shared);
+  assert.equal(Math.round(shared.point.x), 200);
+  assert.equal(Math.round(shared.point.y), 100);
+  assert.deepEqual(normalized.find((wall) => wall.id === "h").centreline.end, shared.point);
+  assert.deepEqual(normalized.find((wall) => wall.id === "v").centreline.start, shared.point);
+
+  const moved = moveHighlightedWallJunction(normalized, shared.id, { x: 205, y: 105 });
+  assert.deepEqual(moved.find((wall) => wall.id === "h").centreline.end, { x: 205, y: 105 });
+  assert.deepEqual(moved.find((wall) => wall.id === "v").centreline.start, { x: 205, y: 105 });
+  assert.ok(highlightedWallsAreValid(moved));
+}
+
+// ---- highlight and area point rendering use reduced visible widths --------
+{
+  const overlay = fs.readFileSync(new URL("../components/TakeoffCanvasOverlay.jsx", import.meta.url), "utf8");
+  assert.ok(overlay.includes("const strokeWidth = selected ? 3 : hovered ? 3 : 3"), "selected exterior highlight should render near 3px");
+  assert.ok(overlay.includes('data-testid="exterior-highlight-junction-hit-area"'), "exterior junction hit area should remain separate");
+  assert.ok(overlay.includes("r={10} fill=\"transparent\""), "exterior/area hit radius should remain easy to grab");
+  assert.ok(overlay.includes("r={i === 0 ? 3.8 : 3.2}"), "area point visible radius should be reduced");
 }
 
 // ---- real sample plan rejects parallel annotation clutter -----------------

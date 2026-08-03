@@ -8,6 +8,7 @@ const MIN_FACE_OVERLAP = 12;
 const PARALLEL_TOLERANCE_DEG = 3;
 const SAME_FACE_TOLERANCE = 5;
 const BAND_GAP_TOLERANCE = 42;
+const JUNCTION_FACE_TOLERANCE = 8;
 const MIN_CONFIDENCE = 0.64;
 const REJECTED_TAGS = new Set([
   "annotation",
@@ -158,6 +159,48 @@ function mergeIntervals(lines, alongHint) {
   return intervalContaining(merged, alongHint) || merged.sort((a, b) => (b.end - b.start) - (a.end - a.start))[0] || null;
 }
 
+function structuralCrossings(lines, seed, faceAFixed, faceBFixed, interval) {
+  const minFixed = Math.min(faceAFixed, faceBFixed) - JUNCTION_FACE_TOLERANCE;
+  const maxFixed = Math.max(faceAFixed, faceBFixed) + JUNCTION_FACE_TOLERANCE;
+  return lines
+    .filter((line) => {
+      const diff = angleDiffDeg(line.angle, seed.angle);
+      if (diff < 25 || diff > 155) return false;
+      if (line.length < MIN_WALL_LENGTH) return false;
+      const aFixed = line.a.x * seed.nx + line.a.y * seed.ny;
+      const bFixed = line.b.x * seed.nx + line.b.y * seed.ny;
+      const lineMinFixed = Math.min(aFixed, bFixed);
+      const lineMaxFixed = Math.max(aFixed, bFixed);
+      return lineMinFixed <= maxFixed && lineMaxFixed >= minFixed;
+    })
+    .map((line) => {
+      const p = line.a;
+      const denom = seed.ux * line.uy - seed.uy * line.ux;
+      if (Math.abs(denom) < 0.0001) return null;
+      const dx = p.x - pointOn(seed, 0, 0).x;
+      const dy = p.y - pointOn(seed, 0, 0).y;
+      const along = (dx * line.uy - dy * line.ux) / denom;
+      return along >= interval.start - BAND_GAP_TOLERANCE && along <= interval.end + BAND_GAP_TOLERANCE
+        ? { along, sourceId: line.id, confidence: Math.min(0.92, 0.62 + Math.min(0.2, line.length / 600)) }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.along - b.along);
+}
+
+function trimIntervalToJunctions(lines, seed, faceAFixed, faceBFixed, interval) {
+  const crossings = structuralCrossings(lines, seed, faceAFixed, faceBFixed, interval);
+  if (crossings.length < 2) {
+    return { ...interval, startSource: "face-termination", endSource: "face-termination", crossings };
+  }
+  const start = crossings[0].along;
+  const end = crossings[crossings.length - 1].along;
+  if (end - start < MIN_WALL_LENGTH) {
+    return { ...interval, startSource: "face-termination", endSource: "face-termination", crossings };
+  }
+  return { start, end, startSource: "structural-intersection", endSource: "structural-intersection", crossings };
+}
+
 function sameFaceLines(lines, seed, fixed) {
   return lines.filter((line) => (
     angleDiffDeg(line.angle, seed.angle) <= PARALLEL_TOLERANCE_DEG &&
@@ -191,8 +234,13 @@ function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
   const intervalB = mergeIntervals(faceBLines, pointerAlong);
   if (!intervalA || !intervalB) return { rejected: true, reason: "missing wall face interval" };
 
-  const startAlong = Math.min(intervalA.start, intervalB.start);
-  const endAlong = Math.max(intervalA.end, intervalB.end);
+  const rawInterval = {
+    start: Math.min(intervalA.start, intervalB.start),
+    end: Math.max(intervalA.end, intervalB.end),
+  };
+  const supportedInterval = trimIntervalToJunctions(lines, seed, faceAFixed, faceBFixed, rawInterval);
+  const startAlong = supportedInterval.start;
+  const endAlong = supportedInterval.end;
   const length = endAlong - startAlong;
   if (length < MIN_WALL_LENGTH) return { rejected: true, reason: `length ${Math.round(length)} below wall minimum` };
 
@@ -218,6 +266,7 @@ function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
     startJunction,
     endJunction,
     confidence,
+    endpointReview: supportedInterval.crossings.length < 2 ? "Needs endpoint review" : null,
     source: "local-vector-wall-band",
     sourceSegmentIds: [...new Set([...(intervalA.ids || []), ...(intervalB.ids || [])])],
     diagnostics: {
@@ -227,7 +276,9 @@ function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
       estimatedThickness: thickness,
       startJunction,
       endJunction,
-      reason: "accepted parallel structural wall band",
+      startSource: supportedInterval.startSource,
+      endSource: supportedInterval.endSource,
+      reason: supportedInterval.crossings.length >= 2 ? "accepted and trimmed to structural intersections" : "accepted parallel structural wall band",
       rasterEvidence: "not-used",
     },
   };
