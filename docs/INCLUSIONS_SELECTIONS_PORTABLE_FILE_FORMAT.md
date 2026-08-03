@@ -1,30 +1,15 @@
-# Portable Selections File Format
+# Inclusions & Selections Portable File Format
 
-Portable exports use:
+Portable project files use the preferred extension:
 
-`*.gr8selections.json`
+`.gr8selections.json`
 
-Current schema:
+The current schema is:
 
-```json
-{
-  "schema": "gr8.selections.project",
-  "schemaVersion": 1,
-  "exportedAt": "ISO-8601 timestamp",
-  "sourceApplication": "gr8-result",
-  "organisationReference": "organisation id",
-  "projectSummary": {},
-  "areasAndLevels": {},
-  "templatesAndTiers": {},
-  "workspace": {},
-  "review": {},
-  "approvals": {},
-  "checksums": { "project": "hash" }
-}
-```
+`gr8.selections.project` version `1`
 
-The export contains project summary, areas and levels, templates and tiers, requirements, selections, product snapshots already stored on selections, locations, pricing and allowance data, notes, review metadata and approval metadata loaded by policy.
+Exports include schema version, application source, export timestamp, organisation reference, project summary, levels, areas, templates, tiers, requirements, product selections, locations, notes, pricing, review metadata, approval metadata where available and a project checksum.
 
-The export must not include passwords, access tokens, environment variables, supplier credentials or database connection information.
+Exports must not include passwords, access tokens, API keys, environment variables, database credentials or unrestricted supplier credentials.
 
-Imports reject malformed JSON, unsupported future schema versions, cross-organisation content and checksum mismatches. Duplicate project or job number imports require explicit import-as-new handling.
+Imports validate the extension, JSON shape, schema version, required project identity, organisation reference, checksum, duplicate project/job warnings and script-like content before any data is written.

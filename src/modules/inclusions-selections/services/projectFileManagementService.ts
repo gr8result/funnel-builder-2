@@ -20,6 +20,7 @@ export type ProjectFileSummary = ProjectSelectionContext & {
   lastModified?: string;
   recentlyOpenedAt?: string;
   status: "active" | "archived";
+  source?: "selections" | "registered_job" | "recent_job";
 };
 
 export type SaveAsOptions = {
@@ -48,6 +49,9 @@ export type PortableSelectionsFile = {
 
 const PROJECT_INDEX_BUCKET = "project-file-index";
 const ACTIVE_PROJECT_BUCKET = "active-project-context";
+const ESTIMATE_REGISTERED_JOBS_KEY = "estimate-builder-registered-jobs";
+const ESTIMATE_ACTIVE_REGISTERED_JOB_KEY = "estimate-builder-active-registered-job";
+const PROJECTS_HUB_RECENT_JOBS_KEY = "gr8-job-recent-files";
 const memoryProjectIndex = new Map<string, ProjectFileSummary[]>();
 
 function now(): string {
@@ -64,6 +68,22 @@ function activeKey(organisationId: string): string {
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+function browserStorage(): Storage | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  return window.localStorage;
+}
+
+function readJson<T>(key: string, fallback: T): T {
+  const store = browserStorage();
+  if (!store) return fallback;
+  try {
+    const raw = store.getItem(key);
+    return raw ? JSON.parse(raw) as T : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function requiredContext(context: Partial<ProjectSelectionContext>): ProjectSelectionContext {
@@ -91,6 +111,7 @@ export function registerProjectOpen(context: ProjectSelectionContext, currentSta
     lastModified: projects.find((item) => item.projectId === context.projectId)?.lastModified ?? now(),
     recentlyOpenedAt: now(),
     status: projects.find((item) => item.projectId === context.projectId)?.status ?? "active",
+    source: projects.find((item) => item.projectId === context.projectId)?.source ?? "selections",
   };
   const next = [summary, ...projects.filter((item) => item.projectId !== context.projectId)];
   memoryProjectIndex.set(context.organisationId, next);
@@ -99,9 +120,107 @@ export function registerProjectOpen(context: ProjectSelectionContext, currentSta
   return summary;
 }
 
+function compactAddress(job: Record<string, unknown>): string {
+  return [job.siteAddress, job.address, job.projectAddress, job.suburb, job.state, job.postcode]
+    .map((value) => String(value ?? "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function normaliseOrganisation(value: unknown, fallback: string): string {
+  return String(value ?? fallback ?? "").trim();
+}
+
+function normaliseStatus(value: unknown): "active" | "archived" {
+  return String(value ?? "").trim().toLowerCase() === "archived" ? "archived" : "active";
+}
+
+function registeredJobToProject(job: Record<string, unknown>, organisationId: string): ProjectFileSummary | null {
+  const sourceOrganisationId = normaliseOrganisation(job.workspace_id ?? job.workspaceId ?? job.organisationId ?? job.organizationId, organisationId);
+  if (!sourceOrganisationId || sourceOrganisationId !== organisationId) return null;
+  const projectId = String(job.jobId ?? job.projectId ?? "").trim();
+  const projectName = String(job.jobName ?? job.projectName ?? job.name ?? "").trim();
+  if (!projectId && !projectName) return null;
+  return {
+    organisationId,
+    projectId: projectId || makeScopedId("project", [organisationId, projectName]),
+    projectName: projectName || projectId || "Registered Project",
+    clientName: String(job.clientName ?? job.client ?? "").trim(),
+    siteAddress: compactAddress(job),
+    jobNumber: String(job.jobNumber ?? job.quoteNumber ?? "").trim(),
+    currentStage: "areas",
+    lastModified: String(job.savedAt ?? job.updatedAt ?? job.lastModified ?? job.registeredAt ?? "").trim(),
+    recentlyOpenedAt: String(job.openedAt ?? job.registeredAt ?? job.savedAt ?? "").trim(),
+    status: normaliseStatus(job.status),
+    source: "registered_job",
+  };
+}
+
+function recentJobToProject(job: Record<string, unknown>, organisationId: string): ProjectFileSummary | null {
+  const sourceOrganisationId = normaliseOrganisation(job.workspace_id ?? job.workspaceId ?? job.organisationId ?? job.organizationId, organisationId);
+  if (!sourceOrganisationId || sourceOrganisationId !== organisationId) return null;
+  const id = String(job.projectId ?? job.key ?? job.id ?? "").trim();
+  const projectName = String(job.projectName ?? job.jobName ?? job.name ?? job.fileName ?? "").trim();
+  if (!id && !projectName) return null;
+  return {
+    organisationId,
+    projectId: id || makeScopedId("project", [organisationId, projectName]),
+    projectName: projectName || id || "Recent Project",
+    clientName: String(job.clientName ?? job.client ?? "").trim(),
+    siteAddress: compactAddress(job),
+    jobNumber: String(job.jobNumber ?? job.quoteNumber ?? "").trim(),
+    currentStage: "areas",
+    lastModified: String(job.lastModified ?? job.savedAt ?? "").trim(),
+    recentlyOpenedAt: String(job.openedAt ?? job.recentlyOpenedAt ?? "").trim(),
+    status: normaliseStatus(job.status),
+    source: "recent_job",
+  };
+}
+
+function loadApplicationProjectSources(organisationId: string): ProjectFileSummary[] {
+  if (!organisationId) return [];
+  const registered = readJson<Record<string, unknown>[]>(ESTIMATE_REGISTERED_JOBS_KEY, [])
+    .map((job) => registeredJobToProject(job, organisationId))
+    .filter((job): job is ProjectFileSummary => Boolean(job));
+  const active = registeredJobToProject(readJson<Record<string, unknown>>(ESTIMATE_ACTIVE_REGISTERED_JOB_KEY, {}), organisationId);
+  const recent = readJson<Record<string, unknown>[]>(PROJECTS_HUB_RECENT_JOBS_KEY, [])
+    .map((job) => recentJobToProject(job, organisationId))
+    .filter((job): job is ProjectFileSummary => Boolean(job));
+  return [...(active ? [active] : []), ...registered, ...recent];
+}
+
+function mergeProjectSources(projects: ProjectFileSummary[]): ProjectFileSummary[] {
+  const merged = new Map<string, ProjectFileSummary>();
+  projects.forEach((project) => {
+    const key = project.projectId || `${project.jobNumber}:${project.projectName}`;
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, project);
+      return;
+    }
+    merged.set(key, {
+      ...project,
+      ...existing,
+      projectName: existing.projectName || project.projectName,
+      clientName: existing.clientName || project.clientName,
+      siteAddress: existing.siteAddress || project.siteAddress,
+      jobNumber: existing.jobNumber || project.jobNumber,
+      lastModified: [existing.lastModified, project.lastModified].filter(Boolean).sort().slice(-1)[0],
+      recentlyOpenedAt: [existing.recentlyOpenedAt, project.recentlyOpenedAt].filter(Boolean).sort().slice(-1)[0],
+      status: existing.status === "archived" ? "archived" : project.status,
+      source: existing.source === "selections" ? existing.source : project.source ?? existing.source,
+    });
+  });
+  return Array.from(merged.values());
+}
+
 export function loadProjectFileMenu(organisationId?: string): ProjectFileSummary[] {
   if (!organisationId) return [];
-  return (memoryProjectIndex.get(organisationId) ?? loadPersistedValue<ProjectFileSummary[]>(indexKey(organisationId)) ?? [])
+  const selectionsProjects = memoryProjectIndex.get(organisationId) ?? loadPersistedValue<ProjectFileSummary[]>(indexKey(organisationId)) ?? [];
+  return mergeProjectSources([
+    ...selectionsProjects.map((project) => ({ ...project, source: project.source ?? "selections" as const })),
+    ...loadApplicationProjectSources(organisationId),
+  ])
     .sort((a, b) => String(b.recentlyOpenedAt ?? b.lastModified ?? "").localeCompare(String(a.recentlyOpenedAt ?? a.lastModified ?? "")));
 }
 
@@ -215,7 +334,9 @@ export function previewSelectionsProjectImport(input: unknown, organisationId: s
   if (!file || file.schema !== "gr8.selections.project") return { ok: false, error: "Unsupported selections file." };
   if (file.schemaVersion !== 1) return { ok: false, error: "Unsupported selections file schema version." };
   if (!file.projectSummary?.projectId || !file.projectSummary?.organisationId) return { ok: false, error: "Selections file is missing project identity." };
+  if (!file.projectSummary.projectName && !file.projectSummary.jobNumber) return { ok: false, error: "Selections file is missing project name or job number." };
   if (file.organisationReference !== organisationId) return { ok: false, error: "Cross-organisation imports require authorised import support." };
+  if (JSON.stringify(file).match(/<script|<\/script>|javascript:|data:text\/html/i)) return { ok: false, error: "This file could not be imported." };
   const expected = checksum({ ...file, checksums: undefined });
   if (file.checksums?.project !== expected) return { ok: false, error: "Selections file checksum does not match." };
   const duplicate = loadProjectFileMenu(organisationId).some((project) => project.projectId === file.projectSummary.projectId || (project.jobNumber && file.projectSummary.jobNumber && project.jobNumber === file.projectSummary.jobNumber));
