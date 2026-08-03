@@ -16,7 +16,15 @@ test("classifies a Twelve Data per-minute rate limit error", () => {
 });
 
 test("classifies an unrecognised error as generic", () => {
-  assert.equal(classifyTwelveDataError("Network timeout"), "error");
+  assert.equal(classifyTwelveDataError("Network failure"), "error");
+});
+
+test("classifies provider status failures without exposing credentials", () => {
+  assert.equal(classifyTwelveDataError("Unauthorized", 401), "auth-required");
+  assert.equal(classifyTwelveDataError("Forbidden", 403), "permission-denied");
+  assert.equal(classifyTwelveDataError("Too many requests", 429), "rate-limited");
+  assert.equal(classifyTwelveDataError("Request timed out"), "timeout");
+  assert.equal(classifyTwelveDataError("Malformed JSON response"), "malformed-provider-response");
 });
 
 // --- Synthetic candle builder for deterministic scoring tests ---

@@ -3,11 +3,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
+import { scanActionText } from "../../lib/freedom-trader/scanSummary";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
 const SCANNER_SETTINGS_KEY = "freedom-trader-scanner-settings";
 const SCANNER_WATCHLIST_KEY = "freedom-trader-scanner-watchlist";
+const LATEST_SCAN_KEY = "freedom-trader-latest-market-scan";
 
 const DEFAULT_SETTINGS = {
   markets: ["US"],
@@ -36,6 +38,17 @@ function formatCurrency(value, currency = "USD") {
 
 function formatNumber(value) {
   return Number.isFinite(value) ? number.format(value) : "--";
+}
+
+function qualityLabel(value, fallback = "Unavailable") {
+  const clean = String(value || "").replace(/-/g, " ").trim();
+  return clean ? clean.replace(/\b\w/g, (letter) => letter.toUpperCase()) : fallback;
+}
+
+function scanOutcome(summary = null) {
+  if (!summary) return { heading: "No market check yet.", body: "Run Check Market Now to analyse the supported universe." };
+  const action = scanActionText(summary);
+  return { heading: action.heading, body: action.body };
 }
 
 async function browserHashPassword(password) {
@@ -78,7 +91,7 @@ export default function MarketOpportunities({ passwordHash }) {
     return () => window.clearInterval(interval);
   }, [unlocked, settings, offset]);
 
-  const strongCount = useMemo(() => results.filter((row) => row.tradingScore >= settings.minimumScore).length, [results, settings.minimumScore]);
+  const strongCount = useMemo(() => results.filter((row) => row.qualified === true).length, [results]);
 
   async function unlock(event) {
     event.preventDefault();
@@ -137,16 +150,17 @@ export default function MarketOpportunities({ passwordHash }) {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.ok) throw new Error(data?.error || "Market scanner is temporarily unavailable.");
-      const incoming = data.results || [];
+      const incoming = data.decisions || [];
       setOffset(data.nextOffset || 0);
       setScanSummary(data.scanSummary || null);
       setResults((current) => {
         const bySymbol = new Map((append ? current : []).map((item) => [item.symbol, item]));
         incoming.forEach((item) => bySymbol.set(item.symbol, item));
-        return Array.from(bySymbol.values()).sort((a, b) => b.tradingScore - a.tradingScore).slice(0, 100);
+        return Array.from(bySymbol.values()).sort((a, b) => Number(b.analysed) - Number(a.analysed) || (Number(b.tradingScore) || 0) - (Number(a.tradingScore) || 0)).slice(0, 100);
       });
-      saveScannerWatchlist(incoming);
-      notifyNewSetups(incoming);
+      saveScannerWatchlist((data.results || []).filter((item) => item.status === "READY TO BUY"));
+      notifyNewSetups((data.results || []).filter((item) => item.status === "READY TO BUY"));
+      window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: data.scanSummary || null, decisions: incoming, results: data.results || [], updatedAt: data.updatedAt || new Date().toISOString() }));
       setUpdatedAt(data.updatedAt || new Date().toISOString());
     } catch (err) {
       setScanMessage(err.message || "Market scanner failed.");
@@ -158,17 +172,7 @@ export default function MarketOpportunities({ passwordHash }) {
   if (checking) return <div className="boot">Opening Market Opportunities...</div>;
   if (!unlocked) return <Gate password={password} setPassword={setPassword} error={error} onSubmit={unlock} />;
 
-  const bestOpportunity = results[0] || null;
-  const plainSummary = (() => {
-    if (!scanSummary) return "Run the scanner to see today's opportunities.";
-    if (bestOpportunity) {
-      return `${scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded} compan${(scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded) === 1 ? "y was" : "ies were"} analysed successfully. The strongest current setup is ${bestOpportunity.companyName} (${bestOpportunity.symbol}), rated ${bestOpportunity.status}.`;
-    }
-    const parts = [`${scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded} compan${(scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded) === 1 ? "y was" : "ies were"} analysed successfully with no qualifying trade yet.`];
-    if (scanSummary.dataUnavailable) parts.push(`${scanSummary.dataUnavailable} could not be checked because market data was unavailable.`);
-    if (scanSummary.disabledSymbols?.length) parts.push(`${scanSummary.disabledSymbols.length} configured symbol${scanSummary.disabledSymbols.length === 1 ? " is" : "s are"} disabled: ${scanSummary.disabledSymbols[0].reason}`);
-    return parts.join(" ");
-  })();
+  const outcome = scanOutcome(scanSummary);
 
   return (
     <div className="page">
@@ -183,13 +187,13 @@ export default function MarketOpportunities({ passwordHash }) {
         <div className="heroStats">
           <article><span>Approved Setups</span><strong>{strongCount}</strong></article>
           <article><span>Last Scan</span><strong>{updatedAt ? new Date(updatedAt).toLocaleTimeString() : "--"}</strong></article>
-          <button type="button" onClick={() => runScan()} disabled={loading}>{loading ? "Scanning..." : "Run Scan Now"}</button>
+          <button type="button" onClick={() => runScan()} disabled={loading}>{loading ? `Checking market... ${scanSummary?.analysedCount || 0} of ${scanSummary?.requestedCount || settings.chunkSize} companies processed.` : "Check Market Now"}</button>
         </div>
       </header>
 
       <section className={`plainSummary ${scanSummary ? (scanSummary.scanCompletionStatus === "complete" ? "complete" : "incomplete") : ""}`}>
-        <strong>{!scanSummary ? "No trade is ready yet." : scanSummary.scanCompletionStatus === "complete" ? "Scan completed successfully." : "Scan completed with incomplete market data."}</strong>
-        <p>{plainSummary}</p>
+        <strong>{outcome.heading}</strong>
+        <p style={{ whiteSpace: "pre-line" }}>{outcome.body}</p>
       </section>
 
       <section className="settings">
@@ -217,9 +221,9 @@ export default function MarketOpportunities({ passwordHash }) {
       {scanMessage ? <section className="notice">{scanMessage}</section> : null}
       {scanSummary ? (
         <section className="scanSummary">
-          <article><span>Universe</span><strong>{scanSummary.universe ?? scanSummary.supportedUniverseCount}</strong></article>
-          <article><span>Requested</span><strong>{scanSummary.requested ?? scanSummary.symbolsRequested}</strong></article>
-          <article><span>Successfully Analysed</span><strong>{scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded}</strong></article>
+          <article><span>Supported universe</span><strong>{scanSummary.universe ?? scanSummary.supportedUniverseCount}</strong></article>
+          <article><span>Requested this scan</span><strong>{scanSummary.requested ?? scanSummary.symbolsRequested}</strong></article>
+          <article><span>Successfully analysed</span><strong>{scanSummary.successfullyAnalysed ?? scanSummary.symbolsSuccessfullyLoaded}</strong></article>
           <article><span>Data Unavailable</span><strong>{scanSummary.dataUnavailable ?? scanSummary.symbolsRejectedMissingData}</strong></article>
           <article><span>Qualified</span><strong>{scanSummary.qualified ?? scanSummary.approvedOpportunities}</strong></article>
           <article><span>Not Qualified</span><strong>{scanSummary.notQualified ?? "--"}</strong></article>
@@ -240,8 +244,8 @@ export default function MarketOpportunities({ passwordHash }) {
           <table>
             <thead>
               <tr>
-                <th>Company</th><th>Market</th><th>Trading Score</th><th>Confidence</th><th>Current Price</th>
-                <th>Recommended Entry</th><th>Stop Loss</th><th>Target</th><th>Risk/Reward</th><th>Trade Type</th><th>Status</th><th>Reason</th><th>Action</th>
+                <th>Company</th><th>Market</th><th>Quote</th><th>History</th><th>Analysis</th><th>Trading Score</th><th>Confidence</th><th>Current Price</th>
+                <th>Recommended Entry</th><th>Safety Exit</th><th>Take Some Profit</th><th>Final Exit</th><th>Reward/Risk</th><th>Status</th><th>Reason</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -249,20 +253,23 @@ export default function MarketOpportunities({ passwordHash }) {
                 <tr key={row.symbol}>
                   <td><Link href={traderCompanyHref(row.symbol, "from=scanner")}>{row.companyName}</Link><small>{row.symbol}</small></td>
                   <td>{row.exchange || "--"}<small>{row.currency || "USD"}</small></td>
-                  <td>{formatNumber(row.tradingScore)}</td>
-                  <td>{formatNumber(row.confidence)}%</td>
-                  <td>{formatCurrency(row.currentPrice, row.currency)}<small>{row.dataQuality === "live" ? "Live" : row.dataQuality === "daily-only" ? "Daily close" : "Delayed"}</small></td>
-                  <td>{formatCurrency(row.recommendedEntry, row.currency)}</td>
-                  <td>{formatCurrency(row.stopLoss, row.currency)}</td>
-                  <td>{formatCurrency(row.target, row.currency)}</td>
-                  <td>{formatNumber(row.riskReward)}</td>
-                  <td>{row.setupType}</td>
+                  <td>{qualityLabel(row.quoteStatus)}<small>{row.provider || "Twelve Data"}</small></td>
+                  <td>{qualityLabel(row.historyStatus, "Unavailable")}</td>
+                  <td>{row.analysed ? "Ready" : "Incomplete"}<small>{row.marketDataTimestamp || row.priceTimestamp || "--"}</small></td>
+                  <td>{row.analysed ? formatNumber(row.tradingScore) : "--"}</td>
+                  <td>{row.analysed ? `${formatNumber(row.confidence)}%` : "--"}</td>
+                  <td>{row.analysed ? formatCurrency(row.currentPrice, row.currency) : "--"}<small>{qualityLabel(row.dataQuality)}</small></td>
+                  <td>{row.analysed ? formatCurrency(row.recommendedEntry, row.currency) : "--"}</td>
+                  <td>{row.analysed ? formatCurrency(row.stopLoss, row.currency) : "--"}</td>
+                  <td>{row.analysed ? formatCurrency(row.target, row.currency) : "--"}</td>
+                  <td>{row.analysed ? formatCurrency(row.finalExit, row.currency) : "--"}</td>
+                  <td>{row.analysed ? formatNumber(row.riskReward) : "--"}</td>
                   <td><span className={`status ${String(row.status).replace(/\s+/g, "").toLowerCase()}`}>{row.status}</span></td>
                   <td>{row.reason}</td>
-                  <td><Link className="prepareTradeLink" href={traderCompanyHref(row.symbol, "from=scanner&prepare=1")}>Prepare Trade</Link></td>
+                  <td>{row.analysed ? <Link className="prepareTradeLink" href={traderCompanyHref(row.symbol, "from=scanner&prepare=1")}>Open Company</Link> : <span>Do not use</span>}</td>
                 </tr>
               ))}
-              {!results.length ? <tr><td colSpan="13">Run the scanner to find approved opportunities.</td></tr> : null}
+              {!results.length ? <tr><td colSpan="16">Run Check Market Now to analyse the supported universe.</td></tr> : null}
             </tbody>
           </table>
         </div>

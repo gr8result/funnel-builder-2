@@ -5,10 +5,11 @@ import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 import { DesktopNotificationProvider } from "../../lib/freedom-trader/notificationProvider";
 import { buildAssistantDecision } from "../../lib/freedom-trader/assistantDecisionEngine";
-import { isFreedomScanSummaryCurrent } from "../../lib/freedom-trader/scanSummary";
+import { isFreedomScanSummaryCurrent, scanActionText } from "../../lib/freedom-trader/scanSummary";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
+const LATEST_SCAN_KEY = "freedom-trader-latest-market-scan";
 
 function formatCurrency(value, currency = "USD") {
   return Number.isFinite(Number(value))
@@ -69,13 +70,8 @@ function formatDateTime(value) {
 }
 
 function scanStatusMessage(summary = {}) {
-  const analysed = Number(summary.analysedCount ?? summary.symbolsAnalysed ?? summary.symbolsSuccessfullyLoaded ?? 0);
-  const requested = Number(summary.requestedCount ?? summary.symbolsRequested ?? analysed);
-  const unavailable = Number(summary.unavailableCount ?? summary.symbolsRejectedMissingData ?? Math.max(0, requested - analysed));
-  if (summary.status === "complete") return `Market check completed at ${formatDateTime(summary.completedAt || summary.scanCompletedAt)}. ${analysed} of ${requested} companies analysed. Data: ${summary.dataLabel || "Delayed by 15 minutes"}.`;
-  if (summary.status === "partial") return `Partial market check completed at ${formatDateTime(summary.completedAt || summary.scanCompletedAt)}. ${analysed} analysed, ${unavailable} unavailable.`;
-  if (summary.status === "failed") return "Market data is unavailable. Do not place a new trade from this report.";
-  return analysed ? `Market check loaded. ${analysed} of ${requested} companies analysed.` : "Market scanner has not completed yet.";
+  const action = scanActionText(summary);
+  return action.body;
 }
 
 async function browserHashPassword(password) {
@@ -249,6 +245,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       setScanSummary(summary);
       setUpdatedAt(scannerData.updatedAt || summary.completedAt || new Date().toISOString());
       setScanMessage(scanStatusMessage(summary));
+      window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: summary, decisions, results: scannerData.results || [], updatedAt: scannerData.updatedAt || summary.completedAt || new Date().toISOString() }));
       return { scannerRows: decisions, scanSummary: summary };
     }
     const failedSummary = scannerData?.scanSummary || {

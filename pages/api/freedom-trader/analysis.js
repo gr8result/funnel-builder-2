@@ -111,7 +111,7 @@ function historyDiagnostics(snapshot, cleanCandles) {
   const candles = snapshot?.candles?.daily || [];
   const first = cleanCandles[0]?.date || candles[0]?.date || null;
   const latest = cleanCandles[cleanCandles.length - 1]?.date || candles[candles.length - 1]?.date || null;
-  const apiError = snapshot?.dataQuality === "unavailable" ? snapshot?.error : null;
+  const apiError = ["unavailable", "stale"].includes(snapshot?.dataQuality) ? snapshot?.error : null;
   let status = "Ready";
   if (apiError) status = apiError;
   else if (!cleanCandles.length) status = "No daily history returned";
@@ -121,6 +121,8 @@ function historyDiagnostics(snapshot, cleanCandles) {
 
   return {
     provider: snapshot?.source || "Twelve Data",
+    quoteStatus: snapshot?.quoteStatus || (snapshot?.dataQuality === "live" ? "live" : snapshot?.dataQuality === "daily-only" ? "delayed" : snapshot?.dataQuality || "unavailable"),
+    historyStatus: snapshot?.historyStatus || (snapshot?.dataQuality === "daily-only" ? "available" : snapshot?.dataQuality || "unavailable"),
     requestedRange: "1y",
     requestedInterval: "1day",
     actualCandleCount: cleanCandles.length,
@@ -129,6 +131,7 @@ function historyDiagnostics(snapshot, cleanCandles) {
     dataQuality: snapshot?.dataQuality || "unavailable",
     cacheStatus: "shared-market-data-service",
     apiError,
+    errorCode: snapshot?.errorCode || null,
     status,
     readyForScore: status === "Ready",
   };
@@ -323,6 +326,8 @@ export function buildAnalysis({ symbol, snapshot }) {
     scoreExplanation: opportunity.scoreBreakdown,
     setup,
     marketData,
+    quoteStatus: snapshot?.quoteStatus || (snapshot?.dataQuality === "live" ? "live" : snapshot?.dataQuality === "daily-only" ? "delayed" : snapshot?.dataQuality || "unavailable"),
+    historyStatus: snapshot?.historyStatus || (snapshot?.dataQuality === "daily-only" ? "available" : snapshot?.dataQuality || "unavailable"),
     dataStatus,
     dataQuality: snapshot?.dataQuality,
     candleCount: clean.length,
@@ -371,17 +376,20 @@ function dataUnavailableRow(symbol, snapshot) {
     setup: { valid: false, setupReasoning: "Market data could not be loaded. No trade recommendation is available." },
     opportunity,
     signalResult: { overallSignal: "DATA UNAVAILABLE", timeframe: "1D", confidence: null, reasons: [snapshot?.error || "Market data unavailable."] },
+    quoteStatus: snapshot?.quoteStatus || "unavailable",
+    historyStatus: snapshot?.historyStatus || "unavailable",
     dataStatus,
     marketData,
     dataQuality: "unavailable",
     candleCount: 0,
     error: snapshot?.error || "Market data unavailable.",
+    errorCode: snapshot?.errorCode || null,
   };
 }
 
 export async function analyseSymbol(symbol, snapshotInput = null) {
   const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: "1y", interval: "1day" });
-  if (snapshot.dataQuality === "unavailable") return dataUnavailableRow(symbol, snapshot);
+  if (snapshot.dataQuality === "unavailable" || snapshot.dataQuality === "stale") return dataUnavailableRow(symbol, snapshot);
   return buildAnalysis({ symbol, snapshot });
 }
 

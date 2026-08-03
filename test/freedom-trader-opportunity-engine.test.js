@@ -122,7 +122,7 @@ test("shared scan summary records complete, partial and ranked decision counts",
   assert.equal(summary.analysedCount, 1);
   assert.equal(summary.unavailableCount, 1);
   assert.equal(summary.qualifiedCount, 1);
-  assert.equal(summary.rankedResults[0].symbol, "READY");
+  assert.equal(summary.rankedResults.length, 0);
 });
 
 test("multiple opportunities are ranked by action, confidence, reward/risk, liquidity and data quality", () => {

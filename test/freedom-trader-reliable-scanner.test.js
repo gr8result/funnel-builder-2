@@ -10,6 +10,8 @@ import {
   buildFreedomScanSummaryFromEngine,
 } from "../lib/freedom-trader/scanSummary.js";
 import { buildScanSummary } from "../pages/api/freedom-trader/scanner.js";
+import { generateFreedomTraderReport } from "../lib/freedom-trader/actionReport.js";
+import { buildAssistantDecision } from "../lib/freedom-trader/assistantDecisionEngine.js";
 
 const NOW = new Date("2026-07-30T22:00:00.000Z");
 
@@ -204,4 +206,94 @@ test("scanner API summary keeps the required checked/found wording", async () =>
   assert.equal(summary.validOpportunityCount, 0);
   assert.equal(summary.plainEnglish, "Checked 2 companies. Found 0 valid opportunities.");
   assert.match(summary.opportunitySummary, /No trade currently meets your rules/);
+});
+
+test("current data failure clears stale score and trade-plan fields", () => {
+  const unavailable = buildOpportunityDecision(analysis("OLD", {
+    currentPrice: 100,
+    tradingScore: 95,
+    confidence: 95,
+    dataQuality: "unavailable",
+    dataStatus: {
+      readyForScore: false,
+      actualCandleCount: 0,
+      latestTimestamp: null,
+      status: "Historical price data could not be loaded.",
+      errorCode: "permission-denied",
+    },
+    error: "Historical price data could not be loaded.",
+    errorCode: "permission-denied",
+  }), { now: NOW });
+
+  assert.equal(unavailable.analysed, false);
+  assert.equal(unavailable.qualified, null);
+  assert.equal(unavailable.tradingScore, null);
+  assert.equal(unavailable.confidence, null);
+  assert.equal(unavailable.entry, null);
+  assert.equal(unavailable.safetyExit, null);
+  assert.equal(unavailable.takeSomeProfit, null);
+  assert.equal(unavailable.finalExit, null);
+  assert.equal(unavailable.quoteStatus, "permission-denied");
+  assert.equal(unavailable.historyStatus, "permission-denied");
+});
+
+test("rate-limited provider results are unavailable and not ranked", () => {
+  const limited = buildOpportunityDecision(analysis("RATE", {
+    dataQuality: "unavailable",
+    dataStatus: {
+      readyForScore: false,
+      actualCandleCount: 0,
+      latestTimestamp: null,
+      status: "Twelve Data's per-minute request limit was reached.",
+      errorCode: "rate-limited",
+    },
+    error: "Twelve Data's per-minute request limit was reached.",
+    errorCode: "rate-limited",
+  }), { now: NOW });
+
+  assert.equal(limited.analysed, false);
+  assert.equal(limited.quoteStatus, "rate-limited");
+  assert.equal(limited.historyStatus, "rate-limited");
+  assert.equal(rankOpportunityDecisions([limited]).length, 0);
+});
+
+test("impossible summary totals fail closed", () => {
+  const ready = buildOpportunityDecision(analysis("READY"), { now: NOW });
+  const summary = buildFreedomScanSummaryFromEngine({
+    scanStartedAt: NOW.toISOString(),
+    scanCompletedAt: NOW.toISOString(),
+    scannedSymbols: ["READY", "MISSING"],
+    supportedSymbols: ["READY", "MISSING"],
+    decisions: [ready],
+    results: [ready],
+  });
+
+  assert.equal(summary.status, "partial");
+  assert.equal(summary.requestedCount, 2);
+  assert.equal(summary.analysedCount, 1);
+  assert.equal(summary.unavailableCount, 1);
+  assert.equal(summary.totalsValid, true);
+});
+
+test("partial and failed scans cannot produce assistant buy advice", () => {
+  const ready = buildOpportunityDecision(analysis("READY"), { now: NOW });
+  const partialSummary = {
+    status: "partial",
+    requestedCount: 2,
+    analysedCount: 1,
+    unavailableCount: 1,
+    qualifiedCount: 1,
+    notQualifiedCount: 0,
+  };
+  const report = generateFreedomTraderReport({
+    scannerRows: [ready],
+    scanSummary: partialSummary,
+    settings: { accountCurrency: "USD", currencyConversionRates: { USD: 1 } },
+    now: NOW,
+  });
+  const decision = buildAssistantDecision({ report, scanSummary: partialSummary });
+
+  assert.notEqual(report.recommendations[0]?.status, "READY TO BUY");
+  assert.notEqual(decision.state, "READY TO PREPARE");
+  assert.equal(decision.action, "WAIT");
 });

@@ -43,7 +43,14 @@ function legacyScannerStatus(result) {
 }
 
 export function buildScanSummary(result) {
-  const shared = buildFreedomScanSummaryFromEngine(result);
+  const disabledSymbols = Array.isArray(result.disabledSymbols) ? result.disabledSymbols : [];
+  const disabledSymbolNames = disabledSymbols.map((item) => item.symbol).filter(Boolean);
+  const requestedForThisScan = Array.from(new Set([...(result.scannedSymbols || []), ...disabledSymbolNames]));
+  const shared = buildFreedomScanSummaryFromEngine({
+    ...result,
+    requestedSymbols: requestedForThisScan,
+    scannedSymbols: requestedForThisScan,
+  });
   const decisions = result.decisions || [];
   const couldAnalyse = decisions.filter((item) => item.couldAnalyse);
   const couldNotAnalyse = decisions.filter((item) => !item.couldAnalyse);
@@ -63,10 +70,10 @@ export function buildScanSummary(result) {
     supportedSymbols: result.supportedSymbols,
     scannedSymbols: result.scannedSymbols,
     universe: result.supportedSymbols.length,
-    requested: result.scannedSymbols.length,
+    requested: shared.requestedCount,
     successfullyAnalysed: couldAnalyse.length,
     couldNotAnalyse: couldNotAnalyse.length,
-    dataUnavailable: counts["DATA UNAVAILABLE"] || 0,
+    dataUnavailable: shared.unavailableCount,
     readyToBuy: counts["READY TO BUY"] || 0,
     developing: counts.DEVELOPING || 0,
     wait: counts.WAIT || 0,
@@ -74,14 +81,14 @@ export function buildScanSummary(result) {
     qualified: counts["READY TO BUY"] || 0,
     notQualified: Math.max(0, couldAnalyse.length - (counts["READY TO BUY"] || 0)),
     scanCompletionStatus: shared.status === "partial" ? "incomplete-data" : shared.status,
-    symbolsRequested: result.scannedSymbols.length,
+    symbolsRequested: shared.requestedCount,
     symbolsSuccessfullyLoaded: couldAnalyse.length,
     symbolsRejectedMissingData: couldNotAnalyse.length,
     symbolsAnalysed: couldAnalyse.length,
-    approvedOpportunities: counts["READY TO BUY"] || 0,
+    approvedOpportunities: shared.status === "complete" ? counts["READY TO BUY"] || 0 : 0,
     rejectionCounts,
     dataUnavailableReasons: Array.from(new Set(couldNotAnalyse.map((item) => item.couldNotAnalyseReason).filter(Boolean))),
-    disabledSymbols: result.disabledSymbols,
+    disabledSymbols,
     plainEnglish: shared.plainEnglish,
     opportunitySummary: result.summary?.plainEnglish || null,
     scanStartedAt: shared.startedAt,
@@ -106,6 +113,7 @@ export default async function handler(req, res) {
       marketSnapshotBatch: getMarketSnapshotBatch,
     });
     const scanSummary = buildScanSummary(engineResult);
+    const trustedResults = scanSummary.status === "complete" ? engineResult.results : [];
 
     return res.status(200).json({
       ok: true,
@@ -117,9 +125,9 @@ export default async function handler(req, res) {
       supportedSymbols: engineResult.supportedSymbols,
       scanSummary,
       nextOffset: engineResult.nextOffset,
-      results: engineResult.results,
+      results: trustedResults,
       decisions: engineResult.decisions,
-      topOpportunity: engineResult.topOpportunity,
+      topOpportunity: trustedResults[0] || null,
       scannerStatus: legacyScannerStatus(engineResult),
       updatedAt: engineResult.scanCompletedAt,
       schedule: ["before market open", "during trading session", "after market close"],
