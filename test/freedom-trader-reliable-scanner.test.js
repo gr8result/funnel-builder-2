@@ -9,6 +9,7 @@ import {
   buildFailedFreedomScanSummary,
   buildFreedomScanSummaryFromEngine,
 } from "../lib/freedom-trader/scanSummary.js";
+import { buildScanSummary } from "../pages/api/freedom-trader/scanner.js";
 
 const NOW = new Date("2026-07-30T22:00:00.000Z");
 
@@ -178,4 +179,29 @@ test("ranked results remain ordered by opportunity quality", async () => {
   });
 
   assert.deepEqual(result.results.map((item) => item.symbol), ["MSFT", "AAPL", "NVDA"]);
+});
+
+test("scanner API summary keeps the required checked/found wording", async () => {
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["US"], chunkSize: 2 },
+    marketSnapshotBatch: async () => new Map(),
+    analyser: async (symbol) => analysis(symbol, {
+      tradingScore: 50,
+      opportunity: {
+        ...analysis(symbol).opportunity,
+        score: 50,
+        confidenceScore: 50,
+        riskReward: 0.8,
+        failedConditions: ["risk/reward below configured minimum"],
+      },
+    }),
+  });
+  const summary = buildScanSummary(result);
+
+  assert.equal(summary.status, "complete");
+  assert.equal(summary.checkedCount, 2);
+  assert.equal(summary.validOpportunityCount, 0);
+  assert.equal(summary.plainEnglish, "Checked 2 companies. Found 0 valid opportunities.");
+  assert.match(summary.opportunitySummary, /No trade currently meets your rules/);
 });
