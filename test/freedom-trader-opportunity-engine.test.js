@@ -5,6 +5,7 @@ import {
   calculateOpportunityQuantity,
   rankOpportunityDecisions,
   runOpportunityEngine,
+  supportedUniverseForMarkets,
   validateMarketData,
 } from "../lib/freedom-trader/opportunityEngine.js";
 import { DEFAULT_REPORT_SETTINGS, generateFreedomTraderReport } from "../lib/freedom-trader/actionReport.js";
@@ -102,6 +103,29 @@ test("no opportunities returns a teaching summary", async () => {
   assert.equal(result.results.length, 2);
   assert.equal(result.summary.counts["READY TO BUY"], 0);
   assert.match(result.summary.plainEnglish, /No trade currently meets your rules/);
+});
+
+test("V1 scanner ignores ASX settings and analyses the supported US universe only", async () => {
+  const universe = supportedUniverseForMarkets(["ASX"]);
+  assert.ok(universe.length > 0);
+  assert.equal(universe.some((item) => String(item.symbol).endsWith(".AX")), false);
+
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["ASX"], chunkSize: 2 },
+    marketSnapshotBatch: async (symbols) => {
+      assert.deepEqual(symbols, ["AAPL", "MSFT"]);
+      return new Map();
+    },
+    analyser: async (symbol) => analysis(symbol),
+  });
+
+  assert.deepEqual(result.settings.markets, ["US"]);
+  assert.deepEqual(result.settings.ignoredMarkets, ["ASX"]);
+  assert.match(result.settings.marketScopeMessage, /US markets only/);
+  assert.deepEqual(result.scannedSymbols, ["AAPL", "MSFT"]);
+  assert.equal(result.disabledSymbols.length, 0);
+  assert.equal(result.decisions.some((item) => String(item.symbol).endsWith(".AX")), false);
 });
 
 test("shared scan summary records complete, partial and ranked decision counts", () => {

@@ -22,6 +22,8 @@ const DEFAULT_SETTINGS = {
   chunkSize: 30,
 };
 
+const V1_MARKET_SCOPE_MESSAGE = "Freedom Trader V1.0 currently analyses US markets only. ASX support is planned for the next major milestone.";
+
 const frequencyMs = {
   "before-open": 60 * 60 * 1000,
   "during-session": 15 * 60 * 1000,
@@ -80,7 +82,7 @@ export default function MarketOpportunities({ passwordHash }) {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
     try {
       const stored = JSON.parse(window.localStorage.getItem(SCANNER_SETTINGS_KEY) || "null");
-      if (stored && typeof stored === "object") setSettings({ ...DEFAULT_SETTINGS, ...stored });
+      if (stored && typeof stored === "object") setSettings({ ...DEFAULT_SETTINGS, ...stored, markets: ["US"] });
     } catch {}
     setChecking(false);
   }, []);
@@ -105,7 +107,7 @@ export default function MarketOpportunities({ passwordHash }) {
   }
 
   function updateSetting(key, value) {
-    const next = { ...settings, [key]: value };
+    const next = { ...settings, [key]: key === "markets" ? ["US"] : value };
     setSettings(next);
     window.localStorage.setItem(SCANNER_SETTINGS_KEY, JSON.stringify(next));
   }
@@ -182,7 +184,7 @@ export default function MarketOpportunities({ passwordHash }) {
       <header className="hero">
         <div>
           <h1>Market Opportunities</h1>
-          <p>This scanner only checks the exact supported symbol universe shown below. It proposes trade plans and alerts; it never places orders.</p>
+          <p>{scanSummary?.marketScopeMessage || V1_MARKET_SCOPE_MESSAGE}</p>
         </div>
         <div className="heroStats">
           <article><span>Approved Setups</span><strong>{strongCount}</strong></article>
@@ -198,9 +200,8 @@ export default function MarketOpportunities({ passwordHash }) {
 
       <section className="settings">
         <label>Markets scanned
-          <select multiple value={settings.markets} onChange={(event) => updateSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}>
-            <option value="US">Supported US shares (NASDAQ/NYSE)</option>
-            <option value="ASX">Supported ASX Australian shares (requires a paid data plan &mdash; currently unavailable)</option>
+          <select value="US" onChange={() => updateSetting("markets", ["US"])}>
+            <option value="US">Freedom Trader V1.0 US shares (NASDAQ/NYSE)</option>
           </select>
         </label>
         <label>Minimum score<input type="number" value={settings.minimumScore} onChange={(event) => updateSetting("minimumScore", Number(event.target.value))} /></label>
@@ -227,6 +228,7 @@ export default function MarketOpportunities({ passwordHash }) {
           <article><span>Data Unavailable</span><strong>{scanSummary.dataUnavailable ?? scanSummary.symbolsRejectedMissingData}</strong></article>
           <article><span>Qualified</span><strong>{scanSummary.qualified ?? scanSummary.approvedOpportunities}</strong></article>
           <article><span>Not Qualified</span><strong>{scanSummary.notQualified ?? "--"}</strong></article>
+          <div className="symbolList"><span>Market scope</span><p>{scanSummary.marketScopeMessage || V1_MARKET_SCOPE_MESSAGE}</p></div>
           <div className="symbolList"><span>Symbols scanned</span><p>{scanSummary.scannedSymbols?.join(", ") || "--"}</p></div>
           <div className="symbolList"><span>Rejected counts (analysed, no setup)</span><p>{Object.entries(scanSummary.rejectionCounts || {}).map(([reason, count]) => `${reason}: ${count}`).join("; ") || "No rejected symbols in this chunk."}</p></div>
           <div className="symbolList"><span>Why data was unavailable</span><p>{scanSummary.dataUnavailableReasons?.length ? scanSummary.dataUnavailableReasons.join("; ") : "None in this batch."}</p></div>

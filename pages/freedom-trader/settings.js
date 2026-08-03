@@ -6,6 +6,7 @@ import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
 const SCANNER_SETTINGS_KEY = "freedom-trader-scanner-settings";
+const V1_MARKET_SCOPE_MESSAGE = "Freedom Trader V1.0 currently analyses US markets only. ASX support is planned for the next major milestone.";
 
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
@@ -50,7 +51,7 @@ export default function TraderSettings({ passwordHash }) {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
     try {
       const stored = JSON.parse(window.localStorage.getItem(SCANNER_SETTINGS_KEY) || "null");
-      if (stored && typeof stored === "object") setScannerSettings((current) => ({ ...current, ...stored }));
+      if (stored && typeof stored === "object") setScannerSettings((current) => ({ ...current, ...stored, markets: ["US"] }));
     } catch {}
     setChecking(false);
   }, []);
@@ -72,7 +73,7 @@ export default function TraderSettings({ passwordHash }) {
 
   function updateScannerSetting(key, value) {
     setScannerSettings((current) => {
-      const next = { ...current, [key]: value };
+      const next = { ...current, [key]: key === "markets" ? ["US"] : value };
       window.localStorage.setItem(SCANNER_SETTINGS_KEY, JSON.stringify(next));
       return next;
     });
@@ -113,9 +114,9 @@ export default function TraderSettings({ passwordHash }) {
       </main>
       <main className="panel">
         <h2>C. Scanner Settings</h2>
-        <p>The scanner searches the exact supported universe and returns trade-plan candidates only.</p>
+        <p>{V1_MARKET_SCOPE_MESSAGE}</p>
         <div className="formGrid">
-          <label>Markets scanned<select multiple value={scannerSettings.markets} onChange={(event) => updateScannerSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}><option value="US">Supported US shares (NASDAQ/NYSE)</option><option value="ASX">Supported ASX shares (requires a paid data plan)</option></select></label>
+          <label>Markets scanned<select value="US" onChange={() => updateScannerSetting("markets", ["US"])}><option value="US">Freedom Trader V1.0 US shares (NASDAQ/NYSE)</option></select></label>
           <label>Minimum score<input type="number" value={scannerSettings.minimumScore} onChange={(event) => updateScannerSetting("minimumScore", Number(event.target.value))} /></label>
           <label>Minimum daily volume<input type="number" value={scannerSettings.minimumDailyVolume} onChange={(event) => updateScannerSetting("minimumDailyVolume", Number(event.target.value))} /></label>
           <label>Minimum risk/reward<input type="number" value={scannerSettings.minimumRiskReward} onChange={(event) => updateScannerSetting("minimumRiskReward", Number(event.target.value))} /></label>

@@ -208,6 +208,27 @@ test("scanner API summary keeps the required checked/found wording", async () =>
   assert.match(summary.opportunitySummary, /No trade currently meets your rules/);
 });
 
+test("scanner API states V1 is US-only and does not count ASX as unavailable", async () => {
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["US", "ASX"], chunkSize: 2 },
+    marketSnapshotBatch: async (symbols) => {
+      assert.deepEqual(symbols, ["AAPL", "MSFT"]);
+      return new Map();
+    },
+    analyser: async (symbol) => analysis(symbol),
+  });
+  const summary = buildScanSummary(result);
+
+  assert.deepEqual(summary.marketLabels, ["US"]);
+  assert.deepEqual(summary.ignoredMarkets, ["ASX"]);
+  assert.match(summary.marketScopeMessage, /US markets only/);
+  assert.equal(summary.requestedCount, 2);
+  assert.equal(summary.dataUnavailable, 0);
+  assert.equal(summary.disabledSymbols.length, 0);
+  assert.equal(summary.scannedSymbols.some((symbol) => symbol.endsWith(".AX")), false);
+});
+
 test("current data failure clears stale score and trade-plan fields", () => {
   const unavailable = buildOpportunityDecision(analysis("OLD", {
     currentPrice: 100,

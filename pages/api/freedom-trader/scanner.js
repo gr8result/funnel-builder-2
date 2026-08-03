@@ -1,6 +1,6 @@
 import { analyseSymbol } from "./analysis.js";
 import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
-import { OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
+import { FREEDOM_TRADER_V1_MARKET_SCOPE_MESSAGE, OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
 import { buildFailedFreedomScanSummary, buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 
 const DEFAULT_SETTINGS = {
@@ -66,6 +66,9 @@ export function buildScanSummary(result) {
     ...shared,
     engineVersion: OPPORTUNITY_ENGINE_VERSION,
     marketLabels: result.settings.markets,
+    marketScope: result.settings.marketScope || "US_ONLY",
+    marketScopeMessage: result.settings.marketScopeMessage || FREEDOM_TRADER_V1_MARKET_SCOPE_MESSAGE,
+    ignoredMarkets: result.settings.ignoredMarkets || [],
     supportedUniverseCount: result.supportedSymbols.length,
     supportedSymbols: result.supportedSymbols,
     scannedSymbols: result.scannedSymbols,
@@ -131,6 +134,7 @@ export default async function handler(req, res) {
       scannerStatus: legacyScannerStatus(engineResult),
       updatedAt: engineResult.scanCompletedAt,
       schedule: ["before market open", "during trading session", "after market close"],
+      marketScopeMessage: scanSummary.marketScopeMessage,
       error: null,
     });
   } catch (error) {
