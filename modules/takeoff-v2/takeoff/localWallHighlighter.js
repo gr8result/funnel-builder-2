@@ -9,6 +9,10 @@ const PARALLEL_TOLERANCE_DEG = 3;
 const SAME_FACE_TOLERANCE = 5;
 const BAND_GAP_TOLERANCE = 42;
 const JUNCTION_FACE_TOLERANCE = 8;
+const DIMENSION_TICK_MIN_LENGTH = 3;
+const DIMENSION_TICK_MAX_LENGTH = 28;
+const DIMENSION_TICK_FACE_TOLERANCE = 5;
+const DIMENSION_CHAIN_MIN_TICKS = 3;
 const MIN_CONFIDENCE = 0.64;
 const REJECTED_TAGS = new Set([
   "annotation",
@@ -121,6 +125,13 @@ function oriented(segment) {
   };
 }
 
+function orientedRawSegments(segments = []) {
+  return segments
+    .filter((segment) => segment?.a && segment?.b && segment.stroked !== false)
+    .map(oriented)
+    .filter(Boolean);
+}
+
 function nearestPointOnSegment(point, a, b) {
   const abx = b.x - a.x;
   const aby = b.y - a.y;
@@ -157,6 +168,45 @@ function mergeIntervals(lines, alongHint) {
     }
   });
   return intervalContaining(merged, alongHint) || merged.sort((a, b) => (b.end - b.start) - (a.end - a.start))[0] || null;
+}
+
+function lineCrossesFaceAt(line, seed, faceFixed, interval) {
+  const diff = angleDiffDeg(line.angle, seed.angle);
+  if (diff < 65 || diff > 115) return null;
+  if (line.length < DIMENSION_TICK_MIN_LENGTH || line.length > DIMENSION_TICK_MAX_LENGTH) return null;
+  const aFixed = line.a.x * seed.nx + line.a.y * seed.ny;
+  const bFixed = line.b.x * seed.nx + line.b.y * seed.ny;
+  const minFixed = Math.min(aFixed, bFixed);
+  const maxFixed = Math.max(aFixed, bFixed);
+  if (minFixed > faceFixed + DIMENSION_TICK_FACE_TOLERANCE || maxFixed < faceFixed - DIMENSION_TICK_FACE_TOLERANCE) return null;
+  const mid = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+  const along = mid.x * seed.ux + mid.y * seed.uy;
+  if (along < interval.start - BAND_GAP_TOLERANCE || along > interval.end + BAND_GAP_TOLERANCE) return null;
+  return { along, sourceId: line.id, length: line.length };
+}
+
+function dimensionChainEvidence(seed, partner, rawLines, interval) {
+  const faces = [seed.fixed, partner.fixed];
+  const evidence = faces.map((faceFixed) => {
+    const ticks = rawLines
+      .map((line) => lineCrossesFaceAt(line, seed, faceFixed, interval))
+      .filter(Boolean)
+      .sort((a, b) => a.along - b.along);
+    const uniqueTicks = [];
+    ticks.forEach((tick) => {
+      if (!uniqueTicks.some((prior) => Math.abs(prior.along - tick.along) <= 4)) uniqueTicks.push(tick);
+    });
+    return { faceFixed, ticks: uniqueTicks };
+  });
+  const strongest = evidence.sort((a, b) => b.ticks.length - a.ticks.length)[0] || { ticks: [] };
+  if (strongest.ticks.length < DIMENSION_CHAIN_MIN_TICKS) return null;
+  return {
+    type: "dimension-chain",
+    tickCount: strongest.ticks.length,
+    faceFixed: strongest.faceFixed,
+    tickSourceIds: strongest.ticks.map((tick) => tick.sourceId).filter(Boolean),
+    reason: `dimension chain evidence: ${strongest.ticks.length} repeated perpendicular ticks`,
+  };
 }
 
 function structuralCrossings(lines, seed, faceAFixed, faceBFixed, interval) {
@@ -216,33 +266,64 @@ function stableWallId(start, end, thickness) {
   return `hl-wall-${points[0]}-${points[1]}-${Math.round(thickness * 10) / 10}`;
 }
 
-function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
+function candidateDebug(type, seed, partner, pointerDistance, reason, extra = {}) {
+  return {
+    candidateType: type,
+    coordinates: {
+      seed: seed ? { start: seed.a, end: seed.b } : null,
+      partner: partner ? { start: partner.a, end: partner.b } : null,
+    },
+    length: seed && partner ? Math.max(seed.length || 0, partner.length || 0) : seed?.length || 0,
+    distanceFromPointer: pointerDistance,
+    representation: partner ? "paired wall band" : "single vector stroke",
+    belongsToDimensionChain: Boolean(extra.dimensionEvidence),
+    reason,
+    ...extra,
+  };
+}
+
+function makeCandidate(seed, partner, lines, rawLines, pointer, pointerDistance, searchRadiusDocUnits) {
   const thickness = Math.abs(seed.fixed - partner.fixed);
   if (thickness < MIN_THICKNESS || thickness > MAX_THICKNESS) {
-    return { rejected: true, reason: `thickness ${Math.round(thickness * 10) / 10} outside range` };
+    return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `thickness ${Math.round(thickness * 10) / 10} outside range`) };
   }
   if (overlap(seed, partner) < MIN_FACE_OVERLAP) {
-    return { rejected: true, reason: "parallel faces do not overlap" };
+    return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, "parallel faces do not overlap") };
   }
 
   const pointerAlong = pointer.x * seed.ux + pointer.y * seed.uy;
+  const pointerFixed = pointer.x * seed.nx + pointer.y * seed.ny;
   const faceAFixed = seed.fixed;
   const faceBFixed = partner.fixed;
+  const minFaceFixed = Math.min(faceAFixed, faceBFixed);
+  const maxFaceFixed = Math.max(faceAFixed, faceBFixed);
+  const bandDistance = pointerFixed < minFaceFixed
+    ? minFaceFixed - pointerFixed
+    : pointerFixed > maxFaceFixed
+      ? pointerFixed - maxFaceFixed
+      : 0;
+  if (bandDistance > Math.max(2, searchRadiusDocUnits)) {
+    return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `pointer ${Math.round(bandDistance * 10) / 10} outside wall band`) };
+  }
   const faceALines = sameFaceLines(lines, seed, faceAFixed);
   const faceBLines = sameFaceLines(lines, seed, faceBFixed);
   const intervalA = mergeIntervals(faceALines, pointerAlong);
   const intervalB = mergeIntervals(faceBLines, pointerAlong);
-  if (!intervalA || !intervalB) return { rejected: true, reason: "missing wall face interval" };
+  if (!intervalA || !intervalB) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, "missing wall face interval") };
 
   const rawInterval = {
     start: Math.min(intervalA.start, intervalB.start),
     end: Math.max(intervalA.end, intervalB.end),
   };
+  const dimensionEvidence = dimensionChainEvidence(seed, partner, rawLines, rawInterval);
+  if (dimensionEvidence) {
+    return { rejected: true, debug: candidateDebug("dimension-chain", seed, partner, pointerDistance, dimensionEvidence.reason, { dimensionEvidence }) };
+  }
   const supportedInterval = trimIntervalToJunctions(lines, seed, faceAFixed, faceBFixed, rawInterval);
   const startAlong = supportedInterval.start;
   const endAlong = supportedInterval.end;
   const length = endAlong - startAlong;
-  if (length < MIN_WALL_LENGTH) return { rejected: true, reason: `length ${Math.round(length)} below wall minimum` };
+  if (length < MIN_WALL_LENGTH) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `length ${Math.round(length)} below wall minimum`) };
 
   const centerFixed = (faceAFixed + faceBFixed) / 2;
   const startJunction = pointOn(seed, startAlong, centerFixed);
@@ -255,7 +336,7 @@ function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
   const supportScore = Math.min(0.16, faceSupport * 0.035);
   const distanceScore = Math.max(0, 0.16 - pointerDistance / 90);
   const confidence = Math.min(0.96, 0.38 + thicknessScore + lengthScore + supportScore + distanceScore);
-  if (confidence < MIN_CONFIDENCE) return { rejected: true, reason: `confidence ${confidence.toFixed(2)} below threshold` };
+  if (confidence < MIN_CONFIDENCE) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `confidence ${confidence.toFixed(2)} below threshold`) };
 
   return {
     id: stableWallId(startJunction, endJunction, thickness),
@@ -281,6 +362,12 @@ function makeCandidate(seed, partner, lines, pointer, pointerDistance) {
       reason: supportedInterval.crossings.length >= 2 ? "accepted and trimmed to structural intersections" : "accepted parallel structural wall band",
       rasterEvidence: "not-used",
     },
+    debug: candidateDebug("structural-wall-band", seed, partner, pointerDistance, supportedInterval.crossings.length >= 2 ? "accepted structural wall band with adjoining junctions" : "accepted wall band but endpoints need review", {
+      dimensionEvidence: null,
+      centreline: { start: startJunction, end: endJunction },
+      thickness,
+      confidence,
+    }),
   };
 }
 
@@ -288,6 +375,7 @@ export function findHighlightableWallAtPoint({ point, planGeometryIndex, page = 
   if (!point || !planGeometryIndex) return { wall: null, diagnostics: [] };
   const diagnostics = [];
   const all = rawSegments(planGeometryIndex);
+  const rawLines = orientedRawSegments(all);
   const lines = all
     .map((segment) => {
       const reason = rejectionReason(segment, page);
@@ -313,9 +401,9 @@ export function findHighlightableWallAtPoint({ point, planGeometryIndex, page = 
     lines.forEach((partner) => {
       if (partner.id === seed.id) return;
       if (angleDiffDeg(seed.angle, partner.angle) > PARALLEL_TOLERANCE_DEG) return;
-      const candidate = makeCandidate(seed, partner, lines, point, pointerDistance);
+      const candidate = makeCandidate(seed, partner, lines, rawLines, point, pointerDistance, radius);
       if (candidate.rejected) {
-        if (diagnosticsEnabled) diagnostics.push({ seedId: seed.id, partnerId: partner.id, accepted: false, reason: candidate.reason });
+        if (diagnosticsEnabled) diagnostics.push({ seedId: seed.id, partnerId: partner.id, accepted: false, ...(candidate.debug || {}) });
         return;
       }
       candidates.push(candidate);
@@ -333,7 +421,7 @@ export function findHighlightableWallAtPoint({ point, planGeometryIndex, page = 
     b.diagnostics.candidateLength - a.diagnostics.candidateLength
   ));
   if (diagnosticsEnabled) {
-    sorted.slice(0, 3).forEach((candidate) => diagnostics.push({ ...candidate.diagnostics, id: candidate.id, accepted: true }));
+    sorted.slice(0, 3).forEach((candidate) => diagnostics.push({ ...candidate.diagnostics, ...candidate.debug, id: candidate.id, accepted: true }));
   }
   return { wall: sorted[0] || null, diagnostics };
 }

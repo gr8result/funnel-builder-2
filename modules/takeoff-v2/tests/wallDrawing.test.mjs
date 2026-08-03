@@ -437,6 +437,54 @@ for (const extra of [
   assert.equal(result.wall, null, `${JSON.stringify(extra)} should not highlight`);
 }
 
+// ---- dimension chain with repeated ticks is rejected as a wall band --------
+{
+  const dimensionTicks = [100, 150, 200, 250, 300].map((x) => line({ x, y: 76 }, { x, y: 88 }));
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 80, y: 80 }, { x: 320, y: 80 }),
+      line({ x: 80, y: 100 }, { x: 320, y: 100 }),
+      ...dimensionTicks,
+    ],
+  };
+  const result = findHighlightableWallAtPoint({
+    point: { x: 200, y: 80 },
+    planGeometryIndex,
+    page: { sourceWidth: 420, sourceHeight: 220 },
+    searchRadiusDocUnits: 12,
+    diagnosticsEnabled: true,
+  });
+  assert.equal(result.wall, null);
+  assert.ok(result.diagnostics.some((entry) => entry.belongsToDimensionChain));
+}
+
+// ---- clicking a dimension chain near a real wall does not jump to the wall -
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 300, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 300, y: 108 }),
+      line({ x: 100, y: 80 }, { x: 300, y: 80 }),
+      line({ x: 120, y: 76 }, { x: 120, y: 88 }),
+      line({ x: 180, y: 76 }, { x: 180, y: 88 }),
+      line({ x: 240, y: 76 }, { x: 240, y: 88 }),
+      line({ x: 300, y: 76 }, { x: 300, y: 88 }),
+      line({ x: 100, y: 70 }, { x: 100, y: 130 }),
+      line({ x: 108, y: 70 }, { x: 108, y: 130 }),
+      line({ x: 300, y: 70 }, { x: 300, y: 130 }),
+      line({ x: 292, y: 70 }, { x: 292, y: 130 }),
+    ],
+  };
+  const dimensionClick = findHighlightableWallAtPoint({ point: { x: 200, y: 80 }, planGeometryIndex, page: { sourceWidth: 420, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.equal(dimensionClick.wall, null);
+  const wallClick = findHighlightableWallAtPoint({ point: { x: 200, y: 104 }, planGeometryIndex, page: { sourceWidth: 420, sourceHeight: 220 }, searchRadiusDocUnits: 12 });
+  assert.ok(wallClick.wall);
+  assert.equal(Math.round(wallClick.wall.centreline.start.x), 100);
+  assert.equal(Math.round(wallClick.wall.centreline.end.x), 300);
+}
+
 // ---- a lone line and a distant pointer do not snap to nonexistent walls ----
 {
   const planGeometryIndex = { source: "fixture", rawSegments: [line({ x: 100, y: 100 }, { x: 300, y: 100 })] };

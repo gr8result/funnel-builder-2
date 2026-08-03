@@ -433,6 +433,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [exteriorHighlightHoverWallId, setExteriorHighlightHoverWallId] = useState(null);
   const [exteriorHighlightPreview, setExteriorHighlightPreview] = useState(null);
   const [exteriorHighlightDiagnostics, setExteriorHighlightDiagnostics] = useState([]);
+  const [exteriorHighlightPointer, setExteriorHighlightPointer] = useState(null);
+  const [exteriorHighlightDebugEnabled, setExteriorHighlightDebugEnabled] = useState(false);
   const [exteriorHighlightGap, setExteriorHighlightGap] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
@@ -485,6 +487,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setExteriorHighlightHoverWallId(null);
     setExteriorHighlightPreview(null);
     setExteriorHighlightDiagnostics([]);
+    setExteriorHighlightPointer(null);
+    setExteriorHighlightDebugEnabled(false);
     setExteriorHighlightGap(null);
   }, []);
 
@@ -777,6 +781,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
     if (activeTool !== "exterior-highlighter") return;
     const diagnosticsEnabled = typeof window !== "undefined" && window.localStorage?.getItem("takeoffHighlighterDebug") === "1";
+    setExteriorHighlightPointer(rawPoint);
+    setExteriorHighlightDebugEnabled(diagnosticsEnabled);
     const result = findHighlightableWallAtPoint({
       point: rawPoint,
       planGeometryIndex,
@@ -2072,6 +2078,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     exteriorHighlightHoverWallId,
     exteriorHighlightPreview,
     exteriorHighlightDiagnostics,
+    exteriorHighlightPointer,
+    exteriorHighlightDebugEnabled,
     exteriorHighlightedWalls: exteriorHighlightJunctionState.walls,
     exteriorHighlightedWallIds: page?.exteriorHighlightedWallIds || [],
     exteriorHighlightJunctions,

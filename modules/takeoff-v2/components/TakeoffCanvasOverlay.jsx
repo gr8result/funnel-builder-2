@@ -191,6 +191,14 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
             hovered
           />
         )}
+        {isExteriorHighlighter && tools.exteriorHighlightDebugEnabled && (
+          <ExteriorHighlighterDebugOverlay
+            pointer={tools.exteriorHighlightPointer}
+            preview={tools.exteriorHighlightPreview}
+            diagnostics={tools.exteriorHighlightDiagnostics || []}
+            project={project}
+          />
+        )}
         {tools.exteriorHighlightGap && (
           <GapLine gap={tools.exteriorHighlightGap} project={project} />
         )}
@@ -370,6 +378,54 @@ function ExteriorHighlightJunctionHandle({ junction, project, selected, hovered 
       {(selected || hovered) && <circle cx={p.x} cy={p.y} r={6} fill="none" stroke="#0f172a" strokeWidth={1.2} opacity={0.65} />}
       <circle cx={p.x} cy={p.y} r={hovered ? 4.5 : 4} fill="#fff7ed" stroke={selected ? "#f97316" : "#0f172a"} strokeWidth={1.5} />
       <path d={`M ${p.x - 2} ${p.y} L ${p.x + 2} ${p.y} M ${p.x} ${p.y - 2} L ${p.x} ${p.y + 2}`} stroke="#0f172a" strokeWidth={1} />
+    </g>
+  );
+}
+
+function ExteriorHighlighterDebugOverlay({ pointer, preview, diagnostics, project }) {
+  const p = pointer ? project(pointer) : null;
+  const rejectedDimension = diagnostics.find((entry) => entry.belongsToDimensionChain && entry.coordinates?.seed);
+  return (
+    <g data-testid="exterior-highlighter-debug-overlay">
+      {p && (
+        <>
+          <circle cx={p.x} cy={p.y} r={5} fill="none" stroke="#ef4444" strokeWidth={1.5} />
+          <path d={`M ${p.x - 8} ${p.y} L ${p.x + 8} ${p.y} M ${p.x} ${p.y - 8} L ${p.x} ${p.y + 8}`} stroke="#ef4444" strokeWidth={1} />
+        </>
+      )}
+      {preview?.faceA && <DebugLine line={preview.faceA} project={project} color="#22c55e" dash="4 3" testId="debug-wall-face-a" />}
+      {preview?.faceB && <DebugLine line={preview.faceB} project={project} color="#22c55e" dash="4 3" testId="debug-wall-face-b" />}
+      {preview?.centreline && <DebugLine line={preview.centreline} project={project} color="#2563eb" width={1.5} testId="debug-wall-centreline" />}
+      {preview?.startJunction && <DebugPoint point={preview.startJunction.point || preview.startJunction} project={project} label="L" />}
+      {preview?.endJunction && <DebugPoint point={preview.endJunction.point || preview.endJunction} project={project} label="R" />}
+      {rejectedDimension?.coordinates?.seed && (
+        <DebugLine
+          line={{ start: rejectedDimension.coordinates.seed.start, end: rejectedDimension.coordinates.seed.end }}
+          project={project}
+          color="#dc2626"
+          width={2}
+          dash="7 4"
+          testId="debug-rejected-dimension-line"
+        />
+      )}
+    </g>
+  );
+}
+
+function DebugLine({ line, project, color, width = 1, dash, testId }) {
+  if (!line?.start || !line?.end) return null;
+  const a = project(line.start);
+  const b = project(line.end);
+  return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={color} strokeWidth={width} strokeDasharray={dash} data-testid={testId} />;
+}
+
+function DebugPoint({ point, project, label }) {
+  if (!point) return null;
+  const p = project(point);
+  return (
+    <g data-testid="debug-wall-endpoint">
+      <circle cx={p.x} cy={p.y} r={4} fill="#fff" stroke="#111827" strokeWidth={1.2} />
+      <text x={p.x} y={p.y - 7} textAnchor="middle" fontSize={9} fontWeight={700} fill="#111827">{label}</text>
     </g>
   );
 }

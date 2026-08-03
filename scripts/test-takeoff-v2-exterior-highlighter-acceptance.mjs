@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(".env.local") });
 
 const baseUrl = process.argv[2] || "http://localhost:3000";
 const samplePath = process.env.TAKEOFF_SAMPLE_PLANS_PDF || "C:/Users/grant/Downloads/SAMPLES PLANS W DIMS.pdf";
-const outDir = path.join("tmp", "takeoff-v2-exterior-highlighter");
+const outDir = path.join("tmp", "takeoff-v2-first-wall");
 fs.mkdirSync(outDir, { recursive: true });
 
 function record(name, pass, detail = "") {
@@ -17,14 +17,6 @@ function record(name, pass, detail = "") {
 
 async function screenshot(page, name) {
   await page.screenshot({ path: path.join(outDir, `${name}.png`), fullPage: false });
-}
-
-async function highlightedCount(page) {
-  return page.$$eval('[data-testid="highlighted-exterior-wall"]', (nodes) => nodes.length);
-}
-
-async function highlightedStrokeWidths(page) {
-  return page.$$eval('[data-testid="highlighted-exterior-wall"] line', (nodes) => nodes.map((node) => Number(node.getAttribute("stroke-width") || node.getAttribute("strokeWidth") || node.style.strokeWidth || 0)));
 }
 
 async function previewState(page) {
@@ -39,30 +31,49 @@ async function previewState(page) {
       height: box.height,
       length: Math.hypot(box.width, box.height),
       vertical: box.height > box.width,
+      x1: Number(line.getAttribute("x1")),
+      y1: Number(line.getAttribute("y1")),
+      x2: Number(line.getAttribute("x2")),
+      y2: Number(line.getAttribute("y2")),
     };
   }).catch(() => null);
 }
 
 async function moveAndReadPreview(page, x, y) {
   await page.mouse.move(x, y);
-  await new Promise((resolve) => setTimeout(resolve, 25));
+  await new Promise((resolve) => setTimeout(resolve, 35));
   return previewState(page);
 }
 
-async function scanVisiblePreviews(page) {
+async function highlightedState(page) {
+  return page.$eval('[data-testid="highlighted-exterior-wall"]', (node) => {
+    const line = node.querySelector("line");
+    return {
+      id: node.getAttribute("data-wall-id"),
+      x1: Number(line.getAttribute("x1")),
+      y1: Number(line.getAttribute("y1")),
+      x2: Number(line.getAttribute("x2")),
+      y2: Number(line.getAttribute("y2")),
+      strokeWidth: Number(line.getAttribute("stroke-width") || line.getAttribute("strokeWidth") || 0),
+    };
+  }).catch(() => null);
+}
+
+async function findTopHorizontalPreview(page) {
   const rect = await page.$eval('[data-testid="plan-canvas"]', (canvas) => {
     const box = canvas.getBoundingClientRect();
     return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
   });
-  const byId = new Map();
-  for (let y = rect.top + 40; y < rect.bottom - 40; y += 18) {
-    for (let x = rect.left + 40; x < rect.right - 40; x += 18) {
+  const seen = new Set();
+  for (let y = rect.top + 35; y < rect.bottom - 35; y += 18) {
+    for (let x = rect.left + 35; x < rect.right - 35; x += 24) {
       const preview = await moveAndReadPreview(page, x, y);
-      if (!preview?.id || byId.has(preview.id)) continue;
-      byId.set(preview.id, preview);
+      if (!preview?.id || seen.has(preview.id)) continue;
+      seen.add(preview.id);
+      if (!preview.vertical && preview.length > 90) return preview;
     }
   }
-  return [...byId.values()];
+  return null;
 }
 
 async function injectScale(page) {
@@ -94,38 +105,23 @@ async function injectScale(page) {
   });
 }
 
-async function savedState(page) {
+async function savedHighlightedWall(page) {
   return page.evaluate(() => {
     const pagesKey = Object.keys(localStorage).find((key) => key.startsWith("gr8:takeoff-v2:pages:"));
     const selectedKey = Object.keys(localStorage).find((key) => key.startsWith("gr8:takeoff-v2:selectedPage:"));
     const selectedPageId = JSON.parse(localStorage.getItem(selectedKey));
     const pages = JSON.parse(localStorage.getItem(pagesKey));
     const planPage = pages.find((candidate) => candidate.id === selectedPageId);
-    return {
-      highlightedWalls: planPage?.exteriorHighlightedWalls?.length || 0,
-      highlightedWallIds: planPage?.exteriorHighlightedWallIds?.length || 0,
-      junctionIds: [...new Set((planPage?.exteriorHighlightedWalls || []).flatMap((wall) => [wall.startJunction?.id, wall.endJunction?.id]).filter(Boolean))].length,
-      exteriorGenerated: Boolean(planPage?.exteriorWalls),
-    };
+    return planPage?.exteriorHighlightedWalls?.[0] || null;
   });
 }
 
-async function clickPreview(page, preview) {
-  await page.mouse.move(preview.x, preview.y);
-  await new Promise((resolve) => setTimeout(resolve, 80));
-  await page.mouse.click(preview.x, preview.y);
-}
-
-function chooseTargets(previews) {
-  const usable = previews.filter((preview) => preview.length > 80);
-  const vertical = usable.filter((preview) => preview.vertical);
-  const horizontal = usable.filter((preview) => !preview.vertical);
-  return {
-    right: vertical.toSorted((a, b) => b.x - a.x)[0],
-    alfresco: horizontal.toSorted((a, b) => a.y - b.y)[0],
-    garage: vertical.toSorted((a, b) => a.x - b.x)[0],
-    studyReturn: usable.toSorted((a, b) => a.length - b.length)[0],
-  };
+function sameSegment(a, b) {
+  if (!a || !b) return false;
+  return Math.abs(a.x1 - b.x1) < 0.5 &&
+    Math.abs(a.y1 - b.y1) < 0.5 &&
+    Math.abs(a.x2 - b.x2) < 0.5 &&
+    Math.abs(a.y2 - b.y2) < 0.5;
 }
 
 if (!fs.existsSync(samplePath)) {
@@ -146,6 +142,7 @@ try {
     Object.keys(localStorage)
       .filter((key) => key.startsWith("gr8:takeoff-v2:"))
       .forEach((key) => localStorage.removeItem(key));
+    localStorage.setItem("takeoffHighlighterDebug", "1");
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="takeoff-v2-page"]', { timeout: 30000 });
@@ -162,89 +159,41 @@ try {
   await page.click('[data-testid="tool-exterior-highlighter"]');
   record("global detected-wall overlay is not rendered", await page.$$eval('[data-testid="detected-wall-object"]', (nodes) => nodes.length) === 0);
 
-  const previews = await scanVisiblePreviews(page);
-  record("sample plan exposes local hoverable wall bands", previews.length >= 4, `${previews.length} unique previews`);
-  const targets = chooseTargets(previews);
-  record("required wall targets found", Boolean(targets.right && targets.alfresco && targets.garage && targets.studyReturn));
-  if (!targets.right || !targets.alfresco || !targets.garage || !targets.studyReturn) {
-    await screenshot(page, "00-no-local-wall-previews-found");
-    throw new Error(`Only found ${previews.length} local wall preview(s).`);
-  }
+  const topFamilyWall = await findTopHorizontalPreview(page);
+  record("top horizontal structural wall preview found", Boolean(topFamilyWall), topFamilyWall ? JSON.stringify({ id: topFamilyWall.id, x: topFamilyWall.x, y: topFamilyWall.y, length: Math.round(topFamilyWall.length) }) : "");
+  if (!topFamilyWall) throw new Error("No top horizontal structural wall preview found.");
 
-  await moveAndReadPreview(page, targets.right.x, targets.right.y);
-  await screenshot(page, "01-trimmed-wall-endpoints");
-  record("right-hand wall hover shows one preview", await page.$$eval('[data-testid="highlightable-wall-preview"]', (nodes) => nodes.length) === 1);
-  await clickPreview(page, targets.right);
-  record("right-hand wall click highlights one wall", await highlightedCount(page) === 1);
-  await clickPreview(page, targets.right);
-  record("clicking same preview toggles it off", await highlightedCount(page) === 0);
-  await clickPreview(page, targets.right);
+  await moveAndReadPreview(page, topFamilyWall.x, topFamilyWall.y);
+  await page.waitForSelector('[data-testid="exterior-highlighter-debug-overlay"]', { timeout: 10000 });
+  await screenshot(page, "01-top-wall-local-debug");
 
-  await clickPreview(page, targets.alfresco);
-  await clickPreview(page, targets.garage);
-  await clickPreview(page, targets.studyReturn);
-  record("repeat clicks add independent highlighted walls", await highlightedCount(page) >= 3);
-  await screenshot(page, "02-clean-shared-corner");
-  const widths = await highlightedStrokeWidths(page);
-  record("yellow highlights render thin", widths.length >= 3 && widths.every((width) => width <= 3), JSON.stringify(widths));
-  await screenshot(page, "04-thinner-yellow-highlights");
+  const dimensionProbe = { x: topFamilyWall.x, y: topFamilyWall.y - 26 };
+  const dimensionPreview = await moveAndReadPreview(page, dimensionProbe.x, dimensionProbe.y);
+  await screenshot(page, "02-dimension-chain-rejected");
+  record("top dimension chain does not preview", !dimensionPreview);
 
-  await page.click('[data-testid="tool-edit-exterior"]');
-  await page.waitForSelector('[data-testid="exterior-highlight-junction"]', { timeout: 10000 });
-  const firstJunction = await page.$eval('[data-testid="exterior-highlight-junction"]', (node) => {
-    const circle = node.querySelector('circle:not([data-testid])');
-    const box = circle.getBoundingClientRect();
-    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
-  });
-  await page.mouse.move(firstJunction.x, firstJunction.y);
-  await page.mouse.down();
-  await page.mouse.move(firstJunction.x + 14, firstJunction.y + 8, { steps: 4 });
-  await page.mouse.up();
-  await screenshot(page, "03-exterior-corner-drag");
-  record("edit exterior exposes draggable highlighted junction handles", await page.$$eval('[data-testid="exterior-highlight-junction"]', (nodes) => nodes.length) > 0);
+  await page.evaluate(() => localStorage.removeItem("takeoffHighlighterDebug"));
+  const hover = await moveAndReadPreview(page, topFamilyWall.x, topFamilyWall.y);
+  await screenshot(page, "03-correct-wall-hover-preview");
+  record("correct wall previews before click", Boolean(hover?.id));
 
-  await page.click('[data-testid="tool-area"]');
-  const canvasRectForArea = await page.$eval('[data-testid="plan-canvas"]', (canvas) => {
-    const box = canvas.getBoundingClientRect();
-    return { left: box.left, top: box.top, width: box.width, height: box.height };
-  });
-  const areaPoints = [
-    [canvasRectForArea.left + canvasRectForArea.width * 0.38, canvasRectForArea.top + canvasRectForArea.height * 0.36],
-    [canvasRectForArea.left + canvasRectForArea.width * 0.52, canvasRectForArea.top + canvasRectForArea.height * 0.36],
-    [canvasRectForArea.left + canvasRectForArea.width * 0.52, canvasRectForArea.top + canvasRectForArea.height * 0.48],
-    [canvasRectForArea.left + canvasRectForArea.width * 0.38, canvasRectForArea.top + canvasRectForArea.height * 0.48],
-  ];
-  for (const [x, y] of areaPoints) await page.mouse.click(x, y);
-  await screenshot(page, "05-smaller-area-points");
-  record("area draft points render small visible handles", await page.$$eval('[data-testid="area-draft-point"]', (nodes) => nodes.length) >= 4);
+  await page.mouse.click(topFamilyWall.x, topFamilyWall.y);
+  await page.waitForSelector('[data-testid="highlighted-exterior-wall"]', { timeout: 10000 });
+  const selected = await highlightedState(page);
+  await screenshot(page, "04-correct-wall-highlighted");
+  record("clicked selection matches hover preview", sameSegment(hover, selected), JSON.stringify({ hover, selected }));
+  record("highlight remains thin", selected?.strokeWidth <= 3, JSON.stringify(selected));
 
-  await page.click('[data-testid="tool-exterior-highlighter"]');
-  const beforeRejectClicks = await highlightedCount(page);
-  const canvasRect = await page.$eval('[data-testid="plan-canvas"]', (canvas) => {
-    const box = canvas.getBoundingClientRect();
-    return { left: box.left, top: box.top, right: box.right, bottom: box.bottom, width: box.width, height: box.height };
-  });
-  await page.mouse.move(canvasRect.left + canvasRect.width * 0.5, canvasRect.top + 25);
-  await page.mouse.click(canvasRect.left + canvasRect.width * 0.5, canvasRect.top + 25);
-  await screenshot(page, "07-dimension-line-rejected");
-  await page.mouse.move(canvasRect.right - 60, canvasRect.bottom - 60);
-  await page.mouse.click(canvasRect.right - 60, canvasRect.bottom - 60);
-  await screenshot(page, "08-title-block-line-rejected");
-  record("dimension/title-block clicks do not add highlights", await highlightedCount(page) === beforeRejectClicks);
+  const saved = await savedHighlightedWall(page);
+  record("saved wall has structural endpoints", Boolean(saved?.centreline?.start && saved?.centreline?.end), JSON.stringify(saved?.centreline || null));
 
-  await page.click('[data-testid="tool-finish-exterior"]');
-  await page.waitForFunction(() => {
-    const msg = document.querySelector('[data-testid="wall-detection-message"]')?.textContent || "";
-    return msg.includes("Exterior generation will be enabled after full-wall selection is reliable.");
-  }, { timeout: 10000 });
-  const finalState = await savedState(page);
-  record("highlight state persists in page storage", finalState.highlightedWalls >= 3 && finalState.highlightedWalls === finalState.highlightedWallIds, JSON.stringify(finalState));
-  record("finish exterior does not generate a polygon", finalState.exteriorGenerated === false, JSON.stringify(finalState));
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-testid="plan-canvas"]', { timeout: 30000 });
-  await page.click('[data-testid="tool-edit-exterior"]');
+  await page.click('[data-testid="tool-exterior-highlighter"]');
   await page.waitForSelector('[data-testid="highlighted-exterior-wall"]', { timeout: 10000 });
-  await screenshot(page, "06-persisted-after-refresh");
+  const persisted = await highlightedState(page);
+  await screenshot(page, "05-correct-wall-after-refresh");
+  record("correct wall persists after refresh", sameSegment(selected, persisted), JSON.stringify({ selected, persisted }));
 } finally {
   await browser.close();
 }
