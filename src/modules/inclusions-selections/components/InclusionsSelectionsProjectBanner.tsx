@@ -13,6 +13,7 @@ import {
   routeForProject,
   saveSelectionsProject,
   SELECTIONS_FILE_EXTENSION,
+  registerProjectOpen,
   type PortableSelectionsFile,
   type SelectionsSaveStatus,
 } from "../services/projectFileManagementService";
@@ -47,6 +48,10 @@ type NewProjectDraft = {
   estimator: string;
 };
 
+type NewProjectField = keyof NewProjectDraft;
+
+type NewProjectValidationErrors = Partial<Record<NewProjectField, string>>;
+
 type RecentSelectionsFile = {
   id: string;
   fileName: string;
@@ -62,7 +67,10 @@ type ActiveSelectionsFile = {
   fileName: string;
   fileId?: string;
   createdAt?: string;
+  builder?: string;
+  estimator?: string;
   status: LocalSaveStatus;
+  pendingSaveOffer?: boolean;
 };
 
 const emptyNewProject: NewProjectDraft = {
@@ -94,10 +102,24 @@ function statusLabel(status: LocalSaveStatus): string {
   return "Saved to File";
 }
 
+function creationStatusLabel(status: "idle" | "creating" | "validation_required" | "save_dialog_opened" | "file_created" | "failed"): string {
+  if (status === "creating") return "Creating...";
+  if (status === "validation_required") return "Validation Required";
+  if (status === "save_dialog_opened") return "Save Dialog Opened";
+  if (status === "file_created") return "File Created";
+  if (status === "failed") return "File Creation Failed";
+  return "";
+}
+
 function safeFileName(context: Partial<ProjectSelectionContext>, suffix = ""): string {
   const base = [context.projectName ?? context.projectId ?? "Selections Project", context.jobNumber].filter(Boolean).join("-");
   const cleaned = base.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "Selections-Project";
   return `${cleaned}${suffix}${SELECTIONS_FILE_EXTENSION}`;
+}
+
+function newProjectFileName(draft: Pick<NewProjectDraft, "projectName" | "jobNumber">): string {
+  const cleaned = [draft.projectName, draft.jobNumber].filter(Boolean).join("-").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "Selections-Project";
+  return `${cleaned}${SELECTIONS_FILE_EXTENSION}`;
 }
 
 function makeProjectId(draft: NewProjectDraft): string {
@@ -133,8 +155,13 @@ function downloadJson(fileName: string, text: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 0);
 }
 
 function openPickerOptions() {
@@ -249,9 +276,18 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   const router = useRouter();
   const { workspaceId } = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const newFieldRefs = useRef<Record<NewProjectField, HTMLInputElement | null>>({
+    projectName: null,
+    jobNumber: null,
+    clientName: null,
+    siteAddress: null,
+    builder: null,
+    estimator: null,
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const [recentOpen, setRecentOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [savePromptOpen, setSavePromptOpen] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [openPreview, setOpenPreview] = useState<ReturnType<typeof previewSelectionsProjectImport> | null>(null);
   const [openPreviewVisible, setOpenPreviewVisible] = useState(false);
@@ -263,7 +299,10 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   const [status, setStatus] = useState<LocalSaveStatus>(locked ? "locked_version" : saveStatus ?? (context.projectId ? "unsaved_file" : "no_file"));
   const [message, setMessage] = useState("");
   const [diagnostics, setDiagnostics] = useState("");
+  const [creationDiagnostics, setCreationDiagnostics] = useState("");
+  const [creationStatus, setCreationStatus] = useState<"idle" | "creating" | "validation_required" | "save_dialog_opened" | "file_created" | "failed">("idle");
   const [recentFiles, setRecentFiles] = useState<RecentSelectionsFile[]>([]);
+  const [newErrors, setNewErrors] = useState<NewProjectValidationErrors>({});
   const [newDraft, setNewDraft] = useState<NewProjectDraft>({
     ...emptyNewProject,
     projectName: context.projectName ?? "",
@@ -271,13 +310,14 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
     clientName: context.clientName ?? "",
     siteAddress: context.siteAddress ?? "",
   });
+  const [pendingCreatedProject, setPendingCreatedProject] = useState<ProjectSelectionContext | null>(null);
   const [saveAsName, setSaveAsName] = useState(safeFileName(context));
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
 
   const organisationId = context.organisationId || workspaceId || "";
   const bannerContext = useMemo(() => ({ ...context, organisationId }), [context, organisationId]);
   const hasProject = Boolean(organisationId && context.projectId);
-  const effectiveStatus = locked ? "locked_version" : saveStatus ?? status;
+  const effectiveStatus = locked ? "locked_version" : status;
   const currentStageLabel = INCLUSIONS_SELECTIONS_STAGES.find((stage) => stage.id === currentStage)?.label ?? currentStage;
   const dashboardHref = projectDashboardHref(bannerContext);
 
@@ -286,7 +326,8 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   }, []);
 
   useEffect(() => {
-    if (saveStatus) setStatus(saveStatus);
+    if (!saveStatus || saveStatus === "saved") return;
+    setStatus(saveStatus);
   }, [saveStatus]);
 
   useEffect(() => {
@@ -301,6 +342,14 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       setActiveFileMetadata(activeFile.fileId && activeFile.createdAt ? { fileId: activeFile.fileId, createdAt: activeFile.createdAt } : null);
       setStatus((current) => current === "saving" ? current : activeFile.status);
       setSaveAsName(activeFile.fileName);
+      if (activeFile.pendingSaveOffer && bannerContext.organisationId && bannerContext.projectId) {
+        setPendingCreatedProject({
+          ...(bannerContext as ProjectSelectionContext),
+          builder: activeFile.builder,
+          estimator: activeFile.estimator,
+        });
+        setSavePromptOpen(true);
+      }
       return;
     }
     setLocalFileName((current) => current === "No selections file open" ? safeFileName(bannerContext) : current);
@@ -338,37 +387,189 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
     return shouldContinue ? "continue" : "cancel";
   }
 
+  function validateNewDraft(): NewProjectValidationErrors {
+    const labels: Record<NewProjectField, string> = {
+      projectName: "Project Name",
+      jobNumber: "Job Number",
+      clientName: "Client",
+      siteAddress: "Site Address",
+      builder: "Builder",
+      estimator: "Estimator",
+    };
+    const errors: NewProjectValidationErrors = {};
+    (Object.keys(labels) as NewProjectField[]).forEach((field) => {
+      if (!newDraft[field].trim()) errors[field] = `${labels[field]} is required.`;
+    });
+    return errors;
+  }
+
+  function focusFirstInvalid(errors: NewProjectValidationErrors) {
+    const first = (Object.keys(errors) as NewProjectField[])[0];
+    if (first) newFieldRefs.current[first]?.focus();
+  }
+
+  function activeFilePayload(
+  project: ProjectSelectionContext,
+  fileName: string,
+  file: Partial<Pick<PortableSelectionsFile, "fileId" | "createdAt">> = {},
+  nextStatus: LocalSaveStatus,
+  pendingSaveOffer = false,
+): ActiveSelectionsFile {
+    return {
+      organisationId: project.organisationId,
+      projectId: project.projectId,
+      fileName,
+      fileId: file.fileId,
+      createdAt: file.createdAt,
+      builder: project.builder,
+      estimator: project.estimator,
+      status: nextStatus,
+      pendingSaveOffer,
+    };
+  }
+
+  function applyActiveFileState(project: ProjectSelectionContext, fileName: string, file: Partial<Pick<PortableSelectionsFile, "fileId" | "createdAt">>, nextStatus: LocalSaveStatus, pendingSaveOffer = false) {
+    setLocalFileName(fileName);
+    setStatus(nextStatus);
+    setActiveFileMetadata(file.fileId && file.createdAt ? { fileId: file.fileId, createdAt: file.createdAt } : null);
+    writeActiveFile(activeFilePayload(project, fileName, file, nextStatus, pendingSaveOffer));
+  }
+
   async function serialiseCurrentProject(mode: "save" | "save_as" = "save"): Promise<{ fileName: string; text: string; file: PortableSelectionsFile }> {
-    const exported = await exportSelectionsProjectFile(bannerContext);
-    const baseFile: PortableSelectionsFile = activeFileMetadata
-      ? { ...exported.file, fileId: activeFileMetadata.fileId, createdAt: activeFileMetadata.createdAt }
+    return serialiseProject(bannerContext as ProjectSelectionContext, mode);
+  }
+
+  async function serialiseProject(project: ProjectSelectionContext, mode: "save" | "save_as" = "save", suggestedFileId?: { fileId?: string; createdAt?: string }): Promise<{ fileName: string; text: string; file: PortableSelectionsFile }> {
+    const activeFile = readActiveFile(project);
+    const projectForFile: ProjectSelectionContext = {
+      ...project,
+      builder: project.builder ?? activeFile?.builder,
+      estimator: project.estimator ?? activeFile?.estimator,
+    };
+    const exported = await exportSelectionsProjectFile(projectForFile);
+    const baseFile: PortableSelectionsFile = activeFileMetadata || suggestedFileId?.fileId || suggestedFileId?.createdAt
+      ? {
+          ...exported.file,
+          fileId: suggestedFileId?.fileId ?? activeFileMetadata?.fileId ?? exported.file.fileId,
+          createdAt: suggestedFileId?.createdAt ?? activeFileMetadata?.createdAt ?? exported.file.createdAt,
+        }
       : exported.file;
-    const file = preparePortableSelectionsFileForLocalSave(baseFile, mode);
+    const file = preparePortableSelectionsFileForLocalSave({
+      ...baseFile,
+      projectSummary: projectForFile,
+      projectDetails: {
+        ...baseFile.projectDetails,
+        ...projectForFile,
+        client: projectForFile.clientName ?? baseFile.projectDetails.client,
+        builder: projectForFile.builder ?? baseFile.projectDetails.builder,
+        estimator: projectForFile.estimator ?? baseFile.projectDetails.estimator,
+      },
+    }, mode);
     const text = JSON.stringify(file, null, 2);
     return { fileName: exported.fileName, text, file };
   }
 
   async function handleNew() {
-    if (!newDraft.projectName.trim() || !newDraft.jobNumber.trim() || !newDraft.clientName.trim() || !newDraft.siteAddress.trim() || !newDraft.builder.trim() || !newDraft.estimator.trim()) {
-      setMessage("Project Name, Job Number, Client, Site Address, Builder and Estimator are required.");
+    setCreationDiagnostics("");
+    setMessage("");
+    setCreationStatus("creating");
+    const errors = validateNewDraft();
+    if (Object.keys(errors).length > 0) {
+      setNewErrors(errors);
+      setCreationStatus("validation_required");
+      setMessage("Complete the required project details before creating the file.");
+      requestAnimationFrame(() => focusFirstInvalid(errors));
       return;
     }
-    const target: ProjectSelectionContext = {
-      organisationId: organisationId || "local_builder",
-      projectId: makeProjectId(newDraft),
-      projectName: newDraft.projectName.trim(),
-      jobNumber: newDraft.jobNumber.trim(),
-      clientName: newDraft.clientName.trim(),
-      siteAddress: newDraft.siteAddress.trim(),
-    };
-    setLocalFileHandle(null);
-    setActiveFileMetadata(null);
-    setLocalFileName("Unsaved File");
-    setStatus("unsaved_file");
+    setNewErrors({});
+    try {
+      const target: ProjectSelectionContext = {
+        organisationId: organisationId || "local_builder",
+        projectId: makeProjectId(newDraft),
+        projectName: newDraft.projectName.trim(),
+        jobNumber: newDraft.jobNumber.trim(),
+        clientName: newDraft.clientName.trim(),
+        siteAddress: newDraft.siteAddress.trim(),
+        builder: newDraft.builder.trim(),
+        estimator: newDraft.estimator.trim(),
+      };
+      const suggestedName = newProjectFileName(newDraft);
+      registerProjectOpen(target, "areas");
+      setLocalFileHandle(null);
+      setPendingCreatedProject(target);
+      setSaveAsName(suggestedName);
+      applyActiveFileState(target, suggestedName, {}, "unsaved_file", true);
+      setMessage("Unsaved File");
+      setCreationStatus("file_created");
+      setNewOpen(false);
+      setSavePromptOpen(true);
+      await router.push(routeForProject(target, "areas"));
+    } catch (error) {
+      console.error("The selections file could not be created.", error);
+      setCreationStatus("failed");
+      setMessage("The selections file could not be created.");
+      setCreationDiagnostics(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function handleCreateSaveNow() {
+    const project = pendingCreatedProject;
+    if (!project) return;
+    setCreationStatus("save_dialog_opened");
+    setStatus("saving");
+    setDiagnostics("");
+    const suggestedName = newProjectFileName({
+      projectName: project.projectName ?? "Selections Project",
+      jobNumber: project.jobNumber ?? "",
+    });
+    try {
+      const serialised = await serialiseProject(project);
+      const picker = filePickerWindow();
+      if (picker.showSaveFilePicker) {
+        try {
+          const handle = await picker.showSaveFilePicker(savePickerOptions(suggestedName));
+          await writeFile(handle, serialised.text);
+          setLocalFileHandle(handle);
+          applyActiveFileState(project, handle.name, serialised.file, "saved_to_file");
+          setMessage("Saved to File");
+          setCreationStatus("file_created");
+          setSavePromptOpen(false);
+          await rememberRecentFile(serialised.file, handle.name, handle);
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            applyActiveFileState(project, suggestedName, {}, "unsaved_file");
+            setMessage("Unsaved File");
+            setCreationStatus("file_created");
+            return;
+          }
+          setCreationDiagnostics(error instanceof Error ? error.message : String(error));
+        }
+      }
+      downloadJson(suggestedName, serialised.text);
+      setLocalFileHandle(null);
+      applyActiveFileState(project, suggestedName, serialised.file, "downloaded_copy");
+      setMessage(`Updated copy downloaded as ${suggestedName}. The browser did not provide a writable file handle, so the original file is not linked for overwrite.`);
+      setCreationStatus("file_created");
+      setSavePromptOpen(false);
+      await rememberRecentFile(serialised.file, suggestedName, null);
+    } catch (error) {
+      console.error("The selections file could not be created.", error);
+      setStatus("save_failed");
+      setCreationStatus("failed");
+      setMessage("The selections file could not be created.");
+      setCreationDiagnostics(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function handleContinueWithoutSaving() {
+    if (!pendingCreatedProject) return;
+    applyActiveFileState(pendingCreatedProject, localFileName === "No selections file open" ? newProjectFileName({
+      projectName: pendingCreatedProject.projectName ?? "Selections Project",
+      jobNumber: pendingCreatedProject.jobNumber ?? "",
+    }) : localFileName, {}, "unsaved_file");
     setMessage("Unsaved File");
-    writeActiveFile({ organisationId: target.organisationId, projectId: target.projectId, fileName: "Unsaved File", status: "unsaved_file" });
-    setNewOpen(false);
-    await router.push(routeForProject(target, "areas"));
+    setSavePromptOpen(false);
   }
 
   async function processPickedFile(file: File, handle: LocalFileHandle | null) {
@@ -663,15 +864,52 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
         <div className="bannerModal" role="dialog" aria-modal="true">
           <div className="modalPanel narrow">
             <header><h2>New File</h2><button type="button" onClick={() => setNewOpen(false)}>Cancel</button></header>
-            <input value={newDraft.projectName} onChange={(event) => setNewDraft({ ...newDraft, projectName: event.target.value })} placeholder="Project Name" />
-            <input value={newDraft.jobNumber} onChange={(event) => setNewDraft({ ...newDraft, jobNumber: event.target.value })} placeholder="Job Number" />
-            <input value={newDraft.clientName} onChange={(event) => setNewDraft({ ...newDraft, clientName: event.target.value })} placeholder="Client" />
-            <input value={newDraft.siteAddress} onChange={(event) => setNewDraft({ ...newDraft, siteAddress: event.target.value })} placeholder="Site Address" />
-            <input value={newDraft.builder} onChange={(event) => setNewDraft({ ...newDraft, builder: event.target.value })} placeholder="Builder" />
-            <input value={newDraft.estimator} onChange={(event) => setNewDraft({ ...newDraft, estimator: event.target.value })} placeholder="Estimator" />
+            {creationStatus === "validation_required" ? <p className="validationSummary">Complete the required project details before creating the file.</p> : null}
+            {(["projectName", "jobNumber", "clientName", "siteAddress", "builder", "estimator"] as NewProjectField[]).map((field) => {
+              const labels: Record<NewProjectField, string> = {
+                projectName: "Project Name",
+                jobNumber: "Job Number",
+                clientName: "Client",
+                siteAddress: "Site Address",
+                builder: "Builder",
+                estimator: "Estimator",
+              };
+              return (
+                <label key={field} className="fieldGroup">
+                  <span>{labels[field]}</span>
+                  <input
+                    ref={(input) => { newFieldRefs.current[field] = input; }}
+                    value={newDraft[field]}
+                    aria-invalid={Boolean(newErrors[field])}
+                    aria-describedby={newErrors[field] ? `new-${field}-error` : undefined}
+                    onChange={(event) => {
+                      setNewDraft({ ...newDraft, [field]: event.target.value });
+                      if (newErrors[field]) setNewErrors({ ...newErrors, [field]: undefined });
+                    }}
+                  />
+                  {newErrors[field] ? <small id={`new-${field}-error`} className="fieldError">{newErrors[field]}</small> : null}
+                </label>
+              );
+            })}
+            {creationStatus !== "idle" ? <p className={`creationState ${creationStatus}`}>{creationStatusLabel(creationStatus)}</p> : null}
+            {creationDiagnostics ? <details className="diagnostics"><summary>Technical details</summary><pre>{creationDiagnostics}</pre></details> : null}
             <div className="dialogActions">
-              <button type="button" className="saveButton" onClick={() => void handleNew()}>Create File</button>
+              <button type="button" className="saveButton" onClick={() => void handleNew()}>{creationStatus === "creating" ? "Creating..." : "Create File"}</button>
               <button type="button" onClick={() => setNewOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {savePromptOpen && pendingCreatedProject ? (
+        <div className="bannerModal" role="dialog" aria-modal="true">
+          <div className="modalPanel narrow">
+            <header><h2>File Created</h2><button type="button" onClick={handleContinueWithoutSaving}>Continue Without Saving</button></header>
+            <p><strong>{pendingCreatedProject.projectName}</strong> has been created in memory. Save a local `.gr8select` file now, or continue and save later.</p>
+            <p className={`creationState ${creationStatus}`}>{creationStatusLabel(creationStatus) || "File Created"}</p>
+            {creationDiagnostics ? <details className="diagnostics"><summary>Technical details</summary><pre>{creationDiagnostics}</pre></details> : null}
+            <div className="dialogActions">
+              <button type="button" className="saveButton" onClick={() => void handleCreateSaveNow()}>Save File Now</button>
+              <button type="button" onClick={handleContinueWithoutSaving}>Continue Without Saving</button>
             </div>
           </div>
         </div>
@@ -940,6 +1178,50 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
           border: 1px solid #cbd5e1;
           padding: 8px 10px;
           font: inherit;
+        }
+        .fieldGroup {
+          display: grid;
+          gap: 6px;
+          color: #172033;
+          font-weight: 750;
+        }
+        .fieldGroup input[aria-invalid="true"] {
+          border-color: #dc2626;
+          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+        }
+        .fieldError, .validationSummary {
+          color: #991b1b;
+        }
+        .validationSummary {
+          margin: 0;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          background: #fff7f7;
+          padding: 10px 12px;
+          font-weight: 750;
+        }
+        .creationState {
+          margin: 0;
+          border-radius: 999px;
+          justify-self: start;
+          padding: 7px 10px;
+          background: #eff6ff;
+          color: #1d4ed8;
+          font-size: 13px;
+          font-weight: 850;
+        }
+        .creationState.validation_required,
+        .creationState.failed {
+          background: #fef2f2;
+          color: #991b1b;
+        }
+        .creationState.file_created {
+          background: #ecfdf5;
+          color: #166534;
+        }
+        .creationState.save_dialog_opened {
+          background: #fff7ed;
+          color: #9a3412;
         }
         .previewGrid {
           display: grid;

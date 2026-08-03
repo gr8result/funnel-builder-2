@@ -51,9 +51,13 @@ export type PortableSelectionsFile = {
   organisationReference: string;
   projectSummary: ProjectSelectionContext;
   projectDetails: ProjectSelectionContext & {
+    client?: string;
     builder?: string;
     estimator?: string;
   };
+  templates: Awaited<ReturnType<typeof loadTemplateStage>>;
+  selectionItems: Awaited<ReturnType<typeof loadSelectionWorkspace>>["requirements"];
+  selections: Awaited<ReturnType<typeof loadSelectionWorkspace>>["selections"];
   areasAndLevels: Awaited<ReturnType<typeof loadProjectAreaRegister>>;
   templatesAndTiers: Awaited<ReturnType<typeof loadTemplateStage>>;
   workspace: Awaited<ReturnType<typeof loadSelectionWorkspace>>;
@@ -339,6 +343,8 @@ export async function exportSelectionsProjectFile(contextInput: Partial<ProjectS
   const context = requiredContext(contextInput);
   const timestamp = now();
   const approvals = await loadApprovalStage(context);
+  const templates = await loadTemplateStage(context);
+  const workspace = await loadSelectionWorkspace(context);
   const file: PortableSelectionsFile = {
     schema: "gr8.selections.project",
     schemaVersion: 1,
@@ -351,10 +357,13 @@ export async function exportSelectionsProjectFile(contextInput: Partial<ProjectS
     sourceApplication: "gr8-result",
     organisationReference: context.organisationId,
     projectSummary: context,
-    projectDetails: context,
+    projectDetails: { ...context, client: context.clientName },
+    templates,
+    selectionItems: workspace.requirements,
+    selections: workspace.selections,
     areasAndLevels: await loadProjectAreaRegister(context),
-    templatesAndTiers: await loadTemplateStage(context),
-    workspace: await loadSelectionWorkspace(context),
+    templatesAndTiers: templates,
+    workspace,
     review: await loadSelectionReview(context),
     approvals,
     attachmentsMetadata: [],
@@ -438,7 +447,7 @@ export async function importSelectionsProjectFile(file: PortableSelectionsFile, 
 
 export function closeSelectionsProject(context: Partial<ProjectSelectionContext>): string {
   if (context.organisationId) savePersistedValue(activeKey(context.organisationId), null);
-  return projectDashboardHref(context);
+  return "/inclusions-selections/areas";
 }
 
 export function routeForProject(project: ProjectSelectionContext, stage: InclusionsSelectionsStageId = "areas"): string {

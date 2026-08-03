@@ -11,6 +11,8 @@ export type ProjectSelectionContext = {
   clientName?: string;
   siteAddress?: string;
   jobNumber?: string;
+  builder?: string;
+  estimator?: string;
 };
 
 export type AreaTypeSelectionState = {
