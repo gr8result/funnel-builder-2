@@ -17,6 +17,12 @@ import { lengthMm } from "../takeoff/measurement.js";
 import { computeAxisLock, applyAxisConstraint, axisAngleDegrees } from "../takeoff/axisLock.js";
 import { softAxisSnap } from "../takeoff/wallDrawing.js";
 import { bestSnapCandidate } from "../takeoff/planSnap.js";
+import {
+  SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
+  expandLineToWall,
+  findLineNearPointer,
+  scaleToolLineSelection,
+} from "../takeoff/lineSelection.js";
 import { buildSnapCandidates, snapPoint } from "../takeoff/snapping.js";
 import {
   addSegment,
@@ -36,7 +42,6 @@ import {
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
-import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -57,7 +62,6 @@ const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirme
 const AUTO_DETECTION_DISABLED_MESSAGE = "No wall objects could be detected from this page yet. Use Trace Exterior manually, or review the PDF/vector extraction.";
 const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until wall-object review is complete.";
 const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
-const EXTERIOR_HIGHLIGHT_SEARCH_SCREEN_PX = 12;
 const EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS = 18;
 const MIN_HIGHLIGHTED_WALL_LENGTH_DOC_UNITS = 12;
 
@@ -618,8 +622,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // placement hasn't been deliberately enabled; callers must check `valid`
   // before accepting/placing a point.
   const resolvePlacement = useCallback((rawPoint, { rotation = 0, zoomScale = 1, anchor = null, requireAxisLock = false } = {}) => {
+    const lineHit = scaleToolLineSelection({
+      page,
+      documentPoint: rawPoint,
+      screenTolerance: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
+      zoom: zoomScale,
+      planGeometryIndex,
+    });
     const candidate = bestSnapCandidate(rawPoint, {
-      toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX,
+      toleranceScreenPx: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
       zoomScale,
       planGeometryIndex,
       page,
@@ -629,12 +640,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const freeCoordinateSource = candidate ? candidate.point : rawPoint;
 
     if (!requireAxisLock || !anchor) {
-      return { point: valid ? freeCoordinateSource : null, rawPoint, axis: null, angleDegrees: null, snap, valid };
+      return { point: valid ? freeCoordinateSource : null, rawPoint, axis: null, angleDegrees: null, snap, valid, lineHit };
     }
 
     const { axis } = computeAxisLock({ pointA: anchor, rawPointB: rawPoint, rotation, forcedAxis });
     const point = valid ? applyAxisConstraint(anchor, freeCoordinateSource, axis) : null;
-    return { point, rawPoint, axis, angleDegrees: axisAngleDegrees(axis), snap, valid };
+    return { point, rawPoint, axis, angleDegrees: axisAngleDegrees(axis), snap, valid, lineHit };
   }, [planGeometryIndex, page, manualPlacementEnabled, forcedAxis]);
 
   const requiresAxisLockFor = useCallback((tool) => {
@@ -783,24 +794,65 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const diagnosticsEnabled = typeof window !== "undefined" && window.localStorage?.getItem("takeoffHighlighterDebug") === "1";
     setExteriorHighlightPointer(rawPoint);
     setExteriorHighlightDebugEnabled(diagnosticsEnabled);
-    const result = findHighlightableWallAtPoint({
-      point: rawPoint,
-      planGeometryIndex,
+    const scaleLineHit = findLineNearPointer({
       page,
-      searchRadiusDocUnits: EXTERIOR_HIGHLIGHT_SEARCH_SCREEN_PX / Math.max(zoomScale, 0.01),
-      diagnosticsEnabled,
+      planGeometryIndex,
+      documentPoint: rawPoint,
+      screenTolerance: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
+      zoom: zoomScale,
     });
-    setExteriorHighlightPreview(result.wall);
-    setExteriorHighlightHoverWallId(result.wall?.id || null);
-    setExteriorHighlightDiagnostics(result.diagnostics || []);
-    if (diagnosticsEnabled && result.diagnostics?.length) {
-      console.table(result.diagnostics.slice(-3));
+    if (!scaleLineHit) {
+      setExteriorHighlightPreview(null);
+      setExteriorHighlightHoverWallId(null);
+      setExteriorHighlightDiagnostics([]);
+      setWallDetectionStatus("idle");
+      setWallDetectionMessage("No line detected here.");
+      setWallDetectionCode("NO_LINE_UNDER_CURSOR");
+      return;
     }
-    setWallDetectionStatus(result.wall ? "wall-found" : "idle");
-    setWallDetectionMessage(result.wall ? "Wall found — click to highlight" : "No structural wall detected here");
-    setWallDetectionCode(result.wall ? null : "NO_STRUCTURAL_WALL_UNDER_CURSOR");
+    const expanded = expandLineToWall(scaleLineHit, { planGeometryIndex, page });
+    const diagnostics = [
+      {
+        label: "Scale Tool result",
+        line: scaleLineHit.line,
+        color: "purple",
+        distanceFromPointer: scaleLineHit.distanceFromPointer,
+        angle: scaleLineHit.angle,
+      },
+      {
+        label: "Exterior initial result",
+        line: scaleLineHit.line,
+        color: "blue",
+        initialSegmentLength: expanded?.initialSegmentLength ?? distance(scaleLineHit.line.start, scaleLineHit.line.end),
+      },
+      ...(expanded ? [{
+        label: "Exterior expanded result",
+        line: expanded.line,
+        color: "green",
+        expandedWallLength: expanded.expandedWallLength,
+        startEndpointReason: expanded.startEndpointReason,
+        endEndpointReason: expanded.endEndpointReason,
+        dimensionRejectionScore: expanded.dimensionRejectionScore,
+      }] : []),
+    ];
+    setExteriorHighlightPreview(expanded && !expanded.rejected ? expanded : null);
+    setExteriorHighlightHoverWallId(expanded && !expanded.rejected ? expanded.id : null);
+    setExteriorHighlightDiagnostics(diagnostics);
+    if (diagnosticsEnabled) console.table(diagnostics);
+    if (!expanded) {
+      setWallDetectionStatus("idle");
+      setWallDetectionMessage("No line detected here.");
+      setWallDetectionCode("NO_LINE_UNDER_CURSOR");
+    } else if (expanded.rejected) {
+      setWallDetectionStatus("rejected");
+      setWallDetectionMessage(expanded.rejectionReason || "Dimension or annotation line rejected.");
+      setWallDetectionCode("DIMENSION_OR_ANNOTATION_REJECTED");
+    } else {
+      setWallDetectionStatus("wall-found");
+      setWallDetectionMessage("Wall found - click to highlight");
+      setWallDetectionCode(null);
+    }
   }, [activeTool, page, planGeometryIndex]);
-
   const toggleExteriorHighlightedWall = useCallback(() => {
     if (activeTool !== "exterior-highlighter") return;
     if (!exteriorHighlightPreview?.id) {
@@ -2134,3 +2186,4 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     undo, redo, canUndo: undoStack.length > 0, canRedo: redoStack.length > 0,
   };
 }
+

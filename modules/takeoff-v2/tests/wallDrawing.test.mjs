@@ -568,7 +568,7 @@ for (const extra of [
 // ---- highlight and area point rendering use reduced visible widths --------
 {
   const overlay = fs.readFileSync(new URL("../components/TakeoffCanvasOverlay.jsx", import.meta.url), "utf8");
-  assert.ok(overlay.includes("const strokeWidth = selected ? 3 : hovered ? 3 : 3"), "selected exterior highlight should render near 3px");
+  assert.ok(overlay.includes("const strokeWidth = selected ? 2.5 : hovered ? 2 : 2"), "selected exterior highlight should render at 2-3px");
   assert.ok(overlay.includes('data-testid="exterior-highlight-junction-hit-area"'), "exterior junction hit area should remain separate");
   assert.ok(overlay.includes("r={10} fill=\"transparent\""), "exterior/area hit radius should remain easy to grab");
   assert.ok(overlay.includes("r={i === 0 ? 3.8 : 3.2}"), "area point visible radius should be reduced");

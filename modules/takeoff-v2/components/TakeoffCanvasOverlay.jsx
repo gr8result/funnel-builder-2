@@ -341,7 +341,7 @@ function HighlightableWallObject({ wall, project, selected, hovered }) {
   const a = project(line.start);
   const b = project(line.end);
   const color = selected ? HIGHLIGHTER_WALL_COLOR.selected : hovered ? HIGHLIGHTER_WALL_COLOR.hover : HIGHLIGHTER_WALL_COLOR.normal;
-  const strokeWidth = selected ? 3 : hovered ? 3 : 3;
+  const strokeWidth = selected ? 2.5 : hovered ? 2 : 2;
   return (
     <g
       data-testid={selected ? "highlighted-exterior-wall" : "highlightable-wall-preview"}
@@ -357,8 +357,7 @@ function HighlightableWallObject({ wall, project, selected, hovered }) {
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
-        strokeDasharray={hovered ? "7 5" : undefined}
-        opacity={selected ? 0.68 : hovered ? 0.86 : 0.35}
+        opacity={selected ? 0.78 : hovered ? 0.95 : 0.35}
       />
     </g>
   );
@@ -385,6 +384,7 @@ function ExteriorHighlightJunctionHandle({ junction, project, selected, hovered 
 function ExteriorHighlighterDebugOverlay({ pointer, preview, diagnostics, project }) {
   const p = pointer ? project(pointer) : null;
   const rejectedDimension = diagnostics.find((entry) => entry.belongsToDimensionChain && entry.coordinates?.seed);
+  const diagnosticLines = diagnostics.filter((entry) => entry.line?.start && entry.line?.end);
   return (
     <g data-testid="exterior-highlighter-debug-overlay">
       {p && (
@@ -396,8 +396,27 @@ function ExteriorHighlighterDebugOverlay({ pointer, preview, diagnostics, projec
       {preview?.faceA && <DebugLine line={preview.faceA} project={project} color="#22c55e" dash="4 3" testId="debug-wall-face-a" />}
       {preview?.faceB && <DebugLine line={preview.faceB} project={project} color="#22c55e" dash="4 3" testId="debug-wall-face-b" />}
       {preview?.centreline && <DebugLine line={preview.centreline} project={project} color="#2563eb" width={1.5} testId="debug-wall-centreline" />}
+      {diagnosticLines.map((entry, index) => (
+        <DebugLine
+          key={`${entry.label}-${index}`}
+          line={entry.line}
+          project={project}
+          color={entry.color === "purple" ? "#7c3aed" : entry.color === "green" ? "#16a34a" : "#0284c7"}
+          width={entry.color === "green" ? 2 : 1.5}
+          dash={entry.color === "green" ? undefined : "5 4"}
+          testId={`debug-${entry.label.toLowerCase().replaceAll(" ", "-")}`}
+        />
+      ))}
       {preview?.startJunction && <DebugPoint point={preview.startJunction.point || preview.startJunction} project={project} label="L" />}
       {preview?.endJunction && <DebugPoint point={preview.endJunction.point || preview.endJunction} project={project} label="R" />}
+      {p && diagnostics.length > 0 && (
+        <g data-testid="exterior-highlighter-debug-readout">
+          <rect x={p.x + 12} y={p.y + 12} width={230} height={112} fill="#111827" opacity={0.88} rx={4} />
+          {debugReadoutLines(pointer, diagnostics).map((line, index) => (
+            <text key={line} x={p.x + 20} y={p.y + 30 + index * 13} fontSize={10} fill="#fff">{line}</text>
+          ))}
+        </g>
+      )}
       {rejectedDimension?.coordinates?.seed && (
         <DebugLine
           line={{ start: rejectedDimension.coordinates.seed.start, end: rejectedDimension.coordinates.seed.end }}
@@ -410,6 +429,21 @@ function ExteriorHighlighterDebugOverlay({ pointer, preview, diagnostics, projec
       )}
     </g>
   );
+}
+
+function debugReadoutLines(pointer, diagnostics) {
+  const expanded = diagnostics.find((entry) => entry.label === "Exterior expanded result") || {};
+  const initial = diagnostics.find((entry) => entry.label === "Exterior initial result") || {};
+  const scale = diagnostics.find((entry) => entry.label === "Scale Tool result") || {};
+  return [
+    `Pointer: ${Math.round(pointer?.x || 0)}, ${Math.round(pointer?.y || 0)}`,
+    `Angle: ${Math.round(scale.angle || 0)} deg`,
+    `Initial: ${Math.round(initial.initialSegmentLength || 0)}`,
+    `Expanded: ${Math.round(expanded.expandedWallLength || 0)}`,
+    `Start: ${expanded.startEndpointReason || "-"}`,
+    `End: ${expanded.endEndpointReason || "-"}`,
+    `Dimension score: ${(expanded.dimensionRejectionScore ?? 0).toFixed(2)}`,
+  ];
 }
 
 function DebugLine({ line, project, color, width = 1, dash, testId }) {
