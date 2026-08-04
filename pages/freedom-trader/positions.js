@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
+import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -216,13 +217,13 @@ export default function TraderPositions({ passwordHash }) {
             <tbody>
               {pendingSetups.length ? pendingSetups.map((setup) => (
                 <tr key={setup.id || `${setup.symbol}-${setup.createdAt}`}>
-                  <td><Link href={`/freedom-trader/company/${setup.symbol}`}>{setup.symbol}</Link></td>
+                  <td><Link href={traderCompanyHref(setup.symbol)}>{setup.symbol}</Link></td>
                   <td>{formatCurrency(setup.entryPrice)}</td>
                   <td>{formatCurrency(setup.stopPrice)}</td>
                   <td>{formatCurrency(setup.targetPrice)}</td>
                   <td>{Number.isFinite(setup.riskRewardRatio) ? setup.riskRewardRatio.toFixed(2) : "--"}</td>
                   <td>{setup.status || "Pending"}</td>
-                  <td><Link href={`/freedom-trader/company/${setup.symbol}`}>Open Chart</Link></td>
+                  <td><Link href={traderCompanyHref(setup.symbol)}>Open Chart</Link></td>
                 </tr>
               )) : <tr><td colSpan="7">No pending trades saved yet.</td></tr>}
             </tbody>
@@ -261,7 +262,7 @@ export default function TraderPositions({ passwordHash }) {
                 return (
                   <tr className={`positionRow ${positionTone(position)} ${nearTarget ? "nearTarget" : nearStop ? "nearStop" : ""}`} key={position.id}>
                     <td>{position.companyName}</td>
-                    <td><Link href={`/freedom-trader/company/${position.symbol}`}>{position.symbol}</Link></td>
+                    <td><Link href={traderCompanyHref(position.symbol)}>{position.symbol}</Link></td>
                     <td>{position.quantity}</td>
                     <td>{formatCurrency(position.entryPrice)}</td>
                     <td>{formatCurrency(position.currentPrice)}</td>
@@ -316,7 +317,7 @@ export default function TraderPositions({ passwordHash }) {
               {positions.filter((position) => position.status === "closed").length ? positions.filter((position) => position.status === "closed").map((position) => (
                 <tr className={Number(position.netProfit ?? position.realisedProfit) >= 0 ? "green" : "red"} key={position.id}>
                   <td>{position.companyName}</td>
-                  <td><Link href={`/freedom-trader/company/${position.symbol}`}>{position.symbol}</Link></td>
+                  <td><Link href={traderCompanyHref(position.symbol)}>{position.symbol}</Link></td>
                   <td>{position.quantity}</td>
                   <td>{formatCurrency(position.entryPrice)}</td>
                   <td>{formatCurrency(position.exitPrice)}</td>

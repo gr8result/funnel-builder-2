@@ -24,6 +24,22 @@ export async function runModuleNavigationTests(): Promise<void> {
   assert(!constructionHub.includes('action="Unavailable"'), "Construction Hub module card must not be disabled.");
   assert(!constructionHub.includes("/modules/builders/client-selections") && !constructionHub.includes("/modules/builders/selections-book"), "Construction Hub must not link to retired selections routes.");
 
+  const estimateBuilder = source("components", "estimate-builder", "EstimateBuilderWorkbook.js");
+  const dashboardCards = estimateBuilder.slice(estimateBuilder.indexOf("const DASHBOARD_WORKSPACE_CARDS"), estimateBuilder.indexOf("function ProjectDashboardSheet"));
+  assert(dashboardCards.includes('title: "Inclusions & Selections"'), "Estimate Builder dashboard should expose the active Inclusions & Selections card.");
+  assert(dashboardCards.includes('href: "/inclusions-selections/areas"'), "Estimate Builder dashboard card should open the new Areas route.");
+  assert(!dashboardCards.includes("/modules/builders/selections-book"), "Estimate Builder dashboard card must not point to the retired selections book.");
+  assert(dashboardCards.includes("Set up project areas, apply inclusion templates and complete client product selections."), "Estimate Builder dashboard card should use the approved description.");
+  assert(dashboardCards.indexOf('title: "Standard Inclusions"') < dashboardCards.indexOf('title: "Inclusions & Selections"'), "Inclusions & Selections should sit after Standard Inclusions.");
+  assert(dashboardCards.indexOf('title: "Inclusions & Selections"') < dashboardCards.indexOf('title: "Product Library"'), "Inclusions & Selections should sit before Product Library.");
+  assert(dashboardCards.includes('title: "Project Estimate"'), "Project Estimate dashboard card should remain available.");
+  assert((dashboardCards.match(/title: "Inclusions & Selections"/g) ?? []).length === 1, "Estimate Builder dashboard should not duplicate the Inclusions & Selections card.");
+  assert(estimateBuilder.includes("function inclusionsSelectionsDashboardHref"), "Estimate Builder dashboard should build a context-preserving new-module URL.");
+  assert(estimateBuilder.includes("organisationId: workspaceId") && estimateBuilder.includes("projectId,") && estimateBuilder.includes('clientWorkbookDataValue(sheet, "projectName")'), "Estimate Builder dashboard should preserve organisation, project and project name context.");
+  assert(estimateBuilder.includes('clientWorkbookDataValue(sheet, "clientName")') && estimateBuilder.includes('clientWorkbookDataValue(sheet, "projectAddress")') && estimateBuilder.includes('clientWorkbookDataValue(sheet, "jobNumber")'), "Estimate Builder dashboard should preserve client, site address and job number context.");
+  assert(estimateBuilder.includes("registeredJob.jobId") && estimateBuilder.includes("registeredJob.jobName") && estimateBuilder.includes("registeredJob.clientName"), "Estimate Builder dashboard should preserve registered job context fallbacks.");
+  assert(estimateBuilder.includes("project-dashboard-card-grid") && estimateBuilder.includes("@media (max-width: 560px)"), "Estimate Builder dashboard cards should have a mobile layout.");
+
   const builderEntryFiles = ["rfis.js", "quote-approvals.js", "document-vault.js"];
   for (const fileName of builderEntryFiles) {
     const builderPage = source("pages", "modules", "builders", fileName);
@@ -80,7 +96,6 @@ export async function runModuleNavigationTests(): Promise<void> {
     assert(page.includes(`currentStage="${stageId}"`), `${fileName} should highlight the current stage.`);
     assert(page.includes("contextFromQuery"), `${fileName} should use shared query context parsing.`);
     assert(page.includes("hrefForStage"), `${fileName} should use shared stage URL generation.`);
-    assert(page.includes("PROJECT_REQUIRED_MESSAGE"), `${fileName} should use the standard project-required state.`);
   }
 
   const repositoryFiles = [

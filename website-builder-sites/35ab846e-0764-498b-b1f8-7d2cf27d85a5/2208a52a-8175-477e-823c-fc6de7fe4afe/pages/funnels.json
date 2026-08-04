@@ -13,84 +13,6 @@
   "objective": "Explain the Funnel Builder module and convert visitors into demo or build requests.",
   "blocks": [
     {
-      "id": "nav-bar-funnels",
-      "type": "nav-bar",
-      "props": {
-        "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          {
-            "href": "#home",
-            "label": "Home",
-            "highlighted": false
-          },
-          {
-            "id": "nav-modules-funnels",
-            "href": "#modules",
-            "label": "Modules",
-            "highlighted": false,
-            "children": [
-              {
-                "id": "nav-child-email",
-                "href": "#email",
-                "label": "Email Marketing"
-              },
-              {
-                "id": "nav-child-sms",
-                "href": "#sms",
-                "label": "SMS Marketing"
-              },
-              {
-                "id": "nav-child-crm",
-                "href": "#crm",
-                "label": "CRM Management"
-              },
-              {
-                "id": "nav-child-funnels",
-                "href": "#funnels",
-                "label": "Funnels"
-              }
-            ]
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us",
-            "highlighted": false
-          },
-          {
-            "href": "#pricing",
-            "label": "Pricing"
-          },
-          {
-            "href": "#contact-us",
-            "label": "Contact Us"
-          }
-        ],
-        "ctaLink": "#contact-us",
-        "ctaText": "Build My Funnel",
-        "variant": "boxed-brand",
-        "showLogo": true,
-        "logoWidth": 150,
-        "textColor": "#06b6d4",
-        "stickyMode": "normal",
-        "borderColor": "rgba(125,211,252,0.24)",
-        "buttonColor": "#22c55e",
-        "ctaFontSize": 20,
-        "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
-        "linkFontSize": 20,
-        "brandFontSize": 24,
-        "backgroundColor": "#121c26",
-        "buttonTextColor": "#052e16",
-        "linkHoverEffect": "glow",
-        "mobileMenuStyle": "hamburger",
-        "fullWidthBackground": true,
-        "linkHoverTextColor": "#ec4899",
-        "activeLinkTextColor": "#f59e0b",
-        "linkHoverBackgroundColor": "#ec4899",
-        "activeLinkBackgroundColor": "#121c26"
-      }
-    },
-    {
       "id": "funnels-hero",
       "type": "hero",
       "props": {
@@ -232,13 +154,13 @@
     {
       "id": "funnels-scroll-stack",
       "type": "scroll-stack",
-        "props": {
-          "peekHeight": 92,
-          "contentVerticalAlign": "top",
-          "contentTopPadding": 82,
-          "hideHeaderDivider": true,
-          "cardRadius": 0,
-          "panels": [
+      "props": {
+        "peekHeight": 92,
+        "contentVerticalAlign": "top",
+        "contentTopPadding": 82,
+        "hideHeaderDivider": true,
+        "cardRadius": 0,
+        "panels": [
           {
             "id": "ss-traffic",
             "eyebrow": "01 - Traffic",
@@ -634,5 +556,7 @@
         "paddingBottom": 96
       }
     }
-  ]
+  ],
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

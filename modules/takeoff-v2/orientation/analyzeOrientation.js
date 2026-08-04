@@ -33,6 +33,11 @@ function isNearZero(angleDegrees) {
   return a <= ANGLE_TOLERANCE_DEGREES || a >= 360 - ANGLE_TOLERANCE_DEGREES;
 }
 
+function isNearUpsideDown(angleDegrees) {
+  const a = normalizeAngle(angleDegrees);
+  return Math.abs(a - 180) <= ANGLE_TOLERANCE_DEGREES;
+}
+
 function isDimensionOrSymbol(text) {
   const trimmed = text.trim();
   if (trimmed.length < MIN_TEXT_LENGTH) return true;
@@ -91,6 +96,12 @@ function baselineConsistencyBonus(items) {
 export function scoreOrientationCandidates({ textItems = [], sourceWidth = 0, sourceHeight = 0, metadataRotation = 0 }) {
   const scores = { 0: 0, 90: 0, 180: 0, 270: 0 };
   const horizontalItemsByRotation = { 0: [], 90: [], 180: [], 270: [] };
+  const scoreReport = {
+    0: { uprightEmbeddedTextCount: 0, upsideDownTextPenalty: 0, roomLabelScore: 0, titleBlockTextScore: 0, horizontalTextLineScore: 0, finalWeightedScore: 0 },
+    90: { uprightEmbeddedTextCount: 0, upsideDownTextPenalty: 0, roomLabelScore: 0, titleBlockTextScore: 0, horizontalTextLineScore: 0, finalWeightedScore: 0 },
+    180: { uprightEmbeddedTextCount: 0, upsideDownTextPenalty: 0, roomLabelScore: 0, titleBlockTextScore: 0, horizontalTextLineScore: 0, finalWeightedScore: 0 },
+    270: { uprightEmbeddedTextCount: 0, upsideDownTextPenalty: 0, roomLabelScore: 0, titleBlockTextScore: 0, horizontalTextLineScore: 0, finalWeightedScore: 0 },
+  };
 
   for (const item of textItems) {
     if (!item) continue;
@@ -99,6 +110,16 @@ export function scoreOrientationCandidates({ textItems = [], sourceWidth = 0, so
       if (isNearZero(effectiveAngle)) {
         scores[rotation] += item.weight + HORIZONTAL_READABLE_BONUS;
         horizontalItemsByRotation[rotation].push(item);
+        scoreReport[rotation].uprightEmbeddedTextCount += 1;
+        scoreReport[rotation].horizontalTextLineScore += item.weight + HORIZONTAL_READABLE_BONUS;
+        if (/(BED|KITCHEN|BATH|GARAGE|LIVING|DINING|LAUNDRY|MEDIA|ROBE|WC|ENSUITE|PATIO|ALFRESCO)/i.test(item.text)) {
+          scoreReport[rotation].roomLabelScore += item.weight;
+        }
+        if (/(GROUND FLOOR|DIMENSIONS|TITLE|DRAWING|PROJECT|CLIENT|WARNING|NOTES|SCALE)/i.test(item.text)) {
+          scoreReport[rotation].titleBlockTextScore += item.weight;
+        }
+      } else if (isNearUpsideDown(effectiveAngle)) {
+        scoreReport[rotation].upsideDownTextPenalty += item.weight;
       }
     }
   }
@@ -127,9 +148,13 @@ export function scoreOrientationCandidates({ textItems = [], sourceWidth = 0, so
   const total = ROTATIONS.reduce((sum, r) => sum + scores[r], 0);
   const bestRotation = ROTATIONS.reduce((best, r) => (scores[r] > scores[best] ? r : best), 0);
   const confidence = total > 0 ? Math.round((scores[bestRotation] / total) * 100) : 0;
+  ROTATIONS.forEach((rotation) => {
+    scoreReport[rotation].finalWeightedScore = scores[rotation];
+  });
 
   return {
     scores,
+    scoreReport,
     bestRotation,
     confidence,
     hasNativeText,

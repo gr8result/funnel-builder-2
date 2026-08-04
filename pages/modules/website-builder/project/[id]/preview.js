@@ -75,8 +75,29 @@ function slugify(v) {
 function resolveProjectPageName(project, pageKey = "") {
   const requested = slugify(pageKey || project?.pages?.[0]?.name || "Home");
   return (Array.isArray(project?.pages) ? project.pages : []).find((entry) => (
-    slugify(entry?.name) === requested || slugify(entry?.slug) === requested
+    slugify(entry?.id) === requested || slugify(entry?.pageId) === requested || slugify(entry?.slug) === requested || slugify(entry?.name) === requested
   ))?.name || "";
+}
+
+function resolveProjectPageEntry(project, pageKey = "") {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const requested = slugify(pageKey || pages[0]?.slug || pages[0]?.name || "home");
+  return pages.find((entry) => (
+    slugify(entry?.id) === requested || slugify(entry?.pageId) === requested || savedProjectPageSlug(project, entry) === requested || slugify(entry?.name) === requested
+  )) || pages[0] || null;
+}
+
+function savedProjectPageSlug(project = {}, page = {}) {
+  const slugMap = project?.pageSlugs && typeof project.pageSlugs === "object" ? project.pageSlugs : {};
+  return slugify(
+    page?.slug
+    || slugMap[page?.id]
+    || slugMap[page?.pageId]
+    || slugMap[page?.name]
+    || page?.pageSlug
+    || page?.routeSlug
+    || ""
+  );
 }
 
 function pickLayoutWidth(blocks, fallback = 1500) {
@@ -486,7 +507,7 @@ export default function ProjectPreviewPage() {
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
     const requested = String(page || "");
-    return project.pages.find((p) => slugify(p.name) === requested) || project.pages[0];
+    return resolveProjectPageEntry(project, requested);
   }, [project, page]);
   const previewViewport = ["mobile", "tablet", "desktop"].includes(String(viewport || "").toLowerCase())
     ? String(viewport).toLowerCase()
@@ -496,15 +517,18 @@ export default function ProjectPreviewPage() {
     if (!project?.id || !project?.pages?.length) return null;
 
     const pageMap = project.pages.reduce((acc, entry) => {
-      const key = slugify(entry?.name || "");
+      const key = savedProjectPageSlug(project, entry);
       if (!key) return acc;
-      acc[key] = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(key)}&viewport=${encodeURIComponent(previewViewport)}`;
+      const isHomePage = key === "home" || key === "index" || slugify(entry?.id) === "home";
+      acc[key] = isHomePage
+        ? `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewViewport)}`
+        : `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(key)}&viewport=${encodeURIComponent(previewViewport)}`;
       return acc;
     }, {});
 
     return {
       basePath: `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewViewport)}`,
-      currentPageKey: slugify(active?.name || page || "home"),
+      currentPageKey: savedProjectPageSlug(project, active) || slugify(active?.id || active?.name || page || "home"),
       pageMap,
     };
   }, [project, active, page, previewViewport]);

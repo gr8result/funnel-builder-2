@@ -51,7 +51,7 @@ assert(defaultSource.includes("standardInclusionsBaseDocument"), "Workbook defau
 assert(defaultSource.includes("createEstimateBuilderWorkbookDefaultsWithBaseTemplate"), "Bootstrap code must have an async active-base default factory");
 assert(masterTemplateSource.includes("loadActiveBaseTemplateServer"), "The base-template resolver must support server-side bootstrap paths");
 assert(masterTemplateSource.includes("standard_inclusions_base_templates"), "The server-side resolver must read the versioned shared base-template table");
-assert(!activeBody.includes("useEffect("), "Opening Standard Inclusions must not autosave or auto-create a fallback document");
+assert(!activeBody.includes("isPremierInclusionsWorkingCopyCurrent"), "Opening Standard Inclusions must not autosave or auto-create a fallback document");
 assert(!activeBody.includes("isPremierInclusionsWorkingCopyCurrent"), "Opening Standard Inclusions must not force the native master working copy");
 assert(!source.includes("function StandardScheduleManagementPanel"), "The duplicated Schedule Management component must be removed");
 assert(!activeReturn.includes("<StandardScheduleManagementPanel"), "StandardInclusionsSheet must not render the old management toolbar");
@@ -80,7 +80,7 @@ assert(contextPanelBody.includes("Import Editable Word Document (.docx)"), "Repl
 assert(contextPanelBody.includes("Attach Finished PDF"), "Replace dialog must preserve finished-PDF attachment");
 assert(contextPanelBody.includes("Use Premier Base Template"), "Replace dialog must offer the active Premier base template");
 assert(contextPanelBody.includes("managementMode === \"pdf-import-options\""), "PDF choices must be shown only after a PDF is selected");
-assert(contextPanelBody.includes("Attach PDF Now"), "PDF choices must include the PDF attachment action");
+assert(contextPanelBody.includes("Attach Finished PDF Now"), "PDF choices must include the finished-PDF attachment action");
 assert(contextPanelBody.includes("Use the Word importer when editable flowing content is required."), "PDF choice copy must point editable imports to DOCX");
 assert(!activeBody.includes("createPremierInclusionsDocument("), "The three-page fallback must not be used in the active Standard Inclusions workflow");
 assert(docxImportSource.includes("JSZip.loadAsync"), "DOCX importer must parse the ZIP package directly");

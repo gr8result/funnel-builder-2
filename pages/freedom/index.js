@@ -2,12 +2,13 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import { companyMeta, investmentCompanyHref } from "../../lib/freedom/companyRoutes";
 import { calculateAdaptiveScores } from "../../lib/freedom-terminal/adaptiveBuyScore";
 import { calculateInvestmentSignal } from "../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
-const WATCHLIST_SYMBOLS = ["MSFT", "NVDA", "V", "AMZN", "COST", "GOOGL", "AVGO", "MA", "ASML", "TSM"];
+const WATCHLIST_SYMBOLS = ["MSFT", "AAPL", "AVGO", "NVDA", "CBA.AX", "BHP.AX", "CSL.AX", "V", "AMZN", "COST", "GOOGL", "MA", "ASML", "TSM"];
 
 const COMPANY_STYLES = {
   MSFT: { companyName: "Microsoft", logoText: "MS", primaryColor: "#00A4EF", secondaryColor: "#7FBA00", accentColor: "#FFB900" },
@@ -32,12 +33,16 @@ const FALLBACK_STYLE = {
 
 const STARTING_ROWS = [
   { companyName: "Microsoft", symbol: "MSFT", sector: "Software", qualityScore: 96, healthScore: 96 },
+  companyMeta("AAPL"),
+  companyMeta("AVGO"),
   { companyName: "NVIDIA", symbol: "NVDA", sector: "Semiconductors", qualityScore: 94 },
+  companyMeta("CBA.AX"),
+  companyMeta("BHP.AX"),
+  companyMeta("CSL.AX"),
   { companyName: "Visa", symbol: "V", sector: "Payments", qualityScore: 95 },
   { companyName: "Amazon", symbol: "AMZN", sector: "Cloud & E-commerce", qualityScore: 93 },
   { companyName: "Costco", symbol: "COST", sector: "Consumer Defensive", qualityScore: 92 },
   { companyName: "Alphabet", symbol: "GOOGL", sector: "Digital Advertising & AI", qualityScore: 93 },
-  { companyName: "Broadcom", symbol: "AVGO", sector: "Semiconductors", qualityScore: 92 },
   { companyName: "Mastercard", symbol: "MA", sector: "Payments", qualityScore: 94 },
   { companyName: "ASML", symbol: "ASML", sector: "Semiconductor Equipment", qualityScore: 91 },
   { companyName: "Taiwan Semiconductor", symbol: "TSM", sector: "Semiconductors", qualityScore: 92 },
@@ -582,7 +587,7 @@ function FreedomTerminal({ passwordHash }) {
                 return (
                   <tr key={row.symbol} style={styleVars(companyStyle)}>
                     <td>
-                      <Link className="companyLink" href={`/freedom/company/${row.symbol}`}>
+                      <Link className="companyLink" href={investmentCompanyHref(row.symbol)}>
                         <span className="logoBadge">{companyStyle.logoText}</span>
                         <span className="companyText">
                           <strong>{row.companyName || companyStyle.companyName}</strong>
@@ -591,7 +596,7 @@ function FreedomTerminal({ passwordHash }) {
                       </Link>
                     </td>
                     <td>
-                      <Link className="ticker" href={`/freedom/company/${row.symbol}`}>
+                      <Link className="ticker" href={investmentCompanyHref(row.symbol)}>
                         {row.symbol}
                       </Link>
                     </td>
@@ -645,7 +650,7 @@ function FreedomTerminal({ passwordHash }) {
                       </div>
                     </td>
                     <td>
-                      <Link className="action" href={`/freedom/company/${row.symbol}`}>
+                      <Link className="action" href={investmentCompanyHref(row.symbol)}>
                         Open
                       </Link>
                     </td>

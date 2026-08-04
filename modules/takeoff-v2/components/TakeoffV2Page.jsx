@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
-import { rotateLeft, rotateRight } from "../types.js";
+import { CURRENT_ORIENTATION_STATE_VERSION, rotateLeft, rotateRight } from "../types.js";
 import {
   listDocuments,
   listPages,
@@ -13,6 +13,7 @@ import { readJobSummaryFromQuery, jobSummaryFromJobFileData, deriveJobId, DEFAUL
 import { detectPageOrientation } from "../orientation/detectPageOrientation.js";
 import { applyOrientationResult } from "../orientation/applyOrientationResult.js";
 import { CONFIDENCE_HIGH } from "../orientation/analyzeOrientation.js";
+import { applyManualOrientationState, resetToDetectedOrientationState } from "../orientation/orientationState.js";
 import { useJobFile } from "../../../hooks/useJobFile.ts";
 import { useTakeoffTools } from "../hooks/useTakeoffTools.js";
 import { usePlanGeometry } from "../hooks/usePlanGeometry.js";
@@ -136,8 +137,15 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
   // it always marks the page orientationSource "manual" so first-import
   // auto-detection (and a stale Re-detect result) never overwrites it again.
   const applyRotation = useCallback((nextRotation) => {
-    commitPage({ rotation: nextRotation, orientationSource: "manual", orientationConfirmed: true });
-  }, [commitPage]);
+    const orientationState = applyManualOrientationState(selectedPage?.orientationState, nextRotation);
+    commitPage({
+      rotation: orientationState.finalAppliedRotation,
+      orientationState,
+      orientationSource: "manual",
+      orientationConfidence: orientationState.confidence,
+      orientationConfirmed: true,
+    });
+  }, [commitPage, selectedPage]);
 
   const handleRotateLeft = useCallback(() => {
     if (!selectedPage) return;
@@ -150,12 +158,27 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
   }, [applyRotation, selectedPage]);
 
   const handleResetRotation = useCallback(() => {
-    applyRotation(0);
-  }, [applyRotation]);
+    if (!selectedPage) return;
+    const orientationState = resetToDetectedOrientationState(selectedPage.orientationState);
+    commitPage({
+      rotation: orientationState.finalAppliedRotation,
+      orientationState,
+      orientationSource: orientationState.source === "metadata" ? "metadata" : "auto",
+      orientationConfidence: orientationState.confidence,
+      orientationConfirmed: false,
+    });
+  }, [commitPage, selectedPage]);
 
   const handlePickOrientation = useCallback((rotation) => {
-    commitPage({ rotation, orientationSource: "user-selection", orientationConfirmed: true });
-  }, [commitPage]);
+    const orientationState = applyManualOrientationState(selectedPage?.orientationState, rotation);
+    commitPage({
+      rotation: orientationState.finalAppliedRotation,
+      orientationState,
+      orientationSource: "manual",
+      orientationConfidence: orientationState.confidence,
+      orientationConfirmed: true,
+    });
+  }, [commitPage, selectedPage]);
 
   const [redetecting, setRedetecting] = useState(false);
   const handleRedetectOrientation = useCallback(async () => {
@@ -172,18 +195,30 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
     }
   }, [selectedPage, pdfDocument, commitPage]);
 
-  const needsOrientationPick = Boolean(selectedPage && !selectedPage.orientationSource);
-  const showAutoNotice = Boolean(selectedPage && selectedPage.orientationSource === "auto");
+  const needsOrientationPick = Boolean(
+    selectedPage &&
+    selectedPage.orientationSource !== "manual" &&
+    (!selectedPage.orientationSource || (selectedPage.orientationConfidence ?? 0) < CONFIDENCE_HIGH)
+  );
+  const showAutoNotice = Boolean(selectedPage && (selectedPage.orientationSource === "auto" || selectedPage.orientationSource === "metadata"));
+
+  useEffect(() => {
+    if (!selectedPage || !pdfDocument) return;
+    if (selectedPage.orientationState?.version === CURRENT_ORIENTATION_STATE_VERSION) return;
+    let cancelled = false;
+    (async () => {
+      const detection = await detectPageOrientation(pdfDocument, selectedPage.pageNumber, {
+        sourceWidth: selectedPage.sourceWidth,
+        sourceHeight: selectedPage.sourceHeight,
+      });
+      if (!cancelled) commitPage(applyOrientationResult(selectedPage, detection));
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPage?.id, selectedPage?.orientationState?.version, selectedPage?.pageNumber, selectedPage?.sourceWidth, selectedPage?.sourceHeight, pdfDocument, commitPage]);
 
   const { geometry: planGeometryIndex } = usePlanGeometry(pdfDocument, selectedPage?.pageNumber);
   const tools = useTakeoffTools({ page: selectedPage, commitPage, planGeometryIndex });
   const planViewerRef = useRef(null);
-
-  const handleDetectExteriorWalls = useCallback(async () => {
-    const snapshot = planViewerRef.current?.captureSnapshot();
-    if (!snapshot) return;
-    await tools.runWallDetection(snapshot);
-  }, [tools]);
 
   const handleZoomToGeometry = useCallback((points) => {
     planViewerRef.current?.zoomToPoints(points);
@@ -250,7 +285,7 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
                   onPick={handlePickOrientation}
                 />
               )}
-              <TakeoffToolbar page={selectedPage} tools={tools} onDetectExteriorWalls={handleDetectExteriorWalls} />
+              <TakeoffToolbar page={selectedPage} tools={tools} />
               <div style={S.viewerRow}>
               <div style={S.viewerFlex}>
                 <PlanViewer

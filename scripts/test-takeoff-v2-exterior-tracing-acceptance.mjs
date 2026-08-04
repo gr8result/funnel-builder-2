@@ -197,6 +197,7 @@ async function main() {
     // ---------- Manual Area Tool (Method B) ----------
     await page.click('[data-testid="tool-select"]');
     await page.click('[data-testid="tool-area"]');
+    await page.click('[data-testid="area-mode-manual-polygon"]');
     const triangle = [
       { x: viewportBox.x + viewportBox.width * 0.1, y: viewportBox.y + viewportBox.height * 0.15 },
       { x: viewportBox.x + viewportBox.width * 0.18, y: viewportBox.y + viewportBox.height * 0.15 },
@@ -206,7 +207,7 @@ async function main() {
     await page.click('[data-testid="area-finish-trace"]');
     await page.waitForSelector('[data-testid="manual-area-confirm-dialog"]', { timeout: 5000 });
     const manualReadout = await textOf(page, "manual-area-readout");
-    record("manual area dialog shows a calculated area", /Calculated area: [\d.]+ m/.test(manualReadout || ""), manualReadout);
+    record("manual area dialog shows gross/net area", /Gross area: [\d.]+ m/.test(manualReadout || "") && /Net area: [\d.]+ m/.test(manualReadout || ""), manualReadout);
     await shot(page, "07-manual-area-dialog");
     await page.click('[data-testid="manual-area-accept"]');
     await page.waitForFunction(

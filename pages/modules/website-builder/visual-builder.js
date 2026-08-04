@@ -25,10 +25,11 @@ import {
   updateWebsiteProject,
 } from "../../../lib/website-builder/projectStore";
 import { BlockTypes } from "../../../lib/website-builder/pageBlockComponents";
-import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
+import { normalizeAccordionBlocks, isUnsafeAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
-import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
+import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
+import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
@@ -155,7 +156,56 @@ function summarizeBuilderBlocksForSave(blocks = []) {
         };
       })
       .filter(Boolean),
+    videoHeroes: safeBlocks
+      .map((block, index) => {
+        if (String(block?.type || "") !== BlockTypes.VIDEO_HERO) return null;
+        return {
+          index,
+          id: block?.id || "",
+          videoUrl: resolveVideoHeroUrl(block?.props || {}),
+          fields: {
+            video: block?.props?.video || "",
+            videoUrl: block?.props?.videoUrl || "",
+            videoSrc: block?.props?.videoSrc || "",
+            src: block?.props?.src || "",
+            backgroundVideo: block?.props?.backgroundVideo || "",
+            backgroundVideoUrl: block?.props?.backgroundVideoUrl || "",
+          },
+          videoStoragePath: block?.props?.videoStoragePath || "",
+          videoFileName: block?.props?.videoFileName || "",
+          videoMimeType: block?.props?.videoMimeType || "",
+        };
+      })
+      .filter(Boolean),
   };
+}
+
+function countBuilderMediaReferences(value) {
+  if (typeof value === "string") {
+    return /^(https?:|\/|data:image\/|data:video\/|blob:|file:)/i.test(value.trim()) ? 1 : 0;
+  }
+  if (Array.isArray(value)) {
+    return value.reduce((total, entry) => total + countBuilderMediaReferences(entry), 0);
+  }
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce((total, [key, child]) => {
+    const keyLooksLikeMedia = /image|media|asset|poster|video|src|url/i.test(key);
+    if (typeof child === "string") {
+      return total + (keyLooksLikeMedia && /^(https?:|\/|data:image\/|data:video\/|blob:|file:)/i.test(child.trim()) ? 1 : 0);
+    }
+    return total + countBuilderMediaReferences(child);
+  }, 0);
+}
+
+function countBuilderFullWidthSettings(value) {
+  const widthKeys = new Set(["fullWidth", "fullWidthBackground", "stretchToCanvas", "blockMaxWidth", "baseLayoutWidth", "contentWidth"]);
+  if (Array.isArray(value)) {
+    return value.reduce((total, entry) => total + countBuilderFullWidthSettings(entry), 0);
+  }
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce((total, [key, child]) => (
+    total + (widthKeys.has(key) ? 1 : 0) + countBuilderFullWidthSettings(child)
+  ), 0);
 }
 
 const PERSISTENCE_DIAGNOSTIC_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
@@ -243,6 +293,7 @@ function filterDeletedBlocks(blocks, deletedBlockIds, pageName) {
 
 function normalizeFooterNavigationForProject(project) {
   if (!project || typeof project !== "object") return project;
+  project = normalizeSharedPrimaryNavigation(project);
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
   const globalFooterBlock = resolveCanonicalGlobalFooterBlock(project, footerContext) || project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
   let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
@@ -461,6 +512,31 @@ function pageNameFromValue(value) {
     return pageNameFromValue(value.name || value.title || value.slug || "");
   }
   return "";
+}
+
+function uniquePageSlug(baseSlug, pages = []) {
+  const base = slugify(baseSlug) || "page";
+  const used = new Set(
+    (Array.isArray(pages) ? pages : [])
+      .map((page) => slugify(page?.slug || page?.name || page?.id || ""))
+      .filter(Boolean)
+  );
+  if (!used.has(base)) return base;
+  let suffix = 2;
+  let candidate = `${base}-${suffix}`;
+  while (used.has(candidate)) {
+    suffix += 1;
+    candidate = `${base}-${suffix}`;
+  }
+  return candidate;
+}
+
+function buildCleanPageChaiData(project = {}) {
+  return {
+    blocks: [],
+    theme: { preset: project?.stylePack || "executive" },
+    designTokens: project?.globalStyles?.designTokens || {},
+  };
 }
 
 async function readApiJson(response) {
@@ -708,6 +784,9 @@ export default function VisualBuilderPage() {
   const [missingProjectId, setMissingProjectId] = useState("");
   const [activePage, setActivePage] = useState("Home");
   const [newPageName, setNewPageName] = useState("");
+  const [newPageSlug, setNewPageSlug] = useState("");
+  const [newPageShowInNavigation, setNewPageShowInNavigation] = useState(true);
+  const [showNewPagePanel, setShowNewPagePanel] = useState(false);
   const [renamingPage, setRenamingPage] = useState(null);
   const [renameValue, setRenameValue] = useState("");
   const [notice, setNotice] = useState("");
@@ -838,9 +917,13 @@ export default function VisualBuilderPage() {
             const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
             const filteredRemoteBlocksForPage = filterDeletedBlocks(remoteBlocksForPage, deletedBlockIds, remotePageName);
             const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
+            const remoteHasMoreMedia = countBuilderMediaReferences(filteredRemoteBlocksForPage) > countBuilderMediaReferences(localBlocksForPage);
+            const remoteHasMoreFullWidthSettings = countBuilderFullWidthSettings(filteredRemoteBlocksForPage) > countBuilderFullWidthSettings(localBlocksForPage);
             const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
               localBlocksForPage.length === 0
               || remoteCleansInlineImages
+              || remoteHasMoreMedia
+              || remoteHasMoreFullWidthSettings
             );
 
             const shouldUseRemoteNow = shouldForceReload || !localProject || shouldRecoverRequestedPage;
@@ -857,6 +940,10 @@ export default function VisualBuilderPage() {
               local: summarizeBuilderBlocksForSave(localBlocksForPage),
               remote: summarizeBuilderBlocksForSave(remoteBlocksForPage),
               filteredRemote: summarizeBuilderBlocksForSave(filteredRemoteBlocksForPage),
+              localMediaReferences: countBuilderMediaReferences(localBlocksForPage),
+              remoteMediaReferences: countBuilderMediaReferences(filteredRemoteBlocksForPage),
+              localFullWidthSettings: countBuilderFullWidthSettings(localBlocksForPage),
+              remoteFullWidthSettings: countBuilderFullWidthSettings(filteredRemoteBlocksForPage),
               deletedBlockIds,
             });
             if (localProject?.id && !shouldForceReload) {
@@ -892,9 +979,13 @@ export default function VisualBuilderPage() {
           const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
           const filteredRemoteBlocksForPage = filterDeletedBlocks(remoteBlocksForPage, deletedBlockIds, remotePageName);
           const remoteCleansInlineImages = containsInlineDataImage(localBlocksForPage) && !containsInlineDataImage(remoteBlocksForPage);
+          const remoteHasMoreMedia = countBuilderMediaReferences(filteredRemoteBlocksForPage) > countBuilderMediaReferences(localBlocksForPage);
+          const remoteHasMoreFullWidthSettings = countBuilderFullWidthSettings(filteredRemoteBlocksForPage) > countBuilderFullWidthSettings(localBlocksForPage);
           const shouldRecoverRequestedPage = remoteBlocksForPage.length > 0 && (
             localBlocksForPage.length === 0
             || remoteCleansInlineImages
+            || remoteHasMoreMedia
+            || remoteHasMoreFullWidthSettings
           );
 
           if (newPages.length === 0 && !shouldRecoverRequestedPage) {
@@ -1124,16 +1215,40 @@ export default function VisualBuilderPage() {
     const deletedBlockIds = normalizeDeletedBlockTombstones(localProject || remoteProject);
     const rawRemoteBlocks = Array.isArray(remoteProject?.pageBlocks?.[remotePageName]) ? remoteProject.pageBlocks[remotePageName] : null;
     const remoteBlocks = Array.isArray(rawRemoteBlocks) ? filterDeletedBlocks(rawRemoteBlocks, deletedBlockIds, remotePageName) : null;
+    logWebsiteBuilderSaveDebug("Loaded widget", {
+      projectId: remoteProject?.id || "",
+      pageName: remotePageName,
+      loaded: summarizeBuilderBlocksForSave(remoteBlocks || []),
+    });
     const remoteHtml = remoteProject?.pagesContent?.[remotePageName];
     const remoteChai = remoteProject?.chaiData?.[remotePageName];
     const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
     const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
     const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
-    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && (
-      remoteUpdatedAt > localUpdatedAt
-      || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
+    const remoteHasMoreMedia = countBuilderMediaReferences(remoteBlocks) > countBuilderMediaReferences(localBlocks);
+    const remoteHasMoreFullWidthSettings = countBuilderFullWidthSettings(remoteBlocks) > countBuilderFullWidthSettings(localBlocks);
+    const localDurableVideoCount = (Array.isArray(localBlocks) ? localBlocks : [])
+      .filter((block) => String(block?.type || "") === "video-hero")
+      .filter((block) => {
+        const videoUrl = resolveVideoHeroUrl(block?.props || {});
+        return videoUrl && !isUnsafeVideoHeroUrl(videoUrl);
+      }).length;
+    const remoteDurableVideoCount = (Array.isArray(remoteBlocks) ? remoteBlocks : [])
+      .filter((block) => String(block?.type || "") === "video-hero")
+      .filter((block) => {
+        const videoUrl = resolveVideoHeroUrl(block?.props || {});
+        return videoUrl && !isUnsafeVideoHeroUrl(videoUrl);
+      }).length;
+    const remoteWouldDropDurableVideo = localDurableVideoCount > 0 && remoteDurableVideoCount < localDurableVideoCount;
+    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && !remoteWouldDropDurableVideo && (
+      (
+        remoteUpdatedAt > localUpdatedAt
+        || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
+      )
       || localBlocks.length === 0
       || remoteCleansInlineImages
+      || remoteHasMoreMedia
+      || remoteHasMoreFullWidthSettings
     );
 
     const localNames = new Set(localPages.map((p) => p.name));
@@ -1163,6 +1278,26 @@ export default function VisualBuilderPage() {
       updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
       deletedBlockIds,
     };
+  }
+
+  async function loadPageDraftIntoProject(pageName) {
+    if (!project?.id || !session?.access_token) return;
+    const requestedPage = pageNameFromValue(pageName);
+    if (!requestedPage) return;
+    try {
+      const remoteProject = normalizeFooterNavigationForProject(await fetchWebsiteProjectFromServer(session, project.id, { pageName: requestedPage }));
+      if (!remoteProject?.id) return;
+      const localProject = getWebsiteProject(project.id) || project;
+      const mergedProject = mergeRemotePageIntoProject(localProject, remoteProject, requestedPage);
+      const cachedProject = updateWebsiteProject(localProject.id, normalizeFooterNavigationForProject(mergedProject)) || mergedProject;
+      setProject(cachedProject);
+    } catch (error) {
+      console.warn("[website-builder page switch] could not load page draft", {
+        projectId: project?.id || "",
+        pageName: requestedPage,
+        error: error?.message || String(error || ""),
+      });
+    }
   }
 
   function stableJson(value) {
@@ -1715,6 +1850,7 @@ export default function VisualBuilderPage() {
     const nextPage = pageNameFromValue(pageName);
     if (!nextPage) return;
     setActivePage(nextPage);
+    void loadPageDraftIntoProject(nextPage);
 
     if (!router.isReady) return;
     router.replace(
@@ -1735,14 +1871,40 @@ export default function VisualBuilderPage() {
     if (!pageName || !project?.id) return;
 
     if (project.pages?.some((entry) => slugify(entry.name) === slugify(pageName))) {
-      flashNotice("That page already exists.");
+      flashNotice("That page name already exists.", "error");
       return;
     }
 
-    const nextPages = [...(project.pages || []), { name: pageName, objective: `Build the ${pageName} page.` }];
-    const starterData = project?.mode === "blank"
-      ? { blocks: [], theme: { preset: project?.stylePack || "executive" }, designTokens: {} }
-      : buildStarterChaiData(project, pageName);
+    const existingPages = Array.isArray(project.pages) ? project.pages : [];
+    const requestedSlug = slugify(nameOverride ? pageName : (newPageSlug || pageName));
+    const pageSlug = uniquePageSlug(requestedSlug, existingPages);
+    if (!pageSlug) {
+      flashNotice("Enter a valid page name or slug.", "error");
+      return;
+    }
+    if (requestedSlug && pageSlug !== requestedSlug) {
+      flashNotice(`Slug already existed, created ${pageSlug} instead.`, "info", 4000);
+    }
+
+    const pageId = pageSlug;
+    const nextOrder = existingPages.reduce((max, entry, index) => {
+      const value = Number(entry?.order ?? entry?.navigationOrder ?? index);
+      return Number.isFinite(value) ? Math.max(max, value) : max;
+    }, -1) + 1;
+    const nextPage = {
+      id: pageId,
+      name: pageName,
+      title: pageName,
+      slug: pageSlug,
+      file: `${pageSlug}.json`,
+      order: nextOrder,
+      showInNavigation: newPageShowInNavigation,
+      navigationLabel: pageName,
+      navigationOrder: nextOrder,
+      objective: `Build the ${pageName} page.`,
+    };
+    const nextPages = [...existingPages, nextPage];
+    const starterData = buildCleanPageChaiData(project);
 
     saveProjectPatch(
       {
@@ -1766,6 +1928,9 @@ export default function VisualBuilderPage() {
 
     navigateToPage(pageName);
     setNewPageName("");
+    setNewPageSlug("");
+    setNewPageShowInNavigation(true);
+    setShowNewPagePanel(false);
     return pageName;
   }
 
@@ -1922,10 +2087,16 @@ export default function VisualBuilderPage() {
 
   function isTemporaryMediaValue(value) {
     const text = String(value || "").trim();
+    // Must match (at least) everything normalizeAccordionBlocks -> isUnsafeAccordionPanelImageUrl
+    // treats as unsafe and strips downstream in this same save pipeline. Otherwise a value that
+    // looks fine here (e.g. a data: URI or a signed storage URL briefly held in panel state) sails
+    // through unprotected, gets wiped a few steps later, and there's no prior durable value left
+    // to fall back to — the image is just gone.
     return !text
       || /^blob:/i.test(text)
       || /^file:/i.test(text)
-      || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(text);
+      || /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i.test(text)
+      || isUnsafeAccordionPanelImageUrl(text);
   }
 
   function preserveDurableMediaValues(nextValue, previousValue) {
@@ -2533,7 +2704,7 @@ export default function VisualBuilderPage() {
     const existingProps = existingBlock?.props || {};
     const nextProps = applyAssetToProps(existingProps, fieldKey, normalizedAsset);
     const selectedSrc = String(normalizedAsset.src || "").startsWith("data:") ? "" : normalizedAsset.src;
-    if (String(existingBlock?.type || "") === "video-hero" && ["__video_hero_src__", "videoUrl", "videoSrc", "mediaUrl", "src", "url"].includes(String(fieldKey || ""))) {
+    if (String(existingBlock?.type || "") === "video-hero" && isVideoHeroMediaFieldKey(fieldKey)) {
       Object.assign(nextProps, mergeVideoHeroProps(existingProps, {
         videoUrl: selectedSrc,
         videoStoragePath: normalizedAsset.storagePath || existingProps.videoStoragePath || "",
@@ -2597,6 +2768,12 @@ export default function VisualBuilderPage() {
         if (uploadError) throw new Error(uploadError.message || "Video upload failed. Please try again.");
 
         await waitForPublicVideoUrlToLoad(json.src);
+        console.info("[website-builder video-hero] Uploaded URL", {
+          fieldKey,
+          url: json.src,
+          storagePath: json.storagePath,
+          response: json,
+        });
 
         fetch("/api/website-builder/upload-video", {
           method: "POST",
@@ -2910,19 +3087,62 @@ export default function VisualBuilderPage() {
                 ))}
               </div>
               <div style={styles.pagesBarAddRow}>
-                <input
-                  value={newPageName}
-                  onChange={(e) => setNewPageName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAddPage(); }}
-                  placeholder="+ New page"
-                  style={styles.pagesBarInput}
-                />
-                {newPageName.trim() ? (
-                  <button type="button" onClick={handleAddPage} style={styles.pagesBarAddBtn}>Add</button>
-                ) : null}
+                <button type="button" onClick={() => setShowNewPagePanel(true)} style={styles.pagesBarAddBtn}>+ New page</button>
               </div>
             </div>
           )}
+
+          {showNewPagePanel ? (
+            <div style={styles.newPagePanel} role="dialog" aria-label="Create new website page">
+              <div style={styles.newPagePanelHeader}>
+                <strong>Create New Page</strong>
+                <button type="button" onClick={() => setShowNewPagePanel(false)} style={styles.newPageCloseBtn}>×</button>
+              </div>
+              <div style={styles.newPageGrid}>
+                <label style={styles.newPageField}>
+                  Page name
+                  <input
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    value={newPageName}
+                    onChange={(event) => {
+                      const previousAutoSlug = slugify(newPageName);
+                      const nextName = event.target.value;
+                      setNewPageName(nextName);
+                      if (!newPageSlug || slugify(newPageSlug) === previousAutoSlug) {
+                        setNewPageSlug(slugify(nextName));
+                      }
+                    }}
+                    onKeyDown={(event) => { if (event.key === "Enter") handleAddPage(); }}
+                    placeholder="Our Services"
+                    style={styles.newPageInput}
+                  />
+                </label>
+                <label style={styles.newPageField}>
+                  Slug
+                  <input
+                    value={newPageSlug}
+                    onChange={(event) => setNewPageSlug(slugify(event.target.value))}
+                    onKeyDown={(event) => { if (event.key === "Enter") handleAddPage(); }}
+                    placeholder="our-services"
+                    style={styles.newPageInput}
+                  />
+                </label>
+                <label style={styles.newPageCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={newPageShowInNavigation}
+                    onChange={(event) => setNewPageShowInNavigation(event.target.checked)}
+                  />
+                  Show in navigation
+                </label>
+                <div style={styles.newPageActions}>
+                  <button type="button" onClick={() => setShowNewPagePanel(false)} style={styles.newPageCancelBtn}>Cancel</button>
+                  <button type="button" onClick={() => handleAddPage()} style={styles.newPageCreateBtn}>Create Page</button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {showSetupPanel && (
             <div style={styles.setupDrawer}>
@@ -3121,15 +3341,8 @@ export default function VisualBuilderPage() {
             </div>
 
             <div style={styles.addRow}>
-              <input
-                value={newPageName}
-                onChange={(event) => setNewPageName(event.target.value)}
-                onKeyDown={(event) => { if (event.key === "Enter") handleAddPage(); }}
-                placeholder="Add page name, e.g. About"
-                style={styles.pageInput}
-              />
-              <button type="button" onClick={() => handleAddPage()} style={styles.addBtn}>
-                Add Page
+              <button type="button" onClick={() => setShowNewPagePanel(true)} style={styles.addBtn}>
+                + New Page
               </button>
             </div>
           </section>
@@ -3890,13 +4103,103 @@ const styles = {
     outline: "none",
   },
   pagesBarAddBtn: {
-    padding: "5px 12px",
+    padding: "7px 12px",
     borderRadius: 7,
     border: 0,
     background: "#0ea5e9",
     color: "#04111d",
     fontSize: 14,
-    fontWeight: 600,
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  newPagePanel: {
+    display: "grid",
+    gap: 10,
+    padding: 14,
+    background: "#0f1b2d",
+    border: "1px solid rgba(56,189,248,0.45)",
+    borderTop: 0,
+    color: "#e5f3ff",
+    boxShadow: "0 16px 34px rgba(0,0,0,0.25)",
+  },
+  newPagePanelHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  newPageCloseBtn: {
+    width: 28,
+    height: 28,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "1px solid rgba(255,255,255,0.18)",
+    borderRadius: 7,
+    background: "rgba(2,6,23,0.55)",
+    color: "#e5f3ff",
+    cursor: "pointer",
+  },
+  newPageGrid: {
+    display: "grid",
+    gridTemplateColumns: "minmax(180px, 1fr) minmax(160px, 0.8fr) auto auto",
+    alignItems: "end",
+    gap: 10,
+  },
+  newPageField: {
+    display: "grid",
+    gap: 5,
+    fontSize: 12,
+    fontWeight: 800,
+    color: "#b9d7ee",
+    textTransform: "uppercase",
+  },
+  newPageInput: {
+    minWidth: 0,
+    background: "rgba(2,6,23,0.72)",
+    color: "#f8fafc",
+    border: "1px solid rgba(148,163,184,0.45)",
+    borderRadius: 8,
+    padding: "8px 10px",
+    fontSize: 14,
+    fontWeight: 700,
+    outline: "none",
+    textTransform: "none",
+  },
+  newPageCheckbox: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 36,
+    fontSize: 13,
+    fontWeight: 800,
+    color: "#dbeafe",
+    whiteSpace: "nowrap",
+  },
+  newPageActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  newPageCancelBtn: {
+    padding: "8px 12px",
+    borderRadius: 8,
+    border: "1px solid rgba(148,163,184,0.45)",
+    background: "rgba(15,23,42,0.70)",
+    color: "#e2e8f0",
+    fontWeight: 800,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  newPageCreateBtn: {
+    padding: "8px 14px",
+    borderRadius: 8,
+    border: 0,
+    background: "#86efac",
+    color: "#052e16",
+    fontWeight: 900,
     cursor: "pointer",
     whiteSpace: "nowrap",
   },

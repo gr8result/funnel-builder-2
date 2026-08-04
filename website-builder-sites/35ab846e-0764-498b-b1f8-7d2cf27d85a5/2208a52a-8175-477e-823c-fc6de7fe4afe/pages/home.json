@@ -10,81 +10,6 @@
   "objective": "Present the offer and move visitors into a demo request.",
   "blocks": [
     {
-      "id": "30814b2a-f7ca-4ecd-9d1d-c32c2e725892",
-      "type": "nav-bar",
-      "props": {
-        "logo": "",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          {
-            "href": "#home",
-            "label": "Home"
-          },
-          {
-            "href": "#features",
-            "label": "Features"
-          },
-          {
-            "href": "#crm",
-            "label": "CRM"
-          },
-          {
-            "href": "#automation",
-            "label": "Automation"
-          },
-          {
-            "href": "#funnel-builder",
-            "label": "Funnel Builder"
-          },
-          {
-            "href": "#pricing",
-            "label": "Pricing"
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us"
-          },
-          {
-            "href": "#demo-request",
-            "label": "Demo Request"
-          },
-          {
-            "href": "#other-modules",
-            "label": "Other Modules"
-          },
-          {
-            "href": "#contact",
-            "label": "CONtact"
-          }
-        ],
-        "ctaLink": "#contact",
-        "ctaText": "Contact",
-        "variant": "boxed-brand",
-        "showLogo": true,
-        "logoWidth": 44,
-        "textColor": "#e2e8f0",
-        "stickyMode": "sticky-transparent",
-        "borderColor": "rgba(148,163,184,0.24)",
-        "buttonColor": "#ffffff",
-        "ctaFontSize": 18,
-        "linkFontSize": 18,
-        "brandFontSize": 18,
-        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-        "pageBackground": "#121c26",
-        "backgroundColor": "#0b1220",
-        "buttonTextColor": "#00b0f0",
-        "linkHoverEffect": "fill",
-        "mobileMenuStyle": "hamburger",
-        "headingFontFamily": "Verdana",
-        "headlineFontFamily": "Verdana",
-        "linkHoverTextColor": "#ffffff",
-        "activeLinkTextColor": "#ffffff",
-        "fullWidthBackground": true,
-        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-        "activeLinkBackgroundColor": "#ffffff"
-      }
-    },
-    {
       "id": 1781385365287,
       "type": "video-hero",
       "props": {
@@ -1762,81 +1687,6 @@
   ],
   "chaiData": {
     "blocks": [
-      {
-        "id": "30814b2a-f7ca-4ecd-9d1d-c32c2e725892",
-        "type": "nav-bar",
-        "props": {
-          "logo": "",
-          "brand": "Gr8 Result Digital Solutions",
-          "links": [
-            {
-              "href": "#home",
-              "label": "Home"
-            },
-            {
-              "href": "#features",
-              "label": "Features"
-            },
-            {
-              "href": "#crm",
-              "label": "CRM"
-            },
-            {
-              "href": "#automation",
-              "label": "Automation"
-            },
-            {
-              "href": "#funnel-builder",
-              "label": "Funnel Builder"
-            },
-            {
-              "href": "#pricing",
-              "label": "Pricing"
-            },
-            {
-              "href": "#about-us",
-              "label": "About Us"
-            },
-            {
-              "href": "#demo-request",
-              "label": "Demo Request"
-            },
-            {
-              "href": "#other-modules",
-              "label": "Other Modules"
-            },
-            {
-              "href": "#contact",
-              "label": "CONtact"
-            }
-          ],
-          "ctaLink": "#contact",
-          "ctaText": "Contact",
-          "variant": "boxed-brand",
-          "showLogo": true,
-          "logoWidth": 44,
-          "textColor": "#e2e8f0",
-          "stickyMode": "sticky-transparent",
-          "borderColor": "rgba(148,163,184,0.24)",
-          "buttonColor": "#ffffff",
-          "ctaFontSize": 18,
-          "linkFontSize": 18,
-          "brandFontSize": 18,
-          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-          "pageBackground": "#121c26",
-          "backgroundColor": "#0b1220",
-          "buttonTextColor": "#00b0f0",
-          "linkHoverEffect": "fill",
-          "mobileMenuStyle": "hamburger",
-          "headingFontFamily": "Verdana",
-          "headlineFontFamily": "Verdana",
-          "linkHoverTextColor": "#ffffff",
-          "activeLinkTextColor": "#ffffff",
-          "fullWidthBackground": true,
-          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-          "activeLinkBackgroundColor": "#ffffff"
-        }
-      },
       {
         "id": 1781385365287,
         "type": "video-hero",
@@ -3519,5 +3369,7 @@
     "designTokens": {}
   },
   "html": "",
-  "updatedAt": "2026-06-22T04:23:09.437Z"
+  "updatedAt": "2026-06-22T04:23:09.437Z",
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

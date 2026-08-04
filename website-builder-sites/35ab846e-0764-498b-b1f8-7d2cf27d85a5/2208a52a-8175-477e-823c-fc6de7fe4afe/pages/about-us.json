@@ -10,51 +10,6 @@
   "objective": "Build the About Us page.",
   "blocks": [
     {
-      "id": "0f679694-deae-4bb0-82d7-1849c1b33f0b",
-      "type": "nav-bar",
-      "props": {
-        "logo": "",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          {
-            "href": "#home",
-            "label": "Home"
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us"
-          },
-          {
-            "href": "#contact",
-            "label": "CONtact"
-          }
-        ],
-        "ctaLink": "#contact",
-        "ctaText": "Contact",
-        "variant": "boxed-brand",
-        "showLogo": true,
-        "logoWidth": 44,
-        "textColor": "#e2e8f0",
-        "stickyMode": "sticky-transparent",
-        "borderColor": "rgba(148,163,184,0.24)",
-        "buttonColor": "#0ea5e9",
-        "ctaFontSize": 16,
-        "linkFontSize": 16,
-        "brandFontSize": 20,
-        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-        "backgroundColor": "#0b1220",
-        "buttonTextColor": "#ffffff",
-        "linkHoverEffect": "fill",
-        "mobileMenuStyle": "hamburger",
-        "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
-        "linkHoverTextColor": "#ffffff",
-        "activeLinkTextColor": "#ffffff",
-        "fullWidthBackground": true,
-        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-      }
-    },
-    {
       "id": "hero-77ago8l",
       "type": "hero",
       "props": {
@@ -369,51 +324,6 @@
   ],
   "chaiData": {
     "blocks": [
-      {
-        "id": "0f679694-deae-4bb0-82d7-1849c1b33f0b",
-        "type": "nav-bar",
-        "props": {
-          "logo": "",
-          "brand": "Gr8 Result Digital Solutions",
-          "links": [
-            {
-              "href": "#home",
-              "label": "Home"
-            },
-            {
-              "href": "#about-us",
-              "label": "About Us"
-            },
-            {
-              "href": "#contact",
-              "label": "CONtact"
-            }
-          ],
-          "ctaLink": "#contact",
-          "ctaText": "Contact",
-          "variant": "boxed-brand",
-          "showLogo": true,
-          "logoWidth": 44,
-          "textColor": "#e2e8f0",
-          "stickyMode": "sticky-transparent",
-          "borderColor": "rgba(148,163,184,0.24)",
-          "buttonColor": "#0ea5e9",
-          "ctaFontSize": 16,
-          "linkFontSize": 16,
-          "brandFontSize": 20,
-          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-          "backgroundColor": "#0b1220",
-          "buttonTextColor": "#ffffff",
-          "linkHoverEffect": "fill",
-          "mobileMenuStyle": "hamburger",
-          "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
-          "linkHoverTextColor": "#ffffff",
-          "activeLinkTextColor": "#ffffff",
-          "fullWidthBackground": true,
-          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-        }
-      },
       {
         "id": "hero-77ago8l",
         "type": "hero",
@@ -733,5 +643,7 @@
     "designTokens": {}
   },
   "html": "",
-  "updatedAt": "2026-06-21T02:45:17.459Z"
+  "updatedAt": "2026-06-21T02:45:17.459Z",
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

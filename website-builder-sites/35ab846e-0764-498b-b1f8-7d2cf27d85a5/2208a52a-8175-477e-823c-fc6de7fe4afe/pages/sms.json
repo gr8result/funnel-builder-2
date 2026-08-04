@@ -10,55 +10,6 @@
   "objective": "Recovered SMS page from previous project data.",
   "blocks": [
     {
-      "id": "nav-bar-njv0lw3",
-      "type": "nav-bar",
-      "props": {
-        "logo": "",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          {
-            "href": "#home",
-            "label": "Home",
-            "children": [],
-            "highlighted": true
-          },
-          {
-            "href": "#about",
-            "label": "About"
-          },
-          {
-            "href": "#services",
-            "label": "Services"
-          },
-          {
-            "href": "#contact",
-            "label": "Contact"
-          }
-        ],
-        "ctaLink": "#contact",
-        "ctaText": "Get Started",
-        "variant": "split-dark",
-        "showLogo": false,
-        "logoWidth": 44,
-        "textColor": "#e2e8f0",
-        "stickyMode": "normal",
-        "borderColor": "rgba(148,163,184,0.24)",
-        "buttonColor": "#ffffff",
-        "ctaFontSize": 16,
-        "linkFontSize": 16,
-        "brandFontSize": 18,
-        "backgroundColor": "#0b1220",
-        "buttonTextColor": "#0f172a",
-        "linkHoverEffect": "fill",
-        "mobileMenuStyle": "hamburger",
-        "linkHoverTextColor": "#ffffff",
-        "activeLinkTextColor": "#ffffff",
-        "fullWidthBackground": true,
-        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-      }
-    },
-    {
       "id": 1782095149942,
       "type": "hero",
       "props": {
@@ -201,55 +152,6 @@
   ],
   "chaiData": {
     "blocks": [
-      {
-        "id": "nav-bar-njv0lw3",
-        "type": "nav-bar",
-        "props": {
-          "logo": "",
-          "brand": "Gr8 Result Digital Solutions",
-          "links": [
-            {
-              "href": "#home",
-              "label": "Home",
-              "children": [],
-              "highlighted": true
-            },
-            {
-              "href": "#about",
-              "label": "About"
-            },
-            {
-              "href": "#services",
-              "label": "Services"
-            },
-            {
-              "href": "#contact",
-              "label": "Contact"
-            }
-          ],
-          "ctaLink": "#contact",
-          "ctaText": "Get Started",
-          "variant": "split-dark",
-          "showLogo": false,
-          "logoWidth": 44,
-          "textColor": "#e2e8f0",
-          "stickyMode": "normal",
-          "borderColor": "rgba(148,163,184,0.24)",
-          "buttonColor": "#ffffff",
-          "ctaFontSize": 16,
-          "linkFontSize": 16,
-          "brandFontSize": 18,
-          "backgroundColor": "#0b1220",
-          "buttonTextColor": "#0f172a",
-          "linkHoverEffect": "fill",
-          "mobileMenuStyle": "hamburger",
-          "linkHoverTextColor": "#ffffff",
-          "activeLinkTextColor": "#ffffff",
-          "fullWidthBackground": true,
-          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-        }
-      },
       {
         "id": 1782095149942,
         "type": "hero",
@@ -397,5 +299,7 @@
     "designTokens": {}
   },
   "html": "",
-  "updatedAt": "2026-06-22T02:50:03.043Z"
+  "updatedAt": "2026-06-22T02:50:03.043Z",
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

@@ -379,7 +379,7 @@ const showBtn = {
   border: "none",
   color: "#60a5fa",
   cursor: "pointer",
-  fontSize: 16,
+  fontSize: 24,
 };
 const btnMain = {
   width: "100%",
@@ -397,7 +397,7 @@ const linkBtn = {
   border: "none",
   color: "#60a5fa",
   cursor: "pointer",
-  fontSize: 16,
+  fontSize: 24,
   marginTop: 6,
 };
 const msgBox = (success) => ({

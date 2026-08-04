@@ -11,7 +11,9 @@
       "objective": "Present the offer and move visitors into a demo request.",
       "id": "home",
       "file": "home.json",
-      "order": 0
+      "order": 0,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "name": "About Us",
@@ -19,7 +21,9 @@
       "id": "about-us",
       "slug": "about-us",
       "file": "about-us.json",
-      "order": 1
+      "order": 1,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "name": "Modules",
@@ -27,7 +31,9 @@
       "id": "modules",
       "slug": "modules",
       "file": "modules.json",
-      "order": 2
+      "order": 2,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "name": "Contact Us",
@@ -35,7 +41,9 @@
       "id": "contact-us",
       "slug": "contact-us",
       "file": "contact-us.json",
-      "order": 3
+      "order": 3,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "name": "Email",
@@ -43,7 +51,9 @@
       "id": "email",
       "slug": "email",
       "file": "email.json",
-      "order": 4
+      "order": 4,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "name": "Pricing",
@@ -51,7 +61,9 @@
       "id": "pricing",
       "slug": "pricing",
       "file": "pricing.json",
-      "order": 5
+      "order": 5,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "crm",
@@ -61,7 +73,9 @@
       "description": "",
       "objective": "Recovered CRM page from Test Page content.",
       "file": "crm.json",
-      "order": 6
+      "order": 6,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "sms",
@@ -69,7 +83,9 @@
       "slug": "sms",
       "objective": "Recovered SMS page from previous project data.",
       "file": "sms.json",
-      "order": 7
+      "order": 7,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "funnels",
@@ -77,7 +93,9 @@
       "slug": "funnels",
       "objective": "Explain the Funnel Builder module and convert visitors into demo or build requests.",
       "file": "funnels.json",
-      "order": 8
+      "order": 8,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "website-builder",
@@ -85,7 +103,9 @@
       "slug": "website-builder",
       "objective": "Showcase the website builder module as a premium, AI-assisted website creation system.",
       "file": "website-builder.json",
-      "order": 9
+      "order": 9,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "social-media",
@@ -93,7 +113,9 @@
       "slug": "social-media",
       "objective": "Sell the Social Media module by demonstrating AI campaign creation, automated publishing and dramatic time savings.",
       "file": "social-media.json",
-      "order": 10
+      "order": 10,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     },
     {
       "id": "project-hub",
@@ -101,7 +123,9 @@
       "slug": "project-hub",
       "objective": "Flagship enterprise SaaS sales page for Project Hub, presenting estimating, job boards, Gantt planning, integrations, reporting and workflow consolidation.",
       "file": "project-hub.json",
-      "order": 11
+      "order": 11,
+      "useGlobalHeader": true,
+      "headerOverrideBlockId": ""
     }
   ],
   "status": "saved",
@@ -126,77 +150,133 @@
   "publishedAt": "2026-05-26T02:08:27.123Z",
   "templateSlug": "business-solution-template",
   "globalNavBlock": {
-    "id": "wb_1778363723819_90ebd6",
+    "id": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
     "type": "nav-bar",
     "props": {
       "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
       "brand": "Gr8 Result Digital Solutions",
       "links": [
         {
-          "href": "#home",
+          "id": "nav-page-home",
           "label": "Home",
+          "linkType": "page",
+          "pageId": "home",
+          "slug": "home",
+          "href": "/",
+          "children": [
+            {
+              "id": "nav-child-1780606303371-57805g",
+              "href": "/pricing",
+              "label": "Pricing",
+              "linkType": "page",
+              "pageId": "pricing",
+              "slug": "pricing",
+              "children": []
+            }
+          ],
           "highlighted": false
         },
         {
           "id": "nav-link-1779144221759-grnh3q",
-          "href": "#",
           "label": "Modules",
+          "linkType": "page",
+          "pageId": "modules",
+          "slug": "modules",
+          "href": "/modules",
           "children": [
             {
               "id": "nav-child-1779149028164-pd9mfy",
-              "href": "#email",
-              "label": "Email Marketing"
+              "href": "/email",
+              "label": "Email",
+              "linkType": "page",
+              "pageId": "email",
+              "slug": "email",
+              "children": []
             },
             {
-              "id": "nav-child-1779149044705-0ov9ih",
-              "href": "#sms",
-              "label": "SMS Marketing"
-            },
-            {
-              "id": "nav-child-1779149064546-ii5sie",
-              "href": "#crm",
-              "label": "CRM  Management"
-            },
-            {
-              "id": "nav-child-funnels",
-              "href": "#funnels",
-              "label": "Funnels"
-            },
-            {
-              "id": "nav-child-website-builder",
-              "href": "#website-builder",
-              "label": "Website Builder"
+              "id": "nav-child-1780606586612-utx34h",
+              "href": "/crm",
+              "label": "CRM",
+              "linkType": "page",
+              "pageId": "crm",
+              "slug": "crm",
+              "children": []
             },
             {
               "id": "nav-child-project-hub",
-              "href": "#project-hub",
-              "label": "Project Hub"
+              "href": "/project-hub",
+              "label": "Project Hub",
+              "linkType": "page",
+              "pageId": "project-hub",
+              "slug": "project-hub",
+              "children": []
             }
           ],
           "highlighted": false
         },
         {
           "id": "nav-link-1779143115150-nrgcvs",
-          "href": "#about",
           "label": "About Us",
+          "linkType": "page",
+          "pageId": "about-us",
+          "slug": "about-us",
+          "href": "/about-us",
+          "children": [],
           "highlighted": false
         },
         {
-          "href": "#pricing",
-          "label": "Pricing"
+          "id": "nav-page-contact-us",
+          "label": "Contact Us",
+          "linkType": "page",
+          "pageId": "contact-us",
+          "slug": "contact-us",
+          "href": "/contact-us",
+          "children": []
         },
         {
-          "href": "#contact",
-          "label": "Contact Us"
+          "id": "nav-page-sms",
+          "label": "SMS",
+          "linkType": "page",
+          "pageId": "sms",
+          "slug": "sms",
+          "href": "/sms",
+          "children": []
+        },
+        {
+          "id": "nav-page-funnels",
+          "label": "Funnels",
+          "linkType": "page",
+          "pageId": "funnels",
+          "slug": "funnels",
+          "href": "/funnels",
+          "children": []
+        },
+        {
+          "id": "nav-page-website-builder",
+          "label": "Website Builder",
+          "linkType": "page",
+          "pageId": "website-builder",
+          "slug": "website-builder",
+          "href": "/website-builder",
+          "children": []
+        },
+        {
+          "id": "nav-page-social-media",
+          "label": "Social Media",
+          "linkType": "page",
+          "pageId": "social-media",
+          "slug": "social-media",
+          "href": "/social-media",
+          "children": []
         }
       ],
-      "ctaLink": "#contact",
+      "ctaLink": "/contact-us",
       "ctaText": "Contact Support",
       "variant": "boxed-brand",
       "showLogo": true,
       "logoWidth": 150,
       "textColor": "#06b6d4",
-      "stickyMode": "normal",
+      "stickyMode": "sticky",
       "borderColor": "rgba(125,211,252,0.24)",
       "buttonColor": "#22c55e",
       "ctaFontSize": 20,
@@ -220,8 +300,139 @@
       "linkHoverBackgroundColor": "#ec4899",
       "activeLinkBackgroundColor": "#121c26",
       "subheadlineAnimationDelay": 0.16,
-      "subheadlineAnimationSpeed": 1.05
-    }
+      "subheadlineAnimationSpeed": 1.05,
+      "cta": {
+        "text": "Contact Support",
+        "linkType": "page",
+        "pageId": "contact-us",
+        "href": "/contact-us"
+      },
+      "role": "primary-navigation",
+      "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+      "globalHeaderSchemaVersion": 1,
+      "globalHeaderRevision": "2026-07-29T03:55:35.165Z",
+      "useGlobalHeader": true,
+      "sticky": true,
+      "positionSticky": true,
+      "navigationLinks": [
+        {
+          "id": "nav-page-home",
+          "label": "Home",
+          "linkType": "page",
+          "pageId": "home",
+          "slug": "home",
+          "href": "/",
+          "children": [
+            {
+              "id": "nav-child-1780606303371-57805g",
+              "href": "/pricing",
+              "label": "Pricing",
+              "linkType": "page",
+              "pageId": "pricing",
+              "slug": "pricing",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "label": "Modules",
+          "linkType": "page",
+          "pageId": "modules",
+          "slug": "modules",
+          "href": "/modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "/email",
+              "label": "Email",
+              "linkType": "page",
+              "pageId": "email",
+              "slug": "email",
+              "children": []
+            },
+            {
+              "id": "nav-child-1780606586612-utx34h",
+              "href": "/crm",
+              "label": "CRM",
+              "linkType": "page",
+              "pageId": "crm",
+              "slug": "crm",
+              "children": []
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "/project-hub",
+              "label": "Project Hub",
+              "linkType": "page",
+              "pageId": "project-hub",
+              "slug": "project-hub",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "label": "About Us",
+          "linkType": "page",
+          "pageId": "about-us",
+          "slug": "about-us",
+          "href": "/about-us",
+          "children": [],
+          "highlighted": false
+        },
+        {
+          "id": "nav-page-contact-us",
+          "label": "Contact Us",
+          "linkType": "page",
+          "pageId": "contact-us",
+          "slug": "contact-us",
+          "href": "/contact-us",
+          "children": []
+        },
+        {
+          "id": "nav-page-sms",
+          "label": "SMS",
+          "linkType": "page",
+          "pageId": "sms",
+          "slug": "sms",
+          "href": "/sms",
+          "children": []
+        },
+        {
+          "id": "nav-page-funnels",
+          "label": "Funnels",
+          "linkType": "page",
+          "pageId": "funnels",
+          "slug": "funnels",
+          "href": "/funnels",
+          "children": []
+        },
+        {
+          "id": "nav-page-website-builder",
+          "label": "Website Builder",
+          "linkType": "page",
+          "pageId": "website-builder",
+          "slug": "website-builder",
+          "href": "/website-builder",
+          "children": []
+        },
+        {
+          "id": "nav-page-social-media",
+          "label": "Social Media",
+          "linkType": "page",
+          "pageId": "social-media",
+          "slug": "social-media",
+          "href": "/social-media",
+          "children": []
+        }
+      ]
+    },
+    "role": "primary-navigation",
+    "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+    "globalHeaderRevision": "2026-07-29T03:55:35.165Z"
   },
   "globalFooterBlock": {
     "id": 1779416282454,
@@ -359,5 +570,415 @@
     "Project Hub": "project-hub"
   },
   "published": false,
-  "storageVersion": 2
+  "storageVersion": 2,
+  "globalHeader": {
+    "id": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+    "enabled": true,
+    "logoUrl": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+    "logoWidth": 150,
+    "siteName": "Gr8 Result Digital Solutions",
+    "menuItems": [
+      {
+        "id": "nav-page-home",
+        "label": "Home",
+        "linkType": "page",
+        "pageId": "home",
+        "slug": "home",
+        "href": "/",
+        "children": [
+          {
+            "id": "nav-child-1780606303371-57805g",
+            "href": "/pricing",
+            "label": "Pricing",
+            "linkType": "page",
+            "pageId": "pricing",
+            "slug": "pricing",
+            "children": []
+          }
+        ],
+        "highlighted": false
+      },
+      {
+        "id": "nav-link-1779144221759-grnh3q",
+        "label": "Modules",
+        "linkType": "page",
+        "pageId": "modules",
+        "slug": "modules",
+        "href": "/modules",
+        "children": [
+          {
+            "id": "nav-child-1779149028164-pd9mfy",
+            "href": "/email",
+            "label": "Email",
+            "linkType": "page",
+            "pageId": "email",
+            "slug": "email",
+            "children": []
+          },
+          {
+            "id": "nav-child-1780606586612-utx34h",
+            "href": "/crm",
+            "label": "CRM",
+            "linkType": "page",
+            "pageId": "crm",
+            "slug": "crm",
+            "children": []
+          },
+          {
+            "id": "nav-child-project-hub",
+            "href": "/project-hub",
+            "label": "Project Hub",
+            "linkType": "page",
+            "pageId": "project-hub",
+            "slug": "project-hub",
+            "children": []
+          }
+        ],
+        "highlighted": false
+      },
+      {
+        "id": "nav-link-1779143115150-nrgcvs",
+        "label": "About Us",
+        "linkType": "page",
+        "pageId": "about-us",
+        "slug": "about-us",
+        "href": "/about-us",
+        "children": [],
+        "highlighted": false
+      },
+      {
+        "id": "nav-page-contact-us",
+        "label": "Contact Us",
+        "linkType": "page",
+        "pageId": "contact-us",
+        "slug": "contact-us",
+        "href": "/contact-us",
+        "children": []
+      },
+      {
+        "id": "nav-page-sms",
+        "label": "SMS",
+        "linkType": "page",
+        "pageId": "sms",
+        "slug": "sms",
+        "href": "/sms",
+        "children": []
+      },
+      {
+        "id": "nav-page-funnels",
+        "label": "Funnels",
+        "linkType": "page",
+        "pageId": "funnels",
+        "slug": "funnels",
+        "href": "/funnels",
+        "children": []
+      },
+      {
+        "id": "nav-page-website-builder",
+        "label": "Website Builder",
+        "linkType": "page",
+        "pageId": "website-builder",
+        "slug": "website-builder",
+        "href": "/website-builder",
+        "children": []
+      },
+      {
+        "id": "nav-page-social-media",
+        "label": "Social Media",
+        "linkType": "page",
+        "pageId": "social-media",
+        "slug": "social-media",
+        "href": "/social-media",
+        "children": []
+      }
+    ],
+    "sticky": true,
+    "supportButton": {
+      "enabled": true,
+      "label": "Contact Support",
+      "href": "/contact-us"
+    },
+    "styles": {
+      "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+      "brand": "Gr8 Result Digital Solutions",
+      "links": [
+        {
+          "id": "nav-page-home",
+          "label": "Home",
+          "linkType": "page",
+          "pageId": "home",
+          "slug": "home",
+          "href": "/",
+          "children": [
+            {
+              "id": "nav-child-1780606303371-57805g",
+              "href": "/pricing",
+              "label": "Pricing",
+              "linkType": "page",
+              "pageId": "pricing",
+              "slug": "pricing",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "label": "Modules",
+          "linkType": "page",
+          "pageId": "modules",
+          "slug": "modules",
+          "href": "/modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "/email",
+              "label": "Email",
+              "linkType": "page",
+              "pageId": "email",
+              "slug": "email",
+              "children": []
+            },
+            {
+              "id": "nav-child-1780606586612-utx34h",
+              "href": "/crm",
+              "label": "CRM",
+              "linkType": "page",
+              "pageId": "crm",
+              "slug": "crm",
+              "children": []
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "/project-hub",
+              "label": "Project Hub",
+              "linkType": "page",
+              "pageId": "project-hub",
+              "slug": "project-hub",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "label": "About Us",
+          "linkType": "page",
+          "pageId": "about-us",
+          "slug": "about-us",
+          "href": "/about-us",
+          "children": [],
+          "highlighted": false
+        },
+        {
+          "id": "nav-page-contact-us",
+          "label": "Contact Us",
+          "linkType": "page",
+          "pageId": "contact-us",
+          "slug": "contact-us",
+          "href": "/contact-us",
+          "children": []
+        },
+        {
+          "id": "nav-page-sms",
+          "label": "SMS",
+          "linkType": "page",
+          "pageId": "sms",
+          "slug": "sms",
+          "href": "/sms",
+          "children": []
+        },
+        {
+          "id": "nav-page-funnels",
+          "label": "Funnels",
+          "linkType": "page",
+          "pageId": "funnels",
+          "slug": "funnels",
+          "href": "/funnels",
+          "children": []
+        },
+        {
+          "id": "nav-page-website-builder",
+          "label": "Website Builder",
+          "linkType": "page",
+          "pageId": "website-builder",
+          "slug": "website-builder",
+          "href": "/website-builder",
+          "children": []
+        },
+        {
+          "id": "nav-page-social-media",
+          "label": "Social Media",
+          "linkType": "page",
+          "pageId": "social-media",
+          "slug": "social-media",
+          "href": "/social-media",
+          "children": []
+        }
+      ],
+      "ctaLink": "/contact-us",
+      "ctaText": "Contact Support",
+      "variant": "boxed-brand",
+      "showLogo": true,
+      "logoWidth": 150,
+      "textColor": "#06b6d4",
+      "stickyMode": "sticky",
+      "borderColor": "rgba(125,211,252,0.24)",
+      "buttonColor": "#22c55e",
+      "ctaFontSize": 20,
+      "logoAssetId": "e548e010-ee00-4612-8fb7-2c22cb639e9a",
+      "linkFontSize": 20,
+      "brandFontSize": 24,
+      "textAnimation": "slide-up",
+      "backgroundColor": "#121c26",
+      "buttonTextColor": "#052e16",
+      "linkHoverEffect": "glow",
+      "mobileMenuStyle": "hamburger",
+      "sectionAnimation": "fade-in",
+      "linkHoverTextColor": "#ec4899",
+      "textAnimationDelay": 0.08,
+      "textAnimationSpeed": 0.95,
+      "activeLinkTextColor": "#f59e0b",
+      "fullWidthBackground": true,
+      "subheadlineAnimation": "fade-up",
+      "sectionAnimationDelay": 0,
+      "sectionAnimationSpeed": 1,
+      "linkHoverBackgroundColor": "#ec4899",
+      "activeLinkBackgroundColor": "#121c26",
+      "subheadlineAnimationDelay": 0.16,
+      "subheadlineAnimationSpeed": 1.05,
+      "cta": {
+        "text": "Contact Support",
+        "linkType": "page",
+        "pageId": "contact-us",
+        "href": "/contact-us"
+      },
+      "role": "primary-navigation",
+      "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+      "globalHeaderSchemaVersion": 1,
+      "globalHeaderRevision": "2026-07-29T03:55:35.165Z",
+      "useGlobalHeader": true,
+      "sticky": true,
+      "positionSticky": true,
+      "navigationLinks": [
+        {
+          "id": "nav-page-home",
+          "label": "Home",
+          "linkType": "page",
+          "pageId": "home",
+          "slug": "home",
+          "href": "/",
+          "children": [
+            {
+              "id": "nav-child-1780606303371-57805g",
+              "href": "/pricing",
+              "label": "Pricing",
+              "linkType": "page",
+              "pageId": "pricing",
+              "slug": "pricing",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779144221759-grnh3q",
+          "label": "Modules",
+          "linkType": "page",
+          "pageId": "modules",
+          "slug": "modules",
+          "href": "/modules",
+          "children": [
+            {
+              "id": "nav-child-1779149028164-pd9mfy",
+              "href": "/email",
+              "label": "Email",
+              "linkType": "page",
+              "pageId": "email",
+              "slug": "email",
+              "children": []
+            },
+            {
+              "id": "nav-child-1780606586612-utx34h",
+              "href": "/crm",
+              "label": "CRM",
+              "linkType": "page",
+              "pageId": "crm",
+              "slug": "crm",
+              "children": []
+            },
+            {
+              "id": "nav-child-project-hub",
+              "href": "/project-hub",
+              "label": "Project Hub",
+              "linkType": "page",
+              "pageId": "project-hub",
+              "slug": "project-hub",
+              "children": []
+            }
+          ],
+          "highlighted": false
+        },
+        {
+          "id": "nav-link-1779143115150-nrgcvs",
+          "label": "About Us",
+          "linkType": "page",
+          "pageId": "about-us",
+          "slug": "about-us",
+          "href": "/about-us",
+          "children": [],
+          "highlighted": false
+        },
+        {
+          "id": "nav-page-contact-us",
+          "label": "Contact Us",
+          "linkType": "page",
+          "pageId": "contact-us",
+          "slug": "contact-us",
+          "href": "/contact-us",
+          "children": []
+        },
+        {
+          "id": "nav-page-sms",
+          "label": "SMS",
+          "linkType": "page",
+          "pageId": "sms",
+          "slug": "sms",
+          "href": "/sms",
+          "children": []
+        },
+        {
+          "id": "nav-page-funnels",
+          "label": "Funnels",
+          "linkType": "page",
+          "pageId": "funnels",
+          "slug": "funnels",
+          "href": "/funnels",
+          "children": []
+        },
+        {
+          "id": "nav-page-website-builder",
+          "label": "Website Builder",
+          "linkType": "page",
+          "pageId": "website-builder",
+          "slug": "website-builder",
+          "href": "/website-builder",
+          "children": []
+        },
+        {
+          "id": "nav-page-social-media",
+          "label": "Social Media",
+          "linkType": "page",
+          "pageId": "social-media",
+          "slug": "social-media",
+          "href": "/social-media",
+          "children": []
+        }
+      ]
+    },
+    "responsive": {},
+    "revision": "2026-07-29T03:55:35.165Z",
+    "updatedAt": "2026-07-29T03:55:35.165Z"
+  },
+  "pageBlocks": {}
 }

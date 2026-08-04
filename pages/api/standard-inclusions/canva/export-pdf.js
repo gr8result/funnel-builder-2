@@ -24,13 +24,15 @@ async function handler(req, res) {
   const jobId = job?.job?.id || job?.id;
   if (!jobId) return res.status(502).json({ ok: false, code: "CANVA_EXPORT_FAILED", error: "Canva did not return an export job ID." });
   let exportJob = job;
+  let exportStatus = exportJob?.job?.status || exportJob?.status || "";
   for (let attempt = 0; attempt < 12; attempt += 1) {
     exportJob = await canvaFetch(connection, `/exports/${encodeURIComponent(jobId)}`);
-    const status = exportJob?.job?.status || exportJob?.status;
-    if (status === "success") break;
-    if (status === "failed") return res.status(502).json({ ok: false, code: "CANVA_EXPORT_FAILED", error: exportJob?.job?.error?.message || "Canva PDF export failed." });
+    exportStatus = exportJob?.job?.status || exportJob?.status || "";
+    if (exportStatus === "success") break;
+    if (exportStatus === "failed") return res.status(502).json({ ok: false, code: "CANVA_EXPORT_FAILED", error: exportJob?.job?.error?.message || "Canva PDF export failed." });
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
+  if (exportStatus !== "success") return res.status(504).json({ ok: false, code: "CANVA_EXPORT_TIMEOUT", error: "Canva PDF export timed out before the complete document was ready." });
   const urls = exportJob?.job?.urls || exportJob?.urls || [];
   const exportUrl = Array.isArray(urls) ? urls[0] : urls?.url;
   if (!exportUrl) return res.status(502).json({ ok: false, code: "CANVA_EXPORT_FAILED", error: "Canva did not return a PDF download URL." });
@@ -42,6 +44,7 @@ async function handler(req, res) {
     action: "canva-export-pdf",
     canvaDesignId: designId,
     exportPdfStorageKey: stored.storagePath,
+    pageCount: stored.pageCount,
     createdAt: now,
     userId: req.user.id,
   };
@@ -50,6 +53,7 @@ async function handler(req, res) {
     version: nextVersion,
     current_exported_pdf_asset_id: stored.storagePath,
     current_export_pdf_storage_key: stored.storagePath,
+    page_count: stored.pageCount,
     updated_at: now,
     revision_history: revisionHistory,
   }).eq("id", documentId).select("*").maybeSingle();
@@ -63,7 +67,7 @@ async function handler(req, res) {
     created_reason: "canva-export-pdf",
     created_by: req.user.id,
   });
-  return res.status(200).json({ ok: true, document: update.data, pdfUrl: stored.publicUrl, storageKey: stored.storagePath });
+  return res.status(200).json({ ok: true, document: update.data, pdfUrl: stored.publicUrl, storageKey: stored.storagePath, pageCount: stored.pageCount });
 }
 
 export default withWorkspace(handler);

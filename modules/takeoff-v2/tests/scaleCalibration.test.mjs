@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { computeCalibration } from "../takeoff/scaleCalibration.js";
+import { computeCalibration, validateCalibrationShape } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
@@ -14,6 +14,9 @@ assert.equal(calibration.mmPerDocumentUnit, 10);
 assert.equal(calibration.axis, "horizontal");
 assert.equal(calibration.pageId, "page-1");
 assert.deepEqual(calibration.snapA, { kind: "manual", lineId: null, lineIds: null });
+assert.equal(calibration.status, "calibrated-unverified");
+assert.equal(validateCalibrationShape(calibration).label, "Scale calibrated — not independently verified");
+assert.equal(validateCalibrationShape({ ...calibration, validation: { status: "passed" } }).label, "Scale confirmed");
 
 // A vertical-locked segment uses the y-delta, not Euclidean distance.
 {

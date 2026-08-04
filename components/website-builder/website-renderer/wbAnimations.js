@@ -688,12 +688,44 @@ function resolveParallaxSpeed(...values) {
   return Math.max(0.05, Math.min(1.4, numeric));
 }
 
+function normalizeOpacityValue(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const normalized = parsed > 1 ? parsed / 100 : parsed;
+  return Math.max(0, Math.min(1, normalized));
+}
+
+function hasOwnProp(obj, key) {
+  return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function resolveHeroOverlayLayer(props) {
+  const overlayExplicitlyDisabled = props?.overlayEnabled === false || props?.backgroundOverlayEnabled === false;
+  if (overlayExplicitlyDisabled) return "";
+
+  const hasOverlayValue = hasOwnProp(props, "overlayOpacity") || hasOwnProp(props, "backgroundOverlayOpacity");
+  const overlayOpacity = normalizeOpacityValue(props?.overlayOpacity ?? props?.backgroundOverlayOpacity, 0);
+  const overlayColor = String(props?.overlayColor || props?.backgroundOverlayColor || "#000000").trim();
+  const overlayLayer = hasOverlayValue && overlayOpacity > 0 && overlayColor && overlayColor !== "transparent"
+    ? `linear-gradient(${colorWithAlpha(overlayColor, overlayOpacity)}, ${colorWithAlpha(overlayColor, overlayOpacity)})`
+    : "";
+
+  if (props?.overlayGradientEnabled) {
+    const start = String(props?.overlayGradientStart || colorWithAlpha(overlayColor || "#000000", overlayOpacity || 0.35)).trim();
+    const end = String(props?.overlayGradientEnd || colorWithAlpha(overlayColor || "#000000", 0)).trim();
+    const direction = String(props?.overlayGradientDirection || "135deg").trim();
+    return `linear-gradient(${direction}, ${start}, ${end})`;
+  }
+
+  return overlayLayer;
+}
+
 function heroBackground(props) {
   if (props.backgroundStyle === "image" && props.backgroundImage) {
     const baseColor = resolveHeroBaseColor(props);
-    const explicitOverlay = String(props.backgroundOverlay || props.backgroundOverlayColor || "").trim();
-    const overlayImage = explicitOverlay && explicitOverlay !== "transparent"
-      ? `linear-gradient(135deg, ${explicitOverlay}, ${explicitOverlay}), `
+    const overlay = resolveHeroOverlayLayer(props);
+    const overlayImage = overlay
+      ? `${overlay}, `
       : "";
     return {
       backgroundColor: baseColor,

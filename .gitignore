@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+e2e/freedom-trader/.auth
 
 # next.js
 /.next/
@@ -32,6 +35,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 build-output.log
+debug.log
+diagnostics/
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -72,6 +77,7 @@ recovery/
 website-builder-sites/**/full-project.json
 website-builder-sites/**/metadata.json
 website-builder-sites/**/*.tmp
+website-builder-sites/**/_global-navigation-backups/
 
 # local dev runtime locks
 .next-dev.lock.json

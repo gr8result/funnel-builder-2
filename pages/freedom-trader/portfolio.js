@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 import PaperOrderTicket from "../../components/freedom-trader/PaperOrderTicket";
+import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -126,9 +127,9 @@ export default function PaperPortfolio({ passwordHash }) {
         <thead><tr><th>Ticker</th><th>Company</th><th>Quantity</th><th>Average Entry</th><th>Current Price</th><th>Market Value</th><th>Stop Loss</th><th>Target</th><th>Unrealised P/L</th><th>Return</th><th>Actions</th></tr></thead>
         <tbody>{snapshot?.positions?.length ? snapshot.positions.map((position) => (
           <tr key={position.id}>
-            <td><Link href={`/freedom-trader/company/${position.ticker}`}>{position.ticker}</Link></td><td>{position.companyName}</td><td>{position.quantity}</td><td>{formatCurrency(position.averageEntry, position.currency)}</td><td>{formatCurrency(position.currentPrice, position.currency)}</td><td>{formatCurrency(position.marketValue, position.currency)}</td><td>{formatCurrency(position.stopLoss, position.currency)}</td><td>{formatCurrency(position.target, position.currency)}</td><td className={Number(position.unrealisedProfitLoss) >= 0 ? "profit" : "loss"}>{formatCurrency(position.unrealisedProfitLoss, position.currency)}</td><td>{formatPercent(position.returnPercent)}</td><td><button type="button" onClick={() => setTicketPosition(position)}>Sell</button></td>
+            <td><Link href={traderCompanyHref(position.ticker)}>{position.ticker}</Link></td><td>{position.companyName}</td><td>{position.quantity}</td><td>{formatCurrency(position.averageEntry, position.currency)}</td><td>{formatCurrency(position.currentPrice, position.currency)}</td><td>{formatCurrency(position.marketValue, position.currency)}</td><td>{formatCurrency(position.stopLoss, position.currency)}</td><td>{formatCurrency(position.target, position.currency)}</td><td className={Number(position.unrealisedProfitLoss) >= 0 ? "profit" : "loss"}>{formatCurrency(position.unrealisedProfitLoss, position.currency)}</td><td>{formatPercent(position.returnPercent)}</td><td><button type="button" onClick={() => setTicketPosition(position)}>Sell</button></td>
           </tr>
-        )) : <tr><td colSpan="11"><div className="emptyState">No open paper positions. <Link href="/freedom-trader/company/AVGO">Open AVGO</Link> or use the watchlist to create a paper trade.</div></td></tr>}</tbody>
+        )) : <tr><td colSpan="11"><div className="emptyState">No open paper positions. <Link href={traderCompanyHref("AVGO")}>Open AVGO</Link> or use the watchlist to create a paper trade.</div></td></tr>}</tbody>
       </Table>
       <Table title="Pending Orders" minWidth="980px">
         <thead><tr><th>Created</th><th>Ticker</th><th>Side</th><th>Type</th><th>Quantity</th><th>Requested Price</th><th>Status</th></tr></thead>
@@ -136,7 +137,7 @@ export default function PaperPortfolio({ passwordHash }) {
       </Table>
       <Table title="Completed Trades" minWidth="1100px">
         <thead><tr><th>Time</th><th>Ticker</th><th>Side</th><th>Quantity</th><th>Price</th><th>Brokerage</th><th>Realised P/L</th><th>Exit Reason</th></tr></thead>
-        <tbody>{snapshot?.trades?.length ? snapshot.trades.slice(0, 20).map((trade) => <tr key={trade.id}><td>{new Date(trade.traded_at).toLocaleString()}</td><td>{trade.ticker}</td><td>{trade.side}</td><td>{trade.quantity}</td><td>{formatCurrency(trade.price, trade.currency)}</td><td>{formatCurrency(trade.brokerage_fee, trade.currency)}</td><td>{formatCurrency(trade.realised_profit_loss, trade.currency)}</td><td>{trade.exit_reason || "--"}</td></tr>) : <tr><td colSpan="8"><div className="emptyState">No completed paper trades yet. <Link href="/freedom-trader/company/AVGO">Create the first paper trade</Link>.</div></td></tr>}</tbody>
+        <tbody>{snapshot?.trades?.length ? snapshot.trades.slice(0, 20).map((trade) => <tr key={trade.id}><td>{new Date(trade.traded_at).toLocaleString()}</td><td>{trade.ticker}</td><td>{trade.side}</td><td>{trade.quantity}</td><td>{formatCurrency(trade.price, trade.currency)}</td><td>{formatCurrency(trade.brokerage_fee, trade.currency)}</td><td>{formatCurrency(trade.realised_profit_loss, trade.currency)}</td><td>{trade.exit_reason || "--"}</td></tr>) : <tr><td colSpan="8"><div className="emptyState">No completed paper trades yet. <Link href={traderCompanyHref("AVGO")}>Create the first paper trade</Link>.</div></td></tr>}</tbody>
       </Table>
       {ticketPosition ? <PaperOrderTicket mode="sell" position={ticketPosition} onClose={() => setTicketPosition(null)} onSubmitted={loadPortfolio} /> : null}
       <PageStyles />

@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
 import { getWebsiteLimitForResolvedPlan, getUserPlan } from "../../../lib/planResolver";
-import { COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
+import { BlockTypes, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../../lib/website-builder/pageBlockComponents";
 import {
   deleteSplitWebsiteProject,
   assembleWebsiteForRendering,
@@ -19,8 +19,9 @@ import {
 } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
-import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
+import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
+import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 
 const TABLE_NAME = "published_websites";
 const GR8_RESULT_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
@@ -235,6 +236,7 @@ function applyDeletedBlockTombstones(blocks, deletedBlockIds, pageName) {
 
 function normalizeProjectBlocksForSave(project) {
   if (!project || typeof project !== "object") return project;
+  project = normalizeSharedPrimaryNavigation(project);
   const footerContext = buildFooterNavigationContext({ pages: project.pages, logInvalid: true });
   const globalFooterBlock = resolveCanonicalGlobalFooterBlock(project, footerContext) || project.globalFooterBlock || globalFooterToFooterBlock(project.globalFooter, null) || null;
   let normalizedGlobalFooterBlock = normalizeFooterNavigationBlock(globalFooterBlock, footerContext);
@@ -290,7 +292,7 @@ function normalizeProjectBlocksForSave(project) {
     deletedBlockIds,
     globalFooterBlock: normalizedGlobalFooterBlock,
     globalFooter: footerBlockToGlobalFooter(normalizedGlobalFooterBlock, footerContext) || project.globalFooter || null,
-    globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
+    globalNavBlock: project.globalNavBlock?.type === BlockTypes.NAV_BAR ? normalizeVideoHeroBlock(project.globalNavBlock) : null,
   };
 }
 
@@ -331,6 +333,7 @@ function summarizeProjectSaveVerification(project = {}) {
       videoFileName: entry.videoFileName || "",
       videoMimeType: entry.videoMimeType || "",
     })),
+    sharedNavigation: summarizeSharedNav(project),
     imageCount: collectMediaFieldCount(project?.pageBlocks || {}, imageFields),
     marqueeIconCount: collectMediaFieldCount(project?.pageBlocks || {}, new Set(["iconName", "iconUrl"])),
   };
@@ -345,6 +348,51 @@ function videoEntryWasRetained(expected, stored) {
     const expectedValue = String(expected?.[field] || "").trim();
     return !expectedValue || String(stored?.[field] || "").trim() === expectedValue;
   });
+}
+
+function canonicalNavEntryKey(entry = {}) {
+  const pageId = String(entry?.pageId || entry?.page_id || "").trim().toLowerCase();
+  if (pageId) return `page:${pageId}`;
+  const slug = String(entry?.slug || entry?.pageSlug || "").trim().toLowerCase();
+  if (slug) return `slug:${slug}`;
+  const href = String(entry?.href || entry?.url || entry?.path || "").trim().toLowerCase().replace(/^\/+/, "").split(/[?#]/)[0];
+  if (href) return `href:${href}`;
+  return `label:${String(entry?.label || "").trim().toLowerCase().replace(/\s+/g, "-")}`;
+}
+
+function summarizeSharedNav(project = {}) {
+  const nav = project?.globalNavBlock?.type === BlockTypes.NAV_BAR ? project.globalNavBlock : null;
+  const links = Array.isArray(nav?.props?.links) ? nav.props.links : [];
+  const entries = [];
+  const visit = (items = [], parent = "") => {
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const key = canonicalNavEntryKey(item);
+      entries.push({
+        key,
+        parent,
+        id: item?.id || "",
+        pageId: item?.pageId || "",
+        slug: item?.slug || "",
+        label: item?.label || "",
+        href: item?.href || "",
+      });
+      if (Array.isArray(item?.children) && item.children.length) {
+        visit(item.children, item?.label || item?.id || "");
+      }
+    });
+  };
+  visit(links);
+  const counts = entries.reduce((map, entry) => {
+    if (!entry.key || entry.key === "label:") return map;
+    map.set(entry.key, (map.get(entry.key) || 0) + 1);
+    return map;
+  }, new Map());
+  return {
+    exists: !!nav,
+    stickyMode: String(nav?.props?.stickyMode || ""),
+    duplicateEntries: entries.filter((entry) => entry.key && counts.get(entry.key) > 1),
+    entries,
+  };
 }
 
 function getVideoRetentionError(verificationIssues = [], fallbackError = "Save failed verification. The database read-back does not match the submitted website project.") {
@@ -461,6 +509,27 @@ function summarizeBlockList(blocks) {
             panelId: panel?.id || "",
             imageUrl: panel?.imageUrl || panel?.image?.url || panel?.image?.src || panel?.media?.url || "",
           })),
+        };
+      })
+      .filter(Boolean),
+    videoHeroes: safeBlocks
+      .map((block, index) => {
+        if (String(block?.type || "") !== "video-hero") return null;
+        return {
+          index,
+          id: block?.id || "",
+          videoUrl: resolveVideoHeroUrl(block?.props || {}),
+          fields: {
+            video: block?.props?.video || "",
+            videoUrl: block?.props?.videoUrl || "",
+            videoSrc: block?.props?.videoSrc || "",
+            src: block?.props?.src || "",
+            backgroundVideo: block?.props?.backgroundVideo || "",
+            backgroundVideoUrl: block?.props?.backgroundVideoUrl || "",
+          },
+          videoStoragePath: block?.props?.videoStoragePath || "",
+          videoFileName: block?.props?.videoFileName || "",
+          videoMimeType: block?.props?.videoMimeType || "",
         };
       })
       .filter(Boolean),
@@ -1000,6 +1069,21 @@ async function handler(req, res) {
       verificationIssues.push({
         type: "video-asset-not-retained",
         missingVideos,
+      });
+    }
+    if (splitVerification.sharedNavigation?.duplicateEntries?.length) {
+      verificationIssues.push({
+        type: "shared-navigation-duplicates",
+        duplicateEntries: splitVerification.sharedNavigation.duplicateEntries,
+      });
+    }
+    const expectedStickyMode = String(expectedVerification.sharedNavigation?.stickyMode || "");
+    const storedStickyMode = String(splitVerification.sharedNavigation?.stickyMode || "");
+    if (expectedStickyMode && storedStickyMode !== expectedStickyMode) {
+      verificationIssues.push({
+        type: "shared-navigation-sticky-mode-mismatch",
+        expected: expectedStickyMode,
+        actual: storedStickyMode,
       });
     }
     const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);

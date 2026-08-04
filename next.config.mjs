@@ -71,6 +71,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...aliases,
     };
+
     return config;
   },
 };

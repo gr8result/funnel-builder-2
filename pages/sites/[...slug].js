@@ -401,17 +401,15 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const footerContext = { pages, logInvalid: true };
   const rawGlobalFooterBlock = project?.globalFooterBlock || globalFooterToFooterBlock(project?.globalFooter, null);
   const usesVerifiedSnapshot = project?.publication?.verified === true;
-  const normalizedPageBlocks = usesVerifiedSnapshot
-    ? (project?.pageBlocks || {})
-    : normalizePublishedWebsiteBlocks(normalizeVideoHeroBlocks(project?.pageBlocks || {}, publishedAssets), footerContext, publishedAssets);
-  const normalizedGlobalNavBlock = usesVerifiedSnapshot
-    ? project?.globalNavBlock
-    : (project?.globalNavBlock?.type === "video-hero"
-      ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
-      : normalizePublishedWebsiteBlocks([project?.globalNavBlock], footerContext, publishedAssets)[0]);
-  const normalizedGlobalFooterBlock = usesVerifiedSnapshot && rawGlobalFooterBlock?.type === "footer"
-    ? rawGlobalFooterBlock
-    : normalizePublishedGlobalFooterBlock(rawGlobalFooterBlock, project, footerContext, publishedAssets);
+  const normalizedPageBlocks = normalizePublishedWebsiteBlocks(
+    normalizeVideoHeroBlocks(project?.pageBlocks || {}, publishedAssets),
+    footerContext,
+    publishedAssets
+  );
+  const normalizedGlobalNavBlock = project?.globalNavBlock?.type === "video-hero"
+    ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
+    : normalizePublishedWebsiteBlocks([project?.globalNavBlock], footerContext, publishedAssets)[0];
+  const normalizedGlobalFooterBlock = normalizePublishedGlobalFooterBlock(rawGlobalFooterBlock, project, footerContext, publishedAssets);
   const requested = Array.isArray(requestedPath) ? requestedPath.join("/") : "";
   const requestedAliases = publishedPageAliases(requested || "home");
   const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
@@ -558,6 +556,10 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
             max-width: 100%;
             min-width: 0;
             overflow-x: clip;
+          }
+          [data-published-block-type="nav-bar"],
+          [data-published-block-type="navigation-bar"] {
+            overflow: visible !important;
           }
           [data-published-block-type="trust-badges"] > section,
           [data-published-block-type="marquee-strip"] > section,

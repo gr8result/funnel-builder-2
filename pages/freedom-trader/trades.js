@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
 import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
+import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -85,8 +86,8 @@ export default function TradesPage({ passwordHash }) {
       </section>
       <section className="panel"><div className="tableWrap"><table><thead><tr><th>Time</th><th>Type</th><th>Ticker</th><th>Side</th><th>Order Type</th><th>Quantity</th><th>Requested</th><th>Filled/Trade Price</th><th>Status</th><th>Realised P/L</th><th>Exit Reason</th><th>Price Source</th></tr></thead><tbody>{rows.length ? rows.map((row) => {
         const item = row.data;
-        return <tr key={`${row.kind}-${item.id}`}><td>{new Date(row.time).toLocaleString()}</td><td>{row.kind}</td><td><Link href={`/freedom-trader/company/${row.ticker}`}>{row.ticker}</Link></td><td>{item.side}</td><td>{item.order_type || "--"}</td><td>{item.quantity}</td><td>{formatCurrency(item.requested_price, item.currency)}</td><td>{formatCurrency(item.filled_price ?? item.price, item.currency)}</td><td>{item.status || "closed"}</td><td>{formatCurrency(item.realised_profit_loss, item.currency)}</td><td>{item.exit_reason || "--"}</td><td>{item.price_provider || item.price_source || "--"}</td></tr>;
-      }) : <tr><td colSpan="12"><div className="emptyState">No matching paper trade records. <Link href="/freedom-trader/company/AVGO">Open a company page</Link> to submit a paper order.</div></td></tr>}</tbody></table></div></section>
+        return <tr key={`${row.kind}-${item.id}`}><td>{new Date(row.time).toLocaleString()}</td><td>{row.kind}</td><td><Link href={traderCompanyHref(row.ticker)}>{row.ticker}</Link></td><td>{item.side}</td><td>{item.order_type || "--"}</td><td>{item.quantity}</td><td>{formatCurrency(item.requested_price, item.currency)}</td><td>{formatCurrency(item.filled_price ?? item.price, item.currency)}</td><td>{item.status || "closed"}</td><td>{formatCurrency(item.realised_profit_loss, item.currency)}</td><td>{item.exit_reason || "--"}</td><td>{item.price_provider || item.price_source || "--"}</td></tr>;
+      }) : <tr><td colSpan="12"><div className="emptyState">No matching paper trade records. <Link href={traderCompanyHref("AVGO")}>Open a company page</Link> to submit a paper order.</div></td></tr>}</tbody></table></div></section>
       <PageStyles />
     </div>
   );

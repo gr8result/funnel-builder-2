@@ -589,6 +589,7 @@ const styles = {
     gap: 0,
     margin: 0,
     cursor: "pointer",
+    position: "relative",
   },
   globalBlockPreviewWrapSelected: {
     borderRadius: 20,
@@ -651,6 +652,9 @@ const styles = {
     flexWrap: "wrap",
     pointerEvents: "auto",
   },
+  blockActionBarCompact: {
+    gap: 4,
+  },
   blockActionLeft: {
     display: "flex",
     alignItems: "center",
@@ -670,6 +674,15 @@ const styles = {
     letterSpacing: "0.05em",
     textTransform: "uppercase",
     backdropFilter: "blur(10px)",
+  },
+  blockActionLabelCompact: {
+    minHeight: 26,
+    padding: "4px 8px",
+    fontSize: 12,
+    maxWidth: 120,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
   },
   blockActionButtons: {
     display: "flex",
@@ -694,6 +707,11 @@ const styles = {
     cursor: "pointer",
     boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
   },
+  blockActionBtnCompact: {
+    minHeight: 26,
+    padding: "4px 8px",
+    fontSize: 12,
+  },
   blockActionBtnIcon: {
     display: "inline-flex",
     alignItems: "center",
@@ -707,6 +725,11 @@ const styles = {
     fontSize: 16,
     cursor: "pointer",
     boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
+  },
+  blockActionBtnIconCompact: {
+    width: 26,
+    height: 26,
+    fontSize: 13,
   },
   blockActionBtnDanger: {
     color: "#991b1b",
@@ -820,9 +843,6 @@ const styles = {
     overflow: "hidden",
     position: "relative",
     paddingTop: 0,
-  },
-  blockPreviewWithOverlay: {
-    paddingTop: 42,
   },
   blockPreviewFullWidth: {
     maxWidth: "none",

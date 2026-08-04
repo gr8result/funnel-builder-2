@@ -35,7 +35,9 @@ function template(areaTypeId: string, code: string, name: string, definitions: D
 }
 
 const bedroom = [
-  { title: "Floor Covering", category: "flooring" },
+  { title: "Carpet", category: "flooring", applicability: "optional" },
+  { title: "Hybrid Flooring", category: "flooring", applicability: "optional" },
+  { title: "Timber Flooring", category: "flooring", applicability: "optional" },
   { title: "Skirting", category: "wall_finish" },
   { title: "Wall Paint", category: "wall_finish" },
   { title: "Ceiling Paint", category: "wall_finish" },
@@ -54,9 +56,11 @@ const bedroom = [
 ] satisfies DefInput[];
 
 const bathroom = [
-  { title: "Floor Tiles", category: "flooring" },
-  { title: "Wall Tiles", category: "wall_finish" },
-  { title: "Waterproofing Finish Reference", category: "wall_finish" },
+  { title: "Floor Tile", category: "flooring" },
+  { title: "Wall Tile", category: "wall_finish" },
+  { title: "Feature Tile", category: "wall_finish", applicability: "optional" },
+  { title: "Grout Colour", category: "wall_finish" },
+  { title: "Waterproofing", category: "wall_finish" },
   { title: "Vanity Cabinetry", category: "fixture" },
   { title: "Vanity Benchtop", category: "fixture" },
   { title: "Basin", category: "plumbing" },
@@ -80,7 +84,10 @@ const bathroom = [
 ] satisfies DefInput[];
 
 const powder = [
-  { title: "Floor Finish", category: "flooring" },
+  { title: "Floor Tile", category: "flooring" },
+  { title: "Wall Tile", category: "wall_finish", applicability: "conditional" },
+  { title: "Feature Tile", category: "wall_finish", applicability: "optional" },
+  { title: "Waterproofing", category: "wall_finish", applicability: "conditional" },
   { title: "Vanity or Basin", category: "plumbing" },
   { title: "Basin Mixer", category: "plumbing" },
   { title: "Mirror", category: "fixture" },
@@ -145,18 +152,22 @@ const garage = [
 ] satisfies DefInput[];
 
 const exterior = [
-  { title: "External Wall Finish", category: "external_finish" },
+  { title: "Wall Finish", category: "external_finish" },
   { title: "Brick or Cladding", category: "external_finish" },
   { title: "Mortar or Joint Finish", category: "external_finish" },
-  { title: "External Paint", category: "external_finish" },
+  { title: "Cladding", category: "external_finish", applicability: "conditional" },
+  { title: "Paint", category: "external_finish" },
   { title: "Windows", category: "fixture" },
-  { title: "External Doors", category: "hardware" },
+  { title: "Entry Door", category: "hardware" },
+  { title: "External Doors", category: "hardware", applicability: "conditional" },
   { title: "Fascia", category: "external_finish" },
   { title: "Gutter", category: "external_finish" },
   { title: "Downpipes", category: "external_finish" },
   { title: "Eaves", category: "external_finish" },
+  { title: "Roof", category: "external_finish", applicability: "conditional" },
   { title: "External Lighting", category: "electrical" },
   { title: "House Numbers", category: "fitting" },
+  { title: "Letterbox", category: "fitting", applicability: "conditional" },
   { title: "External Fixtures", category: "fitting" },
 ] satisfies DefInput[];
 
@@ -179,9 +190,66 @@ const alfresco = [
   { title: "Lighting", category: "electrical" },
   { title: "Power Points", category: "electrical" },
   { title: "External Fan", category: "electrical", applicability: "optional" },
+  { title: "BBQ Provision", category: "appliance", applicability: "optional" },
+  { title: "Sink", category: "plumbing", applicability: "optional" },
   { title: "External Kitchen Provision", category: "appliance", applicability: "conditional" },
-  { title: "External Doors", category: "hardware" },
-  { title: "Paint and Finishes", category: "external_finish" },
+  { title: "Outdoor Kitchen", category: "appliance", applicability: "optional" },
+  { title: "Paint", category: "external_finish" },
+] satisfies DefInput[];
+
+const patio = [
+  { title: "Floor Finish", category: "flooring" },
+  { title: "Ceiling Finish", category: "wall_finish", applicability: "conditional" },
+  { title: "Lighting", category: "electrical", applicability: "conditional" },
+  { title: "External Fan", category: "electrical", applicability: "optional" },
+  { title: "Power Points", category: "electrical", applicability: "optional" },
+  { title: "Paint", category: "external_finish", applicability: "conditional" },
+] satisfies DefInput[];
+
+const porch = [
+  { title: "Front Door", category: "hardware" },
+  { title: "Porch Ceiling", category: "wall_finish", applicability: "conditional" },
+  { title: "Porch Floor", category: "flooring" },
+  { title: "Lighting", category: "electrical" },
+  { title: "Columns", category: "external_finish", applicability: "conditional" },
+  { title: "Paint", category: "external_finish" },
+] satisfies DefInput[];
+
+const balcony = [
+  { title: "Floor Finish", category: "flooring" },
+  { title: "Balustrade", category: "fixture" },
+  { title: "Balustrade Finish", category: "external_finish" },
+  { title: "Handrail", category: "fixture", applicability: "conditional" },
+  { title: "Balcony Drainage", category: "plumbing" },
+  { title: "Ceiling Finish", category: "wall_finish", applicability: "conditional" },
+  { title: "Lighting", category: "electrical" },
+  { title: "Power Point", category: "electrical", applicability: "optional" },
+  { title: "External Fan", category: "electrical", applicability: "optional" },
+  { title: "Paint Finish", category: "external_finish" },
+  { title: "Waterproofing", category: "external_finish", applicability: "conditional" },
+] satisfies DefInput[];
+
+const deck = [
+  { title: "Decking Finish", category: "flooring" },
+  { title: "Board Profile", category: "flooring" },
+  { title: "Balustrade", category: "fixture", applicability: "conditional" },
+  { title: "Handrail", category: "fixture", applicability: "conditional" },
+  { title: "Stain or Sealer", category: "external_finish" },
+  { title: "Lighting", category: "electrical", applicability: "optional" },
+  { title: "Power Point", category: "electrical", applicability: "optional" },
+] satisfies DefInput[];
+
+const driveway = [
+  { title: "Surface Type", category: "external_finish" },
+  { title: "Concrete Finish", category: "external_finish" },
+  { title: "Exposed Aggregate", category: "external_finish", applicability: "optional" },
+  { title: "Coloured Concrete", category: "external_finish", applicability: "optional" },
+  { title: "Width", category: "allowance" },
+  { title: "Crossover", category: "external_finish", applicability: "conditional" },
+  { title: "Expansion Joints", category: "external_finish" },
+  { title: "Drainage", category: "plumbing", applicability: "conditional" },
+  { title: "Sealer", category: "external_finish", applicability: "optional" },
+  { title: "Kerb Finish", category: "external_finish", applicability: "conditional" },
 ] satisfies DefInput[];
 
 export const STANDARD_AREA_TEMPLATES: AreaTemplate[] = [
@@ -238,14 +306,14 @@ export const STANDARD_AREA_TEMPLATES: AreaTemplate[] = [
   template("area_type_hallway", "hallway", "Hallway Template", living.filter((item) => !["Air Conditioning", "Data or TV Points", "Window", "Window Furnishings"].includes(item.title))),
   template("area_type_garage", "garage", "Garage Template", garage),
   template("area_type_carport", "carport", "Carport Template", alfresco.filter((item) => item.title !== "External Kitchen Provision")),
-  template("area_type_driveway", "driveway", "Driveway Template", [{ title: "Surface Finish", category: "external_finish" }, { title: "Drainage", category: "plumbing", applicability: "conditional" }, { title: "Lighting", category: "electrical", applicability: "optional" }]),
+  template("area_type_driveway", "driveway", "Driveway Template", driveway),
   template("area_type_exterior", "exterior", "Exterior Template", exterior),
   template("area_type_roof", "roof", "Roof Template", roof),
   template("area_type_external_living", "alfresco", "Alfresco Template", alfresco),
-  template("area_type_patio", "patio", "Patio Template", alfresco),
-  template("area_type_porch", "porch", "Porch Template", alfresco.filter((item) => item.title !== "External Kitchen Provision")),
-  template("area_type_balcony", "balcony", "Balcony Template", alfresco.filter((item) => item.title !== "External Kitchen Provision")),
-  template("area_type_deck", "deck", "Deck Template", alfresco.filter((item) => item.title !== "External Kitchen Provision")),
+  template("area_type_patio", "patio", "Patio Template", patio),
+  template("area_type_porch", "porch", "Porch Template", porch),
+  template("area_type_balcony", "balcony", "Balcony Template", balcony),
+  template("area_type_deck", "deck", "Deck Template", deck),
   template("area_type_pool", "pool", "Pool Template", [
     { title: "Pool Interior Finish", category: "external_finish" },
     { title: "Coping", category: "external_finish" },

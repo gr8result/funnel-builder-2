@@ -7,14 +7,17 @@ import {
   closeSelectionsProject,
   exportSelectionsProjectFile,
   importSelectionsProjectFile,
+  mergeSelectionsIntoGr8Job,
   preparePortableSelectionsFileForLocalSave,
-  previewSelectionsProjectImport,
+  previewSelectionsFileImport,
   projectDashboardHref,
   routeForProject,
   saveSelectionsProject,
   SELECTIONS_FILE_EXTENSION,
+  GR8_JOB_FILE_EXTENSION,
   registerProjectOpen,
   type PortableSelectionsFile,
+  type SelectionsFilePreview,
   type SelectionsSaveStatus,
 } from "../services/projectFileManagementService";
 
@@ -65,6 +68,7 @@ type ActiveSelectionsFile = {
   organisationId: string;
   projectId: string;
   fileName: string;
+  fileKind?: "gr8select" | "gr8job";
   fileId?: string;
   createdAt?: string;
   builder?: string;
@@ -86,6 +90,7 @@ const RECENT_FILES_KEY = "gr8:inclusions-selections:recent-local-files";
 const ACTIVE_FILE_KEY = "gr8:inclusions-selections:active-local-file";
 const RECENT_HANDLE_DB = "gr8-inclusions-selections-file-handles";
 const RECENT_HANDLE_STORE = "fileHandles";
+const ACTIVE_JOB_FILE_RAW_KEY = "gr8:inclusions-selections:active-gr8job-raw";
 const NEW_FILE_EVENT = "inclusions-selections:new-file";
 const OPEN_FILE_EVENT = "inclusions-selections:open-file";
 
@@ -168,23 +173,23 @@ function openPickerOptions() {
   return {
     types: [
       {
-        description: "Gr8 Result Selections Project",
+        description: "Gr8 Result Project Files",
         accept: {
-          "application/json": [SELECTIONS_FILE_EXTENSION, ".json"],
+          "application/json": [GR8_JOB_FILE_EXTENSION, SELECTIONS_FILE_EXTENSION, ".json"],
         },
       },
     ],
   };
 }
 
-function savePickerOptions(suggestedName: string) {
+function savePickerOptions(suggestedName: string, fileKind: "gr8select" | "gr8job" = "gr8select") {
   return {
     suggestedName,
     types: [
       {
-        description: "Gr8 Result Selections Project",
+        description: fileKind === "gr8job" ? "Gr8 Result Job File" : "Gr8 Result Selections Project",
         accept: {
-          "application/json": [SELECTIONS_FILE_EXTENSION],
+          "application/json": [fileKind === "gr8job" ? GR8_JOB_FILE_EXTENSION : SELECTIONS_FILE_EXTENSION],
         },
       },
     ],
@@ -223,6 +228,26 @@ function writeActiveFile(file: ActiveSelectionsFile | null) {
     return;
   }
   window.localStorage.setItem(ACTIVE_FILE_KEY, JSON.stringify(file));
+}
+
+function readActiveJobFileRaw(context: Partial<ProjectSelectionContext>): Record<string, unknown> | null {
+  if (typeof window === "undefined" || !context.organisationId || !context.projectId) return null;
+  try {
+    const entry = JSON.parse(window.sessionStorage.getItem(ACTIVE_JOB_FILE_RAW_KEY) ?? "null") as { organisationId?: string; projectId?: string; raw?: Record<string, unknown> } | null;
+    if (entry?.organisationId === context.organisationId && entry.projectId === context.projectId && entry.raw) return entry.raw;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function writeActiveJobFileRaw(context: Partial<ProjectSelectionContext>, raw: Record<string, unknown> | null) {
+  if (typeof window === "undefined") return;
+  if (!raw || !context.organisationId || !context.projectId) {
+    window.sessionStorage.removeItem(ACTIVE_JOB_FILE_RAW_KEY);
+    return;
+  }
+  window.sessionStorage.setItem(ACTIVE_JOB_FILE_RAW_KEY, JSON.stringify({ organisationId: context.organisationId, projectId: context.projectId, raw }));
 }
 
 function openRecentHandleDb(): Promise<IDBDatabase | null> {
@@ -289,11 +314,14 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   const [newOpen, setNewOpen] = useState(false);
   const [savePromptOpen, setSavePromptOpen] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
-  const [openPreview, setOpenPreview] = useState<ReturnType<typeof previewSelectionsProjectImport> | null>(null);
+  const [openPreview, setOpenPreview] = useState<SelectionsFilePreview | null>(null);
   const [openPreviewVisible, setOpenPreviewVisible] = useState(false);
   const [openFileMeta, setOpenFileMeta] = useState<{ fileName: string; fileSize: number; detectedFormat: string; updatedAt?: string } | null>(null);
   const [pendingFileHandle, setPendingFileHandle] = useState<LocalFileHandle | null>(null);
+  const [pendingJobFileRaw, setPendingJobFileRaw] = useState<Record<string, unknown> | null>(null);
   const [localFileHandle, setLocalFileHandle] = useState<LocalFileHandle | null>(null);
+  const [activeFileKind, setActiveFileKind] = useState<"gr8select" | "gr8job">("gr8select");
+  const [activeJobFileRaw, setActiveJobFileRaw] = useState<Record<string, unknown> | null>(null);
   const [activeFileMetadata, setActiveFileMetadata] = useState<{ fileId: string; createdAt: string } | null>(null);
   const [localFileName, setLocalFileName] = useState("No selections file open");
   const [status, setStatus] = useState<LocalSaveStatus>(locked ? "locked_version" : saveStatus ?? (context.projectId ? "unsaved_file" : "no_file"));
@@ -339,6 +367,10 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
     const activeFile = readActiveFile(bannerContext);
     if (activeFile) {
       setLocalFileName(activeFile.fileName);
+      setActiveFileKind(activeFile.fileKind ?? (activeFile.fileName.toLowerCase().endsWith(GR8_JOB_FILE_EXTENSION) ? "gr8job" : "gr8select"));
+      if ((activeFile.fileKind ?? (activeFile.fileName.toLowerCase().endsWith(GR8_JOB_FILE_EXTENSION) ? "gr8job" : "gr8select")) === "gr8job") {
+        setActiveJobFileRaw(readActiveJobFileRaw(activeFile));
+      }
       setActiveFileMetadata(activeFile.fileId && activeFile.createdAt ? { fileId: activeFile.fileId, createdAt: activeFile.createdAt } : null);
       setStatus((current) => current === "saving" ? current : activeFile.status);
       setSaveAsName(activeFile.fileName);
@@ -414,11 +446,13 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   file: Partial<Pick<PortableSelectionsFile, "fileId" | "createdAt">> = {},
   nextStatus: LocalSaveStatus,
   pendingSaveOffer = false,
+  fileKind: "gr8select" | "gr8job" = activeFileKind,
 ): ActiveSelectionsFile {
     return {
       organisationId: project.organisationId,
       projectId: project.projectId,
       fileName,
+      fileKind,
       fileId: file.fileId,
       createdAt: file.createdAt,
       builder: project.builder,
@@ -428,15 +462,39 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
     };
   }
 
-  function applyActiveFileState(project: ProjectSelectionContext, fileName: string, file: Partial<Pick<PortableSelectionsFile, "fileId" | "createdAt">>, nextStatus: LocalSaveStatus, pendingSaveOffer = false) {
+  function applyActiveFileState(project: ProjectSelectionContext, fileName: string, file: Partial<Pick<PortableSelectionsFile, "fileId" | "createdAt">>, nextStatus: LocalSaveStatus, pendingSaveOffer = false, fileKind: "gr8select" | "gr8job" = activeFileKind) {
     setLocalFileName(fileName);
+    setActiveFileKind(fileKind);
     setStatus(nextStatus);
     setActiveFileMetadata(file.fileId && file.createdAt ? { fileId: file.fileId, createdAt: file.createdAt } : null);
-    writeActiveFile(activeFilePayload(project, fileName, file, nextStatus, pendingSaveOffer));
+    writeActiveFile(activeFilePayload(project, fileName, file, nextStatus, pendingSaveOffer, fileKind));
   }
 
-  async function serialiseCurrentProject(mode: "save" | "save_as" = "save"): Promise<{ fileName: string; text: string; file: PortableSelectionsFile }> {
-    return serialiseProject(bannerContext as ProjectSelectionContext, mode);
+  async function readActiveJobSource(): Promise<Record<string, unknown> | null> {
+    if (activeFileKind !== "gr8job") return null;
+    if (localFileHandle?.getFile) {
+      try {
+        const file = await localFileHandle.getFile();
+        return JSON.parse(await file.text()) as Record<string, unknown>;
+      } catch {
+        return activeJobFileRaw;
+      }
+    }
+    return activeJobFileRaw ?? readActiveJobFileRaw(bannerContext);
+  }
+
+  async function serialiseCurrentProject(mode: "save" | "save_as" = "save"): Promise<{ fileName: string; text: string; file: PortableSelectionsFile; fileKind: "gr8select" | "gr8job" }> {
+    const serialised = await serialiseProject(bannerContext as ProjectSelectionContext, mode);
+    if (activeFileKind !== "gr8job") return { ...serialised, fileKind: "gr8select" };
+    const rawJob = await readActiveJobSource();
+    if (!rawJob) return { ...serialised, fileKind: "gr8select" };
+    const merged = mergeSelectionsIntoGr8Job(rawJob, serialised.file);
+    return {
+      fileName: localFileName.toLowerCase().endsWith(GR8_JOB_FILE_EXTENSION) ? localFileName : `${localFileName.replace(/\.(gr8select|json)$/i, "")}${GR8_JOB_FILE_EXTENSION}`,
+      text: JSON.stringify(merged, null, 2),
+      file: serialised.file,
+      fileKind: "gr8job",
+    };
   }
 
   async function serialiseProject(project: ProjectSelectionContext, mode: "save" | "save_as" = "save", suggestedFileId?: { fileId?: string; createdAt?: string }): Promise<{ fileName: string; text: string; file: PortableSelectionsFile }> {
@@ -496,9 +554,12 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       const suggestedName = newProjectFileName(newDraft);
       registerProjectOpen(target, "areas");
       setLocalFileHandle(null);
+      setActiveJobFileRaw(null);
+      writeActiveJobFileRaw(target, null);
+      setActiveFileKind("gr8select");
       setPendingCreatedProject(target);
       setSaveAsName(suggestedName);
-      applyActiveFileState(target, suggestedName, {}, "unsaved_file", true);
+      applyActiveFileState(target, suggestedName, {}, "unsaved_file", true, "gr8select");
       setMessage("Unsaved File");
       setCreationStatus("file_created");
       setNewOpen(false);
@@ -530,7 +591,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
           const handle = await picker.showSaveFilePicker(savePickerOptions(suggestedName));
           await writeFile(handle, serialised.text);
           setLocalFileHandle(handle);
-          applyActiveFileState(project, handle.name, serialised.file, "saved_to_file");
+          applyActiveFileState(project, handle.name, serialised.file, "saved_to_file", false, "gr8select");
           setMessage("Saved to File");
           setCreationStatus("file_created");
           setSavePromptOpen(false);
@@ -538,7 +599,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
           return;
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
-            applyActiveFileState(project, suggestedName, {}, "unsaved_file");
+            applyActiveFileState(project, suggestedName, {}, "unsaved_file", false, "gr8select");
             setMessage("Unsaved File");
             setCreationStatus("file_created");
             return;
@@ -548,7 +609,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       }
       downloadJson(suggestedName, serialised.text);
       setLocalFileHandle(null);
-      applyActiveFileState(project, suggestedName, serialised.file, "downloaded_copy");
+      applyActiveFileState(project, suggestedName, serialised.file, "downloaded_copy", false, "gr8select");
       setMessage(`Updated copy downloaded as ${suggestedName}. The browser did not provide a writable file handle, so the original file is not linked for overwrite.`);
       setCreationStatus("file_created");
       setSavePromptOpen(false);
@@ -567,17 +628,19 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
     applyActiveFileState(pendingCreatedProject, localFileName === "No selections file open" ? newProjectFileName({
       projectName: pendingCreatedProject.projectName ?? "Selections Project",
       jobNumber: pendingCreatedProject.jobNumber ?? "",
-    }) : localFileName, {}, "unsaved_file");
+    }) : localFileName, {}, "unsaved_file", false, "gr8select");
     setMessage("Unsaved File");
     setSavePromptOpen(false);
   }
 
   async function processPickedFile(file: File, handle: LocalFileHandle | null) {
-    const detectedFormat = file.name.toLowerCase().endsWith(SELECTIONS_FILE_EXTENSION) ? SELECTIONS_FILE_EXTENSION : file.name.toLowerCase().endsWith(".json") ? ".json" : "unsupported";
+    const lowerName = file.name.toLowerCase();
+    const detectedFormat = lowerName.endsWith(GR8_JOB_FILE_EXTENSION) ? GR8_JOB_FILE_EXTENSION : lowerName.endsWith(SELECTIONS_FILE_EXTENSION) ? SELECTIONS_FILE_EXTENSION : lowerName.endsWith(".json") ? ".json" : "unsupported";
     setOpenFileMeta({ fileName: file.name, fileSize: file.size, detectedFormat });
     setPendingFileHandle(handle);
+    setPendingJobFileRaw(null);
     setOpenPreviewVisible(true);
-    if (file.size > 10 * 1024 * 1024 || !file.name.toLowerCase().match(/\.(gr8select|json)$/)) {
+    if (file.size > 10 * 1024 * 1024 || !lowerName.match(/\.(gr8job|gr8select|json)$/)) {
       setOpenPreview({ ok: false, error: "This file could not be opened." });
       return;
     }
@@ -587,9 +650,11 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       return;
     }
     try {
-      const preview = previewSelectionsProjectImport(JSON.parse(text), organisationId);
+      const parsed = JSON.parse(text);
+      const preview = previewSelectionsFileImport(parsed, organisationId);
       setOpenPreview(preview);
-      if (preview.ok) setOpenFileMeta((meta) => meta ? { ...meta, updatedAt: preview.file.updatedAt } : meta);
+      if (preview.ok && preview.format === "gr8job") setPendingJobFileRaw(preview.rawJobFile);
+      if (preview.ok) setOpenFileMeta((meta) => meta ? { ...meta, updatedAt: preview.format === "gr8job" ? preview.file?.updatedAt : preview.file.updatedAt } : meta);
     } catch (error) {
       setOpenPreview({ ok: false, error: "Invalid JSON was rejected." });
       setDiagnostics(error instanceof Error ? error.message : String(error));
@@ -640,9 +705,16 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
 
   async function handleOpenProject() {
     if (!openPreview?.ok || !openFileMeta) return;
-    const opened = await importSelectionsProjectFile(openPreview.file, openPreview.file.projectSummary);
+    const isJobFile = openPreview.format === "gr8job";
+    const target = isJobFile ? openPreview.project : openPreview.file.projectSummary;
+    const opened = isJobFile && !openPreview.file
+      ? registerProjectOpen(target, "areas")
+      : await importSelectionsProjectFile(openPreview.file, target);
     setLocalFileHandle(pendingFileHandle);
-    setActiveFileMetadata({ fileId: openPreview.file.fileId, createdAt: openPreview.file.createdAt });
+    setActiveFileKind(isJobFile ? "gr8job" : "gr8select");
+    setActiveJobFileRaw(isJobFile ? pendingJobFileRaw ?? openPreview.rawJobFile : null);
+    writeActiveJobFileRaw(target, isJobFile ? pendingJobFileRaw ?? openPreview.rawJobFile : null);
+    setActiveFileMetadata(openPreview.file ? { fileId: openPreview.file.fileId, createdAt: openPreview.file.createdAt } : null);
     setLocalFileName(openFileMeta.fileName);
     setStatus("saved_to_file");
     setMessage("Saved to File");
@@ -650,11 +722,14 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       organisationId: opened.organisationId,
       projectId: opened.projectId,
       fileName: openFileMeta.fileName,
-      fileId: openPreview.file.fileId,
-      createdAt: openPreview.file.createdAt,
+      fileKind: isJobFile ? "gr8job" : "gr8select",
+      fileId: openPreview.file?.fileId,
+      createdAt: openPreview.file?.createdAt,
+      builder: opened.builder,
+      estimator: opened.estimator,
       status: "saved_to_file",
     });
-    await rememberRecentFile(openPreview.file, openFileMeta.fileName, pendingFileHandle);
+    if (openPreview.file) await rememberRecentFile(openPreview.file, openFileMeta.fileName, pendingFileHandle);
     setOpenPreviewVisible(false);
     setOpenPreview(null);
     setOpenFileMeta(null);
@@ -681,21 +756,31 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       const serialised = await serialiseCurrentProject();
       if (localFileHandle?.createWritable) {
         await writeFile(localFileHandle, serialised.text);
+        if (serialised.fileKind === "gr8job") {
+          const raw = JSON.parse(serialised.text) as Record<string, unknown>;
+          setActiveJobFileRaw(raw);
+          writeActiveJobFileRaw(bannerContext, raw);
+        }
         setLocalFileName(localFileHandle.name);
         setActiveFileMetadata({ fileId: serialised.file.fileId, createdAt: serialised.file.createdAt });
         setStatus("saved_to_file");
         setMessage("Saved to File");
-        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: localFileHandle.name, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "saved_to_file" });
+        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: localFileHandle.name, fileKind: serialised.fileKind, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "saved_to_file" });
         await rememberRecentFile(serialised.file, localFileHandle.name, localFileHandle);
         return;
       }
       const downloadName = localFileName === "No selections file open" || localFileName === "Unsaved File" ? serialised.fileName : localFileName;
       downloadJson(downloadName, serialised.text);
+      if (serialised.fileKind === "gr8job") {
+        const raw = JSON.parse(serialised.text) as Record<string, unknown>;
+        setActiveJobFileRaw(raw);
+        writeActiveJobFileRaw(bannerContext, raw);
+      }
       setLocalFileName(downloadName);
       setActiveFileMetadata({ fileId: serialised.file.fileId, createdAt: serialised.file.createdAt });
       setStatus("downloaded_copy");
       setMessage(`Updated copy downloaded as ${downloadName}. The original file was not overwritten.`);
-      writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: downloadName, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "downloaded_copy" });
+      writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: downloadName, fileKind: serialised.fileKind, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "downloaded_copy" });
       await rememberRecentFile(serialised.file, downloadName, null);
     } catch (error) {
       setStatus("save_failed");
@@ -713,26 +798,39 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       if (onSave) await onSave();
       else await saveSelectionsProject(bannerContext, currentStage);
       const serialised = await serialiseCurrentProject("save_as");
-      const suggestedName = (saveAsName.trim() || safeFileName(bannerContext)).replace(/\.gr8selections\.json$/i, SELECTIONS_FILE_EXTENSION);
+      const fallbackName = serialised.fileKind === "gr8job" ? localFileName || `${safeFileName(bannerContext).replace(SELECTIONS_FILE_EXTENSION, "")}${GR8_JOB_FILE_EXTENSION}` : safeFileName(bannerContext);
+      const suggestedName = (saveAsName.trim() || fallbackName).replace(/\.gr8selections\.json$/i, SELECTIONS_FILE_EXTENSION);
       const picker = filePickerWindow();
       if (picker.showSaveFilePicker) {
-        const handle = await picker.showSaveFilePicker(savePickerOptions(suggestedName));
+        const handle = await picker.showSaveFilePicker(savePickerOptions(suggestedName, serialised.fileKind));
         await writeFile(handle, serialised.text);
         setLocalFileHandle(handle);
+        if (serialised.fileKind === "gr8job") {
+          const raw = JSON.parse(serialised.text) as Record<string, unknown>;
+          setActiveJobFileRaw(raw);
+          writeActiveJobFileRaw(bannerContext, raw);
+        }
         setLocalFileName(handle.name);
+        setActiveFileKind(serialised.fileKind);
         setActiveFileMetadata({ fileId: serialised.file.fileId, createdAt: serialised.file.createdAt });
         setStatus("saved_to_file");
         setMessage("Saved to File");
-        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: handle.name, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "saved_to_file" });
+        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: handle.name, fileKind: serialised.fileKind, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "saved_to_file" });
         await rememberRecentFile(serialised.file, handle.name, handle);
       } else {
         downloadJson(suggestedName, serialised.text);
         setLocalFileHandle(null);
+        if (serialised.fileKind === "gr8job") {
+          const raw = JSON.parse(serialised.text) as Record<string, unknown>;
+          setActiveJobFileRaw(raw);
+          writeActiveJobFileRaw(bannerContext, raw);
+        }
         setLocalFileName(suggestedName);
+        setActiveFileKind(serialised.fileKind);
         setActiveFileMetadata({ fileId: serialised.file.fileId, createdAt: serialised.file.createdAt });
         setStatus("downloaded_copy");
         setMessage(`Updated copy downloaded as ${suggestedName}.`);
-        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: suggestedName, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "downloaded_copy" });
+        writeActiveFile({ organisationId, projectId: bannerContext.projectId ?? "", fileName: suggestedName, fileKind: serialised.fileKind, fileId: serialised.file.fileId, createdAt: serialised.file.createdAt, status: "downloaded_copy" });
         await rememberRecentFile(serialised.file, suggestedName, null);
       }
       setSaveAsOpen(false);
@@ -779,6 +877,9 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   async function handleDiscardClose() {
     setCloseConfirmOpen(false);
     setLocalFileHandle(null);
+    setActiveFileKind("gr8select");
+    setActiveJobFileRaw(null);
+    writeActiveJobFileRaw(bannerContext, null);
     setActiveFileMetadata(null);
     setLocalFileName("No selections file open");
     setStatus("no_file");
@@ -803,7 +904,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
         ref={fileInputRef}
         className="hiddenFileInput"
         type="file"
-        accept=".gr8select,.json,application/json"
+        accept=".gr8job,.gr8select,.json,application/json"
         onChange={(event) => {
           const file = event.target.files?.[0];
           if (file) void handleFallbackOpenFile(file);
@@ -930,16 +1031,18 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
               openPreview.ok ? (
                 <>
                   <dl className="previewGrid">
-                    <div><dt>Schema Version</dt><dd>{openPreview.file.schemaVersion}</dd></div>
-                    <div><dt>Project Name</dt><dd>{openPreview.file.projectSummary.projectName || "Not recorded"}</dd></div>
-                    <div><dt>Job Number</dt><dd>{openPreview.file.projectSummary.jobNumber || "Not recorded"}</dd></div>
-                    <div><dt>Client</dt><dd>{openPreview.file.projectSummary.clientName || "Not recorded"}</dd></div>
-                    <div><dt>Site Address</dt><dd>{openPreview.file.projectSummary.siteAddress || "Not recorded"}</dd></div>
-                    <div><dt>Project Areas</dt><dd>{openPreview.file.areasAndLevels.areas.length}</dd></div>
-                    <div><dt>Selections</dt><dd>{openPreview.file.workspace.selections.length}</dd></div>
+                    <div><dt>Schema Version</dt><dd>{openPreview.file?.schemaVersion ?? "Gr8 Job"}</dd></div>
+                    <div><dt>Project Name</dt><dd>{(openPreview.format === "gr8job" ? openPreview.project.projectName : openPreview.file.projectSummary.projectName) || "Not recorded"}</dd></div>
+                    <div><dt>Job Number</dt><dd>{(openPreview.format === "gr8job" ? openPreview.project.jobNumber : openPreview.file.projectSummary.jobNumber) || "Not recorded"}</dd></div>
+                    <div><dt>Client</dt><dd>{(openPreview.format === "gr8job" ? openPreview.project.clientName : openPreview.file.projectSummary.clientName) || "Not recorded"}</dd></div>
+                    <div><dt>Site Address</dt><dd>{(openPreview.format === "gr8job" ? openPreview.project.siteAddress : openPreview.file.projectSummary.siteAddress) || "Not recorded"}</dd></div>
+                    <div><dt>Project Areas</dt><dd>{openPreview.file?.areasAndLevels.areas.length ?? 0}</dd></div>
+                    <div><dt>Selections</dt><dd>{openPreview.file?.workspace.selections.length ?? 0}</dd></div>
                     <div><dt>Warnings</dt><dd>{openPreview.warnings.length ? openPreview.warnings.join(" ") : "None"}</dd></div>
                   </dl>
-                  <button type="button" className="saveButton" onClick={() => void handleOpenProject()}>Open This File</button>
+                  <button type="button" className="saveButton" onClick={() => void handleOpenProject()}>
+                    {openPreview.format === "gr8job" && !openPreview.hasSelections ? "Start Inclusions & Selections for this job" : "Open This File"}
+                  </button>
                 </>
               ) : (
                 <p className="errorMessage">This file could not be opened.<br /><small>{"error" in openPreview ? openPreview.error : ""}</small></p>

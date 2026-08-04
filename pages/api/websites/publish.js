@@ -4,12 +4,17 @@ import {
   buildDefaultSiteDomain,
   buildWebsitePath,
   collectVideoHeroMedia,
+  getPublishedAssetValidationFailures,
   getCustomDomainTargetHost,
   getPublishHost,
   getSiteRootDomain,
   normalizeDomain,
+  normalizePublishedGlobalFooterBlock,
+  normalizePublishedWebsiteBlocks,
+  normalizeVideoHeroBlocks,
   resolveWebsiteUrls,
   slugifyWebsiteValue,
+  validatePublishedAssetUrls,
   withProjectPublicationIdentity,
 } from "../../../lib/website-builder/publishConfig";
 import { assembleWebsiteForRendering } from "../../../lib/website-builder/supabaseSiteStorage";
@@ -22,7 +27,7 @@ import {
   websiteContentHash,
   websitePersistenceHash,
 } from "../../../lib/website-builder/documentVersion";
-import { mergeWebsiteBuilderAssetSources } from "../../../lib/website-builder/mediaAssets";
+import { mergeWebsiteBuilderAssetSources, normalizeWebsiteBuilderAssets } from "../../../lib/website-builder/mediaAssets";
 
 export const config = {
   api: {
@@ -108,6 +113,61 @@ function describePublicationRow(row = {}) {
     publishedAt: row?.published_at || siteData.publishedAt || "",
     updatedAt: row?.updated_at || siteData.updatedAt || "",
   };
+}
+
+function findProjectHubBlocks(pageBlocks = {}) {
+  if (!pageBlocks || typeof pageBlocks !== "object") return [];
+  return pageBlocks["Project Hub"] || pageBlocks["project-hub"] || pageBlocks.ProjectHub || [];
+}
+
+function countProjectHubMediaReferences(value) {
+  if (typeof value === "string") {
+    return /^(https?:|\/|data:image\/|blob:|file:)/i.test(value.trim()) ? 1 : 0;
+  }
+  if (Array.isArray(value)) {
+    return value.reduce((total, entry) => total + countProjectHubMediaReferences(entry), 0);
+  }
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce((total, [key, child]) => {
+    const keyLooksLikeMedia = /image|media|asset|poster|video|src|url/i.test(key);
+    if (typeof child === "string") {
+      return total + (keyLooksLikeMedia && /^(https?:|\/|data:image\/|blob:|file:)/i.test(child.trim()) ? 1 : 0);
+    }
+    return total + countProjectHubMediaReferences(child);
+  }, 0);
+}
+
+function collectProjectHubMediaReferences(value, path = "Project Hub", refs = []) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^(https?:|\/|data:image\/|blob:|file:)/i.test(trimmed)) {
+      refs.push({ path, value: trimmed });
+    }
+    return refs;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => collectProjectHubMediaReferences(entry, `${path}[${index}]`, refs));
+    return refs;
+  }
+  if (!value || typeof value !== "object") return refs;
+  Object.entries(value).forEach(([key, child]) => {
+    const childPath = `${path}.${key}`;
+    const keyLooksLikeMedia = /image|media|asset|poster|video|src|url/i.test(key);
+    if (typeof child === "string") {
+      const trimmed = child.trim();
+      if (keyLooksLikeMedia && /^(https?:|\/|data:image\/|blob:|file:)/i.test(trimmed)) {
+        refs.push({ path: childPath, value: trimmed });
+      }
+      return;
+    }
+    collectProjectHubMediaReferences(child, childPath, refs);
+  });
+  return refs;
+}
+
+function missingMediaReferences(expectedRefs = [], actualRefs = []) {
+  const actualValues = new Set(actualRefs.map((entry) => entry.value));
+  return expectedRefs.filter((entry) => !actualValues.has(entry.value));
 }
 
 async function loadIntendedPublishedRows({ userId, projectId, slug, customDomain, primaryDomain }) {
@@ -235,13 +295,37 @@ async function handler(req, res) {
     ? { projectVersion: project.projectVersion, savedAt: project.savedAt, contentHash: project.contentHash }
     : buildWebsiteProjectVersion(project, project?.savedAt || project?.updatedAt || new Date().toISOString());
 
+  const publishFooterContext = { pages: Array.isArray(project.pages) ? project.pages : [], logInvalid: true };
+  const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
+  const normalizedPageBlocksForPublish = normalizePublishedWebsiteBlocks(
+    normalizeVideoHeroBlocks(project?.pageBlocks && typeof project.pageBlocks === "object" ? project.pageBlocks : {}, publishedAssets),
+    publishFooterContext,
+    publishedAssets
+  );
+  const normalizedGlobalNavBlockForPublish = project?.globalNavBlock?.type === "video-hero"
+    ? normalizeVideoHeroBlocks([project.globalNavBlock], publishedAssets)[0]
+    : normalizePublishedWebsiteBlocks([project?.globalNavBlock], publishFooterContext, publishedAssets)[0];
+  const normalizedGlobalFooterBlockForPublish = normalizePublishedGlobalFooterBlock(
+    project?.globalFooterBlock || null,
+    project,
+    publishFooterContext,
+    publishedAssets
+  );
+  const normalizedProjectForPublish = {
+    ...project,
+    pageBlocks: normalizedPageBlocksForPublish,
+    globalNavBlock: normalizedGlobalNavBlockForPublish || project?.globalNavBlock || null,
+    globalFooterBlock: normalizedGlobalFooterBlockForPublish || project?.globalFooterBlock || null,
+    brandAssets: publishedAssets,
+  };
+
   const sourceDraftHash = websitePersistenceHash(project);
-  const assembledSnapshotHash = websitePersistenceHash(project);
-  const assembledFullHash = websiteContentHash(project);
+  const assembledSnapshotHash = websitePersistenceHash(normalizedProjectForPublish);
+  const assembledFullHash = websiteContentHash(normalizedProjectForPublish);
   const assembledStructuralHash = assembledFullHash;
-  const assembledSummary = summarizePublishSnapshot(project);
+  const assembledSummary = summarizePublishSnapshot(normalizedProjectForPublish);
   const videoHeroMediaBeforePublish = collectVideoHeroMedia(project?.pageBlocks || {});
-  const videoHeroMediaForPublish = collectVideoHeroMedia(project?.pageBlocks || {});
+  const videoHeroMediaForPublish = collectVideoHeroMedia(normalizedProjectForPublish?.pageBlocks || {});
   console.log("[website-publish] Video Hero media", {
     projectId: project?.id || "",
     slug: project?.slug || "",
@@ -286,6 +370,45 @@ async function handler(req, res) {
     });
   }
   const existingPublication = projectRows[0] || intendedRows[0] || null;
+  const draftProjectHubBlocks = findProjectHubBlocks(project?.pageBlocks || {});
+  const normalizedProjectHubBlocks = findProjectHubBlocks(normalizedProjectForPublish?.pageBlocks || {});
+  const existingProjectHubBlocks = findProjectHubBlocks(existingPublication?.site_data?.pageBlocks || {});
+  const draftProjectHubMediaCount = countProjectHubMediaReferences(draftProjectHubBlocks);
+  const normalizedProjectHubMediaRefs = collectProjectHubMediaReferences(normalizedProjectHubBlocks);
+  const normalizedProjectHubMediaCount = normalizedProjectHubMediaRefs.length;
+  const existingProjectHubMediaCount = countProjectHubMediaReferences(existingProjectHubBlocks);
+  if (draftProjectHubBlocks.length > 0 && normalizedProjectHubMediaCount < draftProjectHubMediaCount) {
+    return res.status(500).json({
+      ok: false,
+      error: "Publish blocked: Project Hub media was lost while preparing the render snapshot.",
+      code: "PROJECT_HUB_PUBLISH_MEDIA_NORMALIZATION_REGRESSION",
+      page: "Project Hub",
+      draft: {
+        blockCount: draftProjectHubBlocks.length,
+        mediaCount: draftProjectHubMediaCount,
+      },
+      normalized: {
+        blockCount: normalizedProjectHubBlocks.length,
+        mediaCount: normalizedProjectHubMediaCount,
+      },
+    });
+  }
+  if (existingProjectHubBlocks.length > 0 && draftProjectHubBlocks.length > 0 && draftProjectHubMediaCount < existingProjectHubMediaCount) {
+    return res.status(409).json({
+      ok: false,
+      error: "Publish blocked: current draft appears incomplete compared with the live version.",
+      code: "PROJECT_HUB_DRAFT_MEDIA_REGRESSION",
+      page: "Project Hub",
+      draft: {
+        blockCount: draftProjectHubBlocks.length,
+        mediaCount: draftProjectHubMediaCount,
+      },
+      published: {
+        blockCount: existingProjectHubBlocks.length,
+        mediaCount: existingProjectHubMediaCount,
+      },
+    });
+  }
   const useCustomDomain = !!requestedCustomDomain;
   const nextDomainStatus = useCustomDomain
     ? (normalizeDomain(existingPublication?.custom_domain) === requestedCustomDomain
@@ -310,8 +433,19 @@ async function handler(req, res) {
   const customDomainTarget = getCustomDomainTargetHost();
   const publishedAt = new Date().toISOString();
   const publishedVersionMeta = buildWebsiteProjectVersion(project, publishedAt);
+  const finalAssetValidationReport = validatePublishedAssetUrls(normalizedProjectForPublish);
+  const finalAssetValidationFailures = getPublishedAssetValidationFailures(finalAssetValidationReport);
+  if (finalAssetValidationFailures.length) {
+    return res.status(400).json({
+      ok: false,
+      error: "Publish blocked: one or more website images or media URLs are not publishable.",
+      code: "WEBSITE_PUBLISH_INVALID_ASSET_URLS",
+      failures: finalAssetValidationFailures.slice(0, 50),
+      summary: finalAssetValidationReport.summary,
+    });
+  }
   const finalSiteData = {
-    ...project,
+    ...normalizedProjectForPublish,
     slug,
     customDomain: requestedCustomDomain || project.customDomain || project.custom_domain || "",
     custom_domain: requestedCustomDomain || project.custom_domain || project.customDomain || "",
@@ -345,6 +479,7 @@ async function handler(req, res) {
       publishedStructuralHash: assembledStructuralHash,
       pageCount: assembledSummary.pageCount,
       footerCardCount: assembledSummary.footerCardCount,
+      assetValidationReport: finalAssetValidationReport,
     },
   };
   const finalSiteDataHash = websitePersistenceHash(finalSiteData);
@@ -469,6 +604,38 @@ async function handler(req, res) {
       code: "WEBSITE_PUBLISH_READBACK_FOOTER_CARD_COUNT_MISMATCH",
       expected: assembledSummary,
       actual: verifiedSummary,
+      publicationRowId: verifyResult.data.id,
+    });
+  }
+  const verifiedProjectHubBlocks = findProjectHubBlocks(verifyResult.data.site_data?.pageBlocks || {});
+  const verifiedProjectHubMediaRefs = collectProjectHubMediaReferences(verifiedProjectHubBlocks);
+  const missingProjectHubMedia = missingMediaReferences(normalizedProjectHubMediaRefs, verifiedProjectHubMediaRefs);
+  if (
+    normalizedProjectHubBlocks.length > 0
+    && (verifiedProjectHubBlocks.length !== normalizedProjectHubBlocks.length || missingProjectHubMedia.length > 0)
+  ) {
+    console.error("[website-publish] Project Hub media publish verification failed", {
+      projectId,
+      slug,
+      expectedBlockCount: normalizedProjectHubBlocks.length,
+      verifiedBlockCount: verifiedProjectHubBlocks.length,
+      expectedMediaCount: normalizedProjectHubMediaRefs.length,
+      verifiedMediaCount: verifiedProjectHubMediaRefs.length,
+      missing: missingProjectHubMedia.slice(0, 25),
+    });
+    return res.status(500).json({
+      ok: false,
+      error: "Published website verification failed. The published Project Hub page is missing saved images.",
+      code: "PROJECT_HUB_PUBLISH_READBACK_MEDIA_MISSING",
+      expected: {
+        blockCount: normalizedProjectHubBlocks.length,
+        mediaCount: normalizedProjectHubMediaRefs.length,
+      },
+      actual: {
+        blockCount: verifiedProjectHubBlocks.length,
+        mediaCount: verifiedProjectHubMediaRefs.length,
+      },
+      missingMedia: missingProjectHubMedia.slice(0, 50),
       publicationRowId: verifyResult.data.id,
     });
   }

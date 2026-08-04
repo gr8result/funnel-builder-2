@@ -1,29 +1,16 @@
-// Shared by both the first-import path (PlanDocumentList upload) and the
-// explicit "Re-detect Orientation" action, so the confidence-tier rules can
-// never drift between the two call sites.
-//
-// high/medium -> apply the suggested rotation, source "auto" (medium also
-// needs a confirmation notice in the UI — callers check orientationConfidence
-// < CONFIDENCE_HIGH for that, not a separate flag).
-// low/none    -> do not auto-rotate; leave orientationSource null so the UI
-// shows the four-thumbnail picker instead.
+import { createDetectedOrientationState } from "./orientationState.js";
+
+// Shared by both first import and explicit Re-detect. Automatic detection
+// always applies its best correction so a low-confidence page does not remain
+// sideways; the UI uses orientationConfidence/tier to ask for review.
 export function applyOrientationResult(page, detection) {
-  const { tier, bestRotation, confidence } = detection;
-
-  if (tier === "high" || tier === "medium") {
-    return {
-      ...page,
-      rotation: bestRotation,
-      orientationSource: "auto",
-      orientationConfidence: confidence,
-      orientationConfirmed: false,
-    };
-  }
-
+  const orientationState = createDetectedOrientationState(detection);
   return {
     ...page,
-    orientationSource: null,
-    orientationConfidence: tier === "none" ? null : confidence,
+    rotation: orientationState.finalAppliedRotation,
+    orientationState,
+    orientationSource: detection?.source === "metadata" ? "metadata" : "auto",
+    orientationConfidence: orientationState.confidence,
     orientationConfirmed: false,
   };
 }

@@ -19,7 +19,8 @@ assert(workbook.includes("Finished PDF - not editable inside Gr8 Result."), "Fin
 assert(workbook.includes("FinishedPdfLockedViewer"), "Finished PDFs must render in the locked PDF viewer");
 assert(workbook.includes("activeCanvaDocument") && workbook.includes("STANDARD_INCLUSIONS_EDITOR_MODES.CANVA"), "Canva documents must be a separate active document type");
 assert(workbook.includes("/api/standard-inclusions/canva/start"), "Connect Canva button must call the OAuth start endpoint");
-assert(workbook.includes("/api/standard-inclusions/canva/designs"), "Choose Existing Canva Design must call a design listing endpoint");
+assert(workbook.includes("/api/standard-inclusions/canva/designs"), "Admin Canva import must call a design listing endpoint");
+assert(workbook.includes("/api/standard-inclusions/canva/import-native"), "Selected Canva designs must be converted into native Gr8 Result pages");
 assert(workbook.includes("/api/standard-inclusions/canva/export-pdf"), "Generate PDF must call the Canva export endpoint");
 assert(!workbook.includes("Create from Canva Template"), "UI must not advertise Canva templates when it only supports existing design selection");
 assert(workbook.includes("CanvaSetupDiagnosticsPanel"), "Development diagnostics panel must be visible for Canva setup failures");
@@ -29,7 +30,8 @@ assert(workbook.includes("CANVA_REDIRECT_URI=http://127.0.0.1:3000/api/standard-
 assert(workbook.includes("CANVA_RETURN_URI=http://127.0.0.1:3000/api/standard-inclusions/canva/return"), "Setup modal must show the exact local return URI");
 assert(workbook.includes("window.location.assign(payload.authorizationUrl)"), "Connect Canva must redirect the browser to Canva");
 assert(workbook.includes("http://127.0.0.1:3000/modules/estimate-builder"), "OAuth return target must use the exact 127.0.0.1 estimate-builder URL");
-assert(workbook.includes("Choose Existing Canva Design"), "UI must provide a truthful existing-design workflow");
+assert(workbook.includes("Admin Template Import from Canva"), "UI must provide a truthful admin-only Canva import workflow");
+assert(!workbook.includes("Use Canva as the native editor"), "UI must not treat Canva as the builder editor");
 assert(workbook.includes("Reconnect Canva"), "UI must provide reconnect state for missing scopes/expired connection");
 
 const finishedSummaryStart = workbook.indexOf("function StandardScheduleActiveSummary");

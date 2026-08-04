@@ -13,32 +13,6 @@
   "objective": "Flagship enterprise SaaS sales page for Project Hub. Compete directly against Buildertrend, Procore, Monday.com, ClickUp, Asana and JobTread. 25 full sections with rich content covering Estimator, Gantt, Job Board, integrations, workflow diagrams, comparison sections and multiple CTAs.",
   "blocks": [
     {
-      "id": "ph3-nav",
-      "type": "nav-bar",
-      "props": {
-        "brand": "GR8 Result",
-        "showLogo": true,
-        "variant": "split-dark",
-        "stickyMode": "sticky-transparent",
-        "fullWidthBackground": true,
-        "links": [
-          { "label": "Overview", "href": "#overview", "highlighted": true, "id": "ph3-nav-0", "slug": "overview", "children": [] },
-          { "label": "Estimator", "href": "#estimator", "id": "ph3-nav-1", "slug": "estimator", "children": [] },
-          { "label": "Gantt", "href": "#gantt", "id": "ph3-nav-2", "slug": "gantt", "children": [] },
-          { "label": "Job Board", "href": "#jobboard", "id": "ph3-nav-3", "slug": "jobboard", "children": [] },
-          { "label": "Integrations", "href": "#integrations", "id": "ph3-nav-4", "slug": "integrations", "children": [] },
-          { "label": "Demo", "href": "#demo", "id": "ph3-nav-5", "slug": "demo", "children": [] }
-        ],
-        "ctaText": "Start Free Trial",
-        "ctaLink": "#trial",
-        "backgroundColor": "rgba(2,6,23,0.92)",
-        "textColor": "#e5eefb",
-        "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
-        "buttonTextColor": "#0f172a",
-        "borderColor": "rgba(148,163,184,0.24)"
-      }
-    },
-    {
       "id": "ph3-hero",
       "type": "hero",
       "props": {
@@ -67,7 +41,7 @@
         "backgroundStyle": "image",
         "backgroundImage": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=2200&q=88",
         "backgroundOverlayColor": "#020617",
-        "backgroundOverlayOpacity": 0.74,
+        "backgroundOverlayOpacity": 0,
         "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
         "buttonTextColor": "#0f172a",
         "secondaryAccentColor": "#38bdf8",
@@ -85,7 +59,27 @@
         "floatingRotation": 2,
         "sectionAnimation": "fade-up",
         "textAnimation": "blur-in",
-        "subheadlineAnimation": "fade-up"
+        "subheadlineAnimation": "fade-up",
+        "overlayEnabled": false,
+        "backgroundOverlayEnabled": false,
+        "overlayOpacity": 0,
+        "imageBrightness": 1,
+        "imageFit": "cover",
+        "backgroundSize": "cover",
+        "imagePosition": "center center",
+        "backgroundPosition": "center center",
+        "cta": {
+          "text": "Start Free Trial",
+          "linkType": "anchor",
+          "href": "#trial",
+          "newTab": false
+        },
+        "secondaryCta": {
+          "text": "Book a Live Demo",
+          "linkType": "anchor",
+          "href": "#demo",
+          "newTab": false
+        }
       }
     },
     {
@@ -120,12 +114,36 @@
         "paddingTop": 100,
         "paddingBottom": 100,
         "stats": [
-          { "number": "8+ hrs", "label": "Admin waste per project", "detail": "Hours spent re-entering data, chasing status updates, reformatting quotes and manually rebuilding reports across disconnected systems that should share the same data automatically." },
-          { "number": "12-15%", "label": "Margin lost to scope creep", "detail": "Variations agreed informally and never logged properly erode profit on almost every project-based job. Without a connected commercial record, scope changes disappear into conversation threads." },
-          { "number": "3-5 tools", "label": "Average disconnected stack", "detail": "Most growing businesses pay separately for quoting software, a task management app, a cloud storage folder, a scheduling tool and a calendar application that were never designed to communicate with each other." },
-          { "number": "Weeks", "label": "Delay cost per missed milestone", "detail": "A blocked dependency that goes unseen for even a few days can push a completion date by weeks and a cash position by thousands. Without connected visibility, the problem is discovered too late to fix cheaply." },
-          { "number": "20+ hrs", "label": "Monthly reporting time", "detail": "Without connected data, building a monthly report means pulling information from multiple sources, reconciling inconsistencies and presenting a document that represents the past rather than the present." },
-          { "number": "Zero", "label": "Single source of truth", "detail": "When the project record lives across five tools, no single version of the truth exists. Decisions get made with incomplete information and accountability becomes impossible to maintain." }
+          {
+            "number": "8+ hrs",
+            "label": "Admin waste per project",
+            "detail": "Hours spent re-entering data, chasing status updates, reformatting quotes and manually rebuilding reports across disconnected systems that should share the same data automatically."
+          },
+          {
+            "number": "12-15%",
+            "label": "Margin lost to scope creep",
+            "detail": "Variations agreed informally and never logged properly erode profit on almost every project-based job. Without a connected commercial record, scope changes disappear into conversation threads."
+          },
+          {
+            "number": "3-5 tools",
+            "label": "Average disconnected stack",
+            "detail": "Most growing businesses pay separately for quoting software, a task management app, a cloud storage folder, a scheduling tool and a calendar application that were never designed to communicate with each other."
+          },
+          {
+            "number": "Weeks",
+            "label": "Delay cost per missed milestone",
+            "detail": "A blocked dependency that goes unseen for even a few days can push a completion date by weeks and a cash position by thousands. Without connected visibility, the problem is discovered too late to fix cheaply."
+          },
+          {
+            "number": "20+ hrs",
+            "label": "Monthly reporting time",
+            "detail": "Without connected data, building a monthly report means pulling information from multiple sources, reconciling inconsistencies and presenting a document that represents the past rather than the present."
+          },
+          {
+            "number": "Zero",
+            "label": "Single source of truth",
+            "detail": "When the project record lives across five tools, no single version of the truth exists. Decisions get made with incomplete information and accountability becomes impossible to maintain."
+          }
         ]
       }
     },
@@ -138,11 +156,72 @@
         "backgroundColor": "linear-gradient(135deg,#020617,#111827 40%,#042f2e)",
         "minHeight": "880px",
         "images": [
-          { "id": "ims1-a", "kind": "image", "src": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88", "x": 28, "y": 50, "width": 400, "height": 280, "rotation": -4, "radius": 28, "zIndex": 1 },
-          { "id": "ims1-b", "kind": "image", "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies", "x": 455, "y": 62, "width": 420, "height": 270, "rotation": 3, "radius": 26, "zIndex": 3 },
-          { "id": "ims1-c", "kind": "image", "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88", "x": 910, "y": 88, "width": 290, "height": 400, "rotation": 5, "radius": 28, "zIndex": 2 },
-          { "id": "ims1-d", "kind": "image", "src": "https://placehold.co/1600x980/111827/38bdf8?text=Project+Hub+Dashboard", "x": 180, "y": 358, "width": 560, "height": 320, "rotation": 0, "radius": 26, "zIndex": 4 },
-          { "id": "ims1-e", "kind": "text", "content": "Estimates, Gantt, Job Board, CRM, Documents and Automation — all connected.", "x": 790, "y": 530, "width": 360, "height": 160, "rotation": -2, "radius": 24, "zIndex": 5, "fontSize": 24, "fontWeight": "900", "textAlign": "left", "verticalAlign": "center", "textColor": "#f8fafc", "background": "rgba(2,6,23,0.9)" }
+          {
+            "id": "ims1-a",
+            "kind": "image",
+            "src": "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=88",
+            "x": 28,
+            "y": 50,
+            "width": 400,
+            "height": 280,
+            "rotation": -4,
+            "radius": 28,
+            "zIndex": 1
+          },
+          {
+            "id": "ims1-b",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+            "x": 455,
+            "y": 62,
+            "width": 420,
+            "height": 270,
+            "rotation": 3,
+            "radius": 26,
+            "zIndex": 3
+          },
+          {
+            "id": "ims1-c",
+            "kind": "image",
+            "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
+            "x": 910,
+            "y": 88,
+            "width": 290,
+            "height": 400,
+            "rotation": 5,
+            "radius": 28,
+            "zIndex": 2
+          },
+          {
+            "id": "ims1-d",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/111827/38bdf8?text=Project+Hub+Dashboard",
+            "x": 180,
+            "y": 358,
+            "width": 560,
+            "height": 320,
+            "rotation": 0,
+            "radius": 26,
+            "zIndex": 4
+          },
+          {
+            "id": "ims1-e",
+            "kind": "text",
+            "content": "Estimates, Gantt, Job Board, CRM, Documents and Automation — all connected.",
+            "x": 790,
+            "y": 530,
+            "width": 360,
+            "height": 160,
+            "rotation": -2,
+            "radius": 24,
+            "zIndex": 5,
+            "fontSize": 24,
+            "fontWeight": "900",
+            "textAlign": "left",
+            "verticalAlign": "center",
+            "textColor": "#f8fafc",
+            "background": "rgba(2,6,23,0.9)"
+          }
         ],
         "baseLayoutWidth": 1400
       }
@@ -225,16 +304,56 @@
         "paddingTop": 100,
         "paddingBottom": 100,
         "stats": [
-          { "number": "01", "label": "Lead Captured", "detail": "The CRM records the relationship so client information follows the job from first contact through to final invoice without being retyped anywhere." },
-          { "number": "02", "label": "Quote Built", "detail": "The Estimate Builder structures scope, labour allowances, material costs, margins, optional extras and variations into a professional client-ready proposal." },
-          { "number": "03", "label": "Client Approves", "detail": "The winning proposal becomes the commercial record that feeds directly into the project workspace without requiring manual data transfer or team briefings." },
-          { "number": "04", "label": "Project Created", "detail": "The team gets a live connected workspace for tasks, documents, schedule, client communications and project updates all in one place." },
-          { "number": "05", "label": "Timeline Planned", "detail": "The Gantt Chart maps phases, dependencies, milestones, resource allocations and deadlines so the schedule is understood by everyone before the first task begins." },
-          { "number": "06", "label": "Tasks Assigned", "detail": "The Job Board gives every team member a clear view of their work queue with context, ownership, priority levels, due dates and the files they need." },
-          { "number": "07", "label": "Progress Tracked", "detail": "Updates, comments, photos, approvals and file attachments keep the project record current as the job moves forward through production." },
-          { "number": "08", "label": "Variations Logged", "detail": "Scope changes are captured in the commercial record as they happen so nothing is forgotten, nothing is disputed and margin is protected through to completion." },
-          { "number": "09", "label": "Job Completed", "detail": "Sign-off documentation, completion photos, handover materials and client approvals all belong to the same connected project record." },
-          { "number": "10", "label": "Invoice and Report", "detail": "Completion status, financial context, variation records and delivery performance feed directly into billing and business reporting without additional manual work." }
+          {
+            "number": "01",
+            "label": "Lead Captured",
+            "detail": "The CRM records the relationship so client information follows the job from first contact through to final invoice without being retyped anywhere."
+          },
+          {
+            "number": "02",
+            "label": "Quote Built",
+            "detail": "The Estimate Builder structures scope, labour allowances, material costs, margins, optional extras and variations into a professional client-ready proposal."
+          },
+          {
+            "number": "03",
+            "label": "Client Approves",
+            "detail": "The winning proposal becomes the commercial record that feeds directly into the project workspace without requiring manual data transfer or team briefings."
+          },
+          {
+            "number": "04",
+            "label": "Project Created",
+            "detail": "The team gets a live connected workspace for tasks, documents, schedule, client communications and project updates all in one place."
+          },
+          {
+            "number": "05",
+            "label": "Timeline Planned",
+            "detail": "The Gantt Chart maps phases, dependencies, milestones, resource allocations and deadlines so the schedule is understood by everyone before the first task begins."
+          },
+          {
+            "number": "06",
+            "label": "Tasks Assigned",
+            "detail": "The Job Board gives every team member a clear view of their work queue with context, ownership, priority levels, due dates and the files they need."
+          },
+          {
+            "number": "07",
+            "label": "Progress Tracked",
+            "detail": "Updates, comments, photos, approvals and file attachments keep the project record current as the job moves forward through production."
+          },
+          {
+            "number": "08",
+            "label": "Variations Logged",
+            "detail": "Scope changes are captured in the commercial record as they happen so nothing is forgotten, nothing is disputed and margin is protected through to completion."
+          },
+          {
+            "number": "09",
+            "label": "Job Completed",
+            "detail": "Sign-off documentation, completion photos, handover materials and client approvals all belong to the same connected project record."
+          },
+          {
+            "number": "10",
+            "label": "Invoice and Report",
+            "detail": "Completion status, financial context, variation records and delivery performance feed directly into billing and business reporting without additional manual work."
+          }
         ]
       }
     },
@@ -435,12 +554,36 @@
         "paddingTop": 100,
         "paddingBottom": 100,
         "stats": [
-          { "number": "60%", "label": "Admin time reduced", "detail": "Less time re-entering data, manually chasing status updates and assembling reports from multiple disconnected tools that should share the same information automatically." },
-          { "number": "3x", "label": "Faster quote-to-project handover", "detail": "Approved quotes flow directly into live project workspaces without requiring a team meeting to re-explain scope, reconfirm labour assumptions or rebuild the task list from scratch." },
-          { "number": "90%", "label": "Fewer missed variations", "detail": "Scope changes captured in the Project Hub commercial record are tracked and visible. Variations that live in email threads or verbal agreements disappear and erode margin silently." },
-          { "number": "50%", "label": "Fewer status meetings required", "detail": "When the team can see the Job Board, the Gantt timeline and the project reports without asking someone to compile them, most internal status meetings become unnecessary overhead." },
-          { "number": "1", "label": "Source of truth for every job", "detail": "All project information — commercial scope, operational tasks, communication history and client documents — lives in a single connected record that the whole team trusts." },
-          { "number": "100%", "label": "Mobile and desktop access", "detail": "The platform works on any device so supervisors on site, office staff at their desk and owners travelling can all see the same live operational picture at any moment." }
+          {
+            "number": "60%",
+            "label": "Admin time reduced",
+            "detail": "Less time re-entering data, manually chasing status updates and assembling reports from multiple disconnected tools that should share the same information automatically."
+          },
+          {
+            "number": "3x",
+            "label": "Faster quote-to-project handover",
+            "detail": "Approved quotes flow directly into live project workspaces without requiring a team meeting to re-explain scope, reconfirm labour assumptions or rebuild the task list from scratch."
+          },
+          {
+            "number": "90%",
+            "label": "Fewer missed variations",
+            "detail": "Scope changes captured in the Project Hub commercial record are tracked and visible. Variations that live in email threads or verbal agreements disappear and erode margin silently."
+          },
+          {
+            "number": "50%",
+            "label": "Fewer status meetings required",
+            "detail": "When the team can see the Job Board, the Gantt timeline and the project reports without asking someone to compile them, most internal status meetings become unnecessary overhead."
+          },
+          {
+            "number": "1",
+            "label": "Source of truth for every job",
+            "detail": "All project information — commercial scope, operational tasks, communication history and client documents — lives in a single connected record that the whole team trusts."
+          },
+          {
+            "number": "100%",
+            "label": "Mobile and desktop access",
+            "detail": "The platform works on any device so supervisors on site, office staff at their desk and owners travelling can all see the same live operational picture at any moment."
+          }
         ]
       }
     },
@@ -539,11 +682,72 @@
         "backgroundColor": "linear-gradient(135deg,#111827,#0f172a 45%,#312e81)",
         "minHeight": "880px",
         "images": [
-          { "id": "plt-a", "kind": "image", "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png", "x": 42, "y": 62, "width": 440, "height": 280, "rotation": -3, "radius": 28, "zIndex": 2 },
-          { "id": "plt-b", "kind": "image", "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png", "x": 508, "y": 75, "width": 360, "height": 240, "rotation": 4, "radius": 24, "zIndex": 3 },
-          { "id": "plt-c", "kind": "image", "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard", "x": 830, "y": 220, "width": 360, "height": 240, "rotation": -4, "radius": 24, "zIndex": 2 },
-          { "id": "plt-d", "kind": "image", "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies", "x": 175, "y": 375, "width": 560, "height": 320, "rotation": 1, "radius": 28, "zIndex": 4 },
-          { "id": "plt-e", "kind": "text", "content": "When every update belongs to the same project record, the business stops paying for confusion.", "x": 800, "y": 570, "width": 360, "height": 170, "rotation": 2, "radius": 24, "zIndex": 5, "fontSize": 26, "fontWeight": "900", "textAlign": "left", "verticalAlign": "center", "textColor": "#ffffff", "background": "rgba(2,6,23,0.92)" }
+          {
+            "id": "plt-a",
+            "kind": "image",
+            "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/ai-website-builder-builder-preview.png",
+            "x": 42,
+            "y": 62,
+            "width": 440,
+            "height": 280,
+            "rotation": -3,
+            "radius": 28,
+            "zIndex": 2
+          },
+          {
+            "id": "plt-b",
+            "kind": "image",
+            "src": "/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
+            "x": 508,
+            "y": 75,
+            "width": 360,
+            "height": 240,
+            "rotation": 4,
+            "radius": 24,
+            "zIndex": 3
+          },
+          {
+            "id": "plt-c",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+            "x": 830,
+            "y": 220,
+            "width": 360,
+            "height": 240,
+            "rotation": -4,
+            "radius": 24,
+            "zIndex": 2
+          },
+          {
+            "id": "plt-d",
+            "kind": "image",
+            "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies",
+            "x": 175,
+            "y": 375,
+            "width": 560,
+            "height": 320,
+            "rotation": 1,
+            "radius": 28,
+            "zIndex": 4
+          },
+          {
+            "id": "plt-e",
+            "kind": "text",
+            "content": "When every update belongs to the same project record, the business stops paying for confusion.",
+            "x": 800,
+            "y": 570,
+            "width": 360,
+            "height": 170,
+            "rotation": 2,
+            "radius": 24,
+            "zIndex": 5,
+            "fontSize": 26,
+            "fontWeight": "900",
+            "textAlign": "left",
+            "verticalAlign": "center",
+            "textColor": "#ffffff",
+            "background": "rgba(2,6,23,0.92)"
+          }
         ],
         "baseLayoutWidth": 1400
       }
@@ -564,12 +768,36 @@
         "paddingTop": 100,
         "paddingBottom": 100,
         "stats": [
-          { "number": "Data", "label": "Connected intelligence", "detail": "When sales, project, communication and financial data all live together, patterns and problems become visible that no single specialist tool can show on its own." },
-          { "number": "Cost", "label": "Subscription consolidation", "detail": "Replacing three to five specialist subscriptions with one connected platform typically reduces the total monthly software spend while delivering more capability than the sum of those individual tools." },
-          { "number": "Team", "label": "One system for everyone", "detail": "Training overhead, onboarding time and the daily productivity cost of context-switching between different applications all drop substantially when the entire team operates from a single platform." },
-          { "number": "Speed", "label": "Faster decisions everywhere", "detail": "Owners and managers make better decisions faster when the information they need is available in one place rather than waiting for someone to extract it from three different systems and compile it into a document." },
-          { "number": "Scale", "label": "Grows with the business", "detail": "A platform that handles marketing, CRM, project management, communication, automation and reporting can support the business through every stage of growth without requiring a platform migration." },
-          { "number": "Trust", "label": "One version of the truth", "detail": "When every team member works from the same live data, disagreements about project status, scope boundaries and performance metrics become far less common and far easier to resolve." }
+          {
+            "number": "Data",
+            "label": "Connected intelligence",
+            "detail": "When sales, project, communication and financial data all live together, patterns and problems become visible that no single specialist tool can show on its own."
+          },
+          {
+            "number": "Cost",
+            "label": "Subscription consolidation",
+            "detail": "Replacing three to five specialist subscriptions with one connected platform typically reduces the total monthly software spend while delivering more capability than the sum of those individual tools."
+          },
+          {
+            "number": "Team",
+            "label": "One system for everyone",
+            "detail": "Training overhead, onboarding time and the daily productivity cost of context-switching between different applications all drop substantially when the entire team operates from a single platform."
+          },
+          {
+            "number": "Speed",
+            "label": "Faster decisions everywhere",
+            "detail": "Owners and managers make better decisions faster when the information they need is available in one place rather than waiting for someone to extract it from three different systems and compile it into a document."
+          },
+          {
+            "number": "Scale",
+            "label": "Grows with the business",
+            "detail": "A platform that handles marketing, CRM, project management, communication, automation and reporting can support the business through every stage of growth without requiring a platform migration."
+          },
+          {
+            "number": "Trust",
+            "label": "One version of the truth",
+            "detail": "When every team member works from the same live data, disagreements about project status, scope boundaries and performance metrics become far less common and far easier to resolve."
+          }
         ]
       }
     },
@@ -681,14 +909,34 @@
         "backgroundStyle": "image",
         "backgroundImage": "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=2000&q=88",
         "backgroundOverlayColor": "#020617",
-        "backgroundOverlayOpacity": 0.8,
+        "backgroundOverlayOpacity": 0,
         "fullWidthBackground": true,
         "minHeight": "780px",
         "contentWidth": 1020,
         "headlineAlignment": "center",
         "buttonColor": "linear-gradient(135deg,#f97316,#facc15)",
         "buttonTextColor": "#0f172a",
-        "sectionAnimation": "fade-up"
+        "sectionAnimation": "fade-up",
+        "overlayEnabled": false,
+        "backgroundOverlayEnabled": false,
+        "overlayOpacity": 0,
+        "imageBrightness": 1,
+        "imageFit": "cover",
+        "backgroundSize": "cover",
+        "imagePosition": "center center",
+        "backgroundPosition": "center center",
+        "cta": {
+          "text": "Start Free Trial",
+          "linkType": "anchor",
+          "href": "#trial",
+          "newTab": false
+        },
+        "secondaryCta": {
+          "text": "Book a Live Demo",
+          "linkType": "anchor",
+          "href": "#demo",
+          "newTab": false
+        }
       }
     },
     {
@@ -708,5 +956,7 @@
   ],
   "chaiData": null,
   "html": "",
-  "updatedAt": "2026-07-04T10:00:00.000Z"
+  "updatedAt": "2026-07-04T10:00:00.000Z",
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

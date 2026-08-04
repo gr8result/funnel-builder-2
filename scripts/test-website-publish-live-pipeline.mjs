@@ -39,8 +39,8 @@ assert.doesNotMatch(publicationStore, /limit\(1\)\s*\.maybeSingle\(\)/, "Live re
 });
 
 assert.match(siteRenderer, /usesVerifiedSnapshot/, "Live renderer must distinguish verified published snapshots.");
-assert.match(siteRenderer, /usesVerifiedSnapshot\s*\?\s*\(project\?\.pageBlocks \|\| \{\}\)/, "Live verified snapshots must render stored page blocks directly.");
-assert.match(siteRenderer, /usesVerifiedSnapshot && rawGlobalFooterBlock\?\.type === "footer"/, "Live verified snapshots must render the stored global footer directly.");
+assert.match(siteRenderer, /normalizePublishedWebsiteBlocks\(\s*normalizeVideoHeroBlocks\(project\?\.pageBlocks \|\| \{\}, publishedAssets\)/, "Live verified snapshots must still normalize media URLs before rendering.");
+assert.doesNotMatch(siteRenderer, /usesVerifiedSnapshot\s*\?\s*\(project\?\.pageBlocks \|\| \{\}\)/, "Live verified snapshots must not bypass published media URL normalization.");
 assert.match(siteRenderer, /X-GR8-Footer-Roles/, "Live route must expose footer role diagnostics.");
 assert.match(siteRenderer, /X-GR8-Nav-Sticky-Mode/, "Live route must expose sticky nav diagnostics.");
 assert.match(siteRenderer, /X-GR8-Media-Block-Count/, "Live route must expose media block diagnostics.");

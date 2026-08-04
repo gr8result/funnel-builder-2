@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
 import { buildHeikinAshiCandles, chartTypeLabel, FreedomChartTypeSelector, FREEDOM_CHART_MODE_LABELS, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
+import { canonicalCompanyTicker, companyMeta, isValidCompanyTicker, traderCompanyHref } from "../../../lib/freedom/companyRoutes";
 import { calculateAdaptiveScores } from "../../../lib/freedom-terminal/adaptiveBuyScore";
 import { calculateInvestmentSignal } from "../../../lib/freedom/signalEngine";
 
@@ -15,6 +16,7 @@ const COMPANY_TAB_STORAGE_KEY = "freedom-terminal-company-tabs";
 const COMPANY_CHART_STATE_KEY = "freedom-terminal-company-chart-state";
 const CHART_INTERVAL_STORAGE_KEY = "freedom-terminal-chart-interval";
 const CHART_PANEL_LAYOUT_STORAGE_KEY = "freedom-terminal-chart-panel-layout";
+const CHART_DIAGNOSTICS_ENABLED = process.env.NODE_ENV !== "production";
 const CHART_MODES = FREEDOM_CHART_MODE_LABELS;
 const CHART_RANGES = ["1D", "5D", "1M", "3M", "6M", "1Y", "3Y", "5Y", "MAX"];
 const CHART_INTERVALS = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W"];
@@ -74,8 +76,12 @@ const FALLBACK_STYLE = {
 };
 
 const WATCHLIST = {
+  AAPL: companyMeta("AAPL"),
   MSFT: { companyName: "Microsoft", symbol: "MSFT", sector: "Software", qualityScore: 96 },
   NVDA: { companyName: "NVIDIA", symbol: "NVDA", sector: "Semiconductors", qualityScore: 94 },
+  "CBA.AX": companyMeta("CBA.AX"),
+  "BHP.AX": companyMeta("BHP.AX"),
+  "CSL.AX": companyMeta("CSL.AX"),
   V: { companyName: "Visa", symbol: "V", sector: "Payments", qualityScore: 95 },
   AMZN: { companyName: "Amazon", symbol: "AMZN", sector: "Cloud & E-commerce", qualityScore: 93 },
   COST: { companyName: "Costco", symbol: "COST", sector: "Consumer Defensive", qualityScore: 92 },
@@ -221,7 +227,9 @@ function formatChartCurrency(value, currency = "USD") {
 }
 
 function formatChartTimestamp(value, timeZone = "America/New_York") {
-  const timestamp = typeof value === "number" ? value * 1000 : Date.parse(String(value || "").replace(" ", "T"));
+  const timestamp = typeof value === "number"
+    ? (value > 100000000000 ? value : value * 1000)
+    : Date.parse(String(value || "").replace(" ", "T"));
   if (!Number.isFinite(timestamp)) return "--";
   return new Intl.DateTimeFormat("en-AU", {
     day: "2-digit",
@@ -252,8 +260,16 @@ function normalizeStoredInterval(value, range) {
   return supported.includes(interval) ? interval : DEFAULT_INTERVAL_BY_RANGE[range] || supported[0] || "1D";
 }
 
+function normalizeZoomState(value) {
+  const start = Number(value?.start);
+  const end = Number(value?.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return { start: 0, end: 100 };
+  const next = { start: clamp(start, 0, 99), end: clamp(end, 1, 100) };
+  return next.end - next.start >= 5 ? next : { start: 0, end: 100 };
+}
+
 function labelForAxisDate(value, range, interval, timeZone = "America/New_York") {
-  const timestamp = Date.parse(String(value || "").replace(" ", "T"));
+  const timestamp = typeof value === "number" ? value : Date.parse(String(value || "").replace(" ", "T"));
   if (!Number.isFinite(timestamp)) return value;
   if (intervalIsIntraday(interval) || range === "1D" || range === "5D") {
     return new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone }).format(new Date(timestamp));
@@ -390,6 +406,174 @@ function visibleCandlesForRange(candles, range) {
   if (!newest) return [];
   const cutoff = newest - days * 24 * 60 * 60;
   return indexedCandles.filter((candle) => candle.timestamp >= cutoff);
+}
+
+function chartTimestampSeconds(candle) {
+  const rawTimestamp = Number(candle?.timestamp);
+  if (Number.isFinite(rawTimestamp) && rawTimestamp > 0) {
+    return Math.floor(rawTimestamp > 100000000000 ? rawTimestamp / 1000 : rawTimestamp);
+  }
+  const parsed = Date.parse(String(candle?.date || "").replace(" ", "T"));
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+}
+
+function chartTimestampMs(candle) {
+  const timestamp = Number(candle?.chartTime ?? candle?.timestamp);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return null;
+  return Math.floor(timestamp > 100000000000 ? timestamp : timestamp * 1000);
+}
+
+function chartPayloadSample(records) {
+  return records.map((record) => ({
+    rawTimestamp: record.rawTimestamp ?? record.timestamp ?? null,
+    transformedTime: record.time ?? record.chartTime ?? null,
+    open: record.open ?? null,
+    high: record.high ?? null,
+    low: record.low ?? null,
+    close: record.close ?? null,
+    value: record.value ?? null,
+    volume: record.volume ?? null,
+    types: {
+      rawTimestamp: typeof (record.rawTimestamp ?? record.timestamp),
+      transformedTime: typeof (record.time ?? record.chartTime),
+      open: typeof record.open,
+      high: typeof record.high,
+      low: typeof record.low,
+      close: typeof record.close,
+      value: typeof record.value,
+      volume: typeof record.volume,
+    },
+    finite: {
+      transformedTime: Number.isFinite(record.time ?? record.chartTime),
+      open: record.open === null || record.open === undefined ? null : Number.isFinite(record.open),
+      high: record.high === null || record.high === undefined ? null : Number.isFinite(record.high),
+      low: record.low === null || record.low === undefined ? null : Number.isFinite(record.low),
+      close: record.close === null || record.close === undefined ? null : Number.isFinite(record.close),
+      value: record.value === null || record.value === undefined ? null : Number.isFinite(record.value),
+      volume: record.volume === null || record.volume === undefined ? null : Number.isFinite(record.volume),
+    },
+  }));
+}
+
+function summarizeChartPayload(records) {
+  return chartPayloadSample(records.slice(0, 5)).concat(chartPayloadSample(records.slice(-5)));
+}
+
+function prepareChartCandles(candles) {
+  const byTimestamp = new Map();
+  let invalidRecords = 0;
+  let duplicateTimestamps = 0;
+
+  candles.forEach((candle, index) => {
+    const timestamp = chartTimestampSeconds(candle);
+    const open = Number(candle.open);
+    const high = Number(candle.high);
+    const low = Number(candle.low);
+    const close = Number(candle.close);
+    const volume = Number(candle.volume);
+    if (![timestamp, open, high, low, close].every(Number.isFinite)) {
+      invalidRecords += 1;
+      return;
+    }
+    if ([open, high, low, close].some((value) => value <= 0)) {
+      invalidRecords += 1;
+      return;
+    }
+    if (high < Math.max(open, close) || low > Math.min(open, close)) {
+      invalidRecords += 1;
+      return;
+    }
+    if (byTimestamp.has(timestamp)) duplicateTimestamps += 1;
+    byTimestamp.set(timestamp, {
+      ...candle,
+      timestamp,
+      chartTime: timestamp,
+      date: candle.date || new Date(timestamp * 1000).toISOString(),
+      open,
+      high,
+      low,
+      close,
+      volume: Number.isFinite(volume) ? volume : 0,
+      sourceIndex: Number.isInteger(candle.sourceIndex) ? candle.sourceIndex : index,
+      sourceEndIndex: Number.isInteger(candle.sourceEndIndex) ? candle.sourceEndIndex : Number.isInteger(candle.sourceIndex) ? candle.sourceIndex : null,
+    });
+  });
+  const prepared = Array.from(byTimestamp.values()).sort((a, b) => a.chartTime - b.chartTime);
+  const strictlyAscending = prepared.every((candle, index) => index === 0 || candle.chartTime > prepared[index - 1].chartTime);
+  return {
+    candles: prepared,
+    diagnostics: {
+      rawRecords: candles.length,
+      validRecords: prepared.length,
+      invalidRecords,
+      duplicateTimestamps,
+      firstTime: prepared[0]?.chartTime || null,
+      lastTime: prepared[prepared.length - 1]?.chartTime || null,
+      strictlyAscending,
+      sample: summarizeChartPayload(prepared),
+    },
+  };
+}
+
+function buildLineSeriesPayload(candles) {
+  return candles
+    .map((candle) => ({ time: candle.chartTime, value: candle.close, volume: candle.volume }))
+    .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value) && point.value > 0);
+}
+
+function buildAreaSeriesPayload(candles) {
+  return buildLineSeriesPayload(candles);
+}
+
+function buildCandlestickSeriesPayload(candles) {
+  return candles
+    .map((candle) => ({
+      time: candle.chartTime,
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+      volume: candle.volume,
+    }))
+    .filter((point) => (
+      [point.time, point.open, point.high, point.low, point.close].every(Number.isFinite)
+      && [point.open, point.high, point.low, point.close].every((value) => value > 0)
+      && point.high >= Math.max(point.open, point.close)
+      && point.low <= Math.min(point.open, point.close)
+    ));
+}
+
+function buildHollowCandlestickSeriesPayload(candles) {
+  return buildCandlestickSeriesPayload(candles);
+}
+
+function buildOhlcBarSeriesPayload(candles) {
+  return buildCandlestickSeriesPayload(candles);
+}
+
+function buildHeikinAshiSeriesPayload(candles) {
+  return buildCandlestickSeriesPayload(buildHeikinAshiCandles(candles));
+}
+
+function buildVolumeSeriesPayload(candles) {
+  return candles
+    .map((candle) => ({ time: candle.chartTime, value: Number(candle.volume) || 0, open: candle.open, close: candle.close }))
+    .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value));
+}
+
+function buildIndicatorSeriesPayload(candles, values) {
+  return candles.map((candle, index) => ({
+    time: candle.chartTime,
+    value: Number.isFinite(values[index]) ? values[index] : null,
+  })).filter((point) => Number.isFinite(point.time));
+}
+
+function toEchartsLineData(payload) {
+  return payload.map((point) => ({ value: [point.time * 1000, point.value] }));
+}
+
+function toEchartsCandlestickData(payload) {
+  return payload.map((point) => ({ value: [point.time * 1000, point.open, point.close, point.low, point.high] }));
 }
 
 function classifyTrend(analysis) {
@@ -872,7 +1056,7 @@ function tradeMetrics(levels) {
 
 function mapDailyAverageToDisplayCandles(displayCandles, dailyAverages) {
   return displayCandles.map((candle) => {
-    const sourceIndex = Number.isInteger(candle.sourceEndIndex) ? candle.sourceEndIndex : null;
+    const sourceIndex = Number.isInteger(candle.sourceEndIndex) ? candle.sourceEndIndex : Number.isInteger(candle.sourceIndex) ? candle.sourceIndex : null;
     return sourceIndex === null ? null : dailyAverages[sourceIndex] ?? null;
   });
 }
@@ -1020,7 +1204,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   const chartNodeRef = useRef(null);
   const chartRef = useRef(null);
   const initializedSymbolRef = useRef("");
-  const zoomRef = useRef({ start: 45, end: 100 });
+  const zoomRef = useRef({ start: 0, end: 100 });
   const drawingModeRef = useRef("pan");
   const drawingFibRef = useRef(false);
   const refreshOverlayPixelsRef = useRef(() => {});
@@ -1030,7 +1214,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showRsi, setShowRsi] = useState(false);
   const [showMacd, setShowMacd] = useState(false);
-  const [zoomState, setZoomState] = useState({ start: 45, end: 100 });
+  const [zoomState, setZoomState] = useState({ start: 0, end: 100 });
   const [drawingMode, setDrawingMode] = useState("pan");
   const [tradeLevels, setTradeLevels] = useState({ entry: null, target: null, stop: null });
   const [linePixels, setLinePixels] = useState({ entry: null, target: null, stop: null });
@@ -1050,7 +1234,13 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   const [tradeMessage, setTradeMessage] = useState("");
   const [tradeActionSaving, setTradeActionSaving] = useState(false);
   const dailyVisible = useMemo(() => visibleCandlesForRange(candles, range), [candles, range]);
-  const visible = dailyVisible;
+  const preparedChart = useMemo(() => prepareChartCandles(dailyVisible), [dailyVisible]);
+  const visible = preparedChart.candles;
+  const hasVisibleCandles = visible.length > 0;
+  const chartPreparationDiagnostics = preparedChart.diagnostics;
+  const chartCandleNotice = dailyVisible.length && dailyVisible.length !== visible.length
+    ? `Chart received ${dailyVisible.length} candles; ${visible.length} valid unique candles rendered.`
+    : "";
   const dailyMa20 = useMemo(() => movingAverageValues(candles, 20), [candles]);
   const dailyMa50 = useMemo(() => movingAverageValues(candles, 50), [candles]);
   const dailyMa200 = useMemo(() => movingAverageValues(candles, 200), [candles]);
@@ -1063,12 +1253,14 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   const closeValues = useMemo(() => visible.map((candle) => candle.close), [visible]);
   const rsiValues = useMemo(() => rsiSeriesFromCloses(closeValues), [closeValues]);
   const macdValues = useMemo(() => macdHistogramSeries(closeValues), [closeValues]);
-  const recommendedLevels = useMemo(() => recommendedTradeLevels({ quote, valuation, research, overlayLevels }), [overlayLevels, quote, research, valuation]);
-  const plannerMetrics = useMemo(() => tradeMetrics(tradeLevels), [tradeLevels]);
   const effectiveMode = tradeMode ? "Standard candlesticks" : mode;
   const effectiveShowVolume = tradeMode || showVolume;
   const effectiveShowRsi = !tradeMode && showRsi;
   const effectiveShowMacd = !tradeMode && showMacd;
+  const rsiPanelVisible = effectiveShowRsi && rsiValues.some(Number.isFinite);
+  const macdPanelVisible = effectiveShowMacd && macdValues.some(Number.isFinite);
+  const recommendedLevels = useMemo(() => recommendedTradeLevels({ quote, valuation, research, overlayLevels }), [overlayLevels, quote, research, valuation]);
+  const plannerMetrics = useMemo(() => tradeMetrics(tradeLevels), [tradeLevels]);
   const effectiveMaVisibility = useMemo(
     () => (tradeMode ? { ma20: false, ma50: false, ma200: false } : maVisibility),
     [maVisibility, tradeMode]
@@ -1080,14 +1272,15 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   const activePanelLayout = useMemo(() => {
     const visiblePanels = ["price"];
     if (effectiveShowVolume) visiblePanels.push("volume");
-    if (effectiveShowRsi) visiblePanels.push("rsi");
-    if (effectiveShowMacd) visiblePanels.push("macd");
+    if (rsiPanelVisible) visiblePanels.push("rsi");
+    if (macdPanelVisible) visiblePanels.push("macd");
     const base = { price: panelLayout.price, volume: panelLayout.volume, rsi: panelLayout.rsi, macd: panelLayout.macd };
     const hiddenSpace = ["volume", "rsi", "macd"].filter((key) => !visiblePanels.includes(key)).reduce((total, key) => total + base[key], 0);
     base.price += hiddenSpace;
     const total = visiblePanels.reduce((sum, key) => sum + base[key], 0) || 100;
     return visiblePanels.reduce((next, key) => ({ ...next, [key]: (base[key] / total) * 100 }), {});
-  }, [effectiveShowMacd, effectiveShowRsi, effectiveShowVolume, panelLayout]);
+  }, [effectiveShowVolume, macdPanelVisible, panelLayout, rsiPanelVisible]);
+  const [chartDiagnostics, setChartDiagnostics] = useState(null);
 
   useEffect(() => {
     recommendedLevelsRef.current = recommendedLevels;
@@ -1098,8 +1291,9 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
     const stored = readCompanyChartState(symbol);
     if (CHART_RANGES.includes(stored.range)) setRange(stored.range);
     if (stored.zoom && Number.isFinite(stored.zoom.start) && Number.isFinite(stored.zoom.end)) {
-      zoomRef.current = stored.zoom;
-      setZoomState(stored.zoom);
+      const nextZoom = normalizeZoomState(stored.zoom);
+      zoomRef.current = nextZoom;
+      setZoomState(nextZoom);
     }
     if (stored.tradeLevels && [stored.tradeLevels.entry, stored.tradeLevels.target, stored.tradeLevels.stop].every(Number.isFinite)) {
       setTradeLevels(stored.tradeLevels);
@@ -1314,9 +1508,11 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
       return { x, y };
     };
     const pointToPixel = (date, price) => {
+      const matched = visible.find((candle) => candle.date === date);
+      const chartTime = chartTimestampMs(matched || { date });
       if (chart) {
         try {
-          const point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [date || fallbackDate, price]);
+          const point = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, [chartTime || chartTimestampMs({ date: fallbackDate }), price]);
           if (Array.isArray(point) && point.every(Number.isFinite)) return { x: point[0], y: point[1] };
           if (Number.isFinite(point)) return { x: plotLeft + plotWidth, y: point };
         } catch {}
@@ -1362,23 +1558,28 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
     let chartInstance = null;
 
     async function mountChart() {
+      if (!hasVisibleCandles) return;
       if (!chartNodeRef.current) return;
-      const echarts = await import("echarts");
-      if (cancelled || !chartNodeRef.current) return;
-      chartInstance = echarts.init(chartNodeRef.current, null, { renderer: "canvas" });
-      chartRef.current = chartInstance;
-      setEchartsReady(true);
+      try {
+        const echarts = await import("echarts");
+        if (cancelled || !chartNodeRef.current) return;
+        chartInstance = echarts.init(chartNodeRef.current, null, { renderer: "canvas" });
+        chartRef.current = chartInstance;
+        setEchartsReady(true);
 
-      const updateSize = () => {
-        chartInstance?.resize();
-        window.requestAnimationFrame(() => refreshOverlayPixelsRef.current());
-      };
+        const updateSize = () => {
+          chartInstance?.resize();
+          window.requestAnimationFrame(() => refreshOverlayPixelsRef.current());
+        };
 
-      resizeHandler = updateSize;
-      window.addEventListener("resize", resizeHandler);
-      resizeObserver = new ResizeObserver(updateSize);
-      resizeObserver.observe(chartNodeRef.current);
-      updateSize();
+        resizeHandler = updateSize;
+        window.addEventListener("resize", resizeHandler);
+        resizeObserver = new ResizeObserver(updateSize);
+        resizeObserver.observe(chartNodeRef.current);
+        updateSize();
+      } catch (error) {
+        console.error("Freedom Company chart mount error:", error);
+      }
     }
 
     mountChart();
@@ -1391,7 +1592,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
       if (chartRef.current === chartInstance) chartRef.current = null;
       setEchartsReady(false);
     };
-  }, []);
+  }, [hasVisibleCandles]);
 
   useEffect(() => {
     refreshOverlayPixels();
@@ -1497,23 +1698,36 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
   useEffect(() => {
     if (!chartRef.current || !chartNodeRef.current || !echartsReady || !visible.length) return;
 
-    const chartVisible = normalizeChartType(effectiveMode) === "heikin" ? buildHeikinAshiCandles(visible) : visible;
-    const dates = chartVisible.map((candle) => candle.date);
-    const candleValues = chartVisible.map((candle) => [candle.open, candle.close, candle.low, candle.high]);
-    const closeValues = chartVisible.map((candle) => candle.close);
+    const activeZoom = normalizeZoomState(zoomRef.current);
+    zoomRef.current = activeZoom;
+    const activeChartType = normalizeChartType(effectiveMode);
+    const chartVisible = activeChartType === "heikin" ? buildHeikinAshiCandles(visible) : visible;
+    const linePayload = buildLineSeriesPayload(chartVisible);
+    const areaPayload = buildAreaSeriesPayload(chartVisible);
+    const candlePayload = buildCandlestickSeriesPayload(chartVisible);
+    const hollowPayload = buildHollowCandlestickSeriesPayload(chartVisible);
+    const ohlcPayload = buildOhlcBarSeriesPayload(chartVisible);
+    const heikinPayload = buildHeikinAshiSeriesPayload(visible);
+    const volumePayload = buildVolumeSeriesPayload(visible);
+    const rsiPayload = buildIndicatorSeriesPayload(visible, rsiValues);
+    const macdPayload = buildIndicatorSeriesPayload(visible, macdValues);
+    const trendLinePayload = buildIndicatorSeriesPayload(visible, trendLineData);
+    const ma20Payload = buildIndicatorSeriesPayload(visible, ma20);
+    const ma50Payload = buildIndicatorSeriesPayload(visible, ma50);
+    const ma200Payload = buildIndicatorSeriesPayload(visible, ma200);
     const chartStyles = getComputedStyle(chartNodeRef.current);
     const accentColor = chartStyles.getPropertyValue("--company-accent").trim() || "#E4B85D";
-    const volumeValues = visible.map((candle) => ({
-      value: candle.volume || 0,
-      itemStyle: { color: candle.close >= candle.open ? "#2BD89F" : "#FF5F57" },
+    const volumeValues = volumePayload.map((point) => ({
+      value: [point.time * 1000, point.value],
+      itemStyle: { color: point.close >= point.open ? "#2BD89F" : "#FF5F57" },
     }));
     const upColor = "#2BD89F";
     const downColor = "#FF5F57";
     const activePriceScale = currentPriceScale();
     const panelKeys = ["price"]
       .concat(effectiveShowVolume ? ["volume"] : [])
-      .concat(effectiveShowRsi ? ["rsi"] : [])
-      .concat(effectiveShowMacd ? ["macd"] : []);
+      .concat(rsiPanelVisible ? ["rsi"] : [])
+      .concat(macdPanelVisible ? ["macd"] : []);
     const panelGap = panelKeys.length > 1 ? 2 : 0;
     const usableHeight = 80 - panelGap * (panelKeys.length - 1);
     let panelCursor = 8;
@@ -1523,26 +1737,32 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
       panelGrids[key] = { top: `${panelCursor}%`, height: `${height}%` };
       panelCursor += height + panelGap;
     });
+    const activeCandlePayload =
+      activeChartType === "hollow" ? hollowPayload : activeChartType === "ohlc" ? ohlcPayload : activeChartType === "heikin" ? heikinPayload : candlePayload;
+    const activeLinePayload = activeChartType === "area" ? areaPayload : linePayload;
+    const finalPricePayload = ["candles", "hollow", "ohlc", "heikin"].includes(activeChartType) ? activeCandlePayload : activeLinePayload;
     const priceSeries =
-      ["candles", "hollow", "ohlc", "heikin"].includes(normalizeChartType(effectiveMode))
+      ["candles", "hollow", "ohlc", "heikin"].includes(activeChartType)
         ? {
             type: "candlestick",
             name: "OHLC",
-            data: candleValues,
-            barMaxWidth: normalizeChartType(effectiveMode) === "ohlc" ? 8 : range === "1M" || range === "3M" ? 18 : 14,
-            barMinWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 4,
+            dimensions: ["time", "open", "close", "low", "high"],
+            encode: { x: "time", y: ["open", "close", "low", "high"] },
+            data: toEchartsCandlestickData(activeCandlePayload),
+            barMaxWidth: activeChartType === "ohlc" ? 8 : range === "1M" || range === "3M" ? 18 : 14,
+            barMinWidth: activeChartType === "ohlc" ? 2 : 4,
             itemStyle: {
-              color: normalizeChartType(effectiveMode) === "hollow" ? "transparent" : upColor,
+              color: activeChartType === "hollow" ? "transparent" : upColor,
               color0: downColor,
               borderColor: upColor,
               borderColor0: downColor,
-              borderWidth: normalizeChartType(effectiveMode) === "ohlc" ? 2 : 1.6,
+              borderWidth: activeChartType === "ohlc" ? 2 : 1.6,
             },
           }
         : {
             type: "line",
             name: effectiveMode,
-            data: closeValues,
+            data: toEchartsLineData(activeLinePayload),
             showSymbol: false,
             smooth: true,
             sampling: "lttb",
@@ -1608,50 +1828,46 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
           left: 64,
           right: 72,
           top: panelGrids.rsi?.top || "86%",
-          height: effectiveShowRsi ? panelGrids.rsi?.height || "12%" : 0,
+          height: rsiPanelVisible ? panelGrids.rsi?.height || "12%" : 0,
         },
         {
           left: 64,
           right: 72,
           top: panelGrids.macd?.top || "86%",
-          height: effectiveShowMacd ? panelGrids.macd?.height || "15%" : 0,
+          height: macdPanelVisible ? panelGrids.macd?.height || "15%" : 0,
         },
       ],
       xAxis: [
         {
-          type: "category",
-          data: dates,
-          boundaryGap: true,
+          type: "time",
+          boundaryGap: ["1%", "1%"],
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.14)" } },
           axisLabel: { color: "#AEBCC4", hideOverlap: true, formatter: (value) => labelForAxisDate(value, range, interval, dataQuality.timezone) },
           axisTick: { show: false },
           splitLine: { show: false },
         },
         {
-          type: "category",
+          type: "time",
           gridIndex: 1,
-          data: dates,
-          boundaryGap: true,
+          boundaryGap: ["1%", "1%"],
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
           axisLabel: { show: false },
           axisTick: { show: false },
           splitLine: { show: false },
         },
         {
-          type: "category",
+          type: "time",
           gridIndex: 2,
-          data: dates,
-          boundaryGap: true,
+          boundaryGap: ["1%", "1%"],
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
           axisLabel: { show: false },
           axisTick: { show: false },
           splitLine: { show: false },
         },
         {
-          type: "category",
+          type: "time",
           gridIndex: 3,
-          data: dates,
-          boundaryGap: true,
+          boundaryGap: ["1%", "1%"],
           axisLine: { lineStyle: { color: "rgba(255,255,255,0.1)" } },
           axisLabel: { show: false },
           axisTick: { show: false },
@@ -1699,8 +1915,8 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
         {
           type: "inside",
           xAxisIndex: [0, 1, 2, 3],
-          start: zoomRef.current.start,
-          end: zoomRef.current.end,
+          start: activeZoom.start,
+          end: activeZoom.end,
           zoomOnMouseWheel: true,
           moveOnMouseWheel: false,
           moveOnMouseMove: drawingModeRef.current === "pan",
@@ -1710,8 +1926,8 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
         {
           type: "slider",
           xAxisIndex: [0, 1, 2, 3],
-          start: zoomRef.current.start,
-          end: zoomRef.current.end,
+          start: activeZoom.start,
+          end: activeZoom.end,
           bottom: 12,
           height: 22,
           borderColor: "rgba(255,255,255,0.12)",
@@ -1727,7 +1943,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
           ? {
               name: "MA20",
               type: "line",
-              data: ma20,
+              data: toEchartsLineData(ma20Payload),
               showSymbol: false,
               smooth: true,
               sampling: "lttb",
@@ -1740,7 +1956,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
           ? {
               name: "MA50",
               type: "line",
-              data: ma50,
+              data: toEchartsLineData(ma50Payload),
               showSymbol: false,
               smooth: true,
               sampling: "lttb",
@@ -1753,7 +1969,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
           ? {
               name: "MA200",
               type: "line",
-              data: ma200,
+              data: toEchartsLineData(ma200Payload),
               showSymbol: false,
               smooth: true,
               sampling: "lttb",
@@ -1766,7 +1982,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
           ? {
           name: "Trend Line",
           type: "line",
-          data: trendLineData,
+          data: toEchartsLineData(trendLinePayload),
           showSymbol: false,
           silent: true,
           lineStyle: { color: "rgba(255,255,255,0.58)", width: 1.6, type: "dotted" },
@@ -1783,13 +1999,13 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
               large: true,
             }
           : null,
-        effectiveShowRsi
+        rsiPanelVisible
           ? {
               name: "RSI",
               type: "line",
               xAxisIndex: 2,
               yAxisIndex: 2,
-              data: rsiValues,
+              data: toEchartsLineData(rsiPayload),
               smooth: true,
               showSymbol: false,
               lineStyle: { color: "#60A5FA", width: 1.8 },
@@ -1801,31 +2017,50 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
               },
             }
           : null,
-        effectiveShowMacd
+        macdPanelVisible
           ? {
               name: "MACD",
               type: "bar",
               xAxisIndex: 3,
               yAxisIndex: 3,
-              data: macdValues,
-              itemStyle: { color: (params) => (params.value >= 0 ? "rgba(43,216,159,0.72)" : "rgba(255,95,87,0.72)") },
+              data: toEchartsLineData(macdPayload),
+              itemStyle: { color: (params) => (params.value?.[1] >= 0 ? "rgba(43,216,159,0.72)" : "rgba(255,95,87,0.72)") },
               barMaxWidth: 10,
             }
           : null,
       ].filter(Boolean),
     };
 
-    chartRef.current.setOption(option, {
-      lazyUpdate: true,
-      notMerge: false,
-      replaceMerge: ["series", "xAxis", "yAxis", "grid"],
-    });
+    chartRef.current.setOption(option, { lazyUpdate: false, notMerge: true });
+    chartRef.current.dispatchAction?.({ type: "dataZoom", start: activeZoom.start, end: activeZoom.end });
     chartRef.current.resize();
+    const chartRect = chartNodeRef.current.getBoundingClientRect();
+    const nextDiagnostics = {
+      ...chartPreparationDiagnostics,
+      chartType: activeChartType,
+      transformedRecords: finalPricePayload.length,
+      transformedShape: summarizeChartPayload(finalPricePayload),
+      priceSeriesCreated: Boolean(priceSeries),
+      setOptionCalled: true,
+      chartWidth: Math.round(chartRect.width),
+      chartHeight: Math.round(chartRect.height),
+      visibleRangeAfterFit: activeZoom,
+      indicators: {
+        volume: { visible: effectiveShowVolume, records: volumePayload.length },
+        rsi: { visible: rsiPanelVisible, records: rsiPayload.filter((point) => Number.isFinite(point.value)).length },
+        macd: { visible: macdPanelVisible, records: macdPayload.filter((point) => Number.isFinite(point.value)).length },
+      },
+    };
+    if (CHART_DIAGNOSTICS_ENABLED) {
+      window.__freedomCompanyChartDiagnostics = nextDiagnostics;
+      console.debug("Freedom Company chart final series payload", nextDiagnostics);
+      setChartDiagnostics(nextDiagnostics);
+    }
     window.requestAnimationFrame(refreshOverlayPixels);
     const handleZoom = (event) => {
       const batch = event?.batch?.[0] || event;
       if (Number.isFinite(batch?.start) && Number.isFinite(batch?.end)) {
-        const nextZoom = { start: batch.start, end: batch.end };
+        const nextZoom = normalizeZoomState({ start: batch.start, end: batch.end });
         zoomRef.current = nextZoom;
         setZoomState(nextZoom);
         writeCompanyChartState(symbol, { zoom: nextZoom });
@@ -1834,7 +2069,7 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
     };
     chartRef.current.off?.("datazoom");
     chartRef.current.on?.("datazoom", handleZoom);
-  }, [activePanelLayout, currentPriceScale, dataQuality.currency, dataQuality.timezone, drawingMode, echartsReady, interval, visible, ma20, ma50, ma200, effectiveMaVisibility, effectiveMode, range, effectiveShowVolume, effectiveShowRsi, effectiveShowMacd, rsiValues, macdValues, trendLineData, hasMa200, priceScale, refreshOverlayPixels, symbol, tradeMode]);
+  }, [activePanelLayout, chartPreparationDiagnostics, currentPriceScale, dataQuality.currency, dataQuality.timezone, drawingMode, echartsReady, interval, visible, ma20, ma50, ma200, effectiveMaVisibility, effectiveMode, range, effectiveShowVolume, effectiveShowRsi, effectiveShowMacd, rsiPanelVisible, macdPanelVisible, rsiValues, macdValues, trendLineData, hasMa200, priceScale, refreshOverlayPixels, symbol, tradeMode]);
 
   function resetZoom() {
     setPriceScale(null);
@@ -1976,8 +2211,15 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
       </div>
 
       {notice ? <div className="chartNotice">{notice}</div> : null}
+      {chartCandleNotice ? <div className="chartNotice">{chartCandleNotice}</div> : null}
       {range === "1D" && intervalIsIntraday(interval) && !metadata?.ok ? (
         <div className="chartNotice warning">INTRADAY DATA UNAVAILABLE FROM CURRENT PROVIDER. {metadata?.error || "The provider did not return intraday candles."}</div>
+      ) : null}
+      {effectiveShowRsi && !rsiPanelVisible ? (
+        <div className="chartNotice warning">RSI panel hidden: insufficient valid close data for the selected view.</div>
+      ) : null}
+      {effectiveShowMacd && !macdPanelVisible ? (
+        <div className="chartNotice warning">MACD panel hidden: insufficient valid close data for the selected view.</div>
       ) : null}
       {visible.length && ((range === "1D" && visible.length < 20) || (range === "1M" && visible.length < 20)) ? (
         <div className="chartNotice warning">Only {visible.length} candles were returned for the selected {range} range and {interval} interval.</div>
@@ -2038,6 +2280,14 @@ function MarketChart({ candles, range, setRange, interval, setInterval, metadata
               <span>Provider: {dataQuality.provider}</span>
               <span>{formatChartTimestamp(dataQuality.first, dataQuality.timezone)} - {formatChartTimestamp(dataQuality.latest, dataQuality.timezone)}</span>
             </div>
+            {CHART_DIAGNOSTICS_ENABLED && chartDiagnostics ? (
+              <div className="chartDiagnostics">
+                <strong>Chart diagnostics</strong>
+                <span>Raw {chartDiagnostics.rawRecords} · Valid {chartDiagnostics.validRecords} · Invalid {chartDiagnostics.invalidRecords} · Duplicates {chartDiagnostics.duplicateTimestamps}</span>
+                <span>Type {chartDiagnostics.chartType} · Shape {chartDiagnostics.transformedShape?.[0] ? Object.keys(chartDiagnostics.transformedShape[0]).join(", ") : "--"}</span>
+                <span>Series {chartDiagnostics.priceSeriesCreated ? "yes" : "no"} · setOption {chartDiagnostics.setOptionCalled ? "yes" : "no"} · {chartDiagnostics.chartWidth}x{chartDiagnostics.chartHeight}</span>
+              </div>
+            ) : null}
             {effectiveShowVolume ? (
               <button
                 aria-label="Resize price and volume panels"
@@ -2384,6 +2634,28 @@ const chartStyles = `
     font-size: 11px;
     font-weight: 800;
   }
+  .chartDiagnostics {
+    background: rgba(5, 8, 11, 0.78);
+    border: 1px solid rgba(121, 217, 197, 0.22);
+    border-radius: 7px;
+    bottom: 48px;
+    color: #c9d5db;
+    display: grid;
+    font-size: 11px;
+    font-weight: 800;
+    gap: 3px;
+    left: 74px;
+    max-width: min(520px, calc(100% - 160px));
+    padding: 9px 11px;
+    pointer-events: none;
+    position: absolute;
+    z-index: 7;
+  }
+  .chartDiagnostics strong {
+    color: #79d9c5;
+    font-size: 12px;
+    font-weight: 950;
+  }
   .panelDivider {
     background: rgba(255, 255, 255, 0.08);
     border: 0;
@@ -2723,9 +2995,13 @@ const chartStyles = `
 
 export async function getServerSideProps(context) {
   const { createHash } = await import("crypto");
-  const symbol = String(context.params?.symbol || "").trim().toUpperCase();
+  const symbol = canonicalCompanyTicker(context.params?.symbol || "");
   const password = process.env.FREEDOM_TERMINAL_PASSWORD || "freedom123";
   const passwordHash = createHash("sha256").update(`${PASSWORD_SALT}:${password}`).digest("hex");
+
+  if (!isValidCompanyTicker(symbol)) {
+    return { props: { passwordHash, symbol: "MSFT" } };
+  }
 
   return { props: { passwordHash, symbol } };
 }
@@ -2834,7 +3110,7 @@ function PasswordGate({ passwordHash, onUnlock }) {
 function FreedomCompany({ passwordHash, symbol }) {
   const companyStyle = useMemo(() => getCompanyStyle(symbol), [symbol]);
   const fallback = useMemo(
-    () => WATCHLIST[symbol] || { companyName: companyStyle.companyName || symbol, symbol, sector: "Unknown", qualityScore: 0 },
+    () => WATCHLIST[symbol] || companyMeta(symbol, { companyName: companyStyle.companyName || symbol }),
     [companyStyle.companyName, symbol]
   );
   const [unlocked, setUnlocked] = useState(false);
@@ -3237,7 +3513,7 @@ function FreedomCompany({ passwordHash, symbol }) {
             <button className="headerTradeButton" type="button" onClick={() => setExperienceMode("trade")}>
               Create Trade Setup
             </button>
-            <Link className="headerTraderLink" href={`/freedom-trader/company/${encodeURIComponent(symbol)}`}>
+            <Link className="headerTraderLink" href={traderCompanyHref(symbol)}>
               Open in Freedom Trader
             </Link>
           </div>

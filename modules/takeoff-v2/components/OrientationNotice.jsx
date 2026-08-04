@@ -1,13 +1,14 @@
+import { orientationConfidenceLabel } from "../orientation/orientationState.js";
+
 // Product feedback, not a dev diagnostic: tells the user what automatic
-// orientation did and how sure it was. Purely informational — never blocks or
+// orientation did and how sure it was. Purely informational; never blocks or
 // alters manual rotation.
 export default function OrientationNotice({ rotation, confidence, needsConfirmation }) {
   return (
     <div style={{ ...S.wrap, ...(needsConfirmation ? S.wrapMedium : S.wrapHigh) }} data-testid="orientation-notice">
-      <span>Auto orientation applied: {rotation}&deg;</span>
+      <span>{needsConfirmation ? "Orientation uncertain - choose the correct view" : "Orientation confirmed"} - {rotation}&deg;</span>
       <span style={S.divider}>&middot;</span>
-      <span>Confidence: {confidence == null ? "—" : `${confidence}%`}</span>
-      {needsConfirmation && <span style={S.confirmText}>Please confirm this looks right, or rotate manually.</span>}
+      <span>Confidence: {orientationConfidenceLabel(confidence)}</span>
     </div>
   );
 }

@@ -36,12 +36,13 @@ export default function CanvaReturnPage() {
         if (cancelled) return;
         const returnedDesignId = payload.correlation?.design_id || payload.design?.design?.id || payload.design?.id || "";
         setDesignId(returnedDesignId);
-        setStatus("Returned from Canva. Design information refreshed.");
+        setStatus("Returned from Canva. Canva is available only for administrator template import; builders edit converted templates inside Gr8 Result.");
         window.localStorage.setItem("gr8-standard-inclusions-canva-return-result", JSON.stringify({
           ok: true,
           designId: returnedDesignId,
           at: new Date().toISOString(),
         }));
+        window.setTimeout(() => router.replace("/modules/estimate-builder"), 600);
       } catch (nextError) {
         if (cancelled) return;
         setError(nextError?.message || "Canva return validation failed.");
@@ -58,7 +59,7 @@ export default function CanvaReturnPage() {
         <h1 style={styles.title}>Canva Standard Inclusions</h1>
         <p style={error ? styles.error : styles.status}>{error || status}</p>
         {designId ? <p style={styles.meta}>Design ID: {designId}</p> : null}
-        <p style={styles.meta}>Return to Gr8 Result and use Export latest PDF to save the finished document.</p>
+        <p style={styles.meta}>Back in Gr8 Result, use Admin Template Import from Canva to convert the approved design into native editable pages.</p>
         <button type="button" style={styles.button} onClick={() => router.push("/modules/estimate-builder")}>Back to Gr8 Result</button>
       </section>
     </main>

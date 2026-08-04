@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
-import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
+import { traderCompanyHref } from "../../lib/freedom/companyRoutes";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
@@ -137,8 +137,7 @@ export default function TraderAlerts({ passwordHash }) {
     <div className="page">
       <Head><title>Alerts | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
-      <PaperAccountBar />
-      <FreedomModuleNav module="trader" paper />
+      <FreedomModuleNav module="trader" />
       <header className="hero">
         <h1>Trade Alerts</h1>
         <p>Trader-only alerts. Alerts do not execute trades automatically.</p>
@@ -179,7 +178,7 @@ export default function TraderAlerts({ passwordHash }) {
                   <td>{alert.status}</td>
                   <td>{alert.createdAt ? new Date(alert.createdAt).toLocaleDateString() : "--"}</td>
                   <td>{alert.triggeredAt ? new Date(alert.triggeredAt).toLocaleString() : "--"}</td>
-                  <td><div className="actions"><button onClick={() => updateAlert(alert.id, "acknowledge")} type="button">Acknowledge</button><button onClick={() => updateAlert(alert.id, "disable")} type="button">Disable</button><button onClick={() => deleteAlert(alert.id)} type="button">Delete</button><Link href={`/freedom-trader/company/${alert.symbol}`}>Open Company</Link></div></td>
+                  <td><div className="actions"><button onClick={() => updateAlert(alert.id, "acknowledge")} type="button">Acknowledge</button><button onClick={() => updateAlert(alert.id, "disable")} type="button">Disable</button><button onClick={() => deleteAlert(alert.id)} type="button">Delete</button><Link href={traderCompanyHref(alert.symbol)}>Open Company</Link></div></td>
                 </tr>
               )) : <tr><td colSpan="10">No alerts saved yet.</td></tr>}
             </tbody>

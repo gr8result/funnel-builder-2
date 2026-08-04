@@ -6,6 +6,17 @@ import {
   CONFIDENCE_HIGH,
   CONFIDENCE_MEDIUM,
 } from "../orientation/analyzeOrientation.js";
+import { applyOrientationResult } from "../orientation/applyOrientationResult.js";
+import { applyManualOrientationState, resetToDetectedOrientationState } from "../orientation/orientationState.js";
+import { scoreVectorLayoutOrientation } from "../orientation/vectorLayoutOrientation.js";
+import { CURRENT_ORIENTATION_STATE_VERSION, normaliseQuarterTurn, sourceOrientationToCorrection, withPlanPageDefaults } from "../types.js";
+
+assert.equal(normaliseQuarterTurn(-90), 270);
+assert.equal(normaliseQuarterTurn(450), 90);
+assert.equal(sourceOrientationToCorrection(90), 270);
+assert.equal(sourceOrientationToCorrection(270), 90);
+assert.equal(sourceOrientationToCorrection(180), 180);
+assert.equal(sourceOrientationToCorrection(0), 0);
 
 // classifyTextItem: angle comes from atan2(b, a) of the transform.
 const upright = classifyTextItem({ str: "SITE PLAN", transform: [12, 0, 0, 12, 0, 0] });
@@ -60,6 +71,62 @@ const scannedPage = scoreOrientationCandidates({ textItems: [], sourceWidth: 595
 assert.equal(scannedPage.hasSignal, false);
 assert.equal(confidenceTier(scannedPage), "none");
 
+const lowConfidenceApplied = applyOrientationResult(
+  { id: "page-1", rotation: 0 },
+  { bestRotation: 270, detectedCorrection: 270, pdfMetadataRotation: 0, source: "raster-analysis", confidence: 36, tier: "low" }
+);
+assert.equal(lowConfidenceApplied.rotation, 270);
+assert.equal(lowConfidenceApplied.orientationState.finalAppliedRotation, 270);
+assert.equal(lowConfidenceApplied.orientationState.detectedCorrection, 270);
+assert.equal(lowConfidenceApplied.orientationSource, "auto");
+
+const manualOverride = applyManualOrientationState(lowConfidenceApplied.orientationState, 90);
+assert.equal(manualOverride.finalAppliedRotation, 90);
+assert.equal(manualOverride.detectedCorrection, 270);
+assert.equal(manualOverride.source, "manual");
+const resetManual = resetToDetectedOrientationState(manualOverride);
+assert.equal(resetManual.finalAppliedRotation, 270);
+assert.equal(resetManual.detectedCorrection, 270);
+assert.equal(resetManual.source, "raster-analysis");
+
+const staleManualZero = withPlanPageDefaults({
+  id: "stale-page",
+  rotation: 0,
+  orientationSource: "manual",
+  orientationConfirmed: true,
+  orientationState: {
+    source: "manual",
+    manualOverride: 0,
+    detectedCorrection: 270,
+    finalAppliedRotation: 0,
+    confidence: 100,
+  },
+});
+assert.equal(staleManualZero.orientationSource, null);
+assert.equal(staleManualZero.orientationConfirmed, false);
+assert.equal(staleManualZero.rotation, 270);
+assert.equal(staleManualZero.orientationState.version, 0);
+assert.equal(staleManualZero.orientationState.source, "metadata");
+
+const currentManualZero = withPlanPageDefaults({
+  id: "current-page",
+  rotation: 0,
+  orientationSource: "manual",
+  orientationConfirmed: true,
+  orientationState: {
+    version: CURRENT_ORIENTATION_STATE_VERSION,
+    source: "manual",
+    manualOverride: 0,
+    detectedCorrection: 270,
+    finalAppliedRotation: 0,
+    confidence: 100,
+  },
+});
+assert.equal(currentManualZero.orientationSource, "manual");
+assert.equal(currentManualZero.orientationConfirmed, true);
+assert.equal(currentManualZero.rotation, 0);
+assert.equal(currentManualZero.orientationState.source, "manual");
+
 // Ambiguous: two candidates with roughly equal keyword weight should NOT be high confidence.
 const ambiguousPage = scoreOrientationCandidates({
   textItems: [
@@ -80,5 +147,22 @@ const strongTextBeatsLandscapePrior = scoreOrientationCandidates({
   sourceHeight: 800,
 });
 assert.equal(strongTextBeatsLandscapePrior.bestRotation, 0);
+
+const leftTitleStripSegments = Array.from({ length: 120 }, (_, index) => ({
+  a: { x: 20, y: index * 4 },
+  b: { x: 24, y: index * 4 + 2 },
+  length: 4.5,
+}));
+const vectorFallback = scoreVectorLayoutOrientation({
+  segments: leftTitleStripSegments,
+  sourceWidth: 595,
+  sourceHeight: 842,
+});
+assert.equal(vectorFallback.bestRotation, 270);
+assert.equal(vectorFallback.detectedCorrection, 270);
+assert.equal(vectorFallback.source, "raster-analysis");
+
+const textlessMetadataTie = { hasSignal: false, confidence: 44 };
+assert.equal(Boolean(vectorFallback.hasSignal && (!textlessMetadataTie.hasSignal || vectorFallback.confidence >= textlessMetadataTie.confidence)), true);
 
 console.log("orientation.test.mjs passed");

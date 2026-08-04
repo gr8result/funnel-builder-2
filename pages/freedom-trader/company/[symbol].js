@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FreedomModuleNav from "../../../components/freedom/FreedomModuleNav";
+import supabase from "../../../lib/supabaseClient";
 import { buildHeikinAshiCandles, FreedomChartDisplayToggles, FreedomChartTypeSelector, FREEDOM_CHART_TYPES, normalizeChartType } from "../../../components/freedom/FreedomSharedChart";
 import { canonicalCompanyTicker, companyMeta } from "../../../lib/freedom/companyRoutes";
 import { normalizeSignalLabel, signalClassName } from "../../../lib/freedom/signalEngine";
@@ -470,6 +471,23 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const [draftFibAnchor, setDraftFibAnchor] = useState(null);
   const [draggingFib, setDraggingFib] = useState(null);
   const [selectedFibLevelKey, setSelectedFibLevelKey] = useState("");
+  const [session, setSession] = useState(null);
+  const [fibPlanReady, setFibPlanReady] = useState(false);
+  const [fibPlanSaveStatus, setFibPlanSaveStatus] = useState("idle");
+  const [fibPlanRecord, setFibPlanRecord] = useState(null);
+  const [staleBannerDismissed, setStaleBannerDismissed] = useState(false);
+  const fibPlanSaveTimerRef = useRef(null);
+  const fibPlanSkipNextSaveRef = useRef(false);
+
+  useEffect(() => {
+    let subscription;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      setSession(data?.session || null);
+      ({ data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession || null)));
+    })();
+    return () => subscription?.unsubscribe?.();
+  }, []);
 
   useEffect(() => {
     visualLevelsRef.current = visualLevels;
@@ -553,34 +571,250 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     });
   }, [maxRiskPercent, portfolioValue, tradeDirection, tradingCapital, visualLevels]);
 
-  useEffect(() => {
+  // --- Fib trade-plan persistence (Supabase, symbol + user scoped) ---
+  // localStorage (PLANNER_STORAGE_KEY / FIB_STORAGE_KEY) is kept only as an
+  // offline cache and as a one-time migration source for pre-existing data;
+  // once a signed-in user has a server record, the server is authoritative.
+  const analysisDataTimestamp = setup.dataStatus?.latestTimestamp || setup.opportunity?.priceTimestamp || null;
+
+  function readLocalFibDrawing() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(FIB_STORAGE_KEY) || "{}");
+      const preferredKey = fibRangeKey(symbol, timeframe, chartInterval);
+      const anyKeyForSymbol = Object.keys(saved).find((key) => key.startsWith(`${symbol}:`));
+      return normalizeFibDrawing(saved?.[preferredKey] || (anyKeyForSymbol ? saved[anyKeyForSymbol] : null));
+    } catch {
+      return null;
+    }
+  }
+
+  function readLocalVisualLevels() {
     try {
       const saved = JSON.parse(window.localStorage.getItem(PLANNER_STORAGE_KEY) || "{}");
       const stored = saved?.[symbol];
-      if (levelsComplete(stored)) {
-        setVisualLevels({ entry: stored.entry, target: stored.target, target2: stored.target2 ?? null, stop: stored.stop });
-        setLevelSources({ ...DEFAULT_LEVEL_SOURCES, ...(stored.sources || {}) });
-      } else {
-        setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) });
-        setLevelSources(DEFAULT_LEVEL_SOURCES);
-      }
+      if (!levelsComplete(stored)) return null;
+      return { entry: stored.entry, target: stored.target, target2: stored.target2 ?? null, stop: stored.stop, sources: { ...DEFAULT_LEVEL_SOURCES, ...(stored.sources || {}) } };
     } catch {
+      return null;
+    }
+  }
+
+  function applyLocalFallback(localFib, localLevels) {
+    setFibDrawing(localFib || null);
+    if (localLevels) {
+      setVisualLevels({ entry: localLevels.entry, target: localLevels.target, target2: localLevels.target2, stop: localLevels.stop });
+      setLevelSources(localLevels.sources);
+    } else {
       setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) });
       setLevelSources(DEFAULT_LEVEL_SOURCES);
     }
-  }, [setup.entry, setup.stop, setup.target, setup.target2, symbol]);
+  }
+
+  function applyServerPlan(plan) {
+    const anchorsUsable = Number.isFinite(plan.anchors?.start?.price) && Number.isFinite(plan.anchors?.end?.price);
+    setFibDrawing(anchorsUsable ? normalizeFibDrawing({
+      id: "primary-fib",
+      anchor1: { date: plan.anchors.start.timestamp, price: plan.anchors.start.price },
+      anchor2: { date: plan.anchors.end.timestamp, price: plan.anchors.end.price },
+      visible: true,
+      direction: plan.direction,
+      showExtensions: plan.showExtensions,
+      safetyBufferPercent: DEFAULT_SAFETY_BUFFER_PERCENT,
+    }) : null);
+    const a = plan.assignments || {};
+    const nextLevels = {
+      entry: a.entry?.price ?? null,
+      stop: a.stopLoss?.price ?? null,
+      target: a.target1?.price ?? null,
+      target2: a.target2?.price ?? null,
+    };
+    if (levelsComplete(nextLevels)) {
+      setVisualLevels(nextLevels);
+      setLevelSources({ entry: a.entry?.source || "custom", stop: a.stopLoss?.source || "custom", target: a.target1?.source || "custom", target2: a.target2?.source || null });
+    } else {
+      setVisualLevels({ entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) });
+      setLevelSources(DEFAULT_LEVEL_SOURCES);
+    }
+  }
+
+  function buildCurrentPlanPayload() {
+    return {
+      opportunityId: analysis?.opportunity?.id || null,
+      direction: tradeDirection,
+      anchors: fibDrawing ? {
+        start: { timestamp: fibDrawing.anchor1.date, price: fibDrawing.anchor1.price },
+        end: { timestamp: fibDrawing.anchor2.date, price: fibDrawing.anchor2.price },
+      } : { start: { timestamp: null, price: null }, end: { timestamp: null, price: null } },
+      showExtensions: Boolean(fibDrawing?.showExtensions),
+      assignments: {
+        entry: Number.isFinite(visualLevels.entry) ? { price: visualLevels.entry, source: levelSources.entry || "custom" } : null,
+        stopLoss: Number.isFinite(visualLevels.stop) ? { price: visualLevels.stop, source: levelSources.stop || "custom" } : null,
+        target1: Number.isFinite(visualLevels.target) ? { price: visualLevels.target, source: levelSources.target || "custom" } : null,
+        target2: Number.isFinite(visualLevels.target2) ? { price: visualLevels.target2, source: levelSources.target2 || "custom" } : null,
+      },
+      minimumRiskReward: DEFAULT_MINIMUM_RISK_REWARD,
+      calculatedRiskReward: Number.isFinite(visualMetrics.riskReward) ? visualMetrics.riskReward : null,
+      analysisGeneratedAt: setup.opportunity?.priceTimestamp || null,
+      marketDataTimestamp: analysisDataTimestamp,
+      analysisVersion: setup.opportunity?.engineVersion || null,
+    };
+  }
+
+  async function persistPlanNow(plan, extra = {}) {
+    const token = session?.access_token;
+    if (!token) return null;
+    setFibPlanSaveStatus("saving");
+    try {
+      const response = await fetch("/api/freedom-trader/fib-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ symbol, plan: { ...plan, ...extra } }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) {
+        console.warn("Freedom Trader fib-plan save failed:", data?.error || response.statusText || "Save failed.");
+        setFibPlanSaveStatus("error");
+        return null;
+      }
+      setFibPlanSaveStatus("saved");
+      return data.plan;
+    } catch (error) {
+      console.warn("Freedom Trader fib-plan save failed:", error);
+      setFibPlanSaveStatus("error");
+      return null;
+    }
+  }
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(window.localStorage.getItem(FIB_STORAGE_KEY) || "{}");
-      setFibDrawing(normalizeFibDrawing(saved?.[fibRangeKey(symbol, timeframe, chartInterval)]));
-    } catch {
-      setFibDrawing(null);
+    let cancelled = false;
+    async function load() {
+      setFibPlanReady(false);
+      setStaleBannerDismissed(false);
+      setDraftFibAnchor(null);
+      setDraggingFib(null);
+      setSelectedFibLevelKey("");
+      fibPlanSkipNextSaveRef.current = true;
+
+      const token = session?.access_token;
+      let serverPlan = null;
+      let dbUnavailable = true;
+      if (token) {
+        try {
+          const response = await fetch(`/api/freedom-trader/fib-plan?symbol=${encodeURIComponent(symbol)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const data = await response.json().catch(() => null);
+          if (response.ok && data?.ok) {
+            serverPlan = data.plan;
+            dbUnavailable = Boolean(data.databaseUnavailable);
+          }
+        } catch (error) {
+          console.error("Freedom Trader fib-plan load failed:", error);
+        }
+      }
+      if (cancelled) return;
+
+      if (serverPlan) {
+        applyServerPlan(serverPlan);
+        setFibPlanRecord(serverPlan);
+        setFibPlanReady(true);
+        return;
+      }
+
+      const localFib = readLocalFibDrawing();
+      const localLevels = readLocalVisualLevels();
+      if (token && !dbUnavailable && (localFib || localLevels)) {
+        const migratedPlan = {
+          opportunityId: null,
+          direction: localFib?.direction || "bullish",
+          anchors: localFib ? { start: { timestamp: localFib.anchor1.date, price: localFib.anchor1.price }, end: { timestamp: localFib.anchor2.date, price: localFib.anchor2.price } } : { start: { timestamp: null, price: null }, end: { timestamp: null, price: null } },
+          showExtensions: Boolean(localFib?.showExtensions),
+          assignments: {
+            entry: localLevels && Number.isFinite(localLevels.entry) ? { price: localLevels.entry, source: localLevels.sources?.entry || "custom" } : null,
+            stopLoss: localLevels && Number.isFinite(localLevels.stop) ? { price: localLevels.stop, source: localLevels.sources?.stop || "custom" } : null,
+            target1: localLevels && Number.isFinite(localLevels.target) ? { price: localLevels.target, source: localLevels.sources?.target || "custom" } : null,
+            target2: localLevels && Number.isFinite(localLevels.target2) ? { price: localLevels.target2, source: localLevels.sources?.target2 || "custom" } : null,
+          },
+          minimumRiskReward: DEFAULT_MINIMUM_RISK_REWARD,
+          calculatedRiskReward: null,
+          analysisGeneratedAt: null,
+          marketDataTimestamp: null,
+          analysisVersion: null,
+        };
+        applyLocalFallback(localFib, localLevels);
+        const saved = await persistPlanNow(migratedPlan, { migratedFromLocalStorage: true });
+        if (!cancelled && saved) {
+          setFibPlanRecord(saved);
+          setFibPlanReady(true);
+          return;
+        }
+      }
+
+      if (cancelled) return;
+      applyLocalFallback(localFib, localLevels);
+      setFibPlanRecord(null);
+      setFibPlanSaveStatus("idle");
+      setFibPlanReady(true);
     }
+    load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, session?.access_token]);
+
+  // Debounced auto-save: fires once user interaction settles (covers Fib
+  // assignment, drag-end, custom price entry, direction/extension changes
+  // and both reset actions -- they all mutate visualLevels/fibDrawing).
+  useEffect(() => {
+    if (!fibPlanReady) return undefined;
+    if (fibPlanSkipNextSaveRef.current) {
+      fibPlanSkipNextSaveRef.current = false;
+      return undefined;
+    }
+    if (!session?.access_token) return undefined;
+    if (fibPlanSaveTimerRef.current) clearTimeout(fibPlanSaveTimerRef.current);
+    fibPlanSaveTimerRef.current = setTimeout(async () => {
+      const saved = await persistPlanNow(buildCurrentPlanPayload());
+      if (saved) setFibPlanRecord(saved);
+    }, 800);
+    return () => clearTimeout(fibPlanSaveTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fibPlanReady, fibDrawing, visualLevels, levelSources]);
+
+  const clearFibPlan = useCallback(async () => {
+    deleteFibDrawing();
+    const resetLevels = { entry: roundPrice(setup.entry), target: roundPrice(setup.target), target2: roundPrice(setup.target2), stop: roundPrice(setup.stop) };
+    setVisualLevels(resetLevels);
+    setLevelSources(DEFAULT_LEVEL_SOURCES);
+    setFibPlanRecord(null);
+    const token = session?.access_token;
+    if (!token) return;
+    setFibPlanSaveStatus("saving");
+    try {
+      const response = await fetch(`/api/freedom-trader/fib-plan?symbol=${encodeURIComponent(symbol)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) throw new Error(data?.error || "Clear failed.");
+      setFibPlanSaveStatus("saved");
+    } catch (error) {
+      console.error("Freedom Trader fib-plan clear failed:", error);
+      setFibPlanSaveStatus("error");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.access_token, setup.entry, setup.stop, setup.target, setup.target2, symbol]);
+
+  useEffect(() => {
     setDraftFibAnchor(null);
     setDraggingFib(null);
     setSelectedFibLevelKey("");
-  }, [chartInterval, symbol, timeframe]);
+  }, [chartInterval, timeframe]);
+
+  const planIsStale = Boolean(
+    fibPlanRecord?.marketDataTimestamp
+    && analysisDataTimestamp
+    && Date.parse(analysisDataTimestamp) > Date.parse(fibPlanRecord.marketDataTimestamp)
+  );
 
   const positionSize = useMemo(() => {
     const maxDollarRisk = (Number(portfolioValue) || 0) * ((Number(maxRiskPercent) || 0) / 100);
@@ -1626,6 +1860,18 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         </article>
       </section>
 
+      {planIsStale && !staleBannerDismissed ? (
+        <section className="staleBanner">
+          <strong>This trade plan was created using older market data.</strong>
+          <span>Review the levels before using it.</span>
+          <div className="staleBannerActions">
+            <button type="button" onClick={() => setStaleBannerDismissed(true)}>Keep Saved Plan</button>
+            <button type="button" onClick={() => { resetLevelsToAnalysis(); setStaleBannerDismissed(true); }}>Reset to Latest Analysis</button>
+            <button type="button" onClick={() => { deleteFibDrawing(); setChartMode("fib"); setStaleBannerDismissed(true); }}>Generate New Fib Plan</button>
+          </div>
+        </section>
+      ) : null}
+
       {error ? <section className="alert">{error}</section> : null}
       {setup.marketData && !setup.marketData.validated ? (
         <section className="dataWarning">
@@ -1702,8 +1948,12 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               </label>
               <button className="primaryAction" type="button" onClick={applyGeneratedFibPlan}>Use Fib for Trade Plan</button>
               <button type="button" onClick={resetLevelsToAnalysis}>Reset to Analysis</button>
+              <button type="button" onClick={clearFibPlan}>Clear Fib Plan</button>
             </div>
           ) : null}
+          <div className="fibSaveStatusRow">
+            <FibPlanSaveStatus status={fibPlanSaveStatus} signedIn={Boolean(session?.access_token)} />
+          </div>
         </div>
         <FreedomChartDisplayToggles toggles={displayToggles} onChange={setDisplayToggles} />
         <div
@@ -2020,6 +2270,16 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .fibConfigRow > span { color: #aebdc4; font-size: 11px; font-weight: 900; text-transform: uppercase; }
         .fibExtensionToggle, .fibBufferInput { align-items: center; color: #d8e5ea; display: inline-flex; font-size: 12px; font-weight: 800; gap: 6px; }
         .fibBufferInput input { width: 64px; }
+        .fibSaveStatusRow { margin-top: 8px; }
+        .fibSaveStatus { border-radius: 999px; display: inline-flex; font-size: 11px; font-weight: 900; padding: 5px 10px; text-transform: uppercase; }
+        .fibSaveStatus.saving { background: rgba(94,189,255,.14); color: #bfe3ff; }
+        .fibSaveStatus.saved { background: rgba(35,209,139,.14); color: #b8f4e6; }
+        .fibSaveStatus.error { background: rgba(255,92,92,.16); color: #ffc8c8; text-transform: none; }
+        .fibSaveStatus.offline { background: rgba(255,255,255,.06); color: #aebdc4; text-transform: none; }
+        .staleBanner { align-items: center; background: rgba(255,153,0,.12); border: 1px solid rgba(255,153,0,.36); border-radius: 8px; display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px auto 0; max-width: 1760px; padding: 14px 16px; }
+        .staleBanner strong { color: #ffd7a1; }
+        .staleBanner span { color: #ffe4bd; }
+        .staleBannerActions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
         .fibAnchor, .fibMoveHandle { align-items: center; background: #061014; border: 3px solid #fff; border-radius: 999px; box-shadow: 0 7px 20px rgba(0,0,0,.5); cursor: grab; display: inline-flex; justify-content: center; min-height: 0; padding: 0; pointer-events: auto; position: absolute; transform: translate(-50%, -50%); z-index: 5; }
         .fibAnchor { height: 22px; width: 22px; }
         .fibAnchorOne { border-color: #ffe25c; }
@@ -2123,6 +2383,14 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function FibPlanSaveStatus({ status, signedIn }) {
+  if (!signedIn) return <span className="fibSaveStatus offline">Not signed in -- Fib plan is saved to this browser only.</span>;
+  if (status === "saving") return <span className="fibSaveStatus saving">Saving...</span>;
+  if (status === "saved") return <span className="fibSaveStatus saved">Saved</span>;
+  if (status === "error") return <span className="fibSaveStatus error">Save failed -- your changes are kept on screen. Retry by adjusting a level again.</span>;
+  return null;
 }
 
 TraderCompany.disableLayout = true;

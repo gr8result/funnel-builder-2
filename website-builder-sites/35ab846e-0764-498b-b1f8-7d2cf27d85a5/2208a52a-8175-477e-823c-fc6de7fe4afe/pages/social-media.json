@@ -13,43 +13,6 @@
   "objective": "Sell the Social Media module by demonstrating AI campaign creation, automated publishing and dramatic time savings.",
   "blocks": [
     {
-      "id": "sm-nav",
-      "type": "nav-bar",
-      "props": {
-        "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          { "href": "#home", "label": "Home" },
-          {
-            "id": "nav-modules-sm",
-            "href": "#modules",
-            "label": "Modules",
-            "children": [
-              { "id": "nav-child-email-sm", "href": "#email", "label": "Email Marketing" },
-              { "id": "nav-child-sms-sm", "href": "#sms", "label": "SMS Marketing" },
-              { "id": "nav-child-crm-sm", "href": "#crm", "label": "CRM Management" },
-              { "id": "nav-child-funnels-sm", "href": "#funnels", "label": "Funnels" },
-              { "id": "nav-child-wb-sm", "href": "#website-builder", "label": "Website Builder" }
-            ]
-          },
-          { "href": "#about-us", "label": "About Us" },
-          { "href": "#pricing", "label": "Pricing" },
-          { "href": "#contact-us", "label": "Contact Us" }
-        ],
-        "ctaLink": "#contact-us",
-        "ctaText": "Start Free Trial",
-        "variant": "boxed-brand",
-        "showLogo": true,
-        "logoWidth": 150,
-        "textColor": "#a78bfa",
-        "stickyMode": "normal",
-        "buttonColor": "#a855f7",
-        "backgroundColor": "#06020f",
-        "buttonTextColor": "#ffffff",
-        "fullWidthBackground": true
-      }
-    },
-    {
       "id": "sm-hero",
       "type": "hero",
       "props": {
@@ -263,15 +226,42 @@
         "title": "Publish to Every Platform Simultaneously",
         "subtitle": "Connect your accounts once and Gr8 Result handles the rest. One post, one click, nine platforms reached at the same time.",
         "badges": [
-          { "icon": "📘", "label": "Facebook" },
-          { "icon": "📸", "label": "Instagram" },
-          { "icon": "💼", "label": "LinkedIn" },
-          { "icon": "🎵", "label": "TikTok" },
-          { "icon": "✖️", "label": "X (Twitter)" },
-          { "icon": "📌", "label": "Pinterest" },
-          { "icon": "🔍", "label": "Google Business" },
-          { "icon": "🧵", "label": "Threads" },
-          { "icon": "▶️", "label": "YouTube Community" }
+          {
+            "icon": "📘",
+            "label": "Facebook"
+          },
+          {
+            "icon": "📸",
+            "label": "Instagram"
+          },
+          {
+            "icon": "💼",
+            "label": "LinkedIn"
+          },
+          {
+            "icon": "🎵",
+            "label": "TikTok"
+          },
+          {
+            "icon": "✖️",
+            "label": "X (Twitter)"
+          },
+          {
+            "icon": "📌",
+            "label": "Pinterest"
+          },
+          {
+            "icon": "🔍",
+            "label": "Google Business"
+          },
+          {
+            "icon": "🧵",
+            "label": "Threads"
+          },
+          {
+            "icon": "▶️",
+            "label": "YouTube Community"
+          }
         ],
         "backgroundColor": "#06020f",
         "textColor": "#e2e8f0",
@@ -288,7 +278,20 @@
       "id": "sm-wave-divider",
       "type": "marquee-strip",
       "props": {
-        "items": ["AI CAPTIONS", "AI HASHTAGS", "AI IMAGES", "AI EMOJIS", "AI CTAs", "PROMOTIONAL POSTS", "EDUCATIONAL POSTS", "SEASONAL CAMPAIGNS", "ENGAGEMENT QUESTIONS", "PRODUCT LAUNCHES", "CUSTOMER STORIES", "INDUSTRY TIPS"],
+        "items": [
+          "AI CAPTIONS",
+          "AI HASHTAGS",
+          "AI IMAGES",
+          "AI EMOJIS",
+          "AI CTAs",
+          "PROMOTIONAL POSTS",
+          "EDUCATIONAL POSTS",
+          "SEASONAL CAMPAIGNS",
+          "ENGAGEMENT QUESTIONS",
+          "PRODUCT LAUNCHES",
+          "CUSTOMER STORIES",
+          "INDUSTRY TIPS"
+        ],
         "speed": 30,
         "direction": "left",
         "dividerText": "·",
@@ -569,5 +572,7 @@
         "baseLayoutWidth": 1500
       }
     }
-  ]
+  ],
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }

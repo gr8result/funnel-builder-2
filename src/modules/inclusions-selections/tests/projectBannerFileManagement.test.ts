@@ -4,7 +4,10 @@ import { loadProjectAreaRegister, saveProjectAreaRegister, setAreaQuantity } fro
 import {
   exportSelectionsProjectFile,
   closeSelectionsProject,
+  GR8_JOB_FILE_EXTENSION,
+  mergeSelectionsIntoGr8Job,
   preparePortableSelectionsFileForLocalSave,
+  previewSelectionsFileImport,
   previewSelectionsProjectImport,
   projectDashboardHref,
   registerProjectOpen,
@@ -58,13 +61,14 @@ export async function runProjectBannerFileManagementTests(): Promise<void> {
   assert(!banner.includes("Open Existing Job"), "Normal selections users should not see the database project picker action.");
   assert(!banner.includes("Import Project File"), "Open File should replace the old import-first action.");
   assert(banner.includes("showOpenFilePicker") && banner.includes("showSaveFilePicker"), "Open File and Save As should prefer the File System Access API.");
-  assert(banner.includes('type="file"') && banner.includes(".gr8select,.json,application/json"), "Open File should have a real file input fallback with supported extensions.");
+  assert(banner.includes('type="file"') && banner.includes(".gr8job,.gr8select,.json,application/json"), "Open File should have a real file input fallback with .gr8job, .gr8select and JSON extensions.");
   const openPickerBlock = banner.slice(banner.indexOf("function openPickerOptions"), banner.indexOf("function savePickerOptions"));
   const savePickerBlock = banner.slice(banner.indexOf("function savePickerOptions"), banner.indexOf("function readRecentFiles"));
-  assert(openPickerBlock.includes('".json"') && openPickerBlock.includes("SELECTIONS_FILE_EXTENSION"), "Open File should pass .gr8select and .json to the native picker.");
+  assert(openPickerBlock.includes("GR8_JOB_FILE_EXTENSION") && openPickerBlock.includes('".json"') && openPickerBlock.includes("SELECTIONS_FILE_EXTENSION"), "Open File should pass .gr8job, .gr8select and .json to the native picker.");
   assert(!openPickerBlock.includes(".gr8selections.json") && !savePickerBlock.includes(".gr8selections.json"), "Native file pickers must not receive the retired long extension.");
   assert(banner.includes("The file picker could not be opened.") && banner.includes("Diagnostics"), "Picker failures should show friendly copy with technical details hidden in diagnostics.");
   assert(banner.includes("Open This File") && banner.includes("Schema Version") && banner.includes("Project Areas") && banner.includes("Selections") && banner.includes("Warnings"), "Open File should preview validated local file metadata before replacing the working project.");
+  assert(banner.includes("Start Inclusions & Selections for this job") && banner.includes("mergeSelectionsIntoGr8Job"), "Open File should start selections inside an existing .gr8job and merge selections back into the job file.");
   assert(banner.includes("Project Name") && banner.includes("Job Number") && banner.includes("Client") && banner.includes("Site Address") && banner.includes("Builder") && banner.includes("Estimator"), "New should require the visible project details.");
   assert(banner.includes("newFieldRefs") && banner.includes("focusFirstInvalid"), "New File validation should focus the first invalid field.");
   assert(banner.includes("Complete the required project details before creating the file.") && banner.includes("fieldError"), "New File validation should show visible field-level errors.");
@@ -104,6 +108,7 @@ export async function runProjectBannerFileManagementTests(): Promise<void> {
 
   const exported = await exportSelectionsProjectFile(context);
   assert(SELECTIONS_FILE_EXTENSION === ".gr8select", "Preferred selections file extension should be the short File System Access API-safe extension.");
+  assert(GR8_JOB_FILE_EXTENSION === ".gr8job", "Unified Gr8 Result job files should use the .gr8job extension.");
   assert(exported.fileName.endsWith(".gr8select"), "Export should create a versioned .gr8select file name.");
   const exportedText = JSON.stringify(exported.file);
   assert(exported.file.schemaVersion === 1 && exported.file.applicationVersion && exported.file.fileId && exported.file.createdAt && exported.file.updatedAt && exported.file.contentFingerprint && exported.file.checksums.project, "Exported file should include local file metadata, schema version and content fingerprint.");
@@ -118,6 +123,34 @@ export async function runProjectBannerFileManagementTests(): Promise<void> {
   assert(previewSelectionsProjectImport(exported.file, context.organisationId).ok, "Import preview should accept a valid exported file.");
   const opened = previewSelectionsProjectImport(JSON.parse(JSON.stringify(savedCopy)), context.organisationId);
   assert(opened.ok && opened.file.projectDetails.projectName === context.projectName && opened.file.projectDetails.client === context.clientName, "Saved file should round-trip through Open File preview with project details intact.");
+  const jobFile = {
+    jobName: "Johnson 123",
+    clientName: "Michael Johnson",
+    jobNumber: "26-0001",
+    address: "Sunshine Coast, Queensland",
+    notes: "Quotation notes must survive selections save.",
+    workbook: {
+      id: "estimate-workbook-1",
+      quotation: { preliminaries: { rows: [{ id: "quote-row-1", item: "Preliminaries" }] } },
+      data: {
+        project: {
+          rows: {
+            builderName: { value: "Gr8 Homes" },
+            estimatorName: { value: "Grant" },
+          },
+        },
+      },
+    },
+    unknownQuotationField: { keep: true },
+  };
+  const jobPreview = previewSelectionsFileImport(jobFile, context.organisationId);
+  assert(jobPreview.ok && jobPreview.format === "gr8job" && !jobPreview.hasSelections, ".gr8job files without selections should preview as startable job files.");
+  assert(jobPreview.ok && jobPreview.project.projectName === "Johnson 123" && jobPreview.project.clientName === "Michael Johnson" && jobPreview.project.builder === "Gr8 Homes" && jobPreview.project.estimator === "Grant", ".gr8job preview should extract project, client, builder and estimator details.");
+  const mergedJob = mergeSelectionsIntoGr8Job(jobFile, exported.file);
+  assert(JSON.stringify(mergedJob.workbook) === JSON.stringify(jobFile.workbook) && (mergedJob.unknownQuotationField as { keep: boolean }).keep, "Merging selections into .gr8job should preserve quotation workbook and unknown fields.");
+  assert((mergedJob.inclusionsSelections as { schema: string }).schema === "gr8.selections.project", "Merged .gr8job should contain a module-owned inclusionsSelections section.");
+  const jobPreviewWithSelections = previewSelectionsFileImport(mergedJob, context.organisationId);
+  assert(jobPreviewWithSelections.ok && jobPreviewWithSelections.format === "gr8job" && jobPreviewWithSelections.hasSelections && jobPreviewWithSelections.file?.projectSummary.projectName === context.projectName, ".gr8job files with selections should preview the saved selections section.");
   assert(!previewSelectionsProjectImport({ schema: "bad" }, context.organisationId).ok, "Import preview should reject invalid files.");
   assert(!previewSelectionsProjectImport({ ...exported.file, schemaVersion: 99 }, context.organisationId).ok, "Import preview should reject unsupported future schemas.");
   assert(!previewSelectionsProjectImport({ ...exported.file, projectSummary: { ...exported.file.projectSummary, projectName: "", jobNumber: "" }, checksums: exported.file.checksums }, context.organisationId).ok, "Import preview should reject missing project fields.");

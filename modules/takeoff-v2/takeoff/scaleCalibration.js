@@ -33,7 +33,37 @@ export function computeCalibration({ pageId, pointA, pointB, axis, actualLengthM
     mmPerDocumentUnit: actualLengthMm / documentDistance,
     snapA: snapA || { kind: "manual", lineId: null, lineIds: null },
     snapB: snapB || { kind: "manual", lineId: null, lineIds: null },
+    status: "calibrated-unverified",
+    validation: null,
     confirmedAt: new Date().toISOString(),
+  };
+}
+
+export function validateCalibrationShape(calibration) {
+  if (!calibration) return { valid: false, status: "not-set", label: "Scale not set", reason: "No calibration exists." };
+  if (!Number.isFinite(calibration.mmPerDocumentUnit) || calibration.mmPerDocumentUnit <= 0) {
+    return { valid: false, status: "invalid", label: "Scale invalid", reason: "Calibration conversion is invalid." };
+  }
+  if (!Number.isFinite(calibration.documentDistance) || calibration.documentDistance <= 0) {
+    return { valid: false, status: "invalid", label: "Scale invalid", reason: "Calibration line length is invalid." };
+  }
+  if (!Number.isFinite(calibration.actualLengthMm) || calibration.actualLengthMm <= 0) {
+    return { valid: false, status: "invalid", label: "Scale invalid", reason: "Known distance is invalid." };
+  }
+  if (calibration.status === "proposed") {
+    return { valid: false, status: "proposed", label: "Scale proposed", reason: "Automatic scale proposal has not been confirmed." };
+  }
+  if (calibration.validation?.status === "passed") {
+    return { valid: true, status: "confirmed", label: "Scale confirmed", reason: "" };
+  }
+  if (calibration.validation?.status === "failed") {
+    return { valid: false, status: "invalid", label: "Scale invalid", reason: calibration.validation.reason || "Calibration validation failed." };
+  }
+  return {
+    valid: true,
+    status: "calibrated-unverified",
+    label: "Scale calibrated — not independently verified",
+    reason: "No independent validation line has been checked.",
   };
 }
 

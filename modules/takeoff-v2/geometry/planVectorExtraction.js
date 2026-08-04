@@ -19,6 +19,7 @@
 const LOCAL_PATH_OP = { MOVE_TO: 0, LINE_TO: 1, CLOSE_PATH: 4 };
 
 const IDENTITY_MATRIX = [1, 0, 0, 1, 0, 0];
+const STROKE_PAINT_OPS = new Set([20, 21, 24, 25, 26, 27]);
 
 // Standard PDF matrix concatenation: transformPoint(multiplyMatrix(m1, m2), p)
 // === transformPoint(m2, transformPoint(m1, p)) — i.e. "apply m1, then m2".
@@ -71,6 +72,19 @@ function isNearPageBorder(a, b, pageWidth, pageHeight, marginRatio) {
   );
 }
 
+function matrixScale(matrix) {
+  const [a, b, c, d] = matrix;
+  return Math.max(Math.hypot(a, b), Math.hypot(c, d), 1e-9);
+}
+
+function normalizeColor(args) {
+  if (!args) return null;
+  if (typeof args === "string") return args;
+  if (Array.isArray(args)) return args.join(",");
+  if (typeof args === "object" && typeof args.length === "number") return Array.from(args).join(",");
+  return String(args);
+}
+
 function extractSubpathSegments(packed, ctm, out) {
   if (!packed || typeof packed.length !== "number") return;
   let index = 0;
@@ -109,34 +123,80 @@ export function extractVectorSegmentsFromOperatorList(
   { pageWidth = 0, pageHeight = 0, minLengthDocUnits = DEFAULT_MIN_LENGTH_DOC_UNITS, borderMarginRatio = DEFAULT_BORDER_MARGIN_RATIO } = {}
 ) {
   const ctmStack = [];
+  const graphicsStack = [];
   let ctm = IDENTITY_MATRIX;
+  let lineWidth = 1;
+  let dashPattern = null;
+  let strokeColor = "#000000";
+  let fillColor = "#000000";
   const rawSegments = [];
+  let pathSeq = 0;
 
   for (let i = 0; i < fnArray.length; i += 1) {
     const fn = fnArray[i];
     const args = argsArray[i];
     if (fn === OPS.save) {
       ctmStack.push(ctm);
+      graphicsStack.push({ lineWidth, dashPattern, strokeColor, fillColor });
     } else if (fn === OPS.restore) {
       ctm = ctmStack.pop() || IDENTITY_MATRIX;
+      const graphics = graphicsStack.pop();
+      if (graphics) ({ lineWidth, dashPattern, strokeColor, fillColor } = graphics);
     } else if (fn === OPS.transform) {
       ctm = multiplyMatrix(args, ctm);
+    } else if (fn === OPS.setLineWidth) {
+      lineWidth = args?.[0] ?? lineWidth;
+    } else if (fn === OPS.setDash) {
+      dashPattern = args || null;
+    } else if (fn === OPS.setStrokeRGBColor || fn === OPS.setStrokeGray || fn === OPS.setStrokeColor) {
+      strokeColor = normalizeColor(args) || strokeColor;
+    } else if (fn === OPS.setFillRGBColor || fn === OPS.setFillGray || fn === OPS.setFillColor) {
+      fillColor = normalizeColor(args) || fillColor;
     } else if (fn === OPS.constructPath) {
+      pathSeq += 1;
+      const paintOp = args?.[0] ?? null;
       const subpaths = args?.[1];
+      const pathSegments = [];
       if (Array.isArray(subpaths)) {
-        subpaths.forEach((packed) => extractSubpathSegments(packed, ctm, rawSegments));
+        subpaths.forEach((packed) => extractSubpathSegments(packed, ctm, pathSegments));
       }
+      const pathBounds = pathSegments.reduce(
+        (acc, { a, b }) => ({
+          minX: Math.min(acc.minX, a.x, b.x),
+          minY: Math.min(acc.minY, a.y, b.y),
+          maxX: Math.max(acc.maxX, a.x, b.x),
+          maxY: Math.max(acc.maxY, a.y, b.y),
+        }),
+        { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+      );
+      const metadata = {
+        paintOp,
+        stroked: STROKE_PAINT_OPS.has(paintOp),
+        strokeWidth: lineWidth * matrixScale(ctm),
+        dashPattern,
+        strokeColor,
+        fillColor,
+        pathId: `path-${pathSeq}`,
+        pathSegmentCount: pathSegments.length,
+        pathBounds: Number.isFinite(pathBounds.minX) ? {
+          x: pathBounds.minX,
+          y: pathBounds.minY,
+          width: pathBounds.maxX - pathBounds.minX,
+          height: pathBounds.maxY - pathBounds.minY,
+        } : null,
+      };
+      pathSegments.forEach((segment) => rawSegments.push({ ...segment, metadata }));
     }
   }
 
   let seq = 0;
   const segments = [];
-  for (const { a, b } of rawSegments) {
+  for (const { a, b, metadata = {} } of rawSegments) {
     const length = Math.hypot(b.x - a.x, b.y - a.y);
     if (length < minLengthDocUnits) continue;
     if (isNearPageBorder(a, b, pageWidth, pageHeight, borderMarginRatio)) continue;
     seq += 1;
-    segments.push({ id: `vec-${seq}`, a, b, length, axis: classifyAxis(a, b), source: "vector" });
+    segments.push({ id: `vec-${seq}`, a, b, length, axis: classifyAxis(a, b), source: "vector", ...metadata });
   }
   return segments;
 }
@@ -147,8 +207,26 @@ export function extractVectorSegmentsFromOperatorList(
 // planGeometryService.js fall back to the raster detector.
 export async function extractVectorSegments(pdfDocument, pageNumber, { pageWidth, pageHeight } = {}) {
   try {
-    const { getOperatorListForPage } = await import("../viewer/PdfViewport.js");
-    const { operatorList, OPS } = await getOperatorListForPage(pdfDocument, pageNumber);
+    let operatorList;
+    let OPS;
+    try {
+      const page = await pdfDocument.getPage(pageNumber);
+      operatorList = await page.getOperatorList();
+      if (typeof window === "undefined") {
+        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+        OPS = pdfjsLib.OPS;
+      } else {
+        const { getOperatorListForPage } = await import("../viewer/PdfViewport.js");
+        const fromViewer = await getOperatorListForPage(pdfDocument, pageNumber);
+        operatorList = fromViewer.operatorList;
+        OPS = fromViewer.OPS;
+      }
+    } catch {
+      const { getOperatorListForPage } = await import("../viewer/PdfViewport.js");
+      const fromViewer = await getOperatorListForPage(pdfDocument, pageNumber);
+      operatorList = fromViewer.operatorList;
+      OPS = fromViewer.OPS;
+    }
     return extractVectorSegmentsFromOperatorList(
       { fnArray: operatorList.fnArray, argsArray: operatorList.argsArray, OPS },
       { pageWidth, pageHeight }

@@ -27,6 +27,7 @@ assert(!workbook.includes("Start a new blank Standard Inclusions Schedule?"), "E
 
 assert(workbook.includes("await importPendingPdfNow(file)"), "Selecting a finished PDF must immediately upload it");
 assert(workbook.includes("/api/standard-inclusions/finished-pdf/upload"), "Finished PDF must use the permanent upload endpoint");
+assert(workbook.includes("formatStandardInclusionsUploadError(payload") && workbook.includes("return;"), "Finished PDF upload API failures must stay on-page instead of throwing a runtime overlay");
 assert(workbook.includes("finishedPdfPageCount: pageCount"), "Finished PDF upload must persist page count");
 assert(workbook.includes("handleFinishedPdfPageCount"), "Finished PDF page count must survive refresh after preview rendering");
 assert(workbook.includes("Missing original PDF. Upload the source PDF again."), "Missing finished-PDF storage must show a real recovery error");
@@ -34,7 +35,7 @@ assert(workbook.includes("Replace PDF") && workbook.includes("Export PDF") && wo
 
 assert(workbook.includes("Canva setup required"), "Canva must show setup-required state");
 assert(workbook.includes("Connect and configure Canva before using Canva designs. You can still restore a previous version or attach a finished PDF now."), "Canva disabled state must explain non-Canva recovery options");
-assert(workbook.includes("disabled={readonly || canvaSetupRequired}"), "Empty-state Canva action must be disabled when setup is incomplete");
+assert(workbook.includes("disabled={readonly} style={styles.secondaryButton} onClick={onConnectCanva}>{canvaSetupRequired ? \"Canva setup required\""), "Empty-state Canva setup action must remain clickable when setup is incomplete");
 assert(workbook.includes("const setupRequired = Boolean(!canvaStatus"), "Shared Canva actions must be disabled before setup status is ready");
 
 assert(workbook.includes("Template name:") && workbook.includes("Number of pages:") && workbook.includes("Template status:"), "Header metadata labels must render separately with colons");

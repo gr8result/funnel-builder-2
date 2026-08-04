@@ -9,8 +9,10 @@
 // components/estimate-builder/ai-takeoff/aiDetectionService.js) to keep
 // modules/takeoff-v2 self-contained, per its existing isolation rule.
 
-import { buildWallGraphFromPolylines, isPerimeterClosed } from "./wallGraph.js";
+import { buildWallGraphFromPolylines } from "./wallGraph.js";
+import { assessExteriorDetectionGraph, normalizeSegmentConfidence } from "./wallDetectionQuality.js";
 import { polylineWithinRegion } from "./planRegion.js";
+import { detectExteriorWallsFromGeometry } from "./vectorExteriorDetection.js";
 import { supabase } from "../../../utils/supabase-client";
 
 // Root cause of "AI detection API error 401" (verified live, not guessed —
@@ -75,7 +77,10 @@ async function requestExteriorWallDetection({ imageDataUrl, imageWidth, imageHei
 // sheet's own border rectangle from ever entering the wall graph, without
 // needing any text/table classifier — the user-confirmed region is the
 // single source of truth for "this is the actual floor plan area."
-export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeight, viewport, stitchToleranceDocUnits = 6, planRegion = null }) {
+export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeight, viewport, stitchToleranceDocUnits = 6, planRegion = null, planGeometryIndex = null, page = null }) {
+  const vectorResult = detectExteriorWallsFromGeometry({ planGeometryIndex, page, planRegion, stitchToleranceDocUnits });
+  if (vectorResult?.segments?.length) return vectorResult;
+
   const result = await requestExteriorWallDetection({ imageDataUrl, imageWidth, imageHeight });
   if (!result.connected) {
     return {
@@ -95,22 +100,43 @@ export async function detectExteriorWalls({ imageDataUrl, imageWidth, imageHeigh
         const [x, y] = viewport.convertToPdfPoint(point.x, point.y);
         return { x, y };
       }),
-      confidence: overlay.confidence || null,
+      confidence: normalizeSegmentConfidence(overlay.confidence),
     }))
     .filter((polyline) => polylineWithinRegion(polyline.points, planRegion));
 
   const excludedByRegion = totalOverlays - polylines.length;
 
   const graph = buildWallGraphFromPolylines(polylines, { tolerance: stitchToleranceDocUnits, source: "automatic" });
-  const isClosed = isPerimeterClosed(graph.vertices, graph.segments);
+  const quality = assessExteriorDetectionGraph(graph.vertices, graph.segments, result.confidence || 0);
+  const isClosed = quality.isClosed;
+  const segments = graph.segments.map((segment) => {
+    const inPerimeter = quality.largestSegmentIds.has(segment.id);
+    return { ...segment, confirmed: Boolean(quality.useful && quality.isClosed && inPerimeter), inDetectedPerimeter: inPerimeter };
+  });
 
-  const baseMessage = result.message || `Detected ${graph.segments.length} segment${graph.segments.length !== 1 ? "s" : ""}.`;
+  const baseMessage = quality.useful
+    ? `Exterior candidate found. ${segments.length} segment${segments.length !== 1 ? "s" : ""} need review.`
+    : `Exterior detection incomplete. ${graph.segments.length} isolated candidate${graph.segments.length !== 1 ? "s" : ""} found. No usable perimeter created.`;
   return {
     connected: true,
     vertices: graph.vertices,
-    segments: graph.segments,
+    segments,
     isClosed,
-    detectionConfidence: Math.round((result.confidence || 0) * 100),
+    detectionConfidence: quality.confidence,
+    completeness: quality.completeness,
+    connectedComponents: quality.connectedComponents,
+    openGaps: quality.openGaps,
+    useful: quality.useful,
+    warnings: quality.warnings,
+    diagnostics: {
+      source: "ai-overlay",
+      rawLines: totalOverlays,
+      filteredWallLines: polylines.length,
+      wallPairs: 0,
+      connectedComponents: quality.connectedComponents,
+      candidateExteriorSegments: graph.segments.length,
+      excludedByRegion,
+    },
     message: excludedByRegion > 0
       ? `${baseMessage} (${excludedByRegion} candidate${excludedByRegion !== 1 ? "s" : ""} outside the plan region excluded.)`
       : baseMessage,

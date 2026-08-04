@@ -17,6 +17,7 @@ export type SelectionsSaveStatus = "saved" | "unsaved" | "saving" | "save_failed
 
 export const SELECTIONS_FILE_EXTENSION = ".gr8select";
 export const SELECTIONS_LEGACY_FILE_EXTENSION = ".gr8selections.json";
+export const GR8_JOB_FILE_EXTENSION = ".gr8job";
 
 export type ProjectFileSummary = ProjectSelectionContext & {
   currentStage: InclusionsSelectionsStageId;
@@ -58,11 +59,13 @@ export type PortableSelectionsFile = {
   templates: Awaited<ReturnType<typeof loadTemplateStage>>;
   selectionItems: Awaited<ReturnType<typeof loadSelectionWorkspace>>["requirements"];
   selections: Awaited<ReturnType<typeof loadSelectionWorkspace>>["selections"];
+  pricing: Record<string, unknown>;
   areasAndLevels: Awaited<ReturnType<typeof loadProjectAreaRegister>>;
   templatesAndTiers: Awaited<ReturnType<typeof loadTemplateStage>>;
   workspace: Awaited<ReturnType<typeof loadSelectionWorkspace>>;
   review: Awaited<ReturnType<typeof loadSelectionReview>>;
   approvals: Awaited<ReturnType<typeof loadApprovalStage>>;
+  snapshots: Awaited<ReturnType<typeof loadApprovalStage>>["snapshots"];
   attachmentsMetadata: unknown[];
   variations: unknown[];
   lockedSnapshotData: Awaited<ReturnType<typeof loadApprovalStage>>["snapshots"];
@@ -73,6 +76,21 @@ export type PortableSelectionsFile = {
   };
   checksums: { project: string };
 };
+
+export type Gr8JobSelectionsPreview = {
+  ok: true;
+  format: "gr8job";
+  rawJobFile: Record<string, unknown>;
+  project: ProjectSelectionContext;
+  file: PortableSelectionsFile | null;
+  hasSelections: boolean;
+  warnings: string[];
+};
+
+export type SelectionsFilePreview =
+  | ({ ok: true; format: "gr8select"; file: PortableSelectionsFile; warnings: string[] })
+  | Gr8JobSelectionsPreview
+  | { ok: false; error: string };
 
 const PROJECT_INDEX_BUCKET = "project-file-index";
 const ACTIVE_PROJECT_BUCKET = "active-project-context";
@@ -95,6 +113,10 @@ function activeKey(organisationId: string): string {
 
 function clone<T>(value: T): T {
   return structuredClone(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 function browserStorage(): Storage | null {
@@ -123,6 +145,56 @@ function checksum(value: unknown): string {
   let hash = 0;
   for (let index = 0; index < text.length; index += 1) hash = Math.imul(31, hash) + text.charCodeAt(index) | 0;
   return Math.abs(hash).toString(16);
+}
+
+function textValue(...values: unknown[]): string {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
+function workbookDataValue(workbook: Record<string, unknown>, key: string): string {
+  const data = isRecord(workbook.data) ? workbook.data : {};
+  for (const section of Object.values(data)) {
+    if (!isRecord(section) || !isRecord(section.rows)) continue;
+    const row = section.rows[key];
+    if (isRecord(row)) {
+      const value = textValue(row.value);
+      if (value) return value;
+    }
+  }
+  return "";
+}
+
+function extractProjectFromGr8Job(job: Record<string, unknown>, organisationId: string): ProjectSelectionContext {
+  const project = isRecord(job.project) ? job.project : {};
+  const details = isRecord(job.projectDetails) ? job.projectDetails : {};
+  const workbook = isRecord(job.workbook) ? job.workbook : {};
+  const meta = isRecord(workbook.jobFileMeta) ? workbook.jobFileMeta : {};
+  const jobNumber = textValue(job.jobNumber, project.jobNumber, details.jobNumber, meta.jobNumber, workbookDataValue(workbook, "jobNumber"), workbookDataValue(workbook, "quoteNumber"));
+  const projectName = textValue(job.jobName, project.projectName, project.jobName, details.projectName, details.jobName, meta.jobName, workbookDataValue(workbook, "projectName"), jobNumber, "Gr8 Job");
+  const projectId = textValue(job.projectId, job.fileId, project.projectId, details.projectId, workbook.id, workbook.jobId, jobNumber ? makeScopedId("project", [organisationId, jobNumber]) : "");
+  return {
+    organisationId: textValue(job.organisationId, job.organizationId, project.organisationId, project.organizationId, organisationId || "local_builder"),
+    projectId: projectId || makeScopedId("project", [organisationId || "local_builder", projectName]),
+    projectName,
+    jobNumber,
+    clientName: textValue(job.clientName, job.client, project.clientName, project.client, details.clientName, details.client, meta.clientName, workbookDataValue(workbook, "clientName"), workbookDataValue(workbook, "customerName")),
+    siteAddress: textValue(job.siteAddress, job.address, project.siteAddress, project.address, details.siteAddress, details.address, meta.address, workbookDataValue(workbook, "siteAddress"), workbookDataValue(workbook, "projectAddress"), workbookDataValue(workbook, "address")),
+    builder: textValue(job.builder, job.builderName, project.builder, project.builderName, details.builder, details.builderName, workbookDataValue(workbook, "builderName"), workbookDataValue(workbook, "companyName")),
+    estimator: textValue(job.estimator, job.estimatorName, project.estimator, project.estimatorName, details.estimator, details.estimatorName, workbookDataValue(workbook, "estimatorName")),
+  };
+}
+
+function selectionsSectionFromGr8Job(job: Record<string, unknown>): unknown {
+  if (isRecord(job.inclusionsSelections)) return job.inclusionsSelections;
+  const modules = isRecord(job.modules) ? job.modules : {};
+  if (isRecord(modules.inclusionsSelections)) return modules.inclusionsSelections;
+  const extensions = isRecord(job.extensions) ? job.extensions : {};
+  if (isRecord(extensions.inclusionsSelections)) return extensions.inclusionsSelections;
+  return null;
 }
 
 function fileFingerprint(file: PortableSelectionsFile): string {
@@ -361,11 +433,13 @@ export async function exportSelectionsProjectFile(contextInput: Partial<ProjectS
     templates,
     selectionItems: workspace.requirements,
     selections: workspace.selections,
+    pricing: {},
     areasAndLevels: await loadProjectAreaRegister(context),
     templatesAndTiers: templates,
     workspace,
     review: await loadSelectionReview(context),
     approvals,
+    snapshots: approvals.snapshots,
     attachmentsMetadata: [],
     variations: [],
     lockedSnapshotData: approvals.snapshots,
@@ -422,6 +496,104 @@ export function previewSelectionsProjectImport(input: unknown, organisationId: s
     ...(organisationId && file.organisationReference !== organisationId ? ["This file was created for a different organisation reference."] : []),
   ];
   return { ok: true, file, warnings };
+}
+
+function normalisePortableSelectionsSection(section: unknown, project: ProjectSelectionContext, organisationId: string): PortableSelectionsFile | null {
+  if (!isRecord(section)) return null;
+  if (section.schema === "gr8.selections.project") {
+    const existingPreview = previewSelectionsProjectImport(section, organisationId);
+    if (existingPreview.ok) return existingPreview.file;
+    const file = {
+      ...section,
+      projectSummary: { ...project, ...(isRecord(section.projectSummary) ? section.projectSummary : {}) },
+      organisationReference: textValue(section.organisationReference, organisationId),
+    } as PortableSelectionsFile;
+    const preview = previewSelectionsProjectImport(file, organisationId);
+    return preview.ok ? preview.file : null;
+  }
+  if (section.schemaVersion === undefined && !Array.isArray(section.areas) && !Array.isArray(section.levels) && !Array.isArray(section.selections)) return null;
+  const timestamp = now();
+  const approvals = isRecord(section.approvals) ? section.approvals : { context: project, snapshots: [], approvalState: null, auditEvents: [] };
+  const workspace = isRecord(section.workspace) ? section.workspace : {
+    context: project,
+    templateStage: null,
+    requirements: Array.isArray(section.requirements) ? section.requirements : Array.isArray(section.selectionItems) ? section.selectionItems : [],
+    selections: Array.isArray(section.selections) ? section.selections : [],
+    locations: Array.isArray(section.locations) ? section.locations : [],
+    notes: Array.isArray(section.notes) ? section.notes : [],
+    attachments: Array.isArray(section.attachments) ? section.attachments : [],
+    draftState: { organisationId: project.organisationId, projectId: project.projectId, selectedView: "room", savedStatus: "saved", updatedAt: timestamp },
+  };
+  const file: PortableSelectionsFile = {
+    schema: "gr8.selections.project",
+    schemaVersion: 1,
+    applicationVersion: "inclusions-selections-local-file-v1",
+    fileId: textValue(section.fileId, makeScopedId("selections_file", [project.organisationId, project.projectId, "gr8job"])),
+    createdAt: textValue(section.createdAt, timestamp),
+    updatedAt: textValue(section.updatedAt, timestamp),
+    exportedAt: textValue(section.exportedAt, timestamp),
+    contentFingerprint: "",
+    sourceApplication: "gr8-result",
+    organisationReference: organisationId,
+    projectSummary: project,
+    projectDetails: { ...project, client: project.clientName },
+    templates: (isRecord(section.templatesAndTiers) ? section.templatesAndTiers : section.templates ?? []) as PortableSelectionsFile["templates"],
+    selectionItems: (Array.isArray(section.selectionItems) ? section.selectionItems : Array.isArray(section.requirements) ? section.requirements : []) as PortableSelectionsFile["selectionItems"],
+    selections: (Array.isArray(section.selections) ? section.selections : []) as PortableSelectionsFile["selections"],
+    pricing: isRecord(section.pricing) ? section.pricing : {},
+    areasAndLevels: (isRecord(section.areasAndLevels) ? section.areasAndLevels : { ...project, levels: Array.isArray(section.levels) ? section.levels : [], areas: Array.isArray(section.areas) ? section.areas : [], customAreaTypes: [], selections: [], updatedAt: timestamp }) as PortableSelectionsFile["areasAndLevels"],
+    templatesAndTiers: (isRecord(section.templatesAndTiers) ? section.templatesAndTiers : { context: project, areaRegister: null, configuration: null, requirements: Array.isArray(section.requirements) ? section.requirements : [], templates: [], savedBuilderTemplates: [] }) as PortableSelectionsFile["templatesAndTiers"],
+    workspace: workspace as PortableSelectionsFile["workspace"],
+    review: (isRecord(section.review) ? section.review : { context: project, workspace, reviewState: null, issues: [], allowanceOverrides: [], auditEvents: [], lines: [], summary: {}, status: "draft", statusReasons: [] }) as PortableSelectionsFile["review"],
+    approvals: approvals as PortableSelectionsFile["approvals"],
+    snapshots: (Array.isArray(section.snapshots) ? section.snapshots : Array.isArray((approvals as { snapshots?: unknown[] }).snapshots) ? (approvals as { snapshots: PortableSelectionsFile["snapshots"] }).snapshots : []) as PortableSelectionsFile["snapshots"],
+    attachmentsMetadata: Array.isArray(section.attachmentsMetadata) ? section.attachmentsMetadata : [],
+    variations: Array.isArray(section.variations) ? section.variations : [],
+    lockedSnapshotData: (Array.isArray(section.lockedSnapshotData) ? section.lockedSnapshotData : []) as PortableSelectionsFile["lockedSnapshotData"],
+    auditMetadata: { generatedBy: "gr8-result", generatedAt: timestamp, containsCredentials: false },
+    checksums: { project: "" },
+  };
+  file.contentFingerprint = fileFingerprint(file);
+  file.checksums.project = file.contentFingerprint;
+  return file;
+}
+
+export function previewSelectionsFileImport(input: unknown, organisationId: string): SelectionsFilePreview {
+  const selectionsPreview = previewSelectionsProjectImport(input, organisationId);
+  if (selectionsPreview.ok === true) return { ...selectionsPreview, format: "gr8select" };
+  const unsupportedSelectionsError = { ok: false as const, error: selectionsPreview.error };
+  if (!isRecord(input)) return unsupportedSelectionsError;
+  const looksLikeJob = Boolean(input.workbook || input.jobName || input.jobNumber || input.clientName || input.address || input.project);
+  if (!looksLikeJob) return unsupportedSelectionsError;
+  const project = extractProjectFromGr8Job(input, organisationId);
+  if (!project.projectId || (!project.projectName && !project.jobNumber)) return { ok: false, error: "Job file is missing project identity." };
+  const section = selectionsSectionFromGr8Job(input);
+  const file = normalisePortableSelectionsSection(section, project, project.organisationId);
+  return {
+    ok: true,
+    format: "gr8job",
+    rawJobFile: input,
+    project,
+    file,
+    hasSelections: Boolean(file),
+    warnings: [
+      ...(file ? [] : ["This job file does not contain Inclusions & Selections yet."]),
+      ...(project.organisationId !== organisationId && organisationId ? ["This job file was created for a different organisation reference."] : []),
+    ],
+  };
+}
+
+export function mergeSelectionsIntoGr8Job(rawJobFile: Record<string, unknown>, selections: PortableSelectionsFile): Record<string, unknown> {
+  const timestamp = now();
+  return {
+    ...clone(rawJobFile),
+    lastModified: timestamp,
+    inclusionsSelections: {
+      ...selections,
+      pricing: selections.pricing ?? {},
+      snapshots: selections.snapshots ?? selections.lockedSnapshotData ?? [],
+    },
+  };
 }
 
 export async function importSelectionsProjectFile(file: PortableSelectionsFile, target: ProjectSelectionContext): Promise<ProjectSelectionContext> {

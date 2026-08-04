@@ -7,6 +7,12 @@ function statusLabel(row: RequirementWorkspaceRow) {
   return "";
 }
 
+function roomProgressLabel(rows: RequirementWorkspaceRow[]) {
+  const completed = rows.filter((row) => row.selection?.selectionStatus === "complete").length;
+  if (rows.length === 0) return "No selection items";
+  return `Completed: ${completed} of ${rows.length}`;
+}
+
 export function RoomNavigationPanel({
   groups,
   rows = [],
@@ -40,7 +46,7 @@ export function RoomNavigationPanel({
               <div key={room.area.id}>
                 <button type="button" className={selectedAreaId === room.area.id ? "navItem selected" : "navItem"} onClick={() => onSelectArea(room.area.id)}>
                   <strong>{room.area.name}</strong>
-                  <span>{roomRows.length} selections</span>
+                  <span>{roomProgressLabel(roomRows)}</span>
                 </button>
                 <div className={selectedAreaId === room.area.id ? "roomRequirementTree expanded" : "roomRequirementTree"}>
                   {roomRows.map((row) => (

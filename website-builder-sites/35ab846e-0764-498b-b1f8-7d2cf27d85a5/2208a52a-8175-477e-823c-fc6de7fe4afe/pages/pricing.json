@@ -10,71 +10,6 @@
   "objective": "Build the Pricing page.",
   "blocks": [
     {
-      "id": "da4384ea-3386-4b3e-9287-72d79e7bfd09",
-      "type": "nav-bar",
-      "props": {
-        "logo": "",
-        "brand": "Gr8 Result Digital Solutions",
-        "links": [
-          {
-            "href": "#home",
-            "label": "Home"
-          },
-          {
-            "href": "#about-us",
-            "label": "About Us"
-          },
-          {
-            "href": "#modules",
-            "label": "Modules"
-          },
-          {
-            "href": "#contact-us",
-            "label": "Contact Us"
-          },
-          {
-            "href": "#email",
-            "label": "Email"
-          },
-          {
-            "href": "#sms",
-            "label": "SMS"
-          },
-          {
-            "href": "#crm",
-            "label": "CRM"
-          },
-          {
-            "href": "#pricing",
-            "label": "Pricing"
-          }
-        ],
-        "ctaLink": "#contact",
-        "ctaText": "Contact",
-        "variant": "boxed-brand",
-        "showLogo": true,
-        "logoWidth": 44,
-        "textColor": "#e2e8f0",
-        "stickyMode": "sticky-transparent",
-        "borderColor": "rgba(148,163,184,0.24)",
-        "buttonColor": "#0ea5e9",
-        "ctaFontSize": 16,
-        "linkFontSize": 16,
-        "brandFontSize": 20,
-        "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-        "backgroundColor": "#0b1220",
-        "buttonTextColor": "#ffffff",
-        "linkHoverEffect": "fill",
-        "mobileMenuStyle": "hamburger",
-        "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
-        "linkHoverTextColor": "#ffffff",
-        "activeLinkTextColor": "#ffffff",
-        "fullWidthBackground": true,
-        "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-        "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-      }
-    },
-    {
       "id": "hero-4xaodxr",
       "type": "hero",
       "props": {
@@ -558,71 +493,6 @@
   ],
   "chaiData": {
     "blocks": [
-      {
-        "id": "da4384ea-3386-4b3e-9287-72d79e7bfd09",
-        "type": "nav-bar",
-        "props": {
-          "logo": "",
-          "brand": "Gr8 Result Digital Solutions",
-          "links": [
-            {
-              "href": "#home",
-              "label": "Home"
-            },
-            {
-              "href": "#about-us",
-              "label": "About Us"
-            },
-            {
-              "href": "#modules",
-              "label": "Modules"
-            },
-            {
-              "href": "#contact-us",
-              "label": "Contact Us"
-            },
-            {
-              "href": "#email",
-              "label": "Email"
-            },
-            {
-              "href": "#sms",
-              "label": "SMS"
-            },
-            {
-              "href": "#crm",
-              "label": "CRM"
-            },
-            {
-              "href": "#pricing",
-              "label": "Pricing"
-            }
-          ],
-          "ctaLink": "#contact",
-          "ctaText": "Contact",
-          "variant": "boxed-brand",
-          "showLogo": true,
-          "logoWidth": 44,
-          "textColor": "#e2e8f0",
-          "stickyMode": "sticky-transparent",
-          "borderColor": "rgba(148,163,184,0.24)",
-          "buttonColor": "#0ea5e9",
-          "ctaFontSize": 16,
-          "linkFontSize": 16,
-          "brandFontSize": 20,
-          "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-          "backgroundColor": "#0b1220",
-          "buttonTextColor": "#ffffff",
-          "linkHoverEffect": "fill",
-          "mobileMenuStyle": "hamburger",
-          "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
-          "linkHoverTextColor": "#ffffff",
-          "activeLinkTextColor": "#ffffff",
-          "fullWidthBackground": true,
-          "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-          "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-        }
-      },
       {
         "id": "hero-4xaodxr",
         "type": "hero",
@@ -1111,5 +981,7 @@
     "designTokens": {}
   },
   "html": "",
-  "updatedAt": "2026-06-22T02:54:17.568Z"
+  "updatedAt": "2026-06-22T02:54:17.568Z",
+  "useGlobalHeader": true,
+  "headerOverrideBlockId": ""
 }
