@@ -26,7 +26,7 @@ function userFacingReportError(message = "") {
 function scannerSettingsFromReport(settings = {}) {
   return {
     markets: ["US"],
-    chunkSize: 20,
+    chunkSize: 80,
     minimumScore: 82,
     minimumDailyVolume: 1000000,
     minimumRiskReward: 2,
@@ -259,12 +259,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     if (scanLoading) return { scannerRows, scanSummary };
     if (!force && scannerRows.length && isFreedomScanSummaryCurrent(scanSummary)) return { scannerRows, scanSummary };
     setScanLoading(true);
-    setScanMessage("Checking the market... 0 of 20 companies analysed.");
+    setScanMessage("Checking the US market universe...");
     try {
       const response = await fetch("/api/freedom-trader/scanner?offset=0", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(scannerSettingsFromReport(reportSettings)),
+        body: JSON.stringify({ ...scannerSettingsFromReport(reportSettings), force }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data) throw new Error(data?.error || "Market scanner could not load.");
@@ -272,7 +272,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     } catch (error) {
       const fallback = scanSummary && scannerRows.length ? { scannerRows, scanSummary } : {
         scannerRows: [],
-        scanSummary: { status: "failed", analysedCount: 0, unavailableCount: 20, qualifiedCount: 0, requestedCount: 20, completedAt: new Date().toISOString(), dataLabel: "Unavailable" },
+        scanSummary: { status: "failed", analysedCount: 0, unavailableCount: 48, qualifiedCount: 0, requestedCount: 48, completedAt: new Date().toISOString(), dataLabel: "Unavailable" },
       };
       setScanMessage(scannerRows.length ? `Market scanner failed. Keeping the last valid scan from ${formatDateTime(scanSummary?.completedAt)}.` : "Market scanner failed. Do not place a new trade from this report.");
       setReportError(userFacingReportError(error.message || ""));

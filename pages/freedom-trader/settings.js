@@ -45,13 +45,13 @@ export default function TraderSettings({ passwordHash }) {
     maximumVolatility: 9,
     excludedIndustries: "",
     scanFrequency: "during-session",
-    chunkSize: 30,
+    chunkSize: 80,
   });
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
     try {
       const stored = JSON.parse(window.localStorage.getItem(SCANNER_SETTINGS_KEY) || "null");
-      if (stored && typeof stored === "object") setScannerSettings((current) => ({ ...current, ...stored, markets: ["US"] }));
+      if (stored && typeof stored === "object") setScannerSettings((current) => ({ ...current, ...stored, markets: ["US"], chunkSize: 80 }));
     } catch {}
     setChecking(false);
   }, []);

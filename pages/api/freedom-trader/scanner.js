@@ -3,6 +3,10 @@ import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataSe
 import { FREEDOM_TRADER_V1_MARKET_SCOPE_MESSAGE, OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
 import { buildFailedFreedomScanSummary, buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 
+const LATEST_SCAN_TTL_MS = 15 * 60 * 1000;
+const latestScannerCache = globalThis.__freedomTraderLatestScannerCache || { key: "", cachedAt: 0, payload: null };
+globalThis.__freedomTraderLatestScannerCache = latestScannerCache;
+
 const DEFAULT_SETTINGS = {
   markets: ["US"],
   minimumScore: 82,
@@ -11,7 +15,7 @@ const DEFAULT_SETTINGS = {
   maximumVolatility: 9,
   excludedIndustries: [],
   scanFrequency: "during-session",
-  chunkSize: 30,
+  chunkSize: 80,
   maximumPlannedLossPerTrade: 75,
   maximumPositionValue: 1250,
   availableCash: 5000,
@@ -27,6 +31,19 @@ function cleanSettings(input = {}) {
       : String(input.excludedIndustries || "").split(",").map((item) => item.trim()).filter(Boolean),
     chunkSize: Math.max(1, Math.min(80, Number(input.chunkSize) || DEFAULT_SETTINGS.chunkSize)),
   };
+}
+
+function scannerCacheKey(settings, offset) {
+  return JSON.stringify({
+    offset,
+    markets: settings.markets,
+    minimumScore: settings.minimumScore,
+    minimumDailyVolume: settings.minimumDailyVolume,
+    minimumRiskReward: settings.minimumRiskReward,
+    maximumVolatility: settings.maximumVolatility,
+    excludedIndustries: settings.excludedIndustries,
+    chunkSize: settings.chunkSize,
+  });
 }
 
 function legacyScannerStatus(result) {
@@ -55,6 +72,17 @@ export function buildScanSummary(result) {
   const couldAnalyse = decisions.filter((item) => item.couldAnalyse);
   const couldNotAnalyse = decisions.filter((item) => !item.couldAnalyse);
   const counts = result.summary?.counts || {};
+  const providerCounts = decisions.reduce((output, item) => {
+    const provider = item.provider || item.dataProvider || "Unknown";
+    output[provider] = (output[provider] || 0) + 1;
+    return output;
+  }, {});
+  const timestamps = decisions
+    .map((item) => Date.parse(item.marketDataTimestamp || item.priceTimestamp || ""))
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a);
+  const startedMs = Date.parse(shared.startedAt || "");
+  const completedMs = Date.parse(shared.completedAt || "");
   const rejectionCounts = decisions.reduce((output, item) => {
     if (item.status === "READY TO BUY") return output;
     const reason = item.couldNotAnalyseReason || item.reason || item.status;
@@ -89,6 +117,11 @@ export function buildScanSummary(result) {
     symbolsRejectedMissingData: couldNotAnalyse.length,
     symbolsAnalysed: couldAnalyse.length,
     approvedOpportunities: shared.status === "complete" ? counts["READY TO BUY"] || 0 : 0,
+    totalsBalanced: shared.totalsValid,
+    elapsedMs: Number.isFinite(startedMs) && Number.isFinite(completedMs) ? Math.max(0, completedMs - startedMs) : null,
+    providerStatus: couldNotAnalyse.length ? "Partial data returned" : "Available",
+    providerUsage: providerCounts,
+    lastMarketDataTimestamp: timestamps.length ? new Date(timestamps[0]).toISOString() : null,
     rejectionCounts,
     dataUnavailableReasons: Array.from(new Set(couldNotAnalyse.map((item) => item.couldNotAnalyseReason).filter(Boolean))),
     disabledSymbols,
@@ -109,8 +142,14 @@ export default async function handler(req, res) {
   try {
     const body = req.method === "POST" ? req.body || {} : req.query || {};
     const offset = Math.max(0, Number(req.query.offset ?? body.offset) || 0);
+    const settings = cleanSettings(body);
+    const cacheKey = scannerCacheKey(settings, offset);
+    const force = body.force === true || body.force === "true";
+    if (!force && latestScannerCache.payload && latestScannerCache.key === cacheKey && Date.now() - latestScannerCache.cachedAt < LATEST_SCAN_TTL_MS) {
+      return res.status(200).json({ ...latestScannerCache.payload, fromScanCache: true });
+    }
     const engineResult = await runOpportunityEngine({
-      settings: cleanSettings(body),
+      settings,
       offset,
       analyser: analyseSymbol,
       marketSnapshotBatch: getMarketSnapshotBatch,
@@ -118,7 +157,7 @@ export default async function handler(req, res) {
     const scanSummary = buildScanSummary(engineResult);
     const trustedResults = scanSummary.status === "complete" ? engineResult.results : [];
 
-    return res.status(200).json({
+    const payload = {
       ok: true,
       engineVersion: engineResult.engineVersion,
       settings: engineResult.settings,
@@ -136,7 +175,11 @@ export default async function handler(req, res) {
       schedule: ["before market open", "during trading session", "after market close"],
       marketScopeMessage: scanSummary.marketScopeMessage,
       error: null,
-    });
+    };
+    latestScannerCache.key = cacheKey;
+    latestScannerCache.cachedAt = Date.now();
+    latestScannerCache.payload = payload;
+    return res.status(200).json(payload);
   } catch (error) {
     console.error("Freedom Trader Opportunity Engine scan failed:", error);
     const scanSummary = buildFailedFreedomScanSummary({ error: "Opportunity Engine could not complete the scan." });

@@ -229,6 +229,50 @@ test("scanner API states V1 is US-only and does not count ASX as unavailable", a
   assert.equal(summary.scannedSymbols.some((symbol) => symbol.endsWith(".AX")), false);
 });
 
+test("default V1 scan requests the full supported US universe in priority order", async () => {
+  const requested = [];
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["US"] },
+    marketSnapshotBatch: async (symbols) => {
+      requested.push(...symbols);
+      return new Map();
+    },
+    analyser: async (symbol) => analysis(symbol),
+  });
+  const summary = buildScanSummary(result);
+
+  assert.equal(result.supportedSymbols.length, 48);
+  assert.equal(result.scannedSymbols.length, 48);
+  assert.equal(summary.requestedCount, 48);
+  assert.equal(summary.analysedCount + summary.unavailableCount, summary.requestedCount);
+  assert.equal(summary.qualifiedCount + summary.notQualifiedCount, summary.analysedCount);
+  assert.equal(summary.totalsBalanced, true);
+  assert.deepEqual(requested.slice(0, 7), ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "AVGO"]);
+});
+
+test("scanner summary includes provider status and latest market-data timestamp", async () => {
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["US"], chunkSize: 2 },
+    marketSnapshotBatch: async () => new Map(),
+    analyser: async (symbol) => analysis(symbol, {
+      dataStatus: {
+        readyForScore: true,
+        actualCandleCount: 240,
+        latestTimestamp: "2026-07-30T21:30:00.000Z",
+        provider: "Twelve Data",
+      },
+    }),
+  });
+  const summary = buildScanSummary(result);
+
+  assert.equal(summary.providerStatus, "Available");
+  assert.equal(summary.providerUsage["Twelve Data"], 2);
+  assert.equal(summary.lastMarketDataTimestamp, "2026-07-30T21:30:00.000Z");
+  assert.equal(typeof summary.elapsedMs, "number");
+});
+
 test("current data failure clears stale score and trade-plan fields", () => {
   const unavailable = buildOpportunityDecision(analysis("OLD", {
     currentPrice: 100,
