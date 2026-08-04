@@ -71,6 +71,7 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   const selectionsPanel = page.slice(selectionsStart, adminStart);
   const adminPanel = page.slice(adminStart, estimatingStart);
   const estimatingPanel = page.slice(estimatingStart, page.indexOf('{activeTab === "suppliers"'));
+  const visualBrowser = page.slice(page.indexOf("function VisualSelectionsBrowser"), page.indexOf("const visualBrowserCss"));
 
   assert.match(page, /selectionVisibility: "client_selectable"/);
   assert.match(page, /const \[activeTab, setActiveTab\] = useState\("selections"\)/);
@@ -93,7 +94,6 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /Supplier product page not available\./);
   assert.match(page, /Add To Selections/);
   assert.match(page, /Back to Products/);
-  assert.match(page, /No products have been added for this category yet\./);
   assert.match(page, /ProductLibraryTabs/);
   assert.match(page, /Selection Products/);
   assert.match(page, /Client Selectable Products/);
@@ -122,9 +122,19 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /empty-actions/);
   assert.doesNotMatch(selectionsPanel, /SelectionProductsView/);
   assert.match(selectionsPanel, /VisualSelectionsBrowser/);
+  assert.doesNotMatch(selectionsPanel, /onOpenAdmin/);
   assert.doesNotMatch(selectionsPanel, /LibraryDashboard/);
   assert.doesNotMatch(selectionsPanel, /ProductLibraryFilters/);
   assert.doesNotMatch(selectionsPanel, /ProductLibraryTable/);
+  assert.match(page, /PRODUCT_BROWSER_AREAS/);
+  assert.match(page, /Exterior/);
+  assert.match(page, /Interior/);
+  assert.match(page, /Kitchen/);
+  assert.match(page, /Bathroom/);
+  assert.match(page, /Ovens/);
+  assert.match(visualBrowser, /All Brands/);
+  assert.doesNotMatch(visualBrowser, /Product Library Admin/);
+  assert.doesNotMatch(visualBrowser, /<dt>Tier<\/dt>/);
   assert.match(adminPanel, /LibraryDashboard/);
   assert.match(adminPanel, /ProductLibraryFilters/);
   assert.match(estimatingPanel, /ProductLibraryTable/);

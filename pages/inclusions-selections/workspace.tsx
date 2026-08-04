@@ -339,7 +339,6 @@ export default function InclusionsSelectionsWorkspacePage() {
                     <span className="tileProduct">{productName ?? "Choose product"}</span>
                     <span className="tileMeta">{meta || row.requirement.category}</span>
                   </span>
-                  <span className="tierBadge">{row.inheritedTierId?.replace("tier_", "").replace(/_/g, " ") ?? row.requirement.category}</span>
                   <span className="tilePrice">Allowance {allowance === undefined ? "not set" : `$${allowance.toFixed(0)}`}<br />Selected {selected === undefined ? "pending" : `$${selected.toFixed(0)}`}</span>
                   <span className={variation > 0 ? "tileVariation upgrade" : variation < 0 ? "tileVariation credit" : "tileVariation"}>{variation > 0 ? `+$${variation.toFixed(0)} upgrade` : variation < 0 ? `$${variation.toFixed(0)} credit` : "Included"}</span>
                 </button>
@@ -518,7 +517,6 @@ const workspaceStyles = `
   .modalProductTop { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
   .modalProductTop h3 { font-size: 18px; margin: 2px 0; }
   .modalProductTop p, .modalProductContent p { margin: 0; color: #657186; font-size: 13px; }
-  .tierBadge { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 3px 8px; background: #eef7f1; color: #1d6d47; font-size: 12px; font-weight: 800; text-transform: capitalize; }
   .productFacts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .productFacts div { border: 1px solid #edf1f6; border-radius: 6px; padding: 7px; }
   .productFacts dt { color: #657186; font-size: 11px; font-weight: 800; text-transform: uppercase; }
@@ -551,7 +549,7 @@ const workspaceStyles = `
   .validNotice { border-color: #b7e2c6; color: #1d6d47; background: #e9f8ef; }
   .stageActions { display: flex; justify-content: flex-end; gap: 10px; position: sticky; bottom: 0; background: rgba(245,247,250,.95); padding: 14px 0; flex-wrap: wrap; }
   .persistenceNote { color: #657186; font-size: 13px; }
-  @media (max-width: 1180px) { .selectionItemRow .tierBadge, .selectionItemRow .tilePrice { display: none; } }
+  @media (max-width: 1180px) { .selectionItemRow .tilePrice { display: none; } }
   @media (max-width: 1100px) { .workspaceLayout, .builderWorkspaceLayout, .workspaceSummary, .advancedWorkspaceGrid { grid-template-columns: 1fr; } .workspaceSide { order: 2; } }
   @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .kitchenHero h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .kitchenHero, .roomToolbar, .roomToolbarActions { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .selectionItemRow, .detailLayout, .detailFacts { grid-template-columns: 1fr; } .selectionItemRow { justify-items: start; } .tileVariation { justify-self: start; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } .roomToolbarActions input { width: 100%; } }
 `;

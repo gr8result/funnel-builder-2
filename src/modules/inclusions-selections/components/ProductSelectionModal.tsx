@@ -127,7 +127,6 @@ export function ProductSelectionModal(props: Props) {
                           <h3>{product.name}</h3>
                           <p>{[product.range, product.model, specLine(product, variant)].filter(Boolean).join(" / ")}</p>
                         </div>
-                        <span className="tierBadge">{product.tierId?.replace("tier_", "").replace(/_/g, " ") ?? "No tier"}</span>
                       </div>
                       <p>{product.description}</p>
                       <dl className="productFacts">

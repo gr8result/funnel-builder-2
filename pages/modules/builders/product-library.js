@@ -749,7 +749,6 @@ export default function BuilderProductLibraryPage() {
             onOpenJob={() => router.push({ pathname: "/modules/estimate-builder", query: router.query })}
             onAddProduct={openDrawerForNew}
             onOpenImports={() => changeTab("imports")}
-            onOpenAdmin={() => changeTab("admin")}
           />
         )}
 
@@ -1203,7 +1202,6 @@ function VisualSelectionsBrowser({
   onOpenJob,
   onAddProduct,
   onOpenImports,
-  onOpenAdmin,
 }) {
   const selectedArea = areas.find((area) => area.key === selectedAreaKey) || null;
   const areaProducts = selectedArea
@@ -1241,7 +1239,6 @@ function VisualSelectionsBrowser({
           <button type="button" className="ghost" onClick={onOpenJob}>Open Existing Job</button>
           <button type="button" onClick={onAddProduct}>Add Selection Product</button>
           <button type="button" className="ghost" onClick={onOpenImports}>Import Products</button>
-          <button type="button" className="text" onClick={onOpenAdmin}>Product Library Admin</button>
         </div>
       </header>
 
@@ -1380,7 +1377,6 @@ function VisualProductCard({ product, brandName, supplierName, selected, onOpenP
           <div><dt>Size</dt><dd>{product.size_dimensions || product.width || "-"}</dd></div>
           <div><dt>Finish</dt><dd>{[product.colour, product.finish].filter(Boolean).join(" / ") || "-"}</dd></div>
           <div><dt>Supplier</dt><dd>{supplierName || "-"}</dd></div>
-          <div><dt>Tier</dt><dd>{product.pricing_tier || "-"}</dd></div>
           <div><dt>Client Price</dt><dd>{productClientPrice(product)}</dd></div>
         </dl>
       </div>

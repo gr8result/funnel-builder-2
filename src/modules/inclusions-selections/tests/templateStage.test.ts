@@ -143,6 +143,7 @@ export async function runTemplateStageTests(): Promise<void> {
   assert(pageSource.includes("Select the area of the home you want to complete."), "Stage 2 should explain the area-first workflow.");
   assert(pageSource.includes("Exterior") && pageSource.includes("Interior"), "Stage 2 should start with Exterior and Interior choices.");
   assert(pageSource.includes("Bricks") && pageSource.includes("Cladding") && pageSource.includes("Driveway"), "Exterior should expose product-type tiles.");
+  assert(pageSource.indexOf('label: "Lighting"') < pageSource.indexOf('label: "Exterior Paint"'), "Exterior should keep Lighting before Exterior Paint in the builder-facing navigator.");
   assert(pageSource.includes("Kitchen") && pageSource.includes("Bathrooms") && pageSource.includes("Bedrooms"), "Interior should expose room tiles.");
   assert(pageSource.includes("Oven") && pageSource.includes("Cooktop") && pageSource.includes("Dishwasher"), "Kitchen should expose product picker tiles.");
   assert(!pageSource.includes("Room Templates and Inclusion Tiers"), "Stage 2 should not expose the retired template page title.");

@@ -71,11 +71,13 @@ export async function runProductPickerWorkflowTests(): Promise<void> {
   assert(modalSource.includes("role=\"dialog\"") && modalSource.includes("ProductSelectionModal"), "Product picker modal should render as a dialog.");
   assert(modalSource.includes("simplePickerControls") && modalSource.includes("All Brands") && modalSource.includes("Add To Selections"), "Modal should expose the simple visual picker controls and an Add To Selections button.");
   assert(!modalSource.includes("All suppliers") && !modalSource.includes("All tiers") && !modalSource.includes("Compare"), "Normal picker should not expose technical filter controls.");
+  assert(!modalSource.includes("tierBadge") && !modalSource.includes("<dt>Tier</dt>"), "Normal picker should not expose tier metadata.");
   const workspacePage = source("pages", "inclusions-selections", "workspace.tsx");
   assert(workspacePage.includes("Prepare Selection Items") && workspacePage.includes("handleGenerateRequirements"), "Workspace should expose a user-facing preparation step when selections have not been created yet.");
   assert(workspacePage.includes('area.name.toLowerCase() === "kitchen"'), "Workspace should default to Kitchen when it is available.");
   assert(workspacePage.includes("selectionItemList") && workspacePage.includes("selectionItemRow") && workspacePage.includes("tileImage"), "Workspace should render a screen-first selection item list with thumbnails.");
   assert(workspacePage.includes("openProductPicker(row.requirement.id)") && workspacePage.includes("tileProduct"), "Clicking a selection item should open the product picker and selected products should render on the row.");
+  assert(!workspacePage.includes("tierBadge"), "Normal workspace tiles should not expose tier terminology.");
   assert(workspacePage.includes("productModalBody") && workspacePage.includes("@media (max-width: 760px)"), "Modal should include desktop and mobile layout styles.");
   assert(modalSource.includes("ProductDetailView") && modalSource.includes("Back to Products") && modalSource.includes("Add To Selections"), "Product image/details flow should open a larger detail view.");
   assert(modalSource.includes('rel="noopener noreferrer"') && modalSource.includes("View Official Product Page"), "Supplier links should open exact stored URLs in a new tab.");
