@@ -65,7 +65,33 @@ test("creates one valid READY TO BUY trade with exact CMC instructions", () => {
   assert.match(result.greeting, /^Hi Grant/);
   assert.equal(result.orderInstructions.approvedTrades[0].symbol, "AVGO");
   assert.match(result.orderInstructions.approvedTrades[0].conditionalBuy, /10 AVGO shares/);
+  assert.equal(result.orderInstructions.approvedTrades[0].brokerState, "PLAN PREPARED");
+  assert.deepEqual(result.orderInstructions.approvedTrades[0].instructions.slice(0, 3), ["Open CMC Invest.", "Search for AVGO.", "Select Buy."]);
+  assert.doesNotMatch(JSON.stringify(result), /Tiger/i);
   assert.match(result.overallInstruction, /Prepare one conditional AVGO order in CMC/);
+});
+
+test("one-share positions do not recommend selling half a share", () => {
+  const result = report({
+    scannerRows: [],
+    positions: [{
+      symbol: "ONE",
+      companyName: "One Share Co",
+      quantity: 1,
+      entryPrice: 100,
+      currentPrice: 113,
+      takeSomeProfit: 113,
+      finalExit: 121,
+      safetyExit: 96,
+      status: "open",
+      priceTimestamp: "2026-07-29T21:30:00.000Z",
+    }],
+  });
+  const action = result.positionActions[0];
+  assert.equal(action.action, "TAKE SOME PROFIT");
+  assert.equal(action.partialExit.oneShareOnly, true);
+  assert.match(action.instruction, /This position contains one share/);
+  assert.doesNotMatch(action.instruction, /half/i);
 });
 
 test("ranks multiple opportunities to the best five", () => {

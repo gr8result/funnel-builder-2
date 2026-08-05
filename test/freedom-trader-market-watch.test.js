@@ -36,8 +36,9 @@ function plan(overrides = {}) {
 test("BUY NOW fires when entry is reached", () => {
   const result = evaluateWatchPlan(plan(), { price: 381.18 }, {}, NOW);
   assert.equal(result.action, "BUY NOW");
-  assert.equal(result.nextState, "ACTIVE");
+  assert.equal(result.nextState, "WAITING_FOR_ENTRY");
   assert.equal(result.triggerPrice, 381.18);
+  assert.match(result.reason, /Confirm any fill manually in CMC/);
 });
 
 test("SAFETY EXIT fires when stop is reached", () => {
@@ -87,6 +88,24 @@ test("duplicate alerts are suppressed between cycles", async () => {
   assert.equal(second.newAlerts.length, 0);
 });
 
+test("CMC fill confirmation is required before active position monitoring", () => {
+  const pending = evaluateWatchPlan(plan({ brokerState: "ORDER ENTERED IN CMC" }), { price: 381.18 }, {}, NOW);
+  assert.equal(pending.action, "BUY NOW");
+  assert.equal(pending.nextState, "WAITING_FOR_ENTRY");
+
+  const filled = evaluateWatchPlan(plan({ state: "ACTIVE", brokerState: "ORDER FILLED", actualEntryPrice: 381.1 }), { price: 389.5 }, {}, NOW);
+  assert.equal(filled.action, "TAKE SOME PROFIT");
+  assert.equal(filled.nextState, "PARTIAL_PROFIT");
+});
+
+test("normalises explicit CMC broker workflow states", () => {
+  const entered = normalizeTradePlan({ symbol: "AVGO", brokerState: "ORDER ENTERED IN CMC" }, {}, NOW);
+  const filled = normalizeTradePlan({ symbol: "AVGO", brokerState: "ORDER FILLED", actualEntryPrice: 381.1 }, {}, NOW);
+  assert.equal(entered.brokerState, "ORDER ENTERED IN CMC");
+  assert.equal(filled.brokerState, "ORDER FILLED");
+  assert.equal(filled.actualEntryPrice, 381.1);
+});
+
 test("refresh with no trigger keeps monitoring answer quiet", async () => {
   const result = await runMarketWatchCycle({
     plans: [plan()],
@@ -119,7 +138,8 @@ test("dashboard refresh prioritises active alert actions", async () => {
   });
   assert.equal(result.answer.heading, "ACTION REQUIRED");
   assert.equal(result.answer.action, "BUY NOW");
-  assert.match(result.answer.message, /Open CMC/);
+  assert.match(result.answer.message, /Review CMC/);
+  assert.doesNotMatch(result.answer.message, /Freedom bought|Freedom has bought|executed/i);
   assert.match(result.alerts[0].message, /^ACTION REQUIRED/);
   assert.equal(result.alerts[0].notificationTitle, "ACTION REQUIRED");
 });

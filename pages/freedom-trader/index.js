@@ -348,6 +348,8 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         maximumPlannedLoss: item.maximumPlannedLoss,
         reason: item.reason,
         confidence: item.technicalDetails?.score,
+        brokerState: "PLAN PREPARED",
+        source: "cmc-prepared-plan",
       }));
     if (!plans.length) return;
     const data = await marketWatchCommand("register", { plans });
@@ -372,6 +374,18 @@ export default function FreedomTraderDashboard({ passwordHash }) {
 
   async function runWatchCommand(action) {
     const data = await marketWatchCommand(action);
+    if (data?.ok) setMarketWatch(data);
+  }
+
+  async function updateWatchPlan(planId, action) {
+    const extra = {};
+    if (action === "order-filled") {
+      const value = window.prompt("Enter the actual filled price confirmed by CMC.");
+      const actualEntryPrice = Number(value);
+      if (!Number.isFinite(actualEntryPrice) || actualEntryPrice <= 0) return;
+      extra.actualEntryPrice = actualEntryPrice;
+    }
+    const data = await marketWatchCommand(action, { planId, ...extra });
     if (data?.ok) setMarketWatch(data);
   }
 
@@ -422,6 +436,22 @@ export default function FreedomTraderDashboard({ passwordHash }) {
             <summary>Alerts</summary>
             <p>{marketWatch?.monitoringLabel || "Monitoring paused"}. Last market update: {marketWatch?.lastSuccessfulMarketUpdate ? formatDateTime(marketWatch.lastSuccessfulMarketUpdate) : "--"}.</p>
             <p>{activeWatchPlanCount} active watch plan{activeWatchPlanCount === 1 ? "" : "s"}. {queuedAlertCount} queued alert{queuedAlertCount === 1 ? "" : "s"}.</p>
+            <p>Freedom monitors while this local application is running. CMC broker-side conditional orders remain the primary protection when Freedom is offline.</p>
+            <p>Next check: {marketWatch?.nextCheck ? formatDateTime(marketWatch.nextCheck) : "--"}. Market-data quality: {marketWatch?.cycles?.[0]?.marketDataQuality || "--"}.</p>
+            {marketWatch?.plans?.length ? marketWatch.plans.slice(0, 8).map((plan) => (
+              <article className="instruction" key={plan.id}>
+                <strong>{plan.companyName || plan.symbol}</strong>
+                <span>{plan.symbol} - {plan.brokerState || "PLAN PREPARED"} - {plan.state}</span>
+                <span>Buy trigger: {formatCurrency(plan.entryPrice, plan.currency || "USD")}</span>
+                <span>Safety Exit: {formatCurrency(plan.safetyExit, plan.currency || "USD")}</span>
+                <span>Take Some Profit: {formatCurrency(plan.takeSomeProfit, plan.currency || "USD")}</span>
+                <span>Final Exit: {formatCurrency(plan.finalExit, plan.currency || "USD")}</span>
+                <div className="alertButtons">
+                  {plan.brokerState === "PLAN PREPARED" ? <button type="button" onClick={() => updateWatchPlan(plan.id, "order-entered")}>Order Entered in CMC</button> : null}
+                  {plan.brokerState === "ORDER ENTERED IN CMC" ? <button type="button" onClick={() => updateWatchPlan(plan.id, "order-filled")}>Order Filled</button> : null}
+                </div>
+              </article>
+            )) : null}
             {desktopNotificationMessage ? <p>{desktopNotificationMessage}</p> : null}
             <p>{marketWatch?.answer?.message || (alerts.length ? `${alerts.length} saved alert${alerts.length === 1 ? "" : "s"} loaded.` : "No saved alerts were returned.")}</p>
             {marketWatch?.alerts?.length ? marketWatch.alerts.slice(0, marketWatch.settings?.maximumAlerts || 50).map((alert) => (
@@ -600,7 +630,9 @@ function ReportView({ report, showDetails, alerts, recentReports }) {
         {report.orderInstructions?.approvedTrades?.length ? report.orderInstructions.approvedTrades.map((item) => (
           <article className="instruction" key={item.symbol}>
             <strong>{item.symbol}</strong>
+            <span>{item.brokerState || "PLAN PREPARED"}</span>
             <span>Conditional buy: {item.conditionalBuy}</span>
+            {item.instructions?.length ? <ol>{item.instructions.map((line) => <li key={line}>{line}</li>)}</ol> : null}
             {(item.afterPurchase || []).map((line) => <span key={line}>{line}</span>)}
             <small>{item.disclaimer || "Freedom has not placed this order. Enter and confirm it through CMC."}</small>
           </article>

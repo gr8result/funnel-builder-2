@@ -80,6 +80,14 @@ function formatCurrency(value) {
   return Number.isFinite(value) ? money.format(value) : "--";
 }
 
+function formatCalculatedCurrency(value) {
+  return Number.isFinite(Number(value)) && Number(value) > 0 ? money.format(Number(value)) : "Not calculated";
+}
+
+function formatCalculatedNumber(value) {
+  return Number.isFinite(Number(value)) && Number(value) > 0 ? number.format(Number(value)) : "Not calculated";
+}
+
 function formatPercent(value) {
   return Number.isFinite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(2)}%` : "--";
 }
@@ -840,6 +848,15 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     openTradeConfirmation();
   }, [autoPrepareRequested, loading, tradeModalOpen, unlocked]);
 
+  useEffect(() => {
+    if (!tradeModalOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closeTradeModal();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [tradeModalOpen]);
+
   function addToWatchlist() {
     try {
       const key = "freedom-trader-scanner-watchlist";
@@ -997,13 +1014,22 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   }
 
   function openBroker() {
-    window.open("https://www.cmcmarkets.com/en-au/login", "_blank", "noopener,noreferrer");
+    window.open("https://www.cmcmarketsstockbroking.com.au/", "_blank", "noopener,noreferrer");
+  }
+
+  function closeTradeModal() {
+    setManualBuyForm(null);
+    setTradeModalOpen(false);
+  }
+
+  function closeTradeModalFromBackdrop(event) {
+    if (manualBuyForm || event.target !== event.currentTarget) return;
+    closeTradeModal();
   }
 
   function cancelSetup() {
     setSaveMessage(`${symbol} setup cancelled. No trade was placed.`);
-    setManualBuyForm(null);
-    setTradeModalOpen(false);
+    closeTradeModal();
   }
 
   async function createAllAlerts(draft = tradeDraft) {
@@ -1784,6 +1810,16 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const fibVisible = displayToggles.fibonacci && fibDrawing?.visible !== false;
   const fibOverlayReady = fibVisible && fibGeometry.anchor1 && fibGeometry.anchor2 && fibGeometry.body && fibGeometry.levels.length;
   const selectedFibLevel = fibGeometry.levels.find((level) => level.key === selectedFibLevelKey);
+  const modalCanBuy = Boolean(tradeDraft && tradeDraft.status === "BUY NOW" && !tradeDraft.blockers?.length);
+  const modalWhy = tradeDraft?.blockers?.[0]
+    || (modalCanBuy
+      ? "The price has reached your planned buy price and the risk is within your rules."
+      : Number.isFinite(Number(tradeDraft?.entryPrice)) && Number(tradeDraft.entryPrice) > 0
+        ? "The setup is not ready because the price has not reached your planned buy price yet."
+        : "Freedom cannot calculate a safe buy price from the current chart levels.");
+  const waitForPriceText = Number.isFinite(Number(tradeDraft?.entryPrice)) && Number(tradeDraft.entryPrice) > 0
+    ? formatCalculatedCurrency(tradeDraft.entryPrice)
+    : "Not calculated";
 
   if (checkingStorage) return <div className="boot">Opening Freedom Trader...</div>;
   if (!unlocked) return <PasswordGate passwordHash={passwordHash} onUnlock={() => setUnlocked(true)} />;
@@ -2136,43 +2172,65 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
       <footer>Freedom Trader is separate from Freedom Investment. Trading research only. Not financial advice.</footer>
 
       {tradeModalOpen && tradeDraft ? (
-        <div className="modalBackdrop">
-          <section className="modal">
-            <h2>Trade Plan Details</h2>
+        <div className="modalBackdrop" onMouseDown={closeTradeModalFromBackdrop}>
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="trade-plan-title">
+            <div className="modalHeader">
+              <div>
+                <span>Recommendation</span>
+                <h2 id="trade-plan-title">Should I buy?</h2>
+              </div>
+              <button className="modalClose" type="button" onClick={closeTradeModal} aria-label="Close trade plan">Close</button>
+            </div>
+            <div className={`recommendationCard ${modalCanBuy ? "yes" : "no"}`}>
+              <strong>{modalCanBuy ? "YES" : "NO"}</strong>
+              <p>{modalWhy}</p>
+            </div>
             {tradeDraft.blockers?.length ? (
               <div className="modalWarning">
-                <strong>Setup blocked</strong>
+                <strong>Do not buy yet</strong>
                 {tradeDraft.blockers.map((blocker) => <span key={blocker}>{blocker}</span>)}
               </div>
             ) : null}
-            <div className="confirmationGrid">
+            <div className="plainPlanGrid">
               <Metric label="Company" value={tradeDraft.companyName} />
-              <Metric label="Order Type" value={tradeDraft.orderType} />
-              <Metric label="Current Verified Price" value={formatCurrency(tradeDraft.currentPrice)} />
-              <Metric label="Entry Price" value={formatCurrency(tradeDraft.entryPrice)} />
-              <Metric label="Stop Loss" value={formatCurrency(tradeDraft.stopPrice)} />
-              <Metric label="Target 1" value={formatCurrency(tradeDraft.targetPrice)} />
-              {Number.isFinite(tradeDraft.targetPrice2) ? <Metric label="Target 2" value={formatCurrency(tradeDraft.targetPrice2)} /> : null}
-              {Number.isFinite(tradeDraft.expectedProfitTarget2) ? <Metric label="Expected Profit (Target 2)" value={formatCurrency(tradeDraft.expectedProfitTarget2)} /> : null}
-              <Metric label="Distance to Entry" value={`${formatCurrency(Math.abs(tradeDraft.distanceToEntry))} / ${formatPercent(Math.abs(tradeDraft.distanceToEntryPercent))}`} />
-              <Metric label="Shares" value={`${tradeDraft.quantity || 0}`} />
-              <Metric label="Capital" value={formatCurrency(tradeDraft.capitalRequired)} />
-              <Metric label="Maximum Loss" value={formatCurrency(tradeDraft.maximumLoss)} />
-              <Metric label="Expected Profit" value={formatCurrency(tradeDraft.expectedProfit)} />
-              <Metric label="Percentage Return" value={formatPercent(tradeDraft.percentageReturn)} />
-              <Metric label="Risk/Reward Ratio" value={formatNumber(tradeDraft.riskRewardRatio)} />
-              <Metric label="Holding Time" value={tradeDraft.holdingTime} />
-              <Metric label="Status" value={tradeDraft.status} />
+              {!modalCanBuy ? <Metric label="Wait for this buy price" value={waitForPriceText} /> : null}
+              {modalCanBuy ? <Metric label="How much could I lose?" value={formatCalculatedCurrency(tradeDraft.maximumLoss)} /> : null}
+              {modalCanBuy ? <Metric label="How much could I make?" value={formatCalculatedCurrency(tradeDraft.expectedProfit)} /> : null}
+              <Metric label="Shares to buy" value={formatCalculatedNumber(tradeDraft.quantity)} />
             </div>
-            <div className="confirmationMessage">
-              <strong>{tradeDraft.status}</strong>
-              <span>
-                Current price is {formatCurrency(tradeDraft.currentPrice)}. Your planned entry is {formatCurrency(tradeDraft.entryPrice)}.
-                {" "}The price is {formatCurrency(Math.abs(tradeDraft.distanceToEntry))} {tradeDraft.distanceToEntry > 0 ? "above" : "below"} entry.
-                {" "}{tradeDraft.status === "BUY NOW" ? "The chart setup is at or below the planned entry." : "Wait for the pullback before buying."}
-              </span>
-            </div>
-            <p className="brokerNotice">TRADE PLAN ONLY - PLACE AND CONFIRM THE ORDER THROUGH YOUR BROKER. Record the trade only after your external broker confirms the fill.</p>
+            <section className="cmcInstructions">
+              <h3>Enter this in CMC</h3>
+              <ol>
+                <li>Open CMC Invest.</li>
+                <li>Search for {symbol}.</li>
+                <li>Select Buy.</li>
+                <li>Choose a Limit or conditional order.</li>
+                <li>Enter {formatCalculatedNumber(tradeDraft.quantity)} whole shares.</li>
+                <li>Enter the buy-trigger price of {formatCalculatedCurrency(tradeDraft.entryPrice)}.</li>
+                <li>Review and submit the order in CMC.</li>
+                <li>Add the Safety Exit and profit instructions supported by the CMC order workflow.</li>
+                <li>Return to Freedom and record the actual filled price only after CMC confirms execution.</li>
+              </ol>
+            </section>
+            <p className="brokerNotice">Freedom has not placed this order. Enter and confirm the order manually through CMC.</p>
+            <details className="technicalDetails">
+              <summary>Show Technical Details</summary>
+              <div className="confirmationGrid">
+                <Metric label="Current Price" value={formatCalculatedCurrency(tradeDraft.currentPrice)} />
+                <Metric label="Buy Price" value={formatCalculatedCurrency(tradeDraft.entryPrice)} />
+                <Metric label="Safety Exit" value={formatCalculatedCurrency(tradeDraft.stopPrice)} />
+                <Metric label="Take Some Profit" value={formatCalculatedCurrency(tradeDraft.targetPrice)} />
+                <Metric label="Final Exit" value={formatCalculatedCurrency(tradeDraft.targetPrice2)} />
+                <Metric label="Target 2 Profit" value={formatCalculatedCurrency(tradeDraft.expectedProfitTarget2)} />
+                <Metric label="Distance to Buy Price" value={Number.isFinite(Number(tradeDraft.distanceToEntry)) ? `${formatCalculatedCurrency(Math.abs(tradeDraft.distanceToEntry))} / ${formatPercent(Math.abs(tradeDraft.distanceToEntryPercent))}` : "Not calculated"} />
+                <Metric label="Capital Required" value={formatCalculatedCurrency(tradeDraft.capitalRequired)} />
+                <Metric label="Expected Profit" value={formatCalculatedCurrency(tradeDraft.expectedProfit)} />
+                <Metric label="Percentage Return" value={formatPercent(tradeDraft.percentageReturn)} />
+                <Metric label="Reward For Risk" value={formatCalculatedNumber(tradeDraft.riskRewardRatio)} />
+                <Metric label="Estimated Holding Time" value={tradeDraft.holdingTime || "Not calculated"} />
+                <Metric label="Plan Status" value={modalCanBuy ? "Ready to buy" : "Wait"} />
+              </div>
+            </details>
             {manualBuyForm ? (
               <div className="manualTradeForm">
                 <label>Actual purchase price<input value={manualBuyForm.actualPurchasePrice} onChange={(event) => setManualBuyForm((current) => ({ ...current, actualPurchasePrice: event.target.value }))} type="number" /></label>
@@ -2186,7 +2244,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               </div>
             ) : null}
             <div className="modalActions">
-              <button type="button" onClick={openBroker}>Open Broker</button>
+              <button type="button" onClick={openBroker}>Open CMC</button>
               <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create Alert"}</button>
               <button type="button" onClick={addToWatchlist}>Add to Watchlist</button>
               {!manualBuyForm ? <button type="button" className="primaryAction" onClick={startManualBuy} disabled={tradeDraft.blockers?.length}>Mark as Purchased</button> : null}
@@ -2342,19 +2400,35 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .loss { color: #ff9a9a!important; }
         footer { font-size: 13px; margin-top: 20px; padding-bottom: 12px; }
         .modalBackdrop { align-items: center; background: rgba(0,0,0,.72); display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 50; }
-        .modal { background: #081013; border: 1px solid rgba(255,153,0,.24); border-radius: 8px; box-shadow: 0 30px 120px rgba(0,0,0,.62); display: grid; gap: 14px; max-height: calc(100vh - 48px); max-width: 720px; overflow: auto; padding: 22px; width: 100%; }
-        .modalGrid, .confirmationGrid { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+        .modal { background: #081013; border: 1px solid rgba(255,153,0,.24); border-radius: 8px; box-shadow: 0 30px 120px rgba(0,0,0,.62); display: grid; gap: 16px; max-height: calc(100vh - 48px); max-width: 1000px; overflow: auto; padding: 24px; width: min(100%, 1000px); }
+        .modalHeader { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
+        .modalHeader span { color: #ffcc8a; display: block; font-size: 12px; font-weight: 950; letter-spacing: .08em; margin-bottom: 5px; text-transform: uppercase; }
+        .modalHeader h2 { font-size: 34px; line-height: 1; }
+        .modalClose { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #fff; min-width: 76px; }
+        .recommendationCard { border-radius: 8px; display: grid; gap: 8px; padding: 18px; }
+        .recommendationCard strong { color: #fff; font-size: 54px; line-height: 1; }
+        .recommendationCard p { color: #f5f7f8; font-size: 18px; font-weight: 850; line-height: 1.35; }
+        .recommendationCard.yes { background: rgba(35,209,139,.16); border: 1px solid rgba(35,209,139,.42); }
+        .recommendationCard.no { background: rgba(255,153,0,.14); border: 1px solid rgba(255,153,0,.38); }
+        .plainPlanGrid { display: grid; gap: 12px; grid-template-columns: repeat(4,minmax(0,1fr)); }
+        .technicalDetails { border-top: 1px solid rgba(255,255,255,.1); padding-top: 4px; }
+        .technicalDetails summary { color: #d7efff; cursor: pointer; font-weight: 950; min-height: 34px; padding-top: 8px; }
+        .technicalDetails[open] summary { margin-bottom: 12px; }
+        .modalGrid, .confirmationGrid { display: grid; gap: 12px; grid-template-columns: repeat(3,minmax(0,1fr)); }
         .manualTradeForm { display: grid; gap: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); }
         .confirmationMessage { background: rgba(255,153,0,.1); border: 1px solid rgba(255,153,0,.24); border-radius: 8px; color: #ffd7a1; display: grid; gap: 6px; line-height: 1.45; padding: 12px; }
         .confirmationMessage strong { color: #fff; }
         .modalWarning { background: rgba(255,92,92,.14); border: 1px solid rgba(255,92,92,.3); border-radius: 8px; color: #ffd8d3; display: grid; gap: 5px; padding: 12px; }
         .modalWarning strong { color: #fff; }
         .brokerNotice { background: rgba(255,153,0,.1); border: 1px solid rgba(255,153,0,.24); border-radius: 8px; color: #ffd7a1; font-weight: 850; line-height: 1.45; padding: 12px; }
+        .cmcInstructions { background: rgba(29,155,255,.1); border: 1px solid rgba(29,155,255,.26); border-radius: 8px; display: grid; gap: 10px; padding: 14px 16px; }
+        .cmcInstructions h3 { margin: 0; }
+        .cmcInstructions ol { color: #dcebf2; display: grid; gap: 6px; line-height: 1.45; margin: 0; padding-left: 22px; }
         .riskPreview { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 14px; }
         .riskPreview span { color: #aebdc4; display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; }
         .riskPreview strong { color: #fff; display: block; font-size: 24px; margin-top: 6px; }
         .riskPreview small { color: #ffd7a1; display: block; margin-top: 6px; }
-        .modalActions { display: flex; gap: 10px; }
+        .modalActions { display: flex; flex-wrap: wrap; gap: 10px; }
         :global(.signal) { border-radius: 999px; display: inline-flex; font-size: 12px; font-weight: 950; padding: 8px 12px; }
         :global(.signal.strong), :global(.signal.strongBuy), :global(.signal.buy) { background: rgba(35,209,139,.14); border: 1px solid rgba(35,209,139,.38); color: #b8f4e6; }
         :global(.signal.strong), :global(.signal.strongBuy) { background: rgba(34,255,163,.18); border-color: rgba(34,255,163,.55); color: #c8ffe8; }
@@ -2364,7 +2438,8 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         :global(.signal.noTrade) { background: rgba(255,92,92,.14); border: 1px solid rgba(255,92,92,.38); color: #ffc8c8; }
         :global(.signal.info) { background: rgba(29,155,255,.14); border: 1px solid rgba(29,155,255,.38); color: #d7efff; }
         @media (max-width: 1100px) { .cards, .split, .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 760px) { .page { padding: 88px 16px 16px; } .cards, .split, .grid, .alerts { grid-template-columns: 1fr; } .heroMain { align-items: flex-start; flex-direction: column; } .chart { height: 520px; } }
+        @media (max-width: 1100px) { .plainPlanGrid, .confirmationGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+        @media (max-width: 760px) { .page { padding: 88px 16px 16px; } .cards, .split, .grid, .alerts, .plainPlanGrid, .confirmationGrid { grid-template-columns: 1fr; } .heroMain { align-items: flex-start; flex-direction: column; } .chart { height: 520px; } .modalBackdrop { padding: 12px; } .modal { max-height: calc(100vh - 24px); padding: 18px; } .modalHeader h2 { font-size: 28px; } .recommendationCard strong { font-size: 44px; } }
       `}</style>
     </div>
   );
