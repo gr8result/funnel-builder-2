@@ -14,6 +14,13 @@ const DIMENSION_TICK_MAX_LENGTH = 28;
 const DIMENSION_TICK_FACE_TOLERANCE = 5;
 const DIMENSION_CHAIN_MIN_TICKS = 3;
 const MIN_CONFIDENCE = 0.64;
+const FACE_FRAGMENT_GAP = 10;
+const SMALL_FRAGMENT_GAP = BAND_GAP_TOLERANCE;
+const MAX_WINDOW_GAP = 70;
+const MAX_DOOR_GAP = 95;
+const MAX_GARAGE_GAP = 260;
+const JAMB_ALONG_TOLERANCE = 9;
+const OPENING_SYMBOL_PAD = 10;
 const REJECTED_TAGS = new Set([
   "annotation",
   "dimension",
@@ -35,6 +42,13 @@ const REJECTED_TAGS = new Set([
   "cabinetry",
   "bench",
   "appliance",
+  "window",
+  "window-symbol",
+  "glazing",
+  "door",
+  "door-symbol",
+  "garage-door",
+  "opening",
   "note",
   "arrow",
   "setback",
@@ -51,6 +65,10 @@ function rawSegments(planGeometryIndex) {
 
 function segmentTag(segment) {
   return String(segment?.geometryType || segment?.objectType || segment?.role || segment?.type || segment?.classification || "").toLowerCase();
+}
+
+function segmentText(segment) {
+  return String(segment?.label || segment?.text || segment?.name || segment?.annotation || "").toLowerCase();
 }
 
 function bounds(segment) {
@@ -149,25 +167,166 @@ function overlap(a, b) {
   return Math.max(0, Math.min(a.endAlong, b.endAlong) - Math.max(a.startAlong, b.startAlong));
 }
 
-function intervalContaining(intervals, along) {
-  return intervals.find((interval) => along >= interval.start - BAND_GAP_TOLERANCE && along <= interval.end + BAND_GAP_TOLERANCE) || null;
+function lineMidAlong(line, seed) {
+  const mid = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
+  return mid.x * seed.ux + mid.y * seed.uy;
 }
 
-function mergeIntervals(lines, alongHint) {
-  const intervals = lines
+function lineFixedRangeForSeed(line, seed) {
+  const aFixed = line.a.x * seed.nx + line.a.y * seed.ny;
+  const bFixed = line.b.x * seed.nx + line.b.y * seed.ny;
+  return { min: Math.min(aFixed, bFixed), max: Math.max(aFixed, bFixed) };
+}
+
+function evidenceNearGap(rawLines, seed, faceAFixed, faceBFixed, gap) {
+  const minFixed = Math.min(faceAFixed, faceBFixed) - Math.max(6, Math.abs(faceAFixed - faceBFixed) * 0.8);
+  const maxFixed = Math.max(faceAFixed, faceBFixed) + Math.max(6, Math.abs(faceAFixed - faceBFixed) * 0.8);
+  return rawLines
+    .filter((line) => {
+      const along = lineMidAlong(line, seed);
+      if (along < gap.start - OPENING_SYMBOL_PAD || along > gap.end + OPENING_SYMBOL_PAD) return false;
+      const fixed = lineFixedRangeForSeed(line, seed);
+      return fixed.min <= maxFixed && fixed.max >= minFixed;
+    })
+    .map((line) => ({
+      id: line.id,
+      tag: segmentTag(line),
+      text: segmentText(line),
+      along: lineMidAlong(line, seed),
+      angleDiff: angleDiffDeg(line.angle, seed.angle),
+      length: line.length,
+    }));
+}
+
+function jambEvidenceAt(rawLines, seed, faceAFixed, faceBFixed, along) {
+  const minFixed = Math.min(faceAFixed, faceBFixed) - JUNCTION_FACE_TOLERANCE;
+  const maxFixed = Math.max(faceAFixed, faceBFixed) + JUNCTION_FACE_TOLERANCE;
+  const thickness = Math.abs(faceAFixed - faceBFixed);
+  return rawLines
+    .filter((line) => {
+      const diff = angleDiffDeg(line.angle, seed.angle);
+      if (diff < 65 || diff > 115) return false;
+      if (line.length < Math.max(2, thickness * 0.45) || line.length > Math.max(34, thickness * 5)) return false;
+      const lineAlong = lineMidAlong(line, seed);
+      if (Math.abs(lineAlong - along) > JAMB_ALONG_TOLERANCE) return false;
+      const fixed = lineFixedRangeForSeed(line, seed);
+      return fixed.min <= maxFixed && fixed.max >= minFixed;
+    })
+    .map((line) => line.id)
+    .filter(Boolean);
+}
+
+function openingTypeFromEvidence(gap, evidence, startJambs, endJambs) {
+  const width = gap.end - gap.start;
+  const joined = evidence.map((entry) => `${entry.tag} ${entry.text}`).join(" ");
+  const hasJambs = startJambs.length > 0 && endJambs.length > 0;
+  if (/garage|panel\s*lift|roller|gd\b/.test(joined)) return { type: "garage-door", confidence: 0.9, reason: "garage-door symbol or annotation in wall gap" };
+  if (/sliding|slider|stacker|sd\b/.test(joined)) return { type: "door", confidence: 0.86, reason: "sliding-door evidence in wall gap" };
+  if (/door|entry|external-door|hinge|swing|arc|\bd\b/.test(joined)) return { type: "door", confidence: 0.84, reason: "door symbol evidence in wall gap" };
+  if (/window|glaz|sill|\bw\d*\b/.test(joined)) return { type: "window", confidence: 0.84, reason: "window/glazing evidence in wall gap" };
+  const thinParallelLines = evidence.filter((entry) => entry.angleDiff <= PARALLEL_TOLERANCE_DEG && entry.length >= Math.min(14, width * 0.35)).length;
+  if (width <= MAX_WINDOW_GAP && (hasJambs || thinParallelLines >= 1)) return { type: "window", confidence: hasJambs ? 0.74 : 0.68, reason: hasJambs ? "window-sized gap bounded by jambs" : "window-sized gap with parallel glazing evidence" };
+  if (width <= MAX_DOOR_GAP && hasJambs) return { type: "door", confidence: 0.72, reason: "door-sized gap bounded by jambs" };
+  if (width <= MAX_GARAGE_GAP && hasJambs && thinParallelLines >= 2) return { type: "garage-door", confidence: 0.76, reason: "wide garage-door-sized gap with jambs and panel evidence" };
+  if (width <= MAX_WINDOW_GAP && hasJambs) return { type: "unknown-opening", confidence: 0.66, reason: "supported opening-sized wall gap" };
+  return null;
+}
+
+function normalizeFaceIntervals(lines) {
+  return lines
     .map((line) => ({ start: line.startAlong, end: line.endAlong, ids: [line.id].filter(Boolean) }))
+    .sort((a, b) => a.start - b.start || a.end - b.end)
+    .reduce((merged, interval) => {
+      const current = merged[merged.length - 1];
+      if (current && interval.start <= current.end + FACE_FRAGMENT_GAP) {
+        current.end = Math.max(current.end, interval.end);
+        current.ids.push(...interval.ids);
+      } else {
+        merged.push({ ...interval });
+      }
+      return merged;
+    }, []);
+}
+
+function buildWallAssemblyInterval({ faceALines, faceBLines, rawLines, seed, faceAFixed, faceBFixed, pointerAlong, pointerTolerance = 0 }) {
+  const sourceIntervals = [...normalizeFaceIntervals(faceALines), ...normalizeFaceIntervals(faceBLines)]
     .sort((a, b) => a.start - b.start || a.end - b.end);
+  if (!sourceIntervals.length) return null;
   const merged = [];
-  intervals.forEach((interval) => {
+  sourceIntervals.forEach((interval) => {
     const current = merged[merged.length - 1];
-    if (current && interval.start <= current.end + BAND_GAP_TOLERANCE) {
+    if (current && interval.start <= current.end + FACE_FRAGMENT_GAP) {
       current.end = Math.max(current.end, interval.end);
       current.ids.push(...interval.ids);
     } else {
       merged.push({ ...interval });
     }
   });
-  return intervalContaining(merged, alongHint) || merged.sort((a, b) => (b.end - b.start) - (a.end - a.start))[0] || null;
+
+  const assemblies = [];
+  let current = { start: merged[0].start, end: merged[0].end, solids: [{ start: merged[0].start, end: merged[0].end }], openings: [], sourceIds: [...merged[0].ids] };
+  for (let index = 1; index < merged.length; index += 1) {
+    const next = merged[index];
+    const gap = { start: current.end, end: next.start };
+    const gapWidth = gap.end - gap.start;
+    const startJambs = jambEvidenceAt(rawLines, seed, faceAFixed, faceBFixed, gap.start);
+    const endJambs = jambEvidenceAt(rawLines, seed, faceAFixed, faceBFixed, gap.end);
+    const evidence = evidenceNearGap(rawLines, seed, faceAFixed, faceBFixed, gap);
+    const opening = openingTypeFromEvidence(gap, evidence, startJambs, endJambs);
+    if (opening) {
+      current.openings.push({ ...gap, ...opening, evidenceIds: evidence.map((entry) => entry.id).filter(Boolean), startJambIds: startJambs, endJambIds: endJambs });
+      current.end = Math.max(current.end, next.end);
+      current.solids.push({ start: next.start, end: next.end });
+      current.sourceIds.push(...next.ids);
+      continue;
+    }
+    if (gapWidth <= SMALL_FRAGMENT_GAP) {
+      current.end = Math.max(current.end, next.end);
+      current.solids[current.solids.length - 1].end = Math.max(current.solids[current.solids.length - 1].end, next.end);
+      current.sourceIds.push(...next.ids);
+      continue;
+    }
+
+    assemblies.push(current);
+    current = { start: next.start, end: next.end, solids: [{ start: next.start, end: next.end }], openings: [], sourceIds: [...next.ids] };
+  }
+  assemblies.push(current);
+  if (!Number.isFinite(pointerAlong)) return assemblies.sort((a, b) => (b.end - b.start) - (a.end - a.start))[0] || null;
+  return assemblies.find((assembly) => pointerAlong >= assembly.start - pointerTolerance && pointerAlong <= assembly.end + pointerTolerance) || null;
+}
+
+function wallSectionsFromAssembly(assembly, startAlong, length) {
+  const sections = [];
+  const openings = [...assembly.openings].sort((a, b) => a.start - b.start);
+  let cursor = startAlong;
+  openings.forEach((opening, index) => {
+    if (opening.start > cursor) {
+      sections.push({
+        type: "solid",
+        startOffset: Math.max(0, cursor - startAlong),
+        endOffset: Math.min(length, opening.start - startAlong),
+        confidence: 0.82,
+      });
+    }
+    sections.push({
+      type: opening.type,
+      startOffset: Math.max(0, opening.start - startAlong),
+      endOffset: Math.min(length, opening.end - startAlong),
+      openingId: `op-${index + 1}`,
+      confidence: opening.confidence,
+      reason: opening.reason,
+    });
+    cursor = Math.max(cursor, opening.end);
+  });
+  if (cursor < startAlong + length) {
+    sections.push({
+      type: "solid",
+      startOffset: Math.max(0, cursor - startAlong),
+      endOffset: length,
+      confidence: 0.82,
+    });
+  }
+  return sections.filter((section) => section.endOffset - section.startOffset > 0.5);
 }
 
 function lineCrossesFaceAt(line, seed, faceFixed, interval) {
@@ -307,13 +466,12 @@ function makeCandidate(seed, partner, lines, rawLines, pointer, pointerDistance,
   }
   const faceALines = sameFaceLines(lines, seed, faceAFixed);
   const faceBLines = sameFaceLines(lines, seed, faceBFixed);
-  const intervalA = mergeIntervals(faceALines, pointerAlong);
-  const intervalB = mergeIntervals(faceBLines, pointerAlong);
-  if (!intervalA || !intervalB) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, "missing wall face interval") };
+  const assemblyInterval = buildWallAssemblyInterval({ faceALines, faceBLines, rawLines, seed, faceAFixed, faceBFixed, pointerAlong, pointerTolerance: Math.max(2, searchRadiusDocUnits) });
+  if (!assemblyInterval) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, "missing wall face interval") };
 
   const rawInterval = {
-    start: Math.min(intervalA.start, intervalB.start),
-    end: Math.max(intervalA.end, intervalB.end),
+    start: assemblyInterval.start,
+    end: assemblyInterval.end,
   };
   const dimensionEvidence = dimensionChainEvidence(seed, partner, rawLines, rawInterval);
   if (dimensionEvidence) {
@@ -330,31 +488,52 @@ function makeCandidate(seed, partner, lines, rawLines, pointer, pointerDistance,
   const endJunction = pointOn(seed, endAlong, centerFixed);
   const faceA = { start: pointOn(seed, startAlong, faceAFixed), end: pointOn(seed, endAlong, faceAFixed) };
   const faceB = { start: pointOn(seed, startAlong, faceBFixed), end: pointOn(seed, endAlong, faceBFixed) };
-  const faceSupport = new Set([...(intervalA.ids || []), ...(intervalB.ids || [])]).size;
+  const faceSupport = new Set(assemblyInterval.sourceIds || []).size;
+  const sections = wallSectionsFromAssembly(assemblyInterval, startAlong, length);
+  const openings = sections
+    .filter((section) => section.type !== "solid")
+    .map((section, index) => ({
+      id: section.openingId || `op-${index + 1}`,
+      type: section.type,
+      startOffset: section.startOffset,
+      endOffset: section.endOffset,
+      width: section.endOffset - section.startOffset,
+      confidence: section.confidence,
+      reason: section.reason,
+    }));
+  const pointerDistanceForDiagnostics = pointerAlong >= startAlong - BAND_GAP_TOLERANCE && pointerAlong <= endAlong + BAND_GAP_TOLERANCE
+    ? Math.min(pointerDistance, bandDistance)
+    : pointerDistance;
   const thicknessScore = thickness >= 5 && thickness <= 22 ? 0.16 : 0.08;
   const lengthScore = Math.min(0.18, length / 900);
   const supportScore = Math.min(0.16, faceSupport * 0.035);
-  const distanceScore = Math.max(0, 0.16 - pointerDistance / 90);
+  const distanceScore = Math.max(0, 0.16 - pointerDistanceForDiagnostics / 90);
   const confidence = Math.min(0.96, 0.38 + thicknessScore + lengthScore + supportScore + distanceScore);
   if (confidence < MIN_CONFIDENCE) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `confidence ${confidence.toFixed(2)} below threshold`) };
 
   return {
     id: stableWallId(startJunction, endJunction, thickness),
+    axis: { start: startJunction, end: endJunction },
     centreline: { start: startJunction, end: endJunction },
+    faces: { exterior: [faceA.start, faceA.end], interior: [faceB.start, faceB.end] },
     faceA,
     faceB,
     thickness,
+    sections,
+    openings,
     startJunction,
     endJunction,
     confidence,
     endpointReview: supportedInterval.crossings.length < 2 ? "Needs endpoint review" : null,
     source: "local-vector-wall-band",
-    sourceSegmentIds: [...new Set([...(intervalA.ids || []), ...(intervalB.ids || [])])],
+    sourceSegmentIds: [...new Set(assemblyInterval.sourceIds || [])],
     diagnostics: {
-      pointerDistance,
+      pointerDistance: pointerDistanceForDiagnostics,
       candidateLength: length,
       parallelFaces: 2,
       estimatedThickness: thickness,
+      openingCount: openings.length,
+      bridgeReasons: openings.map((opening) => opening.reason),
       startJunction,
       endJunction,
       startSource: supportedInterval.startSource,
@@ -367,6 +546,7 @@ function makeCandidate(seed, partner, lines, rawLines, pointer, pointerDistance,
       centreline: { start: startJunction, end: endJunction },
       thickness,
       confidence,
+      openings,
     }),
   };
 }
@@ -392,12 +572,12 @@ export function findHighlightableWallAtPoint({ point, planGeometryIndex, page = 
       const projected = nearestPointOnSegment(point, line.a, line.b);
       return { line, distance: distance(point, projected) };
     })
-    .filter((hit) => hit.distance <= radius + MAX_THICKNESS)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 12);
+    .filter((hit) => hit.distance <= radius + MAX_GARAGE_GAP)
+    .sort((a, b) => a.distance - b.distance);
 
   const candidates = [];
-  seedHits.forEach(({ line: seed, distance: pointerDistance }) => {
+  const seedLines = seedHits.length ? seedHits.slice(0, 32) : lines.slice(0, 80).map((line) => ({ line, distance: 0 }));
+  seedLines.forEach(({ line: seed, distance: pointerDistance }) => {
     lines.forEach((partner) => {
       if (partner.id === seed.id) return;
       if (angleDiffDeg(seed.angle, partner.angle) > PARALLEL_TOLERANCE_DEG) return;

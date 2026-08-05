@@ -329,6 +329,7 @@ function centroid(vertices) {
 }
 
 function wallLine(wall) {
+  if (wall?.axis?.start && wall?.axis?.end) return wall.axis;
   if (wall?.centreline?.start && wall?.centreline?.end) return wall.centreline;
   if (wall?.startJunction && wall?.endJunction) return { start: wall.startJunction, end: wall.endJunction };
   if (wall?.start && wall?.end) return { start: wall.start, end: wall.end };
@@ -338,10 +339,26 @@ function wallLine(wall) {
 function HighlightableWallObject({ wall, project, selected, hovered }) {
   const line = wallLine(wall);
   if (!line) return null;
-  const a = project(line.start);
-  const b = project(line.end);
   const color = selected ? HIGHLIGHTER_WALL_COLOR.selected : hovered ? HIGHLIGHTER_WALL_COLOR.hover : HIGHLIGHTER_WALL_COLOR.normal;
   const strokeWidth = selected ? 2.5 : hovered ? 2 : 2;
+  const totalLength = distance(line.start, line.end) || 1;
+  const sections = Array.isArray(wall.sections) && wall.sections.length
+    ? wall.sections
+    : [{ type: "solid", startOffset: 0, endOffset: totalLength }];
+  const pointAtOffset = (offset) => {
+    const t = Math.max(0, Math.min(1, Number(offset || 0) / totalLength));
+    return project({
+      x: line.start.x + (line.end.x - line.start.x) * t,
+      y: line.start.y + (line.end.y - line.start.y) * t,
+    });
+  };
+  const labelForOpening = (type, index) => {
+    if (type === "window") return `W${index + 1}`;
+    if (type === "garage-door") return `GD${index + 1}`;
+    if (type === "door") return `D${index + 1}`;
+    return `O${index + 1}`;
+  };
+  let openingIndex = 0;
   return (
     <g
       data-testid={selected ? "highlighted-exterior-wall" : "highlightable-wall-preview"}
@@ -349,16 +366,33 @@ function HighlightableWallObject({ wall, project, selected, hovered }) {
       data-highlighted={selected ? "true" : "false"}
       data-hovered={hovered ? "true" : "false"}
     >
-      <line
-        x1={a.x}
-        y1={a.y}
-        x2={b.x}
-        y2={b.y}
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        opacity={selected ? 0.78 : hovered ? 0.95 : 0.35}
-      />
+      {sections.map((section, index) => {
+        const a = pointAtOffset(section.startOffset);
+        const b = pointAtOffset(section.endOffset);
+        const isOpening = section.type !== "solid";
+        const label = isOpening ? labelForOpening(section.type, openingIndex++) : "";
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        return (
+          <g key={`${section.type}-${index}`} data-testid={isOpening ? "highlighted-wall-opening" : "highlighted-wall-solid"} data-opening-type={isOpening ? section.type : undefined}>
+            <line
+              x1={a.x}
+              y1={a.y}
+              x2={b.x}
+              y2={b.y}
+              stroke={color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              strokeDasharray={isOpening ? "3 5" : undefined}
+              opacity={isOpening ? 0.62 : selected ? 0.78 : hovered ? 0.95 : 0.35}
+            />
+            {isOpening ? (
+              <text x={mid.x} y={mid.y - 5} textAnchor="middle" fontSize={9} fontWeight={800} fill={color}>
+                {label}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
     </g>
   );
 }

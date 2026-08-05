@@ -354,7 +354,8 @@ function withWallJunctionDefaults(rawJunction, fallbackPoint, fallbackWallId) {
 
 function withHighlightableWallDefaults(rawWall) {
   if (!rawWall || typeof rawWall !== "object") return null;
-  const centreline = withLineSegmentDefaults(rawWall.centreline) || (
+  const axis = withLineSegmentDefaults(rawWall.axis);
+  const centreline = axis || withLineSegmentDefaults(rawWall.centreline) || (
     rawWall.start && rawWall.end
       ? { start: { x: Number(rawWall.start.x) || 0, y: Number(rawWall.start.y) || 0 }, end: { x: Number(rawWall.end.x) || 0, y: Number(rawWall.end.y) || 0 } }
       : null
@@ -364,10 +365,45 @@ function withHighlightableWallDefaults(rawWall) {
   const endJunction = withWallJunctionDefaults(rawWall.endJunction, centreline.end, rawWall.id);
   return {
     id: rawWall.id || `hl-wall-${Math.round(centreline.start.x)}-${Math.round(centreline.start.y)}-${Math.round(centreline.end.x)}-${Math.round(centreline.end.y)}`,
+    axis: { start: startJunction.point, end: endJunction.point },
     centreline: { start: startJunction.point, end: endJunction.point },
+    faces: rawWall.faces && typeof rawWall.faces === "object" ? rawWall.faces : {},
     faceA: withLineSegmentDefaults(rawWall.faceA),
     faceB: withLineSegmentDefaults(rawWall.faceB),
     thickness: Number.isFinite(Number(rawWall.thickness)) ? Number(rawWall.thickness) : null,
+    sections: Array.isArray(rawWall.sections)
+      ? rawWall.sections.map((section) => {
+        const type = ["solid", "window", "door", "garage-door", "unknown-opening"].includes(section?.type) ? section.type : null;
+        const startOffset = Number(section?.startOffset);
+        const endOffset = Number(section?.endOffset);
+        if (!type || !Number.isFinite(startOffset) || !Number.isFinite(endOffset) || endOffset <= startOffset) return null;
+        return {
+          type,
+          startOffset,
+          endOffset,
+          ...(section.openingId ? { openingId: section.openingId } : {}),
+          confidence: Number.isFinite(Number(section.confidence)) ? Number(section.confidence) : 0,
+          ...(section.reason ? { reason: section.reason } : {}),
+        };
+      }).filter(Boolean)
+      : [{ type: "solid", startOffset: 0, endOffset: distance(startJunction.point, endJunction.point), confidence: 0.7 }],
+    openings: Array.isArray(rawWall.openings)
+      ? rawWall.openings.map((opening) => {
+        const type = ["window", "door", "garage-door", "unknown-opening"].includes(opening?.type) ? opening.type : null;
+        const startOffset = Number(opening?.startOffset);
+        const endOffset = Number(opening?.endOffset);
+        if (!type || !Number.isFinite(startOffset) || !Number.isFinite(endOffset) || endOffset <= startOffset) return null;
+        return {
+          id: opening.id || opening.openingId || `op-${Math.round(startOffset)}-${Math.round(endOffset)}`,
+          type,
+          startOffset,
+          endOffset,
+          width: Number.isFinite(Number(opening.width)) ? Number(opening.width) : endOffset - startOffset,
+          confidence: Number.isFinite(Number(opening.confidence)) ? Number(opening.confidence) : 0,
+          ...(opening.reason ? { reason: opening.reason } : {}),
+        };
+      }).filter(Boolean)
+      : [],
     startJunction,
     endJunction,
     confidence: Number.isFinite(Number(rawWall.confidence)) ? Number(rawWall.confidence) : 0,
