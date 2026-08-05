@@ -270,6 +270,12 @@ const PlanViewer = forwardRef(function PlanViewer(
     );
   }, [view.viewport, view.panX, view.panY, view.zoomScale]);
 
+  const currentRasterHitContext = useCallback(() => {
+    const canvas = activeCanvasRef.current === "a" ? canvasARef.current : canvasBRef.current;
+    if (!canvas || !view.viewport) return null;
+    return { canvas, viewport: view.viewport };
+  }, [view.viewport]);
+
   // Default (no active tool / Select tool): byte-for-byte identical to the
   // original pan-only behavior. With a takeoff tool active: pointerdown either
   // starts a vertex-drag (if it lands on an existing wall vertex while
@@ -437,7 +443,7 @@ const PlanViewer = forwardRef(function PlanViewer(
         } else if (WALL_DRAW_TOOLS.includes(activeTool)) {
           tools.updateWallDrawHover(pagePoint, { rotation: page?.rotation ?? 0, zoomScale: view.zoomScale, disableSnap: event.altKey });
         } else if (activeTool === "exterior-highlighter") {
-          tools.updateExteriorHighlighterHover(pagePoint, { zoomScale: view.zoomScale });
+          tools.updateExteriorHighlighterHover(pagePoint, { zoomScale: view.zoomScale, rasterContext: currentRasterHitContext() });
         } else if (OPENING_TOOLS.includes(activeTool)) {
           tools.updateOpeningHover(pagePoint, { zoomScale: view.zoomScale });
         } else if (activeTool === "area") {
@@ -493,7 +499,7 @@ const PlanViewer = forwardRef(function PlanViewer(
     const dx = event.clientX - dragState.startX;
     const dy = event.clientY - dragState.startY;
     setView((prev) => ({ ...prev, panX: dragState.panX + dx, panY: dragState.panY + dy }));
-  }, [tools, eventToPagePoint, view, page]);
+  }, [tools, eventToPagePoint, view, page, currentRasterHitContext]);
 
   const handlePointerUp = useCallback((event) => {
     if (event.pointerId != null) containerRef.current?.releasePointerCapture?.(event.pointerId);

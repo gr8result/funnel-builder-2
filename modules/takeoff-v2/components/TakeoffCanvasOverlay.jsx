@@ -469,15 +469,19 @@ function debugReadoutLines(pointer, diagnostics) {
   const expanded = diagnostics.find((entry) => entry.label === "Exterior expanded result") || {};
   const initial = diagnostics.find((entry) => entry.label === "Exterior initial result") || {};
   const scale = diagnostics.find((entry) => entry.label === "Scale Tool result") || {};
+  const raster = diagnostics.find((entry) => entry.label === "Local raster fallback") || {};
   return [
     `Pointer: ${Math.round(pointer?.x || 0)}, ${Math.round(pointer?.y || 0)}`,
+    `Raw PDF lines: ${raster.rawPdfLineCount ?? "-"}`,
+    `Filtered lines: ${raster.filteredLineCount ?? "-"}`,
+    `Raster edges: ${raster.rasterEdgeCount ?? "-"}`,
+    `Wall bands: ${raster.wallBandCandidateCount ?? "-"}`,
     `Angle: ${Math.round(scale.angle || 0)} deg`,
     `Initial: ${Math.round(initial.initialSegmentLength || 0)}`,
     `Expanded: ${Math.round(expanded.expandedWallLength || 0)}`,
-    `Start: ${expanded.startEndpointReason || "-"}`,
-    `End: ${expanded.endEndpointReason || "-"}`,
-    `Dimension score: ${(expanded.dimensionRejectionScore ?? 0).toFixed(2)}`,
-  ];
+    `Nearest raster: ${Math.round(raster.nearestRasterEdgeDistance ?? 0)}`,
+    `Reason: ${raster.reason || expanded.endEndpointReason || "-"}`,
+  ].slice(0, 9);
 }
 
 function DebugLine({ line, project, color, width = 1, dash, testId }) {

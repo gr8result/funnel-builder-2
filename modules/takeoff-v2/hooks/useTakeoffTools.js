@@ -23,6 +23,7 @@ import {
   findLineNearPointer,
   scaleToolLineSelection,
 } from "../takeoff/lineSelection.js";
+import { findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
 import { buildSnapCandidates, snapPoint } from "../takeoff/snapping.js";
 import {
   addSegment,
@@ -789,11 +790,13 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     }
   }, [planGeometryIndex, page, commitPage]);
 
-  const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+  const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1, rasterContext = null } = {}) => {
     if (activeTool !== "exterior-highlighter") return;
     const diagnosticsEnabled = typeof window !== "undefined" && window.localStorage?.getItem("takeoffHighlighterDebug") === "1";
     setExteriorHighlightPointer(rawPoint);
     setExteriorHighlightDebugEnabled(diagnosticsEnabled);
+    const rawLineCount = Array.isArray(planGeometryIndex?.rawSegments) ? planGeometryIndex.rawSegments.length : 0;
+    const filteredLineCount = Array.isArray(planGeometryIndex?.segments) ? planGeometryIndex.segments.length : 0;
     const scaleLineHit = findLineNearPointer({
       page,
       planGeometryIndex,
@@ -801,30 +804,46 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       screenTolerance: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
       zoom: zoomScale,
     });
-    if (!scaleLineHit) {
+
+    const rasterResult = rasterContext
+      ? findRasterWallBandOnCanvas({ canvas: rasterContext.canvas, viewport: rasterContext.viewport, point: rawPoint })
+      : { wall: null, diagnostics: { reason: "no raster context" } };
+
+    if (!scaleLineHit && !rasterResult.wall) {
       setExteriorHighlightPreview(null);
       setExteriorHighlightHoverWallId(null);
-      setExteriorHighlightDiagnostics([]);
+      setExteriorHighlightDiagnostics([{
+        label: "Local raster fallback",
+        color: "orange",
+        rawPdfLineCount: rawLineCount,
+        filteredLineCount,
+        wallBandCandidateCount: rasterResult.diagnostics?.wallBandCandidateCount || 0,
+        rasterEdgeCount: rasterResult.diagnostics?.rasterEdgeCount || 0,
+        pointerDocument: rawPoint,
+        nearestRasterEdgeDistance: rasterResult.diagnostics?.nearestRasterEdgeDistance,
+        reason: rasterResult.diagnostics?.rejectedReason || rasterResult.diagnostics?.reason || "No local structural wall band under pointer.",
+      }]);
       setWallDetectionStatus("idle");
       setWallDetectionMessage("No line detected here.");
       setWallDetectionCode("NO_LINE_UNDER_CURSOR");
       return;
     }
-    const expanded = expandLineToWall(scaleLineHit, { planGeometryIndex, page });
+    const expanded = scaleLineHit ? expandLineToWall(scaleLineHit, { planGeometryIndex, page }) : null;
+    const acceptedWall = expanded && !expanded.rejected ? expanded : rasterResult.wall;
     const diagnostics = [
-      {
+      ...(scaleLineHit ? [{
         label: "Scale Tool result",
         line: scaleLineHit.line,
         color: "purple",
         distanceFromPointer: scaleLineHit.distanceFromPointer,
         angle: scaleLineHit.angle,
-      },
-      {
+      }] : []),
+      ...(scaleLineHit ? [{
         label: "Exterior initial result",
         line: scaleLineHit.line,
         color: "blue",
         initialSegmentLength: expanded?.initialSegmentLength ?? distance(scaleLineHit.line.start, scaleLineHit.line.end),
-      },
+      }] : []),
       ...(expanded ? [{
         label: "Exterior expanded result",
         line: expanded.line,
@@ -834,16 +853,28 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         endEndpointReason: expanded.endEndpointReason,
         dimensionRejectionScore: expanded.dimensionRejectionScore,
       }] : []),
+      {
+        label: "Local raster fallback",
+        line: rasterResult.wall?.centreline || null,
+        color: rasterResult.wall ? "green" : "orange",
+        rawPdfLineCount: rawLineCount,
+        filteredLineCount,
+        wallBandCandidateCount: rasterResult.diagnostics?.wallBandCandidateCount || 0,
+        rasterEdgeCount: rasterResult.diagnostics?.rasterEdgeCount || 0,
+        pointerDocument: rawPoint,
+        nearestRasterEdgeDistance: rasterResult.diagnostics?.nearestRasterEdgeDistance,
+        reason: rasterResult.wall ? rasterResult.wall.diagnostics?.reason : (rasterResult.diagnostics?.rejectedReason || rasterResult.diagnostics?.reason),
+      },
     ];
-    setExteriorHighlightPreview(expanded && !expanded.rejected ? expanded : null);
-    setExteriorHighlightHoverWallId(expanded && !expanded.rejected ? expanded.id : null);
+    setExteriorHighlightPreview(acceptedWall || null);
+    setExteriorHighlightHoverWallId(acceptedWall?.id || null);
     setExteriorHighlightDiagnostics(diagnostics);
     if (diagnosticsEnabled) console.table(diagnostics);
-    if (!expanded) {
+    if (!acceptedWall && !expanded) {
       setWallDetectionStatus("idle");
       setWallDetectionMessage("No line detected here.");
       setWallDetectionCode("NO_LINE_UNDER_CURSOR");
-    } else if (expanded.rejected) {
+    } else if (!acceptedWall && expanded?.rejected) {
       setWallDetectionStatus("rejected");
       setWallDetectionMessage(expanded.rejectionReason || "Dimension or annotation line rejected.");
       setWallDetectionCode("DIMENSION_OR_ANNOTATION_REJECTED");

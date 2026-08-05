@@ -13,6 +13,7 @@ import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, wi
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
 import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
 import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
+import { findRasterWallBandInImage, findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
 
 const lastPoint = { x: 0, y: 0 };
 
@@ -605,6 +606,125 @@ for (const extra of [
   } else {
     console.warn(`Skipping real sample wall-object detection test; copy it to ${localSamplePath} or set TAKEOFF_SAMPLE_PLANS_PDF.`);
   }
+}
+
+function makeImage(width, height) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 255;
+    data[i + 1] = 255;
+    data[i + 2] = 255;
+    data[i + 3] = 255;
+  }
+  return { data, width, height };
+}
+
+function darkPixel(image, x, y) {
+  if (x < 0 || y < 0 || x >= image.width || y >= image.height) return;
+  const idx = (y * image.width + x) * 4;
+  image.data[idx] = 0;
+  image.data[idx + 1] = 0;
+  image.data[idx + 2] = 0;
+  image.data[idx + 3] = 255;
+}
+
+function drawH(image, x1, x2, y, thickness = 1) {
+  for (let x = x1; x <= x2; x += 1) {
+    for (let dy = 0; dy < thickness; dy += 1) darkPixel(image, x, y + dy);
+  }
+}
+
+function drawV(image, x, y1, y2, thickness = 1) {
+  for (let y = y1; y <= y2; y += 1) {
+    for (let dx = 0; dx < thickness; dx += 1) darkPixel(image, x + dx, y);
+  }
+}
+
+function fakeCanvas(image) {
+  return {
+    width: image.width,
+    height: image.height,
+    getContext: () => ({
+      getImageData: () => image,
+    }),
+  };
+}
+
+function rasterTestViewport(rotation, sourceWidth = 320, sourceHeight = 220) {
+  const sideways = rotation === 90 || rotation === 270;
+  return {
+    width: sideways ? sourceHeight : sourceWidth,
+    height: sideways ? sourceWidth : sourceHeight,
+    convertToViewportPoint: (x, y) => {
+      if (rotation === 90) return [sourceHeight - y, x];
+      if (rotation === 180) return [sourceWidth - x, sourceHeight - y];
+      if (rotation === 270) return [y, sourceWidth - x];
+      return [x, y];
+    },
+    convertToPdfPoint: (x, y) => {
+      if (rotation === 90) return [y, sourceHeight - x];
+      if (rotation === 180) return [sourceWidth - x, sourceHeight - y];
+      if (rotation === 270) return [sourceWidth - y, x];
+      return [x, y];
+    },
+  };
+}
+
+// ---- local raster fallback detects one horizontal wall band end to end ----
+{
+  const image = makeImage(320, 180);
+  drawH(image, 40, 130, 80);
+  drawH(image, 165, 280, 80);
+  drawH(image, 40, 130, 90);
+  drawH(image, 165, 280, 90);
+  drawV(image, 40, 70, 105);
+  drawV(image, 280, 70, 105);
+  drawV(image, 130, 80, 90);
+  drawV(image, 165, 80, 90);
+  const result = findRasterWallBandInImage({ image, pointer: { x: 150, y: 85 } });
+  assert.ok(result.wall, "hover inside a window interruption should still resolve the same raster wall");
+  assert.equal(Math.round(result.wall.centreline.start.x), 40);
+  assert.equal(Math.round(result.wall.centreline.end.x), 280);
+  assert.equal(Math.round(result.wall.centreline.start.y), 85);
+}
+
+// ---- local raster fallback detects a vertical wall band -------------------
+{
+  const image = makeImage(220, 320);
+  drawV(image, 90, 40, 280);
+  drawV(image, 102, 40, 280);
+  drawH(image, 78, 114, 40);
+  drawH(image, 78, 114, 280);
+  const result = findRasterWallBandInImage({ image, pointer: { x: 96, y: 150 } });
+  assert.ok(result.wall, "vertical raster wall should resolve");
+  assert.equal(Math.round(result.wall.centreline.start.x), 96);
+  assert.equal(Math.round(result.wall.centreline.start.y), 40);
+  assert.equal(Math.round(result.wall.centreline.end.y), 280);
+}
+
+// ---- local raster fallback rejects dimension chains and blank space -------
+{
+  const image = makeImage(320, 180);
+  drawH(image, 40, 280, 40);
+  drawH(image, 40, 280, 52);
+  [60, 95, 130, 165, 200, 235, 270].forEach((x) => drawV(image, x, 40, 52));
+  const dimension = findRasterWallBandInImage({ image, pointer: { x: 150, y: 46 } });
+  assert.equal(dimension.wall, null, "repeated dimension ticks must not become a wall");
+  const blank = findRasterWallBandInImage({ image, pointer: { x: 150, y: 120 } });
+  assert.equal(blank.wall, null, "blank space must not jump to distant geometry");
+}
+
+// ---- raster canvas wrapper uses the displayed rotation exactly once -------
+{
+  const point = { x: 72, y: 48 };
+  [0, 90, 180, 270].forEach((rotation) => {
+    const viewport = rasterTestViewport(rotation);
+    const image = makeImage(viewport.width, viewport.height);
+    const result = findRasterWallBandOnCanvas({ canvas: fakeCanvas(image), viewport, point });
+    const [expectedX, expectedY] = viewport.convertToViewportPoint(point.x, point.y);
+    assert.equal(Math.round(result.diagnostics.pointerImage.x), Math.round(expectedX), `rotation ${rotation} pointer x`);
+    assert.equal(Math.round(result.diagnostics.pointerImage.y), Math.round(expectedY), `rotation ${rotation} pointer y`);
+  });
 }
 
 console.log("wallDrawing.test.mjs passed");
