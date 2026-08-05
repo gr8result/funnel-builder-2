@@ -1,20 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { createPlanDocument, createPlanPage, generateId } from "../types.js";
 import { loadPdfDocument, getPageDimensions } from "../viewer/PdfViewport.js";
-import { deleteDocument, saveDocument, savePages } from "../persistence/planStore.js";
+import { deleteDocument, findDuplicateDocument, listPages, saveDocument, savePages } from "../persistence/planStore.js";
 import { detectPageOrientation } from "../orientation/detectPageOrientation.js";
 import { applyOrientationResult } from "../orientation/applyOrientationResult.js";
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
-    reader.readAsDataURL(file);
-  });
-}
-
-export default function PlanDocumentList({ jobId, documents, onDocumentsChange, selectedPageId, onSelectPage }) {
+export default function PlanDocumentList({ jobId, documents, onDocumentsChange, selectedPageId, onSelectPage, onManageStorage }) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -34,17 +25,29 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
           continue;
         }
 
-        setProgress(`Reading ${file.name}...`);
-        const originalFileUrl = await readFileAsDataUrl(file);
+        setProgress(`Checking ${file.name}...`);
+        const duplicate = await findDuplicateDocument(jobId, file);
+        if (duplicate) {
+          const openExisting = window.confirm(`This plan is already stored as "${duplicate.fileName}".\n\nChoose OK to open the existing copy, or Cancel to import another copy.`);
+          if (openExisting) {
+            await onDocumentsChange();
+            const existingPages = await listPages(duplicate.id);
+            if (existingPages[0]) onSelectPage(duplicate.id, existingPages[0].id);
+            continue;
+          }
+        }
 
         setProgress(`Opening ${file.name}...`);
-        const pdfDocument = await loadPdfDocument(originalFileUrl);
+        const pdfDocument = await loadPdfDocument(file);
 
         const document = createPlanDocument({
           id: generateId("doc"),
           jobId,
           fileName: file.name,
-          originalFileUrl,
+          mimeType: file.type || "application/pdf",
+          fileSize: file.size,
+          originalFileUrl: "",
+          storage: "indexeddb",
         });
 
         const pages = [];
@@ -68,14 +71,14 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
           pages.push(page);
         }
 
-        saveDocument(document);
-        savePages(document.id, pages);
-        onDocumentsChange();
+        await saveDocument(document, file);
+        await savePages(document.id, pages);
+        await onDocumentsChange();
         if (!selectedPageId && pages[0]) onSelectPage(document.id, pages[0].id);
       }
       setProgress("");
     } catch (err) {
-      setError(`Failed to process plan file: ${err.message}`);
+      setError(`The plan could not be saved in browser storage. The plan is still open for this session. ${err.message || ""}`.trim());
     } finally {
       setLoading(false);
       setProgress("");
@@ -88,9 +91,11 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
   }, [handleUpload]);
 
   const confirmDelete = useCallback((documentId) => {
-    deleteDocument(jobId, documentId);
-    setConfirmingDeleteId(null);
-    onDocumentsChange();
+    (async () => {
+      await deleteDocument(jobId, documentId);
+      setConfirmingDeleteId(null);
+      await onDocumentsChange();
+    })();
   }, [jobId, onDocumentsChange]);
 
   return (
@@ -118,6 +123,11 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
       />
 
       {error && <div style={S.error}>{error}</div>}
+      {error ? (
+        <div style={S.errorActions}>
+          <button type="button" style={S.manageButton} onClick={() => onManageStorage?.()} data-testid="manage-plan-storage-from-error">Manage Plan Storage</button>
+        </div>
+      ) : null}
 
       {documents.length === 0 ? (
         <div style={S.empty} data-testid="plan-empty-state">No plans uploaded yet.</div>
@@ -159,6 +169,8 @@ const S = {
   uploadSub: { fontSize: 12, color: "#64748b", marginTop: 4 },
   progressText: { fontSize: 13, color: "#64748b" },
   error: { background: "#fef2f2", color: "#dc2626", padding: "8px 10px", borderRadius: 6, fontSize: 13 },
+  errorActions: { display: "flex", gap: 8 },
+  manageButton: { border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 6, padding: "6px 8px", fontSize: 12, cursor: "pointer", fontWeight: 700 },
   empty: { border: "1px dashed #cbd5e1", borderRadius: 8, padding: 12, color: "#64748b", fontSize: 12, textAlign: "center" },
   list: { display: "flex", flexDirection: "column", gap: 8 },
   card: { border: "1px solid #cbd5e1", borderRadius: 8, padding: 10, background: "#fff" },

@@ -7,6 +7,7 @@ import {
   getSelectedPageId,
   setSelectedPageId,
   savePage,
+  migrateLegacyTakeoffStorage,
 } from "../persistence/planStore.js";
 import { usePdfDocument } from "../viewer/usePdfDocument.js";
 import { readJobSummaryFromQuery, jobSummaryFromJobFileData, deriveJobId, DEFAULT_JOB_ID } from "../jobSummary.js";
@@ -19,6 +20,7 @@ import { useTakeoffTools } from "../hooks/useTakeoffTools.js";
 import { usePlanGeometry } from "../hooks/usePlanGeometry.js";
 import JobDetailsBanner from "./JobDetailsBanner.jsx";
 import PlanDocumentList from "./PlanDocumentList.jsx";
+import PlanStorageManager from "./PlanStorageManager.jsx";
 import PlanPageStrip from "./PlanPageStrip.jsx";
 import PlanViewer from "./PlanViewer.jsx";
 import OrientationNotice from "./OrientationNotice.jsx";
@@ -68,10 +70,13 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
   const [pagesByDocument, setPagesByDocument] = useState({});
   const [selectedPageId, setSelectedPageIdState] = useState(null);
 
-  const refresh = useCallback(() => {
-    const docs = listDocuments(jobId);
+  const [storageNotice, setStorageNotice] = useState("");
+  const [storageManagerOpen, setStorageManagerOpen] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const docs = await listDocuments(jobId);
     const pages = {};
-    docs.forEach((doc) => { pages[doc.id] = listPages(doc.id); });
+    await Promise.all(docs.map(async (doc) => { pages[doc.id] = await listPages(doc.id); }));
     setDocuments(docs);
     setPagesByDocument(pages);
   }, [jobId]);
@@ -81,8 +86,18 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
   // Re-running when jobId changes is exactly what makes "open a different job"
   // load only that job's plans.
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    (async () => {
+      try {
+        const migration = await migrateLegacyTakeoffStorage(jobId);
+        if (!cancelled && migration.migratedDocuments) setStorageNotice(`Repaired Takeoff storage: migrated ${migration.migratedDocuments} saved plan${migration.migratedDocuments === 1 ? "" : "s"} to IndexedDB.`);
+      } catch (err) {
+        if (!cancelled) setStorageNotice(`Takeoff storage needs repair. ${err?.message || ""}`.trim());
+      }
+      if (!cancelled) await refresh();
+    })();
     setSelectedPageIdState(getSelectedPageId(jobId));
+    return () => { cancelled = true; };
   }, [jobId, refresh]);
 
   const selectPage = useCallback((documentId, pageId) => {
@@ -90,8 +105,8 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
     setSelectedPageId(jobId, pageId);
   }, [jobId]);
 
-  const handleDocumentsChange = useCallback(() => {
-    refresh();
+  const handleDocumentsChange = useCallback(async () => {
+    await refresh();
     const stillSelected = getSelectedPageId(jobId);
     setSelectedPageIdState(stillSelected);
   }, [jobId, refresh]);
@@ -125,12 +140,13 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
 
   const commitPage = useCallback((patch) => {
     if (!selectedPage) return;
-    const updated = savePage({ ...selectedPage, ...patch });
+    const optimistic = { ...selectedPage, ...patch, updatedAt: new Date().toISOString() };
     setPagesByDocument((prev) => ({
       ...prev,
       [selectedPage.documentId]: (prev[selectedPage.documentId] || []).map((page) =>
-        page.id === updated.id ? updated : page),
+        page.id === optimistic.id ? optimistic : page),
     }));
+    savePage(optimistic).catch((err) => setStorageNotice(`The plan state could not be saved. ${err?.message || ""}`.trim()));
   }, [selectedPage]);
 
   // Manual rotation always wins: it's never blocked by orientation state, and
@@ -254,12 +270,19 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
       </div>
       <div style={S.body}>
         <div style={S.sidebar}>
+          <div style={S.storageTools}>
+            <button type="button" style={S.storageButton} onClick={() => setStorageManagerOpen(true)} data-testid="manage-plan-storage-button">
+              Manage Plan Storage
+            </button>
+            {storageNotice ? <div style={S.storageNotice} data-testid="takeoff-storage-notice">{storageNotice}</div> : null}
+          </div>
           <PlanDocumentList
             jobId={jobId}
             documents={documents}
             onDocumentsChange={handleDocumentsChange}
             selectedPageId={selectedPageId}
             onSelectPage={selectPage}
+            onManageStorage={() => setStorageManagerOpen(true)}
           />
           <PlanPageStrip
             documents={documents}
@@ -337,6 +360,12 @@ export default function TakeoffV2Page({ jobId: defaultJobId = DEFAULT_JOB_ID }) 
           )}
         </div>
       </div>
+      <PlanStorageManager
+        jobId={jobId}
+        open={storageManagerOpen}
+        onClose={() => setStorageManagerOpen(false)}
+        onChanged={handleDocumentsChange}
+      />
     </div>
   );
 }
@@ -347,6 +376,9 @@ const S = {
   jobFileError: { marginTop: 8, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "8px 12px", fontWeight: 700, fontSize: 13 },
   body: { flex: 1, display: "flex", minHeight: 0 },
   sidebar: { width: 300, flexShrink: 0, borderRight: "1px solid #e2e8f0", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" },
+  storageTools: { padding: "12px 12px 0", display: "flex", flexDirection: "column", gap: 8 },
+  storageButton: { border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 8, padding: "8px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
+  storageNotice: { border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412", borderRadius: 8, padding: 8, fontSize: 12, fontWeight: 700 },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 },
   viewerRow: { flex: 1, minHeight: 0, display: "flex", gap: 0 },
   viewerFlex: { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" },

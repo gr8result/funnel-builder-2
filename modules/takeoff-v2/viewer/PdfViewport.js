@@ -35,9 +35,17 @@ function dataUrlToUint8Array(dataUrl) {
   return bytes;
 }
 
+async function pdfSourceToUint8Array(source) {
+  if (source instanceof Uint8Array) return source;
+  if (source instanceof ArrayBuffer) return new Uint8Array(source);
+  if (typeof Blob !== "undefined" && source instanceof Blob) return new Uint8Array(await source.arrayBuffer());
+  if (typeof source === "string" && source.startsWith("data:")) return dataUrlToUint8Array(source);
+  throw new Error("PDF source is unavailable.");
+}
+
 export async function loadPdfDocument(originalFileUrl) {
   const pdfjsLib = await loadPdfjsLib();
-  const data = dataUrlToUint8Array(originalFileUrl);
+  const data = await pdfSourceToUint8Array(originalFileUrl);
   const loadingTask = pdfjsLib.getDocument({ data });
   return loadingTask.promise;
 }

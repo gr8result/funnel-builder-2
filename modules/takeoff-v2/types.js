@@ -44,15 +44,22 @@ export function rotateLeft(rotation) {
  * @property {string} id
  * @property {string} jobId
  * @property {string} fileName
- * @property {string} originalFileUrl   data URL of the uploaded PDF bytes
+ * @property {string} mimeType
+ * @property {number} fileSize
+ * @property {string} storage
+ * @property {string} contentHash
  * @property {string} createdAt         ISO timestamp
  */
 
-export function createPlanDocument({ id, jobId, fileName, originalFileUrl }) {
+export function createPlanDocument({ id, jobId, fileName, mimeType = "application/pdf", fileSize = 0, storage = "indexeddb", contentHash = "", originalFileUrl = "" }) {
   return {
     id,
     jobId: jobId || "",
     fileName,
+    mimeType,
+    fileSize,
+    storage,
+    contentHash,
     originalFileUrl,
     createdAt: new Date().toISOString(),
   };

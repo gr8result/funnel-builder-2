@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { loadPdfDocument } from "./PdfViewport.js";
+import { getDocumentFileBlob } from "../persistence/planStore.js";
 
 const cache = new Map(); // documentId -> Promise<pdfjs document proxy>
 
@@ -18,7 +19,11 @@ export function usePdfDocument(planDocument) {
     setError("");
 
     if (!cache.has(planDocument.id)) {
-      cache.set(planDocument.id, loadPdfDocument(planDocument.originalFileUrl));
+      cache.set(planDocument.id, (async () => {
+        const blob = await getDocumentFileBlob(planDocument.id);
+        const source = blob || planDocument.originalFileUrl;
+        return loadPdfDocument(source);
+      })());
     }
 
     cache.get(planDocument.id)
@@ -33,7 +38,7 @@ export function usePdfDocument(planDocument) {
     // object reference with the same id/url (common from array re-mapping) doesn't
     // trigger a reload loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planDocument?.id, planDocument?.originalFileUrl]);
+  }, [planDocument?.id, planDocument?.storage, planDocument?.updatedAt]);
 
   return { pdfDocument, error };
 }
