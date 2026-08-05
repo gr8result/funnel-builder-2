@@ -139,13 +139,14 @@ export async function runTemplateStageTests(): Promise<void> {
 
   const pageSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "templates.tsx"), "utf8");
   const workspaceSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "workspace.tsx"), "utf8");
-  assert(pageSource.includes("Choose an Area"), "Stage 2 route should render the area navigator title.");
-  assert(pageSource.includes("Select the area of the home you want to complete."), "Stage 2 should explain the area-first workflow.");
+  assert(pageSource.includes("Select an Area"), "Stage 2 route should render the rebuilt area navigator title.");
   assert(pageSource.includes("Exterior") && pageSource.includes("Interior"), "Stage 2 should start with Exterior and Interior choices.");
   assert(pageSource.includes("Bricks") && pageSource.includes("Cladding") && pageSource.includes("Driveway"), "Exterior should expose product-type tiles.");
   assert(pageSource.indexOf('label: "Lighting"') < pageSource.indexOf('label: "Exterior Paint"'), "Exterior should keep Lighting before Exterior Paint in the builder-facing navigator.");
-  assert(pageSource.includes("Kitchen") && pageSource.includes("Bathrooms") && pageSource.includes("Bedrooms"), "Interior should expose room tiles.");
+  assert(!pageSource.includes('label: "Downpipes"') && !pageSource.includes('label: "Landscaping"'), "Exterior should only expose the approved visible tiles.");
+  assert(pageSource.includes("Kitchen") && pageSource.includes('label: "Bathroom"') && pageSource.includes('label: "Ensuite"') && pageSource.includes("Bedrooms"), "Interior should expose the approved room tiles.");
   assert(pageSource.includes("Oven") && pageSource.includes("Cooktop") && pageSource.includes("Dishwasher"), "Kitchen should expose product picker tiles.");
+  assert(pageSource.includes("tileImage") && pageSource.includes("visual"), "Stage 2 should use large visual area tiles.");
   assert(!pageSource.includes("Room Templates and Inclusion Tiers"), "Stage 2 should not expose the retired template page title.");
   assert(!pageSource.includes("Generate ProjectRequirements") && !pageSource.includes("Preview") && !pageSource.includes("Reset"), "Stage 2 should not show backend generation controls.");
   assert(pageSource.includes('currentStage="templates"'), "Stage 2 should remain connected to shared stage navigation.");

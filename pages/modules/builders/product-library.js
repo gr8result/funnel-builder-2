@@ -71,16 +71,20 @@ const TAB_ALIASES = new Map([
 const ACTIVE_SELECTION_VISIBILITIES = new Set(["client_selectable", "builder_selectable"]);
 
 const PRODUCT_BROWSER_AREAS = [
-  { key: "exterior", label: "Exterior", icon: "EX", types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Fascia", "Gutters", "Downpipes", "External Paint", "Decking", "Balustrades", "Driveway Finish", "Pool", "Lighting"] },
-  { key: "interior", label: "Interior", icon: "IN", types: ["Kitchen", "Bathroom", "Bedroom", "Laundry", "Living Areas", "Media", "Study", "Garage"] },
-  { key: "kitchen", label: "Kitchen", icon: "KI", types: ["Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Sink Mixers", "Benchtops", "Cabinetry", "Cabinet Finish", "Cabinet Handles", "Splashbacks", "Microwaves", "Lighting", "Flooring", "Paint Colours"] },
-  { key: "bathroom", label: "Bathroom", icon: "BA", types: ["Vanities", "Basins", "Basin Mixers", "Mirrors", "Showers", "Shower Mixers", "Baths", "Toilets", "Tiles", "Bathroom Accessories"] },
-  { key: "bedroom", label: "Bedroom", icon: "BE", types: ["Carpet", "Hybrid Flooring", "Internal Doors", "Passage Handles", "Robe Fitouts", "Window Furnishings", "Paint Colours", "Lighting"] },
-  { key: "laundry", label: "Laundry", icon: "LA", types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Laundry Mixers", "Splashbacks", "Flooring"] },
-  { key: "garage", label: "Garage", icon: "GA", types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
-  { key: "outdoor", label: "Outdoor", icon: "OU", types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
-  { key: "pool", label: "Pool", icon: "PO", types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
+  { key: "exterior", label: "Exterior", imageClass: "tileExterior", types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
+  { key: "interior", label: "Interior", imageClass: "tileInterior", types: ["Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
+  { key: "kitchen", label: "Kitchen", imageClass: "tileKitchen", types: ["Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
+  { key: "bathroom", label: "Bathroom", imageClass: "tileBathroom", types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
+  { key: "bedroom", label: "Bedroom", imageClass: "tileBedroom", types: ["Carpet", "Hybrid Flooring", "Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
+  { key: "laundry", label: "Laundry", imageClass: "tileLaundry", types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
+  { key: "garage", label: "Garage", imageClass: "tileGarage", types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
+  { key: "outdoor", label: "Outdoor", imageClass: "tileOutdoor", types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
+  { key: "pool", label: "Pool", imageClass: "tilePool", types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
 ];
+
+const FEATURED_BRANDS_BY_TYPE = {
+  Ovens: ["Westinghouse", "Bosch", "Smeg", "Electrolux", "Omega"],
+};
 
 const PRODUCT_TYPE_SYNONYMS = {
   "Ovens": ["oven"],
@@ -116,17 +120,6 @@ const PRODUCT_TYPE_SYNONYMS = {
   "Balustrades": ["balustrade"],
 };
 
-const PRODUCT_TYPE_FILTERS = {
-  "Ovens": ["600 mm", "900 mm", "Electric", "Gas", "Stainless Steel", "Black"],
-  "Cooktops": ["600 mm", "900 mm", "Electric", "Gas", "Induction", "Black"],
-  "Tapware": ["Chrome", "Brushed Nickel", "Matte Black", "Bench Mounted", "Wall Mounted"],
-  "Basin Mixers": ["Chrome", "Brushed Nickel", "Matte Black", "Bench Mounted", "Wall Mounted"],
-  "Floor Tiles": ["600 x 600", "Grey", "White", "Matt", "Gloss", "Floor"],
-  "Wall Tiles": ["300 x 600", "White", "Gloss", "Matt", "Wall"],
-  "Feature Tiles": ["Mosaic", "Stone", "Pattern", "Feature"],
-  "Bricks": ["Red", "Grey", "White", "Cream", "Smooth", "Textured"],
-};
-
 function explicitSelectionVisibility(product) {
   const value = String(product?.selection_visibility ?? product?.selectionVisibility ?? "").trim().toLowerCase();
   return ACTIVE_SELECTION_VISIBILITIES.has(value) || value === "estimating_only" || value === "hidden" || value === "archived" ? value : "";
@@ -149,7 +142,6 @@ export default function BuilderProductLibraryPage() {
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
   const [selectedProductType, setSelectedProductType] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("All Brands");
-  const [selectedQuickFilter, setSelectedQuickFilter] = useState("");
   const [detailProduct, setDetailProduct] = useState(null);
   const [selectedCatalogueProduct, setSelectedCatalogueProduct] = useState(null);
 
@@ -728,27 +720,18 @@ export default function BuilderProductLibraryPage() {
           <VisualSelectionsBrowser
             products={selectionProducts}
             loading={loading}
-            search={search}
-            onSearch={setSearch}
             areas={PRODUCT_BROWSER_AREAS}
             selectedAreaKey={selectedAreaKey}
             selectedProductType={selectedProductType}
             selectedBrand={selectedBrand}
-            selectedQuickFilter={selectedQuickFilter}
-            selectedProduct={selectedCatalogueProduct}
             categoryById={categoryById}
             supplierById={supplierById}
             manufacturerById={manufacturerById}
-            onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); setSelectedBrand("All Brands"); setSelectedQuickFilter(""); }}
-            onSelectProductType={(type) => { setSelectedProductType(type); setSelectedBrand("All Brands"); setSelectedQuickFilter(""); }}
+            onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); setSelectedBrand("All Brands"); }}
+            onSelectProductType={(type) => { setSelectedProductType(type); setSelectedBrand("All Brands"); }}
             onSelectBrand={setSelectedBrand}
-            onSelectQuickFilter={setSelectedQuickFilter}
             onOpenProduct={setDetailProduct}
             onAddToSelections={handleAddToSelections}
-            onBackDashboard={() => router.push({ pathname: "/modules/estimate-builder", query: router.query })}
-            onOpenJob={() => router.push({ pathname: "/modules/estimate-builder", query: router.query })}
-            onAddProduct={openDrawerForNew}
-            onOpenImports={() => changeTab("imports")}
           />
         )}
 
@@ -1153,13 +1136,6 @@ function productMatchesType(product, typeName, categoryName, supplierName, brand
   return needles.some((needle) => text.includes(needle));
 }
 
-function productMatchesQuickFilter(product, filter, categoryName, supplierName, brandName) {
-  if (!filter) return true;
-  const text = productBlob(product, categoryName, supplierName, brandName).replace(/\s+/g, " ");
-  const normalized = filter.toLowerCase().replace(/\s+/g, " ");
-  return text.includes(normalized) || text.replace(/\s/g, "").includes(normalized.replace(/\s/g, ""));
-}
-
 function productBrand(product, manufacturerById) {
   return manufacturerById.get(product.manufacturer_id) || product.brand || product.manufacturer || "Unbranded";
 }
@@ -1181,27 +1157,18 @@ function productVariantOptions(product) {
 function VisualSelectionsBrowser({
   products,
   loading,
-  search,
-  onSearch,
   areas,
   selectedAreaKey,
   selectedProductType,
   selectedBrand,
-  selectedQuickFilter,
-  selectedProduct,
   categoryById,
   supplierById,
   manufacturerById,
   onSelectArea,
   onSelectProductType,
   onSelectBrand,
-  onSelectQuickFilter,
   onOpenProduct,
   onAddToSelections,
-  onBackDashboard,
-  onOpenJob,
-  onAddProduct,
-  onOpenImports,
 }) {
   const selectedArea = areas.find((area) => area.key === selectedAreaKey) || null;
   const areaProducts = selectedArea
@@ -1210,21 +1177,19 @@ function VisualSelectionsBrowser({
   const typeProducts = selectedProductType
     ? areaProducts.filter((product) => productMatchesType(product, selectedProductType, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById)))
     : areaProducts;
-  const brandNames = Array.from(new Set(typeProducts.map((product) => productBrand(product, manufacturerById)).filter((brand) => brand && brand !== "Unbranded"))).sort((a, b) => a.localeCompare(b));
+  const productBrands = Array.from(new Set(typeProducts.map((product) => productBrand(product, manufacturerById)).filter((brand) => brand && brand !== "Unbranded")));
+  const featuredBrands = FEATURED_BRANDS_BY_TYPE[selectedProductType] || [];
+  const brandNames = Array.from(new Set([...featuredBrands, ...productBrands])).sort((a, b) => {
+    const featuredDelta = featuredBrands.indexOf(a) - featuredBrands.indexOf(b);
+    if (featuredBrands.includes(a) && featuredBrands.includes(b)) return featuredDelta;
+    if (featuredBrands.includes(a)) return -1;
+    if (featuredBrands.includes(b)) return 1;
+    return a.localeCompare(b);
+  });
   const brandProducts = selectedBrand && selectedBrand !== "All Brands"
     ? typeProducts.filter((product) => productBrand(product, manufacturerById) === selectedBrand)
     : typeProducts;
-  const visibleProducts = brandProducts.filter((product) => productMatchesQuickFilter(product, selectedQuickFilter, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById)));
-  const quickFilters = selectedProductType ? PRODUCT_TYPE_FILTERS[selectedProductType] || [] : [];
-
-  function typeCount(typeName) {
-    return areaProducts.filter((product) => productMatchesType(product, typeName, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById))).length;
-  }
-
-  function areaCount(area) {
-    const typesWithProducts = area.types.filter((type) => products.some((product) => productMatchesType(product, type, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById))));
-    return typesWithProducts.length;
-  }
+  const visibleProducts = brandProducts;
 
   return (
     <section className="visual-browser">
@@ -1232,13 +1197,6 @@ function VisualSelectionsBrowser({
         <div>
           <p className="eyebrow">Selection Products</p>
           <h1>Product Library</h1>
-          <p>Choose products, finishes and fixtures for project inclusions and client selections.</p>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="ghost" onClick={onBackDashboard}>Back to Project Dashboard</button>
-          <button type="button" className="ghost" onClick={onOpenJob}>Open Existing Job</button>
-          <button type="button" onClick={onAddProduct}>Add Selection Product</button>
-          <button type="button" className="ghost" onClick={onOpenImports}>Import Products</button>
         </div>
       </header>
 
@@ -1249,28 +1207,13 @@ function VisualSelectionsBrowser({
         {selectedProductType && selectedBrand !== "All Brands" && <button type="button">{selectedBrand}</button>}
       </nav>
 
-      <div className="search-strip">
-        <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search products..." />
-        {selectedProduct && (
-          <div className="selected-chip">
-            <span>{selectedProduct.imageUrl ? "Selected" : "Selected"}</span>
-            <strong>{selectedProduct.productName}</strong>
-          </div>
-        )}
-      </div>
-
       {!selectedArea && (
         <section className="step">
-          <div className="step-heading">
-            <span>Step 1</span>
-            <h2>Choose an area</h2>
-          </div>
           <div className="area-grid">
             {areas.map((area) => (
               <button key={area.key} type="button" className="area-tile" onClick={() => onSelectArea(area.key)}>
-                <span className="tile-icon">{area.icon}</span>
+                <span className={`visual-tile-image ${area.imageClass}`} aria-hidden="true" />
                 <strong>{area.label}</strong>
-                <small>{areaCount(area)} product categories</small>
               </button>
             ))}
           </div>
@@ -1279,15 +1222,11 @@ function VisualSelectionsBrowser({
 
       {selectedArea && !selectedProductType && (
         <section className="step">
-          <div className="step-heading">
-            <span>Step 2</span>
-            <h2>{selectedArea.label} product types</h2>
-          </div>
           <div className="type-grid">
             {selectedArea.types.map((type) => (
               <button key={type} type="button" className="type-tile" onClick={() => onSelectProductType(type)}>
+                <span className="visual-tile-image tileProductType" aria-hidden="true" />
                 <strong>{type}</strong>
-                <small>{typeCount(type)} products</small>
               </button>
             ))}
           </div>
@@ -1297,29 +1236,16 @@ function VisualSelectionsBrowser({
       {selectedArea && selectedProductType && (
         <>
           <section className="step compact">
-            <div className="step-heading">
-              <span>Step 3</span>
-              <h2>{selectedProductType} brands</h2>
-            </div>
+            <h2>{selectedProductType}</h2>
             <div className="brand-row">
-              <button type="button" className={selectedBrand === "All Brands" ? "active" : ""} onClick={() => onSelectBrand("All Brands")}>All Brands</button>
               {brandNames.map((brand) => (
                 <button key={brand} type="button" className={selectedBrand === brand ? "active" : ""} onClick={() => onSelectBrand(brand)}>{brand}</button>
               ))}
             </div>
-            {quickFilters.length ? (
-              <div className="quick-row">
-                <button type="button" className={!selectedQuickFilter ? "active" : ""} onClick={() => onSelectQuickFilter("")}>All {selectedProductType}</button>
-                {quickFilters.map((filter) => (
-                  <button key={filter} type="button" className={selectedQuickFilter === filter ? "active" : ""} onClick={() => onSelectQuickFilter(filter)}>{filter}</button>
-                ))}
-              </div>
-            ) : null}
           </section>
 
-          <section className="step">
+          {selectedBrand !== "All Brands" ? <section className="step">
             <div className="step-heading">
-              <span>Step 4</span>
               <h2>{selectedBrand === "All Brands" ? selectedProductType : `${selectedBrand} ${selectedProductType}`}</h2>
             </div>
             {loading ? <p className="empty-message">Loading products...</p> : (
@@ -1338,10 +1264,10 @@ function VisualSelectionsBrowser({
                   ))}
                 </div>
               ) : (
-                <EmptyProductTypeState onAddProduct={onAddProduct} onOpenImports={onOpenImports} />
+                <EmptyProductTypeState />
               )
             )}
-          </section>
+          </section> : null}
         </>
       )}
 
@@ -1350,14 +1276,10 @@ function VisualSelectionsBrowser({
   );
 }
 
-function EmptyProductTypeState({ onAddProduct, onOpenImports }) {
+function EmptyProductTypeState() {
   return (
     <div className="empty-products">
       <h3>No client-selectable products have been added yet.</h3>
-      <div>
-        <button type="button" onClick={onAddProduct}>Add Selection Product</button>
-        <button type="button" className="ghost" onClick={onOpenImports}>Import Products</button>
-      </div>
     </div>
   );
 }
@@ -1442,7 +1364,7 @@ function VisualProductDetailModal({ product, categoryName, supplierName, brandNa
                 <span className="supplier-missing">Supplier product page not available.</span>
               )}
               <button type="button" onClick={() => onAddToSelections(product, variant)}>{selected ? "Selected" : "Add To Selections"}</button>
-              <button type="button" className="ghost" onClick={onClose}>Back to Products</button>
+              <button type="button" className="ghost" onClick={onClose}>Back</button>
             </div>
           </div>
         </article>
@@ -1459,15 +1381,7 @@ const visualBrowserCss = `
     color: #172033;
   }
   .browser-header {
-    border: 1px solid #d8e0ea;
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 20px;
-    display: flex;
-    gap: 18px;
-    align-items: flex-start;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    padding: 4px 0;
   }
   .eyebrow {
     margin: 0 0 6px;
@@ -1480,16 +1394,9 @@ const visualBrowserCss = `
   h1 {
     margin: 0 0 6px;
     color: #101827;
-    font-size: 30px;
+    font-size: 38px;
   }
-  .browser-header p:not(.eyebrow) {
-    margin: 0;
-    color: #64748b;
-    font-size: 14px;
-  }
-  .header-actions,
   .brand-row,
-  .quick-row,
   .card-actions,
   .empty-products div {
     display: flex;
@@ -1538,43 +1445,10 @@ const visualBrowserCss = `
     color: #94a3b8;
     margin-right: 8px;
   }
-  .search-strip {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
-    align-items: center;
-  }
-  .search-strip input {
-    width: 100%;
-    border: 1px solid #d8e0ea;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #172033;
-    font: inherit;
-    padding: 13px 14px;
-  }
-  .selected-chip {
-    border: 1px solid #bbf7d0;
-    background: #f0fdf4;
-    border-radius: 8px;
-    color: #166534;
-    display: grid;
-    gap: 2px;
-    padding: 8px 12px;
-  }
-  .selected-chip span {
-    font-size: 11px;
-    font-weight: 900;
-    text-transform: uppercase;
-  }
-  .selected-chip strong {
-    font-size: 13px;
-  }
   .step {
-    border: 1px solid #d8e0ea;
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 18px;
+    border: 0;
+    background: transparent;
+    padding: 0;
     display: grid;
     gap: 14px;
   }
@@ -1602,55 +1476,59 @@ const visualBrowserCss = `
   .area-grid,
   .type-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 14px;
   }
   .area-tile,
   .type-tile {
-    min-height: 118px;
+    min-height: 236px;
     border: 1px solid #d8e0ea;
-    background: #f8fafc;
+    background: #ffffff;
     color: #172033;
     border-radius: 8px;
     display: grid;
-    gap: 8px;
-    justify-items: start;
-    align-content: center;
+    grid-template-rows: 1fr auto;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
     text-align: left;
   }
   .area-tile:hover,
   .type-tile:hover,
-  .brand-row button:hover,
-  .quick-row button:hover {
+  .brand-row button:hover {
     border-color: #2563eb;
     background: #eff6ff;
   }
-  .tile-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: #dbeafe;
-    color: #1d4ed8;
-    display: grid;
-    place-items: center;
-    font-weight: 900;
-  }
   .area-tile strong,
   .type-tile strong {
-    font-size: 17px;
+    display: block;
+    padding: 16px;
+    background: #ffffff;
+    font-size: 20px;
   }
-  .area-tile small,
-  .type-tile small {
-    color: #64748b;
+  .visual-tile-image {
+    min-height: 172px;
+    display: block;
+    width: 100%;
+    background-size: cover;
+    background-position: center;
   }
-  .brand-row button,
-  .quick-row button {
+  .tileExterior { background-image: linear-gradient(135deg, #f8fafc 0 40%, #7c2d12 40% 54%, #d1d5db 54%); }
+  .tileInterior { background-image: linear-gradient(135deg, #fff7ed 0 45%, #d6d3d1 45% 75%, #78716c 75%); }
+  .tileKitchen { background-image: linear-gradient(135deg, #f8fafc 0 35%, #d6d3d1 35% 70%, #78716c 70%); }
+  .tileBathroom { background-image: linear-gradient(135deg, #eff6ff, #bfdbfe); }
+  .tileBedroom { background-image: linear-gradient(135deg, #fee2e2, #fef3c7); }
+  .tileLaundry { background-image: linear-gradient(135deg, #f0fdfa, #99f6e4); }
+  .tileGarage { background-image: linear-gradient(135deg, #92400e, #eab308); }
+  .tileOutdoor { background-image: linear-gradient(135deg, #dcfce7, #65a30d); }
+  .tilePool { background-image: linear-gradient(135deg, #bae6fd, #0284c7); }
+  .tileProductType { background-image: linear-gradient(135deg, #e5e7eb, #111827); }
+  .brand-row button {
     border-color: #d8e0ea;
     background: #ffffff;
     color: #17406f;
   }
-  .brand-row button.active,
-  .quick-row button.active {
+  .brand-row button.active {
     border-color: #2563eb;
     background: #2563eb;
     color: #ffffff;

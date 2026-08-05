@@ -73,9 +73,7 @@ export function ProductSelectionModal(props: Props) {
         {props.errorMessage ? <div className="errorNotice">{props.errorMessage}</div> : null}
 
         <div className="simplePickerControls">
-          <input value={props.filters.search ?? ""} onChange={(event) => props.onFilterChange({ ...props.filters, search: event.target.value })} placeholder="Search products" aria-label="Search products" />
           <div className="brandPills" aria-label="Brands">
-            <button type="button" className={!props.filters.brand ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, brand: undefined })}>All Brands</button>
             {brands.map((brand) => (
               <button key={brand} type="button" className={props.filters.brand === brand ? "active" : ""} onClick={() => props.onFilterChange({ ...props.filters, brand })}>{brand}</button>
             ))}
@@ -134,6 +132,7 @@ export function ProductSelectionModal(props: Props) {
                         <div><dt>Model</dt><dd>{product.model ?? product.productCode ?? "Not recorded"}</dd></div>
                         <div><dt>Colour</dt><dd>{variant?.colour ?? product.colour ?? "Not recorded"}</dd></div>
                         <div><dt>Price</dt><dd>{aud((variant?.unitCost ?? product.unitCost)?.amount)}</dd></div>
+                        <div><dt>Allowance</dt><dd>{aud(product.allowance?.amount ?? props.row.selection?.allowance?.amount)}</dd></div>
                         <div><dt>Variation</dt><dd>{variationLabel(props.row, product, variant)}</dd></div>
                         <div><dt>Availability</dt><dd>{compatibility.priceStatus === "price_missing" ? "Price pending" : "Available"}</dd></div>
                       </dl>
@@ -174,7 +173,7 @@ function ProductDetailView(props: {
   const canSelect = !requiresVariant || Boolean(props.selectedVariantId);
   return (
     <article className="productDetailView">
-      <button type="button" className="backButton" onClick={props.onBack}>Back to Products</button>
+      <button type="button" className="backButton" onClick={props.onBack}>Back</button>
         <div className="detailLayout">
           <div className="detailMedia">
           <div className="detailImage">{props.product.imageUrl ? <img src={props.product.imageUrl} alt={props.product.name} /> : <span>{(props.product.brand || props.product.name).slice(0, 2).toUpperCase()}</span>}</div>

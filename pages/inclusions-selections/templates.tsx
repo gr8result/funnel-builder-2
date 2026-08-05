@@ -17,127 +17,132 @@ type NavigatorMode = "start" | "exterior" | "interior" | "room";
 type NavigatorTile = {
   key: string;
   label: string;
-  detail?: string;
+  imageClass: string;
 };
 
 const EXTERIOR_PRODUCT_TYPES: NavigatorTile[] = [
-  { key: "bricks", label: "Bricks" },
-  { key: "cladding", label: "Cladding" },
-  { key: "render", label: "Render" },
-  { key: "roof", label: "Roof" },
-  { key: "roof-colour", label: "Roof Colour" },
-  { key: "windows", label: "Windows" },
-  { key: "entry-door", label: "Entry Door" },
-  { key: "garage-door", label: "Garage Door" },
-  { key: "fascia", label: "Fascia" },
-  { key: "gutters", label: "Gutters" },
-  { key: "downpipes", label: "Downpipes" },
-  { key: "lighting", label: "Lighting" },
-  { key: "exterior-paint", label: "Exterior Paint" },
-  { key: "decking", label: "Decking" },
-  { key: "balustrades", label: "Balustrades" },
-  { key: "pool", label: "Pool" },
-  { key: "driveway", label: "Driveway" },
-  { key: "landscaping", label: "Landscaping" },
+  { key: "bricks", label: "Bricks", imageClass: "tileBricks" },
+  { key: "cladding", label: "Cladding", imageClass: "tileCladding" },
+  { key: "render", label: "Render", imageClass: "tileRender" },
+  { key: "roof", label: "Roof", imageClass: "tileRoof" },
+  { key: "roof-colour", label: "Roof Colour", imageClass: "tileRoofColour" },
+  { key: "windows", label: "Windows", imageClass: "tileWindows" },
+  { key: "entry-door", label: "Entry Door", imageClass: "tileEntryDoor" },
+  { key: "garage-door", label: "Garage Door", imageClass: "tileGarageDoor" },
+  { key: "gutters", label: "Gutters", imageClass: "tileGutters" },
+  { key: "fascia", label: "Fascia", imageClass: "tileFascia" },
+  { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+  { key: "driveway", label: "Driveway", imageClass: "tileDriveway" },
+  { key: "decking", label: "Decking", imageClass: "tileDecking" },
+  { key: "balustrades", label: "Balustrades", imageClass: "tileBalustrades" },
+  { key: "pool", label: "Pool", imageClass: "tilePool" },
+  { key: "exterior-paint", label: "Exterior Paint", imageClass: "tileExteriorPaint" },
 ];
 
 const INTERIOR_ROOMS: NavigatorTile[] = [
-  { key: "kitchen", label: "Kitchen" },
-  { key: "bathroom", label: "Bathrooms" },
-  { key: "bedroom", label: "Bedrooms" },
-  { key: "laundry", label: "Laundry" },
-  { key: "living", label: "Living Areas" },
-  { key: "media", label: "Media" },
-  { key: "study", label: "Study" },
-  { key: "garage", label: "Garage" },
+  { key: "kitchen", label: "Kitchen", imageClass: "tileKitchen" },
+  { key: "bathroom", label: "Bathroom", imageClass: "tileBathroom" },
+  { key: "ensuite", label: "Ensuite", imageClass: "tileEnsuite" },
+  { key: "laundry", label: "Laundry", imageClass: "tileLaundry" },
+  { key: "bedroom", label: "Bedrooms", imageClass: "tileBedroom" },
+  { key: "living", label: "Living Areas", imageClass: "tileLiving" },
+  { key: "media", label: "Media", imageClass: "tileMedia" },
+  { key: "study", label: "Study", imageClass: "tileStudy" },
+  { key: "garage", label: "Garage", imageClass: "tileGarage" },
 ];
 
 const ROOM_PRODUCT_TYPES: Record<string, NavigatorTile[]> = {
   kitchen: [
-    { key: "cabinetry", label: "Cabinetry" },
-    { key: "cabinet-finish", label: "Cabinet Finish" },
-    { key: "handles", label: "Handles" },
-    { key: "benchtops", label: "Benchtops" },
-    { key: "splashback", label: "Splashback" },
-    { key: "sink", label: "Sink" },
-    { key: "sink-mixer", label: "Sink Mixer" },
-    { key: "oven", label: "Oven" },
-    { key: "cooktop", label: "Cooktop" },
-    { key: "rangehood", label: "Rangehood" },
-    { key: "dishwasher", label: "Dishwasher" },
-    { key: "microwave", label: "Microwave" },
-    { key: "lighting", label: "Lighting" },
-    { key: "flooring", label: "Flooring" },
-    { key: "paint", label: "Paint" },
+    { key: "cabinetry", label: "Cabinetry", imageClass: "tileCabinetry" },
+    { key: "cabinet-finish", label: "Cabinet Finish", imageClass: "tileCabinetFinish" },
+    { key: "handles", label: "Handles", imageClass: "tileHandles" },
+    { key: "benchtops", label: "Benchtops", imageClass: "tileBenchtops" },
+    { key: "splashback", label: "Splashback", imageClass: "tileSplashback" },
+    { key: "sink", label: "Sink", imageClass: "tileSink" },
+    { key: "sink-mixer", label: "Sink Mixer", imageClass: "tileMixer" },
+    { key: "oven", label: "Oven", imageClass: "tileOven" },
+    { key: "cooktop", label: "Cooktop", imageClass: "tileCooktop" },
+    { key: "rangehood", label: "Rangehood", imageClass: "tileRangehood" },
+    { key: "dishwasher", label: "Dishwasher", imageClass: "tileDishwasher" },
+    { key: "microwave", label: "Microwave", imageClass: "tileMicrowave" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "paint", label: "Paint", imageClass: "tilePaint" },
   ],
   bathroom: [
-    { key: "vanity", label: "Vanity" },
-    { key: "basin", label: "Basin" },
-    { key: "basin-mixer", label: "Basin Mixer" },
-    { key: "mirror", label: "Mirror" },
-    { key: "shower", label: "Shower" },
-    { key: "shower-mixer", label: "Shower Mixer" },
-    { key: "bath", label: "Bath" },
-    { key: "toilet", label: "Toilet" },
-    { key: "tiles", label: "Tiles" },
-    { key: "accessories", label: "Accessories" },
+    { key: "vanity", label: "Vanity", imageClass: "tileVanity" },
+    { key: "basin", label: "Basin", imageClass: "tileBasin" },
+    { key: "basin-mixer", label: "Basin Mixer", imageClass: "tileMixer" },
+    { key: "mirror", label: "Mirror", imageClass: "tileMirror" },
+    { key: "shower", label: "Shower", imageClass: "tileShower" },
+    { key: "shower-mixer", label: "Shower Mixer", imageClass: "tileMixer" },
+    { key: "bath", label: "Bath", imageClass: "tileBath" },
+    { key: "toilet", label: "Toilet", imageClass: "tileToilet" },
+    { key: "tiles", label: "Tiles", imageClass: "tileTiles" },
+    { key: "accessories", label: "Accessories", imageClass: "tileAccessories" },
+  ],
+  ensuite: [
+    { key: "vanity", label: "Vanity", imageClass: "tileVanity" },
+    { key: "basin", label: "Basin", imageClass: "tileBasin" },
+    { key: "basin-mixer", label: "Basin Mixer", imageClass: "tileMixer" },
+    { key: "mirror", label: "Mirror", imageClass: "tileMirror" },
+    { key: "shower", label: "Shower", imageClass: "tileShower" },
+    { key: "shower-mixer", label: "Shower Mixer", imageClass: "tileMixer" },
+    { key: "toilet", label: "Toilet", imageClass: "tileToilet" },
+    { key: "tiles", label: "Tiles", imageClass: "tileTiles" },
   ],
   bedroom: [
-    { key: "flooring", label: "Flooring" },
-    { key: "paint", label: "Paint" },
-    { key: "door", label: "Door" },
-    { key: "door-handle", label: "Door Handle" },
-    { key: "robe", label: "Robe" },
-    { key: "robe-fitout", label: "Robe Fitout" },
-    { key: "lighting", label: "Lighting" },
-    { key: "power-points", label: "Power Points" },
-    { key: "window-furnishings", label: "Window Furnishings" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "paint", label: "Paint", imageClass: "tilePaint" },
+    { key: "door", label: "Door", imageClass: "tileEntryDoor" },
+    { key: "door-handle", label: "Door Handle", imageClass: "tileHandles" },
+    { key: "robe", label: "Robe", imageClass: "tileRobe" },
+    { key: "robe-fitout", label: "Robe Fitout", imageClass: "tileRobe" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "power-points", label: "Power Points", imageClass: "tilePower" },
+    { key: "window-furnishings", label: "Window Furnishings", imageClass: "tileWindows" },
   ],
   laundry: [
-    { key: "cabinetry", label: "Cabinetry" },
-    { key: "benchtops", label: "Benchtops" },
-    { key: "laundry-tub", label: "Laundry Tub" },
-    { key: "laundry-mixer", label: "Laundry Mixer" },
-    { key: "splashback", label: "Splashback" },
-    { key: "flooring", label: "Flooring" },
-    { key: "lighting", label: "Lighting" },
+    { key: "cabinetry", label: "Cabinetry", imageClass: "tileCabinetry" },
+    { key: "benchtops", label: "Benchtops", imageClass: "tileBenchtops" },
+    { key: "laundry-tub", label: "Laundry Tub", imageClass: "tileSink" },
+    { key: "laundry-mixer", label: "Laundry Mixer", imageClass: "tileMixer" },
+    { key: "splashback", label: "Splashback", imageClass: "tileSplashback" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
   ],
   living: [
-    { key: "flooring", label: "Flooring" },
-    { key: "paint", label: "Paint" },
-    { key: "doors", label: "Doors" },
-    { key: "door-hardware", label: "Door Hardware" },
-    { key: "lighting", label: "Lighting" },
-    { key: "window-furnishings", label: "Window Furnishings" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "paint", label: "Paint", imageClass: "tilePaint" },
+    { key: "doors", label: "Doors", imageClass: "tileEntryDoor" },
+    { key: "door-hardware", label: "Door Hardware", imageClass: "tileHandles" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "window-furnishings", label: "Window Furnishings", imageClass: "tileWindows" },
   ],
   media: [
-    { key: "flooring", label: "Flooring" },
-    { key: "paint", label: "Paint" },
-    { key: "lighting", label: "Lighting" },
-    { key: "power-points", label: "Power Points" },
-    { key: "audio-visual", label: "Audio Visual" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "paint", label: "Paint", imageClass: "tilePaint" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "power-points", label: "Power Points", imageClass: "tilePower" },
+    { key: "audio-visual", label: "Audio Visual", imageClass: "tileMedia" },
   ],
   study: [
-    { key: "flooring", label: "Flooring" },
-    { key: "paint", label: "Paint" },
-    { key: "door", label: "Door" },
-    { key: "lighting", label: "Lighting" },
-    { key: "power-points", label: "Power Points" },
+    { key: "flooring", label: "Flooring", imageClass: "tileFlooring" },
+    { key: "paint", label: "Paint", imageClass: "tilePaint" },
+    { key: "door", label: "Door", imageClass: "tileEntryDoor" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "power-points", label: "Power Points", imageClass: "tilePower" },
   ],
   garage: [
-    { key: "garage-door", label: "Garage Door" },
-    { key: "garage-motor", label: "Garage Motor" },
-    { key: "internal-door", label: "Internal Door" },
-    { key: "floor-finish", label: "Floor Finish" },
-    { key: "storage", label: "Storage" },
-    { key: "lighting", label: "Lighting" },
-    { key: "power", label: "Power" },
+    { key: "garage-door", label: "Garage Door", imageClass: "tileGarageDoor" },
+    { key: "garage-motor", label: "Garage Motor", imageClass: "tileGarage" },
+    { key: "internal-door", label: "Internal Door", imageClass: "tileEntryDoor" },
+    { key: "floor-finish", label: "Floor Finish", imageClass: "tileDriveway" },
+    { key: "storage", label: "Storage", imageClass: "tileRobe" },
+    { key: "lighting", label: "Lighting", imageClass: "tileLighting" },
+    { key: "power", label: "Power", imageClass: "tilePower" },
   ],
 };
-
-function tileInitials(label: string) {
-  return label.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-}
 
 export default function AreaNavigatorStagePage() {
   const router = useRouter();
@@ -199,8 +204,7 @@ export default function AreaNavigatorStagePage() {
       <InclusionsSelectionsStageNav currentStage="templates" context={context} />
       <header className="navigatorHeader">
         <div>
-          <h1>Choose an Area</h1>
-          <p>Select the area of the home you want to complete.</p>
+          <h1>Select an Area</h1>
         </div>
       </header>
 
@@ -209,11 +213,11 @@ export default function AreaNavigatorStagePage() {
       {mode === "start" ? (
         <section className="primaryChoiceGrid" aria-label="Choose Exterior or Interior">
           <button type="button" className="homeCard exteriorCard" onClick={() => setMode("exterior")}>
-            <span>EX</span>
+            <span className="tileImage tileExterior" aria-hidden="true" />
             <strong>Exterior</strong>
           </button>
           <button type="button" className="homeCard interiorCard" onClick={() => setMode("interior")}>
-            <span>IN</span>
+            <span className="tileImage tileInterior" aria-hidden="true" />
             <strong>Interior</strong>
           </button>
         </section>
@@ -285,7 +289,7 @@ function NavigatorTileGrid({
       <div className="tileGrid">
         {tiles.map((tile) => (
           <button key={tile.key} type="button" className="selectionTile" disabled={disabled} onClick={() => onSelect(tile)}>
-            <span>{tileInitials(tile.label)}</span>
+            <span className={`tileImage ${tile.imageClass}`} aria-hidden="true" />
             <strong>{tile.label}</strong>
           </button>
         ))}
@@ -312,16 +316,14 @@ const areaNavigatorStyles = `
     margin: 0 auto 18px;
   }
   .navigatorHeader {
-    background: #ffffff;
-    border: 1px solid #dfe6ef;
-    border-radius: 8px;
-    padding: 22px;
+    padding: 8px 0 2px;
   }
   h1 {
-    margin: 0 0 8px;
-    font-size: 36px;
+    margin: 0;
+    font-size: 42px;
     line-height: 1.1;
     letter-spacing: 0;
+    text-transform: uppercase;
   }
   h2 {
     margin: 0;
@@ -353,26 +355,20 @@ const areaNavigatorStyles = `
     gap: 18px;
   }
   .homeCard {
-    min-height: 280px;
-    padding: 26px;
+    min-height: 360px;
+    padding: 0;
     display: grid;
-    align-content: center;
-    justify-items: center;
-    gap: 16px;
-    font-size: 26px;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    gap: 0;
+    font-size: 30px;
     box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   }
-  .homeCard span,
-  .selectionTile span {
-    display: grid;
-    place-items: center;
-    width: 58px;
-    height: 58px;
-    border-radius: 8px;
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-size: 20px;
-    font-weight: 900;
+  .homeCard strong,
+  .selectionTile strong {
+    display: block;
+    padding: 18px;
+    background: #ffffff;
   }
   .homeCard:hover,
   .homeCard:focus-visible,
@@ -381,12 +377,6 @@ const areaNavigatorStyles = `
     border-color: #2563eb;
     box-shadow: 0 14px 34px rgba(37, 99, 235, 0.14);
     outline: none;
-  }
-  .exteriorCard {
-    background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-  }
-  .interiorCard {
-    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
   }
   .navigatorSection {
     display: grid;
@@ -404,22 +394,55 @@ const areaNavigatorStyles = `
   }
   .tileGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     gap: 14px;
   }
   .selectionTile {
-    min-height: 148px;
-    padding: 18px;
+    min-height: 220px;
+    padding: 0;
     display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: 14px;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+    gap: 0;
     text-align: left;
     background: #ffffff;
   }
   .selectionTile strong {
-    font-size: 18px;
+    font-size: 20px;
   }
+  .tileImage {
+    display: block;
+    width: 100%;
+    min-height: 160px;
+    background-size: cover;
+    background-position: center;
+  }
+  .homeCard .tileImage {
+    min-height: 292px;
+  }
+  .tileExterior { background-image: linear-gradient(135deg, rgba(35,61,77,.2), rgba(217,158,86,.15)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 360'%3E%3Crect width='600' height='360' fill='%23dfe8e2'/%3E%3Cpath d='M70 210 300 70l230 140v110H70z' fill='%23f8fafc'/%3E%3Cpath d='M300 70 60 220h480z' fill='%237c2d12'/%3E%3Crect x='125' y='220' width='70' height='90' fill='%239ca3af'/%3E%3Crect x='245' y='205' width='82' height='62' fill='%2393c5fd'/%3E%3Crect x='385' y='210' width='90' height='100' fill='%23cbd5e1'/%3E%3C/svg%3E"); }
+  .tileInterior { background-image: linear-gradient(135deg, rgba(245,158,11,.16), rgba(20,184,166,.12)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 360'%3E%3Crect width='600' height='360' fill='%23f3efe7'/%3E%3Crect x='70' y='70' width='460' height='230' rx='12' fill='%23ffffff'/%3E%3Crect x='105' y='105' width='160' height='120' fill='%23d1d5db'/%3E%3Crect x='305' y='105' width='165' height='130' fill='%23b7c7b2'/%3E%3Crect x='115' y='245' width='350' height='22' fill='%238b5e3c'/%3E%3C/svg%3E"); }
+  .tileBricks { background-image: linear-gradient(135deg, #c66a4a, #7f1d1d); }
+  .tileCladding { background-image: repeating-linear-gradient(90deg, #eef2f7 0 22px, #cbd5e1 22px 25px); }
+  .tileRender, .tileExteriorPaint, .tilePaint { background-image: linear-gradient(135deg, #f8fafc, #dbeafe); }
+  .tileRoof, .tileRoofColour { background-image: linear-gradient(135deg, #334155 0 45%, #64748b 45% 100%); }
+  .tileWindows { background-image: linear-gradient(135deg, #dbeafe 0 48%, #93c5fd 48% 52%, #eff6ff 52%); }
+  .tileEntryDoor, .tileGarageDoor, .tileGarage { background-image: linear-gradient(135deg, #92400e, #eab308); }
+  .tileGutters, .tileFascia { background-image: linear-gradient(135deg, #475569, #e2e8f0); }
+  .tileLighting { background-image: radial-gradient(circle at 50% 38%, #fde68a 0 18%, #fef3c7 19% 34%, #334155 35%); }
+  .tileDriveway { background-image: linear-gradient(135deg, #94a3b8, #475569); }
+  .tileDecking { background-image: repeating-linear-gradient(90deg, #8b5e3c 0 24px, #6b4423 24px 28px); }
+  .tileBalustrades { background-image: repeating-linear-gradient(90deg, #f8fafc 0 14px, #94a3b8 14px 18px); }
+  .tilePool { background-image: linear-gradient(135deg, #bae6fd, #0284c7); }
+  .tileKitchen { background-image: linear-gradient(135deg, #f8fafc 0 35%, #d6d3d1 35% 70%, #78716c 70%); }
+  .tileBathroom, .tileEnsuite, .tileShower, .tileToilet, .tileBasin, .tileBath, .tileVanity { background-image: linear-gradient(135deg, #eff6ff, #bfdbfe); }
+  .tileLaundry, .tileSink, .tileMixer { background-image: linear-gradient(135deg, #f0fdfa, #99f6e4); }
+  .tileBedroom { background-image: linear-gradient(135deg, #fee2e2, #fef3c7); }
+  .tileLiving, .tileMedia { background-image: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+  .tileStudy { background-image: linear-gradient(135deg, #ecfccb, #bef264); }
+  .tileCabinetry, .tileCabinetFinish, .tileHandles, .tileRobe { background-image: linear-gradient(135deg, #fed7aa, #a16207); }
+  .tileBenchtops, .tileSplashback, .tileTiles, .tileMirror { background-image: linear-gradient(135deg, #f8fafc, #94a3b8); }
+  .tileOven, .tileCooktop, .tileRangehood, .tileDishwasher, .tileMicrowave, .tilePower { background-image: linear-gradient(135deg, #e5e7eb, #111827); }
   .requiredState,
   .navigatorNotice,
   .loadingNote {
