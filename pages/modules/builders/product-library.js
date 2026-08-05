@@ -8,6 +8,7 @@ import { ProductLibraryToolbar, ProductLibraryFilters } from "../../../component
 import ProductLibraryTable from "../../../components/product-library/ProductLibraryTable";
 import ProductLibraryCards from "../../../components/product-library/ProductLibraryCards";
 import ProductDetailDrawer from "../../../components/product-library/ProductDetailDrawer";
+import { InclusionsSelectionsProjectBanner } from "../../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import {
   downloadCsv,
   isProductLibraryProduct,
@@ -119,6 +120,18 @@ const PRODUCT_TYPE_SYNONYMS = {
   "Paint Colours": ["paint colour", "paint color", "paint"],
   "Balustrades": ["balustrade"],
 };
+
+function productLibrarySelectionContext(query = {}) {
+  const first = (value) => Array.isArray(value) ? value[0] || "" : value || "";
+  return {
+    organisationId: first(query.organisationId),
+    projectId: first(query.projectId),
+    projectName: first(query.projectName),
+    jobNumber: first(query.jobNumber),
+    clientName: first(query.client || query.clientName),
+    siteAddress: first(query.siteAddress),
+  };
+}
 
 function explicitSelectionVisibility(product) {
   const value = String(product?.selection_visibility ?? product?.selectionVisibility ?? "").trim().toLowerCase();
@@ -717,22 +730,25 @@ export default function BuilderProductLibraryPage() {
         {success && <div className="alert success">{success}</div>}
 
         {activeTab === "selections" && (
-          <VisualSelectionsBrowser
-            products={selectionProducts}
-            loading={loading}
-            areas={PRODUCT_BROWSER_AREAS}
-            selectedAreaKey={selectedAreaKey}
-            selectedProductType={selectedProductType}
-            selectedBrand={selectedBrand}
-            categoryById={categoryById}
-            supplierById={supplierById}
-            manufacturerById={manufacturerById}
-            onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); setSelectedBrand("All Brands"); }}
-            onSelectProductType={(type) => { setSelectedProductType(type); setSelectedBrand("All Brands"); }}
-            onSelectBrand={setSelectedBrand}
-            onOpenProduct={setDetailProduct}
-            onAddToSelections={handleAddToSelections}
-          />
+          <>
+            <InclusionsSelectionsProjectBanner currentStage="workspace" context={productLibrarySelectionContext(router.query)} />
+            <VisualSelectionsBrowser
+              products={selectionProducts}
+              loading={loading}
+              areas={PRODUCT_BROWSER_AREAS}
+              selectedAreaKey={selectedAreaKey}
+              selectedProductType={selectedProductType}
+              selectedBrand={selectedBrand}
+              categoryById={categoryById}
+              supplierById={supplierById}
+              manufacturerById={manufacturerById}
+              onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); setSelectedBrand("All Brands"); }}
+              onSelectProductType={(type) => { setSelectedProductType(type); setSelectedBrand("All Brands"); }}
+              onSelectBrand={setSelectedBrand}
+              onOpenProduct={setDetailProduct}
+              onAddToSelections={handleAddToSelections}
+            />
+          </>
         )}
 
         {activeTab === "admin" && (

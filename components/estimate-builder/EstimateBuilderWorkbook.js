@@ -57,6 +57,15 @@ import * as ProjectEstimateApi from "./project-estimate/persistence/ProjectEstim
 import ProjectEstimateTemplateManager from "./project-estimate/components/TemplateManager";
 import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/VersionHistoryPanel";
 import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/pbPropertiesPanels";
+import {
+  approvedMappingsCsv,
+  applyApprovedSelectionsImport,
+  loadApprovedSelectionMappings,
+  previewApprovedSelectionsCsv,
+  quotationTemplateCsvFromWorkbook,
+  quotationTemplateItemsFromWorkbook,
+  saveApprovedSelectionMappings,
+} from "../../lib/selections/quotationTemplateCsv";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
 
@@ -6666,16 +6675,23 @@ function ProjectEstimateSheet({ sheet }) {
 function ProductLibrarySheet({ sheet }) {
   const readonly = sheet.previewMode;
   const fileRef = useRef(null);
+  const approvedSelectionsFileRef = useRef(null);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [supplierFilter, setSupplierFilter] = useState("all");
   const [activeFilter, setActiveFilter] = useState("active");
   const [preview, setPreview] = useState(null);
+  const [approvedSelectionsPreview, setApprovedSelectionsPreview] = useState(null);
   const [message, setMessage] = useState("");
+  const [approvedSelectionsMessage, setApprovedSelectionsMessage] = useState("");
+  const [approvedMappingsVersion, setApprovedMappingsVersion] = useState(0);
   const [bulkSupplier, setBulkSupplier] = useState("");
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkActive, setBulkActive] = useState("");
   const products = useMemo(() => productLibraryProducts(sheet), [sheet.workbook.productLibrary, sheet.preview, sheet.quoteSections]);
+  const quoteTemplateItems = useMemo(() => quotationTemplateItemsFromWorkbook(sheet.workbook, sheet.quoteSections), [sheet.workbook.quotation, sheet.quoteSections]);
+  const approvedMappingContext = useMemo(() => estimateBuilderApprovedMappingContext(sheet.workbook), [sheet.workbook.jobFileMeta, sheet.workbook.projectSettings, sheet.workbook.clientPage]);
+  const approvedMappings = useMemo(() => loadApprovedSelectionMappings(approvedMappingContext), [approvedMappingContext.organisationId, approvedMappingContext.projectId, approvedMappingsVersion]);
   const savedCount = sheet.workbook.productLibrary?.products?.length || 0;
   const categories = useMemo(() => uniqueProductValues(products, "category"), [products]);
   const suppliers = useMemo(() => uniqueProductValues(products, "supplier"), [products]);
@@ -6747,6 +6763,45 @@ function ProductLibrarySheet({ sheet }) {
     setMessage(`Bulk updated ${visibleIds.size} visible products.`);
   }
 
+  function downloadQuotationTemplateCsv() {
+    const fileName = `Gr8-Result-Quotation-Template-Items-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadBlob(new Blob([quotationTemplateCsvFromWorkbook(sheet.workbook, sheet.quoteSections)], { type: "text/csv;charset=utf-8" }), fileName);
+    setApprovedSelectionsMessage(`Downloaded ${fileName} with ${quoteTemplateItems.length} current quotation template rows.`);
+  }
+
+  function downloadCurrentApprovedSelectionsCsv() {
+    const fileName = `Gr8-Result-Approved-Selections-${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadBlob(new Blob([approvedMappingsCsv(approvedMappings)], { type: "text/csv;charset=utf-8" }), fileName);
+    setApprovedSelectionsMessage(`Downloaded ${fileName} with ${approvedMappings.length} approved selection mapping rows.`);
+  }
+
+  function handleApprovedSelectionsFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const nextPreview = previewApprovedSelectionsCsv(String(reader.result || ""), quoteTemplateItems, approvedMappings, file.name);
+        setApprovedSelectionsPreview(nextPreview);
+        setApprovedSelectionsMessage(`Approved selections preview ready: ${nextPreview.validRows.length} valid, ${nextPreview.invalidRows.length} invalid, ${nextPreview.removedMappings.length} previously mapped but not in upload.`);
+      } catch (error) {
+        setApprovedSelectionsPreview(null);
+        setApprovedSelectionsMessage(error?.message || "Approved Selections CSV could not be parsed.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function confirmApprovedSelectionsImport(removedAction = "remove") {
+    if (!approvedSelectionsPreview?.canImport) return;
+    const nextMappings = applyApprovedSelectionsImport(approvedMappings, approvedSelectionsPreview, removedAction);
+    saveApprovedSelectionMappings(approvedMappingContext, nextMappings);
+    setApprovedMappingsVersion((version) => version + 1);
+    setApprovedSelectionsMessage(`Imported ${approvedSelectionsPreview.validRows.length} approved selection mapping rows. Quotation Builder rows were not changed.`);
+    setApprovedSelectionsPreview(null);
+  }
+
   return (
     <div style={styles.productLibraryShell}>
       <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.estimatingCatalogue.gradient }}>
@@ -6789,6 +6844,39 @@ function ProductLibrarySheet({ sheet }) {
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => fileRef.current?.click()}>Upload CSV</button>
         <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleImportFile} />
         <span style={styles.productLibraryStatus}>{message || `${stats.active} active, ${stats.inactive} inactive, ${filteredProducts.length} visible.`}</span>
+      </section>
+
+      <section style={styles.approvedSelectionsPanel}>
+        <div style={styles.dashboardPanelHeader}>
+          <div>
+            <h3 style={styles.dashboardPanelTitle}>Approved Selections CSV Workflow</h3>
+            <p style={styles.dashboardPanelSubtitle}>Download every current Quotation Builder template row, edit it in Excel, then upload only the rows you approve for Inclusions & Selections.</p>
+          </div>
+          <strong>{quoteTemplateItems.length} quote-template rows</strong>
+        </div>
+        <ol style={styles.csvInstructionList}>
+          <li>Download the CSV and open it in Excel.</li>
+          <li>Delete every row that should not appear in Inclusions & Selections.</li>
+          <li>Keep the original <code>quote_item_code</code> unchanged and complete <code>selection_area</code>, <code>selection_category</code>, <code>selection_item_name</code> and <code>quantity_rule</code> where required.</li>
+          <li>Save as CSV UTF-8 and upload it using Upload Approved Selections CSV.</li>
+        </ol>
+        <p style={styles.productLibraryStatus}>Do not change or duplicate quote item codes. Re-uploading controls Selections only and does not overwrite the working Quotation Builder catalogue.</p>
+        <div style={styles.productLibraryActions}>
+          <button type="button" style={styles.primaryButton} onClick={downloadQuotationTemplateCsv}>Download Quotation Template CSV</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => approvedSelectionsFileRef.current?.click()}>Upload Approved Selections CSV</button>
+          <button type="button" style={styles.secondaryButton} onClick={downloadCurrentApprovedSelectionsCsv}>Download Current Approved Selections CSV</button>
+          <input ref={approvedSelectionsFileRef} type="file" accept=".csv,text/csv" style={{ display: "none" }} onChange={handleApprovedSelectionsFile} />
+          <span style={styles.productLibraryStatus}>{approvedSelectionsMessage || `${approvedMappings.length} approved mapping rows active for this project.`}</span>
+        </div>
+        {approvedSelectionsPreview ? (
+          <ApprovedSelectionsImportPreview
+            preview={approvedSelectionsPreview}
+            readonly={readonly}
+            onImportRemove={() => confirmApprovedSelectionsImport("remove")}
+            onImportRemain={() => confirmApprovedSelectionsImport("remain")}
+            onCancel={() => setApprovedSelectionsPreview(null)}
+          />
+        ) : null}
       </section>
 
       <section style={styles.productLibraryBulkBar}>
@@ -6899,6 +6987,52 @@ function ProductLibraryImportPreview({ preview, onConfirm, onCancel, readonly })
         ))}
       </div>
       {preview.invalidRows.length ? <p style={styles.errorText}>Fix invalid rows and upload again before confirming the import.</p> : null}
+    </section>
+  );
+}
+
+function ApprovedSelectionsImportPreview({ preview, onImportRemove, onImportRemain, onCancel, readonly }) {
+  const groups = [
+    ["Valid rows", preview.validRows],
+    ["Invalid rows", preview.invalidRows],
+    ["Duplicate item codes", preview.duplicateItemCodes],
+    ["Missing item codes", preview.missingItemCodes],
+    ["Unknown quote codes", preview.unknownItemCodes],
+    ["Retained selection areas", preview.retainedSelectionAreas],
+    ["Retained categories", preview.retainedCategories],
+    ["Retained selection item names", preview.retainedSelectionItemNames],
+    ["Quantity rules", preview.quantityRules],
+    ["Warnings", preview.warnings],
+  ];
+  return (
+    <section style={styles.productLibraryPreview}>
+      <div style={styles.dashboardPanelHeader}>
+        <div>
+          <h3 style={styles.dashboardPanelTitle}>Approved Selections Import Preview</h3>
+          <p style={styles.dashboardPanelSubtitle}>{preview.filename || "Selected CSV"}: {preview.totalRows} total rows, {preview.validRows.length} valid rows, {preview.invalidRows.length} invalid rows.</p>
+        </div>
+        <span>
+          <button type="button" disabled={readonly || !preview.canImport} style={styles.primaryButton} onClick={onImportRemove}>Import Approved Items</button>
+          {preview.removedMappings.length ? <button type="button" disabled={readonly || !preview.canImport} style={styles.secondaryButton} onClick={onImportRemain}>Remain active</button> : null}
+          <button type="button" style={styles.secondaryButton} onClick={onCancel}>Cancel</button>
+        </span>
+      </div>
+      {preview.removedMappings.length ? (
+        <p style={styles.productLibraryStatus}>{preview.removedMappings.length} previously approved item(s) are missing from this upload. Import Approved Items removes them from selections mapping only; Remain active keeps them available.</p>
+      ) : null}
+      <div style={styles.productLibraryPreviewGrid}>
+        {groups.map(([label, rows]) => (
+          <div key={label} style={styles.productLibraryPreviewCard}>
+            <strong>{label}: {rows.length}</strong>
+            <div style={styles.productLibraryPreviewList}>
+              {rows.slice(0, 8).map((item, index) => <span key={`${label}-${index}`}>{approvedSelectionsPreviewLabel(item)}</span>)}
+              {rows.length > 8 ? <span>+ {rows.length - 8} more</span> : null}
+              {!rows.length ? <span>None</span> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      {preview.invalidRows.length ? <p style={styles.errorText}>Fix invalid rows and upload again before importing approved items.</p> : null}
     </section>
   );
 }
@@ -13342,6 +13476,30 @@ function productLibraryPreviewLabel(item) {
   return `${prefix}${product.product_code ? `${product.product_code} - ` : ""}${product.product_name || product.description || "Unnamed product"}${reason}`;
 }
 
+function approvedSelectionsPreviewLabel(item) {
+  if (!item) return "None";
+  if (typeof item === "string" || typeof item === "number") return String(item);
+  if (item.reason) return `Row ${item.rowNumber}: ${item.quoteItemCode || "missing code"} - ${item.reason}`;
+  return [item.quoteItemCode, item.selectionArea, item.selectionItemName].filter(Boolean).join(" - ") || "Mapping row";
+}
+
+function estimateBuilderApprovedMappingContext(workbook = {}) {
+  const meta = workbook.jobFileMeta || {};
+  const settings = workbook.projectSettings || {};
+  const projectName = meta.jobName || settings.projectName || workbook.projectName || "";
+  const jobNumber = meta.jobNumber || settings.jobNumber || workbook.jobNumber || "";
+  const clientName = meta.clientName || settings.clientName || workbook.clientName || "";
+  const siteAddress = meta.address || settings.projectAddress || workbook.projectAddress || "";
+  return {
+    organisationId: workbook.organisationId || workbook.workspaceId || "local_builder",
+    projectId: workbook.projectId || meta.fileName || jobNumber || slug(projectName) || "estimate-builder",
+    projectName,
+    jobNumber,
+    clientName,
+    siteAddress,
+  };
+}
+
 function filterProductLibraryProducts(products, filters) {
   const q = String(filters.search || "").trim().toLowerCase();
   return products.filter((product) => {
@@ -15588,6 +15746,8 @@ const styles = {
   productLibraryShell: { display: "grid", gap: 14 },
   productLibraryToolbar: { border: "1px solid #ccfbf1", background: "#f0fdfa", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" },
   productLibraryActions: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" },
+  approvedSelectionsPanel: { border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: 14, padding: 14, display: "grid", gap: 12, color: "#0f172a" },
+  csvInstructionList: { margin: 0, paddingLeft: 22, display: "grid", gap: 6, color: "#334155", fontSize: 13, lineHeight: 1.45 },
   productLibraryBulkBar: { border: "1px solid #d8dee8", background: "#f8fafc", borderRadius: 14, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", color: "#0f172a" },
   productLibrarySelect: { border: "1px solid #94a3b8", borderRadius: 8, padding: "8px 10px", color: "#0f172a", background: "#ffffff", fontWeight: 800, minHeight: 38 },
   productLibraryMiniInput: { border: "1px solid #94a3b8", borderRadius: 8, padding: "8px 10px", color: "#0f172a", background: "#ffffff", fontWeight: 750, minHeight: 38 },

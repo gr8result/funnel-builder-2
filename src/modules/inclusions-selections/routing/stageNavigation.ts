@@ -1,6 +1,6 @@
 import type { ProjectSelectionContext } from "../repositories/projectAreaRegisterRepository";
 
-export type InclusionsSelectionsStageId = "areas" | "templates" | "workspace" | "review" | "approvals" | "documents-export";
+export type InclusionsSelectionsStageId = "areas" | "templates" | "workspace" | "review" | "approvals" | "documents-export" | "procurement";
 
 export type InclusionsSelectionsStage = {
   id: InclusionsSelectionsStageId;
@@ -15,6 +15,7 @@ export const INCLUSIONS_SELECTIONS_STAGES: InclusionsSelectionsStage[] = [
   { id: "review", label: "Review", route: "/inclusions-selections/review" },
   { id: "approvals", label: "Approvals", route: "/inclusions-selections/approvals" },
   { id: "documents-export", label: "Documents & Export", route: "/inclusions-selections/documents-export" },
+  { id: "procurement", label: "Procurement", route: "/inclusions-selections/procurement" },
 ];
 
 export const PROJECT_REQUIRED_MESSAGE = "Create a new selections file or open a local .gr8job or .gr8select file before starting Inclusions & Selections.";

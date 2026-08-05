@@ -18,20 +18,21 @@ The module must not import from:
 
 1. A project owns explicit areas and rooms.
 2. Each area has an area type and area group.
-3. Area templates generate required selection requirements.
-4. Inclusion tiers define default allowance/product intent.
-5. Product references can satisfy requirements only when compatibility matches.
-6. Selections resolve from inherited defaults unless overridden.
-7. Pricing calculates cost, sell, allowance variance, and tax.
-8. Builder and client approvals allow a selection set to lock.
-9. Locked snapshots freeze the selected product identity and pricing.
-10. Estimate export adapts a locked snapshot into estimate lines.
+3. The visible Stage 2 workflow uses the user-approved CSV mapping to show areas and selection item names.
+4. Area templates generate required selection requirements behind the scenes.
+5. Inclusion tiers define default allowance/product intent.
+6. Product references can satisfy requirements only when compatibility matches.
+7. Selections resolve from inherited defaults unless overridden.
+8. Pricing calculates cost, sell, allowance variance, and tax.
+9. Builder and client approvals allow a selection set to lock.
+10. Locked snapshots freeze the selected product identity and pricing.
+11. Estimate export adapts a locked snapshot into estimate lines.
 
 ## Non-Goals In This Phase
 
 - No API routes.
 - No database migrations.
-- No Estimate Builder integration.
+- No Estimate Builder calculation, formula, rate or quotation row mutation.
 - No Product Library schema cleanup.
 - No migration or deletion of historical selection data.
 - No procurement export, supplier ordering or purchase schedule workflow.
@@ -52,7 +53,9 @@ Current persistence is browser-scoped through the existing repository adapters. 
 
 ## Stage-Two Route
 
-`/inclusions-selections/templates` is the second visible replacement workflow. It assigns AreaTemplates and InclusionTiers to the Stage 1 ProjectAreas, previews generated ProjectRequirements, reconciles them safely and saves the template stage configuration.
+`/inclusions-selections/templates` is the second visible replacement workflow. It shows a builder-facing area navigator fed by the user-approved selections CSV mapping. Backend concepts such as AreaTemplates, InclusionTiers and ProjectRequirements remain behind the scenes.
+
+The approved mapping is created from the Quotation Builder CSV export documented in `docs/QUOTATION_TEMPLATE_CSV_EXPORT.md` and `docs/APPROVED_SELECTIONS_CSV_WORKFLOW.md`. The mapping preserves the original quote item codes and does not alter the Quotation Builder workbook.
 
 ## Stage-Three Route
 

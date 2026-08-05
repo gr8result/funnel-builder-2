@@ -893,7 +893,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
         context.jobNumber ? `Job ${context.jobNumber}` : "",
         context.clientName || "",
         context.siteAddress || "",
-        `Stage: ${currentStageLabel}`,
+        `Current Section: ${currentStageLabel}`,
         localFileName,
       ].filter(Boolean)
     : ["No selections file open"];
@@ -919,7 +919,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
         </div>
         <div>
           <h1>Inclusions & Selections</h1>
-          <p>Set up project areas, choose products and finishes, review selections and prepare approvals.</p>
+          <p>Choose project areas, select products and finishes, and prepare the completed selections schedule.</p>
         </div>
       </div>
       <div className="projectDetails" aria-label="Current selections file details">

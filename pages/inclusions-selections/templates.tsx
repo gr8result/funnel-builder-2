@@ -6,6 +6,11 @@ import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selec
 import type { ProjectSelectionContext } from "../../src/modules/inclusions-selections/repositories/projectAreaRegisterRepository";
 import { contextFromQuery, hrefForStage } from "../../src/modules/inclusions-selections/routing/stageNavigation";
 import {
+  approvedSelectionAreas,
+  approvedSelectionItemsForArea,
+  loadApprovedSelectionMappings,
+} from "../../lib/selections/quotationTemplateCsv";
+import {
   loadTemplateStage,
   reconcileProjectRequirements,
   saveTemplateStage,
@@ -144,6 +149,57 @@ const ROOM_PRODUCT_TYPES: Record<string, NavigatorTile[]> = {
   ],
 };
 
+function imageClassForAreaLabel(label: string): string {
+  const text = label.toLowerCase();
+  if (text.includes("kitchen")) return "tileKitchen";
+  if (text.includes("bath")) return "tileBathroom";
+  if (text.includes("ensuite")) return "tileEnsuite";
+  if (text.includes("laundry")) return "tileLaundry";
+  if (text.includes("bed")) return "tileBedroom";
+  if (text.includes("living")) return "tileLiving";
+  if (text.includes("media")) return "tileMedia";
+  if (text.includes("study")) return "tileStudy";
+  if (text.includes("garage")) return "tileGarage";
+  return "tileInterior";
+}
+
+function imageClassForSelectionLabel(label: string): string {
+  const text = label.toLowerCase();
+  if (text.includes("brick")) return "tileBricks";
+  if (text.includes("cladding")) return "tileCladding";
+  if (text.includes("roof")) return "tileRoof";
+  if (text.includes("window")) return "tileWindows";
+  if (text.includes("door") && text.includes("garage")) return "tileGarageDoor";
+  if (text.includes("door")) return "tileEntryDoor";
+  if (text.includes("gutter")) return "tileGutters";
+  if (text.includes("fascia")) return "tileFascia";
+  if (text.includes("light")) return "tileLighting";
+  if (text.includes("driveway")) return "tileDriveway";
+  if (text.includes("deck")) return "tileDecking";
+  if (text.includes("balustrade")) return "tileBalustrades";
+  if (text.includes("pool")) return "tilePool";
+  if (text.includes("paint")) return "tilePaint";
+  if (text.includes("oven")) return "tileOven";
+  if (text.includes("cooktop")) return "tileCooktop";
+  if (text.includes("rangehood")) return "tileRangehood";
+  if (text.includes("dishwasher")) return "tileDishwasher";
+  if (text.includes("microwave")) return "tileMicrowave";
+  if (text.includes("sink")) return "tileSink";
+  if (text.includes("mixer")) return "tileMixer";
+  if (text.includes("tile")) return "tileTiles";
+  if (text.includes("floor")) return "tileFlooring";
+  return "tileExterior";
+}
+
+function queryStringFromContext(context: Partial<ProjectSelectionContext>): string {
+  const params = new URLSearchParams();
+  Object.entries(context).forEach(([key, value]) => {
+    if (value) params.set(key, String(value));
+  });
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 export default function AreaNavigatorStagePage() {
   const router = useRouter();
   const [state, setState] = useState<TemplateStageState | null>(null);
@@ -151,10 +207,17 @@ export default function AreaNavigatorStagePage() {
   const [selectedRoomKey, setSelectedRoomKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [approvedMappings, setApprovedMappings] = useState<any[]>([]);
 
   const context = useMemo<Partial<ProjectSelectionContext>>(() => contextFromQuery(router.query), [router.query]);
-  const selectedRoom = INTERIOR_ROOMS.find((room) => room.key === selectedRoomKey);
-  const roomProductTypes = selectedRoomKey ? ROOM_PRODUCT_TYPES[selectedRoomKey] ?? [] : [];
+  const approvedExteriorTiles = useMemo<NavigatorTile[]>(() => approvedSelectionItemsForArea(approvedMappings, "Exterior").map((item: any) => ({ key: item.key, label: item.label, imageClass: imageClassForSelectionLabel(item.label) })), [approvedMappings]);
+  const approvedInteriorAreas = useMemo<NavigatorTile[]>(() => approvedSelectionAreas(approvedMappings)
+    .filter((area: string) => area.toLowerCase() !== "exterior")
+    .map((area: string) => ({ key: area.toLowerCase().replace(/[^a-z0-9]+/g, "-"), label: area, imageClass: imageClassForAreaLabel(area) })), [approvedMappings]);
+  const selectedRoom = approvedInteriorAreas.find((room) => room.key === selectedRoomKey) ?? INTERIOR_ROOMS.find((room) => room.key === selectedRoomKey);
+  const roomProductTypes = useMemo<NavigatorTile[]>(() => selectedRoom?.label
+    ? approvedSelectionItemsForArea(approvedMappings, selectedRoom.label).map((item: any) => ({ key: item.key, label: item.label, imageClass: imageClassForSelectionLabel(item.label) }))
+    : [], [approvedMappings, selectedRoom?.label]);
 
   useEffect(() => {
     if (!router.isReady || !context.organisationId || !context.projectId) return;
@@ -165,6 +228,16 @@ export default function AreaNavigatorStagePage() {
     return () => {
       cancelled = true;
     };
+  }, [router.isReady, context.organisationId, context.projectId]);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    function refreshMappings() {
+      setApprovedMappings(loadApprovedSelectionMappings(context));
+    }
+    refreshMappings();
+    window.addEventListener("gr8:approved-selection-mappings-updated", refreshMappings);
+    return () => window.removeEventListener("gr8:approved-selection-mappings-updated", refreshMappings);
   }, [router.isReady, context.organisationId, context.projectId]);
 
   async function openPicker(areaLabel: string, productType: string) {
@@ -200,9 +273,12 @@ export default function AreaNavigatorStagePage() {
 
   return (
     <main className="areaNavigatorPage">
+      <InclusionsSelectionsProjectBanner currentStage="templates" context={state?.context ?? context} />
+      <InclusionsSelectionsStageNav currentStage="templates" context={state?.context ?? context} />
       <header className="navigatorHeader">
         <div>
-          <h1>Select an Area</h1>
+          <h1>Choose an Area</h1>
+          <p>Select the area of the home you want to complete.</p>
         </div>
       </header>
 
@@ -224,18 +300,20 @@ export default function AreaNavigatorStagePage() {
       {mode === "exterior" ? (
         <NavigatorTileGrid
           title="Exterior"
-          tiles={EXTERIOR_PRODUCT_TYPES}
+          tiles={approvedExteriorTiles}
           backLabel="Choose Area"
           disabled={saving || !state}
           onBack={() => setMode("start")}
           onSelect={(tile) => openPicker("Exterior", tile.label)}
+          emptyMessage="No approved selection items have been uploaded for this area."
+          onUpload={() => router.push(`/modules/estimate-builder${queryStringFromContext(context)}`)}
         />
       ) : null}
 
       {mode === "interior" ? (
         <NavigatorTileGrid
           title="Interior"
-          tiles={INTERIOR_ROOMS}
+          tiles={approvedInteriorAreas}
           backLabel="Choose Area"
           disabled={saving || !state}
           onBack={() => setMode("start")}
@@ -243,6 +321,8 @@ export default function AreaNavigatorStagePage() {
             setSelectedRoomKey(tile.key);
             setMode("room");
           }}
+          emptyMessage="No approved selection items have been uploaded for this area."
+          onUpload={() => router.push(`/modules/estimate-builder${queryStringFromContext(context)}`)}
         />
       ) : null}
 
@@ -254,6 +334,8 @@ export default function AreaNavigatorStagePage() {
           disabled={saving || !state}
           onBack={() => setMode("interior")}
           onSelect={(tile) => openPicker(selectedRoom.label, tile.label)}
+          emptyMessage="No approved selection items have been uploaded for this area."
+          onUpload={() => router.push(`/modules/estimate-builder${queryStringFromContext(context)}`)}
         />
       ) : null}
 
@@ -270,6 +352,8 @@ function NavigatorTileGrid({
   disabled,
   onBack,
   onSelect,
+  emptyMessage,
+  onUpload,
 }: {
   title: string;
   tiles: NavigatorTile[];
@@ -277,6 +361,8 @@ function NavigatorTileGrid({
   disabled?: boolean;
   onBack: () => void;
   onSelect: (tile: NavigatorTile) => void;
+  emptyMessage?: string;
+  onUpload?: () => void;
 }) {
   return (
     <section className="navigatorSection">
@@ -284,14 +370,24 @@ function NavigatorTileGrid({
         <button type="button" className="backButton" onClick={onBack}>{backLabel}</button>
         <h2>{title}</h2>
       </div>
-      <div className="tileGrid">
-        {tiles.map((tile) => (
-          <button key={tile.key} type="button" className="selectionTile" disabled={disabled} onClick={() => onSelect(tile)}>
-            <span className={`tileImage ${tile.imageClass}`} aria-hidden="true" />
-            <strong>{tile.label}</strong>
-          </button>
-        ))}
-      </div>
+      {tiles.length ? (
+        <div className="tileGrid">
+          {tiles.map((tile) => (
+            <button key={tile.key} type="button" className="selectionTile" disabled={disabled} onClick={() => onSelect(tile)}>
+              <span className={`tileImage ${tile.imageClass}`} aria-hidden="true" />
+              <strong>{tile.label}</strong>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="emptyApprovedState">
+          <p>{emptyMessage}</p>
+          <div>
+            {onUpload ? <button type="button" className="uploadButton" onClick={onUpload}>Upload Approved Selections CSV</button> : null}
+            <button type="button" className="backButton" onClick={onBack}>Back</button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -443,11 +539,27 @@ const areaNavigatorStyles = `
   .tileOven, .tileCooktop, .tileRangehood, .tileDishwasher, .tileMicrowave, .tilePower { background-image: linear-gradient(135deg, #e5e7eb, #111827); }
   .requiredState,
   .navigatorNotice,
-  .loadingNote {
+  .loadingNote,
+  .emptyApprovedState {
     background: #ffffff;
     border: 1px solid #dfe6ef;
     border-radius: 8px;
     padding: 18px;
+  }
+  .emptyApprovedState {
+    display: grid;
+    gap: 14px;
+  }
+  .emptyApprovedState div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .uploadButton {
+    padding: 10px 14px;
+    background: #155e75;
+    border-color: #155e75;
+    color: #ffffff;
   }
   .navigatorNotice {
     border-color: #fecaca;
