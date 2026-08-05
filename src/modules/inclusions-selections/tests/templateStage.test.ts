@@ -141,6 +141,10 @@ export async function runTemplateStageTests(): Promise<void> {
   const workspaceSource = fs.readFileSync(path.join(process.cwd(), "pages", "inclusions-selections", "workspace.tsx"), "utf8");
   assert(pageSource.includes("Select an Area"), "Stage 2 route should render the rebuilt area navigator title.");
   assert(pageSource.includes("Exterior") && pageSource.includes("Interior"), "Stage 2 should start with Exterior and Interior choices.");
+  const activeNavigatorStart = pageSource.indexOf('<main className="areaNavigatorPage">\n      <header className="navigatorHeader">');
+  const activeNavigatorMarkup = pageSource.slice(activeNavigatorStart, pageSource.indexOf("{error ?"));
+  assert(activeNavigatorStart >= 0, "Active Stage 2 should start with the rebuilt navigator header.");
+  assert(!activeNavigatorMarkup.includes("InclusionsSelectionsProjectBanner") && !activeNavigatorMarkup.includes("InclusionsSelectionsStageNav"), "Active Stage 2 should be a rebuilt navigator, not the old workflow chrome.");
   assert(pageSource.includes("Bricks") && pageSource.includes("Cladding") && pageSource.includes("Driveway"), "Exterior should expose product-type tiles.");
   assert(pageSource.indexOf('label: "Lighting"') < pageSource.indexOf('label: "Exterior Paint"'), "Exterior should keep Lighting before Exterior Paint in the builder-facing navigator.");
   assert(!pageSource.includes('label: "Downpipes"') && !pageSource.includes('label: "Landscaping"'), "Exterior should only expose the approved visible tiles.");

@@ -200,8 +200,6 @@ export default function AreaNavigatorStagePage() {
 
   return (
     <main className="areaNavigatorPage">
-      <InclusionsSelectionsProjectBanner currentStage="templates" context={context} />
-      <InclusionsSelectionsStageNav currentStage="templates" context={context} />
       <header className="navigatorHeader">
         <div>
           <h1>Select an Area</h1>

@@ -9,7 +9,6 @@ import { InclusionsSelectionsNoFileState } from "../../src/modules/inclusions-se
 import { InclusionsSelectionsProjectBanner } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsProjectBanner";
 import { InclusionsSelectionsStageNav } from "../../src/modules/inclusions-selections/components/InclusionsSelectionsStageNav";
 import { WorkspaceProgressSummary } from "../../src/modules/inclusions-selections/components/WorkspaceProgressSummary";
-import { WorkspaceStageActions } from "../../src/modules/inclusions-selections/components/WorkspaceStageActions";
 import { WorkspaceValidationSummary } from "../../src/modules/inclusions-selections/components/WorkspaceValidationSummary";
 import { WorkspaceViewSwitcher } from "../../src/modules/inclusions-selections/components/WorkspaceViewSwitcher";
 import { InMemoryProductSelectionCatalogueAdapter } from "../../src/modules/inclusions-selections/products/inMemoryProductSelectionCatalogueAdapter";
@@ -261,10 +260,8 @@ export default function InclusionsSelectionsWorkspacePage() {
   const roomGroups = loadRoomView(state);
   const categoryGroups = loadCategoryView(state);
   const allRows = getRequirementWorkspaceRows(state);
-  const rows = getRequirementWorkspaceRows(state, { areaId: view === "room" ? selectedAreaId : undefined, category: view === "category" ? selectedCategory : undefined, search });
+  const rows = getRequirementWorkspaceRows(state, { areaId: selectedAreaId });
   const selectedArea = state.templateStage.areaRegister.areas.find((area) => area.id === selectedAreaId);
-  const selectedRows = allRows.filter((row) => row.area.id === selectedAreaId);
-  const selectedComplete = selectedRows.filter((row) => row.selection?.selectionStatus === "complete").length;
   const validation = validateSelectionWorkspace(state, false);
 
   if (state.requirements.length === 0) {
@@ -290,39 +287,13 @@ export default function InclusionsSelectionsWorkspacePage() {
 
   return (
     <main className="selectionWorkspacePage">
-      <InclusionsSelectionsProjectBanner currentStage="workspace" context={state.context} />
-      <InclusionsSelectionsStageNav currentStage="workspace" context={state.context} />
-      <section className="kitchenHero">
-        <div>
-          <span className="modalEyebrow">Stage 3 Selection Workspace</span>
-          <h1>{selectedArea?.name ?? "Kitchen"}</h1>
-          <p>Choose each item in the room. Click Oven, pick an oven, and the tile updates with product, supplier, allowance and variation.</p>
-        </div>
-        <div className="kitchenHeroStats">
-          <strong>{selectedComplete}/{selectedRows.length}</strong>
-          <span>completed</span>
-        </div>
-      </section>
+      <header className="roomSelectionHeader">
+        <button type="button" className="backButton" onClick={() => router.push(hrefForStage("templates", state.context))}>Choose Area</button>
+        <h1>{selectedArea?.name ?? "Kitchen"}</h1>
+      </header>
       <div className="builderWorkspaceLayout">
         <section className="kitchenSelectionSurface">
-          <div className="areaRibbon" aria-label="Areas">
-            {state.templateStage.areaRegister.areas.map((area) => (
-              <button key={area.id} type="button" className={selectedAreaId === area.id ? "selected" : ""} onClick={() => setSelectedAreaId(area.id)}>
-                {area.name}
-              </button>
-            ))}
-          </div>
-          <div className="roomToolbar">
-            <div>
-              <h2>{selectedArea?.name ?? "Room"}</h2>
-              <p>Choose the next product type.</p>
-            </div>
-            <div className="roomToolbarActions">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this room" />
-              <button type="button" onClick={() => setSearch("")}>Clear</button>
-            </div>
-          </div>
-          {rows.length === 0 ? <p className="emptyRoomState">No selection items match this room/search.</p> : null}
+          {rows.length === 0 ? <p className="emptyRoomState">No selection items are ready for this area yet.</p> : null}
           <div className="selectionItemList">
             {rows.map((row) => {
               const productName = row.selection?.value.productName ?? row.selection?.value.customSelectionName;
@@ -331,7 +302,7 @@ export default function InclusionsSelectionsWorkspacePage() {
               const selected = row.selection?.selectedPrice?.amount ?? row.selection?.value.clientPrice?.amount;
               const variation = row.selection?.variation?.amount ?? 0;
               return (
-                <button type="button" key={row.requirement.id} className={productName ? "selectionItemRow selected" : "selectionItemRow"} onClick={() => openProductPicker(row.requirement.id)}>
+                <article key={row.requirement.id} className={productName ? "selectionItemRow selected" : "selectionItemRow"}>
                   <span className={`tileStatus status-${row.selection?.selectionStatus ?? "not_started"}`}>{row.selection?.selectionStatus === "complete" ? "Done" : "Select"}</span>
                   <span className="tileImage">{productName ? (row.selection?.value.brand ?? productName).slice(0, 2).toUpperCase() : row.requirement.title.slice(0, 2).toUpperCase()}</span>
                   <span className="selectionItemCopy">
@@ -341,7 +312,8 @@ export default function InclusionsSelectionsWorkspacePage() {
                   </span>
                   <span className="tilePrice">Allowance {allowance === undefined ? "not set" : `$${allowance.toFixed(0)}`}<br />Selected {selected === undefined ? "pending" : `$${selected.toFixed(0)}`}</span>
                   <span className={variation > 0 ? "tileVariation upgrade" : variation < 0 ? "tileVariation credit" : "tileVariation"}>{variation > 0 ? `+$${variation.toFixed(0)} upgrade` : variation < 0 ? `$${variation.toFixed(0)} credit` : "Included"}</span>
-                </button>
+                  <button type="button" className="selectProductButton" onClick={() => openProductPicker(row.requirement.id)}>Select Product</button>
+                </article>
               );
             })}
           </div>
@@ -364,17 +336,13 @@ export default function InclusionsSelectionsWorkspacePage() {
           <ApplyToDialog scope={applyScope} onScope={setApplyScope} onPreview={handleApplyPreview} />
           <ApplyToPreview preview={applyPreview} selectedTargets={selectedApplyTargets} onToggleTarget={(requirementId) => setSelectedApplyTargets((current) => current.includes(requirementId) ? current.filter((id) => id !== requirementId) : [...current, requirementId])} onConfirm={handleApplyConfirm} />
           <WorkspaceValidationSummary issues={issues.length ? issues : validation.issues} />
+          <button type="button" onClick={handleSave} disabled={saving}>{saving ? "Saving" : "Save Draft"}</button>
         </aside>
         </div>
       </details>
-      <WorkspaceStageActions
-        saving={saving}
-        canContinue={validation.ok}
-        onSave={handleSave}
-        onBack={() => router.push(hrefForStage("templates", state.context))}
-        onReviewIncomplete={() => setIssues(validateSelectionWorkspace(state, false).issues)}
-        onContinue={handleContinue}
-      />
+      <footer className="stageActions">
+        <button type="button" className="primaryButton" disabled={!validation.ok || saving} onClick={handleContinue}>Continue</button>
+      </footer>
       {pickerRequirementId ? (
         <ProductSelectionModal
           row={getRequirementWorkspaceRows(state).find((row) => row.requirement.id === pickerRequirementId)!}
@@ -406,14 +374,14 @@ export default function InclusionsSelectionsWorkspacePage() {
 
 const workspaceStyles = `
   .selectionWorkspacePage { min-height: 100vh; background: #f5f7fa; color: #172033; padding: 28px; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .workspaceHeader, .workspaceSummary, .viewSwitcher, .workspaceLayout, .builderWorkspaceLayout, .kitchenHero, .stageActions, .persistenceNote, .requiredState, .generateRequirementsState { max-width: 1320px; margin: 0 auto 16px; }
+  .workspaceHeader, .workspaceSummary, .viewSwitcher, .workspaceLayout, .builderWorkspaceLayout, .roomSelectionHeader, .stageActions, .persistenceNote, .requiredState, .generateRequirementsState { max-width: 1320px; margin: 0 auto 16px; }
   .workspaceHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
   h1 { margin: 0 0 8px; font-size: 34px; line-height: 1.1; letter-spacing: 0; }
   h2, h3 { margin: 0; letter-spacing: 0; }
   p { line-height: 1.5; }
   .workspaceHeader p, .muted, .sourceLine { color: #5d687c; }
   .workspaceSummary { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
-  .workspaceSummary div, .navPanel, .workspaceMain, .workspaceSide, .requirementCard, .issuePanel, .validNotice, .kitchenHero, .kitchenSelectionSurface, .generateRequirementsState { background: #fff; border: 1px solid #dfe6ef; border-radius: 8px; box-shadow: 0 1px 2px rgba(20,31,51,.04); }
+  .workspaceSummary div, .navPanel, .workspaceMain, .workspaceSide, .requirementCard, .issuePanel, .validNotice, .kitchenSelectionSurface, .generateRequirementsState { background: #fff; border: 1px solid #dfe6ef; border-radius: 8px; box-shadow: 0 1px 2px rgba(20,31,51,.04); }
   .workspaceSummary div { padding: 12px; }
   .workspaceSummary span { display: block; color: #657186; font-size: 12px; margin-bottom: 4px; }
   .workspaceLayout { display: grid; grid-template-columns: 300px minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
@@ -439,22 +407,11 @@ const workspaceStyles = `
   .roomRequirementLink span { display: inline-grid; place-items: center; min-width: 34px; height: 18px; border-radius: 999px; background: #eef3f8; color: #526072; font-size: 10px; font-weight: 800; }
   .roomRequirementLink.status-complete span { background: #dff7ec; color: #126344; }
   .roomRequirementLink.status-needs_attention span, .roomRequirementLink.status-in_progress span { background: #fff4d6; color: #986200; }
-  .kitchenHero { padding: 22px; display: flex; justify-content: space-between; gap: 20px; align-items: center; background: linear-gradient(90deg, #ffffff 0%, #f4f9f7 100%); }
-  .kitchenHero h1 { font-size: 42px; }
-  .kitchenHero p { margin: 0; max-width: 720px; color: #526072; }
-  .kitchenHeroStats { min-width: 132px; border: 1px solid #dbe7e1; border-radius: 8px; padding: 14px; text-align: center; background: #fff; }
-  .kitchenHeroStats strong { display: block; font-size: 32px; }
-  .kitchenHeroStats span { color: #526072; font-weight: 750; }
-  .kitchenSelectionSurface { padding: 18px; min-width: 0; }
-  .areaRibbon { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-  .areaRibbon button { border-color: #d8e2ee; background: #fff; color: #17406f; }
-  .areaRibbon button.selected { border-color: #1c4f91; background: #1c4f91; color: #fff; }
-  .roomToolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 16px; }
-  .roomToolbar p { margin: 4px 0 0; color: #657186; }
-  .roomToolbarActions { display: flex; gap: 8px; align-items: center; }
-  .roomToolbarActions input { width: 220px; }
+  .roomSelectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .roomSelectionHeader h1 { margin: 0; font-size: 42px; }
+  .kitchenSelectionSurface { padding: 0; min-width: 0; background: transparent; border: 0; box-shadow: none; }
   .selectionItemList { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-  .selectionItemRow { position: relative; width: 100%; min-height: 230px; text-align: left; padding: 14px; display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; background: #fff; border-color: #dce4ef; overflow: hidden; }
+  .selectionItemRow { position: relative; width: 100%; min-height: 250px; text-align: left; padding: 14px; display: grid; grid-template-columns: 1fr; gap: 10px; align-items: start; background: #fff; border: 1px solid #dce4ef; border-radius: 8px; overflow: hidden; }
   .selectionItemRow:hover, .selectionItemRow:focus-visible { border-color: #1c4f91; box-shadow: 0 8px 20px rgba(21, 48, 84, .09); outline: none; }
   .selectionItemRow.selected { background: #fbfefd; border-color: #b8d9ca; }
   .tileStatus { justify-self: start; min-height: 24px; border-radius: 999px; padding: 3px 9px; background: #eef3f8; color: #526072; font-size: 12px; font-weight: 800; }
@@ -467,6 +424,7 @@ const workspaceStyles = `
   .tileVariation { justify-self: start; border-radius: 999px; padding: 5px 9px; background: #edf8f1; color: #126344; font-size: 13px; font-weight: 850; white-space: nowrap; }
   .tileVariation.upgrade { background: #fff3df; color: #925400; }
   .tileVariation.credit { background: #eaf2fc; color: #1c4f91; }
+  .selectProductButton { width: 100%; min-height: 42px; background: #1c4f91; border-color: #1c4f91; color: #fff; }
   .emptyRoomState, .generateRequirementsState p { color: #526072; }
   .generateRequirementsState { padding: 28px; display: grid; gap: 14px; }
   .generateRequirementsState div { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -551,5 +509,5 @@ const workspaceStyles = `
   .persistenceNote { color: #657186; font-size: 13px; }
   @media (max-width: 1180px) { .selectionItemRow .tilePrice { display: none; } }
   @media (max-width: 1100px) { .workspaceLayout, .builderWorkspaceLayout, .workspaceSummary, .advancedWorkspaceGrid { grid-template-columns: 1fr; } .workspaceSide { order: 2; } }
-  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .kitchenHero h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .kitchenHero, .roomToolbar, .roomToolbarActions { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .selectionItemRow, .detailLayout, .detailFacts { grid-template-columns: 1fr; } .selectionItemRow { justify-items: start; } .tileVariation { justify-self: start; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } .roomToolbarActions input { width: 100%; } }
+  @media (max-width: 760px) { .selectionWorkspacePage { padding: 18px; } h1, .roomSelectionHeader h1 { font-size: 28px; } .workspaceHeader, .workspaceFilters, .requirementHeader, .rowActions, .stageActions, .pricingSummary, .previewColumns, .selectedProductCard, .productModalHeader, .roomSelectionHeader { align-items: stretch; flex-direction: column; grid-template-columns: 1fr; } .productResults, .splitFields, .productModalBody, .modalProductGrid, .modalProductCard, .productFacts, .selectionItemRow, .detailLayout, .detailFacts { grid-template-columns: 1fr; } .selectionItemRow { justify-items: stretch; } .tileVariation { justify-self: start; } .productResult { grid-template-columns: 38px minmax(0, 1fr); } .productModalBackdrop { padding: 0; align-items: stretch; } .productModal { width: 100%; min-height: 100vh; max-height: 100vh; border-radius: 0; } .productFilters { position: static; } .requirementCard { padding: 12px; } }
 `;
