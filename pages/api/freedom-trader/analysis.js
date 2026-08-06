@@ -137,10 +137,19 @@ function historyDiagnostics(snapshot, cleanCandles) {
   };
 }
 
+function hasValidCandleDate(candle = {}) {
+  if (Number.isFinite(candle.timestamp)) return true;
+  return Number.isFinite(Date.parse(String(candle.date || "").replace(" ", "T")));
+}
+
 export function buildAnalysis({ symbol, snapshot }) {
   const meta = getMeta(symbol);
   const candles = snapshot?.candles?.daily || [];
-  const clean = candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])));
+  const clean = candles.filter((candle) => (
+    hasValidCandleDate(candle)
+    && ["open", "high", "low", "close"].every((key) => Number.isFinite(candle[key]) && candle[key] > 0)
+    && Number.isFinite(candle.volume)
+  ));
   const dataStatus = historyDiagnostics(snapshot, clean);
   const closes = clean.map((candle) => candle.close);
   const volumes = clean.map((candle) => candle.volume);
@@ -390,6 +399,12 @@ function dataUnavailableRow(symbol, snapshot) {
 export async function analyseSymbol(symbol, snapshotInput = null) {
   const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: "1y", interval: "1day" });
   if (snapshot.dataQuality === "unavailable" || snapshot.dataQuality === "stale") return dataUnavailableRow(symbol, snapshot);
+  const candles = Array.isArray(snapshot?.candles?.daily) ? snapshot.candles.daily : [];
+  const hasAtLeastOneValidCandle = candles.some((candle) => (
+    hasValidCandleDate(candle)
+    && ["open", "high", "low", "close"].every((key) => Number.isFinite(candle[key]) && candle[key] > 0)
+  ));
+  if (!hasAtLeastOneValidCandle) return dataUnavailableRow(symbol, { ...snapshot, error: "Market data provider did not return usable dated candle data." });
   return buildAnalysis({ symbol, snapshot });
 }
 

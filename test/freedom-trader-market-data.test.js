@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyTwelveDataError } from "../lib/freedom-trader/twelveData.js";
+import { classifyTwelveDataError, fetchTwelveDataHistory } from "../lib/freedom-trader/twelveData.js";
 import { evaluateOpportunity } from "../lib/freedom-trader/opportunityEngine.js";
 import { analyseSymbol } from "../pages/api/freedom-trader/analysis.js";
 
@@ -25,6 +25,36 @@ test("classifies provider status failures without exposing credentials", () => {
   assert.equal(classifyTwelveDataError("Too many requests", 429), "rate-limited");
   assert.equal(classifyTwelveDataError("Request timed out"), "timeout");
   assert.equal(classifyTwelveDataError("Malformed JSON response"), "malformed-provider-response");
+});
+
+test("Twelve Data parser rejects candles with invalid dates or zero prices", async () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.TWELVE_DATA_API_KEY;
+  process.env.TWELVE_DATA_API_KEY = "test-key";
+  global.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      meta: { symbol: "BAD", interval: "1day", exchange: "NASDAQ", currency: "USD" },
+      values: [
+        { datetime: "not-a-date", open: "100", high: "101", low: "99", close: "100", volume: "1000000" },
+        { datetime: "2026-08-04", open: "0", high: "101", low: "99", close: "100", volume: "1000000" },
+        { datetime: "2026-08-05", open: "100", high: "102", low: "99", close: "101", volume: "1000000" },
+      ],
+    }),
+  });
+
+  try {
+    const history = await fetchTwelveDataHistory({ symbol: "BAD", range: "1y", interval: "1day" });
+    assert.equal(history.ok, true);
+    assert.equal(history.candleCount, 1);
+    assert.equal(history.candles[0].date, "2026-08-05");
+    assert.equal(Number.isFinite(history.candles[0].timestamp), true);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.TWELVE_DATA_API_KEY;
+    else process.env.TWELVE_DATA_API_KEY = originalKey;
+  }
 });
 
 // --- Synthetic candle builder for deterministic scoring tests ---
@@ -109,6 +139,17 @@ test("analyseSymbol flags insufficient history as not-ready-for-score and fails 
   assert.notEqual(row.status, "DATA UNAVAILABLE");
   assert.notEqual(row.status, "STRONG BUY");
   assert.notEqual(row.status, "BUY");
+});
+
+test("analyseSymbol cannot score malformed daily candles as a trade candidate", async () => {
+  const candles = buildCandles({ days: 220 }).map((candle) => ({ ...candle, date: "not-a-date", timestamp: NaN }));
+  const snapshot = fakeSnapshot(candles);
+  const row = await analyseSymbol("TEST", snapshot);
+  assert.equal(row.status, "DATA UNAVAILABLE");
+  assert.equal(row.dataStatus.readyForScore, false);
+  assert.equal(row.dataStatus.actualCandleCount, 0);
+  assert.equal(row.tradingScore, null);
+  assert.equal(row.opportunity.failedConditions.some((reason) => /history|candles/i.test(reason)), true);
 });
 
 // --- Scoring / entry-stop-target / risk-reward (Stage 4/5) ---
