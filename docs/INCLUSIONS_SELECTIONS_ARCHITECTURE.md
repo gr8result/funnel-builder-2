@@ -43,6 +43,21 @@ The module must not import from:
 
 The route writes through `ProjectAreaRegisterRepository`. Until a database migration is approved, the active repository is the in-memory implementation and drafts persist only for the current application lifecycle. The route must not import retired selections modules, Product Library modules, Supplier Library modules or Estimate Builder modules.
 
+## Generic Product Library Boundary
+
+The reusable Product Library template now separates approved quotation item rows from product-family definitions and organisation-scoped supplier catalogues. The standard Inclusions & Selections template may define categories, item families, required attributes, allowed variants, quantity rules and stable quotation item links, but suppliers are data owned by each builder.
+
+The first acceptance families are Stone Benchtops, Metal Roofing, Bricks and Internal Doors. They use generic `Demonstration Product` records until a builder imports or enters their own suppliers, brands, ranges, products, images, links and prices. Internal Doors are located under `Interior -> Fix Out -> Internal Doors`; source rows such as `HUME BUILDERS RANGE DOORS AS PER PLANS` are evidence for the family, not a permanent supplier constraint.
+
+Reference docs:
+
+- `docs/GENERIC_PRODUCT_LIBRARY_TEMPLATE.md`
+- `docs/PRODUCT_FAMILY_AND_VARIANT_MODEL.md`
+- `docs/BUILDER_SUPPLIER_CATALOGUE_IMPORT.md`
+- `docs/PRODUCT_LIBRARY_CATEGORY_HIERARCHY.md`
+- `docs/PRODUCT_LIBRARY_GENERIC_IMAGES.md`
+- `docs/PRODUCT_LIBRARY_QUOTATION_LINKS.md`
+
 ## Project Banner and File Management
 
 All active stages render `InclusionsSelectionsProjectBanner` above `InclusionsSelectionsStageNav`. The banner displays project name, job number, client, site address, current stage and save status, and preserves project context when returning to `/modules/estimate-builder`.

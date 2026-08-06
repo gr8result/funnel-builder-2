@@ -72,16 +72,33 @@ const TAB_ALIASES = new Map([
 const ACTIVE_SELECTION_VISIBILITIES = new Set(["client_selectable", "builder_selectable"]);
 
 const PRODUCT_BROWSER_AREAS = [
-  { key: "exterior", label: "Exterior", imageClass: "tileExterior", types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
-  { key: "interior", label: "Interior", imageClass: "tileInterior", types: ["Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
-  { key: "kitchen", label: "Kitchen", imageClass: "tileKitchen", types: ["Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
-  { key: "bathroom", label: "Bathroom", imageClass: "tileBathroom", types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
-  { key: "bedroom", label: "Bedroom", imageClass: "tileBedroom", types: ["Carpet", "Hybrid Flooring", "Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
-  { key: "laundry", label: "Laundry", imageClass: "tileLaundry", types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
-  { key: "garage", label: "Garage", imageClass: "tileGarage", types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
-  { key: "outdoor", label: "Outdoor", imageClass: "tileOutdoor", types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
-  { key: "pool", label: "Pool", imageClass: "tilePool", types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
+  { key: "exterior", label: "Exterior", imageUrl: "/assets/builders/standard-inclusions-construction-strip.png", types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
+  { key: "interior", label: "Interior", imageUrl: "/assets/builders/standard-inclusions-premier-living.jpg", types: ["Internal Doors", "Door Hardware", "Skirting", "Architraves", "Robes", "Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
+  { key: "kitchen", label: "Kitchen", imageUrl: "/assets/builders/standard-inclusions-premier-kitchen.jpg", types: ["Stone Benchtops", "Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
+  { key: "bathroom", label: "Bathroom", imageUrl: "/standard-inclusions/assets/image19.jpeg", types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
+  { key: "bedroom", label: "Bedroom", imageUrl: "/standard-inclusions/assets/image47.jpeg", types: ["Carpet", "Hybrid Flooring", "Internal Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
+  { key: "laundry", label: "Laundry", imageUrl: "/standard-inclusions/assets/image46.jpeg", types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
+  { key: "garage", label: "Garage", imageUrl: "/standard-inclusions/assets/image48.jpeg", types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
+  { key: "outdoor", label: "Outdoor", imageUrl: "/assets/builders/standard-inclusions-hero.jpg", types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
+  { key: "pool", label: "Pool", imageUrl: "/standard-inclusions/assets/image55.jpeg", types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
 ];
+
+const PRODUCT_TYPE_IMAGE_URLS = {
+  Bricks: "/standard-inclusions/assets/image49.jpeg",
+  Roof: "/standard-inclusions/assets/image45.jpeg",
+  "Roof Colour": "/standard-inclusions/assets/image45.jpeg",
+  "Metal Roofing": "/standard-inclusions/assets/image45.jpeg",
+  "Garage Doors": "/standard-inclusions/assets/image48.jpeg",
+  "Internal Doors": "/standard-inclusions/assets/image50.png",
+  Ovens: "/standard-inclusions/assets/image51.png",
+  Benchtops: "/assets/builders/standard-inclusions-premier-kitchen.webp",
+  "Stone Benchtops": "/assets/builders/standard-inclusions-premier-kitchen.webp",
+  Mixers: "/standard-inclusions/assets/image53.jpeg",
+  Toilets: "/standard-inclusions/assets/image54.jpeg",
+  Flooring: "/standard-inclusions/assets/image55.jpeg",
+  Carpet: "/standard-inclusions/assets/image55.jpeg",
+  Paint: "/standard-inclusions/assets/image44.png",
+};
 
 const FEATURED_BRANDS_BY_TYPE = {
   Ovens: ["Westinghouse", "Bosch", "Smeg", "Electrolux", "Omega"],
@@ -98,6 +115,7 @@ const PRODUCT_TYPE_SYNONYMS = {
   "Cladding": ["cladding"],
   "Roof": ["roof material", "roofing", "roof"],
   "Roof Material": ["roof material", "roofing", "roof"],
+  "Metal Roofing": ["metal roof", "metal roofing", "roofing iron"],
   "Roof Colour": ["roof colour", "roof color", "colorbond"],
   "Tapware": ["tapware", "mixer", "tap"],
   "Basin Mixers": ["basin mixer"],
@@ -114,7 +132,9 @@ const PRODUCT_TYPE_SYNONYMS = {
   "Cabinetry": ["cabinetry", "cabinet"],
   "Cabinet Handles": ["cabinet handle", "handles", "handle"],
   "Benchtops": ["benchtop", "bench top"],
+  "Stone Benchtops": ["stone benchtop", "stone range", "benchtop"],
   "Door Hardware": ["door hardware", "handle"],
+  "Internal Doors": ["internal door", "standard internal door", "premium internal door"],
   "Passage Handles": ["passage handle", "handle"],
   "Robe Fitouts": ["robe", "wardrobe"],
   "Paint Colours": ["paint colour", "paint color", "paint"],
@@ -1228,7 +1248,7 @@ function VisualSelectionsBrowser({
           <div className="area-grid">
             {areas.map((area) => (
               <button key={area.key} type="button" className="area-tile" onClick={() => onSelectArea(area.key)}>
-                <span className={`visual-tile-image ${area.imageClass}`} aria-hidden="true" />
+                <span className="visual-tile-image" style={{ backgroundImage: `url(${area.imageUrl})` }} aria-hidden="true" />
                 <strong>{area.label}</strong>
               </button>
             ))}
@@ -1241,7 +1261,7 @@ function VisualSelectionsBrowser({
           <div className="type-grid">
             {selectedArea.types.map((type) => (
               <button key={type} type="button" className="type-tile" onClick={() => onSelectProductType(type)}>
-                <span className="visual-tile-image tileProductType" aria-hidden="true" />
+                <span className="visual-tile-image tileProductType" style={{ backgroundImage: `url(${PRODUCT_TYPE_IMAGE_URLS[type] || selectedArea.imageUrl})` }} aria-hidden="true" />
                 <strong>{type}</strong>
               </button>
             ))}
@@ -1529,16 +1549,6 @@ const visualBrowserCss = `
     background-size: cover;
     background-position: center;
   }
-  .tileExterior { background-image: linear-gradient(135deg, #f8fafc 0 40%, #7c2d12 40% 54%, #d1d5db 54%); }
-  .tileInterior { background-image: linear-gradient(135deg, #fff7ed 0 45%, #d6d3d1 45% 75%, #78716c 75%); }
-  .tileKitchen { background-image: linear-gradient(135deg, #f8fafc 0 35%, #d6d3d1 35% 70%, #78716c 70%); }
-  .tileBathroom { background-image: linear-gradient(135deg, #eff6ff, #bfdbfe); }
-  .tileBedroom { background-image: linear-gradient(135deg, #fee2e2, #fef3c7); }
-  .tileLaundry { background-image: linear-gradient(135deg, #f0fdfa, #99f6e4); }
-  .tileGarage { background-image: linear-gradient(135deg, #92400e, #eab308); }
-  .tileOutdoor { background-image: linear-gradient(135deg, #dcfce7, #65a30d); }
-  .tilePool { background-image: linear-gradient(135deg, #bae6fd, #0284c7); }
-  .tileProductType { background-image: linear-gradient(135deg, #e5e7eb, #111827); }
   .brand-row button {
     border-color: #d8e0ea;
     background: #ffffff;

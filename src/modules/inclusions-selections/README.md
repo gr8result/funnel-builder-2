@@ -32,6 +32,10 @@ Key files:
 - `products/`, `selections/`: product references, inheritance, and apply-to previews.
 - `products/productSelectionCatalogueAdapter.ts`: adapter boundary for shared product and supplier references.
 - `products/productTagTaxonomy.ts`: Product Library classification tags used to match requirements to compatible selections products.
+- `lib/product-library/genericProductLibraryTemplate.js`: supplier-ready standard category hierarchy, product-family templates, generic images, quotation item links and supplier import fields.
+- `lib/product-library/approvedCsvParser.js`: approved Product Library CSV parser and audit helpers; repeated section headers are excluded from product rows and retained for audit.
+
+The standard Product Library template is generic. It proves Stone Benchtops, Metal Roofing, Bricks and Internal Doors with `Demonstration Product` placeholders, while each builder owns supplier, brand, range, product, image, URL and pricing data in their organisation catalogue.
 - `products/requirementProductMatching.ts`: compatibility scoring and filter logic for the Stage 3 product picker.
 - `repositories/selectionWorkspaceRepository.ts`: draft workspace repository interface and in-memory implementation.
 - `repositories/selectionReviewRepository.ts`: review metadata, issue, allowance override and audit repository interface with in-memory implementation.

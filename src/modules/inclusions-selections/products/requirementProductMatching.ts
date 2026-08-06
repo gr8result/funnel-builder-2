@@ -36,6 +36,7 @@ const SUBTYPE_TAGS: Record<string, string[]> = {
   floor_covering: ["carpet", "hybrid-flooring"],
   cabinetry: ["cabinetry"],
   benchtops: ["benchtop"],
+  internal_doors: ["internal-door"],
   door_hardware: ["passage-hardware"],
   external_doors: ["entrance-hardware"],
   garage_door: ["garage-door"],
@@ -60,6 +61,7 @@ function titleTags(requirement: ProjectRequirement): string[] {
   if (title.includes("sink mixer")) tags.push("tapware", "sink-mixer");
   if (title.includes("laundry mixer")) tags.push("tapware", "laundry-mixer");
   if (title.includes("garage door")) tags.push("garage-door");
+  if (title.includes("internal door") || title.includes("door leaf") || title.includes("door as per plan")) tags.push("internal-door");
   if (title.includes("door hardware")) tags.push("passage-hardware");
   return tags;
 }
