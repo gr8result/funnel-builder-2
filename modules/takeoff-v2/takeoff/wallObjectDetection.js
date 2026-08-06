@@ -8,7 +8,7 @@ const MIN_OVERLAP_RATIO = 0.58;
 const PARALLEL_TOLERANCE_DEG = 3;
 const CONNECT_TOLERANCE = 16;
 const ROOM_CLOSURE_TOLERANCE = 22;
-const REJECTED_TAGS = new Set(["annotation", "dimension", "dimension-line", "extension-line", "text", "text-bound", "door-arc", "symbol", "page-border", "title-block", "title-block-rule", "leader", "hatch", "hatching", "furniture", "note", "arrow"]);
+const REJECTED_TAGS = new Set(["annotation", "dimension", "dimension-line", "extension-line", "text", "text-bound", "door", "door-arc", "symbol", "page-border", "title-block", "title-block-rule", "leader", "hatch", "hatching", "furniture", "cabinet", "cabinetry", "appliance", "note", "arrow", "stair", "stair-tread", "tread"]);
 
 function rawSegments(planGeometryIndex) {
   const raw = typeof planGeometryIndex?.getCandidateWallSegments === "function"
@@ -144,26 +144,6 @@ function createWallFromPair(a, b, seq, page) {
     connectedWalls: [],
     source: a.source === "raster" || b.source === "raster" ? "raster" : "pdf-vector",
     sourceSegmentIds: [a.id, b.id].filter(Boolean),
-  };
-}
-
-function createWallFromSingle(line, seq, page) {
-  const thickness = Number(line.lineWidth || line.strokeWidth || 0) || null;
-  if (!(thickness >= MIN_THICKNESS && thickness <= MAX_THICKNESS)) return null;
-  if (line.length < MIN_WALL_LENGTH * 1.5) return null;
-  const start = pointOn(line, line.start);
-  const end = pointOn(line, line.end);
-  return {
-    id: `wall-${seq}`,
-    type: classifyWall({ start, end }, page),
-    start,
-    end,
-    thickness,
-    confidence: Math.min(0.62, 0.36 + Math.min(0.18, line.length / 900) + (line.source === "raster" ? 0.02 : 0.04)),
-    openings: [],
-    connectedWalls: [],
-    source: line.source === "raster" ? "raster" : "pdf-vector-single",
-    sourceSegmentIds: [line.id].filter(Boolean),
   };
 }
 
@@ -329,6 +309,7 @@ export function detectWallObjects({ planGeometryIndex, page = {} } = {}) {
     candidatePairs: 0,
     acceptedPairs: 0,
     singleStrokeCandidates: 0,
+    singleStrokeRejected: 0,
     structuralWalls: 0,
     rejectedCandidateWalls: 0,
   };
@@ -356,15 +337,7 @@ export function detectWallObjects({ planGeometryIndex, page = {} } = {}) {
   });
   diagnostics.acceptedPairs = walls.length;
 
-  lines
-    .filter((line) => !pairedSegmentIds.has(line.id))
-    .forEach((line) => {
-      seq += 1;
-      const wall = createWallFromSingle(line, seq, page);
-      if (!wall) return;
-      diagnostics.singleStrokeCandidates += 1;
-      walls.push(wall);
-    });
+  diagnostics.singleStrokeRejected = lines.filter((line) => !pairedSegmentIds.has(line.id)).length;
 
   const unique = [];
   const seen = new Set();

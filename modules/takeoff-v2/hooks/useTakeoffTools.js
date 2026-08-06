@@ -19,11 +19,11 @@ import { softAxisSnap } from "../takeoff/wallDrawing.js";
 import { bestSnapCandidate } from "../takeoff/planSnap.js";
 import {
   SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
-  expandLineToWall,
   findLineNearPointer,
   scaleToolLineSelection,
 } from "../takeoff/lineSelection.js";
 import { findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
+import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 import { buildSnapCandidates, snapPoint } from "../takeoff/snapping.js";
 import {
   addSegment,
@@ -804,16 +804,23 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       screenTolerance: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX,
       zoom: zoomScale,
     });
+    const vectorWallBand = findHighlightableWallAtPoint({
+      point: rawPoint,
+      planGeometryIndex,
+      page,
+      searchRadiusDocUnits: SHARED_LINE_SELECTION_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01),
+      diagnosticsEnabled,
+    });
 
     const rasterResult = rasterContext
       ? findRasterWallBandOnCanvas({ canvas: rasterContext.canvas, viewport: rasterContext.viewport, point: rawPoint })
       : { wall: null, diagnostics: { reason: "no raster context" } };
 
-    if (!scaleLineHit && !rasterResult.wall) {
+    if (!vectorWallBand.wall && !rasterResult.wall) {
       setExteriorHighlightPreview(null);
       setExteriorHighlightHoverWallId(null);
       setExteriorHighlightDiagnostics([{
-        label: "Local raster fallback",
+        label: "Local wall-band detector",
         color: "orange",
         rawPdfLineCount: rawLineCount,
         filteredLineCount,
@@ -821,15 +828,14 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         rasterEdgeCount: rasterResult.diagnostics?.rasterEdgeCount || 0,
         pointerDocument: rawPoint,
         nearestRasterEdgeDistance: rasterResult.diagnostics?.nearestRasterEdgeDistance,
-        reason: rasterResult.diagnostics?.rejectedReason || rasterResult.diagnostics?.reason || "No local structural wall band under pointer.",
+        reason: vectorWallBand.diagnostics?.[0]?.reason || rasterResult.diagnostics?.rejectedReason || rasterResult.diagnostics?.reason || "No local structural wall band under pointer.",
       }]);
       setWallDetectionStatus("idle");
-      setWallDetectionMessage("No line detected here.");
+      setWallDetectionMessage("No structural wall band detected here.");
       setWallDetectionCode("NO_LINE_UNDER_CURSOR");
       return;
     }
-    const expanded = scaleLineHit ? expandLineToWall(scaleLineHit, { planGeometryIndex, page }) : null;
-    const acceptedWall = expanded && !expanded.rejected ? expanded : rasterResult.wall;
+    const acceptedWall = vectorWallBand.wall || rasterResult.wall;
     const diagnostics = [
       ...(scaleLineHit ? [{
         label: "Scale Tool result",
@@ -838,21 +844,21 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         distanceFromPointer: scaleLineHit.distanceFromPointer,
         angle: scaleLineHit.angle,
       }] : []),
-      ...(scaleLineHit ? [{
-        label: "Exterior initial result",
-        line: scaleLineHit.line,
-        color: "blue",
-        initialSegmentLength: expanded?.initialSegmentLength ?? distance(scaleLineHit.line.start, scaleLineHit.line.end),
-      }] : []),
-      ...(expanded ? [{
-        label: "Exterior expanded result",
-        line: expanded.line,
+      ...(vectorWallBand.wall ? [{
+        label: "Vector wall-band result",
+        line: vectorWallBand.wall.centreline || vectorWallBand.wall.centerline,
         color: "green",
-        expandedWallLength: expanded.expandedWallLength,
-        startEndpointReason: expanded.startEndpointReason,
-        endEndpointReason: expanded.endEndpointReason,
-        dimensionRejectionScore: expanded.dimensionRejectionScore,
-      }] : []),
+        expandedWallLength: vectorWallBand.wall.diagnostics?.candidateLength,
+        startEndpointReason: vectorWallBand.wall.diagnostics?.startSource,
+        endEndpointReason: vectorWallBand.wall.diagnostics?.endSource,
+        dimensionRejectionScore: 0,
+      }] : vectorWallBand.diagnostics.map((entry) => ({
+        label: "Rejected vector wall-band",
+        line: entry.coordinates?.seed || null,
+        color: "orange",
+        reason: entry.reason,
+        belongsToDimensionChain: entry.belongsToDimensionChain,
+      }))),
       {
         label: "Local raster fallback",
         line: rasterResult.wall?.centreline || null,
@@ -870,14 +876,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setExteriorHighlightHoverWallId(acceptedWall?.id || null);
     setExteriorHighlightDiagnostics(diagnostics);
     if (diagnosticsEnabled) console.table(diagnostics);
-    if (!acceptedWall && !expanded) {
+    if (!acceptedWall) {
       setWallDetectionStatus("idle");
-      setWallDetectionMessage("No line detected here.");
+      setWallDetectionMessage("No structural wall band detected here.");
       setWallDetectionCode("NO_LINE_UNDER_CURSOR");
-    } else if (!acceptedWall && expanded?.rejected) {
-      setWallDetectionStatus("rejected");
-      setWallDetectionMessage(expanded.rejectionReason || "Dimension or annotation line rejected.");
-      setWallDetectionCode("DIMENSION_OR_ANNOTATION_REJECTED");
     } else {
       setWallDetectionStatus("wall-found");
       setWallDetectionMessage("Wall found - click to highlight");

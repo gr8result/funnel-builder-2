@@ -52,6 +52,9 @@ const REJECTED_TAGS = new Set([
   "note",
   "arrow",
   "setback",
+  "stair",
+  "stair-tread",
+  "tread",
 ]);
 
 function rawSegments(planGeometryIndex) {

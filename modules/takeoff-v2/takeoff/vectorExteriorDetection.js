@@ -3,6 +3,7 @@ import { assessExteriorDetectionGraph } from "./wallDetectionQuality.js";
 import { isSimplePolygon, polygonAreaDocUnits2, polygonPerimeter } from "./geometry.js";
 import { pointInRegion, polylineWithinRegion } from "./planRegion.js";
 import { createWallSegment, createWallVertex, generateId } from "../types.js";
+import { boundarySupportRatio, detectBuildingRegion, segmentInBuildingRegion } from "./buildingRegionDetection.js";
 
 const MIN_LINE_LENGTH = 8;
 const MERGE_TOLERANCE = 1.8;
@@ -12,7 +13,7 @@ const MIN_OVERLAP = 10;
 const DEFAULT_MIN_FACE_OFFSET = 1.2;
 const DEFAULT_MAX_FACE_OFFSET = 12;
 const ENVELOPE_CELL_SIZE = 6;
-const TINY_RETURN_TOLERANCE = ENVELOPE_CELL_SIZE * 2;
+const TINY_RETURN_TOLERANCE = ENVELOPE_CELL_SIZE * 4;
 
 function lineBounds(line) {
   return {
@@ -61,6 +62,8 @@ function classifyRawLine(line, region, pageWidth, pageHeight) {
   if (line.length < MIN_LINE_LENGTH) return "too-short";
   if (!colorLooksBlack(line.strokeColor)) return "non-black";
   if (isDashed(line)) return "dashed";
+  const tag = String(line?.geometryType || line?.objectType || line?.role || line?.type || line?.classification || "").toLowerCase();
+  if (/stair|tread|cabinet|cabinetry|furniture|door-arc|door|symbol|hatch|appliance/.test(tag)) return `rejected tag ${tag}`;
   if (line.pathSegmentCount > 90 && line.length < 35) return "text-symbol";
   if (isNearPageBorder(line, pageWidth, pageHeight)) return "page-border";
   if (!polylineWithinRegion([line.a, line.b], region)) return "outside-region";
@@ -161,6 +164,42 @@ function pairWallFaces(lines, mmPerDocumentUnit) {
   return { pairedIds, pairs };
 }
 
+function linePoint(line, along, fixed = line.fixed) {
+  if (line.orientation === "horizontal") return { x: along, y: fixed };
+  return { x: fixed, y: along };
+}
+
+function createWallBands(lines, pairs) {
+  const byId = new Map(lines.map((line) => [line.id, line]));
+  return pairs.map((pair, index) => {
+    const a = byId.get(pair.aId);
+    const b = byId.get(pair.bId);
+    if (!a || !b) return null;
+    const start = Math.max(a.start, b.start);
+    const end = Math.min(a.end, b.end);
+    if (end - start < MIN_OVERLAP) return null;
+    const centerFixed = (a.fixed + b.fixed) / 2;
+    const faceA = { start: linePoint(a, start, a.fixed), end: linePoint(a, end, a.fixed) };
+    const faceB = { start: linePoint(a, start, b.fixed), end: linePoint(a, end, b.fixed) };
+    const centerline = { start: linePoint(a, start, centerFixed), end: linePoint(a, end, centerFixed) };
+    return {
+      id: `band-${index + 1}`,
+      centerline,
+      centreline: centerline,
+      faceA,
+      faceB,
+      thickness: Math.abs(a.fixed - b.fixed),
+      confidence: Math.min(0.96, 0.62 + Math.min(0.16, pair.overlap / 400) + Math.min(0.12, pair.overlap / Math.max(Math.min(a.length, b.length), 1))),
+      orientation: pair.orientation,
+      sourceLineIds: [a.id, b.id],
+      start,
+      end,
+      fixed: centerFixed,
+      length: end - start,
+    };
+  }).filter(Boolean);
+}
+
 function lineIntersectsLine(a, b) {
   if (a.orientation === b.orientation) {
     return Math.abs(a.fixed - b.fixed) <= INTERSECTION_TOLERANCE && overlaps(a.start, a.end, b.start, b.end) >= -MERGE_GAP;
@@ -249,6 +288,71 @@ function chooseMainDrawingRegion(lines, pageWidth, pageHeight) {
       height: component.height,
       score: Math.round(component.score),
     })),
+  };
+}
+
+function rectFromPolygonBounds(points = []) {
+  if (!points.length) return null;
+  const bounds = points.reduce(
+    (acc, point) => ({
+      minX: Math.min(acc.minX, point.x),
+      minY: Math.min(acc.minY, point.y),
+      maxX: Math.max(acc.maxX, point.x),
+      maxY: Math.max(acc.maxY, point.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+  );
+  return { x: bounds.minX, y: bounds.minY, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+}
+
+function rectGap(a, b) {
+  if (!a || !b) return Infinity;
+  const gapX = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width));
+  const gapY = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height));
+  return Math.hypot(gapX, gapY);
+}
+
+function unionRects(rects, pageWidth, pageHeight, pad = 8) {
+  const valid = rects.filter(Boolean);
+  if (!valid.length) return null;
+  const minX = Math.max(0, Math.min(...valid.map((rect) => rect.x)) - pad);
+  const minY = Math.max(0, Math.min(...valid.map((rect) => rect.y)) - pad);
+  const maxX = pageWidth > 0 ? Math.min(pageWidth, Math.max(...valid.map((rect) => rect.x + rect.width)) + pad) : Math.max(...valid.map((rect) => rect.x + rect.width)) + pad;
+  const maxY = pageHeight > 0 ? Math.min(pageHeight, Math.max(...valid.map((rect) => rect.y + rect.height)) + pad) : Math.max(...valid.map((rect) => rect.y + rect.height)) + pad;
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY, source: "automatic", confirmed: false };
+}
+
+function polygonFromRegionRect(rect) {
+  return [
+    { x: rect.x, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y + rect.height },
+    { x: rect.x, y: rect.y + rect.height },
+  ];
+}
+
+function growRegionFromNearbyComponents(region, pageWidth, pageHeight) {
+  if (!region?.rect || !Array.isArray(region.excludedRegions)) return region;
+  const pageArea = Math.max(pageWidth * pageHeight, 1);
+  const regionArea = region.rect.width * region.rect.height;
+  const nearbyRects = region.excludedRegions
+    .map((polygon) => rectFromPolygonBounds(polygon))
+    .filter((rect) => {
+      if (!rect) return false;
+      const area = rect.width * rect.height;
+      const titleBand = pageHeight > 0 && rect.y < pageHeight * 0.16 && rect.height < pageHeight * 0.18;
+      const notesColumn = pageWidth > 0 && rect.x < pageWidth * 0.18 && rect.width < pageWidth * 0.25;
+      const tinyDetail = area < pageArea * 0.0012;
+      return !titleBand && !notesColumn && !tinyDetail && rectGap(region.rect, rect) <= Math.max(80, Math.min(region.rect.width, region.rect.height) * 0.45);
+    });
+  const grown = unionRects([region.rect, ...nearbyRects], pageWidth, pageHeight, 10);
+  if (!grown || grown.width * grown.height <= regionArea * 1.25) return region;
+  return {
+    ...region,
+    rect: grown,
+    polygon: polygonFromRegionRect(grown),
+    confidence: Math.min(0.96, Math.max(region.confidence || 0, 0.72)),
+    excludedRegions: region.excludedRegions,
   };
 }
 
@@ -422,8 +526,12 @@ function simplifyTinyOrthogonalReturns(points, tolerance = TINY_RETURN_TOLERANCE
       const shortParallelReturns = abHorizontal === cdHorizontal && abHorizontal !== bcHorizontal && abLength <= tolerance && cdLength <= tolerance;
       const shortMiddleReturn = abHorizontal === cdHorizontal && abHorizontal !== bcHorizontal && bcLength <= tolerance;
       if (!shortParallelReturns && !shortMiddleReturn) continue;
-      simplified.splice(i, 2);
-      simplified = simplifyOrthogonalLoop(simplified);
+      const candidate = simplifyOrthogonalLoop([
+        ...simplified.slice(0, i),
+        ...simplified.slice(i + 2),
+      ]);
+      if (!isSimplePolygon(candidate)) continue;
+      simplified = candidate;
       changed = true;
       break;
     }
@@ -575,6 +683,11 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     source: planGeometryIndex?.source || rawSegments[0]?.source || "vector",
     rawLines: rawSegments.length,
     rejected: {},
+    buildingRegion: null,
+    excludedRegions: [],
+    wallBands: 0,
+    wallProbabilityMask: null,
+    enclosedSpaceMask: null,
     filteredWallLines: 0,
     mergedLines: 0,
     wallPairs: 0,
@@ -589,17 +702,62 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     else diagnostics.rejected[reason] = (diagnostics.rejected[reason] || 0) + 1;
   });
 
-  let accepted = initialAccepted;
-  let effectiveRegion = planRegion;
-  if (!effectiveRegion && pageWidth > 0 && pageHeight > 0) {
-    effectiveRegion = inferPlanRegion(accepted, pageWidth, pageHeight);
-    diagnostics.planRegion = effectiveRegion;
-    if (effectiveRegion) {
-      const beforeRegionFilter = accepted.length;
-      accepted = accepted.filter((line) => polylineWithinRegion([line.a, line.b], effectiveRegion));
-      diagnostics.rejected["outside-building-region"] = (diagnostics.rejected["outside-building-region"] || 0) + (beforeRegionFilter - accepted.length);
+  const mergedBeforeRegion = mergeCollinear(initialAccepted).map(toAxisLine);
+  diagnostics.mergedLines = mergedBeforeRegion.length;
+  if (mergedBeforeRegion.length < 6) return { vertices: [], segments: [], connected: true, isClosed: false, useful: false, diagnostics, message: "Vector geometry did not contain enough wall-like lines." };
+
+  const initialPairs = pairWallFaces(mergedBeforeRegion, mmPerDocumentUnit).pairs;
+  const initialWallBands = createWallBands(mergedBeforeRegion, initialPairs);
+  diagnostics.wallBands = initialWallBands.length;
+  let detectedRegion = planRegion
+    ? { polygon: [
+      { x: planRegion.x, y: planRegion.y },
+      { x: planRegion.x + planRegion.width, y: planRegion.y },
+      { x: planRegion.x + planRegion.width, y: planRegion.y + planRegion.height },
+      { x: planRegion.x, y: planRegion.y + planRegion.height },
+    ], rect: planRegion, confidence: 1, excludedRegions: [], supportBandIds: initialWallBands.map((band) => band.id) }
+    : detectBuildingRegion({ wallBands: initialWallBands, lines: mergedBeforeRegion, pageWidth, pageHeight }).region;
+  if (!planRegion) detectedRegion = growRegionFromNearbyComponents(detectedRegion, pageWidth, pageHeight);
+  if (!planRegion) {
+    const mainDrawing = chooseMainDrawingRegion(mergedBeforeRegion, pageWidth, pageHeight);
+    const currentArea = (detectedRegion?.rect?.width || 0) * (detectedRegion?.rect?.height || 0);
+    const fallbackArea = (mainDrawing?.region?.width || 0) * (mainDrawing?.region?.height || 0);
+    const fallbackIsFullSheet = pageWidth > 0 && pageHeight > 0 && mainDrawing?.region?.width > pageWidth * 0.82 && mainDrawing?.region?.height > pageHeight * 0.82;
+    if (mainDrawing?.region && !fallbackIsFullSheet && fallbackArea > currentArea * 1.6) {
+      detectedRegion = {
+        polygon: polygonFromRegionRect(mainDrawing.region),
+        rect: mainDrawing.region,
+        confidence: Math.max(detectedRegion?.confidence || 0, 0.68),
+        excludedRegions: detectedRegion?.excludedRegions || [],
+        supportBandIds: detectedRegion?.supportBandIds || initialWallBands.map((band) => band.id),
+      };
+      diagnostics.drawingRegionComponents = mainDrawing.components;
     }
   }
+  diagnostics.buildingRegion = detectedRegion;
+  diagnostics.planRegion = detectedRegion?.rect || planRegion || null;
+  diagnostics.excludedRegions = detectedRegion?.excludedRegions || [];
+
+  if (!detectedRegion || detectedRegion.confidence < 0.45) {
+    return {
+      connected: true,
+      vertices: [],
+      segments: [],
+      isClosed: false,
+      exteriorPerimeter: null,
+      detectionConfidence: 0,
+      completeness: 0,
+      connectedComponents: 0,
+      openGaps: 0,
+      useful: false,
+      warnings: ["Exterior not detected reliably. Use Trace Exterior."],
+      diagnostics,
+      message: "Exterior not detected reliably. Use Trace Exterior.",
+    };
+  }
+
+  let accepted = initialAccepted.filter((line) => segmentInBuildingRegion(line, detectedRegion, { tolerance: 10 }));
+  diagnostics.rejected["outside-building-region"] = (diagnostics.rejected["outside-building-region"] || 0) + (initialAccepted.length - accepted.length);
   diagnostics.filteredWallLines = accepted.length;
 
   const merged = mergeCollinear(accepted).map(toAxisLine);
@@ -608,23 +766,42 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
 
   const { pairedIds, pairs } = pairWallFaces(merged, mmPerDocumentUnit);
   diagnostics.wallPairs = pairs.length;
-  let paired = merged.map((line) => ({ ...line, paired: pairedIds.has(line.id) })).filter((line) => line.paired);
-  if (!planRegion) {
-    const mainDrawing = chooseMainDrawingRegion(paired.length >= 6 ? paired : merged, pageWidth, pageHeight);
-    if (mainDrawing?.region) {
-      diagnostics.planRegion = mainDrawing.region;
-      diagnostics.drawingRegionComponents = mainDrawing.components;
-      paired = paired.filter((line) => polylineWithinRegion([line.a, line.b], mainDrawing.region, { minFractionInside: 0.5 }));
-    }
-  }
+  const wallBands = createWallBands(merged, pairs).filter((band) => segmentInBuildingRegion({ a: band.centerline.start, b: band.centerline.end }, detectedRegion, { tolerance: 10 }));
+  diagnostics.wallBands = wallBands.length;
+  diagnostics.wallProbabilityMask = {
+    source: "vector+raster-compatible-band-mask",
+    cellSize: ENVELOPE_CELL_SIZE,
+    occupiedBandCount: wallBands.length,
+    evidence: ["parallel-faces", "plausible-thickness", "overlap", "connected-corners"],
+  };
+  diagnostics.enclosedSpaceMask = {
+    source: "wall-band-flood-fill",
+    cellSize: ENVELOPE_CELL_SIZE,
+    region: detectedRegion.rect,
+  };
+  let paired = merged.map((line) => ({ ...line, paired: pairedIds.has(line.id) }))
+    .filter((line) => line.paired)
+    .filter((line) => segmentInBuildingRegion(line, detectedRegion, { tolerance: 10 }));
   const boundary = selectBoundaryLines(paired.length >= 6 ? paired : merged);
   diagnostics.boundaryLines = boundary.length;
 
   const boundaryCandidateGraph = graphFromLines(boundary.length >= 6 ? boundary : paired, stitchToleranceDocUnits);
   diagnostics.candidateExteriorSegments = boundaryCandidateGraph.graph.segments.length;
   diagnostics.boundaryConnectedComponents = boundaryCandidateGraph.quality.connectedComponents;
-  const envelopeSource = paired.length >= 6 ? paired : [];
-  const envelopePolygon = buildEnvelopePolygon(envelopeSource, diagnostics.planRegion, diagnostics);
+  const envelopeSource = wallBands.length >= 4
+    ? wallBands.map((band) => ({
+      id: band.id,
+      orientation: band.orientation,
+      fixed: band.fixed,
+      start: band.start,
+      end: band.end,
+      length: band.length,
+    }))
+    : [];
+  const envelopeBoundarySource = selectBoundaryLines(envelopeSource);
+  diagnostics.envelopeSourceBands = envelopeSource.length;
+  diagnostics.envelopeBoundaryBands = envelopeBoundarySource.length;
+  const envelopePolygon = buildEnvelopePolygon(envelopeBoundarySource.length >= 6 ? envelopeBoundarySource : envelopeSource, detectedRegion.rect, diagnostics);
   const envelopeGraph = envelopePolygon ? graphFromPolygon(envelopePolygon, stitchToleranceDocUnits) : null;
   if (envelopeGraph) {
     diagnostics.envelopeGraphSegments = envelopeGraph.graph.segments.length;
@@ -655,7 +832,13 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
   }
   const selected = envelopeGraph;
   const { graph, quality } = selected;
-  const footprintValidation = validateExteriorFootprint(envelopeGraph.points, diagnostics.planRegion);
+  const wallSupportRatio = boundarySupportRatio(envelopeGraph.points, wallBands, Math.max(ENVELOPE_CELL_SIZE * 4, 24));
+  diagnostics.wallSupportRatio = wallSupportRatio;
+  const footprintValidation = validateExteriorFootprint(envelopeGraph.points, detectedRegion.rect);
+  if (wallSupportRatio < 0.7) {
+    footprintValidation.valid = false;
+    footprintValidation.reason = "Exterior boundary is not sufficiently supported by wall bands.";
+  }
   if (!footprintValidation.valid) {
     return {
       connected: true,
@@ -688,9 +871,12 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     exteriorPerimeter: quality.isClosed ? {
       points: orderedPoints,
       closed: true,
+      area: footprintValidation.areaDocumentUnits,
+      perimeter: footprintValidation.perimeterDocumentUnits,
       selfIntersectionCount: footprintValidation.selfIntersectionCount,
       selfIntersections: footprintValidation.selfIntersectionCount,
       gapCount: footprintValidation.gapCount,
+      wallSupportRatio,
       areaDocumentUnits: footprintValidation.areaDocumentUnits,
       perimeterDocumentUnits: footprintValidation.perimeterDocumentUnits,
       confidence: Math.max(quality.confidence, 82),
