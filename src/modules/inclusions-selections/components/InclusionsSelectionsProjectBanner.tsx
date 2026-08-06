@@ -27,6 +27,10 @@ type Props = {
   saveStatus?: SelectionsSaveStatus;
   onSave?: () => Promise<void> | void;
   locked?: boolean;
+  title?: string;
+  subtitle?: string;
+  backLabel?: string;
+  onBack?: () => void | Promise<void>;
 };
 
 type LocalFileHandle = {
@@ -297,7 +301,17 @@ function recentId(fileName: string, fileId?: string): string {
   return `${fileId || fileName}`.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
 }
 
-export function InclusionsSelectionsPageBanner({ currentStage, context, saveStatus, onSave, locked = false }: Props) {
+export function InclusionsSelectionsPageBanner({
+  currentStage,
+  context,
+  saveStatus,
+  onSave,
+  locked = false,
+  title = "Inclusions & Selections",
+  subtitle = "Choose project areas, select products and finishes, and prepare the completed selections schedule.",
+  backLabel = "Back to Project Dashboard",
+  onBack,
+}: Props) {
   const router = useRouter();
   const { workspaceId } = useWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -870,6 +884,10 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
   }
 
   async function handleBack() {
+    if (onBack) {
+      await onBack();
+      return;
+    }
     if ((await confirmUnsaved()) === "cancel") return;
     await router.push(dashboardHref);
   }
@@ -918,8 +936,8 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
           <span />
         </div>
         <div>
-          <h1>Inclusions & Selections</h1>
-          <p>Choose project areas, select products and finishes, and prepare the completed selections schedule.</p>
+          <h1>{title}</h1>
+          <p>{subtitle}</p>
         </div>
       </div>
       <div className="projectDetails" aria-label="Current selections file details">
@@ -927,7 +945,7 @@ export function InclusionsSelectionsPageBanner({ currentStage, context, saveStat
       </div>
       <div className="bannerActions">
         <span className={`saveStatus ${effectiveStatus}`}>{statusLabel(effectiveStatus)}</span>
-        <button type="button" className="backButton" onClick={() => void handleBack()}>Back to Project Dashboard</button>
+        <button type="button" className="backButton" onClick={() => void handleBack()}>{backLabel}</button>
         <button type="button" onClick={() => setNewOpen(true)}>New</button>
         <button type="button" className="openButton" onClick={() => void handleOpenFile()}>Open File</button>
         <button type="button" className="saveButton" disabled={locked || !hasProject || effectiveStatus === "saving"} onClick={() => void handleSave()}>Save</button>

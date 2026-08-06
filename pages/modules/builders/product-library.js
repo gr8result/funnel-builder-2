@@ -71,34 +71,51 @@ const TAB_ALIASES = new Map([
 ]);
 const ACTIVE_SELECTION_VISIBILITIES = new Set(["client_selectable", "builder_selectable"]);
 
-const PRODUCT_BROWSER_AREAS = [
-  { key: "exterior", label: "Exterior", imageUrl: "/assets/builders/standard-inclusions-construction-strip.png", types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
-  { key: "interior", label: "Interior", imageUrl: "/assets/builders/standard-inclusions-premier-living.jpg", types: ["Internal Doors", "Door Hardware", "Skirting", "Architraves", "Robes", "Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
-  { key: "kitchen", label: "Kitchen", imageUrl: "/assets/builders/standard-inclusions-premier-kitchen.jpg", types: ["Stone Benchtops", "Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
-  { key: "bathroom", label: "Bathroom", imageUrl: "/standard-inclusions/assets/image19.jpeg", types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
-  { key: "bedroom", label: "Bedroom", imageUrl: "/standard-inclusions/assets/image47.jpeg", types: ["Carpet", "Hybrid Flooring", "Internal Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
-  { key: "laundry", label: "Laundry", imageUrl: "/standard-inclusions/assets/image46.jpeg", types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
-  { key: "garage", label: "Garage", imageUrl: "/standard-inclusions/assets/image48.jpeg", types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
-  { key: "outdoor", label: "Outdoor", imageUrl: "/assets/builders/standard-inclusions-hero.jpg", types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
-  { key: "pool", label: "Pool", imageUrl: "/standard-inclusions/assets/image55.jpeg", types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
-];
+function svgTileDataUri(label) {
+  const text = String(label || "Category");
+  const lower = text.toLowerCase();
+  const palette = lower.includes("brick") ? ["#7f1d1d", "#dc2626", "#fecaca"]
+    : lower.includes("roof") || lower.includes("gutter") || lower.includes("fascia") ? ["#0f172a", "#475569", "#cbd5e1"]
+      : lower.includes("garage") ? ["#1e3a8a", "#64748b", "#dbeafe"]
+        : lower.includes("window") ? ["#075985", "#38bdf8", "#e0f2fe"]
+          : lower.includes("door") ? ["#78350f", "#b45309", "#fde68a"]
+            : lower.includes("oven") || lower.includes("cooktop") || lower.includes("appliance") || lower.includes("dishwasher") || lower.includes("rangehood") || lower.includes("microwave") ? ["#111827", "#6b7280", "#f3f4f6"]
+              : lower.includes("toilet") || lower.includes("bath") || lower.includes("basin") || lower.includes("shower") || lower.includes("vanit") ? ["#0e7490", "#67e8f9", "#ecfeff"]
+                : lower.includes("paint") || lower.includes("colour") || lower.includes("color") ? ["#7e22ce", "#f97316", "#fef3c7"]
+                  : lower.includes("floor") || lower.includes("carpet") || lower.includes("tile") || lower.includes("deck") ? ["#365314", "#84cc16", "#ecfccb"]
+                    : lower.includes("kitchen") || lower.includes("bench") || lower.includes("cabinet") || lower.includes("sink") || lower.includes("mixer") ? ["#1f2937", "#14b8a6", "#f8fafc"]
+                      : lower.includes("pool") ? ["#0369a1", "#38bdf8", "#e0f2fe"]
+                        : lower.includes("lighting") || lower.includes("power") || lower.includes("electrical") ? ["#854d0e", "#facc15", "#fef9c3"]
+                          : lower.includes("robe") || lower.includes("storage") || lower.includes("shelf") ? ["#581c87", "#a78bfa", "#f5f3ff"]
+                            : ["#1f2937", "#64748b", "#f8fafc"];
+  const [dark, mid, light] = palette;
+  const art = lower.includes("brick")
+    ? `<g>${Array.from({ length: 6 }).map((_, row) => Array.from({ length: 5 }).map((__, col) => `<rect x="${20 + col * 54 + (row % 2 ? 27 : 0)}" y="${30 + row * 28}" width="48" height="22" rx="3" fill="${row % 2 ? mid : dark}" opacity="${0.72 + (col % 2) * 0.12}"/>`).join("")).join("")}</g>`
+    : lower.includes("roof") || lower.includes("gutter") || lower.includes("fascia") ? `<path d="M22 126 L160 34 L298 126 Z" fill="${dark}"/><path d="M48 126 H272 V206 H48 Z" fill="${light}"/><path d="M70 150 H250" stroke="${mid}" stroke-width="10"/><path d="M70 174 H250" stroke="${mid}" stroke-width="10"/>`
+      : lower.includes("garage") ? `<rect x="42" y="62" width="236" height="154" rx="8" fill="${light}"/><rect x="64" y="90" width="192" height="96" rx="4" fill="${mid}"/><path d="M64 114 H256 M64 138 H256 M64 162 H256" stroke="${dark}" stroke-width="7"/>`
+        : lower.includes("window") ? `<rect x="48" y="44" width="224" height="168" rx="10" fill="${light}"/><rect x="72" y="68" width="176" height="120" fill="${mid}" opacity=".75"/><path d="M160 68 V188 M72 128 H248" stroke="${dark}" stroke-width="9"/>`
+          : lower.includes("door") ? `<rect x="96" y="34" width="128" height="190" rx="8" fill="${mid}"/><rect x="118" y="58" width="84" height="58" rx="5" fill="${light}" opacity=".55"/><rect x="118" y="134" width="84" height="58" rx="5" fill="${dark}" opacity=".35"/><circle cx="200" cy="128" r="7" fill="${dark}"/>`
+            : lower.includes("oven") || lower.includes("appliance") ? `<rect x="66" y="42" width="188" height="172" rx="12" fill="${dark}"/><rect x="88" y="80" width="144" height="86" rx="4" fill="${light}"/><circle cx="108" cy="60" r="8" fill="${mid}"/><circle cx="136" cy="60" r="8" fill="${mid}"/><circle cx="164" cy="60" r="8" fill="${mid}"/>`
+              : lower.includes("cooktop") ? `<rect x="50" y="62" width="220" height="144" rx="14" fill="${dark}"/><circle cx="112" cy="118" r="34" fill="none" stroke="${light}" stroke-width="9"/><circle cx="204" cy="118" r="34" fill="none" stroke="${light}" stroke-width="9"/><circle cx="158" cy="166" r="24" fill="none" stroke="${mid}" stroke-width="8"/>`
+                : lower.includes("toilet") ? `<rect x="98" y="42" width="124" height="76" rx="12" fill="${light}"/><path d="M112 112 H208 V164 C208 198 184 218 160 218 C136 218 112 198 112 164 Z" fill="${mid}"/><rect x="132" y="210" width="56" height="16" rx="8" fill="${dark}"/>`
+                  : lower.includes("paint") || lower.includes("colour") || lower.includes("color") ? `<rect x="50" y="78" width="54" height="112" rx="8" fill="#ef4444"/><rect x="108" y="62" width="54" height="128" rx="8" fill="#f59e0b"/><rect x="166" y="90" width="54" height="100" rx="8" fill="#22c55e"/><rect x="224" y="70" width="54" height="120" rx="8" fill="#3b82f6"/>`
+                    : lower.includes("floor") || lower.includes("carpet") || lower.includes("tile") || lower.includes("deck") ? `<path d="M28 204 L112 70 H292 L208 204 Z" fill="${light}"/><path d="M82 118 H262 M58 156 H238 M112 70 L28 204 M158 70 L74 204 M204 70 L120 204 M250 70 L166 204" stroke="${dark}" stroke-width="6" opacity=".75"/>`
+                      : `<rect x="52" y="66" width="216" height="132" rx="12" fill="${light}"/><path d="M78 154 H242" stroke="${dark}" stroke-width="14"/><circle cx="112" cy="114" r="28" fill="${mid}"/><rect x="162" y="94" width="60" height="42" rx="6" fill="${dark}"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 320 240" role="img" aria-label="${text}"><rect width="320" height="240" fill="${light}"/><rect x="0" y="0" width="320" height="240" fill="url(#g)" opacity=".55"/><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="${mid}"/></linearGradient></defs>${art}<rect x="18" y="198" width="284" height="28" rx="14" fill="#ffffff" opacity=".88"/><text x="160" y="217" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="800" fill="${dark}">${text.replace(/&/g, "and").slice(0, 30)}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
 
-const PRODUCT_TYPE_IMAGE_URLS = {
-  Bricks: "/standard-inclusions/assets/image49.jpeg",
-  Roof: "/standard-inclusions/assets/image45.jpeg",
-  "Roof Colour": "/standard-inclusions/assets/image45.jpeg",
-  "Metal Roofing": "/standard-inclusions/assets/image45.jpeg",
-  "Garage Doors": "/standard-inclusions/assets/image48.jpeg",
-  "Internal Doors": "/standard-inclusions/assets/image50.png",
-  Ovens: "/standard-inclusions/assets/image51.png",
-  Benchtops: "/assets/builders/standard-inclusions-premier-kitchen.webp",
-  "Stone Benchtops": "/assets/builders/standard-inclusions-premier-kitchen.webp",
-  Mixers: "/standard-inclusions/assets/image53.jpeg",
-  Toilets: "/standard-inclusions/assets/image54.jpeg",
-  Flooring: "/standard-inclusions/assets/image55.jpeg",
-  Carpet: "/standard-inclusions/assets/image55.jpeg",
-  Paint: "/standard-inclusions/assets/image44.png",
-};
+const PRODUCT_BROWSER_AREAS = [
+  { key: "exterior", label: "Exterior", imageUrl: svgTileDataUri("Exterior"), types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
+  { key: "interior", label: "Interior", imageUrl: svgTileDataUri("Interior"), types: ["Internal Doors", "Door Hardware", "Skirting", "Architraves", "Robes", "Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
+  { key: "kitchen", label: "Kitchen", imageUrl: svgTileDataUri("Kitchen"), types: ["Stone Benchtops", "Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
+  { key: "bathroom", label: "Bathroom", imageUrl: svgTileDataUri("Bathroom"), types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
+  { key: "bedroom", label: "Bedroom", imageUrl: svgTileDataUri("Bedroom"), types: ["Carpet", "Hybrid Flooring", "Internal Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
+  { key: "laundry", label: "Laundry", imageUrl: svgTileDataUri("Laundry"), types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
+  { key: "garage", label: "Garage", imageUrl: svgTileDataUri("Garage"), types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
+  { key: "outdoor", label: "Outdoor", imageUrl: svgTileDataUri("Outdoor"), types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
+  { key: "pool", label: "Pool", imageUrl: svgTileDataUri("Pool"), types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
+];
 
 const FEATURED_BRANDS_BY_TYPE = {
   Ovens: ["Westinghouse", "Bosch", "Smeg", "Electrolux", "Omega"],
@@ -445,6 +462,27 @@ export default function BuilderProductLibraryPage() {
     setDrawerProduct(null);
   }
 
+  const selectedBrowserArea = PRODUCT_BROWSER_AREAS.find((area) => area.key === selectedAreaKey) || null;
+  const browserBackLabel = selectedProductType && selectedBrowserArea
+    ? `Back to ${selectedBrowserArea.label}`
+    : selectedBrowserArea
+      ? "Back to Areas"
+      : "Back to Project Dashboard";
+
+  function handleBrowserBack() {
+    if (selectedProductType) {
+      setSelectedProductType("");
+      setSelectedBrand("All Brands");
+      return;
+    }
+    if (selectedAreaKey) {
+      setSelectedAreaKey("");
+      setSelectedBrand("All Brands");
+      return;
+    }
+    router.push("/modules/construction");
+  }
+
   async function authHeaders() {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData?.session?.access_token || "";
@@ -751,7 +789,14 @@ export default function BuilderProductLibraryPage() {
 
         {activeTab === "selections" && (
           <>
-            <InclusionsSelectionsProjectBanner currentStage="workspace" context={productLibrarySelectionContext(router.query)} />
+            <InclusionsSelectionsProjectBanner
+              currentStage="workspace"
+              context={productLibrarySelectionContext(router.query)}
+              title="Product Library"
+              subtitle="Manage the suppliers, products, finishes and options available for project selections."
+              backLabel={browserBackLabel}
+              onBack={handleBrowserBack}
+            />
             <VisualSelectionsBrowser
               products={selectionProducts}
               loading={loading}
@@ -767,6 +812,10 @@ export default function BuilderProductLibraryPage() {
               onSelectBrand={setSelectedBrand}
               onOpenProduct={setDetailProduct}
               onAddToSelections={handleAddToSelections}
+              selectedCatalogueProduct={selectedCatalogueProduct}
+              onImportProducts={() => changeTab("imports")}
+              onAddProduct={openDrawerForNew}
+              onBack={handleBrowserBack}
             />
           </>
         )}
@@ -1205,6 +1254,10 @@ function VisualSelectionsBrowser({
   onSelectBrand,
   onOpenProduct,
   onAddToSelections,
+  selectedCatalogueProduct,
+  onImportProducts,
+  onAddProduct,
+  onBack,
 }) {
   const selectedArea = areas.find((area) => area.key === selectedAreaKey) || null;
   const areaProducts = selectedArea
@@ -1226,6 +1279,7 @@ function VisualSelectionsBrowser({
     ? typeProducts.filter((product) => productBrand(product, manufacturerById) === selectedBrand)
     : typeProducts;
   const visibleProducts = brandProducts;
+  const showProductsOrEmpty = Boolean(selectedArea && selectedProductType);
 
   return (
     <section className="visual-browser">
@@ -1261,7 +1315,7 @@ function VisualSelectionsBrowser({
           <div className="type-grid">
             {selectedArea.types.map((type) => (
               <button key={type} type="button" className="type-tile" onClick={() => onSelectProductType(type)}>
-                <span className="visual-tile-image tileProductType" style={{ backgroundImage: `url(${PRODUCT_TYPE_IMAGE_URLS[type] || selectedArea.imageUrl})` }} aria-hidden="true" />
+                <span className="visual-tile-image tileProductType" style={{ backgroundImage: `url(${svgTileDataUri(type)})` }} aria-hidden="true" />
                 <strong>{type}</strong>
               </button>
             ))}
@@ -1273,14 +1327,17 @@ function VisualSelectionsBrowser({
         <>
           <section className="step compact">
             <h2>{selectedProductType}</h2>
-            <div className="brand-row">
-              {brandNames.map((brand) => (
-                <button key={brand} type="button" className={selectedBrand === brand ? "active" : ""} onClick={() => onSelectBrand(brand)}>{brand}</button>
-              ))}
-            </div>
+            {brandNames.length ? (
+              <div className="brand-row">
+                <button type="button" className={selectedBrand === "All Brands" ? "active" : ""} onClick={() => onSelectBrand("All Brands")}>All Brands</button>
+                {brandNames.map((brand) => (
+                  <button key={brand} type="button" className={selectedBrand === brand ? "active" : ""} onClick={() => onSelectBrand(brand)}>{brand}</button>
+                ))}
+              </div>
+            ) : null}
           </section>
 
-          {selectedBrand !== "All Brands" ? <section className="step">
+          {showProductsOrEmpty ? <section className="step">
             <div className="step-heading">
               <h2>{selectedBrand === "All Brands" ? selectedProductType : `${selectedBrand} ${selectedProductType}`}</h2>
             </div>
@@ -1293,14 +1350,14 @@ function VisualSelectionsBrowser({
                       product={product}
                       brandName={productBrand(product, manufacturerById)}
                       supplierName={supplierById.get(product.supplier_id) || ""}
-                      selected={selectedProduct?.productId === product.id}
+                      selected={selectedCatalogueProduct?.productId === product.id}
                       onOpenProduct={onOpenProduct}
                       onAddToSelections={onAddToSelections}
                     />
                   ))}
                 </div>
               ) : (
-                <EmptyProductTypeState />
+                <EmptyProductTypeState onImportProducts={onImportProducts} onAddProduct={onAddProduct} onBack={onBack} />
               )
             )}
           </section> : null}
@@ -1312,10 +1369,15 @@ function VisualSelectionsBrowser({
   );
 }
 
-function EmptyProductTypeState() {
+function EmptyProductTypeState({ onImportProducts, onAddProduct, onBack }) {
   return (
     <div className="empty-products">
-      <h3>No client-selectable products have been added yet.</h3>
+      <h3>No products have been imported for this category.</h3>
+      <div>
+        <button type="button" onClick={onImportProducts}>Import Products</button>
+        <button type="button" onClick={onAddProduct}>Add Product</button>
+        <button type="button" className="ghost" onClick={onBack}>Back</button>
+      </div>
     </div>
   );
 }

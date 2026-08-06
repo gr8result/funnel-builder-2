@@ -96,8 +96,15 @@ test("Product Library and Inclusions browser expose normal-user flow without adm
   assert(page.includes("Stone Benchtops"));
   assert(page.includes("Metal Roofing"));
   assert(page.includes("Internal Doors"));
-  assert(page.includes("style={{ backgroundImage: `url("));
+  assert(page.includes("svgTileDataUri"));
+  assert(page.includes("title=\"Product Library\""));
+  assert(page.includes("backLabel={browserBackLabel}"));
   assert(!page.includes("linear-gradient(135deg"));
+  assert(!page.includes("PRODUCT_TYPE_IMAGE_URLS"));
+  assert(page.includes("No products have been imported for this category."));
+  assert(page.includes("Import Products"));
+  assert(page.includes("Add Product"));
+  assert(page.includes("onBack={handleBrowserBack}"));
   assert(modal.includes("View Official Product Page"));
   assert(modal.includes("Add To Selections"));
   assert(!modal.includes("builderCost"));
