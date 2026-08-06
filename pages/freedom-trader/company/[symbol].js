@@ -469,6 +469,7 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const [manualBuyForm, setManualBuyForm] = useState(null);
   const [tradeActionSaving, setTradeActionSaving] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const tradeModalOpenerRef = useRef(null);
   const [visualLevels, setVisualLevels] = useState({ entry: null, target: null, target2: null, stop: null });
   const [levelSources, setLevelSources] = useState(DEFAULT_LEVEL_SOURCES);
   const [linePixels, setLinePixels] = useState({ entry: null, target: null, target2: null, stop: null });
@@ -993,8 +994,11 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
     };
   }
 
-  function openTradeConfirmation() {
+  function openTradeConfirmation(event = null) {
     const draft = buildTradeDraft();
+    if (event?.currentTarget && typeof event.currentTarget.focus === "function") {
+      tradeModalOpenerRef.current = event.currentTarget;
+    }
     setSaveMessage("");
     setManualBuyForm(null);
     setTradeDraft(draft);
@@ -1020,6 +1024,9 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   function closeTradeModal() {
     setManualBuyForm(null);
     setTradeModalOpen(false);
+    window.setTimeout(() => {
+      tradeModalOpenerRef.current?.focus?.();
+    }, 0);
   }
 
   function closeTradeModalFromBackdrop(event) {
@@ -1811,12 +1818,22 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
   const fibOverlayReady = fibVisible && fibGeometry.anchor1 && fibGeometry.anchor2 && fibGeometry.body && fibGeometry.levels.length;
   const selectedFibLevel = fibGeometry.levels.find((level) => level.key === selectedFibLevelKey);
   const modalCanBuy = Boolean(tradeDraft && tradeDraft.status === "BUY NOW" && !tradeDraft.blockers?.length);
+  const modalPlanComplete = Boolean(tradeDraft
+    && Number.isFinite(Number(tradeDraft.entryPrice)) && Number(tradeDraft.entryPrice) > 0
+    && Number.isFinite(Number(tradeDraft.quantity)) && Number(tradeDraft.quantity) > 0
+    && Number.isFinite(Number(tradeDraft.stopPrice)) && Number(tradeDraft.stopPrice) > 0
+    && Number.isFinite(Number(tradeDraft.targetPrice)) && Number(tradeDraft.targetPrice) > 0
+    && Number.isFinite(Number(tradeDraft.targetPrice2)) && Number(tradeDraft.targetPrice2) > 0);
+  const modalCanShowOrderInstructions = modalCanBuy && modalPlanComplete;
   const modalWhy = tradeDraft?.blockers?.[0]
     || (modalCanBuy
       ? "The price has reached your planned buy price and the risk is within your rules."
       : Number.isFinite(Number(tradeDraft?.entryPrice)) && Number(tradeDraft.entryPrice) > 0
         ? "The setup is not ready because the price has not reached your planned buy price yet."
         : "Freedom cannot calculate a safe buy price from the current chart levels.");
+  const modalNotReadyReason = tradeDraft?.blockers?.some((blocker) => /chart data is unavailable/i.test(blocker))
+    ? "Chart data is unavailable."
+    : modalWhy;
   const waitForPriceText = Number.isFinite(Number(tradeDraft?.entryPrice)) && Number(tradeDraft.entryPrice) > 0
     ? formatCalculatedCurrency(tradeDraft.entryPrice)
     : "Not calculated";
@@ -2198,21 +2215,31 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               {modalCanBuy ? <Metric label="How much could I make?" value={formatCalculatedCurrency(tradeDraft.expectedProfit)} /> : null}
               <Metric label="Shares to buy" value={formatCalculatedNumber(tradeDraft.quantity)} />
             </div>
-            <section className="cmcInstructions">
-              <h3>Enter this in CMC</h3>
-              <ol>
-                <li>Open CMC Invest.</li>
-                <li>Search for {symbol}.</li>
-                <li>Select Buy.</li>
-                <li>Choose a Limit or conditional order.</li>
-                <li>Enter {formatCalculatedNumber(tradeDraft.quantity)} whole shares.</li>
-                <li>Enter the buy-trigger price of {formatCalculatedCurrency(tradeDraft.entryPrice)}.</li>
-                <li>Review and submit the order in CMC.</li>
-                <li>Add the Safety Exit and profit instructions supported by the CMC order workflow.</li>
-                <li>Return to Freedom and record the actual filled price only after CMC confirms execution.</li>
-              </ol>
-            </section>
-            <p className="brokerNotice">Freedom has not placed this order. Enter and confirm the order manually through CMC.</p>
+            {modalCanShowOrderInstructions ? (
+              <>
+                <section className="cmcInstructions">
+                  <h3>Enter this in CMC</h3>
+                  <ol>
+                    <li>Open CMC Invest.</li>
+                    <li>Search for {symbol}.</li>
+                    <li>Select Buy.</li>
+                    <li>Choose a Limit or conditional order.</li>
+                    <li>Enter {formatCalculatedNumber(tradeDraft.quantity)} whole shares.</li>
+                    <li>Enter the buy-trigger price of {formatCalculatedCurrency(tradeDraft.entryPrice)}.</li>
+                    <li>Review and submit the order in CMC.</li>
+                    <li>Add the Safety Exit and profit instructions supported by the CMC order workflow.</li>
+                    <li>Return to Freedom and record the actual filled price only after CMC confirms execution.</li>
+                  </ol>
+                </section>
+                <p className="brokerNotice">Freedom has not placed this order. Enter and confirm the order manually through CMC.</p>
+              </>
+            ) : (
+              <section className="planNotReady">
+                <h3>Trade plan is not ready.</h3>
+                <p><strong>Reason:</strong><br />{modalNotReadyReason || "Chart data is unavailable."}</p>
+                <p>No order should be entered into CMC until a complete trade plan has been generated.</p>
+              </section>
+            )}
             <details className="technicalDetails">
               <summary>Show Technical Details</summary>
               <div className="confirmationGrid">
@@ -2244,12 +2271,12 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
               </div>
             ) : null}
             <div className="modalActions">
-              <button type="button" onClick={openBroker}>Open CMC</button>
-              <button type="button" onClick={() => createAllAlerts()} disabled={tradeActionSaving || tradeDraft.blockers?.length}>{tradeActionSaving === "alerts" ? "Creating..." : "Create Alert"}</button>
+              {modalCanShowOrderInstructions ? <button type="button" onClick={openBroker}>Open CMC</button> : null}
+              <button type="button" onClick={() => createAllAlerts()} disabled={Boolean(tradeActionSaving)}>{tradeActionSaving === "alerts" ? "Creating..." : "Create Alert"}</button>
               <button type="button" onClick={addToWatchlist}>Add to Watchlist</button>
-              {!manualBuyForm ? <button type="button" className="primaryAction" onClick={startManualBuy} disabled={tradeDraft.blockers?.length}>Mark as Purchased</button> : null}
-              <Link className="primaryAction" href={`/freedom-trader/trade-journal?symbol=${encodeURIComponent(symbol)}`}>Record Broker Trade</Link>
-              <button type="button" onClick={cancelSetup}>Cancel Setup</button>
+              {modalCanShowOrderInstructions && !manualBuyForm ? <button type="button" className="primaryAction" onClick={startManualBuy}>Mark as Purchased</button> : null}
+              {modalCanShowOrderInstructions ? <Link className="primaryAction" href={`/freedom-trader/trade-journal?symbol=${encodeURIComponent(symbol)}`}>Record Broker Trade</Link> : null}
+              <button type="button" onClick={closeTradeModal}>Close</button>
             </div>
           </section>
         </div>
@@ -2399,8 +2426,8 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .profit { color: #8ff0c3!important; }
         .loss { color: #ff9a9a!important; }
         footer { font-size: 13px; margin-top: 20px; padding-bottom: 12px; }
-        .modalBackdrop { align-items: center; background: rgba(0,0,0,.72); display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 50; }
-        .modal { background: #081013; border: 1px solid rgba(255,153,0,.24); border-radius: 8px; box-shadow: 0 30px 120px rgba(0,0,0,.62); display: grid; gap: 16px; max-height: calc(100vh - 48px); max-width: 1000px; overflow: auto; padding: 24px; width: min(100%, 1000px); }
+        .modalBackdrop { align-items: center; background: rgba(0,0,0,.72); display: flex; inset: 0; justify-content: center; overflow: hidden; padding: 24px; position: fixed; z-index: 200; }
+        .modal { background: #081013; border: 1px solid rgba(255,153,0,.24); border-radius: 8px; box-shadow: 0 30px 120px rgba(0,0,0,.62); display: grid; gap: 16px; max-height: calc(100dvh - 48px); max-width: min(1000px, calc(100vw - 48px)); overflow: auto; padding: 24px; width: min(100%, 1000px); }
         .modalHeader { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
         .modalHeader span { color: #ffcc8a; display: block; font-size: 12px; font-weight: 950; letter-spacing: .08em; margin-bottom: 5px; text-transform: uppercase; }
         .modalHeader h2 { font-size: 34px; line-height: 1; }
@@ -2424,6 +2451,9 @@ export default function TraderCompany({ passwordHash, initialSymbol }) {
         .cmcInstructions { background: rgba(29,155,255,.1); border: 1px solid rgba(29,155,255,.26); border-radius: 8px; display: grid; gap: 10px; padding: 14px 16px; }
         .cmcInstructions h3 { margin: 0; }
         .cmcInstructions ol { color: #dcebf2; display: grid; gap: 6px; line-height: 1.45; margin: 0; padding-left: 22px; }
+        .planNotReady { background: rgba(255,153,0,.1); border: 1px solid rgba(255,153,0,.28); border-radius: 8px; color: #ffd7a1; display: grid; gap: 10px; line-height: 1.5; padding: 14px 16px; }
+        .planNotReady h3, .planNotReady p { margin: 0; }
+        .planNotReady h3, .planNotReady strong { color: #fff; }
         .riskPreview { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 14px; }
         .riskPreview span { color: #aebdc4; display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; }
         .riskPreview strong { color: #fff; display: block; font-size: 24px; margin-top: 6px; }
