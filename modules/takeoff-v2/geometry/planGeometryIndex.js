@@ -58,8 +58,68 @@ function isSnapEligibleSegment(segment, pageWidth, pageHeight) {
   return true;
 }
 
-export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_SIZE, pageWidth = 0, pageHeight = 0 } = {}) {
+function angleDegreesFor(a, b) {
+  return ((Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + 360) % 360;
+}
+
+function sourceFor(segment, defaultSource) {
+  if (segment?.source === "raster" || defaultSource === "raster") return "raster";
+  return "pdf-vector";
+}
+
+function lineLength(segment) {
+  return Number.isFinite(segment?.length) ? segment.length : distance(segment.a, segment.b);
+}
+
+function toPlanLine(segment, { pageId, source }) {
+  const length = lineLength(segment);
+  return {
+    ...segment,
+    id: segment.id,
+    pageId,
+    start: { x: segment.a.x, y: segment.a.y },
+    end: { x: segment.b.x, y: segment.b.y },
+    a: segment.a,
+    b: segment.b,
+    length,
+    angleDegrees: angleDegreesFor(segment.a, segment.b),
+    strokeWidth: Number.isFinite(segment.strokeWidth) ? segment.strokeWidth : undefined,
+    source: sourceFor(segment, source),
+    sourceOperator: segment.paintOp ?? segment.sourceOperator ?? null,
+  };
+}
+
+function boundsFor(lines) {
+  if (!lines.length) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+  return lines.reduce(
+    (acc, line) => ({
+      minX: Math.min(acc.minX, line.start.x, line.end.x),
+      minY: Math.min(acc.minY, line.start.y, line.end.y),
+      maxX: Math.max(acc.maxX, line.start.x, line.end.x),
+      maxY: Math.max(acc.maxY, line.start.y, line.end.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+  );
+}
+
+function intersectionType(hit, lineA, lineB) {
+  const nearEndpoint = (point, line) => distance(point, line.a) <= 1e-6 || distance(point, line.b) <= 1e-6;
+  const aEndpoint = nearEndpoint(hit, lineA);
+  const bEndpoint = nearEndpoint(hit, lineB);
+  if (aEndpoint && bEndpoint) return "corner";
+  if (aEndpoint || bEndpoint) return "t-junction";
+  return "crossing";
+}
+
+export function buildPlanGeometryIndex(
+  segments = [],
+  { cellSize = DEFAULT_CELL_SIZE, pageWidth = 0, pageHeight = 0, pageId = "page-1", rotation = 0, source = "pdf-vector" } = {}
+) {
   const snapSegments = segments.filter((segment) => isSnapEligibleSegment(segment, pageWidth, pageHeight));
+  const lines = snapSegments.map((segment) => toPlanLine(segment, { pageId, source }));
+  const rawLines = segments
+    .filter((segment) => segment?.a && segment?.b)
+    .map((segment) => toPlanLine(segment, { pageId, source }));
   const grid = new Map();
   const cellsFor = (seg) => {
     const minX = Math.min(seg.a.x, seg.b.x);
@@ -84,9 +144,9 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
   });
 
   const endpoints = [];
-  snapSegments.forEach((seg) => {
-    endpoints.push({ point: seg.a, lineId: seg.id });
-    endpoints.push({ point: seg.b, lineId: seg.id });
+  lines.forEach((line) => {
+    endpoints.push({ id: `${line.id}:start`, point: line.start, lineId: line.id, type: "endpoint" });
+    endpoints.push({ id: `${line.id}:end`, point: line.end, lineId: line.id, type: "endpoint" });
   });
 
   // Intersections: only test segment pairs that share (or neighbor) a grid
@@ -113,7 +173,12 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
       const pointKey = `${hit.x.toFixed(3)},${hit.y.toFixed(3)}`;
       if (seenPoints.has(pointKey)) return;
       seenPoints.add(pointKey);
-      intersections.push({ point: hit, lineIds: [segA.id, segB.id] });
+      intersections.push({
+        id: `ix-${intersections.length + 1}`,
+        point: hit,
+        lineIds: [segA.id, segB.id],
+        type: intersectionType(hit, segA, segB),
+      });
     });
   });
 
@@ -133,13 +198,13 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
   function findSnapCandidates(point, toleranceDocUnits) {
     const candidates = [];
 
-    intersections.forEach(({ point: p, lineIds }) => {
+    intersections.forEach(({ point: p, lineIds, id, type }) => {
       const d = distance(p, point);
-      if (d <= toleranceDocUnits) candidates.push({ type: "intersection", point: p, lineIds, distance: d });
+      if (d <= toleranceDocUnits) candidates.push({ id, type: "intersection", intersectionType: type, point: p, lineIds, distance: d });
     });
-    endpoints.forEach(({ point: p, lineId }) => {
+    endpoints.forEach(({ point: p, lineId, id }) => {
       const d = distance(p, point);
-      if (d <= toleranceDocUnits) candidates.push({ type: "endpoint", point: p, lineId, distance: d });
+      if (d <= toleranceDocUnits) candidates.push({ id, type: "endpoint", point: p, lineId, distance: d });
     });
     segmentsNear(point, toleranceDocUnits).forEach((seg) => {
       const proj = nearestPointOnSegment(point, seg.a, seg.b);
@@ -152,6 +217,11 @@ export function buildPlanGeometryIndex(segments = [], { cellSize = DEFAULT_CELL_
   }
 
   return {
+    pageId,
+    rotation,
+    bounds: boundsFor(lines),
+    lines,
+    rawLines,
     segments: snapSegments,
     rawSegments: segments,
     endpoints,

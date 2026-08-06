@@ -9,7 +9,22 @@ const segments = [
   { id: "far", a: { x: 900, y: 900 }, b: { x: 1000, y: 900 }, axis: "horizontal" },
 ];
 
-const index = buildPlanGeometryIndex(segments);
+const index = buildPlanGeometryIndex(segments, { pageId: "page-fixture-1", rotation: 90, source: "pdf-vector" });
+
+// ---- Stage 1 public geometry contract ----------------------------------
+{
+  assert.equal(index.pageId, "page-fixture-1");
+  assert.equal(index.rotation, 90);
+  assert.deepEqual(index.bounds, { minX: 0, minY: 100, maxX: 1000, maxY: 900 });
+  assert.equal(index.lines.length, 3);
+  assert.deepEqual(index.lines[0].start, { x: 0, y: 100 });
+  assert.deepEqual(index.lines[0].end, { x: 100, y: 100 });
+  assert.equal(index.lines[0].length, 100);
+  assert.equal(index.lines[0].angleDegrees, 0);
+  assert.equal(index.lines[0].source, "pdf-vector");
+  assert.ok(index.lines.every((line) => !("screenX" in line) && !("screenY" in line) && !("clientX" in line) && !("clientY" in line)));
+  assert.ok(index.endpoints.every((endpoint) => endpoint.type === "endpoint" && endpoint.id && endpoint.point));
+}
 
 // ---- endpoint/intersection coincide at the corner: intersection ranks first
 {
@@ -19,6 +34,7 @@ const index = buildPlanGeometryIndex(segments);
   assert.equal(candidates[0].point.x, 100);
   assert.equal(candidates[0].point.y, 100);
   assert.deepEqual([...candidates[0].lineIds].sort(), ["h1", "v1"]);
+  assert.equal(index.intersections[0].type, "corner");
 }
 
 // ---- a point near a plain endpoint (no intersection there) ---------------
@@ -56,6 +72,15 @@ const index = buildPlanGeometryIndex(segments);
 
 // ---- getCandidateWallSegments exposes snap-eligible plan geometry ----------
 assert.equal(index.getCandidateWallSegments().length, 3);
+
+// ---- raster source is surfaced without changing the compatible segment API
+{
+  const raster = buildPlanGeometryIndex([
+    { id: "r1", a: { x: 10, y: 10 }, b: { x: 70, y: 10 }, source: "raster" },
+  ], { pageId: "raster-page", source: "raster" });
+  assert.equal(raster.lines[0].source, "raster");
+  assert.equal(raster.segments[0].source, "raster");
+}
 
 // ---- local snap search returns at most one best candidate -----------------
 {

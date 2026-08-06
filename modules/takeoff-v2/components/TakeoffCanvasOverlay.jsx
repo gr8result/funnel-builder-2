@@ -59,6 +59,7 @@ function isAutomaticCandidate(segment) {
 export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeometryIndex, sourceCanvas }) {
   if (!viewport) return null;
   const project = (point) => pageToScreenPoint({ viewport, ...IDENTITY_VIEW }, point.x, point.y);
+  const showPlanGeometryDebug = isPlanGeometryDebugEnabled();
   const layers = page?.layerVisibility || {};
   const showLayer = (key) => layers[key] !== false;
   const shouldShowWallSegment = (segment) => !isAutomaticCandidate(segment) || showLayer("automaticCandidates");
@@ -313,12 +314,58 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
             )}
           </>
         )}
+
+        {showPlanGeometryDebug && (
+          <PlanGeometryDebugOverlay planGeometryIndex={planGeometryIndex} project={project} />
+        )}
       </svg>
 
       {!isExteriorHighlighter && isScaleOrMeasure && preview && sourceCanvas && (
         <Magnifier point={preview.valid ? preview.point : preview.rawPoint} project={project} viewport={viewport} sourceCanvas={sourceCanvas} />
       )}
     </>
+  );
+}
+
+function isPlanGeometryDebugEnabled() {
+  if (process.env.NEXT_PUBLIC_TAKEOFF_GEOMETRY_DEBUG === "1") return true;
+  if (typeof window === "undefined") return false;
+  return window.localStorage?.getItem("takeoffGeometryDebug") === "1";
+}
+
+function PlanGeometryDebugOverlay({ planGeometryIndex, project }) {
+  const lines = planGeometryIndex?.lines || [];
+  const endpoints = planGeometryIndex?.endpoints || [];
+  const intersections = planGeometryIndex?.intersections || [];
+  return (
+    <g data-testid="plan-geometry-debug-overlay">
+      {lines.map((line) => {
+        const a = project(line.start || line.a);
+        const b = project(line.end || line.b);
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        return (
+          <g key={line.id} data-testid="plan-geometry-debug-line" data-line-id={line.id} data-angle={Math.round(line.angleDegrees ?? 0)}>
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ef4444" strokeWidth={0.9} opacity={0.65} />
+            <text x={mid.x + 3} y={mid.y - 3} fontSize={8} fill="#991b1b">
+              {line.id} {Math.round(line.angleDegrees ?? 0)} deg
+            </text>
+          </g>
+        );
+      })}
+      {endpoints.map((endpoint) => {
+        const p = project(endpoint.point);
+        return <circle key={endpoint.id || `${endpoint.lineId}-${p.x}-${p.y}`} cx={p.x} cy={p.y} r={2.3} fill="#2563eb" opacity={0.75} data-testid="plan-geometry-debug-endpoint" />;
+      })}
+      {intersections.map((intersection) => {
+        const p = project(intersection.point);
+        return (
+          <g key={intersection.id || `${p.x}-${p.y}`} data-testid="plan-geometry-debug-intersection" data-intersection-type={intersection.type}>
+            <circle cx={p.x} cy={p.y} r={3.5} fill="#16a34a" opacity={0.8} />
+            <text x={p.x + 4} y={p.y - 4} fontSize={8} fill="#166534">{intersection.type}</text>
+          </g>
+        );
+      })}
+    </g>
   );
 }
 

@@ -36,17 +36,47 @@ export async function getPlanGeometry(pdfDocument, pageNumber) {
     });
 
     if (vectorSegments.length >= MIN_VECTOR_SEGMENTS) {
-      return { ...buildPlanGeometryIndex(vectorSegments), source: "vector", segmentCount: vectorSegments.length };
+      return {
+        ...buildPlanGeometryIndex(vectorSegments, {
+          pageWidth: viewport.width,
+          pageHeight: viewport.height,
+          pageId: `pdf-page-${pageNumber}`,
+          rotation: 0,
+          source: "pdf-vector",
+        }),
+        source: "vector",
+        segmentCount: vectorSegments.length,
+      };
     }
 
     try {
       const { canvas, viewport: renderedViewport } = await renderOffscreenForRaster(pdfDocument, pageNumber);
       const rasterSegments = extractRasterSegments({ canvas, viewport: renderedViewport });
-      return { ...buildPlanGeometryIndex(rasterSegments), source: "raster", segmentCount: rasterSegments.length };
+      return {
+        ...buildPlanGeometryIndex(rasterSegments, {
+          pageWidth: viewport.width,
+          pageHeight: viewport.height,
+          pageId: `pdf-page-${pageNumber}`,
+          rotation: 0,
+          source: "raster",
+        }),
+        source: "raster",
+        segmentCount: rasterSegments.length,
+      };
     } catch {
       // Raster rendering failed for any reason — still return whatever the
       // (possibly sparse) vector pass found, rather than nothing at all.
-      return { ...buildPlanGeometryIndex(vectorSegments), source: "vector", segmentCount: vectorSegments.length };
+      return {
+        ...buildPlanGeometryIndex(vectorSegments, {
+          pageWidth: viewport.width,
+          pageHeight: viewport.height,
+          pageId: `pdf-page-${pageNumber}`,
+          rotation: 0,
+          source: "pdf-vector",
+        }),
+        source: "vector",
+        segmentCount: vectorSegments.length,
+      };
     }
   })();
 
