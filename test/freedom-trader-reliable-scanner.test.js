@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildOpportunityDecision,
+  parseConfiguredUniverse,
   rankOpportunityDecisions,
   runOpportunityEngine,
+  supportedUniverseForMarkets,
 } from "../lib/freedom-trader/opportunityEngine.js";
+import { effectiveTwelveDataBatchSize, twelveDataCreditCost } from "../lib/freedom-trader/marketDataService.js";
+import { getMarketSessionState } from "../lib/freedom-trader/marketHours.js";
 import {
   buildFailedFreedomScanSummary,
   buildFreedomScanSummaryFromEngine,
@@ -229,7 +233,7 @@ test("scanner API states V1 is US-only and does not count ASX as unavailable", a
   assert.equal(summary.scannedSymbols.some((symbol) => symbol.endsWith(".AX")), false);
 });
 
-test("default V1 scan requests the full supported US universe in priority order", async () => {
+test("default V1 scan requests the configured US universe in priority order", async () => {
   const requested = [];
   const result = await runOpportunityEngine({
     now: NOW,
@@ -242,13 +246,39 @@ test("default V1 scan requests the full supported US universe in priority order"
   });
   const summary = buildScanSummary(result);
 
-  assert.equal(result.supportedSymbols.length, 48);
-  assert.equal(result.scannedSymbols.length, 48);
-  assert.equal(summary.requestedCount, 48);
+  assert.ok(result.supportedSymbols.length >= 90);
+  assert.equal(result.scannedSymbols.length, 80);
+  assert.equal(summary.configuredUniverseCount, result.supportedSymbols.length);
+  assert.equal(summary.requestedCount, 80);
   assert.equal(summary.analysedCount + summary.unavailableCount, summary.requestedCount);
   assert.equal(summary.qualifiedCount + summary.notQualifiedCount, summary.analysedCount);
   assert.equal(summary.totalsBalanced, true);
   assert.deepEqual(requested.slice(0, 7), ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "AVGO"]);
+});
+
+test("full configured scan totals balance when the requested chunk covers the universe", async () => {
+  const result = await runOpportunityEngine({
+    now: NOW,
+    settings: { markets: ["US"], chunkSize: 250 },
+    marketSnapshotBatch: async () => new Map(),
+    analyser: async (symbol) => analysis(symbol, {
+      tradingScore: 50,
+      opportunity: {
+        ...analysis(symbol).opportunity,
+        score: 50,
+        confidenceScore: 50,
+        riskReward: 0.8,
+        failedConditions: ["risk/reward below configured minimum"],
+      },
+    }),
+  });
+  const summary = buildScanSummary(result);
+
+  assert.equal(result.scannedSymbols.length, result.supportedSymbols.length);
+  assert.equal(summary.status, "complete");
+  assert.equal(summary.requested, summary.successfullyAnalysed + summary.dataUnavailable);
+  assert.equal(summary.successfullyAnalysed, summary.qualified + summary.notQualified);
+  assert.equal(summary.totalsBalanced, true);
 });
 
 test("scanner summary includes provider status and latest market-data timestamp", async () => {
@@ -271,6 +301,39 @@ test("scanner summary includes provider status and latest market-data timestamp"
   assert.equal(summary.providerUsage["Twelve Data"], 2);
   assert.equal(summary.lastMarketDataTimestamp, "2026-07-30T21:30:00.000Z");
   assert.equal(typeof summary.elapsedMs, "number");
+  assert.equal(summary.marketState[0].market, "US");
+  assert.ok(["open", "closed"].includes(summary.marketState[0].state));
+});
+
+test("market data credit accounting uses one Twelve Data credit per unique symbol", () => {
+  assert.equal(twelveDataCreditCost(["AAPL", "MSFT", "AAPL", "msft"]), 2);
+  assert.equal(effectiveTwelveDataBatchSize({ configuredBatchSize: 8, creditsPerMinute: 7 }), 7);
+  assert.equal(effectiveTwelveDataBatchSize({ configuredBatchSize: 4, creditsPerMinute: 60 }), 4);
+});
+
+test("configured US universe entries can be appended without changing scanner code", () => {
+  const parsed = parseConfiguredUniverse("XYZ|Example Corp|Software, ABC|Another Corp|Healthcare", "US");
+  assert.deepEqual(parsed.map((item) => item.symbol), ["XYZ", "ABC"]);
+
+  const original = process.env.FREEDOM_TRADER_US_UNIVERSE;
+  process.env.FREEDOM_TRADER_US_UNIVERSE = "ZZZT|Configured Test|Software";
+  try {
+    const universe = supportedUniverseForMarkets(["US"]);
+    assert.ok(universe.some((item) => item.symbol === "ZZZT" && item.universe === "Configured US shares"));
+  } finally {
+    if (original === undefined) delete process.env.FREEDOM_TRADER_US_UNIVERSE;
+    else process.env.FREEDOM_TRADER_US_UNIVERSE = original;
+  }
+});
+
+test("market-hours behaviour distinguishes regular US market hours from closure", () => {
+  const open = getMarketSessionState("US", new Date("2026-08-03T15:00:00.000Z"));
+  const closed = getMarketSessionState("US", new Date("2026-08-08T15:00:00.000Z"));
+
+  assert.equal(open.state, "open");
+  assert.equal(open.isOpen, true);
+  assert.equal(closed.state, "closed");
+  assert.equal(closed.isOpen, false);
 });
 
 test("current data failure clears stale score and trade-plan fields", () => {

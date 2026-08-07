@@ -1,6 +1,7 @@
 import { analyseSymbol } from "./analysis.js";
 import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
 import { FREEDOM_TRADER_V1_MARKET_SCOPE_MESSAGE, OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
+import { getMarketSessionStates } from "../../../lib/freedom-trader/marketHours.js";
 import { buildFailedFreedomScanSummary, buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 
 const LATEST_SCAN_TTL_MS = 15 * 60 * 1000;
@@ -29,7 +30,7 @@ function cleanSettings(input = {}) {
     excludedIndustries: Array.isArray(input.excludedIndustries)
       ? input.excludedIndustries
       : String(input.excludedIndustries || "").split(",").map((item) => item.trim()).filter(Boolean),
-    chunkSize: Math.max(1, Math.min(80, Number(input.chunkSize) || DEFAULT_SETTINGS.chunkSize)),
+    chunkSize: Math.max(1, Math.min(250, Number(input.chunkSize) || DEFAULT_SETTINGS.chunkSize)),
   };
 }
 
@@ -99,6 +100,8 @@ export function buildScanSummary(result) {
     ignoredMarkets: result.settings.ignoredMarkets || [],
     supportedUniverseCount: result.supportedSymbols.length,
     supportedSymbols: result.supportedSymbols,
+    configuredUniverse: result.supportedSymbols,
+    configuredUniverseCount: result.supportedSymbols.length,
     scannedSymbols: result.scannedSymbols,
     universe: result.supportedSymbols.length,
     requested: shared.requestedCount,
@@ -121,6 +124,7 @@ export function buildScanSummary(result) {
     elapsedMs: Number.isFinite(startedMs) && Number.isFinite(completedMs) ? Math.max(0, completedMs - startedMs) : null,
     providerStatus: couldNotAnalyse.length ? "Partial data returned" : "Available",
     providerUsage: providerCounts,
+    marketState: getMarketSessionStates(result.settings.markets),
     lastMarketDataTimestamp: timestamps.length ? new Date(timestamps[0]).toISOString() : null,
     rejectionCounts,
     dataUnavailableReasons: Array.from(new Set(couldNotAnalyse.map((item) => item.couldNotAnalyseReason).filter(Boolean))),
