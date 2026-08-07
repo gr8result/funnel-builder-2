@@ -12,6 +12,7 @@ export const EXTERIOR_SOURCE_CONNECTED_WALL_SUGGESTION = "connected-wall-suggest
 export const EXTERIOR_SOURCE_ASSISTED_PROPOSAL_V1 = "assisted-proposal-v1";
 export const EXTERIOR_SOURCE_LEGACY_AUTO_DETECTOR = "legacy-auto-detector";
 export const EXTERIOR_SOURCE_FUTURE_AUTO_DETECTOR = "future-auto-detector";
+export const EXTERIOR_SOURCE_AUTO_DETECTOR_V2 = "auto-detector-v2";
 export const EXTERIOR_SOURCE_HIGHLIGHTER_V1 = "exterior-highlighter-v1";
 
 export function isValidRotation(value) {
@@ -136,7 +137,7 @@ export function createPlanDocument({ id, jobId, fileName, mimeType = "applicatio
  * @property {number|null} detectionConfidence   0-100, null if never detected/manual only
  * @property {{vertices:WallVertex[],segments:WallSegment[]}|null} detectedSnapshot   for "Reset to Detected"
  * @property {number} schemaVersion
- * @property {"manual-trace-v2"|"assisted-wall-selection"|"connected-wall-suggestion"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"|"exterior-highlighter-v1"} source
+ * @property {"manual-trace-v2"|"assisted-wall-selection"|"connected-wall-suggestion"|"assisted-proposal-v1"|"legacy-auto-detector"|"future-auto-detector"|"auto-detector-v2"|"exterior-highlighter-v1"} source
  */
 
 /**

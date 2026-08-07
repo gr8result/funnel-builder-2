@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createWallSegment, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
+import { generateId, createWallVertex, createWallSegment, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2, EXTERIOR_SOURCE_AUTO_DETECTOR_V2 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -43,6 +43,7 @@ import {
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
+import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -790,6 +791,88 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     }
   }, [planGeometryIndex, page, commitPage]);
 
+  const detectExterior = useCallback(async () => {
+    setWallDetectionBusy(true);
+    setWallDetectionStatus("detecting");
+    setWallDetectionMessage("Detecting exterior...");
+    setWallDetectionCode(null);
+    try {
+      const result = detectExteriorWallsFromGeometry({
+        planGeometryIndex,
+        page,
+        planRegion: page?.planRegion?.confirmed ? page.planRegion : null,
+        stitchToleranceDocUnits: 6,
+      });
+      const valid = Boolean(
+        result?.exteriorPerimeter?.closed &&
+        result?.segments?.length >= 3 &&
+        result?.vertices?.length >= 3 &&
+        result.exteriorPerimeter.gapCount === 0 &&
+        result.exteriorPerimeter.selfIntersectionCount === 0
+      );
+      if (!valid) {
+        commitPage({
+          exteriorWalls: null,
+          wallDetectionDiagnostics: result?.diagnostics || null,
+          wallDetectionSummary: null,
+        });
+        setWallDetectionStatus("unavailable");
+        setWallDetectionMessage("Exterior not detected reliably. Use Trace Exterior.");
+        setWallDetectionCode("NO_EXTERIOR_BOUNDARY");
+        return;
+      }
+      const exteriorWalls = {
+        boundaryBasis: page?.exteriorWalls?.boundaryBasis || "outside",
+        wallThicknessMm: page?.exteriorWalls?.wallThicknessMm ?? 200,
+        schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
+        source: EXTERIOR_SOURCE_AUTO_DETECTOR_V2,
+        vertices: result.vertices,
+        segments: result.segments.map((segment) => ({
+          ...segment,
+          wallType: "exterior",
+          source: "automatic",
+          confirmed: true,
+          confidence: segment.confidence || "high",
+        })),
+        isClosed: true,
+        confirmed: false,
+        confirmedAt: null,
+        detectionConfidence: result.detectionConfidence ?? result.exteriorPerimeter.confidence ?? null,
+        detectionCompleteness: result.completeness ?? null,
+        connectedComponents: result.connectedComponents ?? null,
+        openGaps: result.openGaps ?? result.exteriorPerimeter.gapCount ?? 0,
+        detectionWarnings: result.warnings || [],
+        detectionUseful: result.useful ?? true,
+        detectionDiagnostics: result.diagnostics || null,
+        exteriorPerimeter: result.exteriorPerimeter,
+        detectedSnapshot: {
+          vertices: result.vertices,
+          segments: result.segments,
+        },
+      };
+      pushUndo("exteriorWalls", page?.exteriorWalls ?? null);
+      const nextLayerVisibility = { ...(page?.layerVisibility || layerVisibility), exteriorWalls: true };
+      setLayerVisibilityState(nextLayerVisibility);
+      commitPage({
+        exteriorWalls,
+        exteriorHighlightedWalls: [],
+        exteriorHighlightedWallIds: [],
+        layerVisibility: nextLayerVisibility,
+        wallDetectionDiagnostics: result.diagnostics || null,
+        wallDetectionSummary: null,
+      });
+      setSelectedField("exteriorWalls");
+      setSelectedVertexId(null);
+      setSelectedSegmentId(null);
+      setWallDetectionStatus("closed-needs-review");
+      setWallDetectionMessage(`Exterior detected - ${result.exteriorPerimeter.points.length} point boundary. Click Finish Exterior to confirm.`);
+      setWallDetectionCode(null);
+      setActiveToolState("select");
+    } finally {
+      setWallDetectionBusy(false);
+    }
+  }, [planGeometryIndex, page, commitPage, pushUndo, layerVisibility]);
+
   const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1, rasterContext = null } = {}) => {
     if (activeTool !== "exterior-highlighter") return;
     const diagnosticsEnabled = typeof window !== "undefined" && window.localStorage?.getItem("takeoffHighlighterDebug") === "1";
@@ -916,10 +999,20 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const finishHighlightedExterior = useCallback(() => {
     setExteriorHighlightGap(null);
-    setWallDetectionStatus("incomplete");
-    setWallDetectionMessage("Wall highlighting is being verified. Exterior generation will be enabled after full-wall selection is reliable.");
-    setWallDetectionCode("EXTERIOR_GENERATION_DISABLED");
-  }, []);
+    const validation = validateExteriorWallsForConfirmation(pageWithActiveExteriorWalls(page));
+    if (!validation.valid || !page?.exteriorWalls) {
+      setWallDetectionStatus("unavailable");
+      setWallDetectionMessage(validation.reason || "Exterior not detected reliably. Use Trace Exterior.");
+      setWallDetectionCode("EXTERIOR_CONFIRMATION_FAILED");
+      return;
+    }
+    commitPage({
+      exteriorWalls: { ...page.exteriorWalls, confirmed: true, confirmedAt: new Date().toISOString() },
+    });
+    setWallDetectionStatus("confirmed");
+    setWallDetectionMessage("Exterior confirmed.");
+    setWallDetectionCode(null);
+  }, [page, commitPage]);
 
   const suggestExteriorProposal = useCallback(async () => {
     setWallDetectionBusy(true);
@@ -2158,7 +2251,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     // Exterior walls (original exterior-only tool, unchanged) + the new
     // field-aware generalizations the Edit/drawing tools use.
     hoverPoint, setHoverPoint,
-    wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, resetWallsToDetected, continueManually,
+    wallDetectionBusy, wallDetectionMessage, wallDetectionStatus, wallDetectionCode, runWallDetection, detectExterior, resetWallsToDetected, continueManually,
     detectedWallSummary,
     exteriorHighlightHoverWallId,
     exteriorHighlightPreview,

@@ -36,15 +36,14 @@ export default function TakeoffToolbar({ page, tools }) {
         </ToolButton>
         <span style={S.divider} />
         <ToolButton
-          active={tools.activeTool === "exterior-highlighter"}
           disabled={tools.wallDetectionBusy}
-          onClick={() => tools.setActiveTool("exterior-highlighter")}
-          testId="tool-exterior-highlighter"
+          onClick={tools.detectExterior}
+          testId="tool-detect-exterior"
         >
-          {tools.wallDetectionBusy ? "Detecting Walls..." : "Exterior Highlighter"}
+          {tools.wallDetectionBusy ? "Detecting Exterior..." : "Detect Exterior"}
         </ToolButton>
         <ToolButton
-          disabled={(tools.exteriorHighlightedWalls?.length || tools.exteriorHighlightedWallIds?.length || 0) < 3}
+          disabled={!hasWalls || wallsConfirmed || tools.wallDetectionBusy}
           onClick={tools.finishHighlightedExterior}
           testId="tool-finish-exterior"
         >
@@ -52,7 +51,7 @@ export default function TakeoffToolbar({ page, tools }) {
         </ToolButton>
         <ToolButton
           active={tools.activeTool === "edit-walls"}
-          disabled={!hasWalls && !(tools.exteriorHighlightedWalls?.length || tools.exteriorHighlightedWallIds?.length)}
+          disabled={!hasWalls}
           onClick={() => tools.setActiveTool("edit-walls")}
           testId="tool-edit-exterior"
         >
