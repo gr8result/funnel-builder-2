@@ -6,8 +6,10 @@ const tools = fs.readFileSync("modules/takeoff-v2/hooks/useTakeoffTools.js", "ut
 const overlay = fs.readFileSync("modules/takeoff-v2/components/TakeoffCanvasOverlay.jsx", "utf8");
 
 const detectButton = toolbar.match(/<ToolButton[\s\S]*?testId="tool-detect-exterior"[\s\S]*?<\/ToolButton>/)?.[0] || "";
+const traceButton = toolbar.match(/<ToolButton[\s\S]*?testId="tool-trace-exterior"[\s\S]*?<\/ToolButton>/)?.[0] || "";
 const finishButton = toolbar.match(/<ToolButton[\s\S]*?testId="tool-finish-exterior"[\s\S]*?<\/ToolButton>/)?.[0] || "";
 assert.match(detectButton, /onClick=\{tools\.detectExterior\}/, "toolbar Detect Exterior must call tools.detectExterior");
+assert.match(traceButton, /setActiveTool\("exterior-wall"\)/, "toolbar must keep manual Trace Exterior available beside automatic detection");
 assert.match(finishButton, /onClick=\{tools\.finishHighlightedExterior\}/, "toolbar Finish Exterior must confirm the detected exterior graph");
 assert.doesNotMatch(toolbar, /EXTERIOR_GENERATION_DISABLED/, "production Finish Exterior must not use the disabled exterior-generation path");
 

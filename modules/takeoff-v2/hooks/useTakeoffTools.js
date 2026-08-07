@@ -865,7 +865,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setSelectedVertexId(null);
       setSelectedSegmentId(null);
       setWallDetectionStatus("closed-needs-review");
-      setWallDetectionMessage(`Exterior detected - ${result.exteriorPerimeter.points.length} point boundary. Click Finish Exterior to confirm.`);
+      setWallDetectionMessage("Exterior detected - needs review.");
       setWallDetectionCode(null);
       setActiveToolState("select");
     } finally {

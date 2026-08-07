@@ -36,6 +36,13 @@ function rectWallBands({ x1, y1, x2, y2, thickness = 8 }) {
   ];
 }
 
+function hasDiagonalEdge(points = []) {
+  return points.some((point, index) => {
+    const next = points[(index + 1) % points.length];
+    return Math.abs(point.x - next.x) > 1e-6 && Math.abs(point.y - next.y) > 1e-6;
+  });
+}
+
 {
   const fixtureLines = [
     ...rectWallBands({ x1: 100, y1: 100, x2: 420, y2: 320 }),
@@ -56,7 +63,8 @@ function rectWallBands({ x1, y1, x2, y2, thickness = 8 }) {
   assert.equal(result.exteriorPerimeter.gapCount, 0);
   assert.equal(result.exteriorPerimeter.selfIntersectionCount, 0);
   assert.equal(result.connectedComponents, 1);
-  assert.ok(result.exteriorPerimeter.points.length <= 18, "collinear and tiny zigzag points should simplify");
+  assert.equal(hasDiagonalEdge(result.exteriorPerimeter.points), false, "exterior perimeter must never use diagonal shortcut edges");
+  assert.ok(result.exteriorPerimeter.points.length >= 12, "garage projection and short returns must be preserved rather than simplified away");
   assert.ok(result.diagnostics.rejected["page-border"] >= 1 || result.diagnostics.rejected["outside-building-region"] >= 1, "page/title zone lines should be excluded");
 }
 
@@ -114,7 +122,8 @@ if (fs.existsSync(localSamplePath)) {
   assert.ok(result.diagnostics.rejected["filled-path"] > 100, "filled/text-like paths should be excluded");
   assert.ok(result.diagnostics.wallPairs > 50, "wall-face pairing should find residential wall pairs");
   assert.equal(result.segments.length, result.exteriorPerimeter.points.length, "normal output should be polygon edges only");
-  assert.ok(result.segments.length >= 8 && result.segments.length <= 20, "actual plan should simplify to one clean perimeter, not dozens of raw candidates");
+  assert.ok(result.segments.length >= 30, "actual plan should preserve stepped exterior returns rather than collapsing to a simplified hull");
+  assert.equal(hasDiagonalEdge(result.exteriorPerimeter.points), false, "actual plan must not contain diagonal shortcut edges");
   assert.ok(result.diagnostics.usedEnvelopePerimeter, "actual plan should assemble an exterior-envelope perimeter");
   assert.equal(result.isClosed, true, "assembled exterior-envelope perimeter should be closed");
   assert.equal(result.connectedComponents, 1, "assembled exterior perimeter should be one editable graph");

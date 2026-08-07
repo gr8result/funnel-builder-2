@@ -1,6 +1,6 @@
 import { buildWallGraphFromPolylines } from "./wallGraph.js";
 import { assessExteriorDetectionGraph } from "./wallDetectionQuality.js";
-import { isSimplePolygon, polygonAreaDocUnits2, polygonPerimeter } from "./geometry.js";
+import { distance, isSimplePolygon, polygonAreaDocUnits2, polygonPerimeter } from "./geometry.js";
 import { pointInRegion, polylineWithinRegion } from "./planRegion.js";
 import { createWallSegment, createWallVertex, generateId } from "../types.js";
 import { boundarySupportRatio, detectBuildingRegion, segmentInBuildingRegion } from "./buildingRegionDetection.js";
@@ -13,7 +13,24 @@ const MIN_OVERLAP = 10;
 const DEFAULT_MIN_FACE_OFFSET = 1.2;
 const DEFAULT_MAX_FACE_OFFSET = 12;
 const ENVELOPE_CELL_SIZE = 6;
-const TINY_RETURN_TOLERANCE = ENVELOPE_CELL_SIZE * 4;
+const WALL_SUPPORT_EDGE_THRESHOLD = 0.7;
+
+const REJECTION = {
+  OUTSIDE_BUILDING_REGION: "OUTSIDE_BUILDING_REGION",
+  NO_VALID_PARALLEL_PAIR: "NO_VALID_PARALLEL_PAIR",
+  THICKNESS_OUT_OF_RANGE: "THICKNESS_OUT_OF_RANGE",
+  INSUFFICIENT_OVERLAP: "INSUFFICIENT_OVERLAP",
+  COMPONENT_NOT_SELECTED: "COMPONENT_NOT_SELECTED",
+  INTERIOR_CLASSIFICATION: "INTERIOR_CLASSIFICATION",
+  INSUFFICIENT_BOUNDARY_SUPPORT: "INSUFFICIENT_BOUNDARY_SUPPORT",
+  SIMPLIFIED_AWAY: "SIMPLIFIED_AWAY",
+  DISCONNECTED: "DISCONNECTED",
+  ANNOTATION_REGION: "ANNOTATION_REGION",
+  DIMENSION_REGION: "DIMENSION_REGION",
+  TITLE_BLOCK_REGION: "TITLE_BLOCK_REGION",
+  PAGE_BORDER: "PAGE_BORDER",
+  OTHER: "OTHER",
+};
 
 function lineBounds(line) {
   return {
@@ -164,6 +181,38 @@ function pairWallFaces(lines, mmPerDocumentUnit) {
   return { pairedIds, pairs };
 }
 
+function auditUnpairedLines(lines, pairs, mmPerDocumentUnit) {
+  const range = faceOffsetRange(mmPerDocumentUnit);
+  const pairedIds = new Set(pairs.flatMap((pair) => [pair.aId, pair.bId]));
+  const audits = [];
+  lines.forEach((line) => {
+    if (pairedIds.has(line.id)) return;
+    const parallels = lines.filter((other) => other.id !== line.id && other.orientation === line.orientation);
+    const hasThicknessCandidate = parallels.some((other) => {
+      const offset = Math.abs(line.fixed - other.fixed);
+      return offset >= range.min && offset <= range.max;
+    });
+    const hasOverlapCandidate = parallels.some((other) => {
+      const offset = Math.abs(line.fixed - other.fixed);
+      if (offset < range.min || offset > range.max) return false;
+      const overlap = overlaps(line.start, line.end, other.start, other.end);
+      return overlap >= MIN_OVERLAP;
+    });
+    audits.push({
+      lineId: line.id,
+      sourceLineIds: line.sourceIds || [line.id],
+      orientation: line.orientation,
+      fixed: line.fixed,
+      start: line.start,
+      end: line.end,
+      length: line.length,
+      accepted: false,
+      rejectionCode: !hasThicknessCandidate ? REJECTION.THICKNESS_OUT_OF_RANGE : !hasOverlapCandidate ? REJECTION.INSUFFICIENT_OVERLAP : REJECTION.NO_VALID_PARALLEL_PAIR,
+    });
+  });
+  return audits;
+}
+
 function linePoint(line, along, fixed = line.fixed) {
   if (line.orientation === "horizontal") return { x: along, y: fixed };
   return { x: fixed, y: along };
@@ -198,6 +247,139 @@ function createWallBands(lines, pairs) {
       length: end - start,
     };
   }).filter(Boolean);
+}
+
+function wallBandComponentIds(wallBands = []) {
+  const componentIds = new Map();
+  let componentId = 0;
+  wallBands.forEach((band) => {
+    if (componentIds.has(band.id)) return;
+    componentId += 1;
+    const stack = [band];
+    componentIds.set(band.id, componentId);
+    while (stack.length) {
+      const current = stack.pop();
+      wallBands.forEach((other) => {
+        if (componentIds.has(other.id)) return;
+        const currentLine = {
+          orientation: current.orientation,
+          fixed: current.fixed,
+          start: current.start,
+          end: current.end,
+        };
+        const otherLine = {
+          orientation: other.orientation,
+          fixed: other.fixed,
+          start: other.start,
+          end: other.end,
+        };
+        if (!lineIntersectsLine(currentLine, otherLine)) return;
+        componentIds.set(other.id, componentId);
+        stack.push(other);
+      });
+    }
+  });
+  return componentIds;
+}
+
+function exteriorScoreForBand(band, boundaryBandIds, supportBandIds) {
+  let score = band.confidence || 0;
+  if (boundaryBandIds.has(band.id)) score += 0.25;
+  if (supportBandIds.has(band.id)) score += 0.1;
+  return Math.round(Math.min(1, score) * 1000) / 1000;
+}
+
+function auditWallBands({ wallBands = [], detectedRegion = null, boundaryBandIds = new Set(), supportBandIds = new Set(), acceptedBandIds = new Set() } = {}) {
+  const componentIds = wallBandComponentIds(wallBands);
+  return wallBands.map((band) => {
+    const inBuildingRegion = segmentInBuildingRegion({ a: band.centerline.start, b: band.centerline.end }, detectedRegion, { tolerance: 10 });
+    let rejectionCode = null;
+    if (!inBuildingRegion) rejectionCode = REJECTION.OUTSIDE_BUILDING_REGION;
+    else if (!supportBandIds.has(band.id)) rejectionCode = REJECTION.COMPONENT_NOT_SELECTED;
+    else if (!boundaryBandIds.has(band.id)) rejectionCode = REJECTION.INTERIOR_CLASSIFICATION;
+    else if (!acceptedBandIds.has(band.id)) rejectionCode = REJECTION.INSUFFICIENT_BOUNDARY_SUPPORT;
+    return {
+      id: band.id,
+      faceALineIds: band.sourceLineIds?.slice(0, 1) || [],
+      faceBLineIds: band.sourceLineIds?.slice(1, 2) || [],
+      sourceLineIds: band.sourceLineIds || [],
+      centreline: band.centreline || band.centerline,
+      orientation: band.orientation,
+      thickness: band.thickness,
+      length: band.length,
+      componentId: componentIds.get(band.id) || null,
+      inBuildingRegion,
+      exteriorCandidateScore: exteriorScoreForBand(band, boundaryBandIds, supportBandIds),
+      accepted: !rejectionCode,
+      rejectionCode,
+    };
+  });
+}
+
+function edgeSupportRatio(a, b, wallBands = [], tolerance = 8) {
+  const length = distance(a, b);
+  if (!(length > 0)) return 0;
+  const supportIntervals = [];
+  const edgeHorizontal = Math.abs(a.y - b.y) < 1e-6;
+  const edgeVertical = Math.abs(a.x - b.x) < 1e-6;
+  if (!edgeHorizontal && !edgeVertical) return 0;
+  const edgeStart = edgeHorizontal ? Math.min(a.x, b.x) : Math.min(a.y, b.y);
+  const edgeEnd = edgeHorizontal ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
+  wallBands.forEach((band) => {
+    if (edgeHorizontal && band.orientation !== "horizontal") return;
+    if (edgeVertical && band.orientation !== "vertical") return;
+    const fixedDistance = edgeHorizontal ? Math.abs(band.fixed - a.y) : Math.abs(band.fixed - a.x);
+    if (fixedDistance > tolerance) return;
+    const start = Math.max(edgeStart, band.start);
+    const end = Math.min(edgeEnd, band.end);
+    if (end - start <= 0) return;
+    supportIntervals.push({ start, end });
+  });
+  supportIntervals.sort((left, right) => left.start - right.start || left.end - right.end);
+  let supported = 0;
+  let current = null;
+  supportIntervals.forEach((interval) => {
+    if (!current) {
+      current = { ...interval };
+      return;
+    }
+    if (interval.start <= current.end + tolerance) {
+      current.end = Math.max(current.end, interval.end);
+      return;
+    }
+    supported += current.end - current.start;
+    current = { ...interval };
+  });
+  if (current) supported += current.end - current.start;
+  return Math.max(0, Math.min(1, supported / length));
+}
+
+function boundaryEdgeSupport(points = [], wallBands = [], tolerance = 8) {
+  if (!Array.isArray(points) || points.length < 2) return [];
+  return points.map((point, index) => {
+    const next = points[(index + 1) % points.length];
+    const ratio = edgeSupportRatio(point, next, wallBands, tolerance);
+    const orthogonal = Math.abs(point.x - next.x) < 1e-6 || Math.abs(point.y - next.y) < 1e-6;
+    return { index, a: point, b: next, length: distance(point, next), wallSupportRatio: ratio, orthogonal };
+  });
+}
+
+function edgeIsSupported(edgeSupport = [], index = 0, tolerance = 8) {
+  const edge = edgeSupport[index];
+  if (!edge?.orthogonal) return false;
+  if (edge.wallSupportRatio >= WALL_SUPPORT_EDGE_THRESHOLD) return true;
+  const shortCornerCap = edge.length <= tolerance * 1.25;
+  if (!shortCornerCap) return false;
+  const findSupportedWallEdge = (direction) => {
+    for (let step = 1; step < edgeSupport.length; step += 1) {
+      const candidate = edgeSupport[(index + direction * step + edgeSupport.length) % edgeSupport.length];
+      if (!candidate?.orthogonal) return false;
+      if (candidate.wallSupportRatio >= WALL_SUPPORT_EDGE_THRESHOLD) return true;
+      if (candidate.length > tolerance * 1.25) return false;
+    }
+    return false;
+  };
+  return findSupportedWallEdge(-1) && findSupportedWallEdge(1);
 }
 
 function lineIntersectsLine(a, b) {
@@ -507,38 +689,6 @@ function simplifyOrthogonalLoop(points) {
   return simplified;
 }
 
-function simplifyTinyOrthogonalReturns(points, tolerance = TINY_RETURN_TOLERANCE) {
-  let simplified = simplifyOrthogonalLoop(points);
-  let changed = true;
-  while (changed && simplified.length >= 5) {
-    changed = false;
-    for (let i = 0; i < simplified.length; i += 1) {
-      const a = simplified[(i - 1 + simplified.length) % simplified.length];
-      const b = simplified[i];
-      const c = simplified[(i + 1) % simplified.length];
-      const d = simplified[(i + 2) % simplified.length];
-      const abHorizontal = Math.abs(a.y - b.y) < 1e-6;
-      const bcHorizontal = Math.abs(b.y - c.y) < 1e-6;
-      const cdHorizontal = Math.abs(c.y - d.y) < 1e-6;
-      const abLength = Math.hypot(b.x - a.x, b.y - a.y);
-      const bcLength = Math.hypot(c.x - b.x, c.y - b.y);
-      const cdLength = Math.hypot(d.x - c.x, d.y - c.y);
-      const shortParallelReturns = abHorizontal === cdHorizontal && abHorizontal !== bcHorizontal && abLength <= tolerance && cdLength <= tolerance;
-      const shortMiddleReturn = abHorizontal === cdHorizontal && abHorizontal !== bcHorizontal && bcLength <= tolerance;
-      if (!shortParallelReturns && !shortMiddleReturn) continue;
-      const candidate = simplifyOrthogonalLoop([
-        ...simplified.slice(0, i),
-        ...simplified.slice(i + 2),
-      ]);
-      if (!isSimplePolygon(candidate)) continue;
-      simplified = candidate;
-      changed = true;
-      break;
-    }
-  }
-  return simplified;
-}
-
 function traceBoundaryLoops(boundaryEdges) {
   const key = (p) => `${p.x}:${p.y}`;
   const edgeKey = (a, b) => `${key(a)}>${key(b)}`;
@@ -654,7 +804,7 @@ function buildEnvelopePolygon(lines, region, diagnostics) {
 }
 
 function graphFromPolygon(points, stitchToleranceDocUnits) {
-  const simplified = simplifyTinyOrthogonalReturns(points);
+  const simplified = simplifyOrthogonalLoop(points);
   if (simplified.length < 4) return null;
   const vertices = simplified.map((point) => createWallVertex({ id: generateId("wv"), x: point.x, y: point.y }));
   const segments = vertices.map((vertex, index) => createWallSegment({
@@ -693,6 +843,8 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     wallPairs: 0,
     boundaryLines: 0,
     planRegion: planRegion || null,
+    wallBandAudit: [],
+    unpairedLineAudit: [],
   };
 
   const initialAccepted = [];
@@ -708,6 +860,7 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
 
   const initialPairs = pairWallFaces(mergedBeforeRegion, mmPerDocumentUnit).pairs;
   const initialWallBands = createWallBands(mergedBeforeRegion, initialPairs);
+  diagnostics.unpairedLineAudit = auditUnpairedLines(mergedBeforeRegion, initialPairs, mmPerDocumentUnit);
   diagnostics.wallBands = initialWallBands.length;
   let detectedRegion = planRegion
     ? { polygon: [
@@ -766,7 +919,8 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
 
   const { pairedIds, pairs } = pairWallFaces(merged, mmPerDocumentUnit);
   diagnostics.wallPairs = pairs.length;
-  const wallBands = createWallBands(merged, pairs).filter((band) => segmentInBuildingRegion({ a: band.centerline.start, b: band.centerline.end }, detectedRegion, { tolerance: 10 }));
+  const allWallBands = createWallBands(merged, pairs);
+  const wallBands = allWallBands.filter((band) => segmentInBuildingRegion({ a: band.centerline.start, b: band.centerline.end }, detectedRegion, { tolerance: 10 }));
   diagnostics.wallBands = wallBands.length;
   diagnostics.wallProbabilityMask = {
     source: "vector+raster-compatible-band-mask",
@@ -799,11 +953,15 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     }))
     : [];
   const envelopeBoundarySource = selectBoundaryLines(envelopeSource);
+  const boundaryBandIds = new Set(envelopeBoundarySource.map((band) => band.id));
+  const supportBandIds = new Set(wallBands.map((band) => band.id));
   diagnostics.envelopeSourceBands = envelopeSource.length;
   diagnostics.envelopeBoundaryBands = envelopeBoundarySource.length;
   const envelopePolygon = buildEnvelopePolygon(envelopeBoundarySource.length >= 6 ? envelopeBoundarySource : envelopeSource, detectedRegion.rect, diagnostics);
   const envelopeGraph = envelopePolygon ? graphFromPolygon(envelopePolygon, stitchToleranceDocUnits) : null;
+  diagnostics.boundaryBeforeSimplification = envelopePolygon || [];
   if (envelopeGraph) {
+    diagnostics.boundaryAfterSimplification = envelopeGraph.points;
     diagnostics.envelopeGraphSegments = envelopeGraph.graph.segments.length;
     diagnostics.envelopeGraphComponents = envelopeGraph.quality.connectedComponents;
     diagnostics.envelopeGraphClosed = envelopeGraph.quality.isClosed;
@@ -832,9 +990,33 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
   }
   const selected = envelopeGraph;
   const { graph, quality } = selected;
-  const wallSupportRatio = boundarySupportRatio(envelopeGraph.points, wallBands, Math.max(ENVELOPE_CELL_SIZE * 4, 24));
+  const supportTolerance = Math.max(ENVELOPE_CELL_SIZE * 4, 24);
+  const wallSupportRatio = boundarySupportRatio(envelopeGraph.points, wallBands, supportTolerance);
+  const edgeSupport = boundaryEdgeSupport(envelopeGraph.points, wallBands, supportTolerance);
   diagnostics.wallSupportRatio = wallSupportRatio;
+  diagnostics.boundaryEdgeSupport = edgeSupport;
+  const acceptedEdgeBandIds = new Set();
+  edgeSupport.forEach((edge) => {
+    wallBands.forEach((band) => {
+      if (edgeSupportRatio(edge.a, edge.b, [band], supportTolerance) > 0) acceptedEdgeBandIds.add(band.id);
+    });
+  });
+  diagnostics.wallBandAudit = auditWallBands({
+    wallBands: allWallBands,
+    detectedRegion,
+    boundaryBandIds,
+    supportBandIds,
+    acceptedBandIds: acceptedEdgeBandIds,
+  });
   const footprintValidation = validateExteriorFootprint(envelopeGraph.points, detectedRegion.rect);
+  const unsupportedEdge = edgeSupport.find((edge, index) => !edgeIsSupported(edgeSupport, index, supportTolerance));
+  if (unsupportedEdge) {
+    footprintValidation.valid = false;
+    footprintValidation.reason = unsupportedEdge.orthogonal
+      ? "Exterior boundary contains an unsupported wall shortcut."
+      : "Exterior boundary contains a non-orthogonal shortcut.";
+    footprintValidation.unsupportedEdge = unsupportedEdge;
+  }
   if (wallSupportRatio < 0.7) {
     footprintValidation.valid = false;
     footprintValidation.reason = "Exterior boundary is not sufficiently supported by wall bands.";

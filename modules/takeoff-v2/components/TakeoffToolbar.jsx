@@ -43,6 +43,13 @@ export default function TakeoffToolbar({ page, tools }) {
           {tools.wallDetectionBusy ? "Detecting Exterior..." : "Detect Exterior"}
         </ToolButton>
         <ToolButton
+          active={tools.activeTool === "exterior-wall"}
+          onClick={() => tools.setActiveTool("exterior-wall")}
+          testId="tool-trace-exterior"
+        >
+          Trace Exterior
+        </ToolButton>
+        <ToolButton
           disabled={!hasWalls || wallsConfirmed || tools.wallDetectionBusy}
           onClick={tools.finishHighlightedExterior}
           testId="tool-finish-exterior"
