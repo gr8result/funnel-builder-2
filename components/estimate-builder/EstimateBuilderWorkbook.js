@@ -35,6 +35,7 @@ import { createPremierInclusionsWorkingCopy, resolveBaseStandardInclusionsTempla
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
+import { importPdfAsStandardDocumentPreview } from "../../lib/standard-inclusions/pdfImport";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
 import JobFileMenu from "./JobFileMenu.jsx";
@@ -7699,9 +7700,41 @@ export function StandardInclusionsSheet({ sheet }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || (file.type !== "application/pdf" && !/\.pdf$/i.test(String(file.name || "")))) return;
+    if (file.size > STANDARD_INCLUSIONS_MAX_UPLOAD_BYTES) {
+      setStandardStatus(`That PDF file is too large. Please upload a PDF up to ${STANDARD_INCLUSIONS_MAX_UPLOAD_MB} MB.`);
+      return;
+    }
     setPendingPdfFile(file);
-    setManagementMode("");
-    await importPendingPdfNow(file);
+    setImportPreview(null);
+    setManagementMode("pdf-import-options");
+    setStandardStatus(`PDF selected: ${file.name}. Choose hybrid editable import or attach as a finished PDF.`);
+  }
+
+  async function importPendingPdfAsHybrid(fileOverride = null) {
+    const file = fileOverride || pendingPdfFile;
+    if (!file) return;
+    setStandardStatus("Analysing PDF pages...");
+    try {
+      const preview = await importPdfAsStandardDocumentPreview(file, {
+        onProgress: ({ pageNumber, pageCount }) => {
+          setStandardStatus(`Analysing PDF page ${pageNumber} of ${pageCount}...`);
+        },
+      });
+      const counts = standardPdfImportCounts(preview);
+      setImportPreview({
+        ...preview,
+        ...counts,
+        reviewMode: "hybrid-pdf-import",
+        validation: { canPublish: true, status: "hybrid-import-review", message: "Review imported pages before saving as Standard Inclusions." },
+      });
+      setManagementMode("import-preview");
+      setStandardStatus(`Import complete: ${preview.pageCount} page${preview.pageCount === 1 ? "" : "s"} imported. Review editable overlays before saving.`);
+    } catch (error) {
+      console.error("Hybrid Standard Inclusions PDF import failed", error);
+      setImportPreview(null);
+      setManagementMode("pdf-import-options");
+      setStandardStatus(error?.message || "PDF import failed.");
+    }
   }
 
   async function prepareDocxImport(event) {
@@ -8049,7 +8082,8 @@ export function StandardInclusionsSheet({ sheet }) {
               onGeneratePdf={handleGenerateCanvaPdf}
               onVersionHistory={restorePreviousVersion}
               onChooseSavedSchedule={loadSavedSchedules}
-              onChoosePdfMode={importPendingPdfNow}
+              onChoosePdfMode={importPendingPdfAsHybrid}
+              onAttachFinishedPdf={importPendingPdfNow}
               onSelectCandidate={replaceWithCandidate}
               onRestoreRevision={restoreRevision}
               onCancelManagement={() => {
@@ -8102,7 +8136,8 @@ export function StandardInclusionsSheet({ sheet }) {
               onGeneratePdf={handleGenerateCanvaPdf}
               onVersionHistory={restorePreviousVersion}
               onChooseSavedSchedule={loadSavedSchedules}
-              onChoosePdfMode={importPendingPdfNow}
+              onChoosePdfMode={importPendingPdfAsHybrid}
+              onAttachFinishedPdf={importPendingPdfNow}
               onSelectCandidate={replaceWithCandidate}
               onRestoreRevision={restoreRevision}
               onCancelManagement={() => {
@@ -8150,7 +8185,8 @@ export function StandardInclusionsSheet({ sheet }) {
           onGeneratePdf={handleGenerateCanvaPdf}
           onVersionHistory={restorePreviousVersion}
           onRestore={restorePreviousVersion}
-          onChoosePdfMode={importPendingPdfNow}
+          onChoosePdfMode={importPendingPdfAsHybrid}
+          onAttachFinishedPdf={importPendingPdfNow}
           onSelectCandidate={replaceWithCandidate}
           onRestoreRevision={restoreRevision}
           onCancelManagement={() => {
@@ -8554,7 +8590,7 @@ export function StandardInclusionsSheet({ sheet }) {
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={openCanvaSetupModal}>{canvaStatus?.ready ? "Canva connected" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Canva setup required" : "Connect Canva"}</button>
           <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleImportExistingCanvaDesign}>Refresh from Canva</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => setStandardStatus("Version History is available from the Standard Inclusions replacement panel.")}>Version History</button>
-          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Attach Finished PDF</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Import PDF</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
           <button type="button" disabled={!pages.length} style={styles.secondaryButton} onClick={() => setStandardStatus("Use the Up and Down controls in the page list to reorder pages.")}>Reorder Pages</button>
           <button type="button" disabled={readonly || !pages.length} style={styles.secondaryButton} onClick={saveAsMasterTemplate}>Save as Master Template</button>
@@ -8773,6 +8809,29 @@ function StandardScheduleActiveSummary({ summary }) {
       {isFinishedPdf ? <span>Finished PDF - not editable inside Gr8 Result.</span> : <span>Editable blocks: {summary.editableBlockCount || 0}</span>}
     </div>
   );
+}
+
+function standardPdfImportCounts(preview = {}) {
+  const pages = Array.isArray(preview.document?.pages) ? preview.document.pages : [];
+  const objects = pages.flatMap((page) => Array.isArray(page.objects) ? page.objects : []);
+  const editableTextCount = objects.filter((object) => ["text", "dynamicField"].includes(object.type) && !object.locked).length;
+  const replaceableImageCount = objects.filter((object) => ["image", "logo"].includes(object.type) && !object.locked && !object.data?.fixedVisual).length;
+  const shapeCount = objects.filter((object) => object.type === "shape").length;
+  const fixedVisualCount = objects.filter((object) => object.data?.fixedVisual || object.data?.importConfidence === "preserved").length || Number(preview.fixedVisualCount || 0);
+  return { editableTextCount, replaceableImageCount, shapeCount, fixedVisualCount };
+}
+
+function importStatusLabel(report = {}) {
+  if (report.method === "locked-image-fallback") return "Preserved - text could not be extracted reliably";
+  if (report.method === "hybrid-background-editable-text") return "Needs Review - original artwork with editable overlays";
+  if (report.failed || report.requiresFallbackChoice) return "Needs Review";
+  return "Editable";
+}
+
+function standardImportedPageImageRef(page = {}) {
+  if (page.background?.imageRef) return page.background.imageRef;
+  const originalLayer = (page.objects || []).find((object) => object.data?.fixedVisual && object.data?.imageRef);
+  return originalLayer?.data?.imageRef || "";
 }
 
 function FinishedPdfLockedViewer({ readonly, summary, pdfUrl, documentId, workspaceId, onReplace, onDelete, onVersionHistory, onPageCount }) {
@@ -9193,6 +9252,7 @@ function StandardScheduleContextPanel({
   onVersionHistory,
   onChooseSavedSchedule,
   onChoosePdfMode,
+  onAttachFinishedPdf,
   onCanvaDesignSearch,
   onSearchCanvaDesigns,
   onSelectCanvaDesign,
@@ -9207,7 +9267,7 @@ function StandardScheduleContextPanel({
     managementMode === "canva-design-picker" ||
     managementMode === "replace" ||
     managementMode === "restore" ||
-    (managementMode === "import-preview" && importPreview)
+    ((managementMode === "import-preview" || managementMode === "review-import") && importPreview)
   );
   if (!hasPanel) return null;
   const importValidation = importPreview?.validation || null;
@@ -9233,8 +9293,8 @@ function StandardScheduleContextPanel({
           />
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onUploadPdf}>
-              <strong>Attach Finished PDF</strong>
-              <span>Stores the original PDF unchanged as locked pages.</span>
+              <strong>Import PDF</strong>
+              <span>Preserves the original PDF artwork and extracts reliable editable overlays for review.</span>
             </button>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={onLoadDefaultTemplate}>
               <strong>Load Default Standard Inclusions Template</strong>
@@ -9302,12 +9362,16 @@ function StandardScheduleContextPanel({
       {managementMode === "pdf-import-options" && pendingPdfFile ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Attach Legacy PDF</strong>
+            <strong>Import Existing Schedule</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
           </div>
           <p style={styles.dashboardPanelSubtitle}>{pendingPdfFile.name}</p>
           <div style={styles.standardSchedulePdfChoiceGrid}>
             <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onChoosePdfMode()}>
+              <strong>Import PDF as Editable Schedule</strong>
+              <span>Analyse pages, preserve the original PDF artwork, extract editable overlays, then review before saving.</span>
+            </button>
+            <button type="button" disabled={readonly} style={styles.standardScheduleChoiceButton} onClick={() => onAttachFinishedPdf?.()}>
               <strong>Attach Finished PDF Now</strong>
               <span>The PDF remains a fixed-page legacy schedule and is inserted into Project Estimate as pages.</span>
             </button>
@@ -9359,12 +9423,12 @@ function StandardScheduleContextPanel({
           })}
         </div>
       ) : null}
-      {managementMode === "import-preview" && importPreview ? (
+      {(managementMode === "import-preview" || managementMode === "review-import") && importPreview ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Import Preview</strong>
+            <strong>IMPORT COMPLETE</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
-            <button type="button" disabled={readonly || !importCanPublish} style={styles.primaryButton} onClick={onConfirmImport}>Confirm Replacement</button>
+            <button type="button" disabled={readonly || !importCanPublish} style={styles.primaryButton} onClick={onConfirmImport}>Save as Standard Inclusions</button>
           </div>
           {!importCanPublish ? (
             <div style={styles.importValidationFailed}>
@@ -9375,9 +9439,17 @@ function StandardScheduleContextPanel({
             </div>
           ) : null}
           <p style={styles.dashboardPanelSubtitle}>
-            {importPreview.fileName} - {importPreview.pageCount} page{importPreview.pageCount === 1 ? "" : "s"}.
-            Editable text blocks: {importPreview.editableTextCount}. Replaceable images: {importPreview.replaceableImageCount || 0}. Shapes/panels: {importPreview.shapeCount || 0}. Fixed visual elements: {importPreview.fixedVisualCount}.
+            {importPreview.fileName} - {importPreview.pageCount} page{importPreview.pageCount === 1 ? "" : "s"} imported.
+            Editable text blocks: {importPreview.editableTextCount}. Editable images: {importPreview.replaceableImageCount || 0}. Preserved artwork elements: {importPreview.fixedVisualCount}.
           </p>
+          {importPreview.reviewMode === "hybrid-pdf-import" ? (
+            <div style={styles.canvaDiagnosticsGrid}>
+              <span><strong>Original Page Layer:</strong> locked PDF page render preserved for visual fidelity</span>
+              <span><strong>Editable Overlay Layer:</strong> text/image/shape blocks extracted only when reliable</span>
+              <span><strong>Coordinates:</strong> relative to the original page dimensions</span>
+              <span><strong>Scanned pages:</strong> preserved as artwork when text cannot be extracted reliably</span>
+            </div>
+          ) : null}
           {importPreview.reviewMode === "canva-native-import" ? (
             <div style={styles.canvaDiagnosticsGrid}>
               <span><strong>Original reference:</strong> Canva source design via {importPreview.sourceFormat || "structured export"}</span>
@@ -9394,11 +9466,13 @@ function StandardScheduleContextPanel({
             <ul style={styles.standardScheduleWarningList}>{importPreview.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>
           ) : null}
           <div style={styles.standardSchedulePreviewGrid}>
-            {importPreview.document.pages.slice(0, 12).map((page, index) => (
+            {importPreview.document.pages.slice(0, 12).map((page, index) => {
+              const originalImageRef = standardImportedPageImageRef(page);
+              return (
               <article key={page.id} style={styles.standardSchedulePreviewCard}>
-                {page.background?.imageRef ? (
+                {originalImageRef ? (
                   <div style={styles.standardSchedulePreviewPage}>
-                    <img src={page.background.imageRef} alt="" style={styles.standardSchedulePreviewImage} />
+                    <img src={originalImageRef} alt="" style={styles.standardSchedulePreviewImage} />
                     <strong>{index + 1}</strong>
                   </div>
                 ) : (
@@ -9409,9 +9483,11 @@ function StandardScheduleContextPanel({
                 )}
                 <span>{page.name}</span>
                 <small>{page.objects.length} editable/fixed block{page.objects.length === 1 ? "" : "s"}</small>
+                {importPreview.pageReports?.[index] ? <small>{importStatusLabel(importPreview.pageReports[index])}</small> : null}
                 {importPreview.reviewMode === "canva-native-import" ? <small>Original Canva/PDF reference | Native Gr8 Result conversion</small> : null}
               </article>
-            ))}
+              );
+            })}
             {!importPreview.document.pages.length && validationPages.map((page) => (
               <article key={`failed-page-${page.pageNumber}`} style={styles.standardSchedulePreviewCard}>
                 <div style={styles.importValidationCardFailed}>
@@ -9459,6 +9535,7 @@ function StandardScheduleEmptyState({
   onVersionHistory,
   onRestore,
   onChoosePdfMode,
+  onAttachFinishedPdf,
   onSelectCandidate,
   onRestoreRevision,
   onCancelManagement,
@@ -9470,21 +9547,23 @@ function StandardScheduleEmptyState({
     <section style={styles.standardScheduleEmptyState}>
       <div style={styles.standardRecoveryPanel}>
         <div>
-          <h3>Your Standard Inclusions Schedule was deleted.</h3>
+          <div style={styles.eyebrow}>Create Standard Inclusions</div>
+          <h3>Import Existing Schedule</h3>
           {latestRestorableRevision ? (
-            <p style={styles.dashboardPanelSubtitle}>A previous version is available from {formatShortDateTime(latestRestorableRevision.timestamp)}.</p>
+            <p style={styles.dashboardPanelSubtitle}>A previous builder-level Standard Inclusions version is available from {formatShortDateTime(latestRestorableRevision.timestamp)}.</p>
           ) : (
-            <p style={styles.dashboardPanelSubtitle}>No valid previous version was found. Load the approved default template or attach a finished PDF now.</p>
+            <p style={styles.dashboardPanelSubtitle}>Import a professional inclusions PDF as a hybrid editable schedule, connect Canva as an optional source, or load the approved native template.</p>
           )}
         </div>
         <div style={styles.standardRecoveryActions}>
-          <button type="button" disabled={readonly || !latestRestorableRevision} style={styles.primaryButton} onClick={onRestoreLatest}>Restore Latest Version</button>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadPdf}>Import PDF</button>
+          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Connect / Import from Canva</button>
+          <button type="button" disabled={readonly || !latestRestorableRevision} style={styles.secondaryButton} onClick={onRestoreLatest}>Restore Latest Version</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onLoadDefaultTemplate}>Load Default Standard Inclusions Template</button>
-          <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Attach Finished PDF</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onConnectCanva}>{canvaSetupRequired ? "Canva setup required" : "Configure Canva"}</button>
         </div>
         {canvaSetupRequired ? (
-          <p style={styles.dashboardPanelSubtitle}>Connect and configure Canva before using Canva designs. You can still restore a previous version or attach a finished PDF now.</p>
+          <p style={styles.dashboardPanelSubtitle}>Canva remains optional. PDF import works for schedules created in Canva, PowerPoint, Word or another design tool.</p>
         ) : null}
         <button type="button" disabled={!revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>View Version History</button>
       </div>
@@ -9513,6 +9592,7 @@ function StandardScheduleEmptyState({
         onVersionHistory={onVersionHistory || onRestore}
         onChooseSavedSchedule={() => {}}
         onChoosePdfMode={onChoosePdfMode}
+        onAttachFinishedPdf={onAttachFinishedPdf}
         onSelectCandidate={onSelectCandidate}
         onRestoreRevision={onRestoreRevision}
         onCancelManagement={onCancelManagement}

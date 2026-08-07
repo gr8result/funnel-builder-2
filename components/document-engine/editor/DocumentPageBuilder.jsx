@@ -217,7 +217,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     updateActivePage((page) => updateObjectOnPage(page, selectedObject.id, (object) => ({
       ...object,
       style: { ...object.style, ...stylePatch },
-      data: { ...object.data, edited: ["pptx-text-activation", "canva-text-activation"].includes(object.data?.overlayMode) ? true : object.data?.edited },
+      data: { ...object.data, edited: ["pptx-text-activation", "pdf-text-activation", "canva-text-activation"].includes(object.data?.overlayMode) ? true : object.data?.edited },
     })), message);
   }
 

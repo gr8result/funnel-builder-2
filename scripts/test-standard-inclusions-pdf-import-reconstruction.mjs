@@ -151,14 +151,14 @@ assert.ok(closeScore.score > 90 && closeScore.score < 100, "a small colour diffe
 
 // --- Structural assertions for the review/versioning wiring that can't run without a browser+DB ---
 const workbookSource = fs.readFileSync(new URL("../components/estimate-builder/EstimateBuilderWorkbook.js", import.meta.url), "utf8");
-assert.match(workbookSource, /setPdfImportReview\(preview\)/, "importing a PDF must route into review state, not save immediately");
-assert.match(workbookSource, /<PdfImportReview/, "the review screen must actually be rendered");
-assert.match(workbookSource, /async function confirmPdfImportReview/, "saving must be a separate, explicit confirm step after review");
-assert.match(workbookSource, /saveReviewedPdfAsBaseTemplate/, "the review screen must offer promoting the import to the shared base template");
+assert.match(workbookSource, /setImportPreview\(\{[\s\S]*reviewMode: "hybrid-pdf-import"/, "importing a PDF must route into review state, not save immediately");
+assert.match(workbookSource, /managementMode === "import-preview"/, "the review screen must actually be rendered");
+assert.match(workbookSource, /function confirmImportPreview/, "saving must be a separate, explicit confirm step after review");
+assert.match(workbookSource, /Save as Standard Inclusions/, "the review screen must save explicitly as Standard Inclusions");
 assert.doesNotMatch(
-  workbookSource.slice(workbookSource.indexOf("async function importPendingPdfNow"), workbookSource.indexOf("function cancelPdfImportReview")),
+  workbookSource.slice(workbookSource.indexOf("async function importPendingPdfAsHybrid"), workbookSource.indexOf("async function prepareDocxImport")),
   /saveStandardWithRevision/,
-  "importPendingPdfNow itself must no longer save/replace the live schedule directly"
+  "importPendingPdfAsHybrid itself must no longer save/replace the live schedule directly"
 );
 
 const migrationSql = fs.readFileSync(new URL("../supabase/migrations/20260727_standard_inclusions_base_templates.sql", import.meta.url), "utf8");
@@ -178,11 +178,13 @@ assert.match(reviewSource, /could not be reconstructed accurately enough/, "the 
 
 const objectRendererSource = fs.readFileSync(new URL("../components/document-engine/renderer/objectRenderer.jsx", import.meta.url), "utf8");
 assert.match(objectRendererSource, /pdf-text-activation/, "hybrid editable text overlays must stay hidden until edited to avoid duplicate visible text");
+assert.match(objectRendererSource, /hybridLocalMaskStyle/, "edited hybrid PDF text must locally mask the original page layer");
 assert.match(objectRendererSource, /orientation === "vertical"/, "vertical dividers must render vertically");
 
 const builderSource = fs.readFileSync(new URL("../components/document-engine/editor/DocumentPageBuilder.jsx", import.meta.url), "utf8");
 assert.match(builderSource, /offsetWidth/, "PDF export must derive page size from the rendered document page width");
 assert.match(builderSource, /96 \/ 72/, "PDF export must convert document CSS pixels back to PDF points");
+assert.match(builderSource, /pdf-text-activation/, "PDF text style edits must activate the local mask");
 
 const uploadAssetApi = fs.readFileSync(new URL("../pages/api/standard-inclusions/pdf-import/upload-asset.js", import.meta.url), "utf8");
 assert.match(uploadAssetApi, /MAX_ASSET_BYTES/, "extracted image uploads must enforce a size limit rather than accepting an unbounded payload");
@@ -194,5 +196,7 @@ assert.match(pdfImportSource, /paintInlineImageXObject/, "inline image operators
 assert.match(pdfImportSource, /paintImageMaskXObject/, "image mask operators must be counted for fallback validation");
 assert.match(pdfImportSource, /hybridPdfPageToDocumentObjects/, "the importer must expose an explicit hybrid page fallback");
 assert.match(pdfImportSource, /overlayMode: "pdf-text-activation"/, "hybrid mode must avoid duplicate visible text over the page render");
+assert.match(pdfImportSource, /runOcr \|\| null/, "OCR must be opt-in so scanned PDFs are preserved rather than fabricated into editable text");
+assert.match(pdfImportSource, /Text could not be extracted reliably/, "scanned pages must be clearly marked as preserved artwork");
 
 console.log("Standard Inclusions PDF import reconstruction tests passed.");

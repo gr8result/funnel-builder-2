@@ -64,6 +64,8 @@ assert(!/imageRef:\s*(dataUrl|canvas\.toDataURL)/.test(pdfImport), "Extracted im
 assert(uploadAssetRoute.includes("uploadStandardInclusionsAsset"), "The asset upload route stores extracted images in Supabase Storage, not inline JSON");
 assert(uploadAssetRoute.includes("getPublicUrl"), "The asset upload route returns a storage URL for the document to reference");
 assert(/MAX_ASSET_BYTES/.test(uploadAssetRoute), "The asset upload route enforces a per-image size limit");
+assert(pdfImport.includes("const ocr = runOcr || null"), "OCR is opt-in; scanned PDFs are not fabricated into editable text by default");
+assert(pdfImport.includes("Page preserved as original artwork. Text could not be extracted reliably."), "Scanned pages are explicitly marked as preserved artwork");
 
 // The UI must not offer an "editable conversion" choice that implies text
 // extraction only sometimes happens — it always happens now.

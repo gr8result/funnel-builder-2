@@ -43,6 +43,7 @@ export function ObjectRenderer({
     cursor: editing && !object.locked ? "move" : "default",
     outline: editing && selected ? "2px solid #2563eb" : "none",
     ...baseObjectStyle(object),
+    ...hybridLocalMaskStyle(object, textEditing),
   };
 
   return (
@@ -211,6 +212,17 @@ function baseObjectStyle(object) {
     };
   }
   return {};
+}
+
+function hybridLocalMaskStyle(object, textEditing = false) {
+  if (!["text", "dynamicField"].includes(object.type)) return {};
+  if (object.data?.overlayMode !== "pdf-text-activation") return {};
+  if (!object.data?.edited && !textEditing) return {};
+  return {
+    backgroundColor: object.style?.backgroundColor && object.style.backgroundColor !== "transparent"
+      ? object.style.backgroundColor
+      : "#ffffff",
+  };
 }
 
 function ElementBadge({ object }) {
