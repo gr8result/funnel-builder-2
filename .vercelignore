@@ -1,0 +1,16 @@
+node_modules
+.next
+.next-dev
+.vercel
+.git
+coverage
+dist
+build
+tmp
+temp
+*.log
+*.bak
+canva-apps/*/node_modules
+
+.history
+.next-build
