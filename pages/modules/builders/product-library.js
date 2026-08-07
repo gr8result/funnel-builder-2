@@ -105,34 +105,151 @@ function svgTileDataUri(label) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-const PRODUCT_BROWSER_AREAS = [
-  { key: "exterior", label: "Exterior", imageUrl: svgTileDataUri("Exterior"), types: ["Bricks", "Cladding", "Render", "Roof", "Roof Colour", "Windows", "Entry Doors", "Garage Doors", "Gutters", "Fascia", "Lighting", "Driveway", "Decking", "Balustrades", "Pool", "Exterior Paint"] },
-  { key: "interior", label: "Interior", imageUrl: svgTileDataUri("Interior"), types: ["Internal Doors", "Door Hardware", "Skirting", "Architraves", "Robes", "Kitchen", "Bathroom", "Ensuite", "Laundry", "Bedrooms", "Living Areas", "Media", "Study", "Garage"] },
-  { key: "kitchen", label: "Kitchen", imageUrl: svgTileDataUri("Kitchen"), types: ["Stone Benchtops", "Ovens", "Cooktops", "Rangehoods", "Dishwashers", "Sinks", "Mixers", "Cabinetry", "Benchtops", "Splashbacks"] },
-  { key: "bathroom", label: "Bathroom", imageUrl: svgTileDataUri("Bathroom"), types: ["Vanities", "Basins", "Mixers", "Mirrors", "Showers", "Baths", "Toilets", "Tiles", "Accessories"] },
-  { key: "bedroom", label: "Bedroom", imageUrl: svgTileDataUri("Bedroom"), types: ["Carpet", "Hybrid Flooring", "Internal Doors", "Handles", "Robe Fitouts", "Window Furnishings", "Paint", "Lighting"] },
-  { key: "laundry", label: "Laundry", imageUrl: svgTileDataUri("Laundry"), types: ["Cabinetry", "Benchtops", "Laundry Tubs", "Mixers", "Splashbacks", "Flooring"] },
-  { key: "garage", label: "Garage", imageUrl: svgTileDataUri("Garage"), types: ["Garage Doors", "Garage Door Motors", "Internal Access Doors", "Floor Finish", "Storage"] },
-  { key: "outdoor", label: "Outdoor", imageUrl: svgTileDataUri("Outdoor"), types: ["Alfresco Flooring", "Patio Flooring", "Balcony Flooring", "Decking", "Balustrades", "Handrails", "Outdoor Kitchen", "External Fans", "External Lighting"] },
-  { key: "pool", label: "Pool", imageUrl: svgTileDataUri("Pool"), types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
+function productCategory(key, label, productTypeKey = key, productType = label) {
+  return { kind: "category", key, label, productTypeKey, productType, imageUrl: svgTileDataUri(label) };
+}
+
+function browserArea(key, label, children) {
+  return { kind: "area", key, label, imageUrl: svgTileDataUri(label), children };
+}
+
+const EXTERIOR_CATEGORIES = [
+  productCategory("bricks", "Bricks"),
+  productCategory("cladding", "Cladding"),
+  productCategory("render", "Render"),
+  productCategory("roof", "Roof"),
+  productCategory("roof-colour", "Roof Colour"),
+  productCategory("windows", "Windows"),
+  productCategory("entry-door", "Entry Door"),
+  productCategory("garage-door", "Garage Door"),
+  productCategory("gutters", "Gutters"),
+  productCategory("fascia", "Fascia"),
+  productCategory("lighting", "Lighting"),
+  productCategory("driveway", "Driveway"),
+  productCategory("decking", "Decking"),
+  productCategory("balustrades", "Balustrades"),
+  productCategory("pool", "Pool"),
+  productCategory("exterior-paint", "Exterior Paint"),
 ];
 
+const KITCHEN_CATEGORIES = [
+  productCategory("cabinetry", "Cabinetry"),
+  productCategory("cabinet-finish", "Cabinet Finish"),
+  productCategory("handles", "Handles"),
+  productCategory("benchtops", "Benchtops"),
+  productCategory("splashback", "Splashback"),
+  productCategory("sink", "Sink"),
+  productCategory("sink-mixer", "Sink Mixer"),
+  productCategory("oven", "Oven"),
+  productCategory("cooktop", "Cooktop"),
+  productCategory("rangehood", "Rangehood"),
+  productCategory("dishwasher", "Dishwasher"),
+  productCategory("microwave", "Microwave"),
+  productCategory("lighting", "Lighting"),
+  productCategory("flooring", "Flooring"),
+  productCategory("paint", "Paint"),
+];
+
+const BATHROOM_CATEGORIES = [
+  productCategory("vanity", "Vanity"),
+  productCategory("basin", "Basin"),
+  productCategory("sink-mixer", "Sink Mixer"),
+  productCategory("shower", "Shower"),
+  productCategory("bath", "Bath"),
+  productCategory("toilet", "Toilet"),
+  productCategory("tiles", "Tiles"),
+  productCategory("lighting", "Lighting"),
+  productCategory("flooring", "Flooring"),
+  productCategory("paint", "Paint"),
+];
+
+const LAUNDRY_CATEGORIES = [
+  productCategory("cabinetry", "Cabinetry"),
+  productCategory("benchtops", "Benchtops"),
+  productCategory("sink", "Sink"),
+  productCategory("sink-mixer", "Sink Mixer"),
+  productCategory("splashback", "Splashback"),
+  productCategory("flooring", "Flooring"),
+  productCategory("paint", "Paint"),
+];
+
+const BEDROOM_CATEGORIES = [
+  productCategory("internal-door", "Internal Door"),
+  productCategory("handles", "Handles"),
+  productCategory("robes", "Robes"),
+  productCategory("flooring", "Flooring"),
+  productCategory("windows", "Windows"),
+  productCategory("lighting", "Lighting"),
+  productCategory("paint", "Paint"),
+];
+
+const LIVING_AREA_CATEGORIES = [
+  productCategory("flooring", "Flooring"),
+  productCategory("windows", "Windows"),
+  productCategory("lighting", "Lighting"),
+  productCategory("paint", "Paint"),
+];
+
+const GARAGE_ROOM_CATEGORIES = [
+  productCategory("garage-door", "Garage Door"),
+  productCategory("internal-door", "Internal Door"),
+  productCategory("flooring", "Flooring"),
+  productCategory("storage", "Storage"),
+  productCategory("lighting", "Lighting"),
+  productCategory("paint", "Paint"),
+];
+
+const INTERIOR_ROOMS = [
+  browserArea("kitchen", "Kitchen", KITCHEN_CATEGORIES),
+  browserArea("bathroom", "Bathroom", BATHROOM_CATEGORIES),
+  browserArea("ensuite", "Ensuite", BATHROOM_CATEGORIES),
+  browserArea("laundry", "Laundry", LAUNDRY_CATEGORIES),
+  browserArea("bedrooms", "Bedrooms", BEDROOM_CATEGORIES),
+  browserArea("living-areas", "Living Areas", LIVING_AREA_CATEGORIES),
+  browserArea("media", "Media", LIVING_AREA_CATEGORIES),
+  browserArea("study", "Study", LIVING_AREA_CATEGORIES),
+  browserArea("garage", "Garage", GARAGE_ROOM_CATEGORIES),
+];
+
+const PRODUCT_BROWSER_AREAS = [
+  browserArea("exterior", "Exterior", EXTERIOR_CATEGORIES),
+  browserArea("interior", "Interior", INTERIOR_ROOMS),
+];
+
+const PRODUCT_BROWSER_NODES = [...PRODUCT_BROWSER_AREAS, ...INTERIOR_ROOMS];
+
 const PRODUCT_TYPE_SYNONYMS = {
-  "Ovens": ["oven"],
-  "Cooktops": ["cooktop", "hob"],
-  "Rangehoods": ["rangehood", "range hood"],
-  "Dishwashers": ["dishwasher"],
-  "Entry Doors": ["entry door", "front door"],
-  "Garage Doors": ["garage door"],
+  "Oven": ["ovens", "built-in oven"],
+  "Cooktop": ["cooktops", "hob"],
+  "Rangehood": ["rangehoods", "range hood"],
+  "Dishwasher": ["dishwashers"],
+  "Microwave": ["microwaves"],
+  "Sink": ["sinks", "kitchen sink"],
+  "Sink Mixer": ["mixers", "sink mixer", "tapware", "tap"],
+  "Splashback": ["splashbacks"],
+  "Handles": ["cabinet handle", "handles", "handle"],
+  "Cabinet Finish": ["cabinet finish", "cabinet colour", "cabinet color"],
+  "Entry Door": ["entry doors", "entry door", "front door"],
+  "Garage Door": ["garage doors", "garage door"],
   "Bricks": ["brick"],
   "Cladding": ["cladding"],
+  "Render": ["render", "rendering"],
+  "Windows": ["window"],
+  "Gutters": ["gutter"],
+  "Fascia": ["fascia", "eaves"],
+  "Driveway": ["driveway"],
   "Roof": ["roof material", "roofing", "roof"],
   "Roof Material": ["roof material", "roofing", "roof"],
   "Metal Roofing": ["metal roof", "metal roofing", "roofing iron"],
   "Roof Colour": ["roof colour", "roof color", "colorbond"],
   "Tapware": ["tapware", "mixer", "tap"],
   "Basin Mixers": ["basin mixer"],
+  "Basin": ["basins", "basin"],
   "Basins": ["basin"],
+  "Vanity": ["vanities", "vanity"],
+  "Shower": ["showers", "shower"],
+  "Bath": ["baths", "bath"],
+  "Toilet": ["toilets", "toilet", "wc"],
   "Toilets": ["toilet", "wc"],
   "Baths": ["bath"],
   "Tiles": ["tile"],
@@ -147,6 +264,7 @@ const PRODUCT_TYPE_SYNONYMS = {
   "Benchtops": ["benchtop", "bench top"],
   "Stone Benchtops": ["stone benchtop", "stone range", "benchtop"],
   "Door Hardware": ["door hardware", "handle"],
+  "Internal Door": ["internal doors", "internal door", "standard internal door", "premium internal door"],
   "Internal Doors": ["internal door", "standard internal door", "premium internal door"],
   "Passage Handles": ["passage handle", "handle"],
   "Robe Fitouts": ["robe", "wardrobe"],
@@ -164,6 +282,19 @@ function productLibrarySelectionContext(query = {}) {
     clientName: first(query.client || query.clientName),
     siteAddress: first(query.siteAddress),
   };
+}
+
+function findBrowserNode(key) {
+  return PRODUCT_BROWSER_NODES.find((node) => node.key === key) || null;
+}
+
+function findBrowserParent(childKey) {
+  return PRODUCT_BROWSER_NODES.find((node) => (node.children || []).some((child) => child.kind === "area" && child.key === childKey)) || null;
+}
+
+function categoryTitle(category) {
+  if (!category) return "";
+  return category.key === "garage-door" ? "Garage Doors" : category.label;
 }
 
 function explicitSelectionVisibility(product) {
@@ -186,6 +317,7 @@ export default function BuilderProductLibraryPage() {
   const [success, setSuccess] = useState("");
   const [activeTab, setActiveTab] = useState("selections");
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedProductType, setSelectedProductType] = useState("");
   const [detailProduct, setDetailProduct] = useState(null);
   const [selectedCatalogueProduct, setSelectedCatalogueProduct] = useState(null);
@@ -457,20 +589,23 @@ export default function BuilderProductLibraryPage() {
     setDrawerProduct(null);
   }
 
-  const selectedBrowserArea = PRODUCT_BROWSER_AREAS.find((area) => area.key === selectedAreaKey) || null;
+  const selectedBrowserArea = findBrowserNode(selectedAreaKey);
+  const selectedBrowserParent = findBrowserParent(selectedAreaKey);
+  const selectedBrowserCategory = selectedBrowserArea?.children?.find((child) => child.kind === "category" && child.key === selectedCategoryKey) || null;
   const browserBackLabel = selectedProductType && selectedBrowserArea
     ? `Back to ${selectedBrowserArea.label}`
     : selectedBrowserArea
-      ? "Back to Areas"
+      ? `Back to ${selectedBrowserParent?.label || "Choose Area"}`
       : "Back to Project Dashboard";
 
   function handleBrowserBack() {
     if (selectedProductType) {
+      setSelectedCategoryKey("");
       setSelectedProductType("");
       return;
     }
     if (selectedAreaKey) {
-      setSelectedAreaKey("");
+      setSelectedAreaKey(selectedBrowserParent?.key || "");
       return;
     }
     router.push("/modules/construction");
@@ -794,13 +929,15 @@ export default function BuilderProductLibraryPage() {
               products={selectionProducts}
               loading={loading}
               areas={PRODUCT_BROWSER_AREAS}
+              projectContext={productLibrarySelectionContext(router.query)}
               selectedAreaKey={selectedAreaKey}
+              selectedCategoryKey={selectedCategoryKey}
               selectedProductType={selectedProductType}
               categoryById={categoryById}
               supplierById={supplierById}
               manufacturerById={manufacturerById}
-              onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); }}
-              onSelectProductType={setSelectedProductType}
+              onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedCategoryKey(""); setSelectedProductType(""); }}
+              onSelectProductType={(category) => { setSelectedCategoryKey(category.key); setSelectedProductType(category.productType); }}
               onOpenProduct={setDetailProduct}
               onAddToSelections={handleAddToSelections}
               selectedCatalogueProduct={selectedCatalogueProduct}
@@ -942,7 +1079,8 @@ export default function BuilderProductLibraryPage() {
 
       <VisualProductDetailModal
         product={detailProduct}
-        categoryName={detailProduct ? categoryById.get(detailProduct.category_id) : ""}
+        categoryName={selectedBrowserCategory ? categoryTitle(selectedBrowserCategory) : detailProduct ? categoryById.get(detailProduct.category_id) : ""}
+        backLabel={selectedBrowserCategory ? `Back to ${categoryTitle(selectedBrowserCategory)}` : "Back"}
         supplierName={detailProduct ? supplierById.get(detailProduct.supplier_id) : ""}
         brandName={detailProduct ? manufacturerById.get(detailProduct.manufacturer_id) : ""}
         selected={selectedCatalogueProduct?.productId === detailProduct?.id}
@@ -1203,7 +1341,10 @@ function productMatchesArea(product, area, categoryName, supplierName, brandName
   if (!area) return true;
   const areaNeedle = area.label.toLowerCase();
   if (text.includes(areaNeedle) || text.includes(area.key.replace(/-/g, " "))) return true;
-  return area.types.some((type) => productMatchesType(product, type, categoryName, supplierName, brandName));
+  return (area.children || []).some((child) => {
+    if (child.kind === "category") return productMatchesType(product, child.productType, categoryName, supplierName, brandName);
+    return productMatchesArea(product, child, categoryName, supplierName, brandName);
+  });
 }
 
 function productMatchesType(product, typeName, categoryName, supplierName, brandName) {
@@ -1234,7 +1375,9 @@ function VisualSelectionsBrowser({
   products,
   loading,
   areas,
+  projectContext,
   selectedAreaKey,
+  selectedCategoryKey,
   selectedProductType,
   categoryById,
   supplierById,
@@ -1248,7 +1391,10 @@ function VisualSelectionsBrowser({
   onAddProduct,
   onBack,
 }) {
-  const selectedArea = areas.find((area) => area.key === selectedAreaKey) || null;
+  const selectedArea = findBrowserNode(selectedAreaKey);
+  const selectedParent = findBrowserParent(selectedAreaKey);
+  const selectedChildren = selectedArea?.children || [];
+  const selectedCategory = selectedChildren.find((child) => child.kind === "category" && child.key === selectedCategoryKey) || null;
   const areaProducts = selectedArea
     ? products.filter((product) => productMatchesArea(product, selectedArea, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById)))
     : products;
@@ -1256,7 +1402,9 @@ function VisualSelectionsBrowser({
     ? areaProducts.filter((product) => productMatchesType(product, selectedProductType, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById)))
     : areaProducts;
   const visibleProducts = typeProducts;
-  const showProductsOrEmpty = Boolean(selectedArea && selectedProductType);
+  const showProductsOrEmpty = Boolean(selectedArea && selectedCategory && selectedProductType);
+  const unresolvedCategory = Boolean(selectedArea && selectedCategoryKey && !selectedCategory);
+  const parentBackLabel = selectedArea ? `Back to ${selectedArea.label}` : "Back";
 
   return (
     <section className="visual-browser">
@@ -1268,7 +1416,19 @@ function VisualSelectionsBrowser({
           </div>
           <div className="area-grid">
             {areas.map((area) => (
-              <button key={area.key} type="button" className="area-tile" onClick={() => onSelectArea(area.key)}>
+              <button
+                key={area.key}
+                type="button"
+                className="area-tile"
+                data-project-id={projectContext?.projectId || ""}
+                data-project-area-id=""
+                data-area-key={area.key}
+                data-category-key=""
+                data-requirement-key=""
+                data-product-type-key=""
+                data-return-route="choose-area"
+                onClick={() => onSelectArea(area.key)}
+              >
                 <span className="visual-tile-image" style={{ backgroundImage: `url(${area.imageUrl})` }} aria-hidden="true" />
                 <strong>{area.label}</strong>
               </button>
@@ -1277,28 +1437,51 @@ function VisualSelectionsBrowser({
         </section>
       )}
 
-      {selectedArea && !selectedProductType && (
+      {selectedArea && !selectedProductType && !unresolvedCategory && (
         <section className="step">
           <div className="purpose-heading">
-            <p className="eyebrow">Step 2</p>
-            <h2>Choose A Category</h2>
+            <p className="eyebrow">{selectedParent ? selectedParent.label : "Step 2"}</p>
+            <h2>{selectedArea.key === "interior" ? "Choose An Interior Area" : "Choose A Category"}</h2>
           </div>
           <div className="type-grid">
-            {selectedArea.types.map((type) => (
-              <button key={type} type="button" className="type-tile" onClick={() => onSelectProductType(type)}>
-                <span className="visual-tile-image tileProductType" style={{ backgroundImage: `url(${svgTileDataUri(type)})` }} aria-hidden="true" />
-                <strong>{type}</strong>
+            {selectedChildren.map((child) => (
+              <button
+                key={child.key}
+                type="button"
+                className="type-tile"
+                data-project-id={projectContext?.projectId || ""}
+                data-project-area-id={child.kind === "area" ? child.key : selectedArea.key}
+                data-area-key={selectedArea.key}
+                data-category-key={child.kind === "category" ? child.key : ""}
+                data-requirement-key={child.kind === "category" ? child.key : ""}
+                data-product-type-key={child.kind === "category" ? child.productTypeKey : ""}
+                data-return-route={selectedParent?.key || "choose-area"}
+                onClick={() => child.kind === "area" ? onSelectArea(child.key) : onSelectProductType(child)}
+              >
+                <span className="visual-tile-image tileProductType" style={{ backgroundImage: `url(${child.imageUrl})` }} aria-hidden="true" />
+                <strong>{child.label}</strong>
               </button>
             ))}
           </div>
         </section>
       )}
 
-      {selectedArea && selectedProductType && (
+      {unresolvedCategory && (
+        <section className="step">
+          <div className="empty-products">
+            <h3>The selected category could not be opened.</h3>
+            <div>
+              <button type="button" className="ghost" onClick={onBack}>{parentBackLabel}</button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {selectedArea && selectedCategory && selectedProductType && (
         <section className="step">
           <div className="purpose-heading">
-            <p className="eyebrow">Step 3</p>
-            <h2>{selectedProductType}</h2>
+            <p className="eyebrow">{selectedArea.label}</p>
+            <h2>{categoryTitle(selectedCategory)}</h2>
           </div>
 
           {showProductsOrEmpty ? loading ? <p className="empty-message">Loading products...</p> : (
@@ -1317,7 +1500,7 @@ function VisualSelectionsBrowser({
                   ))}
                 </div>
               ) : (
-                <EmptyProductTypeState onImportProducts={onImportProducts} onAddProduct={onAddProduct} onBack={onBack} />
+                <EmptyProductTypeState category={selectedCategory} backLabel={parentBackLabel} onImportProducts={onImportProducts} onAddProduct={onAddProduct} onBack={onBack} />
               )
             ) : null}
         </section>
@@ -1328,14 +1511,14 @@ function VisualSelectionsBrowser({
   );
 }
 
-function EmptyProductTypeState({ onImportProducts, onAddProduct, onBack }) {
+function EmptyProductTypeState({ category, backLabel, onImportProducts, onAddProduct, onBack }) {
   return (
     <div className="empty-products">
-      <h3>No products have been imported for this category.</h3>
+      <h3>No {category?.label || "category"} products have been imported yet.</h3>
       <div>
-        <button type="button" onClick={onImportProducts}>Import Products</button>
         <button type="button" onClick={onAddProduct}>Add Product</button>
-        <button type="button" className="ghost" onClick={onBack}>Back</button>
+        <button type="button" onClick={onImportProducts}>Import Products</button>
+        <button type="button" className="ghost" onClick={onBack}>{backLabel || "Back"}</button>
       </div>
     </div>
   );
@@ -1367,7 +1550,7 @@ function VisualProductCard({ product, brandName, supplierName, selected, onOpenP
   );
 }
 
-function VisualProductDetailModal({ product, categoryName, supplierName, brandName, selected, onClose, onAddToSelections }) {
+function VisualProductDetailModal({ product, categoryName, backLabel, supplierName, brandName, selected, onClose, onAddToSelections }) {
   const [variant, setVariant] = useState("");
   useEffect(() => {
     setVariant(productVariantOptions(product || {})[0] || "");
@@ -1421,7 +1604,7 @@ function VisualProductDetailModal({ product, categoryName, supplierName, brandNa
                 <span className="supplier-missing">Supplier product page not available.</span>
               )}
               <button type="button" onClick={() => onAddToSelections(product, variant)}>{selected ? "Selected" : "Add To Selections"}</button>
-              <button type="button" className="ghost" onClick={onClose}>Back</button>
+              <button type="button" className="ghost" onClick={onClose}>{backLabel || "Back"}</button>
             </div>
           </div>
         </article>
