@@ -213,7 +213,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, pageFullWidth = false, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || (allowHoverOverlay && hovered);
   const resizeStateRef = useRef(null);
@@ -226,6 +226,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
   const isStretchToCanvasGrid = !compactPreview && block?.type === "grid-section" && block?.props?.stretchToCanvas === true;
   const isFullWidthBlock = !compactPreview && ((canStretchFullWidth && isFullWidthBackgroundEnabled(block)) || isStretchToCanvasGrid);
+  const isPageFullWidthBlock = !compactPreview && pageFullWidth;
   // Hidden-on-this-device blocks still render in the editor (dimmed, with a badge) so they stay
   // selectable and can be un-hidden -- only real visitors (WebsitePreviewSurface / the published
   // site) actually skip rendering them.
@@ -292,7 +293,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       style={{
         ...styles.canvasBlock,
         width: "100%",
-        maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
+        maxWidth: (isPageFullWidthBlock || isFullWidthBlock) ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
         background: frameBackground,
         border: "none",
@@ -941,6 +942,14 @@ function ImageStackPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               onChange={(e) => update({ showGrid: e.target.checked })}
             />
             Show design grid and snap layers to it
+          </label>
+          <label style={styles.inlineToggle}>
+            <input
+              type="checkbox"
+              checked={(props.fullWidth ?? props.fullWidthBackground) === true}
+              onChange={(e) => update({ fullWidth: e.target.checked, fullWidthBackground: e.target.checked })}
+            />
+            Full Width
           </label>
           <div style={styles.colorGrid}>
             <NumberField

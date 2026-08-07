@@ -3313,6 +3313,69 @@ export function ClientPageSheet({ sheet }) {
     }
   };
 
+  const insertActiveStandardInclusionsTemplate = async () => {
+    try {
+      const standard = normaliseStandardInclusions(workbookStandardInclusionsSource(sheet.workbook), sheet.workbook.builderId || "local-builder");
+      const source = standard.editorMode || standard.activeDocumentSource || standard.source || "";
+      const canvaPdfUrl = standard.canvaExportedPdfUrl || "";
+      const finishedPdfUrl = standard.finishedPdfUrl || "";
+      const pdfUrl = source === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF ? finishedPdfUrl : (canvaPdfUrl || finishedPdfUrl);
+      const storagePath = source === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF
+        ? standard.finishedPdfStorageKey || ""
+        : standard.canvaExportedPdfStorageKey || standard.finishedPdfStorageKey || "";
+      const pageCount = Number(
+        source === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF
+          ? standard.finishedPdfPageCount
+          : standard.canvaExportedPdfPageCount || standard.finishedPdfPageCount || standard.documentBuilder?.pages?.length || 0
+      );
+      if (!pdfUrl) {
+        setStatusMessage("Save or export the Standard Inclusions schedule as a PDF before inserting it.");
+        return;
+      }
+      const count = pageCount > 0 ? pageCount : 1;
+      const document = {
+        id: standard.canvaDocumentId || standard.finishedPdfDocumentId || standard.activeDocumentId || proposalBuilderId("standard-inclusions"),
+        title: standard.activeDocumentName || "Standard Inclusions Schedule",
+        fileName: standard.activeDocumentName || "Standard Inclusions Schedule.pdf",
+        publicUrl: pdfUrl,
+        storagePath,
+        sourceType: "standard_inclusions_template",
+        status: "active",
+        active: true,
+        pageCount: count,
+        projectId: proposalProjectId(sheet),
+        estimateId: proposalEstimateId(sheet),
+        version: standard.onlyOfficeVersion || standard.documentBuilder?.metadata?.standardInclusionsVersion || "",
+        pages: Array.from({ length: count }, (_, index) => ({
+          id: `${standard.canvaDocumentId || standard.finishedPdfDocumentId || standard.activeDocumentId || "standard-inclusions"}-page-${index + 1}`,
+          documentId: standard.canvaDocumentId || standard.finishedPdfDocumentId || standard.activeDocumentId || "",
+          fileName: standard.activeDocumentName || "Standard Inclusions Schedule.pdf",
+          publicUrl: pdfUrl,
+          storagePath,
+          sourceType: "standard_inclusions_template",
+          pageNumber: index + 1,
+          order: index + 1,
+          title: `Standard Inclusions Schedule ${index + 1}`,
+        })),
+        metadata: {
+          source: "standard_inclusions_template",
+          standardInclusionsSource: source,
+          canvaDesignId: standard.canvaDesignId || "",
+          canvaDocumentId: standard.canvaDocumentId || "",
+          finishedPdfDocumentId: standard.finishedPdfDocumentId || "",
+        },
+      };
+      await saveBuilderImmediate(
+        replaceActiveInclusionsDocument(draftRef.current || builder, document, "standard_inclusions_template"),
+        "Standard Inclusions template inserted."
+      );
+      setStatusMessage("Standard Inclusions template inserted.");
+    } catch (error) {
+      console.error("Standard Inclusions template insert failed", error);
+      setStatusMessage(error?.message || "Could not insert the Standard Inclusions template.");
+    }
+  };
+
   const importPlanPdfs = async (event) => {
     const files = Array.from(event.target.files || []).filter((file) => file.type === "application/pdf");
     event.target.value = "";
@@ -3699,7 +3762,7 @@ export function ClientPageSheet({ sheet }) {
               inclusionsDocument={inclusionsDocument}
               pricedPlans={pricedPlans}
               editing={!readonly}
-              onInsertStandard={() => inclusionsInputRef.current?.click()}
+              onInsertStandard={insertActiveStandardInclusionsTemplate}
               onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
               onInsertPlans={() => plansInputRef.current?.click()}
               onReplaceInclusions={() => inclusionsInputRef.current?.click()}
@@ -3722,7 +3785,7 @@ export function ClientPageSheet({ sheet }) {
               inclusionsDocument={inclusionsDocument}
               pricedPlans={pricedPlans}
               editing={pageEditMode && !readonly}
-              onInsertStandard={() => inclusionsInputRef.current?.click()}
+              onInsertStandard={insertActiveStandardInclusionsTemplate}
               onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
               onInsertPlans={() => plansInputRef.current?.click()}
               onReplaceInclusions={() => inclusionsInputRef.current?.click()}
@@ -3990,8 +4053,8 @@ function ProposalImportSidebarStatus({
           <div style={styles.importButtonRow}>
             <button type="button" style={styles.secondaryButton} onClick={() => onViewDocument?.(inclusionsDocument)}>View PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace PDF</button>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Use Standard Editable Template</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Existing PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
             <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove PDF</button>
           </div>
@@ -4002,9 +4065,9 @@ function ProposalImportSidebarStatus({
           <span>Page count: -</span>
           <div style={styles.importButtonRow}>
             <button type="button" style={styles.secondaryButton} disabled>View PDF</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertStandard}>Replace PDF</button>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Upload Existing PDF</button>
+            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Use Standard Editable Template</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
             <button type="button" style={styles.dangerButton} disabled>Remove PDF</button>
           </div>
@@ -7058,6 +7121,7 @@ export function StandardInclusionsSheet({ sheet }) {
   const [canvaStatus, setCanvaStatus] = useState(null);
   const [canvaDesigns, setCanvaDesigns] = useState([]);
   const [canvaDesignSearch, setCanvaDesignSearch] = useState("");
+  const [canvaImportMode, setCanvaImportMode] = useState("high-fidelity-hybrid");
   const [canvaSetupOpen, setCanvaSetupOpen] = useState(false);
   const [finishedPdfPageCount, setFinishedPdfPageCount] = useState(0);
   const onlyOfficeAuthToken = "";
@@ -7073,7 +7137,7 @@ export function StandardInclusionsSheet({ sheet }) {
     : null;
   const activeSourceType = standard.editorMode || standard.pdfEditorMode || standard.activeDocumentSource || "";
   const activeFinishedPdf = !standard.scheduleDeleted && activeSourceType === STANDARD_INCLUSIONS_EDITOR_MODES.FINISHED_PDF;
-  const activeCanvaDocument = !standard.scheduleDeleted && activeSourceType === STANDARD_INCLUSIONS_EDITOR_MODES.CANVA;
+  const activeCanvaDocument = !standard.scheduleDeleted && activeSourceType === STANDARD_INCLUSIONS_EDITOR_MODES.CANVA && Boolean(activeDocument);
   const activeOnlyOfficeDocumentId = !standard.scheduleDeleted ? standard.onlyOfficeDocumentId || "" : "";
   const activeSummary = standardScheduleSummary(activeDocument, standard);
   const latestRestorableRevision = findLatestRestorableStandardRevision(standard.revisionHistory || []);
@@ -7107,7 +7171,7 @@ export function StandardInclusionsSheet({ sheet }) {
     try {
       const returnResult = JSON.parse(window.localStorage.getItem("gr8-standard-inclusions-canva-return-result") || "{}");
       if (returnResult?.ok) {
-        setStandardStatus("Returned from Canva. Canva is available for admin template import only; builders edit converted templates inside Gr8 Result.");
+        setStandardStatus("Returned from Canva. Use Refresh from Canva to pull the latest approved inclusions design into Gr8 Result.");
         window.localStorage.removeItem("gr8-standard-inclusions-canva-return-result");
       }
     } catch {}
@@ -7248,7 +7312,7 @@ export function StandardInclusionsSheet({ sheet }) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Could not load Canva designs.");
       setCanvaDesigns(payload.items || payload.designs || []);
-      setStandardStatus("Choose the approved Canva design to convert into native Gr8 Result pages.");
+      setStandardStatus("Choose the approved Canva inclusions design to import or refresh.");
     } catch (error) {
       setCanvaDesigns([]);
       setStandardStatus(error?.message || "Could not load Canva designs.");
@@ -7257,56 +7321,92 @@ export function StandardInclusionsSheet({ sheet }) {
 
   async function attachCanvaDesign(designId) {
     const headers = await standardAuthHeaders(workspaceId);
-    setStandardStatus("Importing Canva template as native Gr8 Result pages...");
-    const response = await fetch("/api/standard-inclusions/canva/import-native", {
+    const refreshMode = resolveCanvaRefreshMode(standard);
+    if (refreshMode === "cancel") {
+      setStandardStatus("Canva refresh cancelled. Your current Standard Inclusions template was not changed.");
+      return;
+    }
+    setStandardStatus("Exporting latest Canva Standard Inclusions PDF...");
+    const response = await fetch("/api/standard-inclusions/canva/import-design", {
       method: "POST",
       headers,
       body: JSON.stringify({ workspace_id: workspaceId, designId, projectId: proposalProjectId(sheet) || "" }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || !payload?.ok) {
-      const audit = payload?.audit?.availableFormats?.length ? ` Available formats: ${payload.audit.availableFormats.join(", ")}.` : "";
-      throw new Error(`${payload?.error || "Could not convert Canva design into native pages."}${audit}`);
+      if (payload?.code === "CANVA_HIGH_FIDELITY_RENDER_REQUIRED") {
+        setImportPreview({
+          source: "canva-native-import",
+          fileName: payload.fileName || "Canva import review",
+          document: payload.document || createDocument({ name: "Canva import review", pages: [] }),
+          pageCount: Number(payload.pageCount || payload.validation?.pages?.length || 0),
+          editableTextCount: Number(payload.counts?.text || 0),
+          replaceableImageCount: Number(payload.counts?.image || 0),
+          shapeCount: Number(payload.counts?.shape || 0),
+          fixedVisualCount: Number(payload.fixedVisualCount || 0),
+          warnings: payload.warnings || [],
+          validation: payload.validation || { canPublish: false, message: payload.error || "Import failed visual validation." },
+          reviewMode: "canva-native-import",
+        });
+        setManagementMode("review-import");
+        setStandardStatus(payload.error || "Import failed visual validation. Your current Standard Inclusions template has not been changed.");
+        return;
+      }
+      throw new Error(formatCanvaSetupError(payload, "Could not export the selected Canva design."));
     }
-    const document = {
-      ...(payload.import?.document || {}),
-      name: "System Base Standard Inclusions Template",
-      metadata: {
-        ...(payload.import?.document?.metadata || {}),
-        documentSource: "canva-native-import",
-        canvaDesignId: designId,
-        canvaSourceFormat: payload.sourceFormat || payload.audit?.selectedFormat || "",
-        canvaFormatAudit: payload.audit || {},
-        nativeImportCounts: payload.counts || {},
-        systemBaseTemplate: true,
-      },
-    };
-    if (!Array.isArray(document.pages) || !document.pages.length) throw new Error("Canva conversion did not create native editable pages.");
-    setImportPreview({
-      source: "canva-native-import",
-      fileName: document.name || "System Base Standard Inclusions Template",
-      document,
-      pageCount: document.pages.length,
-      editableTextCount: payload.counts?.text || payload.import?.editableTextCount || 0,
-      replaceableImageCount: payload.counts?.image || 0,
-      shapeCount: payload.counts?.shape || 0,
-      fixedVisualCount: payload.import?.fixedVisualCount || 0,
-      warnings: payload.import?.warnings || [],
-      canvaDesignId: designId,
-      canvaThumbnailUrl: payload.design?.thumbnail?.url || payload.design?.design?.thumbnail?.url || "",
-      sourceFormat: payload.sourceFormat || payload.audit?.selectedFormat || "",
-      formatAudit: payload.audit || {},
-      counts: payload.counts || {},
-      reviewMode: "canva-native-import",
+    if (!payload.pdfUrl || !payload.document?.id) throw new Error("Canva export did not return a stored PDF document.");
+    setStandardStatus(`Rendering ${payload.pageCount || "Canva"} schedule page${Number(payload.pageCount || 0) === 1 ? "" : "s"}...`);
+    const renderedPages = await renderCanvaPdfPagesForSchedule(payload.pdfUrl, (pageNumber, pageCount) => {
+      setStandardStatus(`Rendering Canva page ${pageNumber} of ${pageCount}...`);
     });
-    setManagementMode("import-preview");
-    setStandardStatus(`Canva template converted for review: ${document.pages.length} page${document.pages.length === 1 ? "" : "s"}, ${payload.counts?.text || 0} editable text block${(payload.counts?.text || 0) === 1 ? "" : "s"}, ${payload.counts?.image || 0} replaceable image/logo block${(payload.counts?.image || 0) === 1 ? "" : "s"}. Review before publishing the system base template.`);
+    if (!renderedPages.length) throw new Error("The Canva PDF did not render any pages. Your current template was not changed.");
+    setStandardStatus("Saving rendered Canva pages into Gr8 Result...");
+    const renderedResponse = await fetch("/api/standard-inclusions/canva/rendered-pages", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        workspace_id: workspaceId,
+        documentId: payload.document.id,
+        refreshMode,
+        pages: renderedPages,
+      }),
+    });
+    const renderedPayload = await renderedResponse.json().catch(() => ({}));
+    if (!renderedResponse.ok || !renderedPayload?.ok) throw new Error(renderedPayload?.error || "Could not save rendered Canva pages.");
+    const document = markStandardDocumentSaved(renderedPayload.documentBuilder, { ...standard, activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA });
+    await saveStandardWithRevision({
+      documentBuilder: document,
+      source: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      scheduleDeleted: false,
+      isDeleted: false,
+      deletedAt: null,
+      activeDocumentId: document.id,
+      activeDocumentName: document.name,
+      activeDocumentSource: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      activeDocumentLastSavedAt: document.metadata?.lastSavedAt || new Date().toISOString(),
+      pdfPages: [],
+      selectedPdfPageId: "",
+      pdfSourceName: "",
+      canvaDocumentId: payload.document.id,
+      canvaTemplateId: payload.template?.id || "",
+      canvaDesignId: designId,
+      canvaEditUrl: payload.editUrl || "",
+      canvaThumbnailUrl: payload.design?.thumbnail?.url || payload.design?.design?.thumbnail?.url || "",
+      canvaExportedPdfUrl: payload.pdfUrl,
+      canvaExportedPdfStorageKey: payload.pdfStorageKey || "",
+      canvaExportedPdfPageCount: renderedPages.length,
+      editorMode: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+      pdfEditorMode: STANDARD_INCLUSIONS_EDITOR_MODES.CANVA,
+    }, refreshMode === "replace-all" ? "replace-from-canva" : "refresh-from-canva", designId, { persist: true });
+    setImportPreview(null);
+    setManagementMode("");
+    setStandardStatus(`Canva Standard Inclusions imported: ${renderedPages.length} page${renderedPages.length === 1 ? "" : "s"} saved in order with the Canva page artwork locked as the visual base.`);
   }
 
   function handleOpenInCanva() {
     const editUrl = standard.canvaEditUrl || "";
     if (!editUrl) {
-      setStandardStatus("Canva editing is not the builder workflow. Use Admin Template Import from Canva to create native editable pages.");
+      setStandardStatus("Canva is the source design. Use Refresh from Canva to update the Gr8 Result schedule pages.");
       return;
     }
     window.open(editUrl, "_blank", "noopener,noreferrer");
@@ -7772,6 +7872,10 @@ export function StandardInclusionsSheet({ sheet }) {
 
   async function confirmImportPreview() {
     if (!importPreview?.document) return;
+    if (importPreview.validation && importPreview.validation.canPublish !== true) {
+      setStandardStatus(importPreview.validation.message || "Import failed visual validation. The Canva layout could not be reproduced accurately. Your current Standard Inclusions template has not been changed.");
+      return;
+    }
     if (!window.confirm("Replace the currently displayed schedule with this imported schedule?")) return;
     const previewPages = Array.isArray(importPreview.document.pages) ? importPreview.document.pages : [];
     if (!previewPages.length) {
@@ -7914,20 +8018,12 @@ export function StandardInclusionsSheet({ sheet }) {
           onPageCount={handleFinishedPdfPageCount}
         />
       ) : activeCanvaDocument ? (
-        <CanvaStandardInclusionsViewer
+        <StandardScheduleLoadedEditor
           readonly={readonly}
-          standard={standard}
+          activeSummary={activeSummary}
+          document={activeDocument}
+          workbook={sheet.workbook}
           canvaStatus={canvaStatus}
-          onConnectCanva={openCanvaSetupModal}
-          onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
-          onOpenCanva={handleOpenInCanva}
-          onGeneratePdf={handleGenerateCanvaPdf}
-          onDisconnectCanva={handleDisconnectCanvaAccount}
-          onRefresh={() => refreshCanvaStatus().then(() => setStandardStatus("Canva design metadata refreshed. Use Admin Template Import from Canva to create native editable pages."))}
-          onVersionHistory={restorePreviousVersion}
-          onReplace={openReplaceScheduleDialog}
-          onDelete={deleteCurrentSchedule}
-          onPageCount={handleCanvaPdfPageCount}
           contextPanel={(
             <StandardScheduleContextPanel
               readonly={readonly}
@@ -7940,6 +8036,8 @@ export function StandardInclusionsSheet({ sheet }) {
               canvaStatus={canvaStatus}
               canvaDesigns={canvaDesigns}
               canvaDesignSearch={canvaDesignSearch}
+              canvaImportMode={canvaImportMode}
+              onCanvaImportModeChange={setCanvaImportMode}
               onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
               onSearchCanvaDesigns={loadCanvaDesigns}
               onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
@@ -7962,6 +8060,15 @@ export function StandardInclusionsSheet({ sheet }) {
               onConfirmImport={confirmImportPreview}
             />
           )}
+          onReplace={openReplaceScheduleDialog}
+          onDelete={deleteCurrentSchedule}
+          onConnectCanva={openCanvaSetupModal}
+          onImportExistingCanvaDesign={handleImportExistingCanvaDesign}
+          onOpenCanva={handleOpenInCanva}
+          onGeneratePdf={handleGenerateCanvaPdf}
+          onVersionHistory={restorePreviousVersion}
+          onChange={saveDocumentBuilder}
+          onStatus={setStandardStatus}
         />
       ) : activeDocument ? (
         <StandardScheduleLoadedEditor
@@ -7982,6 +8089,8 @@ export function StandardInclusionsSheet({ sheet }) {
               canvaStatus={canvaStatus}
               canvaDesigns={canvaDesigns}
               canvaDesignSearch={canvaDesignSearch}
+              canvaImportMode={canvaImportMode}
+              onCanvaImportModeChange={setCanvaImportMode}
               onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
               onSearchCanvaDesigns={loadCanvaDesigns}
               onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
@@ -8027,6 +8136,8 @@ export function StandardInclusionsSheet({ sheet }) {
           latestRestorableRevision={latestRestorableRevision}
           canvaDesigns={canvaDesigns}
           canvaDesignSearch={canvaDesignSearch}
+          canvaImportMode={canvaImportMode}
+          onCanvaImportModeChange={setCanvaImportMode}
           onCanvaDesignSearch={(value) => setCanvaDesignSearch(value)}
           onSearchCanvaDesigns={loadCanvaDesigns}
           onSelectCanvaDesign={(designId) => attachCanvaDesign(designId).catch((error) => setStandardStatus(error?.message || "Could not import Canva design."))}
@@ -8437,11 +8548,11 @@ export function StandardInclusionsSheet({ sheet }) {
         <div>
           <div style={styles.eyebrow}>Standard Inclusions Native Editor</div>
           <h2 style={styles.cashflowTitle}>Premier Inclusions Schedule</h2>
-          <p style={styles.dashboardPanelSubtitle}>Edit the converted native template inside Gr8 Result. Canva is only an administrator source for one-time master-template imports.</p>
+          <p style={styles.dashboardPanelSubtitle}>Source: Connected Canva Design. Refresh from Canva, edit supported overlays in Gr8 Result, then save as your active Standard Inclusions template.</p>
         </div>
         <div style={styles.proposalMiniActions}>
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={openCanvaSetupModal}>{canvaStatus?.ready ? "Canva connected" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Canva setup required" : "Connect Canva"}</button>
-          <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleImportExistingCanvaDesign}>Admin Template Import from Canva</button>
+          <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.secondaryButton} onClick={handleImportExistingCanvaDesign}>Refresh from Canva</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => setStandardStatus("Version History is available from the Standard Inclusions replacement panel.")}>Version History</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => pdfUploadRef.current?.click()}>Attach Finished PDF</button>
           <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
@@ -8561,7 +8672,7 @@ function CanvaScheduleActions({
   return (
     <div style={styles.canvaScheduleActions}>
       <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConnectCanva}>{ready ? "Canva connected" : needsReconnect ? "Reconnect Canva" : setupRequired ? "Canva setup required" : "Connect Canva"}</button>
-      <button type="button" disabled={readonly || !ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Admin Template Import from Canva</button>
+      <button type="button" disabled={readonly || !ready} style={styles.secondaryButton} onClick={onImportExistingCanvaDesign}>Refresh from Canva</button>
       <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
       {setupRequired ? <small style={styles.dashboardPanelSubtitle}>Connect and configure Canva only for administrator master-template import. Builders do not need Canva after conversion.</small> : null}
     </div>
@@ -8641,6 +8752,7 @@ function StandardScheduleLoadedEditor({
         document={document}
         workbook={workbook}
         readonly={readonly}
+        onBack={onReplace}
         onChange={onChange}
         onStatus={onStatus}
       />
@@ -8747,7 +8859,7 @@ function CanvaStandardInclusionsViewer({ readonly, standard, canvaStatus, contex
   return (
     <section style={styles.standardScheduleLoadedEditor}>
       <div style={styles.standardScheduleSummaryCard}>
-        <strong>Admin Template Import from Canva</strong>
+        <strong>Connected Canva Design</strong>
         <span>Name: {standard.activeDocumentName || "Canva Standard Inclusions"}</span>
         <span>Canva design ID: {standard.canvaDesignId || "-"}</span>
         <span>Status: {canvaStatus?.connected ? "Connected" : "Not connected"}</span>
@@ -8758,7 +8870,7 @@ function CanvaStandardInclusionsViewer({ readonly, standard, canvaStatus, contex
       </div>
       <div style={styles.standardScheduleEditorToolbar}>
         <button type="button" disabled={readonly || canvaStatus?.setupRequired || (canvaStatus?.connected && canvaStatus?.ready)} style={styles.primaryButton} onClick={onConnectCanva}>{canvaStatus?.ready ? "Connected to Canva" : canvaStatus?.connected ? "Reconnect Canva" : canvaStatus?.setupRequired ? "Setup required" : "Connect Canva"}</button>
-        <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Admin Template Import from Canva</button>
+        <button type="button" disabled={readonly || !canvaStatus?.ready} style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Refresh from Canva</button>
         <button type="button" style={styles.secondaryButton} onClick={onRefresh}>Refresh from Canva</button>
         <button type="button" style={styles.secondaryButton} onClick={onVersionHistory}>Version History</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace Template</button>
@@ -8876,9 +8988,9 @@ function CanvaPdfDocumentViewer({ standard, onImportExistingCanvaDesign, onPageC
       {!pdfUrl ? (
         <div style={styles.standardCanvaPreview}>
           <strong>This Canva design is only a source template.</strong>
-          <span>Builders edit the converted native Gr8 Result template, not the Canva design.</span>
+          <span>Builders edit supported overlays in Gr8 Result while the Canva page remains the visual source of truth.</span>
           <div style={styles.canvaScheduleActions}>
-            <button type="button" style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Admin Template Import from Canva</button>
+            <button type="button" style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Refresh from Canva</button>
           </div>
           <span style={styles.dashboardPanelSubtitle}>The importer prefers Canva PPTX export so text, images, shapes and positions become native editable page elements.</span>
           <span style={styles.dashboardPanelSubtitle}>The cover image below is only a Canva thumbnail. It is not the complete document.</span>
@@ -8892,7 +9004,7 @@ function CanvaPdfDocumentViewer({ standard, onImportExistingCanvaDesign, onPageC
       ) : (
         <>
           <div style={styles.canvaPdfToolbar}>
-            <button type="button" style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Admin Template Import from Canva</button>
+            <button type="button" style={styles.primaryButton} onClick={onImportExistingCanvaDesign}>Refresh from Canva</button>
             <span style={styles.dashboardPanelSubtitle}>Stored PDF preview is a visual reference only. It is not the editable template model.</span>
             <button type="button" style={styles.secondaryButton} disabled={pageIndex <= 0} onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}>Previous</button>
             <button type="button" style={styles.secondaryButton} disabled={!pages.length || pageIndex >= pages.length - 1} onClick={() => setPageIndex(Math.min(pages.length - 1, pageIndex + 1))}>Next</button>
@@ -9070,6 +9182,8 @@ function StandardScheduleContextPanel({
   canvaStatus,
   canvaDesigns = [],
   canvaDesignSearch = "",
+  canvaImportMode = "high-fidelity-hybrid",
+  onCanvaImportModeChange,
   onUploadPdf,
   onLoadDefaultTemplate,
   onConnectCanva,
@@ -9096,6 +9210,9 @@ function StandardScheduleContextPanel({
     (managementMode === "import-preview" && importPreview)
   );
   if (!hasPanel) return null;
+  const importValidation = importPreview?.validation || null;
+  const importCanPublish = !importValidation || importValidation.canPublish === true;
+  const validationPages = Array.isArray(importValidation?.pages) ? importValidation.pages : [];
   return (
     <section style={styles.standardScheduleContextPanel}>
       {managementMode === "replace-options" ? (
@@ -9133,7 +9250,7 @@ function StandardScheduleContextPanel({
       {managementMode === "canva-design-picker" ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Admin Template Import from Canva</strong>
+            <strong>Connected Canva Design</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Close</button>
           </div>
           <div style={styles.standardScheduleSearchRow}>
@@ -9146,7 +9263,24 @@ function StandardScheduleContextPanel({
             />
             <button type="button" style={styles.secondaryButton} onClick={() => onSearchCanvaDesigns?.(canvaDesignSearch)}>Search</button>
           </div>
-          <p style={styles.dashboardPanelSubtitle}>Canva Connect is used here only by an administrator to export the approved source design and convert it into native Gr8 Result pages.</p>
+          <p style={styles.dashboardPanelSubtitle}>Select the approved Canva Standard Inclusions design. Gr8 Result exports the latest PDF, renders every page, and keeps the Canva page as the locked visual base.</p>
+          <div style={styles.standardSchedulePanel}>
+            <strong>Import mode</strong>
+            <div style={styles.standardSchedulePdfChoiceGrid}>
+              <button type="button" style={canvaImportMode === "high-fidelity-hybrid" ? { ...styles.standardScheduleChoiceButton, ...styles.standardScheduleChoiceButtonActive } : styles.standardScheduleChoiceButton} onClick={() => onCanvaImportModeChange?.("high-fidelity-hybrid")}>
+                <strong>High-fidelity hybrid import</strong>
+                <span>Exact visual page with editable text and selected images. Required for publishing.</span>
+              </button>
+              <button type="button" style={canvaImportMode === "finished-pdf" ? { ...styles.standardScheduleChoiceButton, ...styles.standardScheduleChoiceButtonActive } : styles.standardScheduleChoiceButton} onClick={() => onCanvaImportModeChange?.("finished-pdf")}>
+                <strong>Finished PDF</strong>
+                <span>Exact appearance, not editable inside Gr8 Result.</span>
+              </button>
+              <button type="button" style={canvaImportMode === "experimental-object-conversion" ? { ...styles.standardScheduleChoiceButton, ...styles.standardScheduleChoiceButtonActive } : styles.standardScheduleChoiceButton} onClick={() => onCanvaImportModeChange?.("experimental-object-conversion")}>
+                <strong>Experimental full object conversion</strong>
+                <span>May alter layout and is not recommended. Cannot be published without visual validation.</span>
+              </button>
+            </div>
+          </div>
           <div style={styles.standardScheduleCandidateGrid}>
             {canvaDesigns.map((design) => {
               const item = design.design || design;
@@ -9157,7 +9291,7 @@ function StandardScheduleContextPanel({
                   {thumbnail ? <img src={thumbnail} alt="" style={styles.standardScheduleThumbnail} /> : <div style={styles.standardScheduleThumbnailPlaceholder}>No preview</div>}
                   <strong>{item.title || item.name || "Untitled Canva design"}</strong>
                   <small>ID: {designId}</small>
-                  <button type="button" disabled={readonly || !designId} style={styles.primaryButton} onClick={() => onSelectCanvaDesign?.(designId)}>Convert to native base template</button>
+                  <button type="button" disabled={readonly || !designId} style={styles.primaryButton} onClick={() => onSelectCanvaDesign?.(designId)}>Refresh from Canva</button>
                 </article>
               );
             })}
@@ -9230,8 +9364,16 @@ function StandardScheduleContextPanel({
           <div style={styles.proposalMiniActions}>
             <strong>Import Preview</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
-            <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConfirmImport}>Confirm Replacement</button>
+            <button type="button" disabled={readonly || !importCanPublish} style={styles.primaryButton} onClick={onConfirmImport}>Confirm Replacement</button>
           </div>
+          {!importCanPublish ? (
+            <div style={styles.importValidationFailed}>
+              <strong>Import failed visual validation.</strong>
+              <span>The Canva layout could not be reproduced accurately.</span>
+              <span>Your current Standard Inclusions template has not been changed.</span>
+              {importValidation?.reason ? <small>{importValidation.reason}</small> : null}
+            </div>
+          ) : null}
           <p style={styles.dashboardPanelSubtitle}>
             {importPreview.fileName} - {importPreview.pageCount} page{importPreview.pageCount === 1 ? "" : "s"}.
             Editable text blocks: {importPreview.editableTextCount}. Replaceable images: {importPreview.replaceableImageCount || 0}. Shapes/panels: {importPreview.shapeCount || 0}. Fixed visual elements: {importPreview.fixedVisualCount}.
@@ -9244,6 +9386,8 @@ function StandardScheduleContextPanel({
               <span><strong>Selected source:</strong> {importPreview.sourceFormat || "None"}</span>
               <span><strong>Missing fonts:</strong> {importPreview.document?.metadata?.missingFonts?.length ? importPreview.document.metadata.missingFonts.join(", ") : "None detected"}</span>
               <span><strong>Rasterised fallback elements:</strong> {importPreview.fixedVisualCount || 0}</span>
+              <span><strong>Visual validation:</strong> {importValidation?.status || "Not run"}</span>
+              <span><strong>Blank thumbnails:</strong> {Number(importValidation?.blankPreviewCount || 0)}</span>
             </div>
           ) : null}
           {importPreview.warnings?.length ? (
@@ -9252,13 +9396,33 @@ function StandardScheduleContextPanel({
           <div style={styles.standardSchedulePreviewGrid}>
             {importPreview.document.pages.slice(0, 12).map((page, index) => (
               <article key={page.id} style={styles.standardSchedulePreviewCard}>
-                <div style={styles.standardSchedulePreviewPage}>
-                  {page.background?.imageRef ? <img src={page.background.imageRef} alt="" style={styles.standardSchedulePreviewImage} /> : null}
-                  <strong>{index + 1}</strong>
-                </div>
+                {page.background?.imageRef ? (
+                  <div style={styles.standardSchedulePreviewPage}>
+                    <img src={page.background.imageRef} alt="" style={styles.standardSchedulePreviewImage} />
+                    <strong>{index + 1}</strong>
+                  </div>
+                ) : (
+                  <div style={styles.importValidationCardFailed}>
+                    <strong>Page {index + 1}</strong>
+                    <span>Source render missing</span>
+                  </div>
+                )}
                 <span>{page.name}</span>
                 <small>{page.objects.length} editable/fixed block{page.objects.length === 1 ? "" : "s"}</small>
                 {importPreview.reviewMode === "canva-native-import" ? <small>Original Canva/PDF reference | Native Gr8 Result conversion</small> : null}
+              </article>
+            ))}
+            {!importPreview.document.pages.length && validationPages.map((page) => (
+              <article key={`failed-page-${page.pageNumber}`} style={styles.standardSchedulePreviewCard}>
+                <div style={styles.importValidationCardFailed}>
+                  <strong>Page {page.pageNumber}</strong>
+                  <span>{page.status}</span>
+                  <span>{page.thumbnailBlank ? "Source render missing" : "Needs review"}</span>
+                </div>
+                <span>Original Canva/PPTX rendering unavailable</span>
+                <small>Editable text: {page.editableTextCount || 0}</small>
+                <small>Editable images: {page.editableImageCount || 0}</small>
+                <small>Fixed visual elements: {page.fixedVisualElementCount || 0}</small>
               </article>
             ))}
           </div>
@@ -9278,6 +9442,13 @@ function StandardScheduleEmptyState({
   pendingPdfFile,
   canvaStatus,
   latestRestorableRevision,
+  canvaDesigns = [],
+  canvaDesignSearch = "",
+  canvaImportMode = "high-fidelity-hybrid",
+  onCanvaDesignSearch,
+  onSearchCanvaDesigns,
+  onSelectCanvaDesign,
+  onCanvaImportModeChange,
   onUploadPdf,
   onRestoreLatest,
   onLoadDefaultTemplate,
@@ -9326,6 +9497,13 @@ function StandardScheduleEmptyState({
         importPreview={importPreview}
         pendingPdfFile={pendingPdfFile}
         canvaStatus={canvaStatus}
+        canvaDesigns={canvaDesigns}
+        canvaDesignSearch={canvaDesignSearch}
+        canvaImportMode={canvaImportMode}
+        onCanvaDesignSearch={onCanvaDesignSearch}
+        onSearchCanvaDesigns={onSearchCanvaDesigns}
+        onSelectCanvaDesign={onSelectCanvaDesign}
+        onCanvaImportModeChange={onCanvaImportModeChange}
         onUploadPdf={onUploadPdf}
         onLoadDefaultTemplate={onLoadDefaultTemplate}
         onConnectCanva={onConnectCanva}
@@ -9379,6 +9557,59 @@ async function readPdfPageCount(file) {
   const bytes = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
   return Number(pdf.numPages || 0);
+}
+
+async function renderCanvaPdfPagesForSchedule(pdfUrl, onProgress = () => {}) {
+  const pdfjsLib = await loadPdfJs();
+  const response = await fetch(pdfUrl);
+  if (!response.ok) throw new Error("The stored Canva PDF could not be downloaded for rendering.");
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const rendered = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    onProgress(pageNumber, pdf.numPages);
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 96 / 72 });
+    const renderViewport = page.getViewport({ scale: 2.4 });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(renderViewport.width);
+    canvas.height = Math.ceil(renderViewport.height);
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error(`Canva page ${pageNumber} could not be rendered.`);
+    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
+
+    const thumbViewport = page.getViewport({ scale: 0.28 });
+    const thumbCanvas = document.createElement("canvas");
+    thumbCanvas.width = Math.ceil(thumbViewport.width);
+    thumbCanvas.height = Math.ceil(thumbViewport.height);
+    const thumbContext = thumbCanvas.getContext("2d", { alpha: false });
+    if (!thumbContext) throw new Error(`Canva page ${pageNumber} thumbnail could not be rendered.`);
+    await page.render({ canvasContext: thumbContext, viewport: thumbViewport }).promise;
+    rendered.push({
+      id: `canva-page-${String(pageNumber).padStart(2, "0")}`,
+      sourcePageId: `canva-pdf-page-${pageNumber}`,
+      pageIndex: pageNumber,
+      order: pageNumber,
+      title: `Page ${pageNumber}`,
+      width: Math.round(viewport.width),
+      height: Math.round(viewport.height),
+      imageUrl: canvas.toDataURL("image/png"),
+      thumbnailUrl: thumbCanvas.toDataURL("image/png"),
+    });
+  }
+  return rendered;
+}
+
+function resolveCanvaRefreshMode(standard = {}) {
+  const isCanva = standard.editorMode === STANDARD_INCLUSIONS_EDITOR_MODES.CANVA || standard.activeDocumentSource === STANDARD_INCLUSIONS_EDITOR_MODES.CANVA;
+  const hasEditedObjects = Array.isArray(standard.documentBuilder?.pages)
+    && standard.documentBuilder.pages.some((page) => (page.objects || []).some((object) => object.data?.edited || object.data?.canvaFirstOverlay));
+  if (!isCanva || !hasEditedObjects || typeof window === "undefined") return "keep-compatible";
+  const choice = window.prompt("A newer Canva version is available.\n\nType one option:\nkeep - Refresh Canva pages and keep compatible edits\nreplace - Replace everything with latest Canva version\ncancel - Cancel", "keep");
+  const value = String(choice || "").trim().toLowerCase();
+  if (value === "replace") return "replace-all";
+  if (value === "cancel" || value === "") return "cancel";
+  return "keep-compatible";
 }
 
 function formatCanvaSetupError(error, fallback = "Canva setup failed.") {
@@ -16089,6 +16320,7 @@ const styles = {
   standardSchedulePanel: { border: "1px solid #cbd5e1", background: "#f8fafc", borderRadius: 12, padding: 12, display: "grid", gap: 10 },
   standardSchedulePdfChoiceGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 },
   standardScheduleChoiceButton: { border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 10, padding: 12, display: "grid", gap: 6, textAlign: "left", cursor: "pointer", fontWeight: 800 },
+  standardScheduleChoiceButtonActive: { borderColor: "#166534", background: "#f0fdf4", boxShadow: "0 0 0 2px rgba(22,101,52,0.16)" },
   standardScheduleCandidateGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 },
   standardScheduleCandidateCard: { border: "1px solid #d8dee8", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gap: 6, color: "#0f172a", fontSize: 13 },
   standardScheduleThumbnail: { width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc" },
@@ -16122,6 +16354,8 @@ const styles = {
   standardRecoveryActions: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8, alignItems: "stretch" },
   standardScheduleRevisionRow: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) repeat(3, auto)", gap: 8, alignItems: "center", color: "#0f172a" },
   standardScheduleWarningList: { margin: 0, paddingLeft: 18, color: "#92400e", fontWeight: 800 },
+  importValidationFailed: { border: "1px solid #fecaca", background: "#fff1f2", color: "#991b1b", borderRadius: 10, padding: 12, display: "grid", gap: 6, fontWeight: 850 },
+  importValidationCardFailed: { minHeight: 150, border: "1px solid #fecaca", background: "#fff1f2", color: "#991b1b", borderRadius: 8, padding: 10, display: "grid", alignContent: "center", justifyItems: "center", gap: 6, textAlign: "center", fontWeight: 900 },
   standardSchedulePreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
   standardSchedulePreviewCard: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 8, display: "grid", gap: 6, color: "#0f172a", fontSize: 12, fontWeight: 800 },
   standardSchedulePreviewPage: { position: "relative", width: "100%", aspectRatio: "1 / 1.414", border: "1px solid #cbd5e1", borderRadius: 6, background: "#ffffff", overflow: "hidden", display: "grid", placeItems: "center" },

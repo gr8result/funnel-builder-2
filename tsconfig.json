@@ -16,5 +16,5 @@
     "esModuleInterop": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
-  "exclude": ["node_modules", "supabase/**/*", "tmp/**/*", "tmp-trade-check/**/*", "transcribe-local/**/*"]
+  "exclude": ["node_modules", "supabase/**/*", "tmp/**/*", "tmp-trade-check/**/*", "transcribe-local/**/*", "canva-apps/**/*"]
 }

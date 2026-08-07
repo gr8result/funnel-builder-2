@@ -4,6 +4,7 @@ import { canvaConfig, canvaDatabaseStatus, canvaFetch, canvaSetupError, loadCanv
 import { importPptxAsStandardDocumentPreview } from "../../../../lib/standard-inclusions/powerpointImport.js";
 
 const FORMAT_PREFERENCE = ["pptx", "powerpoint", "presentation"];
+const HIGH_FIDELITY_REQUIRED_MESSAGE = "Import failed visual validation.\n\nThe Canva layout could not be reproduced accurately.\nYour current Standard Inclusions template has not been changed.";
 
 async function handler(req, res) {
   try {
@@ -56,6 +57,19 @@ async function handler(req, res) {
       arrayBuffer: async () => buffer,
     }, { expectedSlideCount: expectedPageCount });
     const counts = countNativeObjects(imported.document);
+    const validation = validateHighFidelityImport(imported, counts, audit);
+    if (!validation.canPublish) {
+      return res.status(422).json({
+        ok: false,
+        code: "CANVA_HIGH_FIDELITY_RENDER_REQUIRED",
+        error: HIGH_FIDELITY_REQUIRED_MESSAGE,
+        audit,
+        import: imported,
+        counts,
+        sourceFormat: selectedFormat,
+        validation,
+      });
+    }
     return res.status(200).json({
       ok: true,
       design,
@@ -63,6 +77,7 @@ async function handler(req, res) {
       import: imported,
       counts,
       sourceFormat: selectedFormat,
+      validation,
     });
   } catch (error) {
     const code = error?.code || "CANVA_NATIVE_IMPORT_FAILED";
@@ -73,6 +88,53 @@ async function handler(req, res) {
       error: error?.message || "Could not convert the Canva design into native Standard Inclusions pages.",
     });
   }
+}
+
+function validateHighFidelityImport(imported = {}, counts = {}, audit = {}) {
+  const document = imported.document || {};
+  const pages = Array.isArray(document.pages) ? document.pages : [];
+  const pageResults = pages.map((page, index) => {
+    const objects = Array.isArray(page.objects) ? page.objects : [];
+    const hasVisualReference = Boolean(page.background?.imageRef);
+    const widthMatches = Number(page.width || 0) === 794;
+    const heightMatches = Number(page.height || 0) === 1123;
+    return {
+      pageNumber: index + 1,
+      status: hasVisualReference && widthMatches && heightMatches ? "Needs review" : "Failed",
+      hasVisualReference,
+      thumbnailBlank: !hasVisualReference,
+      width: Number(page.width || 0),
+      height: Number(page.height || 0),
+      editableTextCount: objects.filter((object) => object.type === "text").length,
+      editableImageCount: objects.filter((object) => object.type === "image" || object.type === "logo").length,
+      fixedVisualElementCount: hasVisualReference ? 1 : objects.filter((object) => object.data?.fixedVisual === true).length,
+      missingFonts: document.metadata?.missingFonts || [],
+      issues: [
+        !hasVisualReference ? "High-fidelity rendered source page is missing." : "",
+        !widthMatches || !heightMatches ? "Page dimensions do not match the required portrait source size." : "",
+      ].filter(Boolean),
+    };
+  });
+  const warningText = (imported.warnings || []).join("\n");
+  const legacyConversion = /legacy object conversion|pptx-object-conversion/i.test(`${warningText}\n${document.metadata?.importMode || ""}`);
+  const blankPreviewCount = pageResults.filter((page) => page.thumbnailBlank).length;
+  const failedPageCount = pageResults.filter((page) => page.status === "Failed").length;
+  return {
+    mode: "high-fidelity-hybrid-import",
+    canPublish: false,
+    status: "Failed",
+    message: HIGH_FIDELITY_REQUIRED_MESSAGE,
+    reason: legacyConversion
+      ? "High-fidelity slide rendering was not available, so the importer used the legacy object conversion. That path is blocked because it may not visually match the Canva/PPTX source."
+      : "High-fidelity visual validation has not passed.",
+    expectedPageCount: audit.expectedPageCount || pages.length,
+    renderedPageCount: pageResults.filter((page) => page.hasVisualReference).length,
+    blankPreviewCount,
+    failedPageCount: Math.max(failedPageCount, blankPreviewCount),
+    visualDifferenceTolerance: "not-evaluated",
+    pages: pageResults,
+    counts,
+  };
 }
 
 function selectNativeImportFormat(formats = {}) {

@@ -27,6 +27,7 @@
     "test:wb-shared-navigation": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-shared-navigation.mjs",
     "test:wb-navigation-page-registry": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-navigation-page-registry.mjs",
     "test:wb-preview-slug-and-panel-image": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-preview-slug-and-panel-image-regression.mjs",
+    "test:wb-image-stack-full-width": "node scripts/test-website-image-stack-full-width.mjs",
     "test:standard-inclusions-management": "node scripts/test-standard-inclusions-management-regression.mjs",
     "test:standard-inclusions-onlyoffice": "node scripts/test-standard-inclusions-onlyoffice-contract.mjs",
     "standard-inclusions:upload-master": "node scripts/upload-standard-inclusions-master.mjs",

@@ -10,6 +10,7 @@ export function ObjectRenderer({
   onSelect,
   onResize,
   onTextEditStart,
+  onObjectDoubleClick,
   onTextCommit,
   onTableCellCommit,
 }) {
@@ -52,6 +53,11 @@ export function ObjectRenderer({
       style={style}
       onMouseDown={(event) => editing ? onSelect?.(object.id, event) : undefined}
       onDoubleClick={(event) => {
+        if (editing && !object.locked && ["image", "logo"].includes(object.type)) {
+          event.stopPropagation();
+          onObjectDoubleClick?.(object.id, event);
+          return;
+        }
         if (!editing || object.locked || !["text", "dynamicField"].includes(object.type)) return;
         event.stopPropagation();
         onTextEditStart?.(object.id);
@@ -67,7 +73,7 @@ export function ObjectRenderer({
 function renderObjectContent(object, workbook, editor = {}) {
   if (object.type === "text" || object.type === "dynamicField") {
     const text = resolveDynamicText(object.data?.text || "", workbook);
-    const activationHidden = ["pptx-text-activation", "pdf-text-activation"].includes(object.data?.overlayMode) && !object.data?.edited && !editor.textEditing;
+    const activationHidden = ["pptx-text-activation", "pdf-text-activation", "canva-text-activation"].includes(object.data?.overlayMode) && !object.data?.edited && !editor.textEditing;
     return (
       <div
         contentEditable={editor.editing && editor.textEditing && !object.locked}
@@ -100,9 +106,10 @@ function renderObjectContent(object, workbook, editor = {}) {
     );
   }
   if (object.type === "image" || object.type === "logo") {
-    const activationHidden = object.data?.overlayMode === "pptx-image-activation" && !object.data?.edited;
+    const activationHidden = ["pptx-image-activation", "canva-image-activation"].includes(object.data?.overlayMode) && !object.data?.edited;
+    if (activationHidden) return <div style={{ width: "100%", height: "100%", opacity: 0 }} />;
     return object.data?.imageRef ? (
-      <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0, opacity: activationHidden ? 0 : 1 }} />
+      <img src={object.data.imageRef} alt={object.data.alt || ""} style={{ width: "100%", height: "100%", objectFit: object.style?.objectFit || "cover", borderRadius: object.style?.borderRadius || 0 }} />
     ) : (
       <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "#f3f4f6", color: "#6b7280" }}>Image</div>
     );

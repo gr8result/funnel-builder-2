@@ -15,6 +15,7 @@ import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAs
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
+import { isFullWidthPage, normalizePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 
@@ -26,6 +27,14 @@ const supabase = createClient(SUPABASE_URL || "", SUPABASE_ANON_KEY || "", {
 });
 
 const CONTENT_WIDTH = 1440;
+function pickLayoutWidth(blocks, fallback = CONTENT_WIDTH) {
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    const value = Number(block?.props?.baseLayoutWidth || 0);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return fallback;
+}
+
 const seamlessPublishedBlockFrame = (background) => ({
   margin: 0,
   marginTop: 0,
@@ -38,6 +47,12 @@ const seamlessPublishedBlockFrame = (background) => ({
   display: "block",
   overflowX: "clip",
   minWidth: 0,
+});
+const publishedPageBlockFrame = (background, pageFullWidth, layoutWidth) => ({
+  ...seamlessPublishedBlockFrame(background),
+  width: pageFullWidth ? "100%" : `min(100%, ${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px)`,
+  maxWidth: pageFullWidth ? "none" : `${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px`,
+  margin: "0 auto",
 });
 const resolvePublishedBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
 const resolvePublishedStackBackground = (blocks, index, fallback = "") => (
@@ -414,6 +429,9 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const requestedAliases = publishedPageAliases(requested || "home");
   const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
   const pageBlocks = activePage?.name ? (normalizedPageBlocks || {})[activePage.name] || [] : [];
+  const pageWidthMode = normalizePageWidthMode(activePage?.pageWidthMode);
+  const pageFullWidth = isFullWidthPage(pageWidthMode);
+  const layoutWidth = pickLayoutWidth(pageBlocks, CONTENT_WIDTH);
   const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";
   const globalNavBlock = normalizedGlobalNavBlock?.type === "nav-bar" ? normalizedGlobalNavBlock : null;
   const globalFooterBlock = normalizedGlobalFooterBlock?.type === "footer" ? normalizedGlobalFooterBlock : null;
@@ -609,7 +627,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
           ${websiteBlockKeyframes()}
         `}</style>
       </Head>
-      <main data-published-website-root="true" className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
+      <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
             {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
@@ -621,14 +639,14 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
             {blocksToRender.map((block, index) => {
               const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
               return (
-                <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={seamlessPublishedBlockFrame(blockBg)}>
-                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+                <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={publishedPageBlockFrame(blockBg, pageFullWidth, layoutWidth)}>
+                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, layoutWidth: pageFullWidth && !compact ? null : layoutWidth, siteId: publication?.id || "" })}
                 </div>
               );
             })}
           </>
         ) : pageContent ? (
-          <section dangerouslySetInnerHTML={{ __html: pageContent }} />
+          <section style={publishedPageBlockFrame("", pageFullWidth, layoutWidth)} dangerouslySetInnerHTML={{ __html: pageContent }} />
         ) : (
           <section style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24 }}>
             <div style={{ width: "min(640px, 100%)", borderRadius: 18, border: "1px solid rgba(148,163,184,0.35)", padding: 24, background: "#ffffff", boxShadow: "0 20px 40px rgba(15,23,42,0.08)" }}>

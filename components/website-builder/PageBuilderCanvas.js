@@ -6,7 +6,9 @@ import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { primaryNavigationSharedComponentId } from "../../lib/website-builder/sharedNavigation";
 import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
+import { normalizePageWidthMode, PAGE_WIDTH_CONTAINED } from "../../lib/website-builder/pageLayout";
 import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
+import { buildWebsitePreviewUrl } from "../../lib/website-builder/previewRoutes";
 import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
@@ -361,7 +363,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -1688,6 +1690,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
   const responsiveCanvasLayoutWidth = resolveResponsiveLayoutWidth(pageCanvasWidth, previewMode);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
+  const activePageEntry = resolvePreviewPageEntry(project, activePage);
+  const pageWidthMode = normalizePageWidthMode(activePageEntry?.pageWidthMode || PAGE_WIDTH_CONTAINED);
+  const pageIsFullWidth = pageWidthMode === "full";
   const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
   const resolveCanvasFrameBackground = (entries, entryIndex) => (
     resolveCanvasBlockBackground(entries?.[entryIndex]?.block)
@@ -1747,6 +1752,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   }, [blocks, globalFooterBlock, globalNavBlock]);
 
   const applyGlobalStyles = (patch = {}) => {
+    if (Object.prototype.hasOwnProperty.call(patch, "pageWidthMode")) {
+      onUpdatePageSettings?.({ pageWidthMode: normalizePageWidthMode(patch.pageWidthMode) });
+    }
+
     setBlocks((prev) => prev.map((block) => {
       const props = { ...(block?.props || {}) };
 
@@ -2149,25 +2158,28 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       showSavePopup(pageSlugError, "error");
       return;
     }
-    const isHomePage = pageSlug === "home" || pageSlug === "index" || previewSlugify(previewPage?.id || "") === "home";
-    const previewPath = `/modules/website-builder/project/${project.id}/preview`;
-    const previewUrl = new URL(
-      `${previewPath}${isHomePage ? "" : `?page=${encodeURIComponent(pageSlug)}`}`,
-      window.location.origin,
-    );
-    previewUrl.searchParams.set("viewport", previewMode);
     if (!saved || saved?._saveError) {
       const message = saved?._saveErrorMessage || "Preview blocked because the page did not save successfully.";
       previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message}</p>`;
       showSavePopup(message, "error");
       return;
     }
-    if (previewToken) {
-      previewUrl.searchParams.set("previewToken", previewToken);
-      previewWindow.location.replace(previewUrl.toString());
+    const previewHref = buildWebsitePreviewUrl({
+      projectId: project.id,
+      pageSlug,
+      viewport: previewMode,
+      previewToken,
+    });
+    if (!previewHref) {
+      previewWindow.document.body.innerHTML = "<h1 style=\"color:#991b1b\">Preview blocked</h1><p>Preview URL could not be created.</p>";
+      showSavePopup("Preview URL could not be created.", "error");
       return;
     }
-    previewWindow.location.replace(previewUrl.toString());
+    if (previewToken) {
+      previewWindow.location.replace(new URL(previewHref, window.location.origin).toString());
+    } else {
+      previewWindow.location.replace(new URL(previewHref, window.location.origin).toString());
+    }
   };
 
   const handlePreviewSite = async () => {
@@ -2188,23 +2200,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
     }
     const previewToken = writePreviewSnapshot(committedBlocks, saved && !saved?._saveError ? saved : null);
-    const previewUrl = new URL(
-      `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewMode)}`,
-      window.location.origin,
-    ).toString();
     if (!saved || saved?._saveError) {
       const message = saved?._saveErrorMessage || "Preview blocked because the site did not save successfully.";
       previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message}</p>`;
       showSavePopup(message, "error");
       return;
     }
-    if (previewToken) {
-      const url = new URL(previewUrl);
-      url.searchParams.set("previewToken", previewToken);
-      previewWindow.location.replace(url.toString());
+    const previewHref = buildWebsitePreviewUrl({
+      projectId: project.id,
+      viewport: previewMode,
+      previewToken,
+    });
+    if (!previewHref) {
+      previewWindow.document.body.innerHTML = "<h1 style=\"color:#991b1b\">Preview blocked</h1><p>Preview URL could not be created.</p>";
+      showSavePopup("Preview URL could not be created.", "error");
       return;
     }
-    previewWindow.location.replace(previewUrl);
+    previewWindow.location.replace(new URL(previewHref, window.location.origin).toString());
   };
 
   useEffect(() => {
@@ -3730,6 +3742,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         block={block}
                         index={blockIndex}
                         pageCanvasWidth={responsiveCanvasLayoutWidth}
+                        pageFullWidth={pageIsFullWidth}
                         frameBackground={resolveCanvasFrameBackground(canvasBlockEntries, idx)}
                         canvasScale={1}
                         brandAssets={brandAssets}
@@ -3803,7 +3816,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         {showProperties ? (
           <div data-builder-sidepanel="true" style={{ ...styles.sidePanelShell, ...(isNarrowLayout ? { alignSelf: "stretch" } : {}) }}>
             {rightPanelMode === "global" ? (
-              <GlobalStylePanel blocks={blocks} onApplyGlobal={applyGlobalStyles} />
+              <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
             ) : rightPanelMode === "sections" ? (
               <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
             ) : (

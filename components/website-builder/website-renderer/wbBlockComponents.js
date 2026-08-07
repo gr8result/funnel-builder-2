@@ -636,9 +636,57 @@ function renderStatLabelHtml(value) {
   return looksLikePastedCodeBlock ? escapeHtml(htmlToPlainText(raw).trim()) : asRichHtml(raw);
 }
 
+function computeLayerVisualRect(layer = {}) {
+  const x = Number(layer?.x || 0);
+  const y = Number(layer?.y || 0);
+  const width = Math.max(0, Number(layer?.width || 0));
+  const height = Math.max(0, Number(layer?.height || 0));
+  const rotationDeg = Number(layer?.rotation || 0);
+  if (!width || !height) {
+    return { left: x, top: y, right: x, bottom: y };
+  }
+  const radians = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  const boundHalfWidth = Math.abs(halfWidth * cos) + Math.abs(halfHeight * sin);
+  const boundHalfHeight = Math.abs(halfWidth * sin) + Math.abs(halfHeight * cos);
+  const centerX = x + halfWidth;
+  const centerY = y + halfHeight;
+  return {
+    left: centerX - boundHalfWidth,
+    top: centerY - boundHalfHeight,
+    right: centerX + boundHalfWidth,
+    bottom: centerY + boundHalfHeight,
+  };
+}
+
+function computeVisibleLayerBounds(layers = [], fallback = { minX: 0, minY: 0, maxX: 900, maxY: 420 }) {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const layer of Array.isArray(layers) ? layers : []) {
+    const rect = computeLayerVisualRect(layer);
+    minX = Math.min(minX, rect.left);
+    minY = Math.min(minY, rect.top);
+    maxX = Math.max(maxX, rect.right);
+    maxY = Math.max(maxY, rect.bottom);
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+    return fallback;
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
 function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage, layoutWidth = null }) {
   const dragRef = React.useRef(null);
   const fileInputRefs = React.useRef({});
+  const canvasFrameRef = React.useRef(null);
   const canvasRef = React.useRef(null);
   const latestPropsRef = React.useRef(blockProps || {});
   const latestLayersRef = React.useRef([]);
@@ -649,7 +697,9 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const [failedLayerSrcs, setFailedLayerSrcs] = React.useState({});
   const gridSize = compact ? 20 : 24;
   const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
-  const fullWidthBlock = true;
+  const fullWidthBlock = blockProps?.fullWidth !== undefined
+    ? blockProps.fullWidth === true
+    : blockProps?.fullWidthBackground === true;
   const selectedLayerIndex = Number.isInteger(blockProps?.selectedLayerIndex) ? blockProps.selectedLayerIndex : null;
 
   const layers = asArray(blockProps?.images)
@@ -713,32 +763,37 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   };
   const hasLayerImageFailed = (layer, idx) => !!failedLayerSrcs[layer?.id || `${idx}:${String(layer?.src || "")}`];
 
-  const bounds = visibleLayers.reduce((acc, layer) => {
-    const x = Number(layer?.x || 0);
-    const y = Number(layer?.y || 0);
-    const width = Number(layer?.width || 0);
-    const height = Number(layer?.height || 0);
-    return {
-      minX: Math.min(acc.minX, x),
-      minY: Math.min(acc.minY, y),
-      maxX: Math.max(acc.maxX, x + width),
-      maxY: Math.max(acc.maxY, y + height),
-    };
-  }, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
+  const bounds = computeVisibleLayerBounds(visibleLayers, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
   const contentWidth = Math.max(320, bounds.maxX - bounds.minX);
   const contentHeight = Math.max(240, bounds.maxY - bounds.minY);
-  const baseLayoutWidth = Math.max(720, Number(layoutWidth || blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
-  const responsiveScale = 1;
-  const previewOffsetX = 0;
+  const configuredCanvasWidth = Math.max(720, Number(blockProps?.baseLayoutWidth || layoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
+  const designCanvasWidth = Math.max(
+    configuredCanvasWidth,
+    Math.round(bounds.maxX + 32),
+    Math.round(contentWidth + 32)
+  );
+  const designCanvasHeight = Math.max(
+    240,
+    parseSizeValue(blockProps?.minHeight, compact ? 420 : 560),
+    Math.round(bounds.maxY + 32),
+    Math.round(contentHeight + 32)
+  );
+  const responsiveScale = canvasWidth > 0 ? Math.min(1, canvasWidth / designCanvasWidth) : 1;
+  const renderedCanvasWidth = Math.max(1, Math.round(designCanvasWidth * responsiveScale));
+  const renderedCanvasHeight = Math.max(1, Math.round(designCanvasHeight * responsiveScale));
+  const contentCenterX = bounds.minX + (contentWidth / 2);
+  const canvasCenterX = designCanvasWidth / 2;
+  const centeredOffsetX = canvasCenterX - contentCenterX;
+  const minOffsetX = -bounds.minX;
+  const maxOffsetX = designCanvasWidth - bounds.maxX;
+  const previewOffsetX = clampValue(centeredOffsetX, minOffsetX, maxOffsetX);
   const previewOffsetY = 0;
-  const stackHeight = editor
-    ? (compact ? 320 : (blockProps?.minHeight || "72vh"))
-    : Math.max(compact ? 320 : 420, Math.round((Math.max(bounds.maxY + 32, contentHeight + 32)) * responsiveScale));
+  const stackHeight = renderedCanvasHeight;
   const stackFullWidth = fullWidthStyle({ ...blockProps, fullWidthBackground: fullWidthBlock }, compact, editor);
   const previewCanvasBackground = !editor && (!blockProps?.backgroundColor || blockProps.backgroundColor === "transparent")
     ? "linear-gradient(135deg, #09111f 0%, #0f172a 100%)"
     : (blockProps?.backgroundColor || "transparent");
-  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
+  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth: designCanvasWidth }, compact, designCanvasWidth);
 
   React.useEffect(() => {
     latestPropsRef.current = blockProps || {};
@@ -747,7 +802,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const node = canvasRef.current;
+    const node = canvasFrameRef.current;
     if (!node) return undefined;
 
     const syncWidth = () => setCanvasWidth(node.clientWidth || 0);
@@ -761,7 +816,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
     window.addEventListener("resize", syncWidth);
     return () => window.removeEventListener("resize", syncWidth);
-  }, [compact, editor, blockProps?.fullWidthBackground]);
+  }, [compact, editor, blockProps?.fullWidthBackground, blockProps?.fullWidth, designCanvasWidth]);
 
   function applyLayerUpdate(nextLayers) {
     if (typeof onChangeBlock !== "function") return;
@@ -1005,7 +1060,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     });
   }
 
-  if (compact) {
+  if (compact && blockProps?.mobileLayoutMode === "stacked") {
     return (
       <section
         style={{
@@ -1115,168 +1170,215 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
         }}
       >
         <div
-          ref={canvasRef}
-          data-image-stack-canvas
-          onPointerDown={(event) => {
-            if (!editor || typeof onChangeBlock !== "function") return;
-            if (event.target === event.currentTarget && latestPropsRef.current?.selectedLayerIndex != null) {
-              onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: null });
-            }
-          }}
-          onDoubleClick={(event) => {
-            if (!editor || event.target?.closest?.("[data-image-layer]")) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const nextX = clampValue(event.clientX - rect.left - 180, 0, Math.max(0, rect.width - 360));
-            const nextY = clampValue(event.clientY - rect.top - 70, 0, Math.max(0, rect.height - 140));
-            addTextLayer(nextX, nextY);
-          }}
+          ref={canvasFrameRef}
+          data-image-stack-frame
           style={{
-            position: "relative",
             width: "100%",
-            maxWidth: "100%",
-            minHeight: stackHeight,
-            marginTop: 0,
-            marginLeft: 0,
-            marginRight: 0,
+            maxWidth: "none",
+            height: stackHeight,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
             overflow: "hidden",
-            borderRadius: compact ? 16 : 20,
-            border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
-            background: previewCanvasBackground,
-            backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
-            backgroundSize: `${gridSize}px ${gridSize}px`,
+            overflowX: "clip",
+            boxSizing: "border-box",
           }}
         >
-          {editor ? renderCanvasCenterGuides(canvasGuides) : null}
-          {visibleLayers.map((layer, idx) => (
+          <div
+            data-image-stack-canvas-wrapper
+            style={{
+              position: "relative",
+              width: renderedCanvasWidth,
+              height: renderedCanvasHeight,
+              marginInline: "auto",
+              flex: "0 0 auto",
+              overflow: "hidden",
+            }}
+          >
+          <div
+            ref={canvasRef}
+            data-image-stack-canvas
+            data-canvas-scale={responsiveScale}
+            onPointerDown={(event) => {
+              if (!editor || typeof onChangeBlock !== "function") return;
+              if (event.target === event.currentTarget && latestPropsRef.current?.selectedLayerIndex != null) {
+                onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: null });
+              }
+            }}
+            onDoubleClick={(event) => {
+              if (!editor || event.target?.closest?.("[data-image-layer]")) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const canvasScaleVal = Number(event.currentTarget?.dataset?.canvasScale || responsiveScale || 1) || 1;
+              const unscaledWidth = rect.width / canvasScaleVal;
+              const unscaledHeight = rect.height / canvasScaleVal;
+              const nextX = clampValue(((event.clientX - rect.left) / canvasScaleVal) - 180, 0, Math.max(0, unscaledWidth - 360));
+              const nextY = clampValue(((event.clientY - rect.top) / canvasScaleVal) - 70, 0, Math.max(0, unscaledHeight - 140));
+              addTextLayer(nextX, nextY);
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: designCanvasWidth,
+              minWidth: designCanvasWidth,
+              maxWidth: "none",
+              height: designCanvasHeight,
+              minHeight: designCanvasHeight,
+              overflow: "hidden",
+              borderRadius: compact ? 16 : 20,
+              border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
+              background: previewCanvasBackground,
+              backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
+              backgroundSize: `${gridSize}px ${gridSize}px`,
+              transform: `translateX(-50%) scale(${responsiveScale})`,
+              transformOrigin: "top center",
+              willChange: responsiveScale < 1 ? "transform" : undefined,
+            }}
+          >
+            {editor ? renderCanvasCenterGuides(canvasGuides) : null}
             <div
-              key={layer.id || `${idx}`}
-              data-image-layer={idx}
-              data-layer-kind={layer.kind || "image"}
-              onPointerDown={(event) => startInteraction(event, idx, "move")}
-              onMouseDown={(event) => startInteraction(event, idx, "move")}
-              onDoubleClick={() => {
-                if (editor && layer.kind === "image") fileInputRefs.current[idx]?.click();
-              }}
+              data-image-stack-layer-group
+              data-visual-offset-x={Number(previewOffsetX.toFixed(3))}
               style={{
                 position: "absolute",
-                left: Math.round((layer.x * responsiveScale) + previewOffsetX),
-                top: Math.round((layer.y * responsiveScale) + previewOffsetY),
-                width: Math.max(48, Math.round(layer.width * responsiveScale)),
-                height: Math.max(48, Math.round(layer.height * responsiveScale)),
-                zIndex: layer.zIndex,
-                borderRadius: Math.max(8, Math.round(layer.radius * responsiveScale)),
-                overflow: "hidden",
-                cursor: editor ? "move" : "default",
-                border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
-                boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
-                transform: `rotate(${layer.rotation}deg)`,
-                ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
-                touchAction: "none",
-                userSelect: "none",
+                inset: 0,
+                transform: `translateX(${previewOffsetX}px)`,
+                transformOrigin: "top left",
               }}
             >
-            {layer.kind === "text" ? (
-              <>
-                {editor && selectedLayerIndex === idx ? (
-                  <div
-                    data-layer-drag-handle="true"
-                    onPointerDown={(event) => startInteraction(event, idx, "move")}
-                    onMouseDown={(event) => startInteraction(event, idx, "move")}
-                    style={{ position: "absolute", top: 6, left: 6, zIndex: 4, cursor: "move" }}
-                  >
-                    <span style={sharedStyles.editorChip}>Drag Text</span>
-                  </div>
-                ) : null}
-                <div
-                  data-layer-editor="true"
-                  data-website-inline-editor="true"
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onPointerDown={(event) => {
-                    if (editor && typeof onChangeBlock === "function" && latestPropsRef.current?.selectedLayerIndex !== idx) {
-                      onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: idx });
-                    }
-                    event.stopPropagation();
-                  }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onBlur={(event) => {
-                    if (shouldSkipToolbarBlur(event)) return;
-                    patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                  }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: justifyForVertical(layer.verticalAlign),
-                    alignItems: "stretch",
-                    textAlign: layer.textAlign,
-                    padding: editor ? "34px 12px 12px" : 12,
-                    color: layer.textColor,
-                    fontSize: compact ? Math.max(16, layer.fontSize - 6) : Math.max(16, Math.round(layer.fontSize * responsiveScale)),
-                    fontWeight: layer.fontWeight,
-                    lineHeight: 1.2,
-                    outline: "none",
-                    cursor: "text",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "Type text here") }}
-                />
-              </>
-            ) : layer.src && !hasLayerImageFailed(layer, idx) ? (
-              <img
-                src={layer.src}
-                alt={`Layer ${idx + 1}`}
-                onError={(event) => handleLayerImageError(event, layer, idx)}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
-              />
-            ) : layer.src ? (
-              renderLayerImageFallback(layer, idx)
-            ) : (
-              <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#475569", fontWeight: 600, background: "linear-gradient(135deg,#e2e8f0,#f8fafc)", pointerEvents: "none" }}>
-                Double-click to upload
-              </div>
-            )}
-
-
-            {layer.kind === "image" ? (
-              <input
-                ref={(el) => {
-                  fileInputRefs.current[idx] = el;
-                }}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(event) => handleFileChange(event, idx)}
-              />
-            ) : null}
-
-            {editor && selectedLayerIndex === idx ? [
-              { key: "nw", left: 6, top: 6, cursor: "nwse-resize" },
-              { key: "ne", right: 6, top: 6, cursor: "nesw-resize" },
-              { key: "sw", left: 6, bottom: 6, cursor: "nesw-resize" },
-              { key: "se", right: 6, bottom: 6, cursor: "nwse-resize" },
-            ].map((handle) => (
+            {visibleLayers.map((layer, idx) => (
               <div
-                key={handle.key}
-                data-resize-handle={handle.key}
-                onPointerDown={(event) => startInteraction(event, idx, "resize", handle.key)}
-                onMouseDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                key={layer.id || `${idx}`}
+                data-image-layer={idx}
+                data-layer-kind={layer.kind || "image"}
+                onPointerDown={(event) => startInteraction(event, idx, "move")}
+                onMouseDown={(event) => startInteraction(event, idx, "move")}
+                onDoubleClick={() => {
+                  if (editor && layer.kind === "image") fileInputRefs.current[idx]?.click();
+                }}
                 style={{
                   position: "absolute",
-                  width: 14,
-                  height: 14,
-                  borderRadius: 999,
-                  background: layer.kind === "image" ? "#f59e0b" : "#0ea5e9",
-                  border: "2px solid #fff",
-                  boxShadow: "0 6px 16px rgba(15,23,42,0.24)",
+                  left: Math.round(layer.x),
+                  top: Math.round(layer.y + previewOffsetY),
+                  width: Math.max(48, Math.round(layer.width)),
+                  height: Math.max(48, Math.round(layer.height)),
+                  zIndex: layer.zIndex,
+                  borderRadius: Math.max(8, Math.round(layer.radius)),
+                  overflow: "hidden",
+                  cursor: editor ? "move" : "default",
+                  border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
+                  boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
+                  transform: `rotate(${layer.rotation}deg)`,
+                  ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
                   touchAction: "none",
-                  ...handle,
+                  userSelect: "none",
                 }}
-              />
-            )) : null}
+              >
+              {layer.kind === "text" ? (
+                <>
+                  {editor && selectedLayerIndex === idx ? (
+                    <div
+                      data-layer-drag-handle="true"
+                      onPointerDown={(event) => startInteraction(event, idx, "move")}
+                      onMouseDown={(event) => startInteraction(event, idx, "move")}
+                      style={{ position: "absolute", top: 6, left: 6, zIndex: 4, cursor: "move" }}
+                    >
+                      <span style={sharedStyles.editorChip}>Drag Text</span>
+                    </div>
+                  ) : null}
+                  <div
+                    data-layer-editor="true"
+                    data-website-inline-editor="true"
+                    contentEditable={editor}
+                    suppressContentEditableWarning
+                    onPointerDown={(event) => {
+                      if (editor && typeof onChangeBlock === "function" && latestPropsRef.current?.selectedLayerIndex !== idx) {
+                        onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: idx });
+                      }
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onBlur={(event) => {
+                      if (shouldSkipToolbarBlur(event)) return;
+                      patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: justifyForVertical(layer.verticalAlign),
+                      alignItems: "stretch",
+                      textAlign: layer.textAlign,
+                      padding: editor ? "34px 12px 12px" : 12,
+                      color: layer.textColor,
+                      fontSize: compact ? Math.max(16, layer.fontSize - 6) : Math.max(16, Math.round(layer.fontSize)),
+                      fontWeight: layer.fontWeight,
+                      lineHeight: 1.2,
+                      outline: "none",
+                      cursor: "text",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "Type text here") }}
+                  />
+                </>
+              ) : layer.src && !hasLayerImageFailed(layer, idx) ? (
+                <img
+                  src={layer.src}
+                  alt={`Layer ${idx + 1}`}
+                  onError={(event) => handleLayerImageError(event, layer, idx)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
+                />
+              ) : layer.src ? (
+                renderLayerImageFallback(layer, idx)
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#475569", fontWeight: 600, background: "linear-gradient(135deg,#e2e8f0,#f8fafc)", pointerEvents: "none" }}>
+                  Double-click to upload
+                </div>
+              )}
 
+
+              {layer.kind === "image" ? (
+                <input
+                  ref={(el) => {
+                    fileInputRefs.current[idx] = el;
+                  }}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(event) => handleFileChange(event, idx)}
+                />
+              ) : null}
+
+              {editor && selectedLayerIndex === idx ? [
+                { key: "nw", left: 6, top: 6, cursor: "nwse-resize" },
+                { key: "ne", right: 6, top: 6, cursor: "nesw-resize" },
+                { key: "sw", left: 6, bottom: 6, cursor: "nesw-resize" },
+                { key: "se", right: 6, bottom: 6, cursor: "nwse-resize" },
+              ].map((handle) => (
+                <div
+                  key={handle.key}
+                  data-resize-handle={handle.key}
+                  onPointerDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                  onMouseDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                  style={{
+                    position: "absolute",
+                    width: 14,
+                    height: 14,
+                    borderRadius: 999,
+                    background: layer.kind === "image" ? "#f59e0b" : "#0ea5e9",
+                    border: "2px solid #fff",
+                    boxShadow: "0 6px 16px rgba(15,23,42,0.24)",
+                    touchAction: "none",
+                    ...handle,
+                  }}
+                />
+              )) : null}
+
+              </div>
+            ))}
             </div>
-          ))}
+          </div>
+          </div>
         </div>
       </div>
     </section>

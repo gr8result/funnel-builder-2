@@ -6013,7 +6013,7 @@ function pickGlobalStyleValue(blocks, keys, fallback) {
   return fallback;
 }
 
-function GlobalStylePanel({ blocks, onApplyGlobal }) {
+function GlobalStylePanel({ blocks, pageWidthMode = "contained", onApplyGlobal }) {
   const [section, setSection] = useState("text");
   const headingFont = pickGlobalStyleValue(blocks, ["headlineFontFamily", "headingFontFamily"], "Arial");
   const bodyFont = pickGlobalStyleValue(blocks, ["fontFamily", "bodyFontFamily"], "Arial");
@@ -6028,7 +6028,7 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
   const cardBackgroundColor = pickGlobalStyleValue(blocks, ["cardBackgroundColor", "itemBackgroundColor"], "#f8fafc");
   const buttonRadius = Number(pickGlobalStyleValue(blocks, ["buttonRadius"], 999));
   const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500));
-  const layoutMode = blocks.some((block) => isFullWidthBackgroundEnabled(block)) ? "full" : "contained";
+  const resolvedPageWidthMode = pageWidthMode === "full" ? "full" : "contained";
   const textAlign = pickGlobalStyleValue(blocks, ["headlineAlignment", "alignment"], "left");
   const colorSchemes = [
     { id: "coastal", label: "Coastal Blue", patch: { primaryColor: "#0ea5e9", headingColor: "#082f49", bodyColor: "#164e63", pageBackground: "linear-gradient(180deg,#f0f9ff 0%,#dbeafe 48%,#eff6ff 100%)", cardBackgroundColor: "rgba(255,255,255,0.82)", buttonTextColor: "#ffffff" } },
@@ -6120,14 +6120,14 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
 
         {section === "layout" ? (
           <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Website Layout</label>
-            <label style={styles.propertyLabel}>Layout Style</label>
-            <select value={layoutMode} onChange={(e) => onApplyGlobal({ layoutMode: e.target.value })} style={styles.propertyInput}>
-              <option value="full">Full Width</option>
+            <label style={styles.propertyLabel}>Page Settings</label>
+            <label style={styles.propertyLabel}>Page Width</label>
+            <select value={resolvedPageWidthMode} onChange={(e) => onApplyGlobal({ pageWidthMode: e.target.value })} style={styles.propertyInput}>
               <option value="contained">Contained</option>
+              <option value="full">Full Width</option>
             </select>
             <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <NumberField label="Page Width" value={pageWidth} min={720} max={5600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
+              <NumberField label="Contained Width" value={pageWidth} min={720} max={5600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
               <NumberField label="Button Radius" value={buttonRadius >= 999 ? 32 : buttonRadius} min={0} max={40} onChange={(value) => onApplyGlobal({ buttonRadius: value >= 32 ? 999 : value })} />
             </div>
           </div>

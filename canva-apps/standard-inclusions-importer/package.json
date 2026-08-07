@@ -1,0 +1,26 @@
+{
+  "name": "send-to-gr8-result-standard-inclusions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "canva apps:dev",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@canva/asset": "^2.3.0",
+    "@canva/design": "^2.10.1",
+    "@canva/app-ui-kit": "^5.14.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7",
+    "typescript": "^5.9.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@canva/cli": "^2.8.2",
+    "@types/react": "^19.2.8",
+    "@types/react-dom": "^19.2.3"
+  }
+}

@@ -2227,6 +2227,21 @@ export default function VisualBuilderPage() {
     }, successMessage, { pageName, saveSource: options?.saveSource || "autosave" });
   }
 
+  function updateActivePageSettings(patch = {}, options = {}) {
+    const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+    const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    let matched = false;
+    const nextPages = (Array.isArray(currentProject?.pages) ? currentProject.pages : []).map((page) => {
+      const matches = page?.name === pageName || slugify(page?.name || "") === slugify(pageName) || slugify(page?.slug || "") === slugify(pageName);
+      if (matches) matched = true;
+      return matches ? { ...page, ...patch } : page;
+    });
+    const pages = matched
+      ? nextPages
+      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...patch }];
+    saveProjectPatch({ pages }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
+  }
+
   // forceSaveBlockPage: used by the manual Save button / Ctrl+S.
   // Awaits the cloud sync and surfaces errors so the user knows if data didn't reach the server.
   async function forceSaveBlockPage(blocks, options = {}) {
@@ -3376,6 +3391,7 @@ export default function VisualBuilderPage() {
                     onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
                     canSaveTemplates={canSaveTemplates}
                     onUpdateGlobalBlock={updateGlobalBlock}
+                    onUpdatePageSettings={(patch, options = {}) => updateActivePageSettings(patch, { ...options, pageName: activeProjectPageName })}
                     onOpenMediaLibrary={openMediaLibrary}
                     onRefreshAssetLibrary={refreshSharedLibrary}
                     onRegisterPreviewActions={(actions) => {

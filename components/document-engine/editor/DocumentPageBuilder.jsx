@@ -10,13 +10,14 @@ import { relayoutDocxFlowDocument } from "../../../lib/standard-inclusions/docxI
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
 
-export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onChange, onStatus }) {
+export default function DocumentPageBuilder({ document, workbook = null, readonly = false, onBack = null, onChange, onStatus }) {
   const [draft, setDraft] = useState(() => hydrateDocument(document));
   const [mode, setMode] = useState("preview");
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
   const dragRef = useRef(null);
   const imageUploadRef = useRef(null);
+  const imageReplaceObjectIdRef = useRef("");
   const exportPagesRef = useRef(null);
   const activePage = getActivePage(draft);
   const selectedObjectId = draft.selection?.lastSelectedObjectId || "";
@@ -216,7 +217,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     updateActivePage((page) => updateObjectOnPage(page, selectedObject.id, (object) => ({
       ...object,
       style: { ...object.style, ...stylePatch },
-      data: { ...object.data, edited: object.data?.overlayMode === "pptx-text-activation" ? true : object.data?.edited },
+      data: { ...object.data, edited: ["pptx-text-activation", "canva-text-activation"].includes(object.data?.overlayMode) ? true : object.data?.edited },
     })), message);
   }
 
@@ -295,10 +296,17 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   function replaceSelectedImage(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !selectedObject || !["image", "logo"].includes(selectedObject.type)) return;
+    const page = getActivePage(draft);
+    const targetId = imageReplaceObjectIdRef.current || selectedObject?.id || "";
+    imageReplaceObjectIdRef.current = "";
+    const targetObject = page?.objects?.find((object) => object.id === targetId) || selectedObject;
+    if (!file || !targetObject || !["image", "logo"].includes(targetObject.type)) return;
     const reader = new FileReader();
     reader.onload = () => {
-      updateSelectedObject({ data: { imageRef: reader.result, alt: file.name, edited: true } });
+      updateActivePage((currentPage) => updateObjectOnPage(currentPage, targetObject.id, (object) => ({
+        ...object,
+        data: { ...object.data, imageRef: reader.result, alt: file.name, edited: true },
+      })), "Image replaced.");
       onStatus?.("Image replaced.");
     };
     reader.readAsDataURL(file);
@@ -310,6 +318,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         <strong>Pages</strong>
         {draft.pages.map((page, index) => (
           <button key={page.id} type="button" style={{ ...styles.pageButton, ...(page.id === draft.activePageId ? styles.pageButtonActive : {}) }} onClick={() => selectPage(page.id)}>
+            {page.background?.imageRef ? <img src={page.background.imageRef} alt="" style={styles.pageThumb} /> : null}
             <span>{index + 1}. {page.name}</span>
             <small>{page.objects.length} editable block{page.objects.length === 1 ? "" : "s"}</small>
           </button>
@@ -327,6 +336,9 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
 
       <main style={styles.workspace}>
         <div style={styles.toolbar}>
+          {onBack ? (
+            <button type="button" style={styles.secondaryButton} onClick={onBack}>Back</button>
+          ) : null}
           <button
             type="button"
             style={mode === "edit" ? styles.primaryButton : styles.secondaryButton}
@@ -374,6 +386,11 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             onTextEditStart={(objectId) => {
               commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
               setTextEditingObjectId(objectId);
+            }}
+            onObjectDoubleClick={(objectId) => {
+              imageReplaceObjectIdRef.current = objectId;
+              commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
+              imageUploadRef.current?.click();
             }}
             onTextCommit={commitTextEdit}
             onTableCellCommit={commitTableCellEdit}
@@ -659,6 +676,7 @@ const styles = {
   pageList: { position: "sticky", top: 90, display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10, maxHeight: "calc(100vh - 120px)", overflow: "auto" },
   pageButton: { width: "100%", border: "1px solid #d1fae5", background: "#f8fafc", color: "#0f172a", borderRadius: 8, padding: "9px 10px", display: "grid", gap: 3, textAlign: "left", fontWeight: 900, cursor: "pointer" },
   pageButtonActive: { background: "#166534", color: "#ffffff", borderColor: "#166534" },
+  pageThumb: { width: "100%", aspectRatio: "794 / 1123", objectFit: "cover", border: "1px solid #cbd5e1", borderRadius: 6, background: "#ffffff" },
   workspace: { display: "grid", gap: 12, minWidth: 0 },
   toolbar: { display: "flex", flexWrap: "wrap", gap: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 12, padding: 10 },
   addGroup: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, borderLeft: "1px solid #bbf7d0", paddingLeft: 8, color: "#14532d", fontSize: 12, fontWeight: 950 },

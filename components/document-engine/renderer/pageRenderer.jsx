@@ -11,6 +11,7 @@ export function PageRenderer({
   onSelectObject,
   onResizeObject,
   onTextEditStart,
+  onObjectDoubleClick,
   onTextCommit,
   onTableCellCommit,
   exportMode = false,
@@ -44,6 +45,7 @@ export function PageRenderer({
           onSelect={onSelectObject}
           onResize={onResizeObject}
           onTextEditStart={onTextEditStart}
+          onObjectDoubleClick={onObjectDoubleClick}
           onTextCommit={onTextCommit}
           onTableCellCommit={onTableCellCommit}
         />

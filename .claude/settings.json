@@ -8,7 +8,11 @@
       "Read(//d/dev/**)",
       "Bash(node modules/takeoff-v2/tests/rotation.test.mjs)",
       "Bash(node modules/takeoff-v2/tests/coordinateTransform.test.mjs)",
-      "Bash(node modules/takeoff-v2/tests/planStore.test.mjs)"
+      "Bash(node modules/takeoff-v2/tests/planStore.test.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://app.gr8result.digital/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-1.png\" --max-time 15)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://gr8result.solutions/crm\" --max-time 15)",
+      "Bash(git check-ignore *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/api/standard-inclusions/onlyoffice/upload-pptx -X POST -H \"Content-Type: application/json\" -d '{}')"
     ]
   }
 }
