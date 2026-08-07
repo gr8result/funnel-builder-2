@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import WebsitePreviewSurface from "../../../../../components/website-builder/WebsitePreviewSurface";
 
 function SiteLoader() {
   const r = 38;
@@ -53,30 +53,98 @@ import {
   getWebsiteProject,
   restoreWebsiteProjectFromBackup,
 } from "../../../../../lib/website-builder/projectStore";
+import {
+  buildWebsitePreviewUrl,
+  canonicalPreviewPageSlug,
+  resolveCanonicalPreviewPageSlug,
+} from "../../../../../lib/website-builder/previewRoutes";
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
 import { fetchWebsiteProjectFromServer } from "../../../../../lib/website-builder/remoteProjects";
 import { supabase } from "../../../../../lib/supabaseClient";
 
-const WebsitePreviewSurface = dynamic(() => import("../../../../../components/website-builder/WebsitePreviewSurface"), {
-  ssr: false,
-  loading: () => <SiteLoader />,
-});
-
 const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
+const PREVIEW_LOAD_TIMEOUT_MS = 12000;
+const PREVIEW_RENDER_COMMIT_TIMEOUT_MS = 8000;
 
-function slugify(v) {
-  return String(v || "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+function createPreviewFailure(stage, overrides = {}) {
+  return {
+    title: "Preview failed to load",
+    stage,
+    status: overrides.status || "ERROR",
+    message: overrides.message || "Preview data could not be resolved.",
+    requestUrl: overrides.requestUrl || "",
+    details: overrides.details || {},
+  };
+}
+
+function normalizePreviewProjectPayload(inputProject, pageKey = "") {
+  if (!inputProject || typeof inputProject !== "object") return null;
+
+  const project = { ...inputProject };
+  if ((!Array.isArray(project.pages) || !project.pages.length) && project.page && typeof project.page === "object") {
+    const pageName = String(project.page.name || project.page.title || "Home").trim() || "Home";
+    project.pages = [{
+      id: project.page.id || canonicalPreviewPageSlug(project.page.slug || pageName) || "home",
+      name: pageName,
+      slug: canonicalPreviewPageSlug(project.page.slug || pageName) || "home",
+    }];
+  }
+
+  if ((!Array.isArray(project.pages) || !project.pages.length) && pageKey) {
+    const fallbackName = String(pageKey || "Home").trim() || "Home";
+    project.pages = [{
+      id: canonicalPreviewPageSlug(fallbackName) || "home",
+      name: fallbackName,
+      slug: canonicalPreviewPageSlug(fallbackName) || "home",
+    }];
+  }
+
+  const primaryPageName = String(project?.pages?.[0]?.name || "Home").trim() || "Home";
+  if (!project.pageBlocks || typeof project.pageBlocks !== "object") project.pageBlocks = {};
+  if (Array.isArray(project.blocks) && !Array.isArray(project.pageBlocks[primaryPageName])) {
+    project.pageBlocks[primaryPageName] = project.blocks;
+  }
+  if (!project.pagesContent || typeof project.pagesContent !== "object") project.pagesContent = {};
+  if (!project.chaiData || typeof project.chaiData !== "object") project.chaiData = {};
+
+  return project;
 }
 
 function resolveProjectPageName(project, pageKey = "") {
-  const requested = slugify(pageKey || project?.pages?.[0]?.name || "Home");
+  const requested = canonicalPreviewPageSlug(pageKey || project?.pages?.[0]?.name || "Home");
   return (Array.isArray(project?.pages) ? project.pages : []).find((entry) => (
-    slugify(entry?.name) === requested || slugify(entry?.slug) === requested
+    canonicalPreviewPageSlug(entry?.id) === requested
+      || canonicalPreviewPageSlug(entry?.pageId) === requested
+      || resolveCanonicalPreviewPageSlug(entry, { project }) === requested
+      || canonicalPreviewPageSlug(entry?.name) === requested
   ))?.name || "";
+}
+
+function resolveProjectPageEntry(project, pageKey = "") {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const requested = canonicalPreviewPageSlug(pageKey || pages[0]?.slug || pages[0]?.name || "home");
+  return pages.find((entry) => (
+    canonicalPreviewPageSlug(entry?.id) === requested
+      || canonicalPreviewPageSlug(entry?.pageId) === requested
+      || savedProjectPageSlug(project, entry) === requested
+      || canonicalPreviewPageSlug(entry?.name) === requested
+  )) || pages[0] || null;
+}
+
+function resolveRequestedProjectPage(project, pageKey = "") {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const requested = canonicalPreviewPageSlug(pageKey || "");
+  if (!requested) return null;
+  return pages.find((entry) => (
+    canonicalPreviewPageSlug(entry?.id) === requested
+      || canonicalPreviewPageSlug(entry?.pageId) === requested
+      || savedProjectPageSlug(project, entry) === requested
+      || canonicalPreviewPageSlug(entry?.name) === requested
+  )) || null;
+}
+
+function savedProjectPageSlug(project = {}, page = {}) {
+  return resolveCanonicalPreviewPageSlug(page, { project });
 }
 
 function pickLayoutWidth(blocks, fallback = 1500) {
@@ -176,21 +244,48 @@ function isLegacyAiStarterProject(project) {
   return String(homeBlocks[0]?.type || "") === "nav-bar";
 }
 
-export default function ProjectPreviewPage() {
+export function ProjectPreviewPage() {
   const router = useRouter();
-  const { id, page, viewport, previewToken, emergencyDraft } = router.query;
+  const {
+    id: routeProjectId,
+    projectId: queryProjectId,
+    page,
+    viewport,
+    previewToken,
+    emergencyDraft,
+  } = router.query;
+  const id = String(routeProjectId || queryProjectId || "").trim();
 
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [project, setProject] = useState(null);
   const [loadingDone, setLoadingDone] = useState(false);
+  const [loadingIssue, setLoadingIssue] = useState(null);
+  const [surfaceReady, setSurfaceReady] = useState(false);
+  const loadStartedAtRef = useRef(0);
+  const renderCommitStartedAtRef = useRef(0);
   const [retryCount, setRetryCount] = useState(0);
   const [assets, setAssets] = useState({ logo: null, images: [] });
   const projectSnapshotRef = useRef("");
   const assetSnapshotRef = useRef("");
 
   function syncStateIfChanged(nextProject, nextAssets, options = {}) {
-    const nextProjectSnapshot = nextProject ? JSON.stringify(nextProject) : "";
+    let nextProjectSnapshot = "";
+    try {
+      nextProjectSnapshot = nextProject ? JSON.stringify(nextProject) : "";
+    } catch (error) {
+      console.warn("[preview-ui] could not stringify project snapshot; applying state directly", error);
+      projectSnapshotRef.current = "";
+      setProject(nextProject || null);
+      setSurfaceReady(false);
+      if (nextProject) {
+        console.log("[preview-ui] set preview data", {
+          source: "fallback-no-snapshot-stringify",
+          pageCount: Array.isArray(nextProject?.pages) ? nextProject.pages.length : 0,
+          pageBlocksKeys: Object.keys(nextProject?.pageBlocks || {}),
+        });
+      }
+    }
     const nextAssetSnapshot = nextAssets ? JSON.stringify(nextAssets) : "";
 
     if (nextAssetSnapshot !== assetSnapshotRef.current) {
@@ -201,7 +296,23 @@ export default function ProjectPreviewPage() {
     if (nextProjectSnapshot !== projectSnapshotRef.current && (nextProject || options.allowProjectClear)) {
       projectSnapshotRef.current = nextProjectSnapshot;
       setProject(nextProject || null);
+      setSurfaceReady(false);
+      if (nextProject) {
+        const requestedPageName = resolveProjectPageName(nextProject, String(page || ""));
+        const requestedBlocks = Array.isArray(nextProject?.pageBlocks?.[requestedPageName]) ? nextProject.pageBlocks[requestedPageName] : [];
+        console.log("[preview-ui] set preview data", {
+          requestedPageName,
+          blockCount: requestedBlocks.length,
+          blockTypes: requestedBlocks.slice(0, 30).map((block) => String(block?.type || "")),
+        });
+      }
     }
+  }
+
+  function logPreviewStage(stage, details = {}) {
+    const startedAt = loadStartedAtRef.current || Date.now();
+    const elapsedMs = Date.now() - startedAt;
+    console.info(`[preview] ${stage}`, { elapsedMs, projectId: id, page: String(page || ""), ...details });
   }
 
   function syncAssetsIfChanged(nextAssets) {
@@ -252,19 +363,41 @@ export default function ProjectPreviewPage() {
     let cancelled = false;
 
     const loadPreviewProject = async () => {
+      loadStartedAtRef.current = Date.now();
+      setLoadingIssue(null);
+      setSurfaceReady(false);
+      logPreviewStage("load start", {
+        previewTokenPresent: Boolean(previewToken),
+        emergencyDraft: String(emergencyDraft || "") === "1",
+        hasSessionToken: Boolean(session?.access_token),
+      });
+      logPreviewStage("token lookup start");
       const snapshotProject = readPreviewSnapshot(id, previewToken);
-      let nextProject = snapshotProject || null;
-      if (snapshotProject && !cancelled) {
-        nextProject = snapshotProject;
-        syncStateIfChanged(snapshotProject, getWebsiteBuilderAssets());
+      const normalizedSnapshotProject = normalizePreviewProjectPayload(snapshotProject, String(page || ""));
+      logPreviewStage("token lookup complete", { snapshotFound: Boolean(snapshotProject) });
+      if (normalizedSnapshotProject) {
+        console.log("[preview-ui] response received", {
+          source: "preview-token-snapshot",
+          keys: Object.keys(normalizedSnapshotProject || {}),
+          pages: (normalizedSnapshotProject.pages || []).map((entry) => ({ name: entry?.name || "", slug: entry?.slug || "" })),
+        });
+      }
+      let nextProject = normalizedSnapshotProject || null;
+      if (normalizedSnapshotProject && !cancelled) {
+        nextProject = normalizedSnapshotProject;
+        syncStateIfChanged(normalizedSnapshotProject, getWebsiteBuilderAssets());
         setLoadingDone(true);
+        console.log("[preview-ui] set loading false", { source: "preview-token-snapshot" });
+        logPreviewStage("response complete", { source: "preview-token-snapshot" });
       }
 
       // Token previews are one-off snapshots opened directly from the builder.
       // Normal/reloaded previews must render the saved split file from the server,
       // not stale browser storage.
       if (!nextProject && previewToken) {
+        logPreviewStage("local project lookup start", { reason: "token snapshot missing" });
         nextProject = refreshPreviewState(id);
+        logPreviewStage("local project lookup complete", { found: Boolean(nextProject) });
       }
 
       if (String(emergencyDraft || "") === "1") {
@@ -279,9 +412,14 @@ export default function ProjectPreviewPage() {
         const draftPageName = resolveProjectPageName(baseProject, page || "") || String(page || "Home");
         const emergency = await fetchEmergencyPageDraft(id, draftPageName);
         if (emergency && !cancelled) {
-          nextProject = applyEmergencyDraftToProject(baseProject, emergency.pageName || draftPageName, emergency);
+          nextProject = normalizePreviewProjectPayload(
+            applyEmergencyDraftToProject(baseProject, emergency.pageName || draftPageName, emergency),
+            String(page || "")
+          );
           syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
           setLoadingDone(true);
+          console.log("[preview-ui] set loading false", { source: "emergency-draft" });
+          logPreviewStage("response complete", { source: "emergency-draft", pageName: draftPageName });
         }
       }
 
@@ -304,13 +442,25 @@ export default function ProjectPreviewPage() {
       // server with an equal or newer timestamp; onlyIfNewer:true alone is not
       // sufficient in that case — prefer local blocks explicitly.
       if (session?.access_token) {
+        logPreviewStage("project lookup start", { source: "server", requestUrl: "/api/website-builder/projects" });
         try {
-          const remoteProject = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
-          if (remoteProject && !cancelled) {
+          const remoteProject = await fetchWebsiteProjectFromServer(session, id, {
+            pageName: page || "",
+            timeoutMs: 10000,
+          });
+          const normalizedRemoteProject = normalizePreviewProjectPayload(remoteProject, String(page || ""));
+          logPreviewStage("project lookup complete", {
+            source: "server",
+            found: Boolean(normalizedRemoteProject),
+            pageCount: Array.isArray(normalizedRemoteProject?.pages) ? normalizedRemoteProject.pages.length : 0,
+          });
+          if (normalizedRemoteProject && !cancelled) {
             if (!previewToken && String(emergencyDraft || "") !== "1") {
-              nextProject = remoteProject;
-              syncStateIfChanged(remoteProject, getWebsiteBuilderAssets());
+              nextProject = normalizedRemoteProject;
+              syncStateIfChanged(normalizedRemoteProject, getWebsiteBuilderAssets());
               setLoadingDone(true);
+              console.log("[preview-ui] set loading false", { source: "server-project" });
+              logPreviewStage("response complete", { source: "server-project" });
               return;
             }
             // Re-read local now that the async fetch has returned — another tab
@@ -318,16 +468,16 @@ export default function ProjectPreviewPage() {
             const localNow = nextProject || getWebsiteProject(id);
             const localUpdatedAt = Date.parse(localNow?.updatedAt || localNow?.createdAt || 0) || 0;
             const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
-            const remotePageName = resolveProjectPageName(remoteProject, page || "");
+            const remotePageName = resolveProjectPageName(normalizedRemoteProject, page || "");
             const localPageName = resolveProjectPageName(localNow, page || "") || remotePageName;
-            const remotePageBlocks = remotePageName ? remoteProject?.pageBlocks?.[remotePageName] : null;
+            const remotePageBlocks = remotePageName ? normalizedRemoteProject?.pageBlocks?.[remotePageName] : null;
             const hasLocalBlocks = localNow && Object.keys(localNow.pageBlocks || {}).length > 0;
             const shouldPreferRemoteRequestedPage = Array.isArray(remotePageBlocks)
               && (!previewToken || remoteUpdatedAt > localUpdatedAt);
             // Merge: keep server-side metadata (publish status, custom domain,
             // pinned blocks, etc.) while preserving genuinely newer local page content.
             const mergedForCache = hasLocalBlocks ? {
-              ...remoteProject,
+              ...normalizedRemoteProject,
               pageBlocks: {
                 ...(localNow.pageBlocks || {}),
                 ...(shouldPreferRemoteRequestedPage && localPageName ? { [localPageName]: remotePageBlocks } : {}),
@@ -335,18 +485,18 @@ export default function ProjectPreviewPage() {
               pagesContent: {
                 ...(localNow.pagesContent || {}),
                 ...(shouldPreferRemoteRequestedPage && localPageName
-                  ? { [localPageName]: remoteProject?.pagesContent?.[remotePageName] || "" }
+                  ? { [localPageName]: normalizedRemoteProject?.pagesContent?.[remotePageName] || "" }
                   : {}),
               },
               chaiData: {
                 ...(localNow.chaiData || {}),
-                ...(shouldPreferRemoteRequestedPage && localPageName && remoteProject?.chaiData?.[remotePageName]
-                  ? { [localPageName]: remoteProject.chaiData[remotePageName] }
+                ...(shouldPreferRemoteRequestedPage && localPageName && normalizedRemoteProject?.chaiData?.[remotePageName]
+                  ? { [localPageName]: normalizedRemoteProject.chaiData[remotePageName] }
                   : {}),
               },
               ...("globalNavBlock" in Object(localNow) ? { globalNavBlock: localNow.globalNavBlock } : {}),
               ...("globalFooterBlock" in Object(localNow) ? { globalFooterBlock: localNow.globalFooterBlock } : {}),
-            } : remoteProject;
+            } : normalizedRemoteProject;
             const cached = cachePreviewProjectSafely(mergedForCache, { onlyIfNewer: false });
             // Only update nextProject if cacheWebsiteProject returned something —
             // never overwrite a good local project with a null result.
@@ -356,6 +506,10 @@ export default function ProjectPreviewPage() {
             }
           }
         } catch (error) {
+          logPreviewStage("project lookup failed", {
+            source: "server",
+            message: error?.message || "Unknown server lookup error",
+          });
           console.warn("Could not load preview draft from the server", error);
         }
       }
@@ -366,7 +520,9 @@ export default function ProjectPreviewPage() {
       // session?.access_token arrives and will load the project from the server then.
       if (!cancelled) {
         if (!nextProject) {
-          if (!session?.access_token) return; // wait for auth to restore, then re-run
+          if (!session?.access_token) {
+            logPreviewStage("project lookup skipped", { reason: "no-session-token" });
+          }
 
           // Retry up to 3 times (800 ms apart) before giving up. This covers
           // transient server errors, token refresh races, and the edge case where
@@ -393,9 +549,14 @@ export default function ProjectPreviewPage() {
 
             // Re-try server fetch
             try {
-              const retryRemote = await fetchWebsiteProjectFromServer(session, id, { pageName: page || "" });
-              if (retryRemote && !cancelled) {
-                const cached = cachePreviewProjectSafely(retryRemote, { onlyIfNewer: false });
+              if (!session?.access_token) continue;
+              const retryRemote = await fetchWebsiteProjectFromServer(session, id, {
+                pageName: page || "",
+                timeoutMs: 10000,
+              });
+                const normalizedRetryRemote = normalizePreviewProjectPayload(retryRemote, String(page || ""));
+                if (normalizedRetryRemote && !cancelled) {
+                  const cached = cachePreviewProjectSafely(normalizedRetryRemote, { onlyIfNewer: false });
                 if (cached) {
                   nextProject = cached;
                   syncStateIfChanged(nextProject, getWebsiteBuilderAssets());
@@ -408,10 +569,41 @@ export default function ProjectPreviewPage() {
           }
 
           if (!nextProject && !cancelled) {
+            const failedRequestUrl = `/api/website-builder/projects?projectId=${encodeURIComponent(String(id || ""))}&page=${encodeURIComponent(String(page || ""))}`;
+            if (!session?.access_token) {
+              setLoadingIssue(createPreviewFailure("auth", {
+                status: "NO_SESSION",
+                requestUrl: failedRequestUrl,
+                message: "Preview token snapshot was not found and no authenticated session is available to load the saved project.",
+                details: {
+                  previewTokenPresent: Boolean(previewToken),
+                  snapshotExpectedKey: `${PREVIEW_SNAPSHOT_STORAGE_PREFIX}${id}:${String(previewToken || "")}`,
+                },
+              }));
+            } else {
+              setLoadingIssue(createPreviewFailure("project-lookup", {
+                status: "NOT_FOUND",
+                requestUrl: failedRequestUrl,
+                message: "The preview project could not be loaded from storage or server after retries.",
+              }));
+            }
             syncStateIfChanged(null, getWebsiteBuilderAssets(), { allowProjectClear: true });
           }
         }
+        if (nextProject) {
+          const resolvedPageName = resolveProjectPageName(nextProject, page || "");
+          const resolvedBlocks = Array.isArray(nextProject?.pageBlocks?.[resolvedPageName]) ? nextProject.pageBlocks[resolvedPageName] : [];
+          logPreviewStage("page lookup complete", {
+            pageName: resolvedPageName,
+            blocks: resolvedBlocks.length,
+          });
+          logPreviewStage("blocks parsed", { count: resolvedBlocks.length });
+          logPreviewStage("asset resolution complete", {
+            imageCount: Array.isArray(getWebsiteBuilderAssets()?.images) ? getWebsiteBuilderAssets().images.length : 0,
+          });
+        }
         if (!cancelled) setLoadingDone(true);
+        if (!cancelled) console.log("[preview-ui] set loading false", { source: "finalize" });
       }
     };
 
@@ -421,6 +613,59 @@ export default function ProjectPreviewPage() {
       cancelled = true;
     };
   }, [id, authReady, session?.access_token, retryCount, previewToken, page, emergencyDraft]);
+
+  useEffect(() => {
+    if (!project || loadingIssue || surfaceReady) return undefined;
+    renderCommitStartedAtRef.current = Date.now();
+    const timer = window.setTimeout(() => {
+      setLoadingIssue((current) => current || createPreviewFailure("render-commit", {
+        status: "RENDER_NOT_COMMITTED",
+        message: "Preview data loaded but the preview UI did not commit in time.",
+        requestUrl: String(router.asPath || ""),
+        details: {
+          elapsedMs: Date.now() - (renderCommitStartedAtRef.current || Date.now()),
+          pageSlug: String(page || ""),
+          blockCount: (() => {
+            const activePageName = resolveProjectPageName(project, String(page || ""));
+            return Array.isArray(project?.pageBlocks?.[activePageName]) ? project.pageBlocks[activePageName].length : 0;
+          })(),
+        },
+      }));
+      console.error("[preview-ui] render commit timeout", {
+        elapsedMs: Date.now() - (renderCommitStartedAtRef.current || Date.now()),
+      });
+    }, PREVIEW_RENDER_COMMIT_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [project, loadingIssue, surfaceReady, router.asPath, page]);
+
+  useEffect(() => {
+    console.log("[preview-ui] render state", {
+      loadingDone,
+      hasProject: Boolean(project),
+      hasLoadingIssue: Boolean(loadingIssue),
+      surfaceReady,
+      authReady,
+      hasSessionToken: Boolean(session?.access_token),
+      previewTokenPresent: Boolean(previewToken),
+      page: String(page || ""),
+      viewport: String(viewport || "desktop"),
+    });
+  }, [loadingDone, project, loadingIssue, surfaceReady, authReady, session?.access_token, previewToken, page, viewport]);
+
+  useEffect(() => {
+    if (loadingDone || project) return undefined;
+    const timer = window.setTimeout(() => {
+      setLoadingIssue((current) => current || createPreviewFailure("timeout", {
+        status: "TIMEOUT",
+        requestUrl: `/api/website-builder/projects?projectId=${encodeURIComponent(String(id || ""))}&page=${encodeURIComponent(String(page || ""))}`,
+        message: `Preview data did not resolve within ${PREVIEW_LOAD_TIMEOUT_MS / 1000}s.`,
+      }));
+      setLoadingDone(true);
+      logPreviewStage("load timeout", { timeoutMs: PREVIEW_LOAD_TIMEOUT_MS });
+    }, PREVIEW_LOAD_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [loadingDone, project, id, page]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -486,7 +731,11 @@ export default function ProjectPreviewPage() {
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
     const requested = String(page || "");
-    return project.pages.find((p) => slugify(p.name) === requested) || project.pages[0];
+    return resolveProjectPageEntry(project, requested);
+  }, [project, page]);
+  const requestedPageEntry = useMemo(() => {
+    if (!project?.pages?.length || !String(page || "").trim()) return null;
+    return resolveRequestedProjectPage(project, String(page || ""));
   }, [project, page]);
   const previewViewport = ["mobile", "tablet", "desktop"].includes(String(viewport || "").toLowerCase())
     ? String(viewport).toLowerCase()
@@ -496,15 +745,19 @@ export default function ProjectPreviewPage() {
     if (!project?.id || !project?.pages?.length) return null;
 
     const pageMap = project.pages.reduce((acc, entry) => {
-      const key = slugify(entry?.name || "");
+      const key = savedProjectPageSlug(project, entry);
       if (!key) return acc;
-      acc[key] = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(key)}&viewport=${encodeURIComponent(previewViewport)}`;
+      acc[key] = buildWebsitePreviewUrl({
+        projectId: project.id,
+        pageSlug: key,
+        viewport: previewViewport,
+      });
       return acc;
     }, {});
 
     return {
-      basePath: `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewViewport)}`,
-      currentPageKey: slugify(active?.name || page || "home"),
+      basePath: buildWebsitePreviewUrl({ projectId: project.id, viewport: previewViewport }),
+      currentPageKey: savedProjectPageSlug(project, active) || canonicalPreviewPageSlug(active?.id || active?.name || page || "home"),
       pageMap,
     };
   }, [project, active, page, previewViewport]);
@@ -541,19 +794,87 @@ export default function ProjectPreviewPage() {
       ? Math.min(920, layoutWidth)
       : layoutWidth;
 
+  if (project && String(page || "").trim() && !requestedPageEntry) {
+    const requestedPageSlug = canonicalPreviewPageSlug(String(page || ""));
+    return (
+      <main style={styles.page("#0f172a")}>
+        <div style={{ ...styles.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, textAlign: "center" }}>
+          <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>Preview page not found</h1>
+          <p style={{ color: "#94a3b8", fontSize: 16, margin: 0, maxWidth: 520, lineHeight: 1.6 }}>
+            The requested page slug could not be resolved in this project.
+          </p>
+          {process.env.NODE_ENV !== "production" ? (
+            <pre style={{
+              width: "min(860px, 100%)",
+              margin: 0,
+              padding: 12,
+              borderRadius: 10,
+              border: "1px solid rgba(148,163,184,0.35)",
+              background: "rgba(2,6,23,0.7)",
+              color: "#cbd5e1",
+              textAlign: "left",
+              fontSize: 13,
+              lineHeight: 1.45,
+              whiteSpace: "pre-wrap",
+            }}>{JSON.stringify({
+              diagnostic: "website-preview-page-not-found",
+              route: String(router.asPath || ""),
+              projectId: id,
+              requestedPage: String(page || ""),
+              requestedPageSlug,
+              availablePages: (Array.isArray(project?.pages) ? project.pages : []).map((entry) => ({
+                id: entry?.id || "",
+                name: entry?.name || "",
+                slug: savedProjectPageSlug(project, entry) || "",
+              })),
+            }, null, 2)}</pre>
+          ) : null}
+        </div>
+      </main>
+    );
+  }
+
   if (!project) {
-    if (!loadingDone) return <SiteLoader />;
+    if (!loadingDone && !loadingIssue) return <SiteLoader />;
     const builderUrl = id
       ? `/modules/website-builder/visual-builder?projectId=${encodeURIComponent(String(id))}`
       : "/modules/website-builder";
+    const localProject = id ? getWebsiteProject(id) : null;
+    const hasSnapshot = id && previewToken ? Boolean(readPreviewSnapshot(id, previewToken)) : false;
     return (
       <main style={styles.page("#0f172a")}>
         <div style={{ ...styles.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, textAlign: "center" }}>
           <div style={{ fontSize: 48, lineHeight: 1 }}>??</div>
-          <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>Project not found</h1>
+          <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>{loadingIssue?.title || "Project not found"}</h1>
           <p style={{ color: "#94a3b8", fontSize: 16, margin: 0, maxWidth: 380, lineHeight: 1.6 }}>
-            This project could not be loaded. It may have been deleted, or there may be a temporary connection issue.
+            {loadingIssue?.message || "This project could not be loaded. It may have been deleted, or there may be a temporary connection issue."}
           </p>
+          {process.env.NODE_ENV !== "production" ? (
+            <pre style={{
+              width: "min(860px, 100%)",
+              margin: 0,
+              padding: 12,
+              borderRadius: 10,
+              border: "1px solid rgba(148,163,184,0.35)",
+              background: "rgba(2,6,23,0.7)",
+              color: "#cbd5e1",
+              textAlign: "left",
+              fontSize: 13,
+              lineHeight: 1.45,
+              whiteSpace: "pre-wrap",
+            }}>{JSON.stringify({
+              diagnostic: "website-preview-project-not-found",
+              route: String(router.asPath || ""),
+              projectId: id,
+              requestedPage: String(page || ""),
+              requestedPageSlug: canonicalPreviewPageSlug(page || ""),
+              previewTokenPresent: Boolean(previewToken),
+              previewSnapshotFound: hasSnapshot,
+              loadingIssue,
+              localProjectFound: Boolean(localProject),
+              emergencyDraft: String(emergencyDraft || "") === "1",
+            }, null, 2)}</pre>
+          ) : null}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
             <button
               type="button"
@@ -574,8 +895,68 @@ export default function ProjectPreviewPage() {
     );
   }
 
-  return <WebsitePreviewSurface project={project} page={page} viewport={viewport} assets={assets} />;
+  if (loadingIssue?.stage === "render-commit") {
+    return (
+      <main style={styles.page("#0f172a")}>
+        <div style={{ ...styles.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, textAlign: "center" }}>
+          <div style={{ fontSize: 48, lineHeight: 1 }}>??</div>
+          <h1 style={{ ...styles.h1, color: "#f8fafc", fontSize: 24, paddingTop: 0 }}>{loadingIssue?.title || "Preview failed to load"}</h1>
+          <p style={{ color: "#94a3b8", fontSize: 16, margin: 0, maxWidth: 520, lineHeight: 1.6 }}>{loadingIssue?.message}</p>
+          {process.env.NODE_ENV !== "production" ? (
+            <pre style={{
+              width: "min(860px, 100%)",
+              margin: 0,
+              padding: 12,
+              borderRadius: 10,
+              border: "1px solid rgba(148,163,184,0.35)",
+              background: "rgba(2,6,23,0.7)",
+              color: "#cbd5e1",
+              textAlign: "left",
+              fontSize: 13,
+              lineHeight: 1.45,
+              whiteSpace: "pre-wrap",
+            }}>{JSON.stringify({
+              diagnostic: "website-preview-render-not-committed",
+              loadingIssue,
+              route: String(router.asPath || ""),
+            }, null, 2)}</pre>
+          ) : null}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
+            <button
+              type="button"
+              onClick={() => { setLoadingIssue(null); setSurfaceReady(false); setRetryCount((n) => n + 1); }}
+              style={{ padding: "10px 20px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: 16 }}
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  console.log("[preview-ui] blocks", {
+    pageSlug: canonicalPreviewPageSlug(String(page || "")),
+    pageName: active?.name || "",
+    blockCount: Array.isArray(pageBlocks) ? pageBlocks.length : 0,
+    blockTypes: Array.isArray(pageBlocks) ? pageBlocks.slice(0, 30).map((block) => String(block?.type || "")) : [],
+  });
+
+  return (
+    <WebsitePreviewSurface
+      project={project}
+      page={page}
+      viewport={viewport}
+      assets={assets}
+      onSurfaceReady={(details = {}) => {
+        setSurfaceReady(true);
+        console.log("[preview-ui] render complete", details);
+      }}
+    />
+  );
 }
+
+export default ProjectPreviewPage;
 
 const styles = {
   page: (background) => ({

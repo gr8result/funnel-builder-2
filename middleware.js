@@ -6,6 +6,16 @@ export function middleware(req) {
   const { pathname } = req.nextUrl;
   const host = normalizeDomain(req.headers.get("host") || "");
 
+  const legacyWebsitePreviewMatch = pathname.match(/^\/modules\/website-builder\/project\/([^/]+)\/preview\/?$/i);
+  if (legacyWebsitePreviewMatch) {
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = "/modules/website-builder/preview";
+    if (!rewriteUrl.searchParams.get("projectId")) {
+      rewriteUrl.searchParams.set("projectId", decodeURIComponent(legacyWebsitePreviewMatch[1] || ""));
+    }
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
   if (!pathname.startsWith("/dev") && !pathname.startsWith("/api/dev")) {
     const isInternalAsset = pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname === "/favicon.ico";
     if (!isInternalAsset && !isReservedHost(host)) {

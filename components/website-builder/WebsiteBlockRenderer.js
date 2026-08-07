@@ -3,7 +3,7 @@ import RichText from "../RichText";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
-import { isResponsiveDevice, resolveResponsiveLayoutWidth, resolveResponsiveProp } from "../../lib/website-builder/responsiveValue";
+import { isResponsiveDevice, resolveResponsiveBlockProps, resolveResponsiveLayoutWidth, resolveResponsiveMediaSize, resolveResponsiveProp } from "../../lib/website-builder/responsiveValue";
 import PlatformPricingPlans from "../billing/PlatformPricingPlans";
 import { getPlatformChartPlans } from "../../data/platformPricing";
 import { renderGridLibraryIcon, renderSocialPlatformIcon } from "./gridIconLibrary";
@@ -37,6 +37,7 @@ import {
 import { normalizeFooterNavigationProps } from "../../lib/website-builder/footerNavigation";
 import { listItemAltText, resolveListItemImage } from "../../lib/website-builder/listBlockItems";
 import { resolveGridSectionItemImageUrl } from "../../lib/website-builder/gridSectionImages";
+import { resolveBlockImageUrl } from "../../lib/website-builder/blockImageResolver";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -225,16 +226,34 @@ function resolvePageAwareCta(props = {}, navigationContext = null) {
   const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
   const linkType = String(cta.linkType || "").trim();
   const rawHref = String(cta.href || props.ctaLink || props.buttonLink || props.link || props.href || "").trim();
-  if (!text) return { text: "", href: "" };
-  if (linkType === "none") return { text, href: "" };
+  const newTab = !!cta.newTab || !!cta.openInNewTab || !!props.ctaNewTab;
+  if (!text) return { text: "", href: "", newTab: false };
+  if (linkType === "none") return { text, href: "", newTab: false };
   if (linkType === "page" || cta.pageId) {
     const pageMap = navigationContext?.pageMap;
     const key = String(cta.pageId || "").trim();
     const match = pageMap instanceof Map ? pageMap.get(key) : pageMap?.[key];
     const href = match && typeof match === "object" ? match.href : match;
-    return { text, href: href || rawHref || "#" };
+    return { text, href: href || rawHref || "#", newTab };
   }
-  return { text, href: rawHref || "#" };
+  return { text, href: rawHref || "#", newTab };
+}
+
+function resolveSecondaryHeroCta(props = {}, navigationContext = null) {
+  const source = props.secondaryCta && typeof props.secondaryCta === "object" ? props.secondaryCta : {};
+  return resolvePageAwareCta({
+    ...props,
+    cta: {
+      ...source,
+      text: source.text || props.secondaryCtaText || "",
+      href: source.href || props.secondaryCtaLink || props.secondaryButtonLink || "",
+      linkType: source.linkType || props.secondaryCtaLinkType || "",
+      pageId: source.pageId || props.secondaryCtaPageId || "",
+      newTab: source.newTab ?? props.secondaryCtaNewTab,
+    },
+    ctaText: source.text || props.secondaryCtaText || "",
+    ctaLink: source.href || props.secondaryCtaLink || props.secondaryButtonLink || "",
+  }, navigationContext);
 }
 
 function getHeroVideoDebugState(video) {
@@ -1108,6 +1127,7 @@ function resolveFeatureGridStyles(props, compact) {
   const desktop = clampFeatureNumber(props?.cardsPerRowDesktop ?? (props?.layout === "columns" ? 3 : 1), 3, 1, 6);
   const tablet = clampFeatureNumber(props?.cardsPerRowTablet, Math.min(3, desktop), 1, 4);
   const mobile = clampFeatureNumber(props?.cardsPerRowMobile, 1, 1, 2);
+  const resolvedCompactColumns = clampFeatureNumber(props?.gridColumns || props?.columns, mobile, 1, 6);
   const horizontalGap = clampFeatureNumber(props?.horizontalGap, 18, 0, 80);
   const verticalGap = clampFeatureNumber(props?.verticalGap, 18, 0, 80);
   const customWidth = clampFeatureNumber(props?.customCardWidth || props?.featureCardWidth, 320, 160, 900);
@@ -1132,7 +1152,7 @@ function resolveFeatureGridStyles(props, compact) {
       justifyContent,
       justifyItems: alignment === "stretch" ? "stretch" : undefined,
       alignItems: props?.cardHeightMode === "equal" ? "stretch" : "start",
-      "--wb-list-columns": compact ? mobile : desktop,
+      "--wb-list-columns": compact ? resolvedCompactColumns : desktop,
     },
   };
 }
@@ -1170,9 +1190,10 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
   // max-width so all blocks stay within the canvas bounds. Full-bleed backgrounds use
   // fullWidthStyle() which intentionally ignores baseLayoutWidth, so they remain full-screen.
   const effectiveLayoutWidth = resolveResponsiveLayoutWidth(layoutWidth || rawProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH, device);
-  const props = (layoutWidth && Number(layoutWidth) > 0) || device !== "desktop"
+  const propsWithLayout = (layoutWidth && Number(layoutWidth) > 0) || device !== "desktop"
     ? { ...rawProps, baseLayoutWidth: effectiveLayoutWidth, __blockId: block?.id || "", __blockType: block?.type || "" }
     : { ...rawProps, __blockId: block?.id || "", __blockType: block?.type || "" };
+  const props = resolveResponsiveBlockProps(block?.type, propsWithLayout, device);
   const shouldRunAnimations = !editor || animationPreview;
   const sectionAnimationStyle = !shouldRunAnimations
     ? {}
@@ -1181,7 +1202,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
   const sectionPad = scaleBoxPadding(compact ? "24px 20px" : "72px 32px", spacingScale);
   const cardPad = scaleBoxPadding(compact ? "18px" : "32px 28px", spacingScale);
   const imageSrc = resolveAssetField(props, "src", assets);
-  const heroBackgroundImage = resolveAssetField(props, "backgroundImage", assets);
+  const heroBackgroundImage = resolveAssetField(props, "backgroundImage", assets) || resolveBlockImageUrl({ type: block?.type, props }, { assets });
   const avatarSrc = resolveAssetField(props, "avatar", assets);
   const logoSrc = resolveAssetField(props, "logo", assets);
   const defaultAvatarSrc = pickDefaultAvatarSrc(assets);
@@ -1217,6 +1238,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const heroParallaxEnabled = ["hero", "parallax"].includes(block?.type) && !!props.enableParallax && !!heroBackgroundImage && !isVideoHero;
       const heroRequestedBackgroundSize = props.backgroundSize || props.imageFit || props.objectFit || heroStaticStyle.backgroundSize || "cover";
       const heroBackgroundSize = String(heroRequestedBackgroundSize || "cover");
+      const heroBackgroundPosition = props.imagePosition || props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center";
+      const heroImageBrightness = Math.max(0.25, Math.min(2, Number(props.imageBrightness ?? 1) || 1));
       const heroUsesFixedSafeBackground = /^cover$/i.test(heroBackgroundSize.trim());
       // Use CSS background-attachment:fixed so the background image stays completely still
       // while the section content and floating overlays scroll past it.
@@ -1229,7 +1252,10 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a",
           }
         : null;
-      const sectionBgStyle = isFixedBgParallax
+      const renderHeroImageLayer = !!heroBackgroundImage && !isVideoHero;
+      const sectionBgStyle = renderHeroImageLayer
+        ? { backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || props.backgroundColor || "#0f172a" }
+        : isFixedBgParallax
         ? { backgroundColor: heroStaticStyle.backgroundColor || heroParallaxBaseColor || "#0f172a" }
         : (heroContainedBackgroundStyle || heroStaticStyle);
       const explicitHeroOverlay = String(props.backgroundOverlay || props.backgroundOverlayColor || "").trim();
@@ -1240,7 +1266,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       // Only render explicitly added overlay images. Legacy/default floatingImage
       // props should not create a foreground overlay block automatically.
       const rawFloatingImages = Array.isArray(props.floatingImages) ? props.floatingImages : [];
-      const hasFloatingHeroImage = rawFloatingImages.some((item) => String(item?.src || "").trim());
+      const renderFloatingImages = compact && rawFloatingImages.length > 2 ? [] : rawFloatingImages;
+      const hasFloatingHeroImage = renderFloatingImages.some((item) => String(item?.src || "").trim());
       const heroOverlayImageFit = "contain";
       const heroImageOverlayAnimation = String(props.imageOverlayAnimation || "sweep-left");
       const heroImageOverlayDelay = Number(props.imageOverlayAnimationDelay ?? 0.08) || 0.08;
@@ -1252,6 +1279,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const heroCtaDelay = Number(props.ctaAnimationDelay ?? 0.18) || 0.18;
       const heroCtaSpeed = Number(props.ctaAnimationSpeed ?? 0.9) || 0.9;
       const primaryCta = resolvePageAwareCta(props, navigationContext);
+      const secondaryCta = resolveSecondaryHeroCta(props, navigationContext);
       const rawHeroMarginTop = Math.max(0, Number(props.marginTop || 0));
       const heroMarginTop = editor ? Math.min(rawHeroMarginTop, 24) : rawHeroMarginTop;
       const headlineBlock = props.headlineBlock && typeof props.headlineBlock === "object" ? props.headlineBlock : {};
@@ -1269,7 +1297,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const headingAlign = headlineBlock.alignment || props.headlineAlignment || props.headlineAlign || props.headingAlign || heroLayout.headlineAlignment || "center";
       const heroHorizontalInset = compact ? 24 : 48;
       const heroContentMaxWidth = Math.max(320, Number(props.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH));
-      const heroContentBounds = {
+      const heroContentBounds = compact ? {
+        position: "relative",
+        width: "100%",
+        maxWidth: "100%",
+        zIndex: heroParallaxEnabled ? 3 : 2,
+      } : {
         position: "absolute",
         top: 0,
         bottom: 0,
@@ -1279,7 +1312,16 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         height: "100%",
         zIndex: heroParallaxEnabled ? 3 : 2,
       };
-      const heroContentBoundsInner = {
+      const heroContentBoundsInner = compact ? {
+        width: "100%",
+        maxWidth: "100%",
+        height: "auto",
+        margin: "0 auto",
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      } : {
         width: `calc(100% - ${heroHorizontalInset * 2}px)`,
         maxWidth: `${heroContentMaxWidth}px`,
         height: "100%",
@@ -1287,12 +1329,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         minWidth: 0,
       };
       const overlayAnimationLayer = (zIndex, animationStyle = {}) => ({
-        position: "absolute",
-        inset: 0,
+        position: compact ? "relative" : "absolute",
+        inset: compact ? undefined : 0,
         zIndex,
         width: "100%",
-        height: "100%",
-        pointerEvents: "none",
+        height: compact ? "auto" : "100%",
+        pointerEvents: compact ? "auto" : "none",
         ...animationStyle,
       });
       const normalizedOverlayLayout = normalizeOverlayLayoutProps(
@@ -1327,7 +1369,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             // In the editor, use overflow:visible so floating images positioned near the
             // edges of the content bounds can extend beyond the section without being clipped.
             // In live/preview, keep overflow:hidden to clip background parallax layers.
-            overflow: editor ? "visible" : "hidden",
+            overflow: (compact || editor) ? "visible" : "hidden",
             borderRadius: compact ? 12 : (useFullBleedHero ? 0 : 20),
             ...heroFullWidth,
             ...heroVariant.shell,
@@ -1337,42 +1379,24 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             padding: compact ? "40px 24px" : "80px 48px",
           }}
         >
-          {isFixedBgParallax ? (
+          {renderHeroImageLayer ? (
             <div
               aria-hidden="true"
               style={{
                 position: "absolute",
                 inset: 0,
                 zIndex: 0,
-                backgroundImage: `url(${heroBackgroundImage})`,
+                backgroundImage: heroStaticStyle.backgroundImage || `url(${heroBackgroundImage})`,
                 backgroundSize: heroBackgroundSize,
-                backgroundPosition: props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center",
+                backgroundPosition: heroBackgroundPosition,
                 backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
-                backgroundAttachment: "fixed",
+                backgroundAttachment: isFixedBgParallax ? "fixed" : undefined,
+                filter: heroImageBrightness !== 1 ? `brightness(${heroImageBrightness})` : undefined,
                 pointerEvents: "none",
               }}
             />
           ) : null}
-          {heroContainedBackgroundStyle ? (
-            <div
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                top: 0,
-                bottom: 0,
-                left: "50%",
-                width: `min(100%, ${heroContentMaxWidth}px)`,
-                transform: "translateX(-50%)",
-                zIndex: 0,
-                backgroundImage: `url(${heroBackgroundImage})`,
-                backgroundSize: heroBackgroundSize,
-                backgroundPosition: props.backgroundPosition || heroStaticStyle.backgroundPosition || "center center",
-                backgroundRepeat: props.backgroundRepeat || heroStaticStyle.backgroundRepeat || "no-repeat",
-                pointerEvents: "none",
-              }}
-            />
-          ) : null}
-          {heroParallaxEnabled && parallaxStaticOverlay ? (
+          {heroParallaxEnabled && parallaxStaticOverlay && props.overlayEnabled !== false && props.backgroundOverlayEnabled !== false ? (
             <div aria-hidden="true" style={{ position: "absolute", inset: 0, zIndex: 2, background: parallaxStaticOverlay, pointerEvents: "none" }} />
           ) : null}
           {block?.type === "hero" ? (
@@ -1704,10 +1728,36 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               </button>
             </div>
           ) : null}
+          {compact ? (
+            <style>{`
+              .wb-compact-hero-richtext,
+              .wb-compact-hero-richtext * {
+                max-width: 100% !important;
+                width: auto !important;
+                min-width: 0 !important;
+                height: auto !important;
+                white-space: normal !important;
+                overflow-wrap: break-word !important;
+                word-break: normal !important;
+                font-size: inherit !important;
+                line-height: inherit !important;
+                text-align: inherit !important;
+                letter-spacing: 0 !important;
+              }
+              .wb-compact-hero-richtext h1,
+              .wb-compact-hero-richtext h2,
+              .wb-compact-hero-richtext h3,
+              .wb-compact-hero-richtext p,
+              .wb-compact-hero-richtext div {
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+            `}</style>
+          ) : null}
           <div data-overlay-bounds="true" style={heroContentBounds}>
             <div style={heroContentBoundsInner}>
               {/* ── Orbit feature cards are rendered AFTER the avatar (z=3 > avatar z=2) ── */}
-              {rawFloatingImages.length === 0 ? null : rawFloatingImages.map((imgItem, imgIdx) => {
+              {renderFloatingImages.length === 0 ? null : renderFloatingImages.map((imgItem, imgIdx) => {
                 const imgSrc = imgItem.src || "";
                 if (!imgSrc) return null;
                 const imgAnimation = String(imgItem.animation || heroImageOverlayAnimation);
@@ -1764,7 +1814,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                         overlayEnabled={heroOverlayEnabled}
                         frameStyle={null}
                         imageFit="contain"
-                        imageLabel={rawFloatingImages.length > 1 ? `Image ${imgIdx + 1}` : null}
+                        imageLabel={renderFloatingImages.length > 1 ? `Image ${imgIdx + 1}` : null}
                         onDelete={editor ? handleImgDelete : null}
                         onMoveLayer={editor && rawFloatingImages.length > 1 ? handleImgMoveLayer : null}
                       />
@@ -1785,7 +1835,6 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 {props.hideTextOverlay ? null : (
                 <DraggableContentOverlay props={heroContentProps} compact={compact} editor={editor} onChangeBlock={onChangeBlock} align={headingAlign} vertical={props.verticalAlign || heroLayout.verticalAlign || "center"} overlayEnabled={heroOverlayEnabled} contentShellStyle={block?.type === "hero" ? heroVariant.contentShell : null}>
                   {/* Strip maxWidth from heroVariant.content — the DraggableContentOverlay shell already controls the width via contentWidth prop */}
-                  {/* eslint-disable-next-line no-unused-vars */}
                   <div style={(() => { const { maxWidth: _mw, ...variantContent } = heroVariant.content || {}; return { display: "flex", flexDirection: "column", gap: compact ? 12 : 20, width: "100%", textAlign: headingAlign, ...variantContent }; })()}>
                   {!!stripPlaceholder(props.eyebrow) ? (
                     <p
@@ -1914,6 +1963,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     >
                       <a
                         href={editor ? "#" : (primaryCta.href || "#")}
+                        target={!editor && primaryCta.newTab ? "_blank" : undefined}
+                        rel={!editor && primaryCta.newTab ? "noopener noreferrer" : undefined}
                         onClick={(event) => {
                           if (editor) event.preventDefault();
                         }}
@@ -1937,9 +1988,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                       >
                         {primaryCta.text}
                       </a>
-                      {props.secondaryCtaText ? (
+                      {secondaryCta.text ? (
                         <a
-                          href={editor ? "#" : (props.secondaryCtaLink || "#")}
+                          href={editor ? "#" : (secondaryCta.href || "#")}
+                          target={!editor && secondaryCta.newTab ? "_blank" : undefined}
+                          rel={!editor && secondaryCta.newTab ? "noopener noreferrer" : undefined}
                           onClick={(event) => {
                             if (editor) event.preventDefault();
                           }}
@@ -1961,7 +2014,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                             backdropFilter: "blur(10px)",
                           }}
                         >
-                          {props.secondaryCtaText}
+                          {secondaryCta.text}
                         </a>
                       ) : null}
                     </div>
@@ -1982,7 +2035,35 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 )}
               </div>
               {/* Extra free text overlays */}
-              {(Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
+              {compact ? (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
+                const text = String(txtItem?.text || "").trim();
+                if (!text) return null;
+                const lowerText = text.toLowerCase();
+                const isHeadlineLike = txtIdx < 2 || lowerText.includes("<h1") || /font-size:\s*(?:6[8-9]|[7-9]\d|1\d\d)px/i.test(text);
+                const compactTextSize = isHeadlineLike ? (txtIdx === 0 ? 28 : 24) : 16;
+                return (
+                  <div
+                    key={txtItem.id || txtIdx}
+                    className="wb-compact-hero-richtext"
+                    style={{
+                      position: "relative",
+                      zIndex: 4,
+                      width: "100%",
+                      maxWidth: "100%",
+                      padding: txtItem.background && txtItem.background !== "transparent" ? "10px 12px" : 0,
+                      borderRadius: 12,
+                      background: txtItem.background && txtItem.background !== "transparent" ? txtItem.background : "transparent",
+                      color: txtItem.color || headingColor,
+                      fontSize: compactTextSize,
+                      fontWeight: txtItem.fontWeight || 600,
+                      lineHeight: isHeadlineLike ? 1.15 : 1.55,
+                      textAlign: txtItem.textAlign || headingAlign,
+                      overflowWrap: "break-word",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(text) }}
+                  />
+                );
+              }) : (Array.isArray(props.extraTextOverlays) ? props.extraTextOverlays : []).map((txtItem, txtIdx) => {
                 const txtX = Number(txtItem.x ?? 50);
                 const txtY = Number(txtItem.y ?? 30);
                 const txtW = Math.max(80, Number(txtItem.width ?? 320));
@@ -2009,12 +2090,48 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 );
               })}
               {props.heroHtmlEmbed ? (
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 8, pointerEvents: "auto" }}>
+                <div style={compact ? { position: "relative", zIndex: 8, width: "100%", pointerEvents: "auto" } : { position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 8, pointerEvents: "auto" }}>
                   <HtmlEmbedBlock html={props.heroHtmlEmbed} editor={editor} />
                 </div>
               ) : null}
               {/* Extra counter overlays — draggable visit counter widgets */}
-              {(Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((ctrItem, ctrIdx) => {
+              {compact ? (Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((ctrItem, ctrIdx) => {
+                const label = ctrItem.label || "Site Visits";
+                return (
+                  <div
+                    key={ctrItem.id || ctrIdx}
+                    style={{
+                      position: "relative",
+                      zIndex: 5,
+                      width: "100%",
+                      maxWidth: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      padding: "12px 14px",
+                      borderRadius: 14,
+                      background: ctrItem.background || "rgba(0,0,0,0.45)",
+                      color: ctrItem.labelColor || "rgba(255,255,255,0.85)",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <IconCounterNumber
+                      projectId={ctrItem.projectId || siteId}
+                      targetNumber={ctrItem.targetNumber != null ? Number(ctrItem.targetNumber) : null}
+                      startNumber={Number(ctrItem.startNumber ?? 0)}
+                      suffix={ctrItem.suffix || ""}
+                      color={ctrItem.numberColor || "#0c8ce9"}
+                      compact
+                      editor={editor}
+                      fontSize={Math.max(26, Math.min(46, Number(ctrItem.numberSize || 52)))}
+                    />
+                    <span style={{ minWidth: 0, flex: 1, fontSize: 14, fontWeight: 600, lineHeight: 1.3, overflowWrap: "break-word" }}>
+                      {label}
+                    </span>
+                  </div>
+                );
+              }) : (Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((ctrItem, ctrIdx) => {
                 const updateCtr = (patch) => {
                   const next = (Array.isArray(props.extraCounterOverlays) ? props.extraCounterOverlays : []).map((t, i) => i !== ctrIdx ? t : { ...t, ...patch });
                   onChangeBlock?.({ ...props, extraCounterOverlays: next });
@@ -2030,7 +2147,37 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 );
               })}
               {/* Hero inline counter — managed from the Counter tab in the right sidebar */}
-              {props.heroInlineCounter?.enabled ? (
+              {props.heroInlineCounter?.enabled ? compact ? (
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 6,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    padding: "12px 14px",
+                    borderRadius: 14,
+                    background: props.heroInlineCounter.backgroundColor || "rgba(0,0,0,0.55)",
+                    color: props.heroInlineCounter.labelColor || "rgba(255,255,255,0.85)",
+                  }}
+                >
+                  <IconCounterNumber
+                    projectId={props.projectId || siteId || ""}
+                    targetNumber={props.heroInlineCounter.targetNumber != null ? Number(props.heroInlineCounter.targetNumber) : null}
+                    startNumber={props.heroInlineCounter.startNumber ?? 0}
+                    suffix={props.heroInlineCounter.suffix || ""}
+                    color={props.heroInlineCounter.numberColor || "#0c8ce9"}
+                    compact
+                    editor={editor}
+                    fontSize={Math.max(28, Math.min(48, Number(props.heroInlineCounter.numberFontSize || 64)))}
+                  />
+                  <span style={{ minWidth: 0, flex: 1, fontSize: 14, fontWeight: 600, lineHeight: 1.3, overflowWrap: "break-word" }}>
+                    {props.heroInlineCounter.label || "Happy Customers"}
+                  </span>
+                </div>
+              ) : (
                 <div style={{ position: "absolute", inset: 0, zIndex: 20, pointerEvents: "none" }}>
                   <ExtraCounterOverlay
                     item={{
@@ -2356,6 +2503,22 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                   imageAssetId: rawItem?.imageAssetId || rawItem?.assetId || "",
                 });
               }
+              const featureMediaSize = resolveResponsiveMediaSize({
+                desktopWidth: props.imageWidth || props.imageMaxWidth || effectiveLayoutWidth,
+                desktopHeight: item.imageHeight || props.imageHeight || 220,
+                mediaType: "feature-illustration",
+                blockType: "feature-list",
+                device,
+                containerWidth: compact ? effectiveLayoutWidth : Math.round(effectiveLayoutWidth / Math.max(1, Number(featureGrid.gridStyle?.["--wb-list-columns"] || 3))),
+                containerHeight: Number(props.featureCardHeight || props.cardHeight || 0) || undefined,
+                viewportWidth: effectiveLayoutWidth,
+              });
+              const featureMediaResponsiveStyle = compact ? {
+                width: "100%",
+                height: featureMediaSize.height ? Math.max(88, Number(featureMediaSize.height)) : "auto",
+                maxHeight: featureMediaSize.maxHeight || undefined,
+                aspectRatio: featureMediaSize.aspectRatio || "16 / 9",
+              } : {};
               const patchFeatureTextBlock = (textIndex, patch) => {
                 if (!editor || typeof onChangeBlock !== "function") return;
                 const nextItems = asArray(props.items).map((entry, entryIdx) => {
@@ -2384,9 +2547,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
 
               return (
                 <ScrollReveal key={item.id || `${item.title}-${idx}`} animationName={props.cardAnimation || "fade-up"} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...sharedStyles.featureItem(compact), ...featureVariant.item, ...featureCardHeightStyle, width: "100%", maxWidth: "none", alignItems: "stretch", background: props.itemBackgroundColor || undefined, border: `1px solid ${props.borderColor || "#dbeafe"}`, color: props.textColor || "#0f172a" }}>
-                  <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media }}>
+                  <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.14)", minWidth: 0, ...featureVariant.media, ...featureMediaResponsiveStyle }}>
                     {itemImage ? (
-                      <img src={itemImage} alt={itemAlt} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
+                      <img src={itemImage} alt={itemAlt} style={{ width: "100%", height: "100%", objectFit: compact ? featureMediaSize.objectFit : "cover", objectPosition: `${item.imageX}% ${item.imageY}%`, display: "block" }} />
                     ) : (
                       <div aria-label={itemAlt} style={{ width: "100%", minHeight: 96, height: "100%", display: "grid", placeItems: "center", padding: 16, boxSizing: "border-box", color: colorWithAlpha(props.textColor || "#0f172a", 0.64), background: "rgba(148,163,184,0.14)", fontSize: 13, fontWeight: 700, textAlign: "center" }}>
                         Image unavailable
@@ -2521,6 +2684,23 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const renderTestimonialCard = (item, idx) => {
         const cardSty = typeof variantSty.card === "function" ? variantSty.card(idx) : variantSty.card;
         const avatarSrcItem = getAssetFromLibrary(assets, item.avatarAssetId)?.src || item.avatarUrl || avatarSrc || defaultAvatarSrc || "";
+        const testimonialAvatarSize = resolveResponsiveMediaSize({
+          desktopWidth: sharedStyles.avatar?.width || 44,
+          desktopHeight: sharedStyles.avatar?.height || 44,
+          mediaType: "avatar",
+          blockType: "testimonial",
+          device,
+          containerWidth: compact ? effectiveLayoutWidth : 360,
+          viewportWidth: effectiveLayoutWidth,
+        });
+        const testimonialAvatarStyle = compact ? {
+          width: testimonialAvatarSize.width,
+          height: testimonialAvatarSize.height,
+          minWidth: testimonialAvatarSize.width,
+          minHeight: testimonialAvatarSize.height,
+          maxWidth: testimonialAvatarSize.maxWidth,
+          maxHeight: testimonialAvatarSize.maxHeight,
+        } : {};
         // For wall variant the card's own color determines text, override quote/author/meta per card
         const wallCardColor = isWall && (idx % 3 === 2) ? (props.textColor || "#0f172a") : variantSty.quote.color;
         const wallMetaColor = isWall && (idx % 3 === 2) ? "#64748b" : variantSty.meta.color;
@@ -2550,9 +2730,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             />
             <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined }}>
               {avatarSrcItem
-                ? <img src={avatarSrcItem} alt={item.author || ""} style={{ ...asStyleObject(sharedStyles.avatar), objectFit: "cover", objectPosition: item.avatarObjectPosition || "center center", flexShrink: 0, display: "block" }} />
+                ? <img src={avatarSrcItem} alt={item.author || ""} style={{ ...asStyleObject(sharedStyles.avatar), ...testimonialAvatarStyle, objectFit: "cover", objectPosition: item.avatarObjectPosition || "center center", flexShrink: 0, display: "block" }} />
                 : editor
-                  ? <div style={{ width: 44, height: 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
+                  ? <div style={{ width: testimonialAvatarStyle.width || 44, height: testimonialAvatarStyle.height || 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
                   : null}
               <div>
                 <p
@@ -2679,6 +2859,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const pricingVariant = pricingVariantStyles(props);
       const plans = asArray(props.plans).map((plan, idx) => normalizePricingPlan(plan, idx));
       const pricingImageHotspots = asArray(props.pricingImageHotspots);
+      const pricingColumnCount = device === "mobile"
+        ? 1
+        : device === "tablet"
+          ? Math.min(2, Math.max(1, plans.length))
+          : Math.max(1, plans.length);
       const patchPlan = (planIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         const normalizedPatch = { ...patch };
@@ -2802,22 +2987,20 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               ...sharedStyles.priceGrid(compact, plans.length, props.pricingCardWidth, props.pricingCardGap),
               ...(pricingVariant.grid?.(compact, plans.length) || {}),
               ...(pricingVariant.fullWidthGrid
-                ? (compact ? {} : {
-                    gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, 1fr)`,
+                ? {
+                    gridTemplateColumns: `repeat(${pricingColumnCount}, minmax(0, 1fr))`,
                     gap: Math.max(8, Number(props.pricingCardGap) || 16),
-                    justifyContent: "stretch",
-                  })
-                : (compact
-                  ? {}
-                  : {
-                      gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, minmax(0, ${Math.max(180, Number(props.pricingCardWidth) || 260)}px))`,
+                    justifyContent: device === "desktop" ? "stretch" : "center",
+                  }
+                : {
+                      gridTemplateColumns: `repeat(${pricingColumnCount}, minmax(0, ${device === "desktop" ? `${Math.max(180, Number(props.pricingCardWidth) || 260)}px` : "1fr"}))`,
                       gap: Math.max(8, Number(props.pricingCardGap) || 24),
-                      justifyContent: "center",
-                    })),
+                      justifyContent: device === "desktop" ? "center" : "stretch",
+                    }),
             }}
           >
             {plans.map((plan, idx) => (
-              <ScrollReveal as="article" key={plan.id || `${plan.name}-${idx}`} animationName={(plan.cardAnimation && plan.cardAnimation !== "") ? plan.cardAnimation : (props.cardAnimation || "fade-up")} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted) }}>
+              <ScrollReveal as="article" key={plan.id || `${plan.name}-${idx}`} data-pricing-card="true" animationName={(plan.cardAnimation && plan.cardAnimation !== "") ? plan.cardAnimation : (props.cardAnimation || "fade-up")} delay={idx * (Number(props.cardStagger ?? 0.08) || 0.08)} disabled={editor} style={{ ...pricingVariant.card(!!plan.highlighted, compact, idx), background: plan.cardBackgroundColor || (plan.highlighted ? (props.highlightedCardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background) : (props.cardBackgroundColor || pricingVariant.card(!!plan.highlighted, compact, idx).background)), border: plan.highlighted && props.accentColor ? `2px solid ${props.accentColor}` : pricingVariant.card(!!plan.highlighted, compact, idx).border, ...sharedStyles.priceCardLayout(compact, !!plan.highlighted), minWidth: 0, overflow: "hidden" }}>
                 {(() => {
                   const defaultTone = pricingVariant.textTone?.(idx, !!plan.highlighted) || {};
                   const accentTone = props.accentColor || defaultTone.accent || "#0ea5e9";
@@ -2890,9 +3073,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                       const label = parts[0] || feature;
                       const value = parts.slice(1).join(" — ");
                       return (
-                        <div key={`${feature}-${featureIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...featureRowStyle }}>
-                          <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5 }}>{label}</span>
-                          {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: "right", marginLeft: 8, flexShrink: 0 }}>{value}</span>}
+                        <div key={`${feature}-${featureIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", ...featureRowStyle }}>
+                          <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{label}</span>
+                          {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{value}</span>}
                         </div>
                       );
                     }
@@ -2921,9 +3104,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                         const label = parts[0] || extra;
                         const value = parts.slice(1).join(" — ");
                         return (
-                          <div key={`${extra}-${extraIdx}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                            <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16 }}>{label}</span>
-                            {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: "right", marginLeft: 8, flexShrink: 0 }}>{value}</span>}
+                          <div key={`${extra}-${extraIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                            <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{label}</span>
+                            {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{value}</span>}
                           </div>
                         );
                       }
@@ -3271,6 +3454,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const col2LeftW = Number(props.leftColumnWidth) || 0;
       const col2RightW = Number(props.rightColumnWidth) || 0;
       const col2GridCols = (col2LeftW || col2RightW) ? `${col2LeftW || 1}fr ${col2RightW || 1}fr` : (ratioMap[props.ratio] || "1fr 1fr");
+      const col2ResolvedColumns = Math.max(1, Math.min(2, Number(props.gridColumns || props.columns || (compact ? 1 : 2)) || (compact ? 1 : 2)));
+      const col2Template = col2ResolvedColumns === 1 ? "1fr" : col2GridCols;
       const swapColumns2 = editor && onChangeBlock ? () => onChangeBlock({
         ...props,
         ratio: props.ratio === "60-40" ? "40-60" : props.ratio === "40-60" ? "60-40" : props.ratio,
@@ -3295,7 +3480,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || undefined) }}>
           <div style={{ ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact), padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
-          <div style={{ ...sharedStyles.columns(2), gridTemplateColumns: compact ? "1fr" : col2GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
+          <div style={{ ...sharedStyles.columns(col2ResolvedColumns), gridTemplateColumns: col2Template, marginTop: Number(props.columnsTopMargin ?? 16), gap: Number(props.columnGap ?? props.gap ?? 18), alignItems: String(props.columnsVerticalAlign || props.alignItems || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || props.alignItems || "stretch") === "bottom" ? "end" : "stretch" }}>
             <ColumnEditorCard
               title={props.leftTitle}
               content={props.leftContent}
@@ -3392,11 +3577,13 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const col3W2 = Number(props.column2Width) || 0;
       const col3W3 = Number(props.column3Width) || 0;
       const col3GridCols = (col3W1 || col3W2 || col3W3) ? `${col3W1 || 1}fr ${col3W2 || 1}fr ${col3W3 || 1}fr` : "1fr 1fr 1fr";
+      const col3ResolvedColumns = Math.max(1, Math.min(3, Number(props.gridColumns || props.columns || (compact ? 1 : 3)) || (compact ? 1 : 3)));
+      const col3Template = col3ResolvedColumns === 1 ? "1fr" : col3ResolvedColumns === 2 ? "repeat(2, minmax(0, 1fr))" : col3GridCols;
       return (
         <section style={{ ...sharedStyles.cardSection(compact, props), ...fullWidthStyle(props, compact, editor), background: props.backgroundColor || "transparent", boxShadow: "none", borderRadius: 0, border: "none", padding: 0, width: "100%", boxSizing: "border-box", ...sectionAnimationStyle, minHeight: resolveSectionMinHeight(props, device, compact, "auto", props.minHeight || undefined) }}>
           <div style={{ ...sectionContentStyle({ ...props, baseLayoutWidth: props.blockMaxWidth || props.baseLayoutWidth }, compact), padding: compact ? "20px" : "30px 32px" }}>
           {props.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), color: props.textColor || "#0f172a" }}>{props.title}</h2> : null}
-          <div style={{ ...sharedStyles.columns(compact ? 1 : 3), gridTemplateColumns: compact ? "1fr" : col3GridCols, marginTop: Number(props.columnsTopMargin ?? 16), gap: compact ? 16 : Number(props.columnGap ?? 18), alignItems: String(props.columnsVerticalAlign || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || "stretch") === "bottom" ? "end" : "stretch" }}>
+          <div style={{ ...sharedStyles.columns(col3ResolvedColumns), gridTemplateColumns: col3Template, marginTop: Number(props.columnsTopMargin ?? 16), gap: Number(props.columnGap ?? props.gap ?? 18), alignItems: String(props.columnsVerticalAlign || props.alignItems || "stretch") === "center" ? "center" : String(props.columnsVerticalAlign || props.alignItems || "stretch") === "bottom" ? "end" : "stretch" }}>
             <ColumnEditorCard
               title={props.column1Title}
               content={props.column1}
@@ -3605,9 +3792,22 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 const resolvedTitleAnimation = props.titleAnimation || (servicesVariant ? "slide-up" : "none");
                 const resolvedBodyAnimation = props.bodyAnimation || (servicesVariant ? "fade-in" : "none");
                 const resolvedCardAnimation = props.cardAnimation || "fade-up";
-                const serviceIconSize = Math.max(14, Number(props.iconSize ?? (compact ? 28 : 36)));
-                const serviceIconBadgeWidth = Math.max(serviceIconSize + 14, Number(props.iconBadgeWidth ?? (compact ? 58 : 65)));
-                const serviceIconBadgeHeight = Math.max(serviceIconSize + 20, Number(props.iconBadgeHeight ?? (compact ? 72 : 82)));
+                const serviceIconMedia = resolveResponsiveMediaSize({
+                  desktopWidth: Number(props.iconSize ?? 36),
+                  desktopHeight: Number(props.iconSize ?? 36),
+                  mediaType: "icon",
+                  blockType: "grid-section",
+                  device,
+                  containerWidth: compact ? effectiveLayoutWidth : Math.round(effectiveLayoutWidth / Math.max(1, gridColumns)),
+                  viewportWidth: effectiveLayoutWidth,
+                });
+                const serviceIconSize = compact ? Math.max(18, Number(serviceIconMedia.width) || 24) : Math.max(14, Number(props.iconSize ?? 36));
+                const serviceIconBadgeWidth = compact
+                  ? Math.max(serviceIconSize + 12, Math.min(Number(props.iconBadgeWidth ?? 58), Math.round(serviceIconSize * 1.9)))
+                  : Math.max(serviceIconSize + 14, Number(props.iconBadgeWidth ?? 65));
+                const serviceIconBadgeHeight = compact
+                  ? Math.max(serviceIconSize + 14, Math.min(Number(props.iconBadgeHeight ?? 72), Math.round(serviceIconSize * 2.1)))
+                  : Math.max(serviceIconSize + 20, Number(props.iconBadgeHeight ?? 82));
                 const serviceIconBadgePadding = Math.max(0, Number(props.iconBadgePadding ?? (compact ? 12 : 14)));
                 const serviceEyebrowFontSize = Math.max(12, Number(props.eyebrowFontSize ?? 18));
                 const serviceCardTitleFontSize = Math.max(16, Number(props.cardTitleSize ?? 28));
@@ -3616,7 +3816,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 const imageStyle = editor ? {} : getAnimationStyle(resolvedImageAnimation, baseDelay + 0.04, resolvedSurfaceSpeed);
                 const titleStyle = editor ? {} : getAnimationStyle(resolvedTitleAnimation, baseDelay + 0.08, resolvedSurfaceSpeed);
                 const bodyStyle = editor ? {} : getAnimationStyle(resolvedBodyAnimation, baseDelay + 0.12, resolvedSurfaceSpeed);
-                const iconNode = renderGridSectionIcon(item, cardStyle.iconColor, Number(props.iconSize ?? (compact ? 18 : 20)));
+                const inlineIconSize = compact ? Math.max(18, Math.min(serviceIconSize, 24)) : Number(props.iconSize ?? 20);
+                const iconNode = renderGridSectionIcon(item, cardStyle.iconColor, inlineIconSize);
                 const topIconNode = renderGridSectionIcon(item, "#ffffff", serviceIconSize);
                 const ghostIconNode = renderGridSectionIcon(item, colorWithAlpha("#9ae6b4", 0.16), Math.round(serviceIconSize * 2.45));
                 const titleNode = (
@@ -3636,6 +3837,21 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     />
                   </>
                 );
+                const gridCardMedia = resolveResponsiveMediaSize({
+                  desktopWidth: effectiveLayoutWidth,
+                  desktopHeight: item.imageHeight || props.imageHeight || 220,
+                  mediaType: "feature-illustration",
+                  blockType: "grid-section",
+                  device,
+                  containerWidth: compact ? effectiveLayoutWidth : Math.round(effectiveLayoutWidth / Math.max(1, gridColumns)),
+                  containerHeight: Number(props.gridItemMinHeight || props.cardHeight || 0) || undefined,
+                  viewportWidth: effectiveLayoutWidth,
+                });
+                const gridCardImageStyle = compact ? {
+                  height: gridCardMedia.height ? Math.max(88, Number(gridCardMedia.height)) : "auto",
+                  maxHeight: gridCardMedia.maxHeight || undefined,
+                  objectFit: gridCardMedia.objectFit || "contain",
+                } : {};
 
                 if (servicesVariant) {
                   const serviceTileRadius = compact ? 14 : 15;
@@ -3693,7 +3909,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                   >
                     {cardStyle.overlay}
                     {iconNode ? (
-                      <div style={{ position: "relative", zIndex: 1, display: "inline-flex", alignSelf: cardStyle.align === "center" ? "center" : cardStyle.align === "right" ? "flex-end" : "flex-start", alignItems: "center", justifyContent: "center", minWidth: 44, minHeight: 44, borderRadius: 999, padding: "10px 14px", background: props.iconBackgroundColor || "rgba(14,165,233,0.12)", color: cardStyle.iconColor, fontSize: Number(props.iconSize ?? (compact ? 22 : 26)), lineHeight: 1, ...iconStyle }}>
+                      <div style={{ position: "relative", zIndex: 1, display: "inline-flex", alignSelf: cardStyle.align === "center" ? "center" : cardStyle.align === "right" ? "flex-end" : "flex-start", alignItems: "center", justifyContent: "center", minWidth: compact ? Math.max(34, serviceIconSize + 10) : 44, minHeight: compact ? Math.max(34, serviceIconSize + 10) : 44, borderRadius: 999, padding: compact ? "7px 9px" : "10px 14px", background: props.iconBackgroundColor || "rgba(14,165,233,0.12)", color: cardStyle.iconColor, fontSize: compact ? inlineIconSize : Number(props.iconSize ?? 26), lineHeight: 1, ...iconStyle }}>
                         <span
                           data-website-inline-editor="true"
                           contentEditable={editor}
@@ -3705,7 +3921,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                       </div>
                     ) : null}
                     {item.image ? (
-                      <img src={item.image} alt={item.imageAlt || item.title || "Grid item image"} style={{ position: "relative", zIndex: 1, width: "100%", height: item.imageHeight ? `${Number(item.imageHeight)}px` : (compact ? 180 : 220), objectFit: "cover", borderRadius: Math.max(12, Number(props.imageRadius ?? 16)), ...imageStyle }} />
+                      <img src={item.image} alt={item.imageAlt || item.title || "Grid item image"} style={{ position: "relative", zIndex: 1, width: "100%", height: item.imageHeight ? `${Number(item.imageHeight)}px` : (compact ? 180 : 220), objectFit: "cover", borderRadius: Math.max(12, Number(props.imageRadius ?? 16)), ...gridCardImageStyle, ...imageStyle }} />
                     ) : null}
                     <div style={{ position: "relative", zIndex: 1, display: "grid", gap: 10 }}>
                       {!editor && item.link ? (
@@ -3748,7 +3964,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       return <AvatarMorphBlock block={block} compact={compact} editor={editor} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
 
     case "video-hero":
-      return <VideoHeroBlock block={block} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
+      return <VideoHeroBlock block={{ ...block, props }} compact={compact} editor={editor} isSelected={isSelected} onChangeBlock={onChangeBlock} onUploadImage={onUploadImage} />;
 
     case "stats":
       const statsItems = asArray(props.stats).map((item, index) => normalizeStatItem(item, index));
@@ -3919,10 +4135,28 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const renderTeamCard = (member, memberIdx, animIdx) => {
         const memberImageSrc = getAssetFromLibrary(assets, member.imageAssetId)?.src || member.image;
         const editorOutline = editor ? "1px dashed rgba(14,165,233,0.35)" : "none";
+        const teamImageBase = asStyleObject(typeof teamVariant.image === "function" ? teamVariant.image(animIdx) : teamVariant.image);
+        const teamMediaSize = resolveResponsiveMediaSize({
+          desktopWidth: teamImageBase.width || 320,
+          desktopHeight: teamImageBase.height || 320,
+          mediaType: teamImageBase.borderRadius === 999 ? "avatar" : "product-image",
+          blockType: "team",
+          device,
+          containerWidth: compact ? effectiveLayoutWidth : 360,
+          viewportWidth: effectiveLayoutWidth,
+        });
+        const teamMediaStyle = compact ? {
+          width: teamImageBase.width && teamImageBase.height && teamImageBase.borderRadius === 999 ? teamMediaSize.width : "100%",
+          height: teamImageBase.width && teamImageBase.height && teamImageBase.borderRadius === 999 ? teamMediaSize.height : "auto",
+          maxWidth: "100%",
+          maxHeight: teamMediaSize.maxHeight || undefined,
+          aspectRatio: teamMediaSize.aspectRatio || teamImageBase.aspectRatio,
+          objectFit: teamMediaSize.objectFit || teamImageBase.objectFit || "cover",
+        } : {};
         return (
           <ScrollReveal as="article" animationName="fade-up" delay={animIdx * 0.08} disabled={editor} style={{ ...teamVariant.card(animIdx) }}>
             {memberImageSrc ? (
-              <img src={memberImageSrc} alt={member.name || "Team member"} style={{ ...teamVariant.image(animIdx), objectPosition: `${member.imageX}% ${member.imageY}%` }} />
+              <img src={memberImageSrc} alt={member.name || "Team member"} style={{ ...teamImageBase, ...teamMediaStyle, objectPosition: `${member.imageX}% ${member.imageY}%` }} />
             ) : (
               <div style={teamVariant.placeholder(animIdx)}>{editor ? "Upload image in sidebar" : ""}</div>
             )}
@@ -4720,9 +4954,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
           ? "rgba(15,23,42,0.24)"
           : "rgba(255,255,255,0.03)";
       const footerPanelBorder = `1px solid ${ftBorder}`;
-      const topGridColumns = compact
+      const footerColumnCount = Math.max(1, Math.min(4, Number(props.gridColumns || props.columns || (compact ? 1 : 4)) || (compact ? 1 : 4)));
+      const topGridColumns = footerColumnCount === 1
         ? "1fr"
-        : `1.15fr ${linkGroups.map(() => "minmax(0, 1fr)").join(" ")}${props.showNewsletter !== false ? " 1.05fr" : ""}`;
+        : footerColumnCount === 2
+          ? "repeat(2, minmax(0, 1fr))"
+          : `1.15fr ${linkGroups.map(() => "minmax(0, 1fr)").join(" ")}${props.showNewsletter !== false ? " 1.05fr" : ""}`;
       const panelStyle = {
         borderRadius: compact ? 18 : 24,
         padding: compact ? "18px" : "22px",
@@ -5107,6 +5344,17 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       const ccSavings = ccTotal - ccPlanPrice;
       const bg = props.backgroundColor || "#121c26";
       const grid3 = { display: "grid", gridTemplateColumns: "1fr 220px 160px", alignItems: "center" };
+      const ccLogoMedia = resolveResponsiveMediaSize({
+        desktopWidth: 36,
+        desktopHeight: 36,
+        mediaType: "logo",
+        blockType: "competitor-comparison",
+        device,
+        containerWidth: compact ? Math.min(520, effectiveLayoutWidth) : 220,
+        containerHeight: compact ? 96 : 36,
+        viewportWidth: effectiveLayoutWidth,
+      });
+      const ccLogoSize = compact ? Math.max(20, Math.min(36, Number(ccLogoMedia.width) || 24)) : 36;
 
       function CCLogo({ domain, name, src }) {
         const [failed, setFailed] = React.useState(false);
@@ -5136,11 +5384,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               flexShrink: 0,
               fontSize: 11,
               fontWeight: 800,
-              height: 36,
+              height: ccLogoSize,
               justifyContent: "center",
-              minHeight: 36,
-              minWidth: 36,
-              width: 36,
+              minHeight: ccLogoSize,
+              minWidth: ccLogoSize,
+              width: ccLogoSize,
             }}
           >
             {initials}
@@ -5150,12 +5398,13 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         if (!imgSrc || failed) return fallbackBadge;
         return (
           <img
+            data-wb-media-fixed="logo"
             src={imgSrc}
             alt={name}
             title={name}
-            width={36}
-            height={36}
-            style={{ borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0, width: 36, height: 36, minWidth: 36, minHeight: 36 }}
+            width={ccLogoSize}
+            height={ccLogoSize}
+            style={{ "--wb-media-width": `${ccLogoSize}px`, "--wb-media-height": `${ccLogoSize}px`, borderRadius: "50%", background: "#fff", objectFit: "contain", border: "1.5px solid rgba(255,255,255,0.18)", flexShrink: 0, width: ccLogoSize, height: ccLogoSize, minWidth: ccLogoSize, minHeight: ccLogoSize }}
             onError={e => {
               if (!fallbackAttempted && safeSrc && safeDomain) {
                 setFallbackAttempted(true);
@@ -5165,6 +5414,91 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               }
             }}
           />
+        );
+      }
+
+      if (compact) {
+        return (
+          <div style={{ background: bg, color: "#fff", padding: "44px 18px", width: "100%", maxWidth: "100%", boxSizing: "border-box", ...sectionAnimationStyle }}>
+            <div style={{ width: "100%", maxWidth: 520, margin: "0 auto", display: "grid", gap: 18 }}>
+              {(editor || !!props.eyebrow) && (
+                <p
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                  onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                  onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, eyebrow: e.currentTarget.innerText.trim() }); }}
+                  style={{ color: "#60a5fa", fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", textAlign: "center", margin: 0 }}
+                  dangerouslySetInnerHTML={{ __html: props.eyebrow || (editor ? "EYEBROW LABEL" : "") }}
+                />
+              )}
+              <h2
+                contentEditable={editor}
+                suppressContentEditableWarning
+                onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, title: e.currentTarget.innerText.trim() }); }}
+                style={{ fontSize: 28, fontWeight: 700, textAlign: "center", margin: 0, lineHeight: 1.12, overflowWrap: "break-word" }}
+                dangerouslySetInnerHTML={{ __html: props.title || "" }}
+              />
+              {(editor || !!props.subtitle) && (
+                <p
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                  onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                  onBlur={(e) => { if (editor && typeof onChangeBlock === "function") onChangeBlock({ ...props, subtitle: e.currentTarget.innerText.trim() }); }}
+                  style={{ color: "#cbd5e1", fontSize: 16, textAlign: "center", margin: 0, lineHeight: 1.5 }}
+                  dangerouslySetInnerHTML={{ __html: props.subtitle || (editor ? "Add a subtitle here..." : "") }}
+                />
+              )}
+
+              <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
+                {ccRows.map((row, i) => (
+                  <article key={i} style={{ width: "100%", maxWidth: "100%", minWidth: 0, borderRadius: 14, border: "1px solid rgba(255,255,255,0.1)", background: i % 2 === 0 ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.025)", padding: 14, boxSizing: "border-box", display: "grid", gap: 10 }}>
+                    <div
+                      contentEditable={editor}
+                      suppressContentEditableWarning
+                      onMouseDown={editor ? (e) => e.stopPropagation() : undefined}
+                      onPointerDown={editor ? (e) => e.stopPropagation() : undefined}
+                      onBlur={(e) => {
+                        if (editor && typeof onChangeBlock === "function") {
+                          const updated = ccRows.map((r, j) => j === i ? { ...r, category: e.currentTarget.innerText.trim() } : r);
+                          onChangeBlock({ ...props, rows: updated });
+                        }
+                      }}
+                      style={{ fontWeight: 700, fontSize: 15, letterSpacing: "0.03em", color: "#f8fafc", lineHeight: 1.3, overflowWrap: "break-word" }}
+                    >
+                      {row.category}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", minWidth: 0 }}>
+                        {asArray(row.logos).map((l, li) => <CCLogo key={l.src || l.domain || li} domain={l.domain} name={l.name} src={l.src} />)}
+                      </div>
+                      <span style={{ flexShrink: 0, fontSize: 16, fontWeight: 800, color: row.price ? "#f1f5f9" : "#60a5fa", whiteSpace: "nowrap" }}>
+                        {row.price ? `$${row.price}/mo` : (props.uniqueLabel || "Included")}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gap: 10, marginTop: 4 }}>
+                <div style={{ borderRadius: 14, padding: 16, background: "rgba(127,29,29,0.32)", border: "1px solid rgba(248,113,113,0.18)", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ color: "#fecaca", fontSize: 14, fontWeight: 700 }}>Separate tools</span>
+                  <strong style={{ color: "#fca5a5", fontSize: 20 }}>${ccTotal.toLocaleString()}/mo</strong>
+                </div>
+                <div style={{ borderRadius: 14, padding: 16, background: "rgba(10,30,15,0.95)", border: "1px solid rgba(74,222,128,0.2)", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ color: "#86efac", fontSize: 14, fontWeight: 700 }}>{props.planName || "Our platform"}</span>
+                  <strong style={{ color: "#4ade80", fontSize: 20 }}>${ccPlanPrice}/mo</strong>
+                </div>
+                <div style={{ borderRadius: 14, padding: 16, background: "rgba(20,83,45,0.65)", border: "1px solid rgba(74,222,128,0.25)", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ color: "#bbf7d0", fontSize: 16, fontWeight: 800 }}>You save</span>
+                  <strong style={{ color: "#86efac", fontSize: 24 }}>${ccSavings.toLocaleString()}/mo</strong>
+                </div>
+              </div>
+            </div>
+          </div>
         );
       }
 

@@ -44,7 +44,7 @@ import {
   PricingTablePropertiesPanel, FAQPropertiesPanel, SplitBlockPropertiesPanel, FeatureAccordionPropertiesPanel,
   ScrollStackPropertiesPanel,
   CompetitorComparisonPropertiesPanel,
-  NumberField, ResponsiveField, ResponsiveNumberField, ImagePropertiesPanel, NavbarLogoPicker, NavbarPropertiesPanel,
+  NumberField, ResponsiveField, ResponsiveNumberField, ResponsiveLayoutPanel, ImagePropertiesPanel, NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
   ColorSelector, CompactColorField, rgbToHex, stripEditorArtifacts,
   TEXT_TOOLBAR_FONTS, TEXT_TOOLBAR_SIZES, TEXT_TOOLBAR_LINE_HEIGHTS,
@@ -100,14 +100,18 @@ function normalizeBuilderCta(props = {}, pages = []) {
   const href = String(source.href || legacyHref || "").trim();
   const pageRef = resolveBuilderPageRefForCta({ ...source, href }, pages);
   const explicitType = String(source.linkType || "").trim();
-  const linkType = ["page", "external", "anchor", "none"].includes(explicitType)
+  const linkType = ["page", "external", "anchor", "email", "tel", "none"].includes(explicitType)
     ? explicitType
     : pageRef && href && !/^(https?:|mailto:|tel:|#)/i.test(href)
       ? "page"
       : href.startsWith("#")
         ? "anchor"
-        : /^(https?:|mailto:|tel:)/i.test(href)
-          ? "external"
+        : /^mailto:/i.test(href)
+          ? "email"
+          : /^tel:/i.test(href)
+            ? "tel"
+            : /^(https?:)/i.test(href)
+              ? "external"
           : href
             ? "page"
             : "none";
@@ -122,7 +126,22 @@ function normalizeBuilderCta(props = {}, pages = []) {
     linkType,
     pageId: selectedPage?.id || null,
     href: resolvedHref,
+    newTab: !!source.newTab || !!source.openInNewTab,
   };
+}
+
+function normalizeBuilderButtonLink(props = {}, pages = [], prefix = "primary") {
+  const isSecondary = prefix === "secondary";
+  const source = isSecondary && props.secondaryCta && typeof props.secondaryCta === "object"
+    ? props.secondaryCta
+    : !isSecondary && props.cta && typeof props.cta === "object"
+      ? props.cta
+      : {};
+  const text = String(source.text || (isSecondary ? props.secondaryCtaText : props.ctaText || props.buttonText) || "").trim();
+  const legacyHref = isSecondary
+    ? props.secondaryCtaLink || props.secondaryButtonLink || ""
+    : props.ctaLink || props.buttonLink || props.link || props.href || "";
+  return { ...normalizeBuilderCta({ ...props, cta: { ...source, href: source.href || legacyHref, text } }, pages), text };
 }
 
 class BlockPreviewBoundary extends React.Component {
@@ -194,7 +213,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
+const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, pageFullWidth = false, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
   const def = BlockDefinitions[block.type];
   const showOverlay = selected || (allowHoverOverlay && hovered);
   const resizeStateRef = useRef(null);
@@ -207,6 +226,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
   const canStretchFullWidth = supportsFullWidthBackground(block?.type);
   const isStretchToCanvasGrid = !compactPreview && block?.type === "grid-section" && block?.props?.stretchToCanvas === true;
   const isFullWidthBlock = !compactPreview && ((canStretchFullWidth && isFullWidthBackgroundEnabled(block)) || isStretchToCanvasGrid);
+  const isPageFullWidthBlock = !compactPreview && pageFullWidth;
   // Hidden-on-this-device blocks still render in the editor (dimmed, with a badge) so they stay
   // selectable and can be un-hidden -- only real visitors (WebsitePreviewSurface / the published
   // site) actually skip rendering them.
@@ -273,7 +293,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       style={{
         ...styles.canvasBlock,
         width: "100%",
-        maxWidth: isFullWidthBlock ? "none" : `${pageCanvasWidth}px`,
+        maxWidth: (isPageFullWidthBlock || isFullWidthBlock) ? "none" : `${pageCanvasWidth}px`,
         margin: "0 auto",
         background: frameBackground,
         border: "none",
@@ -704,6 +724,8 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, device, 
   if (!block) return null;
   const [hovered, setHovered] = useState(false);
   const showOverlay = selected || hovered;
+  const globalLabel = role === "nav" ? "Global Header" : "Global Footer";
+  const globalHelp = role === "nav" ? "Changes apply to every page" : "Changes apply to every page";
   const actionBarRef = useRef(null);
   const [actionBarHeight, setActionBarHeight] = useState(42);
 
@@ -741,6 +763,11 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, device, 
         <div ref={actionBarRef} style={{ ...styles.blockActionBar, ...(compact ? styles.blockActionBarCompact : {}) }} data-builder-block-controls="true">
           <div style={styles.blockActionLeft}>
             <span style={{ ...styles.blockActionLabel, ...(compact ? styles.blockActionLabelCompact : {}) }}>{label}</span>
+            {!compact ? (
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0, color: "#bae6fd", opacity: 0.92 }}>
+                {globalLabel} · {globalHelp}
+              </span>
+            ) : null}
           </div>
           <div style={styles.blockActionButtons}>
             <button
@@ -769,7 +796,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, device, 
             ) : null}
             {!compact ? (
               <span style={{ ...styles.blockActionBtn, cursor: "default", background: "rgba(59,130,246,0.18)", color: "#bfdbfe", border: "1px solid rgba(96,165,250,0.35)" }}>
-                Global block
+                {globalLabel}
               </span>
             ) : null}
             <button
@@ -915,6 +942,14 @@ function ImageStackPropertiesPanel({ block, index, onChange, brandAssets, onUplo
               onChange={(e) => update({ showGrid: e.target.checked })}
             />
             Show design grid and snap layers to it
+          </label>
+          <label style={styles.inlineToggle}>
+            <input
+              type="checkbox"
+              checked={(props.fullWidth ?? props.fullWidthBackground) === true}
+              onChange={(e) => update({ fullWidth: e.target.checked, fullWidthBackground: e.target.checked })}
+            />
+            Full Width
           </label>
           <div style={styles.colorGrid}>
             <NumberField
@@ -3540,6 +3575,12 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const browserAssets = isVideoAssetBrowser
     ? savedVideos
     : [savedLogo, ...savedImages].filter(Boolean);
+  const withResponsiveLayout = (panel) => (
+    <>
+      <ResponsiveLayoutPanel block={block} index={index} onChange={onChange} device={device} />
+      {panel}
+    </>
+  );
 
   async function regenerateBlockCopy() {
     if (!block || typeof index !== "number") return;
@@ -3580,7 +3621,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.NAV_BAR) {
-    return (
+    return withResponsiveLayout(
       <NavbarPropertiesPanel
         block={block}
         index={index}
@@ -3595,7 +3636,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.IMAGE_STACK) {
-    return (
+    return withResponsiveLayout(
       <ImageStackPropertiesPanel
         block={block}
         index={index}
@@ -3607,7 +3648,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.IMAGE) {
-    return (
+    return withResponsiveLayout(
       <ImagePropertiesPanel
         block={block}
         index={index}
@@ -3621,7 +3662,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.FEATURE_LIST) {
-    return (
+    return withResponsiveLayout(
       <FeatureListPropertiesPanel
         block={block}
         index={index}
@@ -3634,7 +3675,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.IMAGE_GALLERY) {
-    return (
+    return withResponsiveLayout(
       <ImageGalleryPropertiesPanel
         block={block}
         index={index}
@@ -3646,7 +3687,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.TEAM) {
-    return (
+    return withResponsiveLayout(
       <TeamPropertiesPanel
         block={block}
         index={index}
@@ -3659,7 +3700,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.TESTIMONIAL) {
-    return (
+    return withResponsiveLayout(
       <TestimonialPropertiesPanel
         block={block}
         index={index}
@@ -3671,7 +3712,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.TEXT) {
-    return (
+    return withResponsiveLayout(
       <TextPropertiesPanel
         block={block}
         index={index}
@@ -3684,7 +3725,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.NEWSLETTER) {
-    return (
+    return withResponsiveLayout(
       <NewsletterPropertiesPanel
         block={block}
         index={index}
@@ -3694,7 +3735,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.TRUST_BADGES) {
-    return (
+    return withResponsiveLayout(
       <TrustBadgesPropertiesPanel
         block={block}
         index={index}
@@ -3707,7 +3748,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.STATS) {
-    return (
+    return withResponsiveLayout(
       <StatsPropertiesPanel
         block={block}
         index={index}
@@ -3717,7 +3758,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.FOOTER) {
-    return (
+    return withResponsiveLayout(
       <FooterPropertiesPanel
         block={block}
         index={index}
@@ -3733,6 +3774,8 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   const pageRefsForLinks = buildBuilderPageRefs(project?.pages || []);
   const canonicalCta = normalizeBuilderCta(block?.props || {}, project?.pages || []);
+  const primaryHeroCta = normalizeBuilderButtonLink(block?.props || {}, project?.pages || [], "primary");
+  const secondaryHeroCta = normalizeBuilderButtonLink(block?.props || {}, project?.pages || [], "secondary");
   function updateCanonicalCta(patch) {
     const nextCta = { ...canonicalCta, ...patch };
     if (nextCta.linkType === "page") {
@@ -3758,10 +3801,123 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     });
   }
 
+  function normalizeCtaPatch(nextCta) {
+    const normalized = { ...nextCta };
+    if (normalized.linkType === "page") {
+      const page = pageRefsForLinks.find((entry) => entry.id === normalized.pageId) || pageRefsForLinks[0] || null;
+      normalized.pageId = page?.id || null;
+      normalized.href = page?.href || "";
+    } else if (normalized.linkType === "anchor") {
+      normalized.pageId = null;
+      normalized.href = String(normalized.href || "#contact").startsWith("#") ? normalized.href : `#${slugifyBuilderPageLink(normalized.href || "contact")}`;
+    } else if (normalized.linkType === "email") {
+      normalized.pageId = null;
+      const value = String(normalized.href || "").replace(/^mailto:/i, "").trim();
+      normalized.href = value ? `mailto:${value}` : "";
+    } else if (normalized.linkType === "tel") {
+      normalized.pageId = null;
+      const value = String(normalized.href || "").replace(/^tel:/i, "").trim();
+      normalized.href = value ? `tel:${value}` : "";
+    } else if (normalized.linkType === "none") {
+      normalized.pageId = null;
+      normalized.href = "";
+    } else {
+      normalized.pageId = null;
+    }
+    return normalized;
+  }
+
+  function updateHeroButtonCta(slot, patch) {
+    const isSecondary = slot === "secondary";
+    const current = isSecondary ? secondaryHeroCta : primaryHeroCta;
+    const nextCta = normalizeCtaPatch({ ...current, ...patch });
+    if (isSecondary) {
+      onChange(index, {
+        ...block.props,
+        secondaryCta: nextCta,
+        secondaryCtaText: nextCta.text,
+        secondaryCtaLink: nextCta.href,
+        secondaryCtaNewTab: nextCta.newTab,
+      });
+      return;
+    }
+    onChange(index, {
+      ...block.props,
+      cta: nextCta,
+      ctaText: nextCta.text,
+      buttonText: nextCta.text,
+      ctaLink: nextCta.href,
+      buttonLink: nextCta.href,
+      ctaNewTab: nextCta.newTab,
+    });
+  }
+
+  function renderHeroButtonLinkControls(label, ctaValue, slot) {
+    const hrefInputValue = ctaValue.linkType === "email"
+      ? String(ctaValue.href || "").replace(/^mailto:/i, "")
+      : ctaValue.linkType === "tel"
+        ? String(ctaValue.href || "").replace(/^tel:/i, "")
+        : ctaValue.href;
+    return (
+      <div style={styles.linkRowCard}>
+        <label style={styles.propertyLabel}>{label}</label>
+        <input
+          type="text"
+          value={ctaValue.text}
+          onChange={(e) => updateHeroButtonCta(slot, { text: e.target.value })}
+          style={styles.propertyInput}
+          placeholder="Button text"
+        />
+        <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Link Type</label>
+        <select
+          value={ctaValue.linkType}
+          onChange={(e) => updateHeroButtonCta(slot, { linkType: e.target.value })}
+          style={styles.propertyInput}
+        >
+          <option value="page">Website Page</option>
+          <option value="external">External URL</option>
+          <option value="anchor">Anchor / Section</option>
+          <option value="email">Email</option>
+          <option value="tel">Phone</option>
+          <option value="none">No Link</option>
+        </select>
+        {ctaValue.linkType === "page" ? (
+          <select
+            value={ctaValue.pageId || ""}
+            onChange={(e) => updateHeroButtonCta(slot, { linkType: "page", pageId: e.target.value })}
+            style={{ ...styles.propertyInput, marginTop: 8 }}
+          >
+            {pageRefsForLinks.map((page) => (
+              <option key={`${slot}-hero-page-${page.id}`} value={page.id}>{page.label}</option>
+            ))}
+          </select>
+        ) : ctaValue.linkType !== "none" ? (
+          <input
+            type={ctaValue.linkType === "email" ? "email" : ctaValue.linkType === "external" ? "url" : "text"}
+            value={hrefInputValue}
+            onChange={(e) => updateHeroButtonCta(slot, { href: e.target.value })}
+            style={{ ...styles.propertyInput, marginTop: 8 }}
+            placeholder={ctaValue.linkType === "anchor" ? "#contact" : ctaValue.linkType === "email" ? "hello@example.com" : ctaValue.linkType === "tel" ? "+61400000000" : "https://example.com"}
+          />
+        ) : null}
+        <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+          <input
+            type="checkbox"
+            checked={!!ctaValue.newTab}
+            onChange={(e) => updateHeroButtonCta(slot, { newTab: e.target.checked })}
+            style={styles.checkboxInput}
+            disabled={ctaValue.linkType === "none"}
+          />
+          Open in new tab
+        </label>
+      </div>
+    );
+  }
+
   if (block.type === BlockTypes.PLATFORM_PRICING_PLANS) {
     const platformProps = block.props || {};
     const updatePlatformPricing = (patch) => onChange(index, { ...platformProps, ...patch });
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>💳 Platform Pricing Plans</h3>
         <div style={styles.propertyGrid}>
@@ -3808,7 +3964,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.PRICING_TABLE) {
-    return (
+    return withResponsiveLayout(
       <PricingTablePropertiesPanel
         block={block}
         index={index}
@@ -3819,7 +3975,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.CONTACT_FORM) {
-    return (
+    return withResponsiveLayout(
       <ContactFormPropertiesPanel
         block={block}
         index={index}
@@ -3832,7 +3988,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if ([BlockTypes.FAQ, BlockTypes.ACCORDION].includes(block.type)) {
-    return (
+    return withResponsiveLayout(
       <FAQPropertiesPanel
         block={block}
         index={index}
@@ -3845,7 +4001,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.SPLIT_BLOCK) {
-    return (
+    return withResponsiveLayout(
       <SplitBlockPropertiesPanel
         block={block}
         index={index}
@@ -3858,41 +4014,43 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.FEATURE_ACCORDION) {
-    return (
+    return withResponsiveLayout(
       <FeatureAccordionPropertiesPanel
         block={block}
         index={index}
         onChange={onChange}
         brandAssets={brandAssets}
+        device={device}
       />
     );
   }
 
   if (block.type === BlockTypes.SIDE_SCROLL_ACCORDION) {
-    return <SideScrollAccordionPropertiesPanel block={block} index={index} onChange={onChange} />;
+    return withResponsiveLayout(<SideScrollAccordionPropertiesPanel block={block} index={index} onChange={onChange} />);
   }
 
   if (block.type === BlockTypes.SCROLL_STACK) {
-    return (
+    return withResponsiveLayout(
       <ScrollStackPropertiesPanel
         block={block}
         index={index}
         onChange={onChange}
         onUploadImage={onUploadImage}
+        device={device}
       />
     );
   }
 
   if (block.type === BlockTypes.CUSTOM_HTML) {
-    return <CustomHtmlPropertiesPanel block={block} index={index} onChange={onChange} />;
+    return withResponsiveLayout(<CustomHtmlPropertiesPanel block={block} index={index} onChange={onChange} />);
   }
 
   if (block.type === BlockTypes.COMPETITOR_COMPARISON) {
-    return <CompetitorComparisonPropertiesPanel block={block} index={index} onChange={onChange} />;
+    return withResponsiveLayout(<CompetitorComparisonPropertiesPanel block={block} index={index} onChange={onChange} />);
   }
 
   if (block.type === BlockTypes.DIVIDER) {
-    return <DividerPropertiesPanel block={block} index={index} onChange={onChange} />;
+    return withResponsiveLayout(<DividerPropertiesPanel block={block} index={index} onChange={onChange} />);
   }
 
   if (block.type === BlockTypes.SPACE) {
@@ -3900,7 +4058,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     const p          = block.props || {};
     const bgStyle    = p.backgroundStyle || "none";
     const updateSpacer = (patch) => onChange(index, { ...p, ...patch });
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>⬆️ Edit: Spacer</h3>
         <div style={styles.propertyGrid}>
@@ -4051,7 +4209,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if ([BlockTypes.COLUMNS_2, BlockTypes.COLUMNS_3].includes(block.type)) {
-    return (
+    return withResponsiveLayout(
       <ColumnsPropertiesPanel
         block={block}
         index={index}
@@ -4065,7 +4223,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.GRID_SECTION) {
-    return (
+    return withResponsiveLayout(
       <GridSectionPropertiesPanel
         block={block}
         index={index}
@@ -4078,15 +4236,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   }
 
   if (block.type === BlockTypes.TEMPLATE_SHOWCASE) {
-    return <TemplateShowcasePropertiesPanel block={block} index={index} onChange={onChange} />;
+    return withResponsiveLayout(<TemplateShowcasePropertiesPanel block={block} index={index} onChange={onChange} />);
   }
 
   if (block.type === BlockTypes.HOVER_CARDS) {
-    return <HoverCardsPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
+    return withResponsiveLayout(<HoverCardsPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />);
   }
 
   if (block.type === BlockTypes.FRAMER_PORTFOLIO) {
-    return <FramerPortfolioPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />;
+    return withResponsiveLayout(<FramerPortfolioPropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />);
   }
 
   if (block.type === BlockTypes.VIDEO_HERO) {
@@ -4141,7 +4299,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
       if (asset?.src) updateVH({ posterUrl: asset.src });
     };
 
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>🎬 Edit: Video Hero</h3>
         <div style={styles.propertyGrid}>
@@ -4353,7 +4511,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     const safeItems = Array.isArray(block.props?.items) ? block.props.items : [];
     const marqueeProps = block.props || {};
     const updateMarquee = (patch) => onChange(index, { ...marqueeProps, ...patch });
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>🎞 Edit: {def?.name}</h3>
         <div style={styles.propertyGrid}>
@@ -4515,7 +4673,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   if (block.type === BlockTypes.WAVE_MARQUEE) {
     const waveProps = block.props || {};
     const updateWave = (patch) => onChange(index, { ...waveProps, ...patch });
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>~ Edit: Wave Marquee</h3>
         <div style={styles.propertyGrid}>
@@ -4612,7 +4770,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     const ccProps = block.props || {};
     const updateCC = (patch) => onChange(index, { ...ccProps, ...patch });
     const safeRows = Array.isArray(ccProps.rows) ? ccProps.rows : [];
-    return (
+    return withResponsiveLayout(
       <div style={styles.properties}>
         <h3 style={styles.propertiesTitle}>💸 Edit: Competitor Comparison</h3>
         <div style={styles.propertyGrid}>
@@ -4748,7 +4906,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   const textContentKeys = Object.keys(block.props || {}).filter((k) => isLongTextField(k));
   const deviceLabel = device === "mobile" ? "Mobile" : device === "tablet" ? "Tablet" : "Desktop";
 
-  return (
+  return withResponsiveLayout(
     <div style={styles.properties}>
       <h3 style={styles.propertiesTitle}>🎨 Edit: {def?.name}</h3>
       <div style={{ margin: "0 0 10px", display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 999, background: "#e0f2fe", color: "#075985", border: "1px solid #7dd3fc", fontSize: 12, fontWeight: 800 }}>
@@ -4829,6 +4987,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               />
               Full width background
             </label>
+          </div>
+        ) : null}
+        {isHero && block.type === BlockTypes.HERO && shouldShowHeroPanelSection("layout") ? (
+          <div style={styles.sectionCard}>
+            <label style={styles.propertyLabel}>Hero Buttons</label>
+            <div style={{ display: "grid", gap: 10 }}>
+              {renderHeroButtonLinkControls("Primary Button", primaryHeroCta, "primary")}
+              {renderHeroButtonLinkControls("Secondary Button", secondaryHeroCta, "secondary")}
+            </div>
           </div>
         ) : null}
         {isHero && shouldShowHeroPanelSection("layout") ? (
@@ -5032,6 +5199,76 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
                   />
                   No repeat background image
                 </label>
+                <div style={{ ...styles.linkRowCard, marginTop: 10 }}>
+                  <label style={styles.inlineToggle}>
+                    <input
+                      type="checkbox"
+                      checked={block.props?.overlayEnabled !== false && (block.props?.overlayEnabled === true || block.props?.backgroundOverlayOpacity != null || block.props?.overlayOpacity != null || block.props?.overlayGradientEnabled === true)}
+                      onChange={(e) => onChange(index, {
+                        ...block.props,
+                        overlayEnabled: e.target.checked,
+                        backgroundOverlayEnabled: e.target.checked,
+                        backgroundOverlayOpacity: e.target.checked ? Number(block.props?.backgroundOverlayOpacity ?? block.props?.overlayOpacity ?? 0.35) : 0,
+                        overlayOpacity: e.target.checked ? Number(block.props?.overlayOpacity ?? block.props?.backgroundOverlayOpacity ?? 0.35) : 0,
+                      })}
+                      style={styles.checkboxInput}
+                    />
+                    Enable image overlay
+                  </label>
+                  <div style={styles.colorGrid}>
+                    <ColorSelector
+                      label="Overlay Color"
+                      value={block.props?.overlayColor || block.props?.backgroundOverlayColor || "#020617"}
+                      fallback="#020617"
+                      onChange={(value) => onChange(index, { ...block.props, overlayColor: value, backgroundOverlayColor: value })}
+                    />
+                    <NumberField
+                      label="Overlay Opacity %"
+                      value={Math.round(Math.max(0, Math.min(1, Number(block.props?.overlayOpacity ?? block.props?.backgroundOverlayOpacity ?? 0))) * 100)}
+                      min={0}
+                      max={95}
+                      onChange={(value) => onChange(index, {
+                        ...block.props,
+                        overlayEnabled: Number(value) > 0,
+                        backgroundOverlayEnabled: Number(value) > 0,
+                        overlayOpacity: Number((Number(value) / 100).toFixed(3)),
+                        backgroundOverlayOpacity: Number((Number(value) / 100).toFixed(3)),
+                      })}
+                    />
+                  </div>
+                  <label style={{ ...styles.inlineToggle, marginTop: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!block.props?.overlayGradientEnabled}
+                      onChange={(e) => onChange(index, { ...block.props, overlayGradientEnabled: e.target.checked, overlayEnabled: e.target.checked || block.props?.overlayEnabled !== false })}
+                      style={styles.checkboxInput}
+                    />
+                    Use gradient overlay
+                  </label>
+                  {block.props?.overlayGradientEnabled ? (
+                    <div style={styles.colorGrid}>
+                      <ColorSelector label="Gradient Start" value={block.props?.overlayGradientStart || "rgba(2,6,23,0.65)"} fallback="#020617" onChange={(value) => onChange(index, { ...block.props, overlayGradientStart: value })} />
+                      <ColorSelector label="Gradient End" value={block.props?.overlayGradientEnd || "rgba(2,6,23,0)"} fallback="#020617" onChange={(value) => onChange(index, { ...block.props, overlayGradientEnd: value })} />
+                      <select
+                        value={String(block.props?.overlayGradientDirection || "135deg")}
+                        onChange={(e) => onChange(index, { ...block.props, overlayGradientDirection: e.target.value })}
+                        style={styles.propertyInput}
+                      >
+                        <option value="90deg">Left to Right</option>
+                        <option value="180deg">Top to Bottom</option>
+                        <option value="135deg">Diagonal</option>
+                        <option value="to bottom">Vertical</option>
+                      </select>
+                    </div>
+                  ) : null}
+                  <NumberField
+                    label="Image Brightness %"
+                    value={Math.round(Math.max(0.25, Math.min(2, Number(block.props?.imageBrightness ?? 1))) * 100)}
+                    min={25}
+                    max={200}
+                    onChange={(value) => onChange(index, { ...block.props, imageBrightness: Number((Number(value) / 100).toFixed(2)) })}
+                  />
+                </div>
               </>
             ) : null}
             {(block?.props?.backgroundStyle || "gradient") === "video" ? (

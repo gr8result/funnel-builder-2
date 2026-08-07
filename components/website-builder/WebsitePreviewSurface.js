@@ -1,10 +1,61 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import BackToTopButton from "./website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
+import { isFullWidthPage, normalizePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isBlockVisibleOnDevice, resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
+import { buildWebsitePreviewUrl, canonicalPreviewPageSlug, resolveCanonicalPreviewPageSlug } from "../../lib/website-builder/previewRoutes";
+
+class PreviewBlockErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      errorMessage: error?.message ? String(error.message) : "Unknown preview rendering error",
+    };
+  }
+
+  componentDidCatch(error, info) {
+    const details = {
+      blockId: this.props.blockId || "",
+      blockType: this.props.blockType || "",
+      message: error?.message ? String(error.message) : "",
+      stack: error?.stack ? String(error.stack) : "",
+      componentStack: info?.componentStack ? String(info.componentStack) : "",
+    };
+    if (typeof window !== "undefined") {
+      if (!window.__websitePreviewBlockErrors) window.__websitePreviewBlockErrors = [];
+      window.__websitePreviewBlockErrors.push(details);
+    }
+    console.error("[WebsitePreviewSurface] Block render failure", details);
+    if (typeof this.props.onError === "function") this.props.onError(details);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section style={styles.blockErrorFallback}>
+          <h3 style={styles.blockErrorTitle}>Block failed to render</h3>
+          <p style={styles.blockErrorBody}>
+            {this.props.blockType || "unknown"}
+            {this.props.blockId ? ` #${this.props.blockId}` : ""}
+          </p>
+          {process.env.NODE_ENV !== "production" ? (
+            <p style={styles.blockErrorDetail}>{this.state.errorMessage}</p>
+          ) : null}
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function slugify(value) {
   return String(value || "")
@@ -45,11 +96,16 @@ function resolveStackBlockBackground(blocks, index, fallback = "transparent") {
     || fallback;
 }
 
-export default function WebsitePreviewSurface({ project, page, viewport, assets }) {
+export default function WebsitePreviewSurface({ project, page, viewport, assets, onSurfaceReady = null }) {
+  const [firstBlockRuntimeError, setFirstBlockRuntimeError] = React.useState(null);
   const active = useMemo(() => {
     if (!project?.pages?.length) return null;
-    const requested = String(page || "");
-    return project.pages.find((entry) => slugify(entry.name) === requested) || project.pages[0];
+    const requested = canonicalPreviewPageSlug(page || "");
+    return project.pages.find((entry) => {
+      const entrySlug = resolveCanonicalPreviewPageSlug(entry, { project });
+      const entryName = canonicalPreviewPageSlug(entry?.name || entry?.title || "");
+      return (requested && entrySlug === requested) || (requested && entryName === requested);
+    }) || project.pages[0];
   }, [project, page]);
 
   const previewViewport = ["mobile", "tablet", "desktop"].includes(String(viewport || "").toLowerCase())
@@ -70,6 +126,8 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
   ).filter((block) => isBlockVisibleOnDevice(block?.props, previewViewport));
   const shellBlocks = [globalNavBlock, ...blocksWithoutShellDuplicates, globalFooterBlock].filter(Boolean);
   const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
+  const pageWidthMode = normalizePageWidthMode(active?.pageWidthMode);
+  const pageFullWidth = isFullWidthPage(pageWidthMode);
   const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
   // Tablet must use the same mobile-safe compact layout as phone preview -- otherwise the
   // shell narrows to ~920px while every `compact ? mobile : desktop` rule in the renderer
@@ -87,9 +145,13 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
     if (!project?.id || !project?.pages?.length) return null;
 
     const pageMap = project.pages.reduce((acc, entry) => {
-      const pageKey = slugify(entry?.slug || entry?.name || entry?.title || "");
+      const pageKey = resolveCanonicalPreviewPageSlug(entry, { project });
       if (!pageKey) return acc;
-      const href = `/modules/website-builder/project/${project.id}/preview?page=${encodeURIComponent(pageKey)}&viewport=${encodeURIComponent(previewViewport)}`;
+      const href = buildWebsitePreviewUrl({
+        projectId: project.id,
+        pageSlug: pageKey,
+        viewport: previewViewport,
+      });
       [
         entry?.name,
         entry?.title,
@@ -106,11 +168,30 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
     }, {});
 
     return {
-      basePath: `/modules/website-builder/project/${project.id}/preview?viewport=${encodeURIComponent(previewViewport)}`,
-      currentPageKey: slugify(active?.name || page || "home"),
+      basePath: buildWebsitePreviewUrl({ projectId: project.id, viewport: previewViewport }),
+      currentPageKey: canonicalPreviewPageSlug(active?.slug || active?.name || page || "home"),
       pageMap,
     };
   }, [project, active, page, previewViewport]);
+
+  React.useEffect(() => {
+    const activePageName = active?.name || "";
+    const activeBlocks = Array.isArray(pageBlocks) ? pageBlocks : [];
+    console.log("[preview-ui] surface mounted", {
+      projectId: project?.id || "",
+      activePageName,
+      pageSlug: canonicalPreviewPageSlug(active?.slug || activePageName || page || ""),
+      blockCount: activeBlocks.length,
+    });
+    if (typeof onSurfaceReady === "function") {
+      onSurfaceReady({
+        projectId: project?.id || "",
+        activePageName,
+        blockCount: activeBlocks.length,
+        blockTypes: activeBlocks.slice(0, 30).map((block) => String(block?.type || "")),
+      });
+    }
+  }, [project?.id, active?.name, active?.slug, page, pageBlocks, onSurfaceReady]);
 
   return (
     <>
@@ -198,17 +279,33 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
           <Link href={`/modules/website-builder/visual-builder?projectId=${encodeURIComponent(project.id)}&page=${encodeURIComponent(active?.name || project?.pages?.[0]?.name || "Home")}&name=${encodeURIComponent(project.name || "GR8 Website")}`} style={styles.backBtn}>Back to Builder</Link>
         </div>
 
-        <div className="gr8wb-viewport" style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
+        <div className="gr8wb-viewport" data-page-width-mode={pageWidthMode} style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
           {injectNav ? (
             <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalNavBlock?.id || ""} data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalNavBlock, pageBackground))}>
-              {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+              <PreviewBlockErrorBoundary
+                blockId={globalNavBlock?.id || ""}
+                blockType={globalNavBlock?.type || ""}
+                onError={(details) => {
+                  setFirstBlockRuntimeError((current) => current || details);
+                }}
+              >
+                {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+              </PreviewBlockErrorBoundary>
             </div>
           ) : null}
 
           {Array.isArray(pageBlocks) && pageBlocks.length ? (
             blocksWithoutShellDuplicates.map((block, index) => (
-              <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-id={block.id || ""} data-website-preview-block-type={block.type || ""} style={styles.blockFrame(resolveStackBlockBackground(blocksWithoutShellDuplicates, index, pageBackground))}>
-                {renderWebsiteBlock(block, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+              <div key={block.id || `${block.type}-${index}`} data-website-preview-block="true" data-website-preview-block-id={block.id || ""} data-website-preview-block-type={block.type || ""} style={styles.pageBlockFrame(resolveStackBlockBackground(blocksWithoutShellDuplicates, index, pageBackground), pageFullWidth, previewShellWidth)}>
+                <PreviewBlockErrorBoundary
+                  blockId={block.id || ""}
+                  blockType={block.type || ""}
+                  onError={(details) => {
+                    setFirstBlockRuntimeError((current) => current || details);
+                  }}
+                >
+                  {renderWebsiteBlock(block, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: pageFullWidth && previewViewport === "desktop" ? null : previewShellWidth, siteId: project?.id || "" })}
+                </PreviewBlockErrorBoundary>
               </div>
             ))
           ) : pageContent ? (
@@ -224,7 +321,11 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
                         {project.pages.map((entry) => (
                           <Link
                             key={entry.name}
-                            href={`/modules/website-builder/project/${project.id}/preview?page=${slugify(entry.name)}&viewport=${encodeURIComponent(previewViewport)}`}
+                            href={buildWebsitePreviewUrl({
+                              projectId: project.id,
+                              pageSlug: resolveCanonicalPreviewPageSlug(entry, { project }) || slugify(entry.name),
+                              viewport: previewViewport,
+                            })}
                             style={{ ...styles.navLink, ...(active?.name === entry.name ? styles.navLinkActive : {}) }}
                           >
                             {entry.name}
@@ -245,8 +346,26 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets 
 
           {injectFooter ? (
             <div key={`__global-footer-${globalFooterBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalFooterBlock?.id || ""} data-website-preview-block-type={globalFooterBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalFooterBlock, pageBackground))}>
-              {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+              <PreviewBlockErrorBoundary
+                blockId={globalFooterBlock?.id || ""}
+                blockType={globalFooterBlock?.type || ""}
+                onError={(details) => {
+                  setFirstBlockRuntimeError((current) => current || details);
+                }}
+              >
+                {renderWebsiteBlock(globalFooterBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+              </PreviewBlockErrorBoundary>
             </div>
+          ) : null}
+
+          {process.env.NODE_ENV !== "production" && firstBlockRuntimeError ? (
+            <aside style={styles.runtimeErrorBadge}>
+              <p style={styles.runtimeErrorTitle}>Preview block error captured</p>
+              <p style={styles.runtimeErrorMeta}>
+                {firstBlockRuntimeError.blockType || "unknown"}
+                {firstBlockRuntimeError.blockId ? ` #${firstBlockRuntimeError.blockId}` : ""}
+              </p>
+            </aside>
           ) : null}
         </div>
         <BackToTopButton />
@@ -310,11 +429,9 @@ const styles = {
   },
   previewViewport: (viewport, previewShellWidth, background) => ({
     ...styles.previewStack,
-    width: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
-    maxWidth: viewport === "desktop" ? "100vw" : `min(100%, ${previewShellWidth}px)`,
+    width: viewport === "desktop" ? "100%" : `min(100%, ${previewShellWidth}px)`,
+    maxWidth: viewport === "desktop" ? "100%" : `min(100%, ${previewShellWidth}px)`,
     margin: viewport === "desktop" ? 0 : "0 auto",
-    marginLeft: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
-    marginRight: viewport === "desktop" ? "calc(50% - 50vw)" : undefined,
     overflowX: "clip",
     background,
   }),
@@ -330,6 +447,12 @@ const styles = {
     boxShadow: "none",
     background,
     display: "block",
+  }),
+  pageBlockFrame: (background, pageFullWidth, layoutWidth) => ({
+    ...styles.blockFrame(background),
+    width: pageFullWidth ? "100%" : `min(100%, ${Math.max(320, Number(layoutWidth) || 1500)}px)`,
+    maxWidth: pageFullWidth ? "none" : `${Math.max(320, Number(layoutWidth) || 1500)}px`,
+    margin: "0 auto",
   }),
   siteHeader: { paddingTop: 70, paddingBottom: 14 },
   brandRow: {
@@ -370,6 +493,56 @@ const styles = {
     color: "#475569",
     padding: "16px 18px",
     fontSize: 16,
+    fontWeight: 600,
+  },
+  blockErrorFallback: {
+    border: "1px solid rgba(239,68,68,0.45)",
+    background: "rgba(127,29,29,0.08)",
+    color: "#7f1d1d",
+    borderRadius: 12,
+    margin: "18px auto",
+    padding: "14px 16px",
+    width: "min(100%, 920px)",
+    boxSizing: "border-box",
+  },
+  blockErrorTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 700,
+  },
+  blockErrorBody: {
+    margin: "6px 0 0",
+    fontSize: 14,
+    fontWeight: 600,
+  },
+  blockErrorDetail: {
+    margin: "8px 0 0",
+    fontSize: 12,
+    color: "#991b1b",
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+  },
+  runtimeErrorBadge: {
+    position: "fixed",
+    left: 14,
+    bottom: 14,
+    zIndex: 300,
+    borderRadius: 10,
+    background: "rgba(127,29,29,0.95)",
+    color: "#fee2e2",
+    border: "1px solid rgba(248,113,113,0.65)",
+    boxShadow: "0 10px 28px rgba(15,23,42,0.24)",
+    padding: "10px 12px",
+    maxWidth: "min(90vw, 420px)",
+  },
+  runtimeErrorTitle: {
+    margin: 0,
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+  },
+  runtimeErrorMeta: {
+    margin: "4px 0 0",
+    fontSize: 12,
     fontWeight: 600,
   },
 };

@@ -236,18 +236,30 @@ function fullWidthStyle(props, compact, editor) {
   };
   const backgroundStyle = String(props?.backgroundStyle || "").toLowerCase();
   const backgroundImage = String(props?.backgroundImage || "").trim();
-  const overlayOpacity = Math.max(0, Math.min(1, Number(props?.backgroundOverlayOpacity ?? props?.overlayOpacity ?? 0)));
+  const normalizeOpacity = (value, fallback = 0) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    const normalized = parsed > 1 ? parsed / 100 : parsed;
+    return Math.max(0, Math.min(1, normalized));
+  };
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(props || {}, key);
+  const overlayDisabled = props?.overlayEnabled === false || props?.backgroundOverlayEnabled === false;
+  const overlayOpacity = overlayDisabled ? 0 : normalizeOpacity(props?.overlayOpacity ?? props?.backgroundOverlayOpacity, 0);
   const overlayColor = String(props?.backgroundOverlayColor || props?.overlayColor || "#000000");
   const overlayRgb = /^#([0-9a-f]{6})$/i.test(overlayColor)
     ? `${parseInt(overlayColor.slice(1, 3), 16)},${parseInt(overlayColor.slice(3, 5), 16)},${parseInt(overlayColor.slice(5, 7), 16)}`
     : "0,0,0";
+  const overlayEnabled = !overlayDisabled && (props?.overlayGradientEnabled || hasOwn("overlayOpacity") || hasOwn("backgroundOverlayOpacity")) && overlayOpacity > 0;
+  const overlayLayer = props?.overlayGradientEnabled
+    ? `linear-gradient(${props?.overlayGradientDirection || "135deg"}, ${props?.overlayGradientStart || `rgba(${overlayRgb},${overlayOpacity})`}, ${props?.overlayGradientEnd || `rgba(${overlayRgb},0)`})`
+    : `linear-gradient(rgba(${overlayRgb},${overlayOpacity}), rgba(${overlayRgb},${overlayOpacity}))`;
   const imageLayer = backgroundImage
     ? `url("${backgroundImage.replace(/"/g, "%22")}") ${props?.backgroundPosition || "center center"} / ${props?.backgroundSize || "cover"} no-repeat`
     : "";
   const designBackground = backgroundStyle === "gradient"
     ? (props?.backgroundGradient || props?.sectionGradient || undefined)
     : backgroundStyle === "image" && imageLayer
-      ? (overlayOpacity > 0 ? `linear-gradient(rgba(${overlayRgb},${overlayOpacity}), rgba(${overlayRgb},${overlayOpacity})), ${imageLayer}` : imageLayer)
+      ? (overlayEnabled ? `${overlayLayer}, ${imageLayer}` : imageLayer)
       : props?.backgroundColor || undefined;
   const borderWidth = Number(props?.borderWidth || 0);
   const designStyle = {

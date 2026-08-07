@@ -1,5 +1,8 @@
 import React from "react";
 import { getAssetFromLibrary, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
+import { isResponsiveDevice, resolveResponsiveMediaSize, resolveResponsiveProp } from "../../../lib/website-builder/responsiveValue";
+import { resolveGridSectionItemImageUrl } from "../../../lib/website-builder/gridSectionImages";
+import { resolveLayerImageUrl } from "../../../lib/website-builder/blockImageResolver";
 import { isUnsafeAccordionPanelImageUrl, resolveAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
 import { normalizeAccordionHeading } from "../../../lib/website-builder/accordionHeadingText";
 import { resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
@@ -93,7 +96,8 @@ function logAccordionRenderDebug({ blockId, blockType, panels, renderer }) {
   });
 }
 
-function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationContext = null }) {
+function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, navigationContext = null }) {
+  if (!isResponsiveDevice(device)) device = compact ? "mobile" : "desktop";
   const wrapperRef = React.useRef(null);
   const shellRef = React.useRef(null);
   const dropdownCloseTimerRef = React.useRef(null);
@@ -102,6 +106,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
   const stickyMode = blockProps.stickyMode || "normal";
   const isAlwaysMode = stickyMode === "always";
   const isStickyMode = stickyMode === "sticky" || stickyMode === "sticky-transparent" || stickyMode === "sticky-solid";
+  const isGlobalSiteHeader = blockProps.role === "primary-navigation" || !!blockProps.sharedComponentId || blockProps.useGlobalHeader === true;
   const navFullWidth = fullWidthStyle(navProps, compact, editor);
   const isFullWidthNav = navProps.fullWidthBackground && !compact;
   const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
@@ -181,11 +186,23 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
 
     const wrapperNode = wrapperRef.current;
     const scrollTarget = findScrollParent(wrapperNode || shellRef.current);
+    // `.gr8wb-viewport` (the editor/preview/published shared responsive shell -- see
+    // styles/website-builder-responsive.css) uses `container-type: inline-size` so tablet/mobile
+    // preview can use real container queries. That containment also makes it the CSS containing
+    // block for `position: fixed` descendants, same as `transform` would. `getBoundingClientRect`
+    // always returns true-viewport-relative coordinates regardless of that, so once this nav is
+    // fixed we have to re-express those coordinates relative to the containing block ourselves --
+    // otherwise "always"/"sticky" nav mode renders offset by however far the shell sits from the
+    // real viewport origin (e.g. a centered, narrower tablet/mobile preview shell).
+    const containingBlockNode = wrapperNode?.closest?.(".gr8wb-viewport") || null;
     const readScrollTop = () => {
       const usesWindowScroll = !scrollTarget || scrollTarget === window;
       const scrollAmount = usesWindowScroll ? (window.scrollY || 0) : (scrollTarget?.scrollTop || 0);
       const wrapperRect = wrapperNode?.getBoundingClientRect?.();
       const containerTop = usesWindowScroll ? 0 : (scrollTarget?.getBoundingClientRect?.().top || 0);
+      const containingBlockRect = containingBlockNode?.getBoundingClientRect?.() || null;
+      const cbLeft = containingBlockRect?.left || 0;
+      const cbTop = containingBlockRect?.top || 0;
 
       setScrolled(scrollAmount > 18);
 
@@ -196,8 +213,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
       if ((isAlwaysMode || isStickyMode) && wrapperRect) {
         setFixedFrame((current) => {
           const next = {
-            top: usesWindowScroll ? 0 : containerTop,
-            left: wrapperRect.left,
+            top: (usesWindowScroll ? 0 : containerTop) - cbTop,
+            left: wrapperRect.left - cbLeft,
             width: wrapperRect.width,
           };
 
@@ -276,13 +293,35 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
 
   const shouldUseMobileMenu = (compact || isMobile) && mobileMenuStyle === "hamburger";
   const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : asArray(blockProps.links);
-  const shouldUseStickyEditor = editor && (isAlwaysMode || isStickyMode);
-  const useFixedSticky = !editor && isStickyMode;
-  const shouldUseFixedNav = !editor && (isAlwaysMode || isStickyMode);
+  const shouldUseTrueSticky = isStickyMode || (editor && isAlwaysMode);
+  const shouldUseFixedNav = !editor && isAlwaysMode && !isGlobalSiteHeader;
   const fixedTop = fixedFrame.top || 0;
   const fixedLeft = editor ? fixedFrame.left : (isFullWidthNav ? 0 : fixedFrame.left);
   const fixedWidth = editor ? (fixedFrame.width || undefined) : (isFullWidthNav ? "100vw" : (fixedFrame.width || "100%"));
-  const brandMarkSize = compact ? 36 : Number(blockProps.logoWidth) || 44;
+  // Logo width is per-device: an explicit logoWidthTablet/logoWidthMobile override wins, and
+  // absent that, tablet/mobile shrink to a sensible default (180px / 140px) instead of silently
+  // rendering the desktop logo's own width -- a wide desktop wordmark left at full size is what
+  // overflows/overlaps a narrow nav on tablet/mobile.
+  const resolvedLogoWidth = resolveResponsiveProp(blockProps, "logoWidth", device, {
+    fitContentFallback: true,
+    fitContentValue: { tablet: 180, mobile: 140 },
+  });
+  const desktopLogoWidth = Number(blockProps.logoWidth) || 44;
+  const brandMarkSize = Number(resolvedLogoWidth.value) || (device === "desktop" ? desktopLogoWidth : (device === "tablet" ? 180 : 140));
+  const navLogoMedia = resolveResponsiveMediaSize({
+    desktopWidth: brandMarkSize,
+    desktopHeight: brandMarkSize,
+    mediaType: "logo",
+    blockType: "navigation-bar",
+    device,
+    containerWidth: device === "desktop" ? brandMarkSize : (device === "tablet" ? 360 : 220),
+    viewportWidth: device === "tablet" ? 1024 : device === "mobile" ? 430 : undefined,
+  });
+  const resolvedLogoMaxWidth = resolveResponsiveProp(blockProps, "logoMaxWidth", device, {
+    fitContentFallback: true,
+    fitContentValue: { tablet: 180, mobile: 140 },
+  });
+  const brandMarkMaxWidth = resolvedLogoMaxWidth.value ? Number(resolvedLogoMaxWidth.value) : undefined;
   const shouldShowBrandMark = blockProps.showLogo || !!logoSrc;
 
   const shellStyle = {
@@ -291,8 +330,8 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     width: shouldUseFixedNav ? fixedWidth : (navFullWidth.width || "100%"),
     maxWidth: shouldUseFixedNav ? fixedWidth : navFullWidth.maxWidth,
     boxSizing: "border-box",
-    position: shouldUseFixedNav ? "fixed" : shouldUseStickyEditor ? "sticky" : navTheme.shell.position,
-    top: shouldUseFixedNav ? fixedTop : shouldUseStickyEditor ? 0 : navTheme.shell.top,
+    position: shouldUseFixedNav ? "fixed" : shouldUseTrueSticky ? "sticky" : navTheme.shell.position,
+    top: shouldUseFixedNav ? fixedTop : shouldUseTrueSticky ? 0 : navTheme.shell.top,
     left: shouldUseFixedNav ? fixedLeft : navTheme.shell.left,
     right: shouldUseFixedNav ? (editor || !isFullWidthNav ? "auto" : 0) : navTheme.shell.right,
     zIndex: Math.max(Number(navTheme.shell.zIndex) || 0, isAlwaysMode ? (editor ? 28 : 120) : isStickyMode ? (editor ? 24 : 80) : 80, editor ? 80 : 10000),
@@ -324,13 +363,20 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     : navTheme.links;
 
   const renderNavSection = () => (
-    <section ref={shellRef} data-website-nav-shell="true" style={asStyleObject(shellStyle)}>
+    <section
+      ref={shellRef}
+      data-website-nav-shell="true"
+      data-global-site-header={isGlobalSiteHeader ? "true" : undefined}
+      className={isGlobalSiteHeader ? "global-site-header" : undefined}
+      style={asStyleObject(shellStyle)}
+    >
       <div style={asStyleObject(navTheme.brandRow)}>
         {shouldShowBrandMark ? (
           <BrandMark
             brand={blockProps.brand}
             logoSrc={logoSrc}
-            size={brandMarkSize}
+            size={device === "desktop" ? brandMarkSize : Math.max(32, Math.min(brandMarkSize, Number(navLogoMedia.width) || brandMarkSize))}
+            maxWidth={brandMarkMaxWidth}
             background={blockProps.buttonColor || blockProps.backgroundColor || "#0f172a"}
             color={blockProps.buttonTextColor || "#ffffff"}
             borderColor={blockProps.borderColor || "rgba(148,163,184,0.24)"}
@@ -525,6 +571,7 @@ function NavBarBlock({ blockProps, compact, logoSrc, editor = false, navigationC
     return (
         <div
           ref={wrapperRef}
+          data-global-site-header-wrapper={isGlobalSiteHeader ? "true" : undefined}
           style={{
             position: "relative",
             width: "100%",
@@ -589,9 +636,57 @@ function renderStatLabelHtml(value) {
   return looksLikePastedCodeBlock ? escapeHtml(htmlToPlainText(raw).trim()) : asRichHtml(raw);
 }
 
+function computeLayerVisualRect(layer = {}) {
+  const x = Number(layer?.x || 0);
+  const y = Number(layer?.y || 0);
+  const width = Math.max(0, Number(layer?.width || 0));
+  const height = Math.max(0, Number(layer?.height || 0));
+  const rotationDeg = Number(layer?.rotation || 0);
+  if (!width || !height) {
+    return { left: x, top: y, right: x, bottom: y };
+  }
+  const radians = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  const boundHalfWidth = Math.abs(halfWidth * cos) + Math.abs(halfHeight * sin);
+  const boundHalfHeight = Math.abs(halfWidth * sin) + Math.abs(halfHeight * cos);
+  const centerX = x + halfWidth;
+  const centerY = y + halfHeight;
+  return {
+    left: centerX - boundHalfWidth,
+    top: centerY - boundHalfHeight,
+    right: centerX + boundHalfWidth,
+    bottom: centerY + boundHalfHeight,
+  };
+}
+
+function computeVisibleLayerBounds(layers = [], fallback = { minX: 0, minY: 0, maxX: 900, maxY: 420 }) {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const layer of Array.isArray(layers) ? layers : []) {
+    const rect = computeLayerVisualRect(layer);
+    minX = Math.min(minX, rect.left);
+    minY = Math.min(minY, rect.top);
+    maxX = Math.max(maxX, rect.right);
+    maxY = Math.max(maxY, rect.bottom);
+  }
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+    return fallback;
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
 function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, onChangeBlock, onUploadLayerImage, layoutWidth = null }) {
   const dragRef = React.useRef(null);
   const fileInputRefs = React.useRef({});
+  const canvasFrameRef = React.useRef(null);
   const canvasRef = React.useRef(null);
   const latestPropsRef = React.useRef(blockProps || {});
   const latestLayersRef = React.useRef([]);
@@ -599,16 +694,19 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
   const [draftLayers, setDraftLayers] = React.useState(null);
   const [canvasGuides, setCanvasGuides] = React.useState({ showX: false, showY: false, active: false });
   const [canvasWidth, setCanvasWidth] = React.useState(0);
+  const [failedLayerSrcs, setFailedLayerSrcs] = React.useState({});
   const gridSize = compact ? 20 : 24;
   const snapEnabled = blockProps?.showGrid !== false && blockProps?.snapToGrid !== false;
-  const fullWidthBlock = true;
+  const fullWidthBlock = blockProps?.fullWidth !== undefined
+    ? blockProps.fullWidth === true
+    : blockProps?.fullWidthBackground === true;
   const selectedLayerIndex = Number.isInteger(blockProps?.selectedLayerIndex) ? blockProps.selectedLayerIndex : null;
 
   const layers = asArray(blockProps?.images)
     .map((layer, index) => ({
       id: layer?.id || `layer-${index}`,
       kind: layer?.kind || (layer?.content ? "text" : "image"),
-      src: getAssetFromLibrary(assets, layer?.assetId)?.src || layer?.src || "",
+      src: resolveLayerImageUrl(layer, assets),
       assetId: layer?.assetId || "",
       content: layer?.content || "Headline Text",
       x: Number(layer?.x ?? 40 + (index * 30)),
@@ -628,33 +726,74 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
   const visibleLayers = draftLayers || layers;
+  const renderLayerImageFallback = (layer, idx, style = {}) => (
+    <div
+      aria-label={layer?.alt || `Layer ${idx + 1}`}
+      style={{
+        width: "100%",
+        height: "100%",
+        minHeight: compact ? 96 : undefined,
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        boxSizing: "border-box",
+        color: "#94a3b8",
+        fontSize: 12,
+        fontWeight: 700,
+        textAlign: "center",
+        background: layer?.background && layer.background !== "transparent" ? layer.background : "rgba(148,163,184,0.16)",
+        pointerEvents: "none",
+        ...style,
+      }}
+    >
+      {editor ? "Image unavailable" : ""}
+    </div>
+  );
+  const handleLayerImageError = (event, layer, idx) => {
+    const src = String(layer?.src || event?.currentTarget?.currentSrc || event?.currentTarget?.src || "").trim();
+    if (shouldLogHeroVideoDebug()) {
+      console.warn("[image-stack] image failed to load", {
+        blockId: blockProps?.id || "",
+        layerId: layer?.id || "",
+        layerIndex: idx,
+        src,
+      });
+    }
+    setFailedLayerSrcs((current) => ({ ...current, [layer?.id || `${idx}:${src}`]: true }));
+  };
+  const hasLayerImageFailed = (layer, idx) => !!failedLayerSrcs[layer?.id || `${idx}:${String(layer?.src || "")}`];
 
-  const bounds = visibleLayers.reduce((acc, layer) => {
-    const x = Number(layer?.x || 0);
-    const y = Number(layer?.y || 0);
-    const width = Number(layer?.width || 0);
-    const height = Number(layer?.height || 0);
-    return {
-      minX: Math.min(acc.minX, x),
-      minY: Math.min(acc.minY, y),
-      maxX: Math.max(acc.maxX, x + width),
-      maxY: Math.max(acc.maxY, y + height),
-    };
-  }, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
+  const bounds = computeVisibleLayerBounds(visibleLayers, { minX: 0, minY: 0, maxX: 900, maxY: 420 });
   const contentWidth = Math.max(320, bounds.maxX - bounds.minX);
   const contentHeight = Math.max(240, bounds.maxY - bounds.minY);
-  const baseLayoutWidth = Math.max(720, Number(layoutWidth || blockProps?.baseLayoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
-  const responsiveScale = 1;
-  const previewOffsetX = 0;
+  const configuredCanvasWidth = Math.max(720, Number(blockProps?.baseLayoutWidth || layoutWidth || DEFAULT_LAYOUT_WIDTH || 1100));
+  const designCanvasWidth = Math.max(
+    configuredCanvasWidth,
+    Math.round(bounds.maxX + 32),
+    Math.round(contentWidth + 32)
+  );
+  const designCanvasHeight = Math.max(
+    240,
+    parseSizeValue(blockProps?.minHeight, compact ? 420 : 560),
+    Math.round(bounds.maxY + 32),
+    Math.round(contentHeight + 32)
+  );
+  const responsiveScale = canvasWidth > 0 ? Math.min(1, canvasWidth / designCanvasWidth) : 1;
+  const renderedCanvasWidth = Math.max(1, Math.round(designCanvasWidth * responsiveScale));
+  const renderedCanvasHeight = Math.max(1, Math.round(designCanvasHeight * responsiveScale));
+  const contentCenterX = bounds.minX + (contentWidth / 2);
+  const canvasCenterX = designCanvasWidth / 2;
+  const centeredOffsetX = canvasCenterX - contentCenterX;
+  const minOffsetX = -bounds.minX;
+  const maxOffsetX = designCanvasWidth - bounds.maxX;
+  const previewOffsetX = clampValue(centeredOffsetX, minOffsetX, maxOffsetX);
   const previewOffsetY = 0;
-  const stackHeight = editor
-    ? (compact ? 320 : (blockProps?.minHeight || "72vh"))
-    : Math.max(compact ? 320 : 420, Math.round((Math.max(bounds.maxY + 32, contentHeight + 32)) * responsiveScale));
+  const stackHeight = renderedCanvasHeight;
   const stackFullWidth = fullWidthStyle({ ...blockProps, fullWidthBackground: fullWidthBlock }, compact, editor);
   const previewCanvasBackground = !editor && (!blockProps?.backgroundColor || blockProps.backgroundColor === "transparent")
     ? "linear-gradient(135deg, #09111f 0%, #0f172a 100%)"
     : (blockProps?.backgroundColor || "transparent");
-  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth }, compact, baseLayoutWidth);
+  const stackContentFrame = sectionContentStyle({ ...blockProps, baseLayoutWidth: designCanvasWidth }, compact, designCanvasWidth);
 
   React.useEffect(() => {
     latestPropsRef.current = blockProps || {};
@@ -663,7 +802,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const node = canvasRef.current;
+    const node = canvasFrameRef.current;
     if (!node) return undefined;
 
     const syncWidth = () => setCanvasWidth(node.clientWidth || 0);
@@ -677,7 +816,7 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
 
     window.addEventListener("resize", syncWidth);
     return () => window.removeEventListener("resize", syncWidth);
-  }, [compact, editor, blockProps?.fullWidthBackground]);
+  }, [compact, editor, blockProps?.fullWidthBackground, blockProps?.fullWidth, designCanvasWidth]);
 
   function applyLayerUpdate(nextLayers) {
     if (typeof onChangeBlock !== "function") return;
@@ -921,6 +1060,93 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
     });
   }
 
+  if (compact && blockProps?.mobileLayoutMode === "stacked") {
+    return (
+      <section
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          padding: "18px 0",
+          margin: 0,
+          background: previewCanvasBackground,
+          border: "none",
+          boxShadow: "none",
+          ...stackFullWidth,
+        }}
+      >
+        {editor && blockProps?.title ? <h2 style={{ ...sharedStyles.sectionTitle(compact), marginBottom: 12 }}>{blockProps.title}</h2> : null}
+        <div
+          style={{
+            width: "100%",
+            ...stackContentFrame,
+            padding: "0 14px",
+            boxSizing: "border-box",
+            display: "grid",
+            gap: 14,
+          }}
+        >
+          {visibleLayers.map((layer, idx) => (
+            <div
+              key={layer.id || `${idx}`}
+              data-image-layer={idx}
+              data-layer-kind={layer.kind || "image"}
+              style={{
+                position: "relative",
+                width: "100%",
+                maxWidth: "100%",
+                borderRadius: Math.max(10, Math.min(22, Number(layer.radius || 18))),
+                overflow: "hidden",
+                ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
+                boxShadow: layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none",
+              }}
+            >
+              {layer.kind === "text" ? (
+                <div
+                  data-layer-editor="true"
+                  data-website-inline-editor="true"
+                  contentEditable={editor}
+                  suppressContentEditableWarning
+                  onBlur={(event) => {
+                    if (shouldSkipToolbarBlur(event)) return;
+                    patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                  }}
+                  style={{
+                    minHeight: 96,
+                    display: "flex",
+                    alignItems: justifyForVertical(layer.verticalAlign),
+                    justifyContent: layer.textAlign === "right" ? "flex-end" : layer.textAlign === "left" ? "flex-start" : "center",
+                    padding: 16,
+                    color: layer.textColor || "#0f172a",
+                    fontSize: Math.max(18, Math.min(30, Number(layer.fontSize || 28))),
+                    fontWeight: layer.fontWeight || "700",
+                    lineHeight: 1.12,
+                    textAlign: layer.textAlign || "center",
+                    overflowWrap: "break-word",
+                    outline: editor ? "1px dashed rgba(125,211,252,0.6)" : "none",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "") }}
+                />
+              ) : layer.src && !hasLayerImageFailed(layer, idx) ? (
+                <img
+                  src={layer.src}
+                  alt={layer.alt || "Layer image"}
+                  onError={(event) => handleLayerImageError(event, layer, idx)}
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16 / 10",
+                    objectFit: "contain",
+                    display: "block",
+                    background: layer.background && layer.background !== "transparent" ? layer.background : "transparent",
+                  }}
+                />
+              ) : layer.src ? renderLayerImageFallback(layer, idx, { aspectRatio: "16 / 10" }) : null}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       style={{
@@ -944,161 +1170,215 @@ function LayeredImageStackBlock({ blockProps, compact, assets, editor = false, o
         }}
       >
         <div
-          ref={canvasRef}
-          data-image-stack-canvas
-          onPointerDown={(event) => {
-            if (!editor || typeof onChangeBlock !== "function") return;
-            if (event.target === event.currentTarget && latestPropsRef.current?.selectedLayerIndex != null) {
-              onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: null });
-            }
-          }}
-          onDoubleClick={(event) => {
-            if (!editor || event.target?.closest?.("[data-image-layer]")) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const nextX = clampValue(event.clientX - rect.left - 180, 0, Math.max(0, rect.width - 360));
-            const nextY = clampValue(event.clientY - rect.top - 70, 0, Math.max(0, rect.height - 140));
-            addTextLayer(nextX, nextY);
-          }}
+          ref={canvasFrameRef}
+          data-image-stack-frame
           style={{
-            position: "relative",
             width: "100%",
-            maxWidth: "100%",
-            minHeight: stackHeight,
-            marginTop: 0,
-            marginLeft: 0,
-            marginRight: 0,
+            maxWidth: "none",
+            height: stackHeight,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start",
             overflow: "hidden",
-            borderRadius: compact ? 16 : 20,
-            border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
-            background: previewCanvasBackground,
-            backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
-            backgroundSize: `${gridSize}px ${gridSize}px`,
+            overflowX: "clip",
+            boxSizing: "border-box",
           }}
         >
-          {editor ? renderCanvasCenterGuides(canvasGuides) : null}
-          {visibleLayers.map((layer, idx) => (
+          <div
+            data-image-stack-canvas-wrapper
+            style={{
+              position: "relative",
+              width: renderedCanvasWidth,
+              height: renderedCanvasHeight,
+              marginInline: "auto",
+              flex: "0 0 auto",
+              overflow: "hidden",
+            }}
+          >
+          <div
+            ref={canvasRef}
+            data-image-stack-canvas
+            data-canvas-scale={responsiveScale}
+            onPointerDown={(event) => {
+              if (!editor || typeof onChangeBlock !== "function") return;
+              if (event.target === event.currentTarget && latestPropsRef.current?.selectedLayerIndex != null) {
+                onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: null });
+              }
+            }}
+            onDoubleClick={(event) => {
+              if (!editor || event.target?.closest?.("[data-image-layer]")) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              const canvasScaleVal = Number(event.currentTarget?.dataset?.canvasScale || responsiveScale || 1) || 1;
+              const unscaledWidth = rect.width / canvasScaleVal;
+              const unscaledHeight = rect.height / canvasScaleVal;
+              const nextX = clampValue(((event.clientX - rect.left) / canvasScaleVal) - 180, 0, Math.max(0, unscaledWidth - 360));
+              const nextY = clampValue(((event.clientY - rect.top) / canvasScaleVal) - 70, 0, Math.max(0, unscaledHeight - 140));
+              addTextLayer(nextX, nextY);
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: designCanvasWidth,
+              minWidth: designCanvasWidth,
+              maxWidth: "none",
+              height: designCanvasHeight,
+              minHeight: designCanvasHeight,
+              overflow: "hidden",
+              borderRadius: compact ? 16 : 20,
+              border: editor ? "1px dashed rgba(125,211,252,0.42)" : "none",
+              background: previewCanvasBackground,
+              backgroundImage: blockProps?.showGrid !== false ? "linear-gradient(rgba(148,163,184,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.18) 1px, transparent 1px)" : "none",
+              backgroundSize: `${gridSize}px ${gridSize}px`,
+              transform: `translateX(-50%) scale(${responsiveScale})`,
+              transformOrigin: "top center",
+              willChange: responsiveScale < 1 ? "transform" : undefined,
+            }}
+          >
+            {editor ? renderCanvasCenterGuides(canvasGuides) : null}
             <div
-              key={layer.id || `${idx}`}
-              data-image-layer={idx}
-              data-layer-kind={layer.kind || "image"}
-              onPointerDown={(event) => startInteraction(event, idx, "move")}
-              onMouseDown={(event) => startInteraction(event, idx, "move")}
-              onDoubleClick={() => {
-                if (editor && layer.kind === "image") fileInputRefs.current[idx]?.click();
-              }}
+              data-image-stack-layer-group
+              data-visual-offset-x={Number(previewOffsetX.toFixed(3))}
               style={{
                 position: "absolute",
-                left: Math.round((layer.x * responsiveScale) + previewOffsetX),
-                top: Math.round((layer.y * responsiveScale) + previewOffsetY),
-                width: Math.max(48, Math.round(layer.width * responsiveScale)),
-                height: Math.max(48, Math.round(layer.height * responsiveScale)),
-                zIndex: layer.zIndex,
-                borderRadius: Math.max(8, Math.round(layer.radius * responsiveScale)),
-                overflow: "hidden",
-                cursor: editor ? "move" : "default",
-                border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
-                boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
-                transform: `rotate(${layer.rotation}deg)`,
-                ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
-                touchAction: "none",
-                userSelect: "none",
+                inset: 0,
+                transform: `translateX(${previewOffsetX}px)`,
+                transformOrigin: "top left",
               }}
             >
-            {layer.kind === "text" ? (
-              <>
-                {editor && selectedLayerIndex === idx ? (
-                  <div
-                    data-layer-drag-handle="true"
-                    onPointerDown={(event) => startInteraction(event, idx, "move")}
-                    onMouseDown={(event) => startInteraction(event, idx, "move")}
-                    style={{ position: "absolute", top: 6, left: 6, zIndex: 4, cursor: "move" }}
-                  >
-                    <span style={sharedStyles.editorChip}>Drag Text</span>
-                  </div>
-                ) : null}
-                <div
-                  data-layer-editor="true"
-                  data-website-inline-editor="true"
-                  contentEditable={editor}
-                  suppressContentEditableWarning
-                  onPointerDown={(event) => {
-                    if (editor && typeof onChangeBlock === "function" && latestPropsRef.current?.selectedLayerIndex !== idx) {
-                      onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: idx });
-                    }
-                    event.stopPropagation();
-                  }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onBlur={(event) => {
-                    if (shouldSkipToolbarBlur(event)) return;
-                    patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
-                  }}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: justifyForVertical(layer.verticalAlign),
-                    alignItems: "stretch",
-                    textAlign: layer.textAlign,
-                    padding: editor ? "34px 12px 12px" : 12,
-                    color: layer.textColor,
-                    fontSize: compact ? Math.max(16, layer.fontSize - 6) : Math.max(16, Math.round(layer.fontSize * responsiveScale)),
-                    fontWeight: layer.fontWeight,
-                    lineHeight: 1.2,
-                    outline: "none",
-                    cursor: "text",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "Type text here") }}
-                />
-              </>
-            ) : layer.src ? (
-              <img src={layer.src} alt={`Layer ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
-            ) : (
-              <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#475569", fontWeight: 600, background: "linear-gradient(135deg,#e2e8f0,#f8fafc)", pointerEvents: "none" }}>
-                Double-click to upload
-              </div>
-            )}
-
-
-            {layer.kind === "image" ? (
-              <input
-                ref={(el) => {
-                  fileInputRefs.current[idx] = el;
-                }}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(event) => handleFileChange(event, idx)}
-              />
-            ) : null}
-
-            {editor && selectedLayerIndex === idx ? [
-              { key: "nw", left: 6, top: 6, cursor: "nwse-resize" },
-              { key: "ne", right: 6, top: 6, cursor: "nesw-resize" },
-              { key: "sw", left: 6, bottom: 6, cursor: "nesw-resize" },
-              { key: "se", right: 6, bottom: 6, cursor: "nwse-resize" },
-            ].map((handle) => (
+            {visibleLayers.map((layer, idx) => (
               <div
-                key={handle.key}
-                data-resize-handle={handle.key}
-                onPointerDown={(event) => startInteraction(event, idx, "resize", handle.key)}
-                onMouseDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                key={layer.id || `${idx}`}
+                data-image-layer={idx}
+                data-layer-kind={layer.kind || "image"}
+                onPointerDown={(event) => startInteraction(event, idx, "move")}
+                onMouseDown={(event) => startInteraction(event, idx, "move")}
+                onDoubleClick={() => {
+                  if (editor && layer.kind === "image") fileInputRefs.current[idx]?.click();
+                }}
                 style={{
                   position: "absolute",
-                  width: 14,
-                  height: 14,
-                  borderRadius: 999,
-                  background: layer.kind === "image" ? "#f59e0b" : "#0ea5e9",
-                  border: "2px solid #fff",
-                  boxShadow: "0 6px 16px rgba(15,23,42,0.24)",
+                  left: Math.round(layer.x),
+                  top: Math.round(layer.y + previewOffsetY),
+                  width: Math.max(48, Math.round(layer.width)),
+                  height: Math.max(48, Math.round(layer.height)),
+                  zIndex: layer.zIndex,
+                  borderRadius: Math.max(8, Math.round(layer.radius)),
+                  overflow: "hidden",
+                  cursor: editor ? "move" : "default",
+                  border: editor && selectedLayerIndex === idx ? (layer.kind === "text" ? "1px dashed rgba(125,211,252,0.9)" : "2px solid rgba(245,158,11,0.9)") : "none",
+                  boxShadow: (editor && selectedLayerIndex === idx) ? "0 0 0 2px rgba(255,255,255,0.18), 0 18px 32px rgba(15,23,42,0.18)" : (layer.kind === "text" && layer.background && layer.background !== "transparent" ? "0 18px 32px rgba(15,23,42,0.14)" : "none"),
+                  transform: `rotate(${layer.rotation}deg)`,
+                  ...(layer.kind === "text" ? textLayerBackgroundStyle(layer) : { background: "transparent" }),
                   touchAction: "none",
-                  ...handle,
+                  userSelect: "none",
                 }}
-              />
-            )) : null}
+              >
+              {layer.kind === "text" ? (
+                <>
+                  {editor && selectedLayerIndex === idx ? (
+                    <div
+                      data-layer-drag-handle="true"
+                      onPointerDown={(event) => startInteraction(event, idx, "move")}
+                      onMouseDown={(event) => startInteraction(event, idx, "move")}
+                      style={{ position: "absolute", top: 6, left: 6, zIndex: 4, cursor: "move" }}
+                    >
+                      <span style={sharedStyles.editorChip}>Drag Text</span>
+                    </div>
+                  ) : null}
+                  <div
+                    data-layer-editor="true"
+                    data-website-inline-editor="true"
+                    contentEditable={editor}
+                    suppressContentEditableWarning
+                    onPointerDown={(event) => {
+                      if (editor && typeof onChangeBlock === "function" && latestPropsRef.current?.selectedLayerIndex !== idx) {
+                        onChangeBlock({ ...latestPropsRef.current, selectedLayerIndex: idx });
+                      }
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onBlur={(event) => {
+                      if (shouldSkipToolbarBlur(event)) return;
+                      patchLayer(idx, { content: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
+                    }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: justifyForVertical(layer.verticalAlign),
+                      alignItems: "stretch",
+                      textAlign: layer.textAlign,
+                      padding: editor ? "34px 12px 12px" : 12,
+                      color: layer.textColor,
+                      fontSize: compact ? Math.max(16, layer.fontSize - 6) : Math.max(16, Math.round(layer.fontSize)),
+                      fontWeight: layer.fontWeight,
+                      lineHeight: 1.2,
+                      outline: "none",
+                      cursor: "text",
+                    }}
+                    dangerouslySetInnerHTML={{ __html: asRichHtml(layer.content || "Type text here") }}
+                  />
+                </>
+              ) : layer.src && !hasLayerImageFailed(layer, idx) ? (
+                <img
+                  src={layer.src}
+                  alt={`Layer ${idx + 1}`}
+                  onError={(event) => handleLayerImageError(event, layer, idx)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
+                />
+              ) : layer.src ? (
+                renderLayerImageFallback(layer, idx)
+              ) : (
+                <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", color: "#475569", fontWeight: 600, background: "linear-gradient(135deg,#e2e8f0,#f8fafc)", pointerEvents: "none" }}>
+                  Double-click to upload
+                </div>
+              )}
 
+
+              {layer.kind === "image" ? (
+                <input
+                  ref={(el) => {
+                    fileInputRefs.current[idx] = el;
+                  }}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(event) => handleFileChange(event, idx)}
+                />
+              ) : null}
+
+              {editor && selectedLayerIndex === idx ? [
+                { key: "nw", left: 6, top: 6, cursor: "nwse-resize" },
+                { key: "ne", right: 6, top: 6, cursor: "nesw-resize" },
+                { key: "sw", left: 6, bottom: 6, cursor: "nesw-resize" },
+                { key: "se", right: 6, bottom: 6, cursor: "nwse-resize" },
+              ].map((handle) => (
+                <div
+                  key={handle.key}
+                  data-resize-handle={handle.key}
+                  onPointerDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                  onMouseDown={(event) => startInteraction(event, idx, "resize", handle.key)}
+                  style={{
+                    position: "absolute",
+                    width: 14,
+                    height: 14,
+                    borderRadius: 999,
+                    background: layer.kind === "image" ? "#f59e0b" : "#0ea5e9",
+                    border: "2px solid #fff",
+                    boxShadow: "0 6px 16px rgba(15,23,42,0.24)",
+                    touchAction: "none",
+                    ...handle,
+                  }}
+                />
+              )) : null}
+
+              </div>
+            ))}
             </div>
-          ))}
+          </div>
+          </div>
         </div>
       </div>
     </section>
@@ -2927,7 +3207,13 @@ function normalizeGridSectionItems(items) {
     eyebrow: String(item?.eyebrow || ""),
     content: String(item?.content || ""),
     link: String(item?.link || ""),
-    image: String(item?.image || ""),
+    image: String(item?.image || item?.imageUrl || item?.backgroundImage || item?.src || item?.mediaUrl || item?.cardImage || ""),
+    imageUrl: String(item?.imageUrl || ""),
+    backgroundImage: String(item?.backgroundImage || ""),
+    src: String(item?.src || ""),
+    mediaUrl: String(item?.mediaUrl || ""),
+    cardImage: String(item?.cardImage || ""),
+    imageAssetId: String(item?.imageAssetId || item?.assetId || item?.mediaAssetId || item?.cardImageAssetId || ""),
     imageAlt: String(item?.imageAlt || ""),
     imageHeight: item?.imageHeight,
   }));
@@ -2939,7 +3225,7 @@ function renderGridSectionIcon(item, color, size) {
     return socialIcon;
   }
   if (item?.iconImage && !isUnsafePublishedIconUrl(item.iconImage)) {
-    return <img src={item.iconImage} alt={item?.title || "Grid icon"} style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
+    return <img data-wb-media-fixed="icon" src={item.iconImage} alt={item?.title || "Grid icon"} style={{ "--wb-media-width": `${size}px`, "--wb-media-height": `${size}px`, width: size, height: size, objectFit: "contain", display: "block" }} />;
   }
   if (item?.iconGlyph && item?.iconFontFamily) {
     return (
@@ -2974,6 +3260,27 @@ function renderGridSectionIcon(item, color, size) {
 const resolveAccordionPanelImage = resolveAccordionPanelImageUrl;
 const isUnsafeAccordionImageUrl = isUnsafeAccordionPanelImageUrl;
 
+function normaliseAccordionImageFit(value = "contain") {
+  const fit = String(value || "contain").toLowerCase().trim();
+  if (fit === "contain" || fit === "cover" || fit === "fill" || fit === "none" || fit === "scale-down") return fit;
+  return "contain";
+}
+
+function clampImagePositionPercent(value, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function resolveAccordionImageObjectPosition(source = {}) {
+  const x = source.imagePositionX ?? source.objectPositionX;
+  const y = source.imagePositionY ?? source.objectPositionY;
+  if (x !== undefined && x !== null && x !== "" && y !== undefined && y !== null && y !== "") {
+    return `${clampImagePositionPercent(x, 50)}% ${clampImagePositionPercent(y, 50)}%`;
+  }
+  return normaliseAccordionImageObjectPosition(source.imageObjectPosition || source.objectPosition || "center center");
+}
+
 function normaliseAccordionImageObjectPosition(value = "center center") {
   const position = String(value || "center center").toLowerCase().replace(/\s+/g, " ").trim();
   const map = {
@@ -2982,13 +3289,25 @@ function normaliseAccordionImageObjectPosition(value = "center center") {
     "centre centre": "center center",
     "center center": "center center",
     top: "center top",
+    "top centre": "center top",
+    "top center": "center top",
     bottom: "center bottom",
+    "bottom centre": "center bottom",
+    "bottom center": "center bottom",
     left: "left center",
     right: "right center",
     "top left": "left top",
+    "left top": "left top",
     "top right": "right top",
+    "right top": "right top",
+    "centre left": "left center",
+    "center left": "left center",
+    "centre right": "right center",
+    "center right": "right center",
     "bottom left": "left bottom",
+    "left bottom": "left bottom",
     "bottom right": "right bottom",
+    "right bottom": "right bottom",
   };
   return map[position] || "center center";
 }
@@ -3136,9 +3455,10 @@ function ServicesGridCard({
     ? "inset 0 0 0 1px rgba(255,255,255,0.16)"
     : "inset 0 0 0 1px rgba(255,255,255,0.08)";
   const contentPanelBackground = hovered ? stylePreset.panelHoverBackground : stylePreset.panelBackground;
+  const cardImage = resolveGridSectionItemImageUrl(item);
   const showCardImage = props?.cardFlipEffect
-    ? !!item.image  // flip-card front face is always image-based when an image is set
-    : (stylePreset.useImageBackground !== false && !!item.image);
+    ? !!cardImage  // flip-card front face is always image-based when an image is set
+    : (stylePreset.useImageBackground !== false && !!cardImage);
   const activateCardLink = React.useCallback((event) => {
     if (!navigateHref || typeof window === "undefined") return;
     const interactiveTarget = event?.target?.closest?.("a,button,input,textarea,select,label");
@@ -3188,7 +3508,7 @@ function ServicesGridCard({
           >
             {showCardImage ? (
               <img
-                src={item.image}
+                src={cardImage}
                 alt={item.imageAlt || item.title || ""}
                 style={{
                   position: "absolute",
@@ -3307,6 +3627,94 @@ function ServicesGridCard({
     );
   }
 
+  if (compact) {
+    const compactDevice = Number(props?.baseLayoutWidth || 0) > 640 ? "tablet" : "mobile";
+    const compactMedia = resolveResponsiveMediaSize({
+      desktopWidth: props?.baseLayoutWidth || 360,
+      desktopHeight: item?.imageHeight || props?.imageHeight || 220,
+      mediaType: "feature-illustration",
+      blockType: "grid-section",
+      device: compactDevice,
+      containerWidth: props?.baseLayoutWidth || (compactDevice === "tablet" ? 768 : 390),
+      containerHeight: tileHeight || 260,
+      viewportWidth: props?.baseLayoutWidth || (compactDevice === "tablet" ? 768 : 390),
+    });
+    const compactImageHeight = Math.max(72, Math.min(compactDevice === "tablet" ? 120 : 96, Number(compactMedia.height) || 96));
+
+    return (
+      <article
+        onClick={cardLinkEnabled ? activateCardLink : undefined}
+        onKeyDown={cardLinkEnabled ? (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          activateCardLink(event);
+        } : undefined}
+        role={cardLinkEnabled ? "link" : undefined}
+        tabIndex={cardLinkEnabled ? 0 : undefined}
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: stylePreset.cardRadius,
+          minHeight: 0,
+          height: "auto",
+          background: cardSurface,
+          border: `1px solid ${cardBorder}`,
+          boxShadow: `0 10px 26px rgba(2,6,23,0.18), ${cardInset}`,
+          cursor: cardLinkEnabled ? "pointer" : "default",
+          display: "grid",
+          gap: 12,
+          padding: 16,
+        }}
+      >
+        {showCardImage ? (
+          <img
+            src={cardImage}
+            alt={item.imageAlt || item.title || "Grid item image"}
+            style={{
+              width: "100%",
+              height: compactImageHeight,
+              maxHeight: compactImageHeight,
+              objectFit: compactMedia.objectFit || "contain",
+              borderRadius: Math.max(10, Number(stylePreset.cardRadius || 16) - 4),
+              display: "block",
+              background: "rgba(255,255,255,0.04)",
+              ...imageStyle,
+            }}
+          />
+        ) : topIconNode ? (
+          <div
+            style={{
+              width: serviceIconBadgeWidth,
+              height: serviceIconBadgeHeight,
+              borderRadius: stylePreset.badgeRadius,
+              background: colorPreset.badgeBackground,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              padding: serviceIconBadgePadding,
+              boxSizing: "border-box",
+              ...iconStyle,
+            }}
+          >
+            {topIconNode}
+          </div>
+        ) : null}
+        <div style={{ position: "relative", zIndex: 1, display: "grid", gap: item.title && item.eyebrow ? 7 : 9, padding: 0, textAlign: stylePreset.contentAlign }}>
+          {item.title ? (
+            <div data-website-inline-editor="true" contentEditable={editor} suppressContentEditableWarning onBlur={(e) => onUpdate(itemIndex, { title: cleanInlineEditorHtml(e.currentTarget.innerHTML) })} style={{ ...bodyStyle, margin: 0, color: props.cardTitleColor || colorPreset.titleColor, fontSize: cardTitleFontSize, lineHeight: 1.25, fontWeight: stylePreset.titleWeight, outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "2px 4px" : 0 }} dangerouslySetInnerHTML={{ __html: asRichHtml(item.title || "Card title") }} />
+          ) : null}
+          {item.eyebrow ? (
+            <div data-website-inline-editor="true" contentEditable={editor} suppressContentEditableWarning onBlur={(e) => onUpdate(itemIndex, { eyebrow: cleanInlineEditorHtml(e.currentTarget.innerHTML) })} style={{ ...titleStyle, margin: 0, fontSize: eyebrowFontSize, fontWeight: 600, lineHeight: 1.3, letterSpacing: 0, color: "rgba(248,250,252,0.9)", outline: editor ? "1px dashed rgba(14,165,233,0.35)" : "none", borderRadius: 8, padding: editor ? "2px 4px" : 0 }} dangerouslySetInnerHTML={{ __html: asRichHtml(item.eyebrow || "") }} />
+          ) : null}
+          {item.content ? (
+            <div data-website-inline-editor="true" contentEditable={editor} suppressContentEditableWarning onBlur={(e) => onUpdate(itemIndex, { content: cleanInlineEditorHtml(e.currentTarget.innerHTML) })} style={{ ...bodyStyle, margin: 0, color: colorPreset.bodyColor, fontSize: cardBodyFontSize, lineHeight: 1.55, outline: editor ? "1px dashed rgba(14,165,233,0.28)" : "none", borderRadius: 8, padding: editor ? "2px 4px" : 0 }} dangerouslySetInnerHTML={{ __html: asRichHtml(item.content || "") }} />
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article
       onMouseEnter={() => setHovered(true)}
@@ -3338,7 +3746,7 @@ function ServicesGridCard({
     >
       {showCardImage ? (
         <img
-          src={item.image}
+          src={cardImage}
           alt={item.imageAlt || item.title || "Grid item image"}
           style={{
             position: "absolute",
@@ -3652,7 +4060,7 @@ function ExtraTextOverlay({ item, editor, onUpdate, onDelete }) {
         left: `${x}%`,
         top: `${y}%`,
         transform: "translate(-50%, -50%)",
-        width: `${w}px`,
+        width: `min(${w}px, calc(100% - 16px))`,
         minHeight: `${h}px`,
         zIndex: isActive ? 12 : 10,
         border: editor ? `2px dashed ${isActive ? "rgba(34,197,94,1)" : "rgba(34,197,94,0.55)"}` : "none",
@@ -3912,7 +4320,7 @@ function ExtraCounterOverlay({ item, editor, onUpdate, onDelete }) {
         left: `${x}%`,
         top: `${y}%`,
         transform: "translate(-50%, -50%)",
-        width: `${w}px`,
+        width: `min(${w}px, calc(100% - 16px))`,
         minHeight: `${h}px`,
         zIndex: isActive ? 12 : 10,
         border: editor ? `2px dashed ${isActive ? "rgba(14,165,233,1)" : "rgba(14,165,233,0.6)"}` : "none",
@@ -4027,11 +4435,14 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
   const displayRotation = draftPatch?.floatingRotation != null ? Number(draftPatch.floatingRotation) : rotationDeg;
   const displayBoxWidth = Math.max(120, Number(draftPatch?.floatingWidth ?? boxWidth));
   const displayBoxHeight = Math.max(120, Number(draftPatch?.floatingHeight ?? boxHeight));
-  // No clamping — images can extend beyond the block edges intentionally
+  // No clamping on desktop — images can extend beyond the block edges intentionally (bleed
+  // effect). On tablet/mobile a desktop-sized custom width/height is still stored verbatim in
+  // px, so without a cap here it can bleed most of the way across a 375-430px viewport; allow
+  // some bleed (matches the desktop design intent) but bound it relative to the block itself.
   const effectiveWidth = displayBoxWidth;
   const effectiveHeight = displayBoxHeight;
-  const constrainedWidth = `${effectiveWidth}px`;
-  const constrainedHeight = `${effectiveHeight}px`;
+  const constrainedWidth = compact ? `min(${effectiveWidth}px, calc(100% * 1.3))` : `${effectiveWidth}px`;
+  const constrainedHeight = compact ? `min(${effectiveHeight}px, calc(100% * 1.3))` : `${effectiveHeight}px`;
   const constrainedLeft = `${displayX}%`;
   const constrainedTop = `${displayY}%`;
 
@@ -4211,15 +4622,15 @@ function DraggableImageOverlay({ props, compact, editor, onChangeBlock, onUpload
           style={{
             width: compact ? "100%" : `min(${boxWidth}px, 100%)`,
             maxWidth: "100%",
-            height: `${compact ? Math.min(Math.max(180, effectiveHeight), 320) : effectiveHeight}px`,
-            overflow: "hidden",
+            height: compact ? "auto" : `${effectiveHeight}px`,
+            overflow: compact ? "visible" : "hidden",
             borderRadius: compact ? 18 : 22,
             boxShadow: compact ? "0 18px 34px rgba(15,23,42,0.16)" : "0 24px 48px rgba(15,23,42,0.28)",
             background: "rgba(255,255,255,0.06)",
             ...(frameStyle || {}),
           }}
         >
-          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: "100%", objectFit: imageFit, display: "block" }} onError={(e) => { e.target.style.display = "none"; }} />
+          <img src={imageSrc} alt={props?.floatingAlt || "Overlay image"} style={{ width: "100%", height: compact ? "auto" : "100%", maxWidth: "100%", objectFit: compact ? "contain" : imageFit, display: "block" }} onError={(e) => { e.target.style.display = "none"; }} />
         </div>
       </div>
     );
@@ -4911,6 +5322,62 @@ function HoverCardsBlock({ props, compact, editor, navigationContext }) {
     </button>
   );
 
+  if (compact) {
+    return (
+      <section style={{
+        background: props.backgroundColor || "#f8fafc",
+        padding: `${Number(props.paddingTop ?? 48)}px ${sectionSidePad}px ${Number(props.paddingBottom ?? 48)}px`,
+        boxSizing: "border-box",
+        width: "100%",
+      }}>
+        {props.sectionTitle ? (
+          <h2 style={{
+            textAlign: "center",
+            fontSize: 22,
+            fontWeight: 600,
+            color: props.sectionTitleColor || "#0f172a",
+            margin: "0 auto 24px",
+            lineHeight: 1.2,
+            maxWidth: 860,
+          }}>
+            {props.sectionTitle}
+          </h2>
+        ) : null}
+        <div style={{ maxWidth: outerMaxWidth, margin: "0 auto", display: "grid", gap: cardGap }}>
+          {cards.map((card, idx) => (
+            <article
+              key={card.id || idx}
+              style={{
+                width: "100%",
+                overflow: "hidden",
+                borderRadius: cardRadius,
+                background: card.hoverBackgroundColor || backColor,
+                boxShadow: "0 18px 36px rgba(15,23,42,0.14)",
+              }}
+            >
+              {card.image ? (
+                <img src={card.image} alt={card.title || ""} style={{ width: "100%", aspectRatio: "16 / 10", objectFit: "cover", display: "block" }} />
+              ) : null}
+              <div style={{ padding: cardPadding, display: "grid", gap: 10 }}>
+                {card.title ? (
+                  <div style={{ fontSize: Number(props.backTitleSize || 20), fontWeight: 600, color: "#fff", lineHeight: 1.3 }}>{card.title}</div>
+                ) : null}
+                {card.description ? (
+                  <div style={{ fontSize: Math.max(14, Number(props.backDescSize || 15)), color: "rgba(255,255,255,0.86)", lineHeight: 1.55, whiteSpace: "pre-wrap", overflowWrap: "break-word" }}>{card.description}</div>
+                ) : null}
+                {card.link ? (
+                  <a href={editor ? undefined : resolvePublishedNavHref({ href: card.link }, navigationContext)} style={{ justifySelf: "start", display: "inline-flex", alignItems: "center", padding: "10px 18px", borderRadius: 8, background: buttonColor, color: buttonTextColor, fontSize: 15, fontWeight: 600, textDecoration: "none" }}>
+                    {buttonText}
+                  </a>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section style={{
       background: props.backgroundColor || "#f8fafc",
@@ -5105,6 +5572,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
     imageAlt: htmlToPlainText(item?.imageAlt || ""),
     imageFit: item?.imageFit || props.imageFit || "contain",
     imageObjectPosition: item?.imageObjectPosition || props.imageObjectPosition || props.imagePositionValue || "center center",
+    imagePositionX: item?.imagePositionX ?? props.imagePositionX ?? "",
+    imagePositionY: item?.imagePositionY ?? props.imagePositionY ?? "",
     imageScale: item?.imageScale || props.imageScale || 100,
     accentColor: item?.accentColor || null,   // null ? falls back to global accent
     panelBg: item?.panelBg || null,           // null ? falls back to global bg/accent gradient
@@ -5128,6 +5597,9 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   const bg        = props.backgroundColor || "#0f172a";
   const textColor = props.textColor       || "#ffffff";
   const accent    = props.accentColor     || "#0ea5e9";
+  const resolvedDevice = compact
+    ? (Number(props.baseLayoutWidth || 0) > 640 ? "tablet" : "mobile")
+    : "desktop";
   const imageRight = (props.imagePosition || "right") !== "left";
   const contentVerticalSetting = String(
     props.contentVerticalAlign || props.contentPosition || props.textPosition || props.textVerticalPosition || "top"
@@ -5492,12 +5964,8 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
   // -- image slot -------------------------------------------------------------
   function renderImageSlot(item, idx, forEditor = false) {
     const imageSrc = resolveAccordionPanelImage(item);
-    const fit = String(item.imageFit || "contain").toLowerCase() === "cover"
-      ? "cover"
-      : String(item.imageFit || "contain").toLowerCase() === "fill"
-        ? "fill"
-        : "contain";
-    const pos = normaliseAccordionImageObjectPosition(item.imageObjectPosition || "center center");
+    const fit = normaliseAccordionImageFit(item.imageFit || props.imageFit || props.imageObjectFit || props.objectFit || "contain");
+    const pos = resolveAccordionImageObjectPosition(item);
     const scale = Math.max(50, Math.min(150, Number(item.imageScale || 100) || 100)) / 100;
     const failedKey = item.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
@@ -5509,6 +5977,7 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
       <>
         {showImage ? (
           <img
+            data-wb-controlled-image="accordion"
             src={imageSrc}
             alt={item.imageAlt || item.label}
             style={{ width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, objectFit: fit, objectPosition: pos, transform: `scale(${scale})`, transformOrigin: pos, display: "block" }}
@@ -5638,7 +6107,48 @@ function FeatureAccordionBlock({ props, compact, editor = false, onChangeBlock, 
               </div>
               <div style={{ display: "grid", gridTemplateRows: isOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1)" }}>
                 <div style={{ overflow: "hidden", minHeight: 0 }}>
-                  {item.image ? <img src={item.image} alt={item.imageAlt || item.label} style={{ width: "100%", maxWidth: "100%", minWidth: 0, maxHeight: 260, objectFit: item.imageFit || "contain", objectPosition: normaliseAccordionImageObjectPosition(item.imageObjectPosition || "center center"), display: "block" }} /> : null}
+                  {item.image ? (() => {
+                    const compactImageSize = resolveResponsiveMediaSize({
+                      desktopWidth: props.imageWidth || props.baseLayoutWidth || 720,
+                      desktopHeight: props.imageHeight || 320,
+                      mediaType: "feature-illustration",
+                      blockType: "feature-accordion",
+                      device: resolvedDevice,
+                      containerWidth: props.baseLayoutWidth || (resolvedDevice === "tablet" ? 768 : 390),
+                      viewportWidth: props.baseLayoutWidth || (resolvedDevice === "tablet" ? 768 : 390),
+                    });
+                    const fit = normaliseAccordionImageFit(item.imageFit || props.imageFit || props.imageObjectFit || props.objectFit || "contain");
+                    const position = resolveAccordionImageObjectPosition(item);
+                    const imageHeightMode = String(props.imageHeightMode || "auto").toLowerCase();
+                    const containerHeight = Number(props.containerHeight || props.imageHeight || 0);
+                    const img = (
+                      <img
+                        data-wb-controlled-image="accordion"
+                        src={item.image}
+                        alt={item.imageAlt || item.label}
+                        style={{
+                          width: "100%",
+                          maxWidth: "100%",
+                          minWidth: 0,
+                          height: imageHeightMode === "fixed" || containerHeight > 0 ? "100%" : "auto",
+                          maxHeight: compactImageSize.maxHeight || props.imageMaxHeight || 260,
+                          objectFit: fit,
+                          objectPosition: position,
+                          display: "block",
+                        }}
+                      />
+                    );
+                    if (imageHeightMode === "fixed" || containerHeight > 0) {
+                      return (
+                        <div style={{ width: "100%", height: Math.max(120, containerHeight || 260), overflow: "hidden" }}>
+                          {img}
+                        </div>
+                      );
+                    }
+                    return (
+                      img
+                    );
+                  })() : null}
                   <div style={{ padding: "16px 24px 28px", display: "flex", flexDirection: "column", gap: 16 }}>
                     {item.contentBlocks.map((block, cbIdx) => renderCb(item, idx, block, cbIdx, item.accentColor || accent))}
                   </div>
@@ -5831,6 +6341,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     useBlockImageSettings: p?.useBlockImageSettings !== false,
     imageFit: p?.imageFit ?? "",
     imageObjectPosition: p?.imageObjectPosition ?? "",
+    imagePositionX: p?.imagePositionX ?? "",
+    imagePositionY: p?.imagePositionY ?? "",
     imageScale: p?.imageScale ?? "",
     imageMaxHeightMode: p?.imageMaxHeightMode ?? "",
     imageMaxHeightCustom: p?.imageMaxHeightCustom ?? "",
@@ -5861,10 +6373,17 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   const sectionRef = React.useRef(null);
   const stickyRef = React.useRef(null);
   const [scrollProgress, setScrollProgress] = React.useState(0);
+  const [activePanelIndex, setActivePanelIndex] = React.useState(0);
   const [navH, setNavH] = React.useState(0);
   const leadOffset = Number(props.stickyTopOffset ?? 0);
   const stickyTop = navH + leadOffset;
   const [containerMetrics, setContainerMetrics] = React.useState({ width: 1280, height: 800 });
+
+  React.useEffect(() => {
+    if (activePanelIndex > panels.length - 1) {
+      setActivePanelIndex(Math.max(0, panels.length - 1));
+    }
+  }, [activePanelIndex, panels.length]);
 
   React.useEffect(() => {
     if (editor || compact || typeof window === "undefined") return;
@@ -5979,11 +6498,17 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   function normaliseImageFit(value) {
     const fit = String(value || "contain").toLowerCase();
+    if (fit === "scale-down") return "scale-down";
     if (fit === "cover" || fit === "fill" || fit === "natural" || fit === "none") return fit === "natural" ? "none" : fit;
     return "contain";
   }
 
-  function normaliseImagePosition(value) {
+  function normaliseImagePosition(value, panel = null) {
+    const x = panel ? imageSetting(panel, "imagePositionX", "") : "";
+    const y = panel ? imageSetting(panel, "imagePositionY", "") : "";
+    if (x !== "" && x != null && y !== "" && y != null) {
+      return `${clampImagePositionPercent(x, 50)}% ${clampImagePositionPercent(y, 50)}%`;
+    }
     const position = String(value || "center center").toLowerCase().replace(/\s+/g, " ").trim();
     const map = {
       centre: "center center",
@@ -5991,15 +6516,34 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       "centre centre": "center center",
       "center center": "center center",
       top: "center top",
+      "top centre": "center top",
+      "top center": "center top",
       bottom: "center bottom",
+      "bottom centre": "center bottom",
+      "bottom center": "center bottom",
       left: "left center",
       right: "right center",
       "top left": "left top",
+      "left top": "left top",
       "top right": "right top",
+      "right top": "right top",
+      "centre left": "left center",
+      "center left": "left center",
+      "centre right": "right center",
+      "center right": "right center",
       "bottom left": "left bottom",
+      "left bottom": "left bottom",
       "bottom right": "right bottom",
+      "right bottom": "right bottom",
     };
     return map[position] || "center center";
+  }
+
+  function objectPositionFlexAlign(objectPosition = "center center") {
+    const [, y = "center"] = String(objectPosition || "center center").toLowerCase().split(/\s+/);
+    if (y === "top" || y === "0%" || y === "0") return "flex-start";
+    if (y === "bottom" || y === "100%" || y === "100") return "flex-end";
+    return "center";
   }
 
   function normaliseImageScale(value) {
@@ -6009,19 +6553,21 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   function imageMaxHeightValue(panel) {
     const legacyMaxHeight = Number(imageSetting(panel, "imageMaxHeight", 0));
-    const mode = String(imageSetting(panel, "imageMaxHeightMode", legacyMaxHeight > 0 ? "custom" : "auto")).toLowerCase();
+    const defaultMaxHeight = Number(props.imageMaxHeight || 0) > 0 ? Number(props.imageMaxHeight) : 420;
+    const mode = String(imageSetting(panel, "imageMaxHeightMode", legacyMaxHeight > 0 ? "custom" : "custom")).toLowerCase();
     if (mode === "auto") return "";
     const preset = Number(mode);
     if ([300, 400, 500, 600, 700].includes(preset)) return `${preset}px`;
-    const custom = Number(imageSetting(panel, "imageMaxHeightCustom", legacyMaxHeight || 500));
-    return `${Math.max(300, Math.min(900, Number.isFinite(custom) ? custom : 500))}px`;
+    const custom = Number(imageSetting(panel, "imageMaxHeightCustom", legacyMaxHeight || defaultMaxHeight));
+    return `${Math.max(220, Math.min(900, Number.isFinite(custom) ? custom : defaultMaxHeight))}px`;
   }
 
   function panelImageHeightValue(panel, fallbackHeight) {
-    const mode = String(imageSetting(panel, "panelImageHeightMode", "match")).toLowerCase();
+    if (fallbackHeight === "auto") return "auto";
+    const mode = String(imageSetting(panel, "panelImageHeightMode", props.panelImageHeightMode || "fixed")).toLowerCase();
     if (mode === "fixed") {
-      const fixed = Number(imageSetting(panel, "panelImageFixedHeight", 500));
-      return `${Math.max(300, Math.min(900, Number.isFinite(fixed) ? fixed : 500))}px`;
+      const fixed = Number(imageSetting(panel, "panelImageFixedHeight", props.panelImageFixedHeight || props.imageHeight || 420));
+      return `${Math.max(220, Math.min(900, Number.isFinite(fixed) ? fixed : 420))}px`;
     }
     if (mode === "auto") return "auto";
     return fallbackHeight;
@@ -6061,11 +6607,13 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     const isCard = panel.imageStyle === "card";
     const imageSrc = resolveAccordionPanelImage(panel);
     const objectFit = normaliseImageFit(imageSetting(panel, "imageFit", "contain"));
-    const objectPosition = normaliseImagePosition(imageSetting(panel, "imageObjectPosition", "center center"));
+    const objectPosition = normaliseImagePosition(imageSetting(panel, "imageObjectPosition", "center center"), panel);
+    const imageFlexAlign = objectPositionFlexAlign(objectPosition);
     const imageScale = normaliseImageScale(imageSetting(panel, "imageScale", 100)) / 100;
     const imagePadding = Math.max(0, Math.min(80, Number(imageSetting(panel, "imagePadding", 0)) || 0));
     const resolvedMaxHeight = imageMaxHeightValue(panel);
     const resolvedHalfHeight = panelImageHeightValue(panel, halfHeight);
+    const imageMaxWidth = Number(imageSetting(panel, "imageMaxWidth", props.imageMaxWidth || 620)) || 620;
     const failedKey = panel.id || idx;
     const imageFailed = !!failedImages[failedKey] || isUnsafeAccordionImageUrl(imageSrc);
     const showImage = !!imageSrc && !imageFailed;
@@ -6074,12 +6622,14 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     }
     const imageEl = showImage ? (
       <img
+        data-wb-controlled-image="scroll-stack"
         src={imageSrc}
         alt={panel.imageAlt || panel.heading}
         style={{
           width: "100%",
-          height: "100%",
-          maxWidth: "100%",
+          height: resolvedHalfHeight === "auto" && objectFit === "contain" ? "auto" : "100%",
+          maxWidth: objectFit === "contain" ? imageMaxWidth : "100%",
+          maxHeight: objectFit === "contain" ? (resolvedMaxHeight || "420px") : "100%",
           minWidth: 0,
           objectFit,
           objectPosition,
@@ -6141,8 +6691,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     if (isCard) {
       // Card-style: colored background with inset padded rounded card
       return (
-        <div style={{ width: "100%", height: resolvedHalfHeight, maxHeight: resolvedMaxHeight || undefined, maxWidth: "100%", minWidth: 0, background: panel.imageCardBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", boxSizing: "border-box", padding: imagePadding }}>
-          <div style={{ position: "relative", width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.2)" }}>
+        <div style={{ width: "100%", height: resolvedHalfHeight, maxHeight: resolvedMaxHeight || undefined, maxWidth: "100%", minWidth: 0, background: panel.imageCardBg, display: "flex", alignItems: imageFlexAlign, justifyContent: "center", overflow: "hidden", position: "relative", boxSizing: "border-box", padding: imagePadding }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", maxWidth: objectFit === "contain" ? imageMaxWidth : "100%", minWidth: 0, borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.28), 0 4px 16px rgba(0,0,0,0.2)", display: "flex", alignItems: imageFlexAlign, justifyContent: "center" }}>
             {imageEl}
             {replaceControls}
             {libraryControls}
@@ -6154,7 +6704,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     // Bleed-style: full-bleed image
     return (
       <div style={{ width: "100%", height: resolvedHalfHeight, maxHeight: resolvedMaxHeight || undefined, maxWidth: "100%", minWidth: 0, position: "relative", overflow: "hidden", boxSizing: "border-box", padding: imagePadding }}>
-        <div style={{ width: "100%", height: "100%", maxWidth: "100%", minWidth: 0, overflow: "hidden" }}>
+        <div style={{ width: "100%", height: "100%", maxWidth: objectFit === "contain" ? imageMaxWidth : "100%", minWidth: 0, overflow: "hidden", display: "flex", alignItems: imageFlexAlign, justifyContent: "center", margin: "0 auto" }}>
           {imageEl}
         </div>
         {replaceControls}
@@ -6164,7 +6714,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   }
 
   // -- Text content -----------------------------------------------------------
-  function renderPanelContent(panel, idx) {
+  function renderPanelContent(panel, idx, options = {}) {
     const tc = panel.textColor;
     const ac = panel.accentColor;
     const contentVerticalSetting = String(panel.contentVerticalAlign || props.contentVerticalAlign || props.textVerticalAlign || "center").toLowerCase();
@@ -6193,8 +6743,10 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       fontWeight: panel.headingWeight || 800,
     });
 
+    const contentPadding = options.padding ?? (compact ? "40px 24px 48px" : `${contentPadTop}px 64px 0 72px`);
+
     return (
-      <div style={{ display: "flex", flexDirection: "column", justifyContent: contentJustify, gap: 20, padding: compact ? "40px 24px 48px" : `${contentPadTop}px 64px 0 72px`, height: "100%", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", overflow: "hidden" }}>
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: contentJustify, gap: 20, padding: contentPadding, height: "100%", width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", overflow: "hidden" }}>
 
         {/* Eyebrow — colored dot + label */}
         {(panel.eyebrow || editor) ? (
@@ -6236,12 +6788,12 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               if (shouldSkipToolbarBlur(e)) return;
               patchPanel(idx, { heading: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
+            style={{ fontSize: compact ? 28 : (panel.headingSize || props.headingFontSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.headingMaxWidth || props.headingMaxWidth || panel.textMaxWidth || props.textMaxWidth || 560), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(panel.heading || "Your headline") }}
           />
         ) : (
           <div
-            style={{ fontSize: compact ? 28 : (panel.headingSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box", ...panelHeading.style }}
+            style={{ fontSize: compact ? 28 : (panel.headingSize || props.headingFontSize || 46), fontWeight: panel.headingWeight || 800, lineHeight: 1.08, color: tc, outline: edgeOut, borderRadius: 6, padding: edgePad, margin: 0, width: "100%", maxWidth: Number(panel.headingMaxWidth || props.headingMaxWidth || panel.textMaxWidth || props.textMaxWidth || 560), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box", ...panelHeading.style }}
           >
             {panelHeading.text}
           </div>
@@ -6260,7 +6812,7 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
               if (shouldSkipToolbarBlur(e)) return;
               patchPanel(idx, { body: cleanInlineEditorHtml(e.currentTarget.innerHTML) });
             }}
-            style={{ fontSize: panel.bodySize || 17, lineHeight: 1.75, color: bodyColor, outline: edgeOut, borderRadius: 6, padding: edgePad, width: "100%", maxWidth: Number(panel.textMaxWidth || props.textMaxWidth || 760), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
+            style={{ fontSize: panel.bodySize || 17, lineHeight: 1.75, color: bodyColor, outline: edgeOut, borderRadius: 6, padding: edgePad, width: "100%", maxWidth: Number(panel.bodyMaxWidth || props.bodyMaxWidth || panel.textMaxWidth || props.textMaxWidth || 620), minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal", boxSizing: "border-box" }}
             dangerouslySetInnerHTML={{ __html: asRichHtml(panel.body || (editor ? "Add your body text here." : "")) }}
           />
         ) : null}
@@ -6317,6 +6869,147 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
+  const stackMode = String(props.stackMode || props.orientation || props.scrollStackMode || "").toLowerCase();
+  const useSideStack = stackMode === "side" || stackMode === "horizontal" || stackMode === "right";
+
+  function renderStackedAccordion(forEditor = false, isCompact = false) {
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : (isCompact ? 390 : 1440);
+    const isMobile = isCompact && viewportWidth <= 560;
+    const isTablet = isCompact && !isMobile;
+    const closedHeight = isMobile ? 56 : isTablet ? 60 : Number(props.closedRowHeight || props.accordionHeaderHeight || 64);
+    const headerPadding = isMobile ? "16px" : isTablet ? "18px 24px" : (props.headerPadding || "20px 32px");
+    const contentPadding = isMobile ? "24px 16px" : isTablet ? "32px" : (props.contentPadding || `${Number(props.cardPadding ?? 48)}px`);
+    const openMinHeight = isMobile ? 0 : isTablet ? Number(props.tabletOpenCardMinHeight || 700) : Number(props.openCardMinHeight || props.cardMinHeight || props.cardHeight || 560);
+    const cardGap = isMobile ? 24 : isTablet ? 28 : Number(props.cardGap || 40);
+    const cardRadius = Number(props.cardRadius ?? 20);
+    const sectionPadding = isMobile ? "32px 0" : isTablet ? "48px 24px" : `${Number(props.paddingTop ?? 60)}px ${Number(props.paddingRight ?? 48)}px ${Number(props.paddingBottom ?? 60)}px ${Number(props.paddingLeft ?? 48)}px`;
+    const sectionMaxWidth = Number(props.contentMaxWidth || props.baseLayoutWidth || 1440);
+    const activeHeight = isMobile || isTablet ? "auto" : Number(props.activeCardHeight || props.cardHeight || 560);
+    const activeMaxHeight = isMobile || isTablet ? undefined : (props.activeCardMaxHeight || "70vh");
+    const openGridColumns = isCompact ? "minmax(0, 1fr)" : "minmax(0, 45%) minmax(0, 55%)";
+    const imageHeight = isMobile || isTablet ? "auto" : `${Number(props.imageHeight || props.panelImageFixedHeight || 420)}px`;
+    const imageHalfHeight = isMobile || isTablet ? "auto" : `${Number(props.imageHeight || props.panelImageFixedHeight || 420)}px`;
+
+    return (
+      <section
+        ref={sectionRef}
+        style={{
+          width: "100%",
+          minHeight: isMobile ? "auto" : Number(props.minSectionHeight || props.sectionMinHeight || 620),
+          height: "auto",
+          background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f",
+          padding: sectionPadding,
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ width: "100%", maxWidth: sectionMaxWidth, margin: "0 auto" }}>
+          {panels.map((panel, idx) => {
+            const isOpen = idx === activePanelIndex;
+            const isFirst = idx === 0;
+            const isLast = idx === panels.length - 1;
+            const imageRight = panel.imagePosition !== "left";
+            const tc = panel.textColor || "#ffffff";
+            const ac = panel.accentColor || "#0ea5e9";
+            const stripHeading = normalizeAccordionHeading(panel.eyebrow || panel.heading || `Panel ${idx + 1}`, {
+              color: tc,
+              fontSize: isMobile ? "15px" : "16px",
+              fontWeight: 700,
+            });
+            const contentAreas = isCompact
+              ? '"text" "image"'
+              : (imageRight ? '"text image"' : '"image text"');
+            const contentVerticalSetting = String(panel.contentVerticalAlign || props.contentVerticalAlign || props.textVerticalAlign || "top").toLowerCase();
+            const openAlignItems = contentVerticalSetting === "bottom" || contentVerticalSetting === "end"
+              ? "end"
+              : contentVerticalSetting === "center" || contentVerticalSetting === "centre"
+                ? "center"
+                : "start";
+            const openFlexAlign = openAlignItems === "end" ? "flex-end" : openAlignItems === "center" ? "center" : "flex-start";
+
+            return (
+              <article
+                key={panel.id}
+                style={{
+                  width: "100%",
+                  background: panel.backgroundColor,
+                  color: tc,
+                  borderRadius: isOpen
+                    ? cardRadius
+                    : `${isFirst ? 18 : 0}px ${isFirst ? 18 : 0}px ${isLast ? 18 : 0}px ${isLast ? 18 : 0}px`,
+                  overflow: "hidden",
+                  border: Number(props.cardBorderWidth ?? 0) > 0 ? `${Number(props.cardBorderWidth)}px solid ${props.cardBorderColor || "#3b82f6"}` : "1px solid rgba(255,255,255,0.10)",
+                  boxShadow: isOpen ? "0 18px 46px rgba(0,0,0,0.22)" : "none",
+                  marginTop: idx === 0 ? 0 : Number(props.rowGap ?? 0),
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActivePanelIndex(idx)}
+                  style={{
+                    width: "100%",
+                    minHeight: closedHeight,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: headerPadding,
+                    background: panel.backgroundColor,
+                    color: tc,
+                    border: 0,
+                    borderBottom: isOpen && props.hideHeaderDivider !== true ? `1px solid ${tc}1a` : "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: ac, flexShrink: 0 }} />
+                  <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...stripHeading.style }}>
+                    {stripHeading.text}
+                  </span>
+                  {forEditor ? (
+                    <span style={{ display: "inline-flex", gap: 6, flexShrink: 0 }}>
+                      <span onClick={(event) => { event.stopPropagation(); removePanel(idx); }} style={{ color: "#fca5a5", fontWeight: 800 }}>Remove</span>
+                    </span>
+                  ) : null}
+                </button>
+
+                {isOpen ? (
+                  <div
+                    style={{
+                      minHeight: openMinHeight || undefined,
+                      height: activeHeight,
+                      maxHeight: activeMaxHeight,
+                      display: "grid",
+                      gridTemplateColumns: openGridColumns,
+                      gridTemplateAreas: contentAreas,
+                      alignItems: openAlignItems,
+                      alignContent: openAlignItems,
+                      gap: cardGap,
+                      padding: contentPadding,
+                      boxSizing: "border-box",
+                      overflow: "visible",
+                    }}
+                  >
+                    <div style={{ ...textColumnStyle, overflow: "visible", alignItems: openFlexAlign, alignSelf: openAlignItems }}>
+                      {renderPanelContent(panel, idx, { padding: 0 })}
+                    </div>
+                    <div style={{ ...imageColumnStyle, overflow: "visible", display: "flex", alignItems: openFlexAlign, alignSelf: openAlignItems, justifyContent: "center", height: imageHeight }}>
+                      {renderImageHalf(panel, idx, forEditor, imageHalfHeight)}
+                    </div>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+          {forEditor ? (
+            <div style={{ padding: "18px 0 0", display: "flex", justifyContent: "center" }}>
+              <button type="button" onClick={(e) => { e.stopPropagation(); addPanel(); }} style={{ background: "rgba(14,165,233,0.10)", border: "2px dashed rgba(14,165,233,0.4)", color: "#0ea5e9", borderRadius: 10, padding: "12px 28px", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>+ Add Panel</button>
+            </div>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
+
   // This effect must run unconditionally on every render (Rules of Hooks) even though its
   // scroll-tracking behaviour only matters for the desktop sticky-stack branch further down.
   // It used to live after the editor/compact early returns below, so whenever `compact`
@@ -6345,46 +7038,12 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   // -- EDITOR MODE: flat stacked panels, no sticky ----------------------------
   if (editor) {
-    return (
-      <div style={{ width: "100%" }}>
-        {panels.map((panel, idx) => {
-          const imageRight = panel.imagePosition !== "left";
-          return (
-            <div key={panel.id} style={{ position: "relative", width: "100%", background: panel.backgroundColor, color: panel.textColor, minHeight: 520 }}>
-              <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ background: "rgba(14,165,233,0.8)", color: "#fff", borderRadius: 6, padding: "4px 10px", fontSize: 16, fontWeight: 600 }}>Panel {idx + 1}</span>
-                <button type="button" onClick={(e) => { e.stopPropagation(); removePanel(idx); }} style={{ background: "rgba(239,68,68,0.15)", border: "none", color: "#f87171", borderRadius: 6, padding: "4px 10px", fontSize: 16, cursor: "pointer", fontWeight: 600 }}>Remove</button>
-              </div>
-              <div style={{ ...twoColumnGrid(imageRight), minHeight: 520 }}>
-                <div style={imageColumnStyle}>
-                  {renderImageHalf(panel, idx, true, "100%")}
-                </div>
-                <div style={textColumnStyle}>
-                  {renderPanelContent(panel, idx)}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        <div style={{ background: panels[panels.length - 1]?.backgroundColor || "#0f172a", padding: "24px 40px", display: "flex", justifyContent: "center" }}>
-          <button type="button" onClick={(e) => { e.stopPropagation(); addPanel(); }} style={{ background: "rgba(14,165,233,0.10)", border: "2px dashed rgba(14,165,233,0.4)", color: "#0ea5e9", borderRadius: 10, padding: "14px 36px", fontSize: 16, fontWeight: 600, cursor: "pointer" }}>+ Add Panel</button>
-        </div>
-      </div>
-    );
+    return renderStackedAccordion(true, false);
   }
 
   // -- COMPACT / MOBILE: image on top, text below -----------------------------
   if (compact) {
-    return (
-      <div style={{ width: "100%" }}>
-        {panels.map((panel, idx) => (
-          <div key={panel.id} style={{ width: "100%", background: panel.backgroundColor, color: panel.textColor }}>
-            {renderImageHalf(panel, idx, false, "280px")}
-            {renderPanelContent(panel, idx)}
-          </div>
-        ))}
-      </div>
-    );
+    return renderStackedAccordion(false, true);
   }
 
   // -- PREVIEW MODE: Stacked Card Deck ----------------------------------------
@@ -6415,9 +7074,6 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
   const n = panels.length;
   const vp = Math.max(360, containerMetrics.height);
   const vw = Math.max(320, containerMetrics.width);
-  const stackMode = String(props.stackMode || props.orientation || props.scrollStackMode || "").toLowerCase();
-  const useSideStack = stackMode === "side" || stackMode === "horizontal" || stackMode === "right";
-
   if (useSideStack) {
     const SIDE_PEEK = Math.max(58, Math.min(170, Number(props.peekWidth ?? props.cardPeekWidth ?? props.sidePeekWidth ?? PEEK)));
     const stackSide = String(props.stackSide || props.sideStackSide || props.stackEdge || "left").toLowerCase() === "right" ? "right" : "left";
@@ -6528,6 +7184,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
       </section>
     );
   }
+
+  return renderStackedAccordion(false, false);
 
   return (
     <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative" }}>
@@ -7008,6 +7666,7 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   const loadedSrcRef = React.useRef("");
   const [muted, setMuted] = React.useState(initialMuted);
   const [videoFailed, setVideoFailed] = React.useState(false);
+  const [videoReady, setVideoReady] = React.useState(false);
   const debugLabel = `video-hero ${block?.id || "unknown"}`;
 
   React.useEffect(() => {
@@ -7024,7 +7683,34 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
   React.useEffect(() => {
     logHeroVideoDebug(debugLabel, "Video source changed", videoRef.current, { videoSrc });
     setVideoFailed(false);
+    setVideoReady(false);
   }, [debugLabel, videoSrc]);
+
+  const debugVideoFields = React.useMemo(() => ({
+    video: props.video || "",
+    videoUrl: props.videoUrl || "",
+    videoSrc: props.videoSrc || "",
+    src: props.src || "",
+    backgroundVideo: props.backgroundVideo || "",
+    backgroundVideoUrl: props.backgroundVideoUrl || "",
+  }), [
+    props.video,
+    props.videoUrl,
+    props.videoSrc,
+    props.src,
+    props.backgroundVideo,
+    props.backgroundVideoUrl,
+  ]);
+
+  React.useEffect(() => {
+    if (!editor) return;
+    console.info("[website-builder video-hero] Rendering widget", {
+      blockId: block?.id || "",
+      videoUrl: videoSrc,
+      fields: debugVideoFields,
+      widget: block,
+    });
+  }, [block, debugVideoFields, editor, videoSrc]);
 
   // React owns the media source; the observer only nudges playback and never
   // reloads an already-active source.
@@ -7324,6 +8010,131 @@ function VideoHeroBlock({ block, editor = false, compact = false, isSelected = f
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (compact) {
+    const compactControls = true;
+    const compactVideoStyle = {
+      display: "block",
+      width: "100%",
+      height: "100%",
+      maxWidth: "100%",
+      position: "relative",
+      inset: "auto",
+      transform: "none",
+      objectFit,
+      objectPosition,
+      zIndex: 0,
+      background: "#000",
+    };
+
+    return (
+      <div style={marginTop ? { marginTop, width: "100%", maxWidth: "100%", minWidth: 0 } : { width: "100%", maxWidth: "100%", minWidth: 0 }}>
+        <section
+          ref={sectionRef}
+          data-mobile-video-hero="true"
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            height: "auto",
+            minHeight: 0,
+            overflow: "visible",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            background: "#000",
+            paddingTop: paddingTop || undefined,
+            paddingBottom: paddingBottom || undefined,
+            boxSizing: "border-box",
+          }}
+        >
+          <div
+            className="mobile-video-wrapper"
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              aspectRatio: "16 / 9",
+              overflow: "hidden",
+              background: "#000",
+            }}
+          >
+            {videoFailed && posterSrc ? (
+              <img
+                src={posterSrc}
+                alt={title || "Video poster"}
+                style={{ ...compactVideoStyle, objectFit }}
+              />
+            ) : (
+              <video
+                ref={videoRef}
+                src={videoSrc || undefined}
+                poster={posterSrc || undefined}
+                muted={muted}
+                autoPlay={autoplay}
+                loop={loop}
+                controls={compactControls || showControls}
+                playsInline
+                preload={preloadMode}
+                onPlay={(event) => logHeroVideoDebug(debugLabel, "Video started", event.currentTarget)}
+                onPause={(event) => logHeroVideoDebug(debugLabel, "Video paused", event.currentTarget)}
+                onEnded={(event) => logHeroVideoDebug(debugLabel, "Video ended", event.currentTarget)}
+                onStalled={(event) => logHeroVideoDebug(debugLabel, "Video stalled", event.currentTarget)}
+                onWaiting={(event) => logHeroVideoDebug(debugLabel, "Video waiting", event.currentTarget)}
+                onLoadedData={(event) => {
+                  setVideoReady(true);
+                  logHeroVideoDebug(debugLabel, "Video loaded data", event.currentTarget);
+                }}
+                onCanPlay={(event) => {
+                  setVideoReady(true);
+                  logHeroVideoDebug(debugLabel, "Video can play", event.currentTarget);
+                }}
+                onError={(event) => {
+                  logHeroVideoDebug(debugLabel, "Video error", event.currentTarget);
+                  if (posterSrc) setVideoFailed(true);
+                }}
+                style={compactVideoStyle}
+              />
+            )}
+            {overlayOpacity > 0 ? <div style={{ ...overlayStyle, zIndex: 1 }} /> : null}
+            {!videoReady && !posterSrc ? (
+              <div style={{ position: "absolute", inset: 0, zIndex: 3, display: "grid", placeItems: "center", pointerEvents: "none", background: "linear-gradient(135deg, rgba(15,23,42,0.52), rgba(2,6,23,0.28))" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 10, borderRadius: 999, padding: "11px 16px", background: "rgba(0,0,0,0.58)", color: "#fff", fontSize: 14, fontWeight: 700, border: "1px solid rgba(255,255,255,0.28)" }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.18)", fontSize: 16 }}>▶</span>
+                  Play video
+                </span>
+              </div>
+            ) : null}
+          </div>
+
+          {showText && (title || subtitle || ctaText) ? (
+            <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 14, padding: "0 24px 32px", maxWidth: "100%", width: "100%", boxSizing: "border-box" }}>
+              {eyebrow ? (
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.12em", color: accentColor, textTransform: "uppercase" }}>{eyebrow}</div>
+              ) : null}
+              {title ? (
+                <h1 style={{ margin: 0, fontSize: 34, fontWeight: 900, lineHeight: 1.03, color: textColor, overflowWrap: "break-word" }}>{title}</h1>
+              ) : null}
+              {subtitle ? (
+                <p style={{ margin: 0, fontSize: 17, lineHeight: 1.7, color: "rgba(255,255,255,0.72)", maxWidth: "100%", overflowWrap: "break-word" }}>{subtitle}</p>
+              ) : null}
+              {ctaText ? (
+                <a
+                  href={ctaUrl}
+                  style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10, maxWidth: "100%", background: `linear-gradient(135deg, ${accentColor}, #818cf8)`, color: "#fff", borderRadius: 14, padding: "13px 28px", fontSize: 16, fontWeight: 700, textDecoration: "none", boxShadow: `0 10px 28px ${accentColor}44`, marginTop: 4, overflowWrap: "break-word" }}
+                >
+                  {ctaText}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
       </div>
     );
   }
