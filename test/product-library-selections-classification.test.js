@@ -83,11 +83,6 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /Outdoor/);
   assert.match(page, /Ovens/);
   assert.match(page, /Cooktops/);
-  assert.match(page, /Westinghouse/);
-  assert.match(page, /Bosch/);
-  assert.match(page, /Smeg/);
-  assert.match(page, /Electrolux/);
-  assert.match(page, /Omega/);
   assert.match(page, /View Official Product Page/);
   assert.match(page, /Supplier product page not available\./);
   assert.match(page, /Add To Selections/);
@@ -135,7 +130,12 @@ test("Product Library defaults to client selectable catalogue filters", () => {
   assert.match(page, /Kitchen/);
   assert.match(page, /Bathroom/);
   assert.match(page, /Ovens/);
+  assert.match(visualBrowser, /Choose An Area/);
+  assert.match(visualBrowser, /Choose A Category/);
+  assert.match(visualBrowser, /Step 3/);
   assert.match(visualBrowser, /visual-tile-image/);
+  assert.doesNotMatch(visualBrowser, /brand-row/);
+  assert.doesNotMatch(visualBrowser, /All Brands/);
   assert.doesNotMatch(visualBrowser, /Product Library Admin/);
   assert.doesNotMatch(visualBrowser, /<dt>Tier<\/dt>/);
   assert.match(adminPanel, /LibraryDashboard/);

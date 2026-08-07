@@ -105,6 +105,11 @@ test("Product Library and Inclusions browser expose normal-user flow without adm
   assert(page.includes("Import Products"));
   assert(page.includes("Add Product"));
   assert(page.includes("onBack={handleBrowserBack}"));
+  assert(page.includes("Choose An Area"));
+  assert(page.includes("Choose A Category"));
+  assert(page.includes("Step 3"));
+  assert(!page.includes("brand-row"));
+  assert(!page.includes("All Brands"));
   assert(modal.includes("View Official Product Page"));
   assert(modal.includes("Add To Selections"));
   assert(!modal.includes("builderCost"));

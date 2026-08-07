@@ -117,10 +117,6 @@ const PRODUCT_BROWSER_AREAS = [
   { key: "pool", label: "Pool", imageUrl: svgTileDataUri("Pool"), types: ["Pool Interior Finish", "Coping", "Waterline Tiles", "Pool Fencing", "Gates", "Lighting", "Equipment"] },
 ];
 
-const FEATURED_BRANDS_BY_TYPE = {
-  Ovens: ["Westinghouse", "Bosch", "Smeg", "Electrolux", "Omega"],
-};
-
 const PRODUCT_TYPE_SYNONYMS = {
   "Ovens": ["oven"],
   "Cooktops": ["cooktop", "hob"],
@@ -191,7 +187,6 @@ export default function BuilderProductLibraryPage() {
   const [activeTab, setActiveTab] = useState("selections");
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
   const [selectedProductType, setSelectedProductType] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("All Brands");
   const [detailProduct, setDetailProduct] = useState(null);
   const [selectedCatalogueProduct, setSelectedCatalogueProduct] = useState(null);
 
@@ -472,12 +467,10 @@ export default function BuilderProductLibraryPage() {
   function handleBrowserBack() {
     if (selectedProductType) {
       setSelectedProductType("");
-      setSelectedBrand("All Brands");
       return;
     }
     if (selectedAreaKey) {
       setSelectedAreaKey("");
-      setSelectedBrand("All Brands");
       return;
     }
     router.push("/modules/construction");
@@ -803,13 +796,11 @@ export default function BuilderProductLibraryPage() {
               areas={PRODUCT_BROWSER_AREAS}
               selectedAreaKey={selectedAreaKey}
               selectedProductType={selectedProductType}
-              selectedBrand={selectedBrand}
               categoryById={categoryById}
               supplierById={supplierById}
               manufacturerById={manufacturerById}
-              onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); setSelectedBrand("All Brands"); }}
-              onSelectProductType={(type) => { setSelectedProductType(type); setSelectedBrand("All Brands"); }}
-              onSelectBrand={setSelectedBrand}
+              onSelectArea={(areaKey) => { setSelectedAreaKey(areaKey); setSelectedProductType(""); }}
+              onSelectProductType={setSelectedProductType}
               onOpenProduct={setDetailProduct}
               onAddToSelections={handleAddToSelections}
               selectedCatalogueProduct={selectedCatalogueProduct}
@@ -1245,13 +1236,11 @@ function VisualSelectionsBrowser({
   areas,
   selectedAreaKey,
   selectedProductType,
-  selectedBrand,
   categoryById,
   supplierById,
   manufacturerById,
   onSelectArea,
   onSelectProductType,
-  onSelectBrand,
   onOpenProduct,
   onAddToSelections,
   selectedCatalogueProduct,
@@ -1266,39 +1255,17 @@ function VisualSelectionsBrowser({
   const typeProducts = selectedProductType
     ? areaProducts.filter((product) => productMatchesType(product, selectedProductType, categoryById.get(product.category_id) || "", supplierById.get(product.supplier_id) || "", productBrand(product, manufacturerById)))
     : areaProducts;
-  const productBrands = Array.from(new Set(typeProducts.map((product) => productBrand(product, manufacturerById)).filter((brand) => brand && brand !== "Unbranded")));
-  const featuredBrands = FEATURED_BRANDS_BY_TYPE[selectedProductType] || [];
-  const brandNames = Array.from(new Set([...featuredBrands, ...productBrands])).sort((a, b) => {
-    const featuredDelta = featuredBrands.indexOf(a) - featuredBrands.indexOf(b);
-    if (featuredBrands.includes(a) && featuredBrands.includes(b)) return featuredDelta;
-    if (featuredBrands.includes(a)) return -1;
-    if (featuredBrands.includes(b)) return 1;
-    return a.localeCompare(b);
-  });
-  const brandProducts = selectedBrand && selectedBrand !== "All Brands"
-    ? typeProducts.filter((product) => productBrand(product, manufacturerById) === selectedBrand)
-    : typeProducts;
-  const visibleProducts = brandProducts;
+  const visibleProducts = typeProducts;
   const showProductsOrEmpty = Boolean(selectedArea && selectedProductType);
 
   return (
     <section className="visual-browser">
-      <header className="browser-header">
-        <div>
-          <p className="eyebrow">Selection Products</p>
-          <h1>Product Library</h1>
-        </div>
-      </header>
-
-      <nav className="breadcrumbs" aria-label="Product Library path">
-        <button type="button" onClick={() => { onSelectArea(""); onSelectProductType(""); onSelectBrand("All Brands"); }}>Product Library</button>
-        {selectedArea && <button type="button" onClick={() => { onSelectProductType(""); onSelectBrand("All Brands"); }}>{selectedArea.label}</button>}
-        {selectedProductType && <button type="button" onClick={() => onSelectBrand("All Brands")}>{selectedProductType}</button>}
-        {selectedProductType && selectedBrand !== "All Brands" && <button type="button">{selectedBrand}</button>}
-      </nav>
-
       {!selectedArea && (
         <section className="step">
+          <div className="purpose-heading">
+            <p className="eyebrow">Step 1</p>
+            <h2>Choose An Area</h2>
+          </div>
           <div className="area-grid">
             {areas.map((area) => (
               <button key={area.key} type="button" className="area-tile" onClick={() => onSelectArea(area.key)}>
@@ -1312,6 +1279,10 @@ function VisualSelectionsBrowser({
 
       {selectedArea && !selectedProductType && (
         <section className="step">
+          <div className="purpose-heading">
+            <p className="eyebrow">Step 2</p>
+            <h2>Choose A Category</h2>
+          </div>
           <div className="type-grid">
             {selectedArea.types.map((type) => (
               <button key={type} type="button" className="type-tile" onClick={() => onSelectProductType(type)}>
@@ -1324,24 +1295,13 @@ function VisualSelectionsBrowser({
       )}
 
       {selectedArea && selectedProductType && (
-        <>
-          <section className="step compact">
+        <section className="step">
+          <div className="purpose-heading">
+            <p className="eyebrow">Step 3</p>
             <h2>{selectedProductType}</h2>
-            {brandNames.length ? (
-              <div className="brand-row">
-                <button type="button" className={selectedBrand === "All Brands" ? "active" : ""} onClick={() => onSelectBrand("All Brands")}>All Brands</button>
-                {brandNames.map((brand) => (
-                  <button key={brand} type="button" className={selectedBrand === brand ? "active" : ""} onClick={() => onSelectBrand(brand)}>{brand}</button>
-                ))}
-              </div>
-            ) : null}
-          </section>
+          </div>
 
-          {showProductsOrEmpty ? <section className="step">
-            <div className="step-heading">
-              <h2>{selectedBrand === "All Brands" ? selectedProductType : `${selectedBrand} ${selectedProductType}`}</h2>
-            </div>
-            {loading ? <p className="empty-message">Loading products...</p> : (
+          {showProductsOrEmpty ? loading ? <p className="empty-message">Loading products...</p> : (
               visibleProducts.length ? (
                 <div className="product-grid">
                   {visibleProducts.map((product) => (
@@ -1359,9 +1319,8 @@ function VisualSelectionsBrowser({
               ) : (
                 <EmptyProductTypeState onImportProducts={onImportProducts} onAddProduct={onAddProduct} onBack={onBack} />
               )
-            )}
-          </section> : null}
-        </>
+            ) : null}
+        </section>
       )}
 
       <style jsx>{visualBrowserCss}</style>
@@ -1478,9 +1437,6 @@ const visualBrowserCss = `
     gap: 18px;
     color: #172033;
   }
-  .browser-header {
-    padding: 4px 0;
-  }
   .eyebrow {
     margin: 0 0 6px;
     color: #2563eb;
@@ -1494,7 +1450,6 @@ const visualBrowserCss = `
     color: #101827;
     font-size: 38px;
   }
-  .brand-row,
   .card-actions,
   .empty-products div {
     display: flex;
@@ -1592,8 +1547,7 @@ const visualBrowserCss = `
     text-align: left;
   }
   .area-tile:hover,
-  .type-tile:hover,
-  .brand-row button:hover {
+  .type-tile:hover {
     border-color: #2563eb;
     background: #eff6ff;
   }
@@ -1610,16 +1564,6 @@ const visualBrowserCss = `
     width: 100%;
     background-size: cover;
     background-position: center;
-  }
-  .brand-row button {
-    border-color: #d8e0ea;
-    background: #ffffff;
-    color: #17406f;
-  }
-  .brand-row button.active {
-    border-color: #2563eb;
-    background: #2563eb;
-    color: #ffffff;
   }
   .product-grid {
     display: grid;
@@ -1707,7 +1651,6 @@ const visualBrowserCss = `
     justify-items: center;
   }
   @media (max-width: 820px) {
-    .browser-header,
     .step-heading {
       align-items: stretch;
       flex-direction: column;
@@ -1724,7 +1667,6 @@ const visualBrowserCss = `
     .visual-browser {
       gap: 14px;
     }
-    .browser-header,
     .step {
       padding: 14px;
     }
