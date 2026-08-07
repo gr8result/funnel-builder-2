@@ -1,86 +1,49 @@
 import Head from "next/head";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Archive, Boxes, Check, Copy, Edit3, FileUp, ImagePlus, Layers3, Package, Plus, RefreshCw, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
+import {
+  GENERIC_DEMO_PRODUCTS,
+  PRODUCT_ENTITY_FIELDS,
+  PRODUCT_FAMILIES,
+  PRODUCT_LIBRARY_IMPORT_COLUMNS,
+  TOP_LEVEL_AREAS,
+  createProductEntity,
+  familiesForArea,
+  familyByKey,
+  productsForFamily,
+  selectionQueryForFamily,
+  validateProductImportRows,
+} from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
 
-const PRICE_BANDS = [
-  { value: "budget", label: "Budget" },
-  { value: "mid_range", label: "Mid Range" },
-  { value: "higher_end", label: "Higher End" },
-  { value: "luxury", label: "Luxury" },
-];
-
 const EMPTY_PRODUCT = {
+  product_code: "",
   product_name: "",
-  category_id: "",
-  manufacturer_id: "",
-  supplier_id: "",
-  quote_structure_section: "",
-  quote_structure_item: "",
-  quote_structure_row_id: "",
-  selection_type: "",
-  sku: "",
+  supplier_name: "",
+  brand: "",
+  range: "",
   model: "",
-  description: "",
-  price_band: "mid_range",
-  standard_included: false,
-  base_allowance: "",
-  upgrade_cost: "",
-  primary_image_url: "",
-  datasheet_pdf_url: "",
-  warranty_document_url: "",
-  product_url: "",
-  notes: "",
+  colour: "",
+  finish: "",
+  size: "",
+  primary_image: "",
+  official_product_url: "",
+  specification_url: "",
+  builder_cost: "",
+  client_price: "",
   active: true,
 };
 
-const PRODUCT_CSV_HEADERS = [
-  "quote_structure_section",
-  "quote_structure_item",
-  "quote_structure_row_id",
-  "selection_type",
-  "product_name",
-  "category",
-  "manufacturer",
-  "supplier",
-  "sku",
-  "model",
-  "description",
-  "price_band",
-  "base_allowance",
-  "upgrade_cost",
-  "primary_image_url",
-  "product_url",
-  "datasheet_pdf_url",
-  "warranty_document_url",
-  "standard_included",
-  "active",
-  "notes",
-];
-
-const EMPTY_CATEGORY = {
-  category_name: "",
-  description: "",
-};
-
-const EMPTY_MANUFACTURER = {
-  manufacturer_name: "",
-  website_url: "",
-};
-
-const EMPTY_SUPPLIER = {
-  supplier_name: "",
-  contact_name: "",
-  email: "",
-  phone: "",
-  website_url: "",
-};
-
-const EMPTY_IMAGE = {
-  image_url: "",
-  alt_text: "",
-  is_primary: true,
-};
+function slugify(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 function money(value) {
   return Number(value || 0).toLocaleString("en-AU", {
@@ -88,39 +51,6 @@ function money(value) {
     currency: "AUD",
     maximumFractionDigits: 0,
   });
-}
-
-function slugify(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function normalizeMoney(value) {
-  if (value === "" || value === null || value === undefined) return 0;
-  const numeric = Number(String(value).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
-function csvCell(input) {
-  const text = String(input ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-function downloadCsv(fileName, rows) {
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
 }
 
 function parseCsv(text) {
@@ -157,90 +87,120 @@ function parseCsv(text) {
 function csvRecords(text) {
   const rows = parseCsv(text);
   if (!rows.length) return [];
-  const headers = rows[0].map((header) => slugify(header));
+  const headers = rows[0].map((header) => slugify(header).replace(/-/g, "_"));
   return rows.slice(1).map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] || ""])));
 }
 
-function truthyCsv(value, fallback = false) {
-  const text = String(value ?? "").trim().toLowerCase();
-  if (!text) return fallback;
-  return ["1", "true", "yes", "y", "included", "active"].includes(text);
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-function normalizePriceBand(value) {
-  const key = slugify(value);
-  return PRICE_BANDS.some((band) => band.value === key) ? key : "mid_range";
+function downloadCsv(fileName, rows) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function mapDbProductToEntity(product, categoryName = "", supplierName = "", brandName = "") {
+  const entity = product.metadata?.productEntity || {};
+  return {
+    productId: product.id,
+    productCode: product.sku || entity.productCode || "",
+    organisationId: product.workspace_id || "",
+    linkedQuoteItemCode: product.quote_structure_row_id || entity.linkedQuoteItemCode || "",
+    approvedSourceKey: entity.approvedSourceKey || product.metadata?.approvedSourceKey || "",
+    familyKey: entity.familyKey || product.metadata?.familyKey || "",
+    topLevelArea: entity.topLevelArea || product.metadata?.topLevelArea || "",
+    category: categoryName || entity.category || product.quote_structure_section || "",
+    subcategory: entity.subcategory || product.selection_type || "",
+    productType: entity.productType || product.selection_type || "",
+    tags: entity.tags || [],
+    compatibleAreaTypes: entity.compatibleAreaTypes || [],
+    productName: product.product_name,
+    supplier: supplierName || entity.supplier || "",
+    brand: brandName || entity.brand || "",
+    range: entity.range || product.metadata?.range || "",
+    model: product.model || "",
+    description: product.description || "",
+    colour: entity.colour || product.metadata?.colour || "",
+    finish: entity.finish || product.metadata?.finish || "",
+    size: entity.size || product.metadata?.size || "",
+    dimensions: entity.dimensions || {},
+    variants: entity.variants || [],
+    primaryImage: product.primary_image_url || entity.primaryImage || "",
+    thumbnail: product.primary_image_url || entity.thumbnail || "",
+    galleryImages: entity.galleryImages || [],
+    colourSwatches: entity.colourSwatches || [],
+    imageAltText: entity.imageAltText || product.product_name,
+    imageSource: entity.imageSource || "",
+    officialProductURL: product.product_url || entity.officialProductURL || "",
+    specificationURL: product.datasheet_pdf_url || entity.specificationURL || "",
+    supplierURL: product.supplier_website_url || entity.supplierURL || "",
+    RRP: entity.RRP || 0,
+    builderCost: entity.builderCost || Number(product.base_allowance || 0),
+    clientPrice: entity.clientPrice || Number(product.upgrade_cost || 0),
+    allowance: Number(product.base_allowance || 0),
+    upgradePrice: Number(product.upgrade_cost || 0),
+    currency: entity.currency || "AUD",
+    gstTreatment: entity.gstTreatment || "GST inclusive",
+    priceSource: entity.priceSource || "workspace product",
+    effectiveDate: entity.effectiveDate || "",
+    priceStatus: entity.priceStatus || "workspace",
+    active: product.active !== false,
+    discontinued: entity.discontinued || false,
+    archived: product.active === false,
+    unavailable: entity.unavailable || false,
+    imageReviewRequired: !product.primary_image_url,
+    priceReviewRequired: !product.base_allowance && !product.upgrade_cost,
+    raw: product,
+  };
 }
 
 export default function BuilderProductLibraryPage() {
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const [categories, setCategories] = useState([]);
-  const [manufacturers, setManufacturers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [images, setImages] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedAreaKey, setSelectedAreaKey] = useState("");
+  const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
+  const [selectedProductCode, setSelectedProductCode] = useState("");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
-  const [categoryForm, setCategoryForm] = useState(EMPTY_CATEGORY);
-  const [manufacturerForm, setManufacturerForm] = useState(EMPTY_MANUFACTURER);
-  const [supplierForm, setSupplierForm] = useState(EMPTY_SUPPLIER);
-  const [imageForm, setImageForm] = useState(EMPTY_IMAGE);
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [priceBandFilter, setPriceBandFilter] = useState("all");
-  const [activeFilter, setActiveFilter] = useState("active");
-  const [importFile, setImportFile] = useState(null);
-  const [importing, setImporting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const selectedProduct = useMemo(
-    () => products.find((product) => product.id === selectedProductId) || null,
-    [products, selectedProductId]
-  );
-
+  const selectedArea = TOP_LEVEL_AREAS.find((area) => area.key === selectedAreaKey) || null;
+  const selectedFamily = familyByKey(selectedFamilyKey);
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category.category_name])), [categories]);
-  const manufacturerById = useMemo(
-    () => new Map(manufacturers.map((manufacturer) => [manufacturer.id, manufacturer.manufacturer_name])),
-    [manufacturers]
-  );
   const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier.supplier_name])), [suppliers]);
+  const manufacturerById = useMemo(() => new Map(manufacturers.map((manufacturer) => [manufacturer.id, manufacturer.manufacturer_name])), [manufacturers]);
 
-  const primaryImageByProduct = useMemo(() => {
-    const map = new Map();
-    images.forEach((image) => {
-      const existing = map.get(image.product_id);
-      if (!existing || image.is_primary || image.sort_order < existing.sort_order) {
-        map.set(image.product_id, image);
-      }
-    });
-    return map;
-  }, [images]);
-
-  const selectedProductImages = useMemo(
-    () => images.filter((image) => image.product_id === selectedProductId),
-    [images, selectedProductId]
+  const orgProducts = useMemo(
+    () => products.map((product) => mapDbProductToEntity(product, categoryById.get(product.category_id), supplierById.get(product.supplier_id), manufacturerById.get(product.manufacturer_id))),
+    [categoryById, manufacturerById, products, supplierById]
   );
 
-  const filteredProducts = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesSearch =
-        !term ||
-        [product.product_name, product.sku, product.model, product.description]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(term));
-      const matchesCategory = categoryFilter === "all" || product.category_id === categoryFilter;
-      const matchesPriceBand = priceBandFilter === "all" || product.price_band === priceBandFilter;
-      const matchesActive =
-        activeFilter === "all" ||
-        (activeFilter === "active" && product.active !== false) ||
-        (activeFilter === "inactive" && product.active === false);
-      return matchesSearch && matchesCategory && matchesPriceBand && matchesActive;
-    });
-  }, [products, search, categoryFilter, priceBandFilter, activeFilter]);
+  const visibleFamilies = useMemo(() => (selectedArea ? familiesForArea(selectedArea.key) : []), [selectedArea]);
+  const visibleProducts = useMemo(() => {
+    if (!selectedFamily) return [];
+    const organisationProducts = productsForFamily(orgProducts, selectedFamily);
+    const demos = GENERIC_DEMO_PRODUCTS.filter((product) => product.familyKey === selectedFamily.familyKey);
+    return organisationProducts.length ? organisationProducts : demos;
+  }, [orgProducts, selectedFamily]);
+  const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
+  const selectionQuery = selectedFamily ? selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey }) : null;
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -248,1279 +208,984 @@ export default function BuilderProductLibraryPage() {
   }, [workspaceId]);
 
   useEffect(() => {
-    if (!selectedProduct) {
-      setProductForm(EMPTY_PRODUCT);
-      return;
-    }
-
-    setProductForm({
-      product_name: selectedProduct.product_name || "",
-      category_id: selectedProduct.category_id || "",
-      manufacturer_id: selectedProduct.manufacturer_id || "",
-      supplier_id: selectedProduct.supplier_id || "",
-      quote_structure_section: selectedProduct.quote_structure_section || selectedProduct.source_quote_section || "",
-      quote_structure_item: selectedProduct.quote_structure_item || selectedProduct.source_quote_item_name || "",
-      quote_structure_row_id: selectedProduct.quote_structure_row_id || selectedProduct.source_quote_row_id || "",
-      selection_type: selectedProduct.selection_type || "",
-      sku: selectedProduct.sku || "",
-      model: selectedProduct.model || "",
-      description: selectedProduct.description || "",
-      price_band: selectedProduct.price_band || "mid_range",
-      standard_included: Boolean(selectedProduct.standard_included),
-      base_allowance: selectedProduct.base_allowance ?? "",
-      upgrade_cost: selectedProduct.upgrade_cost ?? "",
-      primary_image_url: selectedProduct.primary_image_url || "",
-      datasheet_pdf_url: selectedProduct.datasheet_pdf_url || "",
-      warranty_document_url: selectedProduct.warranty_document_url || "",
-      product_url: selectedProduct.product_url || "",
-      notes: selectedProduct.notes || "",
-      active: selectedProduct.active !== false,
-    });
-  }, [selectedProduct]);
+    setSelectedProductCode("");
+    setProductForm(EMPTY_PRODUCT);
+  }, [selectedFamilyKey]);
 
   async function loadLibrary() {
+    if (!workspaceId) return;
     setLoading(true);
     setError("");
-
-    const [categoryResult, manufacturerResult, supplierResult, productResult] = await Promise.all([
-      supabase
-        .from("builder_product_categories")
-        .select("*")
-        .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
-        .order("sort_order", { ascending: true })
-        .order("category_name", { ascending: true }),
-      supabase
-        .from("builder_product_manufacturers")
-        .select("*")
-        .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
-        .order("manufacturer_name", { ascending: true }),
-      supabase
-        .from("builder_product_suppliers")
-        .select("*")
-        .or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`)
-        .order("supplier_name", { ascending: true }),
-      supabase
-        .from("builder_products")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("updated_at", { ascending: false }),
+    const [categoryResult, supplierResult, manufacturerResult, productResult] = await Promise.all([
+      supabase.from("builder_product_categories").select("*").or(`workspace_id.eq.${workspaceId},workspace_id.is.null`).order("sort_order", { ascending: true }),
+      supabase.from("builder_product_suppliers").select("*").eq("workspace_id", workspaceId).order("supplier_name", { ascending: true }),
+      supabase.from("builder_product_manufacturers").select("*").eq("workspace_id", workspaceId).order("manufacturer_name", { ascending: true }),
+      supabase.from("builder_products").select("*").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }),
     ]);
-
-    if (categoryResult.error || manufacturerResult.error || supplierResult.error || productResult.error) {
-      setError(
-        categoryResult.error?.message ||
-          manufacturerResult.error?.message ||
-          supplierResult.error?.message ||
-          productResult.error?.message ||
-          "Could not load the Product Library."
-      );
-      setLoading(false);
-      return;
-    }
-
-    const productRows = productResult.data || [];
-    setCategories(categoryResult.data || []);
-    setManufacturers(manufacturerResult.data || []);
-    setSuppliers(supplierResult.data || []);
-    setProducts(productRows);
-    setSelectedProductId((current) => productRows.find((product) => product.id === current)?.id || productRows[0]?.id || "");
-
-    if (productRows.length) {
-      const { data, error: imageError } = await supabase
-        .from("builder_product_images")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .in("product_id", productRows.map((product) => product.id))
-        .eq("active", true)
-        .order("sort_order", { ascending: true });
-      if (imageError) setError(imageError.message || "Could not load product images.");
-      setImages(data || []);
+    const firstError = categoryResult.error || supplierResult.error || manufacturerResult.error || productResult.error;
+    if (firstError) {
+      setError(firstError.message || "Could not load the Product Library.");
+      setCategories([]);
+      setSuppliers([]);
+      setManufacturers([]);
+      setProducts([]);
     } else {
-      setImages([]);
+      setCategories(categoryResult.data || []);
+      setSuppliers(supplierResult.data || []);
+      setManufacturers(manufacturerResult.data || []);
+      setProducts(productResult.data || []);
     }
-
     setLoading(false);
   }
 
-  function updateProduct(field, value) {
-    setProductForm((current) => ({ ...current, [field]: value }));
-  }
-
-  async function saveProduct(event) {
-    event.preventDefault();
-    if (!workspaceId) {
-      setError("Select a workspace before saving products.");
-      return;
-    }
-    if (!productForm.product_name.trim()) {
-      setError("Product Name is required.");
-      return;
-    }
-
-    setSaving(true);
+  function goBack() {
     setError("");
     setSuccess("");
-
-    const payload = {
-      workspace_id: workspaceId,
-      product_name: productForm.product_name.trim(),
-      category_id: productForm.category_id || null,
-      manufacturer_id: productForm.manufacturer_id || null,
-      supplier_id: productForm.supplier_id || null,
-      quote_structure_section: productForm.quote_structure_section.trim() || null,
-      quote_structure_item: productForm.quote_structure_item.trim() || null,
-      quote_structure_row_id: productForm.quote_structure_row_id.trim() || null,
-      selection_type: productForm.selection_type.trim() || null,
-      source_quote_section: productForm.quote_structure_section.trim() || null,
-      source_quote_item_name: productForm.quote_structure_item.trim() || null,
-      source_quote_row_id: productForm.quote_structure_row_id.trim() || null,
-      sku: productForm.sku.trim() || null,
-      model: productForm.model.trim() || null,
-      description: productForm.description.trim() || null,
-      price_band: productForm.price_band || "mid_range",
-      standard_included: Boolean(productForm.standard_included),
-      base_allowance: normalizeMoney(productForm.base_allowance),
-      upgrade_cost: normalizeMoney(productForm.upgrade_cost),
-      primary_image_url: productForm.primary_image_url.trim() || null,
-      datasheet_pdf_url: productForm.datasheet_pdf_url.trim() || null,
-      warranty_document_url: productForm.warranty_document_url.trim() || null,
-      product_url: productForm.product_url.trim() || null,
-      notes: productForm.notes.trim() || null,
-      active: Boolean(productForm.active),
-      updated_at: new Date().toISOString(),
-    };
-
-    const request = selectedProductId
-      ? supabase.from("builder_products").update(payload).eq("workspace_id", workspaceId).eq("id", selectedProductId).select("*").single()
-      : supabase.from("builder_products").insert(payload).select("*").single();
-
-    const { data, error: saveError } = await request;
-    if (saveError) {
-      setError(saveError.message || "Could not save product.");
-    } else {
-      if (payload.primary_image_url) await savePrimaryImage(data.id, payload.primary_image_url, data.product_name);
-      await loadLibrary();
-      setSelectedProductId(data.id);
-      setSuccess(`Saved ${data.product_name}.`);
-    }
-    setSaving(false);
-  }
-
-  async function savePrimaryImage(productId, imageUrl, altText) {
-    if (!workspaceId || !productId || !imageUrl) return;
-    await supabase
-      .from("builder_product_images")
-      .update({ is_primary: false, updated_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId)
-      .eq("product_id", productId);
-
-    const { data: existing } = await supabase
-      .from("builder_product_images")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("product_id", productId)
-      .eq("image_url", imageUrl)
-      .maybeSingle();
-
-    if (existing?.id) {
-      await supabase
-        .from("builder_product_images")
-        .update({ alt_text: altText, is_primary: true, active: true, updated_at: new Date().toISOString() })
-        .eq("workspace_id", workspaceId)
-        .eq("id", existing.id);
+    if (selectedFamilyKey) {
+      setSelectedFamilyKey("");
       return;
     }
-
-    await supabase.from("builder_product_images").insert({
-      workspace_id: workspaceId,
-      product_id: productId,
-      image_url: imageUrl,
-      alt_text: altText,
-      is_primary: true,
-      active: true,
-      sort_order: 1,
-    });
+    if (selectedAreaKey) {
+      setSelectedAreaKey("");
+      return;
+    }
+    window.history.back();
   }
 
-  async function createCategory(event) {
-    event.preventDefault();
-    if (!workspaceId || !categoryForm.category_name.trim()) return;
-    setSaving(true);
-    const { data, error: createError } = await supabase
-      .from("builder_product_categories")
-      .insert({
-        workspace_id: workspaceId,
-        category_key: slugify(categoryForm.category_name),
-        category_name: categoryForm.category_name.trim(),
-        description: categoryForm.description.trim() || null,
-        active: true,
-        sort_order: categories.length + 1,
-      })
-      .select("*")
-      .single();
-    if (createError) setError(createError.message || "Could not create category.");
-    else {
-      setCategories((current) => [...current, data].sort((a, b) => a.category_name.localeCompare(b.category_name)));
-      setCategoryForm(EMPTY_CATEGORY);
-      setProductForm((current) => ({ ...current, category_id: data.id }));
-      setSuccess(`Created category ${data.category_name}.`);
-    }
-    setSaving(false);
+  function openFamily(familyKey) {
+    setSelectedFamilyKey(familyKey);
+    setAdminOpen(false);
   }
 
-  async function createManufacturer(event) {
-    event.preventDefault();
-    if (!workspaceId || !manufacturerForm.manufacturer_name.trim()) return;
-    setSaving(true);
-    const { data, error: createError } = await supabase
-      .from("builder_product_manufacturers")
-      .insert({
-        workspace_id: workspaceId,
-        manufacturer_name: manufacturerForm.manufacturer_name.trim(),
-        website_url: manufacturerForm.website_url.trim() || null,
-        active: true,
-      })
-      .select("*")
-      .single();
-    if (createError) setError(createError.message || "Could not create manufacturer.");
-    else {
-      setManufacturers((current) => [...current, data].sort((a, b) => a.manufacturer_name.localeCompare(b.manufacturer_name)));
-      setManufacturerForm(EMPTY_MANUFACTURER);
-      setProductForm((current) => ({ ...current, manufacturer_id: data.id }));
-      setSuccess(`Created manufacturer ${data.manufacturer_name}.`);
-    }
-    setSaving(false);
+  function exportTemplateCsv() {
+    downloadCsv("product-library-supplier-import-template.csv", [
+      PRODUCT_LIBRARY_IMPORT_COLUMNS,
+      [
+        "DEMO-STONE-WHITE",
+        "approved-family:stone-benchtops",
+        "Generic Stone Supplier",
+        "Generic Stone",
+        "Essentials",
+        "Generic Stone Range - White",
+        "",
+        "Benchtops",
+        "Stone Tops",
+        "stone-benchtops",
+        "White",
+        "Honed",
+        "20mm",
+        "",
+        "",
+        "",
+        "White / Honed",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "AUD",
+        "GST inclusive",
+        "",
+        "true",
+        "false",
+      ],
+    ]);
   }
 
-  async function createSupplier(event) {
-    event.preventDefault();
-    if (!workspaceId || !supplierForm.supplier_name.trim()) return;
-    setSaving(true);
-    const { data, error: createError } = await supabase
-      .from("builder_product_suppliers")
-      .insert({
-        workspace_id: workspaceId,
-        supplier_name: supplierForm.supplier_name.trim(),
-        contact_name: supplierForm.contact_name.trim() || null,
-        email: supplierForm.email.trim() || null,
-        phone: supplierForm.phone.trim() || null,
-        website_url: supplierForm.website_url.trim() || null,
-        active: true,
-      })
-      .select("*")
-      .single();
-    if (createError) setError(createError.message || "Could not create supplier.");
-    else {
-      setSuppliers((current) => [...current, data].sort((a, b) => a.supplier_name.localeCompare(b.supplier_name)));
-      setSupplierForm(EMPTY_SUPPLIER);
-      setProductForm((current) => ({ ...current, supplier_id: data.id }));
-      setSuccess(`Created supplier ${data.supplier_name}.`);
-    }
-    setSaving(false);
+  function handleProductCsvPreview(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const records = csvRecords(String(reader.result || ""));
+      const preview = validateProductImportRows(records, workspaceId || "");
+      setImportPreview({ fileName: file.name, records, preview });
+      setAdminOpen(true);
+      setSuccess(`Previewed ${preview.length} row${preview.length === 1 ? "" : "s"} from ${file.name}.`);
+    };
+    reader.onerror = () => setError("Could not read that CSV file.");
+    reader.readAsText(file);
+    event.target.value = "";
   }
 
-  async function ensureCategory(name, cache) {
-    const cleanName = String(name || "").trim();
-    if (!cleanName) return null;
-    const key = slugify(cleanName);
-    const cached = cache.get(key);
-    if (cached) return cached.id;
-    const existing = categories.find((category) => slugify(category.category_name) === key);
-    if (existing) {
-      cache.set(key, existing);
-      return existing.id;
-    }
+  async function ensureCategory(familyItem) {
+    const key = slugify(`${familyItem.topLevelArea}-${familyItem.category}-${familyItem.subcategory}`);
+    const existing = categories.find((category) => category.category_key === key || slugify(category.category_name) === key);
+    if (existing) return existing.id;
     const { data, error: createError } = await supabase
       .from("builder_product_categories")
       .insert({
         workspace_id: workspaceId,
         category_key: key,
-        category_name: cleanName,
-        active: true,
-        sort_order: categories.length + cache.size + 1,
+        category_name: `${familyItem.category} - ${familyItem.subcategory}`,
+        description: `${familyItem.displayName} product family`,
+        metadata: { familyKey: familyItem.familyKey, topLevelArea: familyItem.topLevelArea },
       })
       .select("*")
       .single();
     if (createError) throw createError;
-    cache.set(key, data);
+    setCategories((current) => [...current, data]);
     return data.id;
   }
 
-  async function ensureManufacturer(name, cache) {
-    const cleanName = String(name || "").trim();
-    if (!cleanName) return null;
-    const key = slugify(cleanName);
-    const cached = cache.get(key);
-    if (cached) return cached.id;
-    const existing = manufacturers.find((manufacturer) => slugify(manufacturer.manufacturer_name) === key);
-    if (existing) {
-      cache.set(key, existing);
-      return existing.id;
-    }
-    const { data, error: createError } = await supabase
-      .from("builder_product_manufacturers")
-      .insert({ workspace_id: workspaceId, manufacturer_name: cleanName, active: true })
-      .select("*")
-      .single();
-    if (createError) throw createError;
-    cache.set(key, data);
-    return data.id;
-  }
-
-  async function ensureSupplier(name, cache) {
-    const cleanName = String(name || "").trim();
-    if (!cleanName) return null;
-    const key = slugify(cleanName);
-    const cached = cache.get(key);
-    if (cached) return cached.id;
+  async function ensureSupplier(name) {
+    const clean = String(name || "").trim();
+    if (!clean) return null;
+    const key = slugify(clean);
     const existing = suppliers.find((supplier) => slugify(supplier.supplier_name) === key);
-    if (existing) {
-      cache.set(key, existing);
-      return existing.id;
-    }
-    const { data, error: createError } = await supabase
-      .from("builder_product_suppliers")
-      .insert({ workspace_id: workspaceId, supplier_name: cleanName, active: true })
-      .select("*")
-      .single();
+    if (existing) return existing.id;
+    const { data, error: createError } = await supabase.from("builder_product_suppliers").insert({ workspace_id: workspaceId, supplier_name: clean, active: true }).select("*").single();
     if (createError) throw createError;
-    cache.set(key, data);
+    setSuppliers((current) => [...current, data]);
     return data.id;
   }
 
-  function exportTemplateCsv() {
-    downloadCsv("product-library-import-template.csv", [
-      PRODUCT_CSV_HEADERS,
-      [
-        "Kitchen",
-        "Oven",
-        "quote-oven-001",
-        "product_selection",
-        "Westinghouse WVE6314DD",
-        "Appliances",
-        "Westinghouse",
-        "Harvey Norman Commercial",
-        "",
-        "WVE6314DD",
-        "60cm built-in oven",
-        "mid_range",
-        "0",
-        "0",
-        "",
-        "",
-        "",
-        "",
-        "yes",
-        "yes",
-        "Example only. Delete this row before importing real supplier data.",
-      ],
-    ]);
+  async function ensureManufacturer(name) {
+    const clean = String(name || "").trim();
+    if (!clean) return null;
+    const key = slugify(clean);
+    const existing = manufacturers.find((manufacturer) => slugify(manufacturer.manufacturer_name) === key);
+    if (existing) return existing.id;
+    const { data, error: createError } = await supabase.from("builder_product_manufacturers").insert({ workspace_id: workspaceId, manufacturer_name: clean, active: true }).select("*").single();
+    if (createError) throw createError;
+    setManufacturers((current) => [...current, data]);
+    return data.id;
   }
 
-  function exportProductsCsv() {
-    const rows = products.map((product) => [
-      product.quote_structure_section || product.source_quote_section || "",
-      product.quote_structure_item || product.source_quote_item_name || "",
-      product.quote_structure_row_id || product.source_quote_row_id || "",
-      product.selection_type || "",
-      product.product_name || "",
-      categoryById.get(product.category_id) || "",
-      manufacturerById.get(product.manufacturer_id) || "",
-      supplierById.get(product.supplier_id) || "",
-      product.sku || "",
-      product.model || "",
-      product.description || "",
-      product.price_band || "mid_range",
-      product.base_allowance ?? "",
-      product.upgrade_cost ?? "",
-      product.primary_image_url || "",
-      product.product_url || "",
-      product.datasheet_pdf_url || "",
-      product.warranty_document_url || "",
-      product.standard_included ? "yes" : "no",
-      product.active === false ? "no" : "yes",
-      product.notes || "",
-    ]);
-    downloadCsv("builder-product-library.csv", [PRODUCT_CSV_HEADERS, ...rows]);
+  async function saveEntityProduct(entity, mode = "create") {
+    const familyItem = familyByKey(entity.familyKey);
+    const categoryId = await ensureCategory(familyItem);
+    const supplierId = await ensureSupplier(entity.supplier);
+    const manufacturerId = await ensureManufacturer(entity.brand);
+    const payload = {
+      workspace_id: workspaceId,
+      category_id: categoryId,
+      supplier_id: supplierId,
+      manufacturer_id: manufacturerId,
+      product_name: entity.productName,
+      sku: entity.productCode,
+      model: entity.model,
+      description: entity.description,
+      primary_image_url: entity.primaryImage,
+      product_url: entity.officialProductURL,
+      datasheet_pdf_url: entity.specificationURL,
+      base_allowance: entity.builderCost || entity.allowance || 0,
+      upgrade_cost: entity.clientPrice || entity.upgradePrice || 0,
+      quote_structure_section: familyItem.category,
+      quote_structure_item: familyItem.displayName,
+      quote_structure_row_id: entity.linkedQuoteItemCode || familyItem.approvedSourceKey,
+      selection_type: familyItem.familyKey,
+      active: entity.active !== false,
+      metadata: {
+        productEntity: entity,
+        familyKey: familyItem.familyKey,
+        topLevelArea: familyItem.topLevelArea,
+        category: familyItem.category,
+        subcategory: familyItem.subcategory,
+        range: entity.range,
+        colour: entity.colour,
+        finish: entity.finish,
+        size: entity.size,
+        approvedSourceKey: entity.approvedSourceKey,
+      },
+      updated_at: new Date().toISOString(),
+    };
+    const existing = products.find((product) => product.sku && product.sku === entity.productCode);
+    const request = existing && mode !== "duplicate"
+      ? supabase.from("builder_products").update(payload).eq("workspace_id", workspaceId).eq("id", existing.id).select("*").single()
+      : supabase.from("builder_products").insert(payload).select("*").single();
+    const { data, error: saveError } = await request;
+    if (saveError) throw saveError;
+    setProducts((current) => [data, ...current.filter((product) => product.id !== data.id)]);
+    return data;
   }
 
-  async function importProductsCsv(event) {
-    event.preventDefault();
-    if (!workspaceId || !importFile) return;
-    setImporting(true);
+  async function importPreviewRows() {
+    if (!workspaceId || !importPreview) return;
+    setSaving(true);
     setError("");
-    setSuccess("");
-
     try {
-      const records = csvRecords(await importFile.text()).filter((record) => String(record.product_name || "").trim());
-      if (!records.length) throw new Error("No product rows found in the CSV.");
-
-      const categoryCache = new Map();
-      const manufacturerCache = new Map();
-      const supplierCache = new Map();
-      const productByIdentity = new Map(
-        products.map((product) => [
-          [product.sku, product.model, product.product_name, product.source_quote_row_id || product.quote_structure_row_id]
-            .map((value) => slugify(value))
-            .join("|"),
-          product,
-        ])
-      );
-      let created = 0;
-      let updated = 0;
-
-      const { data: batch } = await supabase
-        .from("builder_product_import_batches")
-        .insert({
-          workspace_id: workspaceId,
-          source_name: importFile.name,
-          source_type: "csv",
-          file_name: importFile.name,
-          imported_count: records.length,
-          status: "processing",
-        })
-        .select("*")
-        .single();
-
-      for (const record of records) {
-        const categoryId = await ensureCategory(record.category || record.quote_structure_section, categoryCache);
-        const manufacturerId = await ensureManufacturer(record.manufacturer, manufacturerCache);
-        const supplierId = await ensureSupplier(record.supplier, supplierCache);
-        const quoteSection = String(record.quote_structure_section || record.source_quote_section || "").trim();
-        const quoteItem = String(record.quote_structure_item || record.source_quote_item_name || "").trim();
-        const quoteRowId = String(record.quote_structure_row_id || record.source_quote_row_id || "").trim();
-        const payload = {
-          workspace_id: workspaceId,
-          category_id: categoryId,
-          manufacturer_id: manufacturerId,
-          supplier_id: supplierId,
-          quote_structure_section: quoteSection || null,
-          quote_structure_item: quoteItem || null,
-          quote_structure_row_id: quoteRowId || null,
-          selection_type: String(record.selection_type || "").trim() || null,
-          source_quote_section: quoteSection || null,
-          source_quote_item_name: quoteItem || null,
-          source_quote_row_id: quoteRowId || null,
-          product_name: String(record.product_name || "").trim(),
-          sku: String(record.sku || "").trim() || null,
-          model: String(record.model || "").trim() || null,
-          description: String(record.description || "").trim() || null,
-          price_band: normalizePriceBand(record.price_band),
-          standard_included: truthyCsv(record.standard_included, false),
-          base_allowance: normalizeMoney(record.base_allowance),
-          upgrade_cost: normalizeMoney(record.upgrade_cost),
-          primary_image_url: String(record.primary_image_url || "").trim() || null,
-          datasheet_pdf_url: String(record.datasheet_pdf_url || "").trim() || null,
-          warranty_document_url: String(record.warranty_document_url || "").trim() || null,
-          product_url: String(record.product_url || "").trim() || null,
-          notes: String(record.notes || "").trim() || null,
-          active: truthyCsv(record.active, true),
-          source_type: "csv",
-          source_workbook_metadata: {
-            quote_structure_section: quoteSection,
-            quote_structure_item: quoteItem,
-            quote_structure_row_id: quoteRowId,
-            import_file_name: importFile.name,
-          },
-          updated_at: new Date().toISOString(),
-        };
-        const identity = [payload.sku, payload.model, payload.product_name, quoteRowId].map((value) => slugify(value)).join("|");
-        const existing = productByIdentity.get(identity);
-        const request = existing?.id
-          ? supabase.from("builder_products").update(payload).eq("workspace_id", workspaceId).eq("id", existing.id).select("*").single()
-          : supabase.from("builder_products").insert(payload).select("*").single();
-        const { data, error: importError } = await request;
-        if (importError) throw importError;
-        if (existing?.id) updated += 1;
-        else created += 1;
-        productByIdentity.set(identity, data);
-        if (payload.primary_image_url) await savePrimaryImage(data.id, payload.primary_image_url, data.product_name);
+      const validRows = importPreview.preview.filter((row) => !row.errors.length && row.entity);
+      for (const row of validRows) {
+        await saveEntityProduct(row.entity);
       }
-
-      if (batch?.id) {
-        await supabase
-          .from("builder_product_import_batches")
-          .update({ created_count: created, updated_count: updated, status: "completed" })
-          .eq("workspace_id", workspaceId)
-          .eq("id", batch.id);
-      }
-      setImportFile(null);
+      setSuccess(`Imported ${validRows.length} product${validRows.length === 1 ? "" : "s"}. Rows with errors were skipped.`);
+      setImportPreview(null);
       await loadLibrary();
-      setSuccess(`Imported ${records.length} products. Created ${created}, updated ${updated}.`);
-    } catch (importError) {
-      setError(importError?.message || "Could not import products.");
+    } catch (saveError) {
+      setError(saveError.message || "Product import failed.");
     }
-    setImporting(false);
+    setSaving(false);
   }
 
-  async function addImage(event) {
+  async function saveManualProduct(event) {
     event.preventDefault();
-    if (!workspaceId || !selectedProductId || !imageForm.image_url.trim()) return;
+    if (!workspaceId || !selectedFamily) return;
     setSaving(true);
     setError("");
-    if (imageForm.is_primary) {
-      await supabase
-        .from("builder_product_images")
-        .update({ is_primary: false, updated_at: new Date().toISOString() })
-        .eq("workspace_id", workspaceId)
-        .eq("product_id", selectedProductId);
-    }
-    const { data, error: imageError } = await supabase
-      .from("builder_product_images")
-      .insert({
-        workspace_id: workspaceId,
-        product_id: selectedProductId,
-        image_url: imageForm.image_url.trim(),
-        alt_text: imageForm.alt_text.trim() || selectedProduct?.product_name || "Product image",
-        is_primary: Boolean(imageForm.is_primary),
-        active: true,
-        sort_order: selectedProductImages.length + 1,
-      })
-      .select("*")
-      .single();
-    if (imageError) setError(imageError.message || "Could not add image.");
-    else {
-      if (imageForm.is_primary) {
-        await supabase
-          .from("builder_products")
-          .update({ primary_image_url: data.image_url, updated_at: new Date().toISOString() })
-          .eq("workspace_id", workspaceId)
-          .eq("id", selectedProductId);
-      }
-      setImageForm(EMPTY_IMAGE);
-      await loadLibrary();
-      setSuccess("Image added.");
+    try {
+      const entity = createProductEntity({
+        ...productForm,
+        productCode: productForm.product_code,
+        productName: productForm.product_name,
+        supplier: productForm.supplier_name,
+        familyKey: selectedFamily.familyKey,
+        linkedQuoteItemCode: selectedFamily.linkedQuoteItemCode || selectedFamily.approvedSourceKey,
+        primaryImage: productForm.primary_image,
+        officialProductURL: productForm.official_product_url,
+        specificationURL: productForm.specification_url,
+        builderCost: productForm.builder_cost,
+        clientPrice: productForm.client_price,
+      }, workspaceId);
+      await saveEntityProduct(entity);
+      setProductForm(EMPTY_PRODUCT);
+      setSuccess(`${entity.productName} saved to ${selectedFamily.displayName}.`);
+    } catch (saveError) {
+      setError(saveError.message || "Could not save product.");
     }
     setSaving(false);
   }
 
-  async function deactivateProduct(productId) {
-    if (!workspaceId || !productId) return;
+  async function archiveProduct(entity) {
+    if (!entity?.raw?.id) return;
     setSaving(true);
-    const { error: updateError } = await supabase
-      .from("builder_products")
-      .update({ active: false, updated_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId)
-      .eq("id", productId);
-    if (updateError) setError(updateError.message || "Could not deactivate product.");
+    const { error: archiveError } = await supabase.from("builder_products").update({ active: false, updated_at: new Date().toISOString() }).eq("workspace_id", workspaceId).eq("id", entity.raw.id);
+    if (archiveError) setError(archiveError.message || "Could not archive product.");
     else {
+      setSuccess("Product archived.");
       await loadLibrary();
-      setSuccess("Product deactivated.");
     }
     setSaving(false);
+  }
+
+  function duplicateProduct(entity) {
+    setProductForm({
+      product_code: `${entity.productCode || slugify(entity.productName)}-copy`,
+      product_name: `${entity.productName} Copy`,
+      supplier_name: entity.supplier,
+      brand: entity.brand,
+      range: entity.range,
+      model: entity.model,
+      colour: entity.colour,
+      finish: entity.finish,
+      size: entity.size,
+      primary_image: entity.primaryImage,
+      official_product_url: entity.officialProductURL,
+      specification_url: entity.specificationURL,
+      builder_cost: entity.builderCost || "",
+      client_price: entity.clientPrice || "",
+      active: true,
+    });
+    setAdminOpen(true);
+  }
+
+  function addToSelection(entity) {
+    if (!selectedFamily || !entity) return;
+    const query = selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey });
+    setSuccess(`Added ${entity.productName} to selections context ${query.area} / ${query.familyKey} / ${query.linkedQuoteItemCode}.`);
   }
 
   return (
     <>
       <Head>
-        <title>Builder Product Library | Gr8 Result</title>
+        <title>Product Library | Gr8 Result</title>
       </Head>
-
       <main className="page">
-        <header className="hero">
-          <div>
-            <p className="eyebrow">Builders Platform</p>
-            <h1>Builder Product Library</h1>
-            <p>
-              Separate catalogue of selectable products. Each product can reference one Quote Structure item while the Quote
-              Structure remains the master estimate order.
-            </p>
+        <header className="standard-banner">
+          <button type="button" className="back-button" onClick={goBack} aria-label="Back">
+            <ArrowLeft size={18} />
+            <span>Back</span>
+          </button>
+          <div className="banner-icon">
+            <Package size={28} />
           </div>
-          <div className="hero-actions">
-            <button type="button" onClick={exportTemplateCsv}>
-              CSV Template
-            </button>
-            <button type="button" onClick={exportProductsCsv} disabled={!products.length}>
-              Export Products CSV
-            </button>
-            <button type="button" onClick={loadLibrary} disabled={!workspaceId || loading}>
-              {loading ? "Loading..." : "Refresh"}
-            </button>
+          <div className="banner-copy">
+            <h1>Product Library</h1>
+            <p>Manage the suppliers, products, finishes and options available for project selections.</p>
+          </div>
+          <div className="banner-meta">
+            <span>{workspaceLoading ? "Loading organisation..." : activeWorkspace?.name || "No organisation selected"}</span>
+            <span>{loading ? "Loading..." : success || "Saved locally to organisation catalogue"}</span>
+            <div className="file-controls">
+              <button type="button" onClick={exportTemplateCsv}><FileUp size={16} /> CSV Template</button>
+              <label className="file-button">
+                <Upload size={16} />
+                Import Products
+                <input type="file" accept=".csv,text/csv" onChange={handleProductCsvPreview} />
+              </label>
+              <button type="button" onClick={loadLibrary} disabled={!workspaceId || loading}><RefreshCw size={16} /> Refresh</button>
+            </div>
           </div>
         </header>
 
-        <section className="stats">
-          <div>
-            <span>Workspace</span>
-            <strong>{workspaceLoading ? "Loading..." : activeWorkspace?.name || "No workspace"}</strong>
-          </div>
-          <div>
-            <span>Products</span>
-            <strong>{products.length}</strong>
-          </div>
-          <div>
-            <span>Categories</span>
-            <strong>{categories.length}</strong>
-          </div>
-          <div>
-            <span>Standard Included</span>
-            <strong>{products.filter((product) => product.standard_included).length}</strong>
-          </div>
-        </section>
+        {error ? <div className="alert error">{error}</div> : null}
+        {success ? <div className="alert success">{success}</div> : null}
 
-        {error && <div className="alert error">{error}</div>}
-        {success && <div className="alert success">{success}</div>}
-
-        <section className="panel import-panel">
-          <div>
-            <p className="eyebrow">Supplier Import</p>
-            <h2>Import Product Library CSV</h2>
-            <p>
-              Import products from supplier CSVs and map each row back to a Quote Structure section/item/row reference.
-            </p>
-          </div>
-          <form className="import-form" onSubmit={importProductsCsv}>
-            <input type="file" accept=".csv,text/csv" onChange={(event) => setImportFile(event.target.files?.[0] || null)} />
-            <button type="submit" disabled={!workspaceId || !importFile || importing}>
-              {importing ? "Importing..." : "Import Products"}
-            </button>
-          </form>
-        </section>
-
-        <section className="layout">
-          <aside className="panel catalogue">
-            <div className="panel-title">
-              <h2>Products</h2>
-              <button
-                type="button"
-                className="small"
-                onClick={() => {
-                  setSelectedProductId("");
-                  setProductForm(EMPTY_PRODUCT);
-                }}
-              >
-                New
-              </button>
+        {!selectedArea ? (
+          <section className="purpose">
+            <div className="section-heading">
+              <span>Catalogue Areas</span>
+              <strong>Choose one area</strong>
             </div>
-            <div className="filters">
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products..." />
-              <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-                <option value="all">All categories</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.category_name}
-                  </option>
-                ))}
-              </select>
-              <select value={priceBandFilter} onChange={(event) => setPriceBandFilter(event.target.value)}>
-                <option value="all">All price bands</option>
-                {PRICE_BANDS.map((band) => (
-                  <option key={band.value} value={band.value}>
-                    {band.label}
-                  </option>
-                ))}
-              </select>
-              <select value={activeFilter} onChange={(event) => setActiveFilter(event.target.value)}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="all">All</option>
-              </select>
+            <div className="tile-grid area-grid">
+              {TOP_LEVEL_AREAS.map((area) => (
+                <button key={area.key} type="button" className="visual-tile" onClick={() => setSelectedAreaKey(area.key)} data-area-key={area.key}>
+                  <span className="tile-image" style={{ backgroundImage: `url(${area.image})` }} />
+                  <span className="tile-body">
+                    <strong>{area.displayName}</strong>
+                    <small>{area.description}</small>
+                  </span>
+                </button>
+              ))}
             </div>
+          </section>
+        ) : null}
 
-            <div className="product-list">
-              {filteredProducts.map((product) => {
-                const imageUrl = primaryImageByProduct.get(product.id)?.image_url || product.primary_image_url;
+        {selectedArea && !selectedFamily ? (
+          <section className="purpose">
+            <div className="section-heading">
+              <span>{selectedArea.displayName}</span>
+              <strong>Choose one product family</strong>
+            </div>
+            <div className="tile-grid family-grid">
+              {visibleFamilies.map((familyItem) => {
+                const count = productsForFamily(orgProducts, familyItem).length;
                 return (
-                  <button
-                    key={product.id}
-                    type="button"
-                    className={selectedProductId === product.id ? "product-card selected" : "product-card"}
-                    onClick={() => setSelectedProductId(product.id)}
-                  >
-                    <span className="thumb">{imageUrl ? <img src={imageUrl} alt={product.product_name} /> : "No image"}</span>
-                    <span>
-                      <strong>{product.product_name}</strong>
-                      <small>{categoryById.get(product.category_id) || "Uncategorised"}</small>
-                      <small>{manufacturerById.get(product.manufacturer_id) || "No manufacturer"} · {product.model || "No model"}</small>
+                  <button key={familyItem.familyKey} type="button" className="visual-tile" onClick={() => openFamily(familyItem.familyKey)} data-family-key={familyItem.familyKey}>
+                    <span className="tile-image" style={{ backgroundImage: `url(${familyItem.image})` }} />
+                    <span className="tile-body">
+                      <strong>{familyItem.displayName}</strong>
+                      <small>{familyItem.category} / {familyItem.subcategory}</small>
+                      <em>{count ? `${count} organisation product${count === 1 ? "" : "s"}` : "Generic demo products available"}</em>
                     </span>
                   </button>
                 );
               })}
-              {!filteredProducts.length && <p className="empty">No products yet. Create the first product when you are ready.</p>}
             </div>
-          </aside>
-
-          <section className="main-column">
-            <form className="panel form" onSubmit={saveProduct}>
-              <div className="panel-title">
-                <div>
-                  <p className="eyebrow">Product Record</p>
-                  <h2>{selectedProduct ? "Edit Product" : "New Product"}</h2>
-                </div>
-                <div className="actions">
-                  {selectedProduct && selectedProduct.active !== false && (
-                    <button type="button" className="danger" onClick={() => deactivateProduct(selectedProduct.id)} disabled={saving}>
-                      Deactivate
-                    </button>
-                  )}
-                  <button type="submit" disabled={saving || !workspaceId}>
-                    {saving ? "Saving..." : "Save Product"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid two">
-                <label>
-                  Quote Structure Section
-                  <input
-                    value={productForm.quote_structure_section}
-                    onChange={(event) => updateProduct("quote_structure_section", event.target.value)}
-                    placeholder="Kitchen"
-                  />
-                </label>
-                <label>
-                  Quote Structure Item
-                  <input
-                    value={productForm.quote_structure_item}
-                    onChange={(event) => updateProduct("quote_structure_item", event.target.value)}
-                    placeholder="Oven"
-                  />
-                </label>
-                <label>
-                  Quote Structure Row ID
-                  <input
-                    value={productForm.quote_structure_row_id}
-                    onChange={(event) => updateProduct("quote_structure_row_id", event.target.value)}
-                    placeholder="quote row id from master CSV"
-                  />
-                </label>
-                <label>
-                  Selection Type
-                  <input
-                    value={productForm.selection_type}
-                    onChange={(event) => updateProduct("selection_type", event.target.value)}
-                    placeholder="appliance, finish, fixture..."
-                  />
-                </label>
-                <label>
-                  Product Name
-                  <input value={productForm.product_name} onChange={(event) => updateProduct("product_name", event.target.value)} required />
-                </label>
-                <label>
-                  Category
-                  <select value={productForm.category_id} onChange={(event) => updateProduct("category_id", event.target.value)}>
-                    <option value="">Select category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.category_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Manufacturer
-                  <select value={productForm.manufacturer_id} onChange={(event) => updateProduct("manufacturer_id", event.target.value)}>
-                    <option value="">Select manufacturer</option>
-                    {manufacturers.map((manufacturer) => (
-                      <option key={manufacturer.id} value={manufacturer.id}>
-                        {manufacturer.manufacturer_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Supplier
-                  <select value={productForm.supplier_id} onChange={(event) => updateProduct("supplier_id", event.target.value)}>
-                    <option value="">Select supplier</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.supplier_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  SKU
-                  <input value={productForm.sku} onChange={(event) => updateProduct("sku", event.target.value)} />
-                </label>
-                <label>
-                  Model
-                  <input value={productForm.model} onChange={(event) => updateProduct("model", event.target.value)} />
-                </label>
-              </div>
-
-              <label>
-                Description
-                <textarea value={productForm.description} onChange={(event) => updateProduct("description", event.target.value)} rows={4} />
-              </label>
-
-              <div className="grid three">
-                <label>
-                  Price Band
-                  <select value={productForm.price_band} onChange={(event) => updateProduct("price_band", event.target.value)}>
-                    {PRICE_BANDS.map((band) => (
-                      <option key={band.value} value={band.value}>
-                        {band.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Base Allowance
-                  <input type="number" step="0.01" value={productForm.base_allowance} onChange={(event) => updateProduct("base_allowance", event.target.value)} />
-                </label>
-                <label>
-                  Upgrade Cost
-                  <input type="number" step="0.01" value={productForm.upgrade_cost} onChange={(event) => updateProduct("upgrade_cost", event.target.value)} />
-                </label>
-              </div>
-
-              <div className="grid two">
-                <label>
-                  Primary Image URL
-                  <input value={productForm.primary_image_url} onChange={(event) => updateProduct("primary_image_url", event.target.value)} />
-                </label>
-                <label>
-                  Product URL
-                  <input value={productForm.product_url} onChange={(event) => updateProduct("product_url", event.target.value)} />
-                </label>
-                <label>
-                  Datasheet URL
-                  <input value={productForm.datasheet_pdf_url} onChange={(event) => updateProduct("datasheet_pdf_url", event.target.value)} />
-                </label>
-                <label>
-                  Warranty URL
-                  <input value={productForm.warranty_document_url} onChange={(event) => updateProduct("warranty_document_url", event.target.value)} />
-                </label>
-              </div>
-
-              <label>
-                Notes
-                <textarea value={productForm.notes} onChange={(event) => updateProduct("notes", event.target.value)} rows={3} />
-              </label>
-
-              <div className="switch-row">
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={productForm.standard_included}
-                    onChange={(event) => updateProduct("standard_included", event.target.checked)}
-                  />
-                  Standard Included
-                </label>
-                <label className="check">
-                  <input type="checkbox" checked={productForm.active} onChange={(event) => updateProduct("active", event.target.checked)} />
-                  Active
-                </label>
-              </div>
-            </form>
-
-            <section className="panel image-panel">
-              <div className="panel-title">
-                <div>
-                  <p className="eyebrow">Images</p>
-                  <h2>Product Images</h2>
-                </div>
-              </div>
-              <form className="image-form" onSubmit={addImage}>
-                <input value={imageForm.image_url} onChange={(event) => setImageForm((current) => ({ ...current, image_url: event.target.value }))} placeholder="Image URL" />
-                <input value={imageForm.alt_text} onChange={(event) => setImageForm((current) => ({ ...current, alt_text: event.target.value }))} placeholder="Alt text" />
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={imageForm.is_primary}
-                    onChange={(event) => setImageForm((current) => ({ ...current, is_primary: event.target.checked }))}
-                  />
-                  Primary
-                </label>
-                <button type="submit" disabled={!selectedProductId || !imageForm.image_url.trim() || saving}>
-                  Add Image
-                </button>
-              </form>
-              <div className="image-grid">
-                {selectedProductImages.map((image) => (
-                  <div key={image.id} className="image-card">
-                    <img src={image.image_url} alt={image.alt_text || "Product image"} />
-                    <span>{image.is_primary ? "Primary image" : "Gallery image"}</span>
-                  </div>
-                ))}
-                {!selectedProductImages.length && <p className="empty">Save a product, then add images.</p>}
-              </div>
-            </section>
           </section>
+        ) : null}
 
-          <aside className="panel side">
-            <h2>Foundation Records</h2>
-            <form onSubmit={createCategory} className="mini-form">
-              <h3>Category</h3>
-              <input value={categoryForm.category_name} onChange={(event) => setCategoryForm((current) => ({ ...current, category_name: event.target.value }))} placeholder="Category name" />
-              <input value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} placeholder="Description" />
-              <button type="submit" disabled={saving || !categoryForm.category_name.trim()}>
-                Add Category
-              </button>
-            </form>
-
-            <form onSubmit={createManufacturer} className="mini-form">
-              <h3>Manufacturer</h3>
-              <input value={manufacturerForm.manufacturer_name} onChange={(event) => setManufacturerForm((current) => ({ ...current, manufacturer_name: event.target.value }))} placeholder="Manufacturer name" />
-              <input value={manufacturerForm.website_url} onChange={(event) => setManufacturerForm((current) => ({ ...current, website_url: event.target.value }))} placeholder="Website URL" />
-              <button type="submit" disabled={saving || !manufacturerForm.manufacturer_name.trim()}>
-                Add Manufacturer
-              </button>
-            </form>
-
-            <form onSubmit={createSupplier} className="mini-form">
-              <h3>Supplier</h3>
-              <input value={supplierForm.supplier_name} onChange={(event) => setSupplierForm((current) => ({ ...current, supplier_name: event.target.value }))} placeholder="Supplier name" />
-              <input value={supplierForm.contact_name} onChange={(event) => setSupplierForm((current) => ({ ...current, contact_name: event.target.value }))} placeholder="Contact name" />
-              <input value={supplierForm.email} onChange={(event) => setSupplierForm((current) => ({ ...current, email: event.target.value }))} placeholder="Email" />
-              <input value={supplierForm.phone} onChange={(event) => setSupplierForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Phone" />
-              <input value={supplierForm.website_url} onChange={(event) => setSupplierForm((current) => ({ ...current, website_url: event.target.value }))} placeholder="Website URL" />
-              <button type="submit" disabled={saving || !supplierForm.supplier_name.trim()}>
-                Add Supplier
-              </button>
-            </form>
-
-            {selectedProduct && (
-              <div className="summary">
-                <h3>Selected Product</h3>
-                <dl>
-                  <dt>Category</dt>
-                  <dd>{categoryById.get(selectedProduct.category_id) || "Not set"}</dd>
-                  <dt>Manufacturer</dt>
-                  <dd>{manufacturerById.get(selectedProduct.manufacturer_id) || "Not set"}</dd>
-                  <dt>Supplier</dt>
-                  <dd>{supplierById.get(selectedProduct.supplier_id) || "Not set"}</dd>
-                  <dt>Quote Item</dt>
-                  <dd>{selectedProduct.quote_structure_item || selectedProduct.source_quote_item_name || "Not linked"}</dd>
-                  <dt>Base Allowance</dt>
-                  <dd>{money(selectedProduct.base_allowance)}</dd>
-                  <dt>Upgrade Cost</dt>
-                  <dd>{money(selectedProduct.upgrade_cost)}</dd>
-                </dl>
+        {selectedFamily ? (
+          <section className="family-layout">
+            <div className="family-main">
+              <div className="section-heading">
+                <span>{selectedArea?.displayName || selectedFamily.topLevelArea}</span>
+                <strong>{selectedFamily.displayName}</strong>
               </div>
-            )}
-          </aside>
+              <div className="family-hero">
+                <img src={selectedFamily.image} alt={`${selectedFamily.displayName} generic category`} />
+                <div>
+                  <h2>{selectedFamily.displayName}</h2>
+                  <p>{selectedFamily.category} / {selectedFamily.subcategory}</p>
+                  <div className="chips">
+                    <span>{selectionQuery.area}</span>
+                    <span>{selectionQuery.familyKey}</span>
+                    <span>{selectionQuery.linkedQuoteItemCode}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="product-flow">
+                <div>
+                  <span>Select Supplier</span>
+                  <strong>{selectedProduct?.supplier || "No supplier"}</strong>
+                </div>
+                <div>
+                  <span>Select Range</span>
+                  <strong>{selectedProduct?.range || "No range"}</strong>
+                </div>
+                <div>
+                  <span>Select Colour / Finish</span>
+                  <strong>{[selectedProduct?.colour, selectedProduct?.finish].filter(Boolean).join(" / ") || "No colour"}</strong>
+                </div>
+              </div>
+
+              <div className="product-grid">
+                {visibleProducts.map((product) => (
+                  <button
+                    key={product.productId}
+                    type="button"
+                    className={selectedProduct?.productId === product.productId ? "product-option selected" : "product-option"}
+                    onClick={() => setSelectedProductCode(product.productCode || product.productId)}
+                  >
+                    <img src={product.primaryImage || selectedFamily.image} alt={product.imageAltText || product.productName} />
+                    <strong>{product.productName}</strong>
+                    <small>{product.supplier} / {product.brand}</small>
+                    <small>{product.range} / {product.colour || product.finish || product.size}</small>
+                    <span>{product.priceSource === "generic-demo" ? "Generic demo" : money(product.clientPrice || product.builderCost)}</span>
+                  </button>
+                ))}
+              </div>
+
+              {!visibleProducts.length ? (
+                <div className="empty-state">
+                  <strong>No products have been added for this category yet.</strong>
+                  <div>
+                    <button type="button" onClick={() => setAdminOpen(true)}><Plus size={16} /> Add Product</button>
+                    <label className="file-button">
+                      <Upload size={16} />
+                      Import Products
+                      <input type="file" accept=".csv,text/csv" onChange={handleProductCsvPreview} />
+                    </label>
+                    <button type="button" onClick={() => setSelectedFamilyKey("")}>Back</button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <aside className="detail-panel">
+              <div className="panel-title">
+                <Layers3 size={20} />
+                <strong>Family Schema</strong>
+              </div>
+              <dl>
+                <dt>Required</dt>
+                <dd>{selectedFamily.requiredAttributes.join(", ")}</dd>
+                <dt>Optional</dt>
+                <dd>{selectedFamily.optionalAttributes.join(", ")}</dd>
+                <dt>Variants</dt>
+                <dd>{selectedFamily.supportedVariantTypes.join(", ")}</dd>
+                <dt>Pricing</dt>
+                <dd>{selectedFamily.pricingMode}</dd>
+              </dl>
+              {selectedProduct ? (
+                <div className="selected-product">
+                  <img src={selectedProduct.primaryImage || selectedFamily.image} alt={selectedProduct.imageAltText || selectedProduct.productName} />
+                  <h3>{selectedProduct.productName}</h3>
+                  <p>{selectedProduct.description}</p>
+                  <div className="swatches">
+                    {(selectedProduct.colourSwatches?.length ? selectedProduct.colourSwatches : [selectedProduct.colour, selectedProduct.finish].filter(Boolean)).map((swatch) => (
+                      <span key={swatch}>{swatch}</span>
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => addToSelection(selectedProduct)}><Check size={16} /> Add to Selections</button>
+                  <button type="button" className="secondary" onClick={() => duplicateProduct(selectedProduct)}><Copy size={16} /> Duplicate</button>
+                  {selectedProduct.raw ? <button type="button" className="secondary" onClick={() => archiveProduct(selectedProduct)}><Archive size={16} /> Archive</button> : null}
+                </div>
+              ) : null}
+            </aside>
+          </section>
+        ) : null}
+
+        <section className={adminOpen ? "admin-panel open" : "admin-panel"}>
+          <button type="button" className="admin-toggle" onClick={() => setAdminOpen((current) => !current)}>
+            <Boxes size={18} />
+            Product Library Admin
+          </button>
+          {adminOpen ? (
+            <div className="admin-body">
+              <div className="admin-actions">
+                <button type="button" onClick={() => setProductForm(EMPTY_PRODUCT)}><Plus size={16} /> Add Product</button>
+                <button type="button" onClick={() => setSuccess("Add Supplier: enter supplier_name in the import CSV or save a product with a new supplier.")}>Add Supplier</button>
+                <button type="button" onClick={() => setSuccess("Add Brand: enter brand in the import CSV or save a product with a new brand.")}>Add Brand</button>
+                <button type="button" onClick={() => setSuccess("Add Range: enter range on a product or import row.")}>Add Range</button>
+                <button type="button" onClick={() => setSuccess("Add Variant: enter colour, finish, size or variant_name in the import CSV.")}>Add Variant</button>
+                <label className="file-button">
+                  <Upload size={16} />
+                  Import CSV
+                  <input type="file" accept=".csv,text/csv" onChange={handleProductCsvPreview} />
+                </label>
+                <button type="button" onClick={exportTemplateCsv}><FileUp size={16} /> Export Template</button>
+              </div>
+
+              {selectedFamily ? (
+                <form className="product-form" onSubmit={saveManualProduct}>
+                  <div className="panel-title">
+                    <Edit3 size={18} />
+                    <strong>Add Product to {selectedFamily.displayName}</strong>
+                  </div>
+                  <div className="form-grid">
+                    <input value={productForm.product_code} onChange={(event) => setProductForm((current) => ({ ...current, product_code: event.target.value }))} placeholder="product_code" required />
+                    <input value={productForm.product_name} onChange={(event) => setProductForm((current) => ({ ...current, product_name: event.target.value }))} placeholder="product_name" required />
+                    <input value={productForm.supplier_name} onChange={(event) => setProductForm((current) => ({ ...current, supplier_name: event.target.value }))} placeholder="supplier_name" />
+                    <input value={productForm.brand} onChange={(event) => setProductForm((current) => ({ ...current, brand: event.target.value }))} placeholder="brand" />
+                    <input value={productForm.range} onChange={(event) => setProductForm((current) => ({ ...current, range: event.target.value }))} placeholder="range" />
+                    <input value={productForm.model} onChange={(event) => setProductForm((current) => ({ ...current, model: event.target.value }))} placeholder="model" />
+                    <input value={productForm.colour} onChange={(event) => setProductForm((current) => ({ ...current, colour: event.target.value }))} placeholder="colour" />
+                    <input value={productForm.finish} onChange={(event) => setProductForm((current) => ({ ...current, finish: event.target.value }))} placeholder="finish" />
+                    <input value={productForm.size} onChange={(event) => setProductForm((current) => ({ ...current, size: event.target.value }))} placeholder="size" />
+                    <input value={productForm.primary_image} onChange={(event) => setProductForm((current) => ({ ...current, primary_image: event.target.value }))} placeholder="primary_image" />
+                    <input value={productForm.official_product_url} onChange={(event) => setProductForm((current) => ({ ...current, official_product_url: event.target.value }))} placeholder="official_product_url" />
+                    <input value={productForm.specification_url} onChange={(event) => setProductForm((current) => ({ ...current, specification_url: event.target.value }))} placeholder="specification_url" />
+                    <input value={productForm.builder_cost} onChange={(event) => setProductForm((current) => ({ ...current, builder_cost: event.target.value }))} placeholder="builder_cost" />
+                    <input value={productForm.client_price} onChange={(event) => setProductForm((current) => ({ ...current, client_price: event.target.value }))} placeholder="client_price" />
+                  </div>
+                  <button type="submit" disabled={saving || !workspaceId}><ImagePlus size={16} /> Save Product</button>
+                </form>
+              ) : (
+                <p className="admin-note">Choose a product family before adding a product manually. Imports can still be previewed from any page.</p>
+              )}
+
+              {importPreview ? (
+                <div className="import-preview">
+                  <div className="panel-title">
+                    <FileUp size={18} />
+                    <strong>Import Preview: {importPreview.fileName}</strong>
+                  </div>
+                  <p>{importPreview.preview.length} rows previewed. {importPreview.preview.filter((row) => row.errors.length).length} row-level error(s).</p>
+                  <div className="preview-list">
+                    {importPreview.preview.slice(0, 12).map((row) => (
+                      <div key={row.rowNumber} className={row.errors.length ? "preview-row error" : "preview-row"}>
+                        <strong>Row {row.rowNumber}</strong>
+                        <span>{row.record.product_name || "Unnamed product"}</span>
+                        <small>{row.errors.length ? row.errors.join("; ") : row.action}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={importPreviewRows} disabled={saving || !workspaceId}><Upload size={16} /> Create / Update Valid Rows</button>
+                </div>
+              ) : null}
+
+              <div className="entity-model">
+                <strong>Shared Product Entity</strong>
+                {Object.entries(PRODUCT_ENTITY_FIELDS).map(([section, fields]) => (
+                  <p key={section}><span>{section}</span> {fields.join(", ")}</p>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
       </main>
 
       <style jsx>{`
         .page {
           min-height: 100vh;
-          background: #07111f;
-          color: #e5eefb;
-          padding: 24px;
+          background: #f5f7fb;
+          color: #172033;
+          padding: 20px;
         }
-        .hero,
-        .stats,
-        .panel,
-        .alert {
-          border: 1px solid rgba(148, 163, 184, 0.22);
-          background: rgba(15, 23, 42, 0.92);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
-        }
-        .hero {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 24px;
-          border-radius: 10px;
-          padding: 22px;
-        }
-        .hero-actions {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-        .eyebrow {
-          margin: 0 0 6px;
-          color: #38bdf8;
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-        }
-        h1,
-        h2,
-        h3,
-        p {
-          margin-top: 0;
-        }
-        h1 {
-          margin-bottom: 8px;
-          font-size: 30px;
-        }
-        h2 {
-          margin-bottom: 0;
-          font-size: 20px;
-        }
-        h3 {
-          margin-bottom: 10px;
-          font-size: 15px;
-        }
-        .hero p {
-          max-width: 780px;
-          margin-bottom: 0;
-          color: #a8bbd4;
-        }
-        button {
-          border: 0;
+        .standard-banner {
+          display: grid;
+          grid-template-columns: auto 48px minmax(0, 1fr) minmax(280px, auto);
+          gap: 14px;
+          align-items: center;
+          border: 1px solid #d7deea;
+          background: #ffffff;
           border-radius: 8px;
-          background: #2563eb;
-          color: white;
+          padding: 14px;
+          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+        .back-button,
+        .file-controls button,
+        .file-button,
+        button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #172033;
           cursor: pointer;
           font-weight: 800;
-          padding: 10px 14px;
+          padding: 9px 12px;
+          text-align: left;
         }
         button:disabled {
           cursor: not-allowed;
           opacity: 0.55;
         }
-        button.small {
-          padding: 7px 10px;
-          font-size: 12px;
+        .back-button,
+        .file-controls button,
+        .file-button {
+          min-height: 38px;
         }
-        button.danger {
-          background: #b91c1c;
-        }
-        .stats {
+        .banner-icon {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 12px;
-          margin: 16px 0;
-          border-radius: 10px;
-          padding: 16px;
+          width: 48px;
+          height: 48px;
+          place-items: center;
+          border-radius: 8px;
+          background: #1f6feb;
+          color: #ffffff;
         }
-        .stats span {
-          display: block;
-          color: #93a4bd;
-          font-size: 12px;
+        .banner-copy h1 {
+          margin: 0;
+          font-size: 48px;
+          line-height: 1;
+          letter-spacing: 0;
         }
-        .stats strong {
-          display: block;
-          margin-top: 4px;
+        .banner-copy p {
+          margin: 6px 0 0;
+          color: #58657a;
           font-size: 18px;
         }
+        .banner-meta {
+          display: grid;
+          gap: 8px;
+          justify-items: end;
+          color: #64748b;
+          font-size: 13px;
+        }
+        .file-controls {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+        .file-button {
+          position: relative;
+          overflow: hidden;
+        }
+        .file-button input {
+          position: absolute;
+          inset: 0;
+          opacity: 0;
+          cursor: pointer;
+        }
         .alert {
-          margin-bottom: 12px;
+          margin: 14px 0 0;
           border-radius: 8px;
           padding: 12px 14px;
+          font-weight: 800;
         }
         .alert.error {
-          border-color: rgba(248, 113, 113, 0.45);
-          color: #fecaca;
+          border: 1px solid #fecaca;
+          background: #fff1f2;
+          color: #991b1b;
         }
         .alert.success {
-          border-color: rgba(34, 197, 94, 0.45);
-          color: #bbf7d0;
+          border: 1px solid #bbf7d0;
+          background: #f0fdf4;
+          color: #166534;
         }
-        .layout {
-          display: grid;
-          grid-template-columns: minmax(260px, 330px) minmax(0, 1fr) minmax(260px, 330px);
-          gap: 16px;
+        .purpose,
+        .family-layout,
+        .admin-panel {
+          margin-top: 16px;
         }
-        .import-panel {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(320px, 480px);
-          gap: 16px;
-          align-items: end;
-          margin-bottom: 16px;
-        }
-        .import-panel p {
-          margin-bottom: 0;
-          color: #a8bbd4;
-        }
-        .import-form {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          gap: 10px;
-          align-items: center;
-        }
-        .panel {
-          border-radius: 10px;
-          padding: 16px;
-        }
-        .panel-title,
-        .actions,
-        .switch-row {
+        .section-heading {
           display: flex;
-          align-items: center;
+          align-items: end;
           justify-content: space-between;
-          gap: 10px;
+          gap: 16px;
+          margin-bottom: 12px;
         }
-        .panel-title {
-          margin-bottom: 16px;
+        .section-heading span {
+          color: #64748b;
+          font-size: 13px;
+          font-weight: 900;
+          text-transform: uppercase;
         }
-        .main-column,
-        .filters,
-        .form,
-        .mini-form {
+        .section-heading strong {
+          font-size: 24px;
+        }
+        .tile-grid {
           display: grid;
-          gap: 12px;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 14px;
         }
-        input,
-        select,
-        textarea {
-          width: 100%;
-          border: 1px solid rgba(148, 163, 184, 0.25);
-          border-radius: 8px;
-          background: #0b1626;
-          color: #e5eefb;
-          padding: 10px 11px;
-          font: inherit;
+        .visual-tile {
+          display: grid;
+          align-content: stretch;
+          min-height: 250px;
+          overflow: hidden;
+          border-color: #d7deea;
+          background: #ffffff;
+          padding: 0;
         }
-        textarea {
-          resize: vertical;
+        .visual-tile:hover,
+        .product-option:hover {
+          border-color: #1f6feb;
+          box-shadow: 0 14px 34px rgba(31, 111, 235, 0.16);
         }
-        label {
+        .tile-image {
+          display: block;
+          min-height: 150px;
+          background-position: center;
+          background-size: cover;
+        }
+        .tile-body {
           display: grid;
           gap: 6px;
-          color: #bfd0e8;
-          font-size: 13px;
-          font-weight: 700;
+          padding: 14px;
         }
-        label.check {
+        .tile-body strong {
+          font-size: 18px;
+        }
+        .tile-body small,
+        .tile-body em {
+          color: #64748b;
+          font-style: normal;
+          line-height: 1.35;
+        }
+        .family-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 340px;
+          gap: 16px;
+        }
+        .family-main,
+        .detail-panel,
+        .admin-body {
+          border: 1px solid #d7deea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .family-hero {
+          display: grid;
+          grid-template-columns: 240px minmax(0, 1fr);
+          gap: 16px;
+          align-items: center;
+          margin-bottom: 14px;
+        }
+        .family-hero img,
+        .selected-product img,
+        .product-option img {
+          width: 100%;
+          object-fit: cover;
+          background: #e2e8f0;
+        }
+        .family-hero img {
+          height: 160px;
+          border-radius: 8px;
+        }
+        .family-hero h2 {
+          margin: 0;
+          font-size: 32px;
+        }
+        .family-hero p {
+          margin: 6px 0 12px;
+          color: #64748b;
+        }
+        .chips,
+        .swatches {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .chips span,
+        .swatches span {
+          border: 1px solid #cbd5e1;
+          border-radius: 999px;
+          background: #f8fafc;
+          padding: 6px 9px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .product-flow {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .product-flow div {
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 12px;
+        }
+        .product-flow span {
+          display: block;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .product-flow strong {
+          display: block;
+          margin-top: 4px;
+        }
+        .product-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+          gap: 12px;
+        }
+        .product-option {
+          display: grid;
+          gap: 8px;
+          align-content: start;
+          border-color: #d7deea;
+          background: #ffffff;
+          padding: 10px;
+        }
+        .product-option.selected {
+          border-color: #1f6feb;
+          box-shadow: inset 0 0 0 1px #1f6feb;
+        }
+        .product-option img {
+          height: 140px;
+          border-radius: 6px;
+        }
+        .product-option small {
+          color: #64748b;
+        }
+        .product-option span {
+          color: #166534;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .detail-panel {
+          align-self: start;
+          display: grid;
+          gap: 14px;
+        }
+        .panel-title {
           display: flex;
           align-items: center;
           gap: 8px;
-        }
-        label.check input {
-          width: auto;
-        }
-        .grid {
-          display: grid;
-          gap: 12px;
-        }
-        .grid.two {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .grid.three {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-        .product-list {
-          display: grid;
-          gap: 8px;
-          max-height: 78vh;
-          overflow: auto;
-          padding-right: 4px;
-        }
-        .product-card {
-          display: grid;
-          grid-template-columns: 58px minmax(0, 1fr);
-          gap: 12px;
-          align-items: center;
-          width: 100%;
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          border-radius: 8px;
-          background: rgba(30, 41, 59, 0.62);
-          color: #e5eefb;
-          padding: 10px;
-          text-align: left;
-        }
-        .product-card.selected {
-          border-color: #38bdf8;
-          background: rgba(14, 165, 233, 0.16);
-        }
-        .product-card strong,
-        .product-card small {
-          display: block;
-        }
-        .product-card small {
-          color: #93a4bd;
-        }
-        .thumb {
-          display: grid;
-          place-items: center;
-          width: 58px;
-          height: 58px;
-          overflow: hidden;
-          border-radius: 8px;
-          background: #0b1626;
-          color: #64748b;
-          font-size: 11px;
-        }
-        .thumb img,
-        .image-card img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .image-form {
-          display: grid;
-          grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto auto;
-          gap: 10px;
-          align-items: center;
-        }
-        .image-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-          gap: 10px;
-          margin-top: 14px;
-        }
-        .image-card {
-          overflow: hidden;
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          border-radius: 8px;
-          background: rgba(2, 6, 23, 0.35);
-        }
-        .image-card img {
-          height: 110px;
-        }
-        .image-card span {
-          display: block;
-          padding: 8px;
-          color: #cbd5e1;
-          font-size: 12px;
-        }
-        .side {
-          display: grid;
-          align-content: start;
-          gap: 16px;
-        }
-        .summary {
-          border-top: 1px solid rgba(148, 163, 184, 0.18);
-          padding-top: 14px;
         }
         dl {
           display: grid;
-          grid-template-columns: 110px minmax(0, 1fr);
-          gap: 8px 12px;
+          gap: 8px;
           margin: 0;
         }
         dt {
-          color: #93a4bd;
+          color: #64748b;
           font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
         }
         dd {
+          margin: 0 0 8px;
+          color: #172033;
+          line-height: 1.45;
+        }
+        .selected-product {
+          display: grid;
+          gap: 10px;
+        }
+        .selected-product img {
+          height: 190px;
+          border-radius: 8px;
+        }
+        .selected-product h3,
+        .selected-product p {
           margin: 0;
-          overflow-wrap: anywhere;
-          font-weight: 800;
         }
-        .empty {
-          color: #93a4bd;
-          line-height: 1.5;
+        .selected-product p {
+          color: #64748b;
+          line-height: 1.45;
         }
-        @media (max-width: 1280px) {
-          .layout {
-            grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
-          }
-          .side {
-            grid-column: 1 / -1;
-          }
+        .selected-product button,
+        .product-form button,
+        .import-preview button {
+          background: #1f6feb;
+          color: #ffffff;
+          border-color: #1f6feb;
         }
-        @media (max-width: 900px) {
-          .page {
-            padding: 14px;
-          }
-          .hero,
-          .import-panel,
-          .layout {
-            display: grid;
-          }
-          .layout,
-          .stats,
-          .grid.two,
-          .grid.three,
-          .import-form,
-          .image-form {
+        .selected-product button.secondary {
+          background: #ffffff;
+          color: #172033;
+          border-color: #cbd5e1;
+        }
+        .empty-state {
+          display: grid;
+          gap: 12px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 16px;
+        }
+        .empty-state div {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .admin-toggle {
+          background: #172033;
+          color: #ffffff;
+          border-color: #172033;
+        }
+        .admin-body {
+          display: grid;
+          gap: 14px;
+          margin-top: 10px;
+        }
+        .admin-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .product-form,
+        .import-preview,
+        .entity-model {
+          display: grid;
+          gap: 12px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 14px;
+        }
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 10px;
+        }
+        input {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 10px 11px;
+          font: inherit;
+        }
+        .preview-list {
+          display: grid;
+          gap: 8px;
+        }
+        .preview-row {
+          display: grid;
+          grid-template-columns: 90px minmax(0, 1fr) minmax(120px, auto);
+          gap: 8px;
+          align-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 10px;
+        }
+        .preview-row.error {
+          border-color: #fecaca;
+          background: #fff1f2;
+        }
+        .preview-row small {
+          color: #64748b;
+        }
+        .entity-model p {
+          margin: 0;
+          color: #475569;
+          line-height: 1.45;
+        }
+        .entity-model span {
+          color: #172033;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        @media (max-width: 980px) {
+          .standard-banner,
+          .family-layout,
+          .family-hero,
+          .product-flow {
             grid-template-columns: 1fr;
           }
-          .hero-actions {
-            justify-content: stretch;
+          .banner-meta {
+            justify-items: start;
           }
-          .hero-actions button {
-            width: 100%;
+          .banner-copy h1 {
+            font-size: 38px;
+          }
+        }
+        @media (max-width: 560px) {
+          .page {
+            padding: 12px;
+          }
+          .banner-copy h1 {
+            font-size: 30px;
+          }
+          .banner-copy p {
+            font-size: 16px;
+          }
+          .tile-grid,
+          .product-grid,
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+          .preview-row {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

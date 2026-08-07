@@ -1,0 +1,428 @@
+# Product Library Approved Source Audit
+
+Source file: `C:\Users\grant\Downloads\PRODUCTS LIBRARY.csv`
+
+## Counts
+
+- Total physical rows: 747
+- Usable item rows: 614
+- Repeated section/header rows excluded: 29
+- Blank rows excluded: 91
+- Section count: 29
+- Rows with quote item codes: 0
+- Rows without usable codes: 614
+- Duplicate descriptions: 96
+- Missing rates: 418
+- Obvious product family rows: 452
+- Rows requiring manual review: 188
+
+## Family Coverage
+
+- stone-benchtops: 35 source row(s)
+- metal-roofing: 1 source row(s)
+- bricks: 2 source row(s)
+- internal-doors: 3 source row(s)
+- garage-doors: 12 source row(s)
+- ovens: 50 source row(s)
+- cooktops: 23 source row(s)
+- cabinetry: 42 source row(s)
+- cabinet-finishes: 2 source row(s)
+- handles: 3 source row(s)
+- splashbacks: 3 source row(s)
+- sinks: 16 source row(s)
+- sink-mixers: 10 source row(s)
+- rangehoods: 71 source row(s)
+- dishwashers: 42 source row(s)
+- microwaves: 0 source row(s)
+- windows: 3 source row(s)
+- entry-doors: 3 source row(s)
+- cladding: 7 source row(s)
+- balustrades: 10 source row(s)
+- exterior-paint: 0 source row(s)
+- external-lighting: 0 source row(s)
+- vanities: 25 source row(s)
+- basins: 0 source row(s)
+- basin-mixers: 15 source row(s)
+- toilets: 14 source row(s)
+- floor-tiles: 7 source row(s)
+- wall-tiles: 3 source row(s)
+- paint: 0 source row(s)
+- flooring: 29 source row(s)
+- robes: 8 source row(s)
+
+## Duplicate Descriptions
+
+- colour: rows 2, 3, 4
+- handle (key in knob): rows 17, 21
+- builders range balustrade: rows 78, 94, 98
+- semi frameless glass balustrade: rows 79, 95, 99
+- frameless glass balustrade: rows 80, 96, 100
+- base cabinets - std colour board: rows 125, 150, 175, 191, 202
+- base cabinets - 2 pack finish: rows 126, 151, 176, 192, 203
+- island bench back panels: rows 128, 153, 178
+- overhead cupboards - std colour board: rows 129, 154, 179
+- overhead cabinets - 2 pack finish: rows 130, 155, 180
+- overhead cabinets - shaker style: rows 131, 156, 181
+- pot draws set of 2: rows 132, 157
+- 3 drawer cupboard 2 lge & 1 sml: rows 133, 158
+- 4 drawer cutlery cupboard: rows 134, 159
+- upgrade to soft close doors and drawers: rows 135, 160
+- builders range laminate benchtops: rows 136, 161, 184, 194, 205
+- 20mm stone tops - builders range: rows 137, 162, 185, 195, 206
+- 20mm stone tops - premium range: rows 138, 163, 186, 196, 207
+- 40mm stone tops - builders range: rows 139, 164, 187, 197, 208
+- 40mm stone tops - premium range: rows 140, 165, 188, 198, 209
+- upgrade to specialty stone feature: rows 141, 166
+- 20mm waterfall ends: rows 142, 167
+- 40mm waterfall ends: rows 143, 168
+- microwave underbench cupboard - std colour board: rows 144, 169
+- 5 shelf melamine open shelves cleated: rows 145, 170
+- wall oven tower: rows 146, 171
+- add for 300mm craftwood bulkheads: rows 147, 172
+- base cabinets - shaker style: rows 152, 177, 193, 204
+- - euromaid 60cm 5 function built-in oven eo605dtb: rows 213, 218
+- - euromaid 60cm slide out rangehood rs6s: rows 215, 220
+- - euromaid 60cm dishwasher edw14s: rows 216, 221, 228, 233, 237, 241
+- - euromaid 90cm built-in oven eo916astb: rows 225, 230
+- - euromaid 90cm slide out rangehood rs9s: rows 227, 232
+- - euromaid 90cm dual fuel freestanding cooker gg90s: rows 235, 239
+- - omega 60cm 4 function oven obo660x: rows 250, 255
+- - omega 60cm slide out rangehood ort6wba: rows 252, 257
+- - omega 60cm freestanding dishwasher odw702xb: rows 253, 258, 265, 267, 271, 275
+- - omega 90cm 9 function freestanding oven of916fx: rows 269, 273
+- - blanco 60cm electric oven bose65xm: rows 282, 287
+- - blanco 60cm slide out rangehood bru53x: rows 284, 289
+- - blanco 60cm freestanding dishwasher bdw146x: rows 285, 290, 296, 301, 305, 309
+- - blanco 90cm electric oven bose90x: rows 293, 298
+- - blanco 90cm slide out rangehood bru90x: rows 295, 300
+- - blanco 90cm dual fuel freestanding cooker bfs90wx: rows 303, 307
+- - ariston 60cm electric oven fa5834hixaaus: rows 317, 325
+- - ariston 60cm slide out rangehood arhs60x: rows 319, 327
+- - ariston 60cm dishwasher lfo3c23wf: rows 320, 324, 328, 335, 341, 345
+- - ariston 90cm slide out rangehood arhs90x: rows 323, 334
+- - ariston 90cm built-in oven fi9 891 sp ix a aus: rows 332, 337
+- - ariston 90cm dual fuel freestanding cooker cp059mdx: rows 339, 343
+- - westinghouse 60cm multifunction oven wve6314dd: rows 353, 358
+- - westinghouse 60cm slideout rangehood wrr614sb: rows 355, 360
+- - westinghouse 60cm freestanding dishwasher wsf6606x: rows 356, 361, 368, 373, 377, 381
+- - westinghouse 90cm electric oven wve916sc: rows 365, 370
+- - westinghouse 90cm slideout rangehood wri930sb: rows 367, 372
+- - westinghouse 90cm dual fuel freestanding cooker wfe9515sd: rows 375, 379
+- - smeg 60cm classic electric oven sf64m3tvx: rows 389, 394
+- - smeg 60cm slideout rangehood sth600x: rows 391, 396
+- - smeg 60cm freestanding dishwasher dwau6315x3: rows 392, 397, 404, 409, 413, 417
+- - smeg 90cm classic thermoseal oven sfpa9395x1: rows 401, 406
+- - smeg 90cm slideout rangehood sth900x: rows 403, 408
+- - smeg 90cm dual fuel freestanding cooker fs9606as-1: rows 411, 415
+- splashback: rows 428, 437, 450
+- wall tiles: rows 432, 445, 457, 462
+- floor tiles: rows 433, 446, 458, 463, 471, 472, 473, 474
+- shower recess: rows 434, 447
+- bath arpon (1.8 m2): rows 435, 448
+- bath hob (1 m2): rows 436, 449
+- soap holder: rows 438, 451, 619
+- feature tiles: rows 439, 452
+- other: rows 440, 453
+- raymor clermont: rows 490, 519, 527, 596
+- raymor victoria spray: rows 491, 597
+- raymor academy pillar: rows 492, 528, 598
+- raymor torino gooseneck: rows 493, 599
+- kohler singular: rows 494, 600
+- raymor torino multi function mixer: rows 495, 601
+- sink mixer artesian - tradelink: rows 496, 602
+- kohler july mixer: rows 497, 603
+- kohler viteo/pin: rows 498, 604
+
+## Missing Rates
+
+- Row 2: WINDOWS / ALUMINIUM WINDOWS AS PER PLAN / COLOUR
+- Row 3: WINDOWS / TIMBER WINDOWS AS PER PLAN / COLOUR
+- Row 4: WINDOWS / FLYSCREENS / COLOUR
+- Row 8: ROOFING MATERIALS / COLORBOND ROOFING / ROOFING IRON
+- Row 9: ROOFING MATERIALS / TILE ROOFING / ROOF TILES
+- Row 10: ROOFING MATERIALS / ROOFING MATERIALS / FASCIAS
+- Row 11: ROOFING MATERIALS / ROOFING MATERIALS / GUTTERING
+- Row 15: ENTRY DOORS / ENTRY DOORS / HUME DOORS 820
+- Row 16: ENTRY DOORS / DOUBLE ENTRY DOORS / HUME DOORS 1200
+- Row 17: ENTRY DOORS / DOUBLE ENTRY DOORS / HANDLE (KEY IN KNOB)
+- Row 18: SIDE LIGHTS / SIDE LIGHTS / DOOR JAMB WITH 1 SIDE LIGHT
+- Row 19: PIVOT DOOR / PIVOT DOOR / PIVOT DOOR PC SUM
+- Row 20: LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / DOOR - BUILDERS RANGE (1/3 PANEL GLASS RC)
+- Row 21: LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / HANDLE (KEY IN KNOB)
+- Row 22: LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / LAUNDRY/GARAGE 820 1/3 PANEL GLASS DOOR / DOGGY FLAP
+- Row 25: DOOR JAMBS / DOOR JAMBS / EXTERIOR DOOR JAMBS - PAINT GRADE
+- Row 26: DOOR JAMBS / DOOR JAMBS / EXTERIOR DOOR JAMBS - STAIN GRADE
+- Row 27: DOOR JAMBS / DOOR JAMBS / DOUBLE FRONT DOOR JAMB - PAINT GRADE
+- Row 28: DOOR JAMBS / DOOR JAMBS / DOUBLE FRONT DOOR JAMB - STAIN GRADE
+- Row 32: DOOR FURNITURE / DOOR FURNITURE / GAINSBOROUGH SC KEY IN KNOB ENTRACE SET
+- Row 33: DOOR FURNITURE / DOOR FURNITURE / GAINSBOROUGH TRILOCK
+- Row 34: DOOR FURNITURE / DOOR FURNITURE / 600mm CHROME PULL HANDLES
+- Row 35: DOOR FURNITURE / DOOR FURNITURE / DEADLOCK AND SPRING CATCH
+- Row 36: DOOR FURNITURE / DOOR FURNITURE / MISC ENTRANCE SET (PC ALLOWANCE)
+- Row 40: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2100 X 4800w
+- Row 41: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2400 X 4800w
+- Row 42: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2100 X UP TO 5450w
+- Row 43: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2400 X UP TO 5450w
+- Row 44: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2100 X 2400w
+- Row 45: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2400 X 2400w
+- Row 46: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / COLOURBOND GARAGE DOOR - 2100 X 3000w
+- Row 47: GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOORS - SECTIONAL PANEL LIFT / GARAGE DOOR - TIMBER LOOK UPGRADE
+- Row 48: GARAGE DOORS - MANUAL ROLL-A-DOOR / GARAGE DOORS - MANUAL ROLL-A-DOOR / COLOURBOND GARAGE DOOR - 2100 X 2500w
+- Row 49: GARAGE DOORS - MANUAL ROLL-A-DOOR / GARAGE DOORS - MANUAL ROLL-A-DOOR / ADD FOR REMOTE OPENER
+- Row 50: GARAGE DOOR JAMBS / SINGLE GARAGE DOOR JAMBS / SINGLE GARAGE DOOR JAMB 163 X 31 PRIMIED
+- Row 51: GARAGE DOOR JAMBS / DOUBLE GARAGE DOOR JAMBS / DOUBLE GARAGE DOOR JAMB 163 X 31 PRIMIED
+- Row 56: FACE BRICKWORK / FACE BRICKWORK / FACE BRICKS - PREMIER RANGE
+- Row 57: FACE BRICKWORK / FACE BRICKWORK / FACE BRICKS - PREMIUM RANGE
+- Row 61: EXTERNAL CLADDING / EXTERNAL CLADDING / 150mm LINEA BOARD
+- Row 62: EXTERNAL CLADDING / EXTERNAL CLADDING / 180mm LINEA BOARD
+- Row 63: EXTERNAL CLADDING / EXTERNAL CLADDING / MATRIX
+- Row 64: EXTERNAL CLADDING / EXTERNAL CLADDING / STRIA
+- Row 65: EXTERNAL CLADDING / EXTERNAL CLADDING / COLORBOND WALL SHEETING
+- Row 66: EXTERNAL CLADDING / EXTERNAL CLADDING / FEATURE TIMBER SCREEN
+- Row 67: WEATHER BOARDS / WEATHER BOARDS / FIBRO SHEETING WITH TIMBER STRAPS
+- Row 70: TIMBER DECKS / TIMBER DECKS / 90 x 19 HARDWOOD DECKING
+- Row 71: TIMBER DECKS / TIMBER DECKS / 90 x 19 TREATED PINE DECKING
+- Row 72: TIMBER DECKS / TIMBER DECKS / 140 x 19 HARDWOOD DECKING
+- Row 73: EXTERIOR STAIRS / EXTERIOR STAIRS / 93 x 19 HARDWOOD DECKING
+- Row 77: BALUSTRADE / DECK/BALCONY ETC BALUSTRADE / BUILDERS RANGE
+- Row 78: BALUSTRADE / BALUSTRADE / BUILDERS RANGE BALUSTRADE
+- Row 79: BALUSTRADE / BALUSTRADE / SEMI FRAMELESS GLASS BALUSTRADE
+- Row 80: BALUSTRADE / BALUSTRADE / FRAMELESS GLASS BALUSTRADE
+- Row 84: PLASTERER - SUPPLY AND INSTALL / CORNICE / 55mm COVE CORNICE
+- Row 85: PLASTERER - SUPPLY AND INSTALL / CORNICE / 90mm COVE CORNICE
+- Row 86: PLASTERER - SUPPLY AND INSTALL / CORNICE / SQUARE SET CEILINGS
+- Row 87: PLASTERING EXTRAS / CORNICE / MISC CORNICES (PC ALLOWANCE)
+- Row 90: STAIRS / TIMBER STAIRS / TIMBER STAIRS FINISH
+- Row 91: STAIRS / TIMBER STAIRS / SAND AND POLISH STAIRS
+- Row 92: STAIRS / TIMBER STAIRS / MONO STRINGER STAIR STRINGERS
+- Row 93: STAIRS / TIMBER STAIRS / STAIR LANDING
+- Row 94: BALUSTRADE / BALUSTRADE / BUILDERS RANGE BALUSTRADE
+- Row 95: BALUSTRADE / BALUSTRADE / SEMI FRAMELESS GLASS BALUSTRADE
+- Row 96: BALUSTRADE / BALUSTRADE / FRAMELESS GLASS BALUSTRADE
+- Row 97: HANDRAILS / HANDRAILS / TIMBER HANDRAILS
+- Row 98: BALUSTRADE / BALUSTRADE / BUILDERS RANGE BALUSTRADE
+- Row 99: BALUSTRADE / BALUSTRADE / SEMI FRAMELESS GLASS BALUSTRADE
+- Row 100: BALUSTRADE / BALUSTRADE / FRAMELESS GLASS BALUSTRADE
+- Row 104: INTERNAL DOORS / INTERNAL DOORS / HUME BUILDERS RANGE DOORS AS PER PLANS
+- Row 105: INTERNAL DOORS / INTERNAL DOORS / HUME PREMIUM DOORS AS PER PLANS
+- Row 106: FIX OUT / SKIRTING / 68 x 11 SPLAYED SKIRTING
+- Row 107: FIX OUT / SKIRTING / 68 x 11 BULLNOSE SKIRTING
+- Row 108: FIX OUT / SKIRTING / 68 x 11 COLONIAL SKIRTING
+- Row 109: FIX OUT / ARCHITRAVES / 42 x 11 SPLAYED SKIRTING
+- Row 110: FIX OUT / ARCHITRAVES / 42 x 11 BULLNOSE SKIRTING
+- Row 111: FIX OUT / ARCHITRAVES / 42 x 11 COLONIAL SKIRTING
+- Row 112: STANDARD WARDROBES DOORS / WARDROBES DOORS / WARDROBES DOORS - VINYL
+- Row 113: STANDARD WARDROBES DOORS / WARDROBES DOORS / WARDROBES DOORS - MIRROR
+- Row 114: STANDARD WARDROBES DOORS / WARDROBES DOORS / WARDROBES DOORS - FRAMELESS GLASS
+- Row 115: SHELVING / SHELVING / LINEN SHELVING - 4 SHELVES
+- Row 116: SHELVING / SHELVING / PANTRY SHELVING - 5 SHELVES
+- Row 117: SHELVING / SHELVING / ROBE SHELVING - 1 SHELF & RAIL
+- Row 118: SHELVING / SHELVING / ROBE - 1 FULL SHELF & RAIL & BANK OF SHELVES
+- Row 119: SHELVING / SHELVING / BANK OF SHELVES
+- Row 125: CABINET MAKER / KITCHEN / BASE CABINETS - STD COLOUR BOARD
+- Row 126: CABINET MAKER / KITCHEN / BASE CABINETS - 2 PACK FINISH
+- Row 127: CABINET MAKER / KITCHEN / BASE KITCHEN CABINETS - SHAKER STYLE
+- Row 128: CABINET MAKER / KITCHEN / ISLAND BENCH BACK PANELS
+- Row 129: CABINET MAKER / KITCHEN / OVERHEAD CUPBOARDS - STD COLOUR BOARD
+- Row 130: CABINET MAKER / KITCHEN / OVERHEAD CABINETS - 2 PACK FINISH
+- Row 131: CABINET MAKER / KITCHEN / OVERHEAD CABINETS - SHAKER STYLE
+- Row 132: CABINET MAKER / KITCHEN / POT DRAWS SET OF 2
+- Row 133: CABINET MAKER / KITCHEN / 3 DRAWER CUPBOARD 2 LGE & 1 SML
+- Row 134: CABINET MAKER / KITCHEN / 4 DRAWER CUTLERY CUPBOARD
+- Row 135: CABINET MAKER / KITCHEN / UPGRADE TO SOFT CLOSE DOORS AND DRAWERS
+- Row 136: BENCHTOPS / KITCHEN / BUILDERS RANGE LAMINATE BENCHTOPS
+- Row 137: BENCHTOPS / KITCHEN / 20mm STONE TOPS - BUILDERS RANGE
+- Row 138: BENCHTOPS / KITCHEN / 20mm STONE TOPS - PREMIUM RANGE
+- Row 139: BENCHTOPS / KITCHEN / 40mm STONE TOPS - BUILDERS RANGE
+- Row 140: BENCHTOPS / KITCHEN / 40mm STONE TOPS - PREMIUM RANGE
+- Row 141: CABINET MAKER / KITCHEN / UPGRADE TO SPECIALTY STONE FEATURE
+- Row 142: CABINET MAKER / KITCHEN / 20mm WATERFALL ENDS
+- Row 143: CABINET MAKER / KITCHEN / 40mm WATERFALL ENDS
+- Row 144: CABINET MAKER / KITCHEN / MICROWAVE UNDERBENCH CUPBOARD - STD COLOUR BOARD
+- Row 145: CABINET MAKER / KITCHEN / 5 SHELF MELAMINE OPEN SHELVES CLEATED
+- Row 146: CABINET MAKER / KITCHEN / WALL OVEN TOWER
+- Row 147: CABINET MAKER / KITCHEN / ADD FOR 300mm CRAFTWOOD BULKHEADS
+- Row 150: CABINET MAKER / BUTLERS PANTRY / BASE CABINETS - STD COLOUR BOARD
+- Row 151: CABINET MAKER / BUTLERS PANTRY / BASE CABINETS - 2 PACK FINISH
+- Row 152: CABINET MAKER / BUTLERS PANTRY / BASE CABINETS - SHAKER STYLE
+- Row 153: CABINET MAKER / BUTLERS PANTRY / ISLAND BENCH BACK PANELS
+- Row 154: CABINET MAKER / BUTLERS PANTRY / OVERHEAD CUPBOARDS - STD COLOUR BOARD
+- Row 155: CABINET MAKER / BUTLERS PANTRY / OVERHEAD CABINETS - 2 PACK FINISH
+- Row 156: CABINET MAKER / BUTLERS PANTRY / OVERHEAD CABINETS - SHAKER STYLE
+- Row 157: CABINET MAKER / BUTLERS PANTRY / POT DRAWS SET OF 2
+- Row 158: CABINET MAKER / BUTLERS PANTRY / 3 DRAWER CUPBOARD 2 LGE & 1 SML
+- Row 159: CABINET MAKER / BUTLERS PANTRY / 4 DRAWER CUTLERY CUPBOARD
+- Row 160: CABINET MAKER / BUTLERS PANTRY / UPGRADE TO SOFT CLOSE DOORS AND DRAWERS
+- Row 161: BENCHTOPS / BUTLERS PANTRY / BUILDERS RANGE LAMINATE BENCHTOPS
+- Row 162: BENCHTOPS / BUTLERS PANTRY / 20mm STONE TOPS - BUILDERS RANGE
+
+## Manual Review Rows
+
+- Row 9: No matching product family
+- Row 10: No matching product family
+- Row 11: No matching product family
+- Row 18: No matching product family
+- Row 22: No matching product family
+- Row 25: No matching product family
+- Row 26: No matching product family
+- Row 27: No matching product family
+- Row 28: No matching product family
+- Row 32: No matching product family
+- Row 33: No matching product family
+- Row 35: No matching product family
+- Row 36: No matching product family
+- Row 73: No matching product family
+- Row 84: No matching product family
+- Row 85: No matching product family
+- Row 86: No matching product family
+- Row 87: No matching product family
+- Row 106: No matching product family
+- Row 107: No matching product family
+- Row 108: No matching product family
+- Row 109: No matching product family
+- Row 110: No matching product family
+- Row 111: No matching product family
+- Row 115: No matching product family
+- Row 116: No matching product family
+- Row 119: No matching product family
+- Row 124: Missing item description
+- Row 149: Missing item description
+- Row 174: Missing item description
+- Row 182: No matching product family
+- Row 183: No matching product family
+- Row 190: Missing item description
+- Row 201: Missing item description
+- Row 235: No matching product family
+- Row 239: No matching product family
+- Row 303: No matching product family
+- Row 307: No matching product family
+- Row 339: No matching product family
+- Row 343: No matching product family
+- Row 375: No matching product family
+- Row 379: No matching product family
+- Row 411: No matching product family
+- Row 415: No matching product family
+- Row 427: Missing item description
+- Row 431: Missing item description
+- Row 434: No matching product family
+- Row 435: No matching product family
+- Row 436: No matching product family
+- Row 438: No matching product family
+- Row 439: No matching product family
+- Row 440: No matching product family
+- Row 444: Missing item description
+- Row 447: No matching product family
+- Row 448: No matching product family
+- Row 449: No matching product family
+- Row 451: No matching product family
+- Row 452: No matching product family
+- Row 453: No matching product family
+- Row 456: Missing item description
+- Row 461: Missing item description
+- Row 466: Missing item description
+- Row 467: Missing item description
+- Row 470: Missing item description
+- Row 527: No matching product family
+- Row 528: No matching product family
+- Row 529: No matching product family
+- Row 530: No matching product family
+- Row 531: No matching product family
+- Row 532: No matching product family
+- Row 533: No matching product family
+- Row 534: No matching product family
+- Row 535: No matching product family
+- Row 536: No matching product family
+- Row 537: No matching product family
+- Row 538: No matching product family
+- Row 539: No matching product family
+- Row 541: No matching product family
+- Row 542: No matching product family
+- Row 543: No matching product family
+- Row 544: No matching product family
+- Row 545: No matching product family
+- Row 546: No matching product family
+- Row 547: No matching product family
+- Row 550: No matching product family
+- Row 551: No matching product family
+- Row 552: No matching product family
+- Row 561: No matching product family
+- Row 562: No matching product family
+- Row 563: No matching product family
+- Row 564: No matching product family
+- Row 565: No matching product family
+- Row 566: No matching product family
+- Row 567: No matching product family
+- Row 568: No matching product family
+- Row 569: No matching product family
+- Row 570: No matching product family
+- Row 571: No matching product family
+- Row 572: No matching product family
+- Row 573: No matching product family
+- Row 574: No matching product family
+- Row 575: No matching product family
+- Row 576: No matching product family
+- Row 577: No matching product family
+- Row 578: No matching product family
+- Row 580: No matching product family
+- Row 581: No matching product family
+- Row 582: No matching product family
+- Row 583: No matching product family
+- Row 584: No matching product family
+- Row 585: No matching product family
+- Row 586: No matching product family
+- Row 587: No matching product family
+- Row 588: No matching product family
+- Row 590: No matching product family
+- Row 591: No matching product family
+- Row 592: No matching product family
+- Row 593: No matching product family
+- Row 594: No matching product family
+- Row 595: No matching product family
+- Row 611: No matching product family
+- Row 612: No matching product family
+- Row 614: No matching product family
+- Row 615: No matching product family
+- Row 616: No matching product family
+- Row 617: No matching product family
+- Row 618: No matching product family
+- Row 619: No matching product family
+- Row 622: No matching product family
+- Row 623: No matching product family
+- Row 624: No matching product family
+- Row 625: No matching product family
+- Row 629: No matching product family
+- Row 630: No matching product family
+- Row 631: No matching product family
+- Row 632: No matching product family
+- Row 633: No matching product family
+- Row 641: No matching product family
+- Row 642: No matching product family
+- Row 643: No matching product family
+- Row 644: No matching product family
+- Row 645: No matching product family
+- Row 646: No matching product family
+- Row 647: No matching product family
+- Row 648: No matching product family
+- Row 649: No matching product family
+- Row 650: No matching product family
+- Row 651: No matching product family
+- Row 652: No matching product family
+- Row 653: No matching product family
+- Row 654: No matching product family
+- Row 655: No matching product family
+- Row 656: No matching product family
+- Row 657: No matching product family
+- Row 658: No matching product family
+- Row 659: No matching product family
+- Row 660: No matching product family
+- Row 664: No matching product family
+- Row 665: No matching product family
+- Row 666: No matching product family
+
+## Notes
+
+- Section heading rows are deliberately excluded from usable products.
+- Blank quote codes are not fabricated. Rows without a code receive a separate stable `approvedSourceKey` such as `csv-row-42`.
+- Broad quote rows are treated as product families or family source rows, not as actual supplier products.
+- Supplier, brand, range, image and price data belongs to each organisation's private catalogue.
+

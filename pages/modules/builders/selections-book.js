@@ -1,6 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
@@ -1232,6 +1233,23 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
         </aside>
 
         <section className="workspace">
+          <header className="standardBanner">
+            <button type="button" className="standardBack" onClick={() => window.history.back()} aria-label="Back">
+              <ArrowLeft size={18} />
+              <span>Back</span>
+            </button>
+            <div className="standardIcon">
+              <ClipboardList size={28} />
+            </div>
+            <div className="standardCopy">
+              <h1>Inclusions & Selections</h1>
+              <p>Choose project areas, products and finishes and prepare the completed selections schedule.</p>
+            </div>
+            <div className="standardMeta">
+              <span>{selectedProject?.project_name || "No project selected"}</span>
+              <span>{saving ? "Saving..." : success || "Changes saved when you press Save Progress"}</span>
+            </div>
+          </header>
           <header className="topbar">
             <div>
               <p>{workspaceLoading || loading ? "Loading..." : "Luxury Selections Schedule Builder"}</p>
@@ -2264,6 +2282,12 @@ const styles = `
   .pages button.active { background: #c99735; color: #071827; }
   .roomTools { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid #244057; }
   .workspace { min-width: 0; padding: 16px 18px 28px; overflow: auto; }
+  .standardBanner { display: grid; grid-template-columns: auto 48px minmax(0, 1fr) minmax(220px, auto); gap: 14px; align-items: center; max-width: 1500px; margin: 0 auto 14px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+  .standardBack { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #172033; cursor: pointer; font-weight: 800; padding: 9px 12px; }
+  .standardIcon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 8px; background: #1f6feb; color: #ffffff; }
+  .standardCopy h1 { margin: 0; font-size: 48px; line-height: 1; letter-spacing: 0; }
+  .standardCopy p { margin: 6px 0 0; color: #58657a; font-size: 18px; }
+  .standardMeta { display: grid; gap: 6px; justify-items: end; color: #64748b; font-size: 13px; font-weight: 700; }
   .topbar { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin: 0 auto 14px; max-width: 1500px; }
   .topbar p { margin: 0; color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; }
   .topbar h1 { margin: 4px 0 0; font-size: 24px; }
@@ -2427,12 +2451,12 @@ const styles = `
   @page { size: A4 portrait; margin: 0; }
   @media print {
     .screen { display: block; background: white; }
-    .sidebar, .topbar, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
+    .sidebar, .standardBanner, .topbar, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
     .workspace { padding: 0; overflow: visible; }
     .documentWrap { display: block; }
     .page { box-shadow: none; page-break-after: always; break-after: page; }
     .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
   @media (max-width: 1380px) { .contractPage { grid-template-columns: 200px minmax(720px, 1fr) 190px; } .roomTabs { grid-template-columns: repeat(4, minmax(92px, auto)) 1fr auto auto; } .roomTabs button:nth-child(n+5):nth-child(-n+6) { display: none; } }
-  @media (max-width: 980px) { .screen { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .documentSpine, .roomSidePanel, .contractFooter { grid-column: 1; grid-row: auto; } .roomHero, .roomTabs, .notesRow { grid-template-columns: 1fr; } }
+  @media (max-width: 980px) { .screen { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; } .standardBanner { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .documentSpine, .roomSidePanel, .contractFooter { grid-column: 1; grid-row: auto; } .roomHero, .roomTabs, .notesRow { grid-template-columns: 1fr; } }
 `;
