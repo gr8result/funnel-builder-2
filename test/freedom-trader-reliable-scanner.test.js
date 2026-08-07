@@ -246,10 +246,10 @@ test("default V1 scan requests the configured US universe in priority order", as
   });
   const summary = buildScanSummary(result);
 
-  assert.ok(result.supportedSymbols.length >= 90);
-  assert.equal(result.scannedSymbols.length, 80);
+  assert.equal(result.supportedSymbols.length, 48);
+  assert.equal(result.scannedSymbols.length, 48);
   assert.equal(summary.configuredUniverseCount, result.supportedSymbols.length);
-  assert.equal(summary.requestedCount, 80);
+  assert.equal(summary.requestedCount, 48);
   assert.equal(summary.analysedCount + summary.unavailableCount, summary.requestedCount);
   assert.equal(summary.qualifiedCount + summary.notQualifiedCount, summary.analysedCount);
   assert.equal(summary.totalsBalanced, true);
@@ -295,10 +295,11 @@ test("scanner summary includes provider status and latest market-data timestamp"
       },
     }),
   });
-  const summary = buildScanSummary(result);
+  const summary = buildScanSummary(result, { marketDataMetrics: { historyProviderCalls: 1 } });
 
   assert.equal(summary.providerStatus, "Available");
   assert.equal(summary.providerUsage["Twelve Data"], 2);
+  assert.deepEqual(summary.providerDiagnostics, { historyProviderCalls: 1 });
   assert.equal(summary.lastMarketDataTimestamp, "2026-07-30T21:30:00.000Z");
   assert.equal(typeof summary.elapsedMs, "number");
   assert.equal(summary.marketState[0].market, "US");

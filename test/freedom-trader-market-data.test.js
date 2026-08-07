@@ -27,6 +27,29 @@ test("classifies provider status failures without exposing credentials", () => {
   assert.equal(classifyTwelveDataError("Malformed JSON response"), "malformed-provider-response");
 });
 
+test("Twelve Data history preserves Retry-After for safe rate-limit retries", async () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.TWELVE_DATA_API_KEY;
+  process.env.TWELVE_DATA_API_KEY = "test-key";
+  global.fetch = async () => ({
+    ok: false,
+    status: 429,
+    headers: { get: (name) => name.toLowerCase() === "retry-after" ? "7" : null },
+    json: async () => ({ status: "error", message: "API request limit reached for your key." }),
+  });
+
+  try {
+    const history = await fetchTwelveDataHistory({ symbol: "AAPL", range: "1y", interval: "1day" });
+    assert.equal(history.ok, false);
+    assert.equal(history.errorCode, "rate-limited");
+    assert.equal(history.retryAfterMs, 7000);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env.TWELVE_DATA_API_KEY;
+    else process.env.TWELVE_DATA_API_KEY = originalKey;
+  }
+});
+
 test("Twelve Data parser rejects candles with invalid dates or zero prices", async () => {
   const originalFetch = global.fetch;
   const originalKey = process.env.TWELVE_DATA_API_KEY;

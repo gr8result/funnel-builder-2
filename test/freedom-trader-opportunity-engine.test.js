@@ -106,26 +106,32 @@ test("no opportunities returns a teaching summary", async () => {
 });
 
 test("V1 scanner ignores ASX settings and analyses the supported US universe only", async () => {
-  const universe = supportedUniverseForMarkets(["ASX"]);
-  assert.ok(universe.length > 0);
-  assert.equal(universe.some((item) => String(item.symbol).endsWith(".AX")), false);
+  const originalAsxFlag = process.env.FREEDOM_TRADER_ASX_MARKET_DATA_ENABLED;
+  delete process.env.FREEDOM_TRADER_ASX_MARKET_DATA_ENABLED;
+  try {
+    const universe = supportedUniverseForMarkets(["ASX"]);
+    assert.equal(universe.length, 0);
 
-  const result = await runOpportunityEngine({
-    now: NOW,
-    settings: { markets: ["ASX"], chunkSize: 2 },
-    marketSnapshotBatch: async (symbols) => {
-      assert.deepEqual(symbols, ["AAPL", "MSFT"]);
-      return new Map();
-    },
-    analyser: async (symbol) => analysis(symbol),
-  });
+    const result = await runOpportunityEngine({
+      now: NOW,
+      settings: { markets: ["ASX"], chunkSize: 2 },
+      marketSnapshotBatch: async (symbols) => {
+        assert.deepEqual(symbols, ["AAPL", "MSFT"]);
+        return new Map();
+      },
+      analyser: async (symbol) => analysis(symbol),
+    });
 
-  assert.deepEqual(result.settings.markets, ["US"]);
-  assert.deepEqual(result.settings.ignoredMarkets, ["ASX"]);
-  assert.match(result.settings.marketScopeMessage, /US markets only/);
-  assert.deepEqual(result.scannedSymbols, ["AAPL", "MSFT"]);
-  assert.equal(result.disabledSymbols.length, 0);
-  assert.equal(result.decisions.some((item) => String(item.symbol).endsWith(".AX")), false);
+    assert.deepEqual(result.settings.markets, ["US"]);
+    assert.deepEqual(result.settings.ignoredMarkets, ["ASX"]);
+    assert.match(result.settings.marketScopeMessage, /US markets only/);
+    assert.deepEqual(result.scannedSymbols, ["AAPL", "MSFT"]);
+    assert.equal(result.disabledSymbols.length, 0);
+    assert.equal(result.decisions.some((item) => String(item.symbol).endsWith(".AX")), false);
+  } finally {
+    if (originalAsxFlag === undefined) delete process.env.FREEDOM_TRADER_ASX_MARKET_DATA_ENABLED;
+    else process.env.FREEDOM_TRADER_ASX_MARKET_DATA_ENABLED = originalAsxFlag;
+  }
 });
 
 test("shared scan summary records complete, partial and ranked decision counts", () => {

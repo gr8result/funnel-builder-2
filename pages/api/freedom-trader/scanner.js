@@ -1,12 +1,14 @@
 import { analyseSymbol } from "./analysis.js";
-import { getMarketSnapshotBatch } from "../../../lib/freedom-trader/marketDataService.js";
+import { getMarketDataMetrics, getMarketSnapshotBatch, resetMarketDataMetrics } from "../../../lib/freedom-trader/marketDataService.js";
 import { FREEDOM_TRADER_V1_MARKET_SCOPE_MESSAGE, OPPORTUNITY_ENGINE_VERSION, runOpportunityEngine } from "../../../lib/freedom-trader/opportunityEngine.js";
 import { getMarketSessionStates } from "../../../lib/freedom-trader/marketHours.js";
 import { buildFailedFreedomScanSummary, buildFreedomScanSummaryFromEngine } from "../../../lib/freedom-trader/scanSummary.js";
 
 const LATEST_SCAN_TTL_MS = 15 * 60 * 1000;
 const latestScannerCache = globalThis.__freedomTraderLatestScannerCache || { key: "", cachedAt: 0, payload: null };
+const activeScannerRequests = globalThis.__freedomTraderActiveScannerRequests || new Map();
 globalThis.__freedomTraderLatestScannerCache = latestScannerCache;
+globalThis.__freedomTraderActiveScannerRequests = activeScannerRequests;
 
 const DEFAULT_SETTINGS = {
   markets: ["US"],
@@ -60,7 +62,7 @@ function legacyScannerStatus(result) {
   }));
 }
 
-export function buildScanSummary(result) {
+export function buildScanSummary(result, { marketDataMetrics = null } = {}) {
   const disabledSymbols = Array.isArray(result.disabledSymbols) ? result.disabledSymbols : [];
   const disabledSymbolNames = disabledSymbols.map((item) => item.symbol).filter(Boolean);
   const requestedForThisScan = Array.from(new Set([...(result.scannedSymbols || []), ...disabledSymbolNames]));
@@ -124,6 +126,7 @@ export function buildScanSummary(result) {
     elapsedMs: Number.isFinite(startedMs) && Number.isFinite(completedMs) ? Math.max(0, completedMs - startedMs) : null,
     providerStatus: couldNotAnalyse.length ? "Partial data returned" : "Available",
     providerUsage: providerCounts,
+    providerDiagnostics: marketDataMetrics,
     marketState: getMarketSessionStates(result.settings.markets),
     lastMarketDataTimestamp: timestamps.length ? new Date(timestamps[0]).toISOString() : null,
     rejectionCounts,
@@ -152,34 +155,45 @@ export default async function handler(req, res) {
     if (!force && latestScannerCache.payload && latestScannerCache.key === cacheKey && Date.now() - latestScannerCache.cachedAt < LATEST_SCAN_TTL_MS) {
       return res.status(200).json({ ...latestScannerCache.payload, fromScanCache: true });
     }
-    const engineResult = await runOpportunityEngine({
-      settings,
-      offset,
-      analyser: analyseSymbol,
-      marketSnapshotBatch: getMarketSnapshotBatch,
-    });
-    const scanSummary = buildScanSummary(engineResult);
-    const trustedResults = scanSummary.status === "complete" ? engineResult.results : [];
+    const active = activeScannerRequests.get(cacheKey);
+    if (active) {
+      const payload = await active;
+      return res.status(200).json({ ...payload, alreadyRunning: true, message: "Market check already running. Returning the completed shared scan." });
+    }
 
-    const payload = {
-      ok: true,
-      engineVersion: engineResult.engineVersion,
-      settings: engineResult.settings,
-      universeCount: engineResult.supportedSymbols.length,
-      scannedCount: engineResult.scannedSymbols.length,
-      scannedSymbols: engineResult.scannedSymbols,
-      supportedSymbols: engineResult.supportedSymbols,
-      scanSummary,
-      nextOffset: engineResult.nextOffset,
-      results: trustedResults,
-      decisions: engineResult.decisions,
-      topOpportunity: trustedResults[0] || null,
-      scannerStatus: legacyScannerStatus(engineResult),
-      updatedAt: engineResult.scanCompletedAt,
-      schedule: ["before market open", "during trading session", "after market close"],
-      marketScopeMessage: scanSummary.marketScopeMessage,
-      error: null,
-    };
+    const scanPromise = (async () => {
+      resetMarketDataMetrics();
+      const engineResult = await runOpportunityEngine({
+        settings,
+        offset,
+        analyser: analyseSymbol,
+        marketSnapshotBatch: getMarketSnapshotBatch,
+      });
+      const scanSummary = buildScanSummary(engineResult, { marketDataMetrics: getMarketDataMetrics() });
+      const trustedResults = scanSummary.status === "complete" ? engineResult.results : [];
+
+      return {
+        ok: true,
+        engineVersion: engineResult.engineVersion,
+        settings: engineResult.settings,
+        universeCount: engineResult.supportedSymbols.length,
+        scannedCount: engineResult.scannedSymbols.length,
+        scannedSymbols: engineResult.scannedSymbols,
+        supportedSymbols: engineResult.supportedSymbols,
+        scanSummary,
+        nextOffset: engineResult.nextOffset,
+        results: trustedResults,
+        decisions: engineResult.decisions,
+        topOpportunity: trustedResults[0] || null,
+        scannerStatus: legacyScannerStatus(engineResult),
+        updatedAt: engineResult.scanCompletedAt,
+        schedule: ["before market open", "during trading session", "after market close"],
+        marketScopeMessage: scanSummary.marketScopeMessage,
+        error: null,
+      };
+    })().finally(() => activeScannerRequests.delete(cacheKey));
+    activeScannerRequests.set(cacheKey, scanPromise);
+    const payload = await scanPromise;
     latestScannerCache.key = cacheKey;
     latestScannerCache.cachedAt = Date.now();
     latestScannerCache.payload = payload;
