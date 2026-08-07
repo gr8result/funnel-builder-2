@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
-import { resolveResponsiveProp, getResponsiveOverride, hasResponsiveOverride, setResponsiveValue, clearResponsiveOverride, responsiveSourceLabel } from "../../../lib/website-builder/responsiveValue";
+import { getAutomaticResponsiveDefaults, getResponsiveLayoutKeysForBlock, resolveResponsiveProp, getResponsiveOverride, hasResponsiveOverride, setResponsiveValue, clearResponsiveOverride, responsiveSourceLabel } from "../../../lib/website-builder/responsiveValue";
 import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
@@ -4305,6 +4305,225 @@ function ResponsiveNumberField({ label, props, baseKey, device, onChange, min = 
   );
 }
 
+const IMAGE_FIT_OPTIONS = [
+  ["contain", "Contain"],
+  ["cover", "Cover"],
+  ["fill", "Fill"],
+  ["none", "None"],
+  ["scale-down", "Scale Down"],
+];
+
+const IMAGE_POSITION_PRESETS = [
+  ["left top", "Top Left", 0, 0],
+  ["center top", "Top Centre", 50, 0],
+  ["right top", "Top Right", 100, 0],
+  ["left center", "Centre Left", 0, 50],
+  ["center center", "Centre", 50, 50],
+  ["right center", "Centre Right", 100, 50],
+  ["left bottom", "Bottom Left", 0, 100],
+  ["center bottom", "Bottom Centre", 50, 100],
+  ["right bottom", "Bottom Right", 100, 100],
+];
+
+function ResponsiveImageFitPositionControls({ props, onChange, device = "desktop", includePanelHeight = false }) {
+  const setDeviceValue = (baseKey, value, currentProps = props) => setResponsiveValue(currentProps, baseKey, device, value);
+  const applyPositionPreset = (position, x, y) => {
+    let next = setDeviceValue("imageObjectPosition", position);
+    next = setDeviceValue("imagePositionX", x, next);
+    next = setDeviceValue("imagePositionY", y, next);
+    onChange(next);
+  };
+  const positionValue = String(resolveResponsiveProp(props, "imageObjectPosition", device).value || "center center");
+
+  return (
+    <div style={styles.sectionCard}>
+      <label style={styles.propertyLabel}>Image Fit & Position</label>
+      <div style={styles.colorGrid}>
+        <ResponsiveField
+          label="Image Fit"
+          props={props}
+          baseKey="imageFit"
+          device={device}
+          onChange={onChange}
+          render={(value, setValue) => (
+            <select value={String(value || "contain")} onChange={(event) => setValue(event.target.value)} style={styles.propertyInput}>
+              {IMAGE_FIT_OPTIONS.map(([valueOption, label]) => <option key={valueOption} value={valueOption}>{label}</option>)}
+            </select>
+          )}
+        />
+        <ResponsiveField
+          label="Image Height Mode"
+          props={props}
+          baseKey="imageHeightMode"
+          device={device}
+          onChange={onChange}
+          render={(value, setValue) => (
+            <select value={String(value || "fixed")} onChange={(event) => setValue(event.target.value)} style={styles.propertyInput}>
+              <option value="auto">Auto</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          )}
+        />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginTop: 10 }}>
+        {IMAGE_POSITION_PRESETS.map(([position, label, x, y]) => (
+          <button
+            key={position}
+            type="button"
+            onClick={() => applyPositionPreset(position, x, y)}
+            style={{
+              ...styles.secondaryBtn,
+              padding: "7px 6px",
+              fontSize: 12,
+              background: positionValue === position ? "rgba(14,165,233,0.28)" : styles.secondaryBtn.background,
+              borderColor: positionValue === position ? "rgba(14,165,233,0.72)" : styles.secondaryBtn.borderColor,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+        <ResponsiveNumberField label="Horizontal Position (%)" props={props} baseKey="imagePositionX" device={device} min={0} max={100} onChange={onChange} fitContentFallback fitContentValue={50} />
+        <ResponsiveNumberField label="Vertical Position (%)" props={props} baseKey="imagePositionY" device={device} min={0} max={100} onChange={onChange} fitContentFallback fitContentValue={50} />
+        <ResponsiveNumberField label="Image Width (px)" props={props} baseKey="imageWidth" device={device} min={0} max={1800} onChange={onChange} />
+        <ResponsiveNumberField label="Image Max Width (px)" props={props} baseKey="imageMaxWidth" device={device} min={0} max={1800} onChange={onChange} />
+        <ResponsiveNumberField label="Image Height (px)" props={props} baseKey="imageHeight" device={device} min={0} max={1200} onChange={onChange} />
+        <ResponsiveNumberField label="Image Max Height (px)" props={props} baseKey="imageMaxHeight" device={device} min={0} max={1200} onChange={onChange} />
+        <ResponsiveNumberField label="Container Height (px)" props={props} baseKey="containerHeight" device={device} min={0} max={1400} onChange={onChange} />
+        {includePanelHeight ? (
+          <ResponsiveNumberField label="Fixed Panel Image Height (px)" props={props} baseKey="panelImageFixedHeight" device={device} min={0} max={1200} onChange={onChange} mirrorKeys={["imageHeight"]} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+const RESPONSIVE_NUMERIC_FIELDS = {
+  width: ["Width", 0, 5600, "px"],
+  maxWidth: ["Max Width", 0, 5600, "px"],
+  minWidth: ["Min Width", 0, 5600, "px"],
+  height: ["Height", 0, 2400, "px"],
+  minHeight: ["Min Height", 0, 2400, "px"],
+  paddingTop: ["Padding Top", 0, 400, "number"],
+  paddingRight: ["Padding Right", 0, 400, "number"],
+  paddingBottom: ["Padding Bottom", 0, 400, "number"],
+  paddingLeft: ["Padding Left", 0, 400, "number"],
+  marginTop: ["Margin Top", 0, 400, "number"],
+  marginRight: ["Margin Right", 0, 400, "number"],
+  marginBottom: ["Margin Bottom", 0, 400, "number"],
+  marginLeft: ["Margin Left", 0, 400, "number"],
+  gap: ["Gap", 0, 160, "number"],
+  rowGap: ["Row Gap", 0, 160, "number"],
+  columnGap: ["Column Gap", 0, 160, "number"],
+  fontSize: ["Font Size", 8, 120, "number"],
+  textFontSize: ["Text Size", 8, 120, "number"],
+  headlineFontSize: ["Heading Size", 12, 140, "number"],
+  subheadlineFontSize: ["Subheading Size", 10, 80, "number"],
+  sectionTitleSize: ["Section Title Size", 10, 120, "number"],
+  sectionSubtitleSize: ["Section Subtitle Size", 10, 80, "number"],
+  letterSpacing: ["Letter Spacing", 0, 24, "number"],
+  gridColumns: ["Grid Columns", 1, 6, "number"],
+  columns: ["Columns", 1, 6, "number"],
+  cardsPerRowDesktop: ["Cards Per Row", 1, 6, "number"],
+  cardsPerRow: ["Cards Per Row", 1, 6, "number"],
+  testimonialColumns: ["Testimonial Columns", 1, 6, "number"],
+  imageWidth: ["Image Width", 0, 5600, "px"],
+  imageMaxWidth: ["Image Max Width", 0, 5600, "px"],
+  imageHeight: ["Image Height", 0, 2400, "px"],
+};
+
+const RESPONSIVE_SELECT_FIELDS = {
+  alignItems: ["Align Items", [["stretch", "Stretch"], ["flex-start", "Top / Left"], ["center", "Center"], ["flex-end", "Bottom / Right"]]],
+  justifyContent: ["Justify Content", [["flex-start", "Start"], ["center", "Center"], ["flex-end", "End"], ["space-between", "Space Between"]]],
+  textAlign: ["Text Align", [["left", "Left"], ["center", "Center"], ["right", "Right"], ["justify", "Justify"]]],
+  alignment: ["Alignment", [["left", "Left"], ["center", "Center"], ["right", "Right"]]],
+  flexDirection: ["Direction", [["row", "Row"], ["column", "Column"], ["row-reverse", "Row Reverse"], ["column-reverse", "Column Reverse"]]],
+  flexWrap: ["Wrap", [["nowrap", "No Wrap"], ["wrap", "Wrap"]]],
+  imageObjectFit: ["Image Fit", [["contain", "Contain"], ["cover", "Cover"], ["fill", "Fill"], ["none", "Natural"]]],
+  objectFit: ["Object Fit", [["contain", "Contain"], ["cover", "Cover"], ["fill", "Fill"], ["none", "Natural"]]],
+  buttonWidth: ["Button Width", [["auto", "Auto"], ["100%", "Full Width"], ["fit-content", "Fit Content"]]],
+  buttonAlignment: ["Button Alignment", [["left", "Left"], ["center", "Center"], ["right", "Right"], ["stretch", "Stretch"]]],
+  contentOrder: ["Content Order", [["text-first", "Text First"], ["media-first", "Media First"], ["default", "Default"]]],
+};
+
+function ResponsiveLayoutPanel({ block, index, onChange, device = "desktop" }) {
+  const props = block?.props || {};
+  const keys = getResponsiveLayoutKeysForBlock(block?.type);
+  if (!keys.length) return null;
+  const automatic = getAutomaticResponsiveDefaults(block?.type, device, props);
+  const updateProps = (nextProps) => onChange(index, nextProps);
+  const visibleKeys = keys.filter((key) => RESPONSIVE_NUMERIC_FIELDS[key] || RESPONSIVE_SELECT_FIELDS[key] || ["lineHeight", "textLineHeight", "bodyLineHeight", "headlineLineHeight", "subheadlineLineHeight"].includes(key));
+  if (!visibleKeys.length) return null;
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>Responsive Layout</h3>
+      <div style={styles.propertyGrid}>
+        {visibleKeys.map((key) => {
+          const lineHeightField = ["lineHeight", "textLineHeight", "bodyLineHeight", "headlineLineHeight", "subheadlineLineHeight"].includes(key);
+          if (lineHeightField) {
+            return (
+              <ResponsiveNumberField
+                key={key}
+                label={formatLabel(key)}
+                props={props}
+                baseKey={key}
+                device={device}
+                min={0.8}
+                max={3}
+                step={0.05}
+                onChange={updateProps}
+                fitContentFallback={automatic[key] !== undefined}
+                fitContentValue={automatic[key]}
+              />
+            );
+          }
+          const numeric = RESPONSIVE_NUMERIC_FIELDS[key];
+          if (numeric) {
+            return (
+              <ResponsiveNumberField
+                key={key}
+                label={numeric[0]}
+                props={props}
+                baseKey={key}
+                device={device}
+                min={numeric[1]}
+                max={numeric[2]}
+                unit={numeric[3]}
+                onChange={updateProps}
+                fitContentFallback={automatic[key] !== undefined}
+                fitContentValue={automatic[key]}
+              />
+            );
+          }
+          const select = RESPONSIVE_SELECT_FIELDS[key];
+          if (!select) return null;
+          return (
+            <ResponsiveField
+              key={key}
+              label={select[0]}
+              props={props}
+              baseKey={key}
+              device={device}
+              onChange={updateProps}
+              fitContentFallback={automatic[key] !== undefined}
+              fitContentValue={automatic[key]}
+              render={(value, setValue) => (
+                <select value={String(value ?? "")} onChange={(event) => setValue(event.target.value)} style={styles.propertyInput}>
+                  {select[1].map(([valueOption, label]) => (
+                    <option key={`${key}-${valueOption}`} value={valueOption}>{label}</option>
+                  ))}
+                </select>
+              )}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function NumberField({ label, value, min = 0, max = 200, step = 1, onChange }) {
   return (
     <div style={styles.numberField}>
@@ -5794,7 +6013,7 @@ function pickGlobalStyleValue(blocks, keys, fallback) {
   return fallback;
 }
 
-function GlobalStylePanel({ blocks, onApplyGlobal }) {
+function GlobalStylePanel({ blocks, pageWidthMode = "contained", onApplyGlobal }) {
   const [section, setSection] = useState("text");
   const headingFont = pickGlobalStyleValue(blocks, ["headlineFontFamily", "headingFontFamily"], "Arial");
   const bodyFont = pickGlobalStyleValue(blocks, ["fontFamily", "bodyFontFamily"], "Arial");
@@ -5809,7 +6028,7 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
   const cardBackgroundColor = pickGlobalStyleValue(blocks, ["cardBackgroundColor", "itemBackgroundColor"], "#f8fafc");
   const buttonRadius = Number(pickGlobalStyleValue(blocks, ["buttonRadius"], 999));
   const pageWidth = Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500));
-  const layoutMode = blocks.some((block) => isFullWidthBackgroundEnabled(block)) ? "full" : "contained";
+  const resolvedPageWidthMode = pageWidthMode === "full" ? "full" : "contained";
   const textAlign = pickGlobalStyleValue(blocks, ["headlineAlignment", "alignment"], "left");
   const colorSchemes = [
     { id: "coastal", label: "Coastal Blue", patch: { primaryColor: "#0ea5e9", headingColor: "#082f49", bodyColor: "#164e63", pageBackground: "linear-gradient(180deg,#f0f9ff 0%,#dbeafe 48%,#eff6ff 100%)", cardBackgroundColor: "rgba(255,255,255,0.82)", buttonTextColor: "#ffffff" } },
@@ -5901,14 +6120,14 @@ function GlobalStylePanel({ blocks, onApplyGlobal }) {
 
         {section === "layout" ? (
           <div style={styles.sectionCard}>
-            <label style={styles.propertyLabel}>Website Layout</label>
-            <label style={styles.propertyLabel}>Layout Style</label>
-            <select value={layoutMode} onChange={(e) => onApplyGlobal({ layoutMode: e.target.value })} style={styles.propertyInput}>
-              <option value="full">Full Width</option>
+            <label style={styles.propertyLabel}>Page Settings</label>
+            <label style={styles.propertyLabel}>Page Width</label>
+            <select value={resolvedPageWidthMode} onChange={(e) => onApplyGlobal({ pageWidthMode: e.target.value })} style={styles.propertyInput}>
               <option value="contained">Contained</option>
+              <option value="full">Full Width</option>
             </select>
             <div style={{ ...styles.colorGrid, marginTop: 8 }}>
-              <NumberField label="Page Width" value={pageWidth} min={720} max={5600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
+              <NumberField label="Contained Width" value={pageWidth} min={720} max={5600} onChange={(value) => onApplyGlobal({ pageWidth: value })} />
               <NumberField label="Button Radius" value={buttonRadius >= 999 ? 32 : buttonRadius} min={0} max={40} onChange={(value) => onApplyGlobal({ buttonRadius: value >= 32 ? 999 : value })} />
             </div>
           </div>
@@ -6382,7 +6601,7 @@ function CompetitorComparisonPropertiesPanel({ block, index, onChange }) {
   );
 }
 
-function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }) {
+function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets, device = "desktop" }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
   const items = Array.isArray(props.items) ? props.items : [];
@@ -6476,28 +6695,10 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
               </select>
             </div>
             <div style={styles.propertyField}>
-              <label style={styles.propertyLabel}>Text Vertical Position</label>
+              <label style={styles.propertyLabel}>Content Vertical Alignment</label>
               <select value={String(props.contentVerticalAlign || "top")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
                 <option value="top">Top of card</option>
                 <option value="center">Centre of card</option>
-              </select>
-            </div>
-            <div style={styles.propertyField}>
-              <label style={styles.propertyLabel}>Image Fit</label>
-              <select value={String(props.imageFit || "contain")} onChange={(e) => update({ imageFit: e.target.value })} style={styles.propertyInput}>
-                <option value="contain">Contain</option>
-                <option value="cover">Cover</option>
-                <option value="fill">Fill</option>
-              </select>
-            </div>
-            <div style={styles.propertyField}>
-              <label style={styles.propertyLabel}>Image Position</label>
-              <select value={String(props.imageObjectPosition || "center center")} onChange={(e) => update({ imageObjectPosition: e.target.value })} style={styles.propertyInput}>
-                <option value="center center">Centre</option>
-                <option value="center top">Top</option>
-                <option value="center bottom">Bottom</option>
-                <option value="left center">Left</option>
-                <option value="right center">Right</option>
               </select>
             </div>
             <NumberField label="Image Scale (%)" value={Number(props.imageScale || 100)} min={50} max={150} onChange={(v) => update({ imageScale: v })} />
@@ -6528,8 +6729,6 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
             <NumberField label="Title Line Height" value={Number(props.itemLabelLineHeight || 1.2)} min={0.8} max={2.4} step={0.05} onChange={(v) => update({ itemLabelLineHeight: v })} />
             <NumberField label="Title Top Padding (px)" value={Number(props.itemLabelPaddingTop ?? 20)} min={0} max={120} onChange={(v) => update({ itemLabelPaddingTop: v })} />
             <NumberField label="Title Left Padding (px)" value={Number(props.itemLabelPaddingLeft ?? 32)} min={0} max={160} onChange={(v) => update({ itemLabelPaddingLeft: v })} />
-            <NumberField label="Image Max Width (px)" value={Number(props.imageMaxWidth || 0)} min={0} max={1600} onChange={(v) => update({ imageMaxWidth: v })} />
-            <NumberField label="Image Max Height (px)" value={Number(props.imageMaxHeight || 0)} min={0} max={1200} onChange={(v) => update({ imageMaxHeight: v })} />
             <NumberField label="Card Max Width (px)" value={Number(props.cardWidth || 1180)} min={640} max={1800} onChange={(v) => update({ cardWidth: v })} />
             <NumberField label="Card Min Height (px)" value={Number(props.cardMinHeight || props.cardHeight || 650)} min={600} max={800} onChange={(v) => update({ cardMinHeight: v, cardHeight: v })} />
             <NumberField label="Card Padding (px)" value={Number(props.cardPadding ?? 56)} min={24} max={120} onChange={(v) => update({ cardPadding: v })} />
@@ -6544,6 +6743,7 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
         </div>
+        <ResponsiveImageFitPositionControls props={props} onChange={update} device={device} />
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Colours</label>
           <ColorSelector label="Section Background" value={props.backgroundColor || "#0f172a"} fallback="#0f172a" onChange={(v) => update({ backgroundColor: v })} />
@@ -6568,7 +6768,7 @@ function FeatureAccordionPropertiesPanel({ block, index, onChange, brandAssets }
   );
 }
 
-function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
+function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage, device = "desktop" }) {
   const props = block?.props || {};
   const update = (patch) => onChange(index, { ...props, ...patch });
   const panels = Array.isArray(props.panels) ? props.panels : [];
@@ -6598,7 +6798,7 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
             <NumberField label="Corner Radius (px)" value={Number(props.cardRadius ?? 18)} min={0} max={60} onChange={(v) => update({ cardRadius: v })} />
             <NumberField label="Border Width (px)" value={Number(props.cardBorderWidth ?? 0)} min={0} max={12} onChange={(v) => update({ cardBorderWidth: v })} />
           </div>
-          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Text Vertical Alignment</label>
+          <label style={{ ...styles.propertyLabel, marginTop: 10 }}>Content Vertical Alignment</label>
           <select value={String(props.contentVerticalAlign || "center")} onChange={(e) => update({ contentVerticalAlign: e.target.value })} style={styles.propertyInput}>
             <option value="top">Top</option>
             <option value="center">Center</option>
@@ -6617,34 +6817,12 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
         </div>
         <div style={styles.sectionCard}>
           <label style={styles.propertyLabel}>Image Settings</label>
+          <ResponsiveImageFitPositionControls props={props} onChange={update} device={device} includePanelHeight />
           <div style={styles.colorGrid}>
-            <div style={styles.propertyField}>
-              <label style={styles.propertyLabel}>Image Fit</label>
-              <select value={String(props.imageFit || "contain")} onChange={(e) => update({ imageFit: e.target.value })} style={styles.propertyInput}>
-                <option value="contain">Contain</option>
-                <option value="cover">Cover</option>
-                <option value="fill">Fill</option>
-                <option value="none">Natural Size</option>
-              </select>
-            </div>
-            <div style={styles.propertyField}>
-              <label style={styles.propertyLabel}>Image Position</label>
-              <select value={String(props.imageObjectPosition || "center center")} onChange={(e) => update({ imageObjectPosition: e.target.value })} style={styles.propertyInput}>
-                <option value="center center">Centre</option>
-                <option value="center top">Top</option>
-                <option value="center bottom">Bottom</option>
-                <option value="left center">Left</option>
-                <option value="right center">Right</option>
-                <option value="left top">Top Left</option>
-                <option value="right top">Top Right</option>
-                <option value="left bottom">Bottom Left</option>
-                <option value="right bottom">Bottom Right</option>
-              </select>
-            </div>
             <NumberField label="Image Scale (%)" value={Number(props.imageScale || 100)} min={50} max={150} onChange={(v) => update({ imageScale: v })} />
             <div style={styles.propertyField}>
               <label style={styles.propertyLabel}>Image Max Height</label>
-              <select value={String(props.imageMaxHeightMode || "auto")} onChange={(e) => update({ imageMaxHeightMode: e.target.value })} style={styles.propertyInput}>
+              <select value={String(props.imageMaxHeightMode || "custom")} onChange={(e) => update({ imageMaxHeightMode: e.target.value })} style={styles.propertyInput}>
                 <option value="auto">Auto</option>
                 <option value="300">300px</option>
                 <option value="400">400px</option>
@@ -6654,20 +6832,20 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage }) {
                 <option value="custom">Custom</option>
               </select>
             </div>
-            {String(props.imageMaxHeightMode || "auto") === "custom" ? (
-              <NumberField label="Custom Max Height (px)" value={Number(props.imageMaxHeightCustom || 500)} min={300} max={900} onChange={(v) => update({ imageMaxHeightCustom: v })} />
+            {String(props.imageMaxHeightMode || "custom") === "custom" ? (
+              <NumberField label="Custom Max Height (px)" value={Number(props.imageMaxHeightCustom || 420)} min={220} max={900} onChange={(v) => update({ imageMaxHeightCustom: v })} />
             ) : null}
             <NumberField label="Image Padding (px)" value={Number(props.imagePadding || 0)} min={0} max={80} onChange={(v) => update({ imagePadding: v })} />
             <div style={styles.propertyField}>
               <label style={styles.propertyLabel}>Panel Image Height</label>
-              <select value={String(props.panelImageHeightMode || "match")} onChange={(e) => update({ panelImageHeightMode: e.target.value })} style={styles.propertyInput}>
+              <select value={String(props.panelImageHeightMode || "fixed")} onChange={(e) => update({ panelImageHeightMode: e.target.value })} style={styles.propertyInput}>
                 <option value="match">Match Panel</option>
                 <option value="auto">Auto From Image</option>
                 <option value="fixed">Fixed Height</option>
               </select>
             </div>
-            {String(props.panelImageHeightMode || "match") === "fixed" ? (
-              <NumberField label="Fixed Image Height (px)" value={Number(props.panelImageFixedHeight || 500)} min={300} max={900} onChange={(v) => update({ panelImageFixedHeight: v })} />
+            {String(props.panelImageHeightMode || "fixed") === "fixed" ? (
+              <NumberField label="Fixed Image Height (px)" value={Number(props.panelImageFixedHeight || 420)} min={220} max={900} onChange={(v) => update({ panelImageFixedHeight: v })} />
             ) : null}
           </div>
         </div>
@@ -6862,7 +7040,7 @@ export {
   ScrollStackPropertiesPanel,
   CompetitorComparisonPropertiesPanel,
   NumberField, ImagePropertiesPanel,
-  ResponsiveField, ResponsiveNumberField,
+  ResponsiveField, ResponsiveNumberField, ResponsiveLayoutPanel,
   NavbarLogoPicker, NavbarPropertiesPanel,
   normalizeColorInput, STANDARD_COLOR_SWATCHES, PRICING_COLOR_SWATCHES,
   ColorSelector, CompactColorField,

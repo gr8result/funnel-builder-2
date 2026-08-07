@@ -6,6 +6,7 @@ import { renderWebsiteBlock, websiteBlockKeyframes } from "../../../components/w
 import { deleteWebsiteTemplateOverride, getWebsiteTemplatePreview, updateWebsiteTemplateOverride } from "../../../lib/website-builder/projectStore";
 import { seedWebsiteBuilderSharedLibrary } from "../../../lib/website-builder/mediaAssets";
 import { supabase } from "../../../lib/supabaseClient";
+import { ProjectPreviewPage } from "./project/[id]/preview";
 
 function pickLayoutWidth(blocks, fallback = 1500) {
   for (const block of Array.isArray(blocks) ? blocks : []) {
@@ -39,15 +40,17 @@ export default function ThemePreviewPage() {
   const [defaultsVersion, setDefaultsVersion] = useState(0);
   const routeParams = useMemo(() => {
     const query = router.query || {};
-    const search = String(router.asPath || "").split("?")[1] || "";
-    const params = new URLSearchParams(search);
-
     return {
-      templateSlug: String(query.theme || query.template || params.get("theme") || params.get("template") || "").trim(),
-      pageKey: String(query.page || params.get("page") || "").trim(),
-      viewport: String(query.viewport || params.get("viewport") || "").toLowerCase(),
+      projectId: String(query.projectId || "").trim(),
+      templateSlug: String(query.theme || query.template || "").trim(),
+      pageKey: String(query.page || "").trim(),
+      viewport: String(query.viewport || "").toLowerCase(),
     };
-  }, [router.asPath, router.query]);
+  }, [router.query]);
+
+  if (router.isReady && routeParams.projectId) {
+    return <ProjectPreviewPage />;
+  }
 
   const templateSlug = routeParams.templateSlug;
   const pageKey = routeParams.pageKey;
