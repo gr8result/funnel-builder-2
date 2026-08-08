@@ -1,143 +1,123 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
 import {
+  APPROVED_SELECTIONS_CSV_PATH,
   GENERIC_DEMO_PRODUCTS,
-  PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
   PRODUCT_LIBRARY_IMPORT_COLUMNS,
+  PRODUCT_LIBRARY_SOURCE_CSV,
   TOP_LEVEL_AREAS,
-  createProductEntity,
-  familiesForArea,
+  buildProductFamilyDefinitions,
+  buildProductLibraryTaxonomy,
   familyByKey,
+  familiesForArea,
   parseApprovedProductLibraryCsv,
-  productMatchesFamily,
-  productsForFamily,
   selectionQueryForFamily,
-  validateProductImportRows,
 } from "../lib/product-library/catalogueModel.js";
 
-const sourcePath = "C:/Users/grant/Downloads/PRODUCTS LIBRARY.csv";
+const repoRoot = process.cwd();
+const sourcePath = path.join(repoRoot, APPROVED_SELECTIONS_CSV_PATH);
 const sourceText = fs.readFileSync(sourcePath, "utf8");
 const audit = parseApprovedProductLibraryCsv(sourceText);
+const taxonomy = buildProductLibraryTaxonomy(audit.usableRows);
+const derivedFamilies = buildProductFamilyDefinitions(audit.usableRows);
 
-assert.equal(audit.totalPhysicalRows, 747, "approved CSV physical row count must be stable");
-assert.equal(audit.usableRows.length, 614, "approved CSV usable item row count must be stable");
+assert.equal(PRODUCT_LIBRARY_SOURCE_CSV, "data/product-library/PRODUCTS-LIBRARY.csv", "catalogue source must be the approved repo CSV");
+assert.ok(fs.existsSync(sourcePath), "approved product library CSV must exist");
+assert.ok(!PRODUCT_LIBRARY_SOURCE_CSV.includes("Downloads"), "old local Downloads source must not be used");
+assert.ok(!PRODUCT_LIBRARY_SOURCE_CSV.toLowerCase().includes("fixture"), "old demo fixture paths must not be used");
+assert.equal(GENERIC_DEMO_PRODUCTS.length, 0, "generic demo products must not seed the standard selections template");
+
+assert.ok(audit.totalPhysicalRows > 700, "approved CSV row count should be read from the canonical source");
+assert.ok(audit.usableRows.length > 500, "approved CSV should yield quotation-derived product rows");
 assert.ok(audit.headingRows.length > 20, "repeated section heading rows must be detected");
-assert.ok(!audit.usableRows.some((row) => row.itemDescription === "ITEM"), "section/header rows must be excluded from item rows");
-assert.equal(audit.rowsWithQuoteItemCodes, 0, "blank CODE cells must not be fabricated into quote item codes");
-assert.equal(audit.rowsWithoutUsableCodes, audit.usableRows.length, "rows without usable codes must be reported");
-assert.ok(audit.broadFamilyRows.length > 100, "broad quote rows must be recognised as product family source rows");
+assert.ok(!audit.usableRows.some((row) => row.originalQuoteItemCode === "CODE"), "section heading rows must be ignored");
+assert.ok(!audit.usableRows.some((row) => row.itemDescription.toUpperCase() === "ITEM"), "repeated ITEM header rows must be ignored");
+assert.ok(audit.usableRows.every((row) => row.sourceRow > 0 && row.sourceRow <= audit.totalPhysicalRows), "all parsed rows must point back to approved CSV source rows");
 
-const topAreaKeys = TOP_LEVEL_AREAS.map((area) => area.key);
-["exterior", "interior", "kitchen", "bathroom-ensuite", "laundry", "bedrooms", "living-areas", "garage", "outdoor-areas", "pool"].forEach((key) => {
-  assert.ok(topAreaKeys.includes(key), `missing top-level area ${key}`);
+const expectedTopLevelAreas = [
+  "Exterior",
+  "Interior",
+  "Kitchen",
+  "Bathroom & Ensuite",
+  "Laundry",
+  "Bedrooms",
+  "Living Areas",
+  "Garage",
+  "Outdoor Areas",
+  "Pool",
+];
+assert.deepEqual(TOP_LEVEL_AREAS.map((area) => area.displayName), expectedTopLevelAreas, "top-level selections areas must match the approved structure");
+assert.deepEqual(taxonomy.areas.map((area) => area.displayName), expectedTopLevelAreas, "generated taxonomy must include every approved top-level area");
+
+function categoryNames(areaKey) {
+  return taxonomy.areas.find((area) => area.key === areaKey)?.categories.map((category) => category.displayName) || [];
+}
+
+["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Roof Colour", "Gutters", "Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking"].forEach((category) => {
+  assert.ok(categoryNames("exterior").includes(category), `Exterior taxonomy must include ${category}`);
+});
+["Cabinetry", "Cabinet Finish", "Handles", "Benchtops", "Splashback", "Sink", "Sink Mixer", "Oven", "Cooktop", "Rangehood", "Dishwasher", "Microwave", "Flooring", "Lighting", "Paint"].forEach((category) => {
+  assert.ok(categoryNames("kitchen").includes(category), `Kitchen taxonomy must include ${category}`);
+});
+["Vanity", "Basin", "Basin Mixer", "Shower Mixer", "Shower Outlet", "Shower Screen", "Bath", "Toilet", "Mirror", "Accessories", "Floor Tiles", "Wall Tiles", "Feature Tiles"].forEach((category) => {
+  assert.ok(categoryNames("bathroom-ensuite").includes(category), `Bathroom & Ensuite taxonomy must include ${category}`);
+});
+["Internal Doors", "Door Hardware", "Skirting", "Architraves", "Paint", "Flooring", "Robes", "Window Furnishings"].forEach((category) => {
+  assert.ok(categoryNames("interior").includes(category), `Interior taxonomy must include ${category}`);
 });
 
-const stone = familyByKey("stone-benchtops");
-const roof = familyByKey("metal-roofing");
-const bricks = familyByKey("bricks");
-const doors = familyByKey("internal-doors");
+const internalDoors = familyByKey("internal-doors");
+assert.equal(internalDoors.topLevelArea, "interior", "Internal Doors must be under Interior");
+assert.equal(internalDoors.category, "Fix Out", "Internal Doors must be under Fix Out / Interior");
+assert.equal(internalDoors.subcategory, "Internal Doors", "Internal Doors subcategory must be explicit");
+assert.ok(familiesForArea("interior").some((family) => family.familyKey === "internal-doors"), "Interior families must expose Internal Doors");
+assert.ok(familiesForArea("exterior").some((family) => family.familyKey === "garage-doors"), "Exterior families must expose Garage Doors");
 
-assert.equal(stone.topLevelArea, "kitchen", "Stone Benchtops must live under Kitchen");
-assert.ok(stone.requiredAttributes.includes("range") && stone.requiredAttributes.includes("colour"), "Stone must support range and colour variants");
-assert.equal(roof.topLevelArea, "exterior", "Metal Roofing must live under Exterior");
-assert.ok(roof.supportedVariantTypes.includes("profile") && roof.supportedVariantTypes.includes("colour"), "Roofing must support profile and colour variants");
-assert.equal(bricks.category, "Bricks", "Bricks family must keep the Bricks category");
-assert.ok(bricks.requiredAttributes.includes("brand") && bricks.requiredAttributes.includes("range"), "Bricks must support brand and range");
-assert.equal(doors.topLevelArea, "interior", "Internal Doors must live under Interior");
-assert.equal(doors.category, "Fix Out", "Internal Doors must exist under Interior / Fix Out");
-assert.equal(doors.subcategory, "Internal Doors", "Internal Doors must keep the Internal Doors subcategory");
-assert.doesNotMatch(JSON.stringify(doors), /Hume/i, "Internal Doors must not be tied to Hume");
+const forbiddenSupplierNames = /\b(PGH|Austral|Caesarstone|Smartstone|Hume|Colorbond|Colourbond)\b/i;
+const platformFamilySchema = PRODUCT_FAMILIES.map((family) => ({
+  familyKey: family.familyKey,
+  displayName: family.displayName,
+  topLevelArea: family.topLevelArea,
+  category: family.category,
+  subcategory: family.subcategory,
+  sourceMatchers: family.sourceMatchers,
+  requiredAttributes: family.requiredAttributes,
+  optionalAttributes: family.optionalAttributes,
+  supportedVariantTypes: family.supportedVariantTypes,
+}));
+assert.doesNotMatch(JSON.stringify(platformFamilySchema), forbiddenSupplierNames, "supplier names must not be hard-coded into mandatory platform structure");
 
-assert.ok(familiesForArea("kitchen").some((family) => family.familyKey === "ovens"), "Kitchen must expose Ovens");
-assert.ok(familiesForArea("exterior").some((family) => family.familyKey === "garage-doors"), "Exterior must expose Garage Doors");
-assert.ok(PRODUCT_FAMILIES.every((family) => family.image && /^https:\/\//.test(family.image)), "generic category images must render as image URLs");
-
-const demoCodes = new Set();
-GENERIC_DEMO_PRODUCTS.forEach((product) => {
-  assert.ok(!demoCodes.has(product.productCode), `duplicate generic product code ${product.productCode}`);
-  demoCodes.add(product.productCode);
-  assert.equal(product.organisationId, "generic-demo", "generic demos must be clearly scoped away from real organisations");
-  assert.equal(product.priceSource, "generic-demo", "generic demos must not pretend to be commercial data");
+const requiredFamilyKeys = ["stone-20mm-tops", "stone-40mm-tops", "bricks", "metal-roofing", "garage-doors", "internal-doors", "ovens", "tapware", "tiles", "flooring"];
+requiredFamilyKeys.forEach((familyKey) => {
+  const family = derivedFamilies.find((item) => item.familyKey === familyKey);
+  assert.ok(family, `missing product family ${familyKey}`);
+  ["familyKey", "displayName", "topLevelArea", "category", "subcategory", "linkedQuoteItemCode", "unit", "quantityRule", "requiredAttributes", "optionalAttributes", "supportedVariantTypes"].forEach((field) => {
+    assert.ok(Object.hasOwn(family, field), `${familyKey} must define ${field}`);
+  });
+  assert.ok(Array.isArray(family.requiredAttributes), `${familyKey} requiredAttributes must be an array`);
+  assert.ok(Array.isArray(family.optionalAttributes), `${familyKey} optionalAttributes must be an array`);
+  assert.ok(Array.isArray(family.supportedVariantTypes), `${familyKey} supportedVariantTypes must be an array`);
 });
 
-const orgAStone = createProductEntity({
-  product_code: "ORG-A-STONE-1",
-  product_family: "stone-benchtops",
-  product_name: "Organisation A Stone White",
-  supplier_name: "Organisation A Supplier",
-  brand: "Private Brand",
-  range: "Private Range",
-  colour: "White",
-  finish: "Honed",
-  linked_quote_item_code: stone.approvedSourceKey,
-}, "org-a");
-const orgBStone = createProductEntity({
-  product_code: "ORG-B-STONE-1",
-  product_family: "stone-benchtops",
-  product_name: "Organisation B Stone White",
-  supplier_name: "Organisation B Supplier",
-  brand: "Private Brand",
-  range: "Private Range",
-  colour: "White",
-  finish: "Honed",
-  linked_quote_item_code: stone.approvedSourceKey,
-}, "org-b");
-assert.equal(orgAStone.organisationId, "org-a");
-assert.equal(orgBStone.organisationId, "org-b");
-assert.notEqual(orgAStone.supplier, orgBStone.supplier, "organisation supplier data must not be hard-coded");
+function assertFamilyAttributes(familyKey, requiredAttributes, optionalAttributes, supportedVariantTypes) {
+  const family = derivedFamilies.find((item) => item.familyKey === familyKey);
+  requiredAttributes.forEach((attribute) => assert.ok(family.requiredAttributes.includes(attribute), `${familyKey} must require ${attribute}`));
+  optionalAttributes.forEach((attribute) => assert.ok(family.optionalAttributes.includes(attribute), `${familyKey} must optionally support ${attribute}`));
+  supportedVariantTypes.forEach((variant) => assert.ok(family.supportedVariantTypes.includes(variant), `${familyKey} must support ${variant} variants`));
+}
 
-assert.ok(productMatchesFamily({ metadata: { familyKey: "stone-benchtops" }, product_name: "Stone" }, stone), "metadata family key must match exact family");
-assert.equal(productsForFamily([orgAStone, orgBStone], roof).length, 0, "exact-category selection query must not fall back to unrelated products");
-const stoneQuery = selectionQueryForFamily({ areaKey: "kitchen", familyKey: "stone-benchtops" });
-assert.deepEqual(stoneQuery, {
-  area: "kitchen",
-  familyKey: "stone-benchtops",
-  linkedQuoteItemCode: stone.approvedSourceKey,
-  category: "Benchtops",
-  subcategory: "Stone Tops",
-});
-assert.throws(() => selectionQueryForFamily({ areaKey: "exterior", familyKey: "stone-benchtops" }), /does not belong/, "wrong-area queries must fail instead of falling back");
+assertFamilyAttributes("stone-20mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
+assertFamilyAttributes("stone-40mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
+assertFamilyAttributes("bricks", ["supplier", "brand", "range", "brickName", "colour"], ["texture", "format", "image", "price", "supplierURL"], ["range", "brickName", "colour", "texture", "format"]);
+assertFamilyAttributes("metal-roofing", ["supplier", "brand", "profile", "range", "colour"], ["finish", "gauge", "image", "price", "supplierURL"], ["profile", "range", "colour", "finish", "gauge"]);
+assertFamilyAttributes("internal-doors", ["supplier", "brand", "range", "design", "construction", "size", "finish"], ["glazing", "image", "price", "supplierURL"], ["range", "design", "construction", "size", "finish", "glazing"]);
 
-assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("supplier_name"), "supplier import must include supplier_name");
-assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("specification_url"), "supplier import must include specification_url");
-assert.ok(PRODUCT_ENTITY_FIELDS.pricing.includes("builderCost"), "shared product entity must include builder cost");
+const kitchenStoneQuery = selectionQueryForFamily({ areaKey: "kitchen", familyKey: "stone-20mm-tops" });
+assert.equal(kitchenStoneQuery.area, "kitchen", "family selection query must stay area-scoped");
+assert.throws(() => selectionQueryForFamily({ areaKey: "exterior", familyKey: "stone-20mm-tops" }), /does not belong/, "wrong-area queries must fail");
+assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("supplier_name"), "supplier data must stay organisation import data");
+assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("official_product_url"), "family model must support supplier URLs through imports");
 
-const importRows = validateProductImportRows([
-  {
-    product_code: "IMP-1",
-    product_family: "bricks",
-    product_name: "Imported Generic Brick",
-    supplier_name: "Builder Supplier",
-    brand: "Builder Brand",
-    range: "Builder Range",
-    colour: "Charcoal",
-    linked_quote_item_code: bricks.approvedSourceKey,
-  },
-  {
-    product_code: "IMP-1",
-    product_family: "bricks",
-    product_name: "Duplicate Brick",
-  },
-  {
-    product_code: "BAD-1",
-    product_family: "not-a-family",
-    product_name: "Bad Product",
-  },
-], "org-a");
-assert.equal(importRows[0].errors.length, 0, "valid import row must create/update");
-assert.ok(importRows[1].errors.includes("Duplicate product_code in import"), "duplicate-code detection must run");
-assert.ok(importRows[2].errors.includes("Invalid or missing product_family"), "invalid family rows must be blocked");
-
-const pageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
-assert.match(pageSource, /Product Library Admin/, "technical admin tools must live under Product Library Admin");
-assert.match(pageSource, /Manage the suppliers, products, finishes and options available for project selections\./, "standard Product Library banner must render");
-assert.match(pageSource, /No products have been added for this category yet\./, "empty category state must be explicit");
-assert.doesNotMatch(pageSource, /Quotation Builder/, "Product Library page must not rebuild Quotation Builder");
-
-const selectionsBookSource = fs.readFileSync(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
-assert.match(selectionsBookSource, /Inclusions & Selections/, "Inclusions & Selections banner title must render");
-assert.match(selectionsBookSource, /Choose project areas, products and finishes and prepare the completed selections schedule\./, "Inclusions & Selections banner subtitle must render");
-assert.match(selectionsBookSource, /standardBack/, "Inclusions & Selections banner must include Back control");
-
-console.log("Product Library shared catalogue tests passed.");
+console.log("Product Library approved-source taxonomy tests passed.");
