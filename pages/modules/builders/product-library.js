@@ -1,13 +1,13 @@
 import Head from "next/head";
-import Link from "next/link";
+import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Archive, Boxes, Check, Copy, Edit3, FileUp, ImagePlus, Layers3, Package, Plus, RefreshCw, Upload } from "lucide-react";
+import { ArrowLeft, Boxes, Check, Edit3, FileUp, ImagePlus, Package, Plus, RefreshCw, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
-  GENERIC_DEMO_PRODUCTS,
   PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
   PRODUCT_LIBRARY_IMPORT_COLUMNS,
+  TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   createProductEntity,
   familiesForArea,
@@ -165,12 +165,14 @@ function mapDbProductToEntity(product, categoryName = "", supplierName = "", bra
 }
 
 export default function BuilderProductLibraryPage() {
+  const router = useRouter();
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
@@ -182,6 +184,7 @@ export default function BuilderProductLibraryPage() {
   const [success, setSuccess] = useState("");
 
   const selectedArea = TOP_LEVEL_AREAS.find((area) => area.key === selectedAreaKey) || null;
+  const selectedCategory = TAXONOMY_CATEGORY_DEFINITIONS.find((category) => category.key === selectedCategoryKey) || null;
   const selectedFamily = familyByKey(selectedFamilyKey);
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category.category_name])), [categories]);
   const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier.supplier_name])), [suppliers]);
@@ -192,15 +195,30 @@ export default function BuilderProductLibraryPage() {
     [categoryById, manufacturerById, products, supplierById]
   );
 
-  const visibleFamilies = useMemo(() => (selectedArea ? familiesForArea(selectedArea.key) : []), [selectedArea]);
+  const visibleCategories = useMemo(
+    () => (selectedArea ? TAXONOMY_CATEGORY_DEFINITIONS.filter((category) => category.topLevelArea === selectedArea.key) : []),
+    [selectedArea]
+  );
+  const visibleFamilies = useMemo(() => {
+    if (!selectedArea) return [];
+    const areaFamilies = familiesForArea(selectedArea.key);
+    if (!selectedCategory) return areaFamilies;
+    return areaFamilies.filter((familyItem) => familyItem.category === selectedCategory.category || familyItem.subcategory === selectedCategory.category || familyItem.subcategory === selectedCategory.subcategory);
+  }, [selectedArea, selectedCategory]);
   const visibleProducts = useMemo(() => {
     if (!selectedFamily) return [];
-    const organisationProducts = productsForFamily(orgProducts, selectedFamily);
-    const demos = GENERIC_DEMO_PRODUCTS.filter((product) => product.familyKey === selectedFamily.familyKey);
-    return organisationProducts.length ? organisationProducts : demos;
+    return productsForFamily(orgProducts, selectedFamily);
   }, [orgProducts, selectedFamily]);
   const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
   const selectionQuery = selectedFamily ? selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey }) : null;
+  const bannerTitle = selectedFamily?.displayName || selectedCategory?.category || selectedArea?.displayName || "Product Library";
+  const bannerSubtitle = selectedFamily
+    ? `${selectedFamily.category} / ${selectedFamily.subcategory}`
+    : selectedCategory
+      ? `Choose products and families for ${selectedCategory.category}.`
+      : selectedArea
+        ? `Choose one ${selectedArea.displayName} category.`
+        : "Choose an area, then a category, then the products available for selections.";
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -245,16 +263,48 @@ export default function BuilderProductLibraryPage() {
       setSelectedFamilyKey("");
       return;
     }
+    if (selectedCategoryKey) {
+      setSelectedCategoryKey("");
+      return;
+    }
     if (selectedAreaKey) {
       setSelectedAreaKey("");
       return;
     }
-    window.history.back();
+    router.push("/modules/builders");
   }
 
   function openFamily(familyKey) {
     setSelectedFamilyKey(familyKey);
     setAdminOpen(false);
+  }
+
+  function openArea(areaKey) {
+    setSelectedAreaKey(areaKey);
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedProductCode("");
+  }
+
+  function openCategory(categoryKey) {
+    setSelectedCategoryKey(categoryKey);
+    setSelectedFamilyKey("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+  }
+
+  function countProductsForFamily(familyItem) {
+    return productsForFamily(orgProducts, familyItem).length;
+  }
+
+  function countProductsForCategory(categoryItem) {
+    return PRODUCT_FAMILIES
+      .filter((familyItem) => familyItem.topLevelArea === categoryItem.topLevelArea && (familyItem.category === categoryItem.category || familyItem.subcategory === categoryItem.category || familyItem.subcategory === categoryItem.subcategory))
+      .reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
+  }
+
+  function statusForCount(count) {
+    return count ? "Ready" : "Needs products";
   }
 
   function exportTemplateCsv() {
@@ -448,39 +498,6 @@ export default function BuilderProductLibraryPage() {
     setSaving(false);
   }
 
-  async function archiveProduct(entity) {
-    if (!entity?.raw?.id) return;
-    setSaving(true);
-    const { error: archiveError } = await supabase.from("builder_products").update({ active: false, updated_at: new Date().toISOString() }).eq("workspace_id", workspaceId).eq("id", entity.raw.id);
-    if (archiveError) setError(archiveError.message || "Could not archive product.");
-    else {
-      setSuccess("Product archived.");
-      await loadLibrary();
-    }
-    setSaving(false);
-  }
-
-  function duplicateProduct(entity) {
-    setProductForm({
-      product_code: `${entity.productCode || slugify(entity.productName)}-copy`,
-      product_name: `${entity.productName} Copy`,
-      supplier_name: entity.supplier,
-      brand: entity.brand,
-      range: entity.range,
-      model: entity.model,
-      colour: entity.colour,
-      finish: entity.finish,
-      size: entity.size,
-      primary_image: entity.primaryImage,
-      official_product_url: entity.officialProductURL,
-      specification_url: entity.specificationURL,
-      builder_cost: entity.builderCost || "",
-      client_price: entity.clientPrice || "",
-      active: true,
-    });
-    setAdminOpen(true);
-  }
-
   function addToSelection(entity) {
     if (!selectedFamily || !entity) return;
     const query = selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey });
@@ -502,19 +519,13 @@ export default function BuilderProductLibraryPage() {
             <Package size={28} />
           </div>
           <div className="banner-copy">
-            <h1>Product Library</h1>
-            <p>Manage the suppliers, products, finishes and options available for project selections.</p>
+            <h1>{bannerTitle}</h1>
+            <p>{bannerSubtitle}</p>
           </div>
           <div className="banner-meta">
             <span>{workspaceLoading ? "Loading organisation..." : activeWorkspace?.name || "No organisation selected"}</span>
-            <span>{loading ? "Loading..." : success || "Saved locally to organisation catalogue"}</span>
+            <span>{loading ? "Loading..." : success || "Saved to organisation catalogue"}</span>
             <div className="file-controls">
-              <button type="button" onClick={exportTemplateCsv}><FileUp size={16} /> CSV Template</button>
-              <label className="file-button">
-                <Upload size={16} />
-                Import Products
-                <input type="file" accept=".csv,text/csv" onChange={handleProductCsvPreview} />
-              </label>
               <button type="button" onClick={loadLibrary} disabled={!workspaceId || loading}><RefreshCw size={16} /> Refresh</button>
             </div>
           </div>
@@ -530,35 +541,16 @@ export default function BuilderProductLibraryPage() {
               <strong>Choose one area</strong>
             </div>
             <div className="tile-grid area-grid">
-              {TOP_LEVEL_AREAS.map((area) => (
-                <button key={area.key} type="button" className="visual-tile" onClick={() => setSelectedAreaKey(area.key)} data-area-key={area.key}>
-                  <span className="tile-image" style={{ backgroundImage: `url(${area.image})` }} />
-                  <span className="tile-body">
-                    <strong>{area.displayName}</strong>
-                    <small>{area.description}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {selectedArea && !selectedFamily ? (
-          <section className="purpose">
-            <div className="section-heading">
-              <span>{selectedArea.displayName}</span>
-              <strong>Choose one product family</strong>
-            </div>
-            <div className="tile-grid family-grid">
-              {visibleFamilies.map((familyItem) => {
-                const count = productsForFamily(orgProducts, familyItem).length;
+              {TOP_LEVEL_AREAS.map((area) => {
+                const areaFamilies = familiesForArea(area.key);
+                const count = areaFamilies.reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
                 return (
-                  <button key={familyItem.familyKey} type="button" className="visual-tile" onClick={() => openFamily(familyItem.familyKey)} data-family-key={familyItem.familyKey}>
-                    <span className="tile-image" style={{ backgroundImage: `url(${familyItem.image})` }} />
+                  <button key={area.key} type="button" className="visual-tile" onClick={() => openArea(area.key)} data-area-key={area.key}>
+                    <span className="tile-image" style={{ backgroundImage: `url(${area.image})` }} />
                     <span className="tile-body">
-                      <strong>{familyItem.displayName}</strong>
-                      <small>{familyItem.category} / {familyItem.subcategory}</small>
-                      <em>{count ? `${count} organisation product${count === 1 ? "" : "s"}` : "Generic demo products available"}</em>
+                      <strong>{area.displayName}</strong>
+                      <small>{count} product{count === 1 ? "" : "s"}</small>
+                      <em>{statusForCount(count)}</em>
                     </span>
                   </button>
                 );
@@ -567,11 +559,74 @@ export default function BuilderProductLibraryPage() {
           </section>
         ) : null}
 
+        {selectedArea && !selectedCategory ? (
+          <section className="purpose">
+            <div className="section-heading">
+              <span>{selectedArea.displayName}</span>
+              <strong>Choose one category</strong>
+            </div>
+            <div className="tile-grid category-grid">
+              {visibleCategories.map((categoryItem) => {
+                const count = countProductsForCategory(categoryItem);
+                return (
+                  <button key={categoryItem.key} type="button" className="visual-tile" onClick={() => openCategory(categoryItem.key)} data-category-key={categoryItem.key}>
+                    <span className="tile-image" style={{ backgroundImage: `url(${categoryItem.image})` }} />
+                    <span className="tile-body">
+                      <strong>{categoryItem.category}</strong>
+                      <small>{count} product{count === 1 ? "" : "s"}</small>
+                      <em>{statusForCount(count)}</em>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {selectedArea && selectedCategory && !selectedFamily ? (
+          <section className="purpose">
+            <div className="section-heading">
+              <span>{selectedArea.displayName}</span>
+              <strong>{selectedCategory.category}</strong>
+            </div>
+            {visibleFamilies.length ? (
+              <div className="tile-grid family-grid">
+                {visibleFamilies.map((familyItem) => {
+                  const count = countProductsForFamily(familyItem);
+                  return (
+                    <button key={familyItem.familyKey} type="button" className="visual-tile" onClick={() => openFamily(familyItem.familyKey)} data-family-key={familyItem.familyKey}>
+                      <span className="tile-image" style={{ backgroundImage: `url(${familyItem.image || selectedCategory.image})` }} />
+                      <span className="tile-body">
+                        <strong>{familyItem.displayName}</strong>
+                        <small>{count} product{count === 1 ? "" : "s"}</small>
+                        <em>{statusForCount(count)}</em>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <strong>No products have been added for this category yet.</strong>
+                <div>
+                  <button type="button" onClick={() => setAdminOpen(true)}><Plus size={16} /> Add Product</button>
+                  <label className="file-button">
+                    <Upload size={16} />
+                    Import Products
+                    <input type="file" accept=".csv,text/csv" onChange={handleProductCsvPreview} />
+                  </label>
+                  <button type="button" onClick={() => setSelectedCategoryKey("")}>Back</button>
+                </div>
+              </div>
+            )}
+          </section>
+        ) : null}
+
         {selectedFamily ? (
           <section className="family-layout">
             <div className="family-main">
               <div className="section-heading">
-                <span>{selectedArea?.displayName || selectedFamily.topLevelArea}</span>
+                <span>{selectedCategory?.category || selectedArea?.displayName || selectedFamily.topLevelArea}</span>
                 <strong>{selectedFamily.displayName}</strong>
               </div>
               <div className="family-hero">
@@ -587,21 +642,6 @@ export default function BuilderProductLibraryPage() {
                 </div>
               </div>
 
-              <div className="product-flow">
-                <div>
-                  <span>Select Supplier</span>
-                  <strong>{selectedProduct?.supplier || "No supplier"}</strong>
-                </div>
-                <div>
-                  <span>Select Range</span>
-                  <strong>{selectedProduct?.range || "No range"}</strong>
-                </div>
-                <div>
-                  <span>Select Colour / Finish</span>
-                  <strong>{[selectedProduct?.colour, selectedProduct?.finish].filter(Boolean).join(" / ") || "No colour"}</strong>
-                </div>
-              </div>
-
               <div className="product-grid">
                 {visibleProducts.map((product) => (
                   <button
@@ -614,7 +654,7 @@ export default function BuilderProductLibraryPage() {
                     <strong>{product.productName}</strong>
                     <small>{product.supplier} / {product.brand}</small>
                     <small>{product.range} / {product.colour || product.finish || product.size}</small>
-                    <span>{product.priceSource === "generic-demo" ? "Generic demo" : money(product.clientPrice || product.builderCost)}</span>
+                    <span>{money(product.clientPrice || product.builderCost)}</span>
                   </button>
                 ))}
               </div>
@@ -636,20 +676,6 @@ export default function BuilderProductLibraryPage() {
             </div>
 
             <aside className="detail-panel">
-              <div className="panel-title">
-                <Layers3 size={20} />
-                <strong>Family Schema</strong>
-              </div>
-              <dl>
-                <dt>Required</dt>
-                <dd>{selectedFamily.requiredAttributes.join(", ")}</dd>
-                <dt>Optional</dt>
-                <dd>{selectedFamily.optionalAttributes.join(", ")}</dd>
-                <dt>Variants</dt>
-                <dd>{selectedFamily.supportedVariantTypes.join(", ")}</dd>
-                <dt>Pricing</dt>
-                <dd>{selectedFamily.pricingMode}</dd>
-              </dl>
               {selectedProduct ? (
                 <div className="selected-product">
                   <img src={selectedProduct.primaryImage || selectedFamily.image} alt={selectedProduct.imageAltText || selectedProduct.productName} />
@@ -661,10 +687,13 @@ export default function BuilderProductLibraryPage() {
                     ))}
                   </div>
                   <button type="button" onClick={() => addToSelection(selectedProduct)}><Check size={16} /> Add to Selections</button>
-                  <button type="button" className="secondary" onClick={() => duplicateProduct(selectedProduct)}><Copy size={16} /> Duplicate</button>
-                  {selectedProduct.raw ? <button type="button" className="secondary" onClick={() => archiveProduct(selectedProduct)}><Archive size={16} /> Archive</button> : null}
                 </div>
-              ) : null}
+              ) : (
+                <div className="empty-state compact">
+                  <strong>No products have been added for this category yet.</strong>
+                  <button type="button" onClick={() => setAdminOpen(true)}><Plus size={16} /> Add Product</button>
+                </div>
+              )}
             </aside>
           </section>
         ) : null}

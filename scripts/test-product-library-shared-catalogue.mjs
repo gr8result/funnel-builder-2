@@ -4,9 +4,11 @@ import path from "node:path";
 import {
   APPROVED_SELECTIONS_CSV_PATH,
   GENERIC_DEMO_PRODUCTS,
+  GENERIC_IMAGE_URLS,
   PRODUCT_FAMILIES,
   PRODUCT_LIBRARY_IMPORT_COLUMNS,
   PRODUCT_LIBRARY_SOURCE_CSV,
+  TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   buildProductFamilyDefinitions,
   buildProductLibraryTaxonomy,
@@ -58,7 +60,7 @@ function categoryNames(areaKey) {
 ["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Roof Colour", "Gutters", "Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking"].forEach((category) => {
   assert.ok(categoryNames("exterior").includes(category), `Exterior taxonomy must include ${category}`);
 });
-["Cabinetry", "Cabinet Finish", "Handles", "Benchtops", "Splashback", "Sink", "Sink Mixer", "Oven", "Cooktop", "Rangehood", "Dishwasher", "Microwave", "Flooring", "Lighting", "Paint"].forEach((category) => {
+["Cabinetry", "Cabinet Finish", "Handles", "Benchtops", "Splashback", "Sink", "Sink Mixer", "Ovens", "Cooktop", "Rangehood", "Dishwasher", "Microwave", "Flooring", "Lighting", "Paint"].forEach((category) => {
   assert.ok(categoryNames("kitchen").includes(category), `Kitchen taxonomy must include ${category}`);
 });
 ["Vanity", "Basin", "Basin Mixer", "Shower Mixer", "Shower Outlet", "Shower Screen", "Bath", "Toilet", "Mirror", "Accessories", "Floor Tiles", "Wall Tiles", "Feature Tiles"].forEach((category) => {
@@ -119,5 +121,51 @@ assert.equal(kitchenStoneQuery.area, "kitchen", "family selection query must sta
 assert.throws(() => selectionQueryForFamily({ areaKey: "exterior", familyKey: "stone-20mm-tops" }), /does not belong/, "wrong-area queries must fail");
 assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("supplier_name"), "supplier data must stay organisation import data");
 assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("official_product_url"), "family model must support supplier URLs through imports");
+
+const pageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
+assert.match(pageSource, /data-area-key=\{area\.key\}/, "normal Product Library must render area cards");
+assert.match(pageSource, /data-category-key=\{categoryItem\.key\}/, "normal Product Library must render category cards");
+assert.match(pageSource, /openCategory\(categoryItem\.key\)/, "category cards must route to the exact selected category");
+assert.match(pageSource, /setSelectedCategoryKey\(""\)/, "Back navigation must step from category back to area");
+assert.match(pageSource, /router\.push\("\/modules\/builders"\)/, "root Back must use a logical Builders route");
+assert.match(pageSource, /No products have been added for this category yet\./, "empty category state must be explicit");
+assert.match(pageSource, /> Add Product</, "empty state must expose Add Product");
+assert.match(pageSource, />\s*Import Products\s*</, "empty state must expose Import Products");
+assert.match(pageSource, />Back</, "empty state must expose Back");
+assert.match(pageSource, /@media \(max-width: 560px\)/, "mobile layout must have a small-screen breakpoint");
+assert.match(pageSource, /grid-template-columns: 1fr;/, "mobile grids must collapse to one column instead of clipping");
+assert.doesNotMatch(pageSource, /window\.history\.back/, "normal Back must not use random browser history");
+assert.doesNotMatch(pageSource, /sourceRow|headingRows|manualReviewRows/, "normal Product Library must not expose raw CSV row internals");
+
+const requiredVisualCategories = [
+  ["exterior", "Bricks", "brick"],
+  ["exterior", "Roofing", "roof"],
+  ["exterior", "Garage Doors", "garage door"],
+  ["interior", "Internal Doors", "door"],
+  ["kitchen", "Ovens", "oven"],
+  ["kitchen", "Benchtops", "stone"],
+  ["bathroom-ensuite", "Tapware", "tap"],
+  ["bathroom-ensuite", "Floor Tiles", "tile"],
+  ["interior", "Flooring", "floor"],
+];
+const requiredVisualUrls = new Map();
+requiredVisualCategories.forEach(([areaKey, categoryName, label]) => {
+  const category = TAXONOMY_CATEGORY_DEFINITIONS.find((item) => item.topLevelArea === areaKey && item.category === categoryName);
+  assert.ok(category?.image, `${categoryName} must have a visual ${label} image`);
+  assert.match(category.image, /^https:\/\/images\.unsplash\.com\//, `${categoryName} must render a high-quality image URL`);
+  assert.ok(!requiredVisualUrls.has(category.image), `${categoryName} must not reuse the ${requiredVisualUrls.get(category.image)} image`);
+  requiredVisualUrls.set(category.image, categoryName);
+});
+
+const areaImageUrls = new Map();
+TOP_LEVEL_AREAS.forEach((area) => {
+  assert.ok(area.image, `${area.displayName} must have a visual card image`);
+  assert.match(area.image, /^https:\/\/images\.unsplash\.com\//, `${area.displayName} must render a high-quality image URL`);
+  assert.ok(!areaImageUrls.has(area.image), `${area.displayName} must not reuse the ${areaImageUrls.get(area.image)} area image`);
+  areaImageUrls.set(area.image, area.displayName);
+});
+assert.notEqual(GENERIC_IMAGE_URLS.exterior, GENERIC_IMAGE_URLS.roofing, "Exterior and Roofing must not reuse one house image");
+assert.notEqual(GENERIC_IMAGE_URLS.kitchen, GENERIC_IMAGE_URLS.ovens, "Kitchen and Ovens must not reuse one kitchen image");
+assert.notEqual(GENERIC_IMAGE_URLS.garage, GENERIC_IMAGE_URLS.garageDoors, "Garage and Garage Doors must not reuse one garage image");
 
 console.log("Product Library approved-source taxonomy tests passed.");
