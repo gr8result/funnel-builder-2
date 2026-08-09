@@ -1,7 +1,31 @@
 import { useEffect, useState } from "react";
+import { getPdfFileBlob } from "../persistence/pdfFileStore.js";
 import { loadPdfDocument } from "./PdfViewport.js";
 
-const cache = new Map(); // documentId -> Promise<pdfjs document proxy>
+const cache = new Map(); // documentId -> { promise, revoke }
+
+function loadDocumentFromStoredFile(planDocument) {
+  let objectUrl = "";
+  const promise = (async () => {
+    const blob = await getPdfFileBlob(planDocument);
+    if (!blob) {
+      throw new Error("Uploaded PDF file is missing from local file storage.");
+    }
+    objectUrl = URL.createObjectURL(blob);
+    return loadPdfDocument(objectUrl);
+  })().catch((err) => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = "";
+    throw err;
+  });
+  return {
+    promise,
+    revoke: () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = "";
+    },
+  };
+}
 
 /** Loads (and caches, per document id) the parsed pdfjs document for a PlanDocument. */
 export function usePdfDocument(planDocument) {
@@ -18,13 +42,13 @@ export function usePdfDocument(planDocument) {
     setError("");
 
     if (!cache.has(planDocument.id)) {
-      cache.set(planDocument.id, loadPdfDocument(planDocument.originalFileUrl));
+      cache.set(planDocument.id, loadDocumentFromStoredFile(planDocument));
     }
 
-    cache.get(planDocument.id)
+    cache.get(planDocument.id).promise
       .then((doc) => { if (!cancelled) setPdfDocument(doc); })
       .catch((err) => {
-        cache.delete(planDocument.id);
+        forgetCachedDocument(planDocument.id);
         if (!cancelled) setError(err.message || "Failed to load PDF.");
       });
 
@@ -33,11 +57,13 @@ export function usePdfDocument(planDocument) {
     // object reference with the same id/url (common from array re-mapping) doesn't
     // trigger a reload loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planDocument?.id, planDocument?.originalFileUrl]);
+  }, [planDocument?.id, planDocument?.fileStorageKey]);
 
   return { pdfDocument, error };
 }
 
 export function forgetCachedDocument(documentId) {
+  const cached = cache.get(documentId);
+  cached?.revoke?.();
   cache.delete(documentId);
 }

@@ -28,10 +28,23 @@ const {
 } = await import("../persistence/planStore.js");
 
 const jobId = "job-1";
-const doc = { id: "doc-1", jobId, fileName: "plan.pdf", originalFileUrl: "data:application/pdf;base64,AAAA", createdAt: new Date().toISOString() };
+const doc = {
+  id: "doc-1",
+  jobId,
+  fileName: "plan.pdf",
+  fileStorageKey: "doc-1",
+  fileSize: 1234,
+  mimeType: "application/pdf",
+  originalFileUrl: "data:application/pdf;base64,AAAA",
+  rasterImage: "data:image/png;base64,AAAA",
+  createdAt: new Date().toISOString(),
+};
 saveDocument(doc);
 
 assert.deepEqual(listDocuments(jobId).map((d) => d.id), ["doc-1"]);
+assert.equal(listDocuments(jobId)[0].originalFileUrl, undefined);
+assert.equal(listDocuments(jobId)[0].rasterImage, undefined);
+assert.equal(listDocuments(jobId)[0].fileStorageKey, "doc-1");
 
 const pageA = { id: "page-1", documentId: "doc-1", pageNumber: 1, sourceWidth: 612, sourceHeight: 792, rotation: 0, orientationConfirmed: false, calibration: null, detectedRotationSuggestion: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 const pageB = { ...pageA, id: "page-2", pageNumber: 2 };
@@ -40,9 +53,10 @@ savePages("doc-1", [pageA, pageB]);
 assert.equal(listPages("doc-1").length, 2);
 
 // Rotating one page must not touch the other (no shared-blob overwrite bug).
-savePage({ ...pageA, rotation: 90 });
+savePage({ ...pageA, rotation: 90, rasterDataUrl: "data:image/png;base64,CCCC" });
 const pagesAfterRotate = listPages("doc-1");
 assert.equal(pagesAfterRotate.find((p) => p.id === "page-1").rotation, 90);
+assert.equal(pagesAfterRotate.find((p) => p.id === "page-1").rasterDataUrl, undefined);
 assert.equal(pagesAfterRotate.find((p) => p.id === "page-2").rotation, 0);
 
 // Selected page persists independently of document/page saves.
@@ -58,7 +72,7 @@ assert.equal(getSelectedPageId(jobId), null);
 assert.deepEqual(listAllPages(jobId), []);
 
 // A second document's pages are unaffected by the first document's deletion.
-const doc2 = { id: "doc-2", jobId, fileName: "other.pdf", originalFileUrl: "data:application/pdf;base64,BBBB", createdAt: new Date().toISOString() };
+const doc2 = { id: "doc-2", jobId, fileName: "other.pdf", fileStorageKey: "doc-2", fileSize: 5678, mimeType: "application/pdf", createdAt: new Date().toISOString() };
 saveDocument(doc2);
 savePages("doc-2", [{ ...pageA, id: "page-3", documentId: "doc-2" }]);
 setSelectedPageId(jobId, "page-3");

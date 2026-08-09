@@ -2,15 +2,8 @@ import { useCallback, useRef, useState } from "react";
 import { createPlanDocument, createPlanPage, generateId } from "../types.js";
 import { loadPdfDocument, getPageDimensions } from "../viewer/PdfViewport.js";
 import { deleteDocument, saveDocument, savePages } from "../persistence/planStore.js";
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
-    reader.readAsDataURL(file);
-  });
-}
+import { savePdfFile, deletePdfFile } from "../persistence/pdfFileStore.js";
+import { forgetCachedDocument } from "../viewer/usePdfDocument.js";
 
 export default function PlanDocumentList({ jobId, documents, onDocumentsChange, selectedPageId, onSelectPage }) {
   const [loading, setLoading] = useState(false);
@@ -32,17 +25,19 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
           continue;
         }
 
-        setProgress(`Reading ${file.name}...`);
-        const originalFileUrl = await readFileAsDataUrl(file);
+        const documentId = generateId("doc");
+
+        setProgress(`Saving ${file.name}...`);
+        const fileRecord = await savePdfFile(documentId, file);
 
         setProgress(`Opening ${file.name}...`);
-        const pdfDocument = await loadPdfDocument(originalFileUrl);
+        const pdfDocument = await loadPdfDocument(file);
 
         const document = createPlanDocument({
-          id: generateId("doc"),
+          id: documentId,
           jobId,
           fileName: file.name,
-          originalFileUrl,
+          ...fileRecord,
         });
 
         const pages = [];
@@ -77,8 +72,10 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
     event.target.value = "";
   }, [handleUpload]);
 
-  const confirmDelete = useCallback((documentId) => {
+  const confirmDelete = useCallback(async (documentId) => {
     deleteDocument(jobId, documentId);
+    forgetCachedDocument(documentId);
+    await deletePdfFile(documentId);
     setConfirmingDeleteId(null);
     onDocumentsChange();
   }, [jobId, onDocumentsChange]);

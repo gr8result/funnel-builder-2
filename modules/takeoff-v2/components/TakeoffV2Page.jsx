@@ -56,19 +56,7 @@ export default function TakeoffV2Page({ jobId = "dev-job-1" }) {
     return documents.find((doc) => doc.id === selectedPage.documentId) || null;
   }, [documents, selectedPage]);
 
-  const { pdfDocument } = usePdfDocument(selectedDocument);
-
-  // Observes the authoritative pagesByDocument state itself (not a value read
-  // synchronously right after setPagesByDocument, which would still show the
-  // pre-update value — React state updates are async) so this always reflects
-  // what actually landed.
-  useEffect(() => {
-    console.log("AUTHORITATIVE PAGE UPDATED", {
-      selectedPageId,
-      pageFound: Boolean(selectedPage),
-      rotation: selectedPage?.rotation,
-    });
-  }, [pagesByDocument, selectedPageId, selectedPage]);
+  const { pdfDocument, error: pdfError } = usePdfDocument(selectedDocument);
 
   const applyRotation = useCallback((nextRotation) => {
     if (!selectedPage) return;
@@ -94,18 +82,8 @@ export default function TakeoffV2Page({ jobId = "dev-job-1" }) {
     applyRotation(0);
   }, [applyRotation]);
 
-  const allPages = useMemo(() => Object.values(pagesByDocument).flat(), [pagesByDocument]);
-
   return (
     <div style={S.page} data-testid="takeoff-v2-page">
-      <div style={S.diagnostics} data-testid="state-diagnostics">
-        <span>DOCUMENT COUNT: {documents.length}</span>
-        <span>PAGE COUNT: {allPages.length}</span>
-        <span>SELECTED DOCUMENT ID: {selectedDocument?.id || "none"}</span>
-        <span>SELECTED PAGE ID: {selectedPageId || "none"}</span>
-        <span data-testid="selected-page-found">SELECTED PAGE FOUND: {selectedPage ? "YES" : "NO"}</span>
-        <span>SELECTED PAGE SOURCE URL PRESENT: {selectedDocument?.originalFileUrl ? "YES" : "NO"}</span>
-      </div>
       <div style={S.body}>
         <div style={S.sidebar}>
           <PlanDocumentList
@@ -133,7 +111,7 @@ export default function TakeoffV2Page({ jobId = "dev-job-1" }) {
             />
           ) : (
             <div style={S.emptyViewer} data-testid="viewer-empty-state">
-              {documents.length === 0 ? "Upload a plan to get started." : "Select a page to view it."}
+              {pdfError || (documents.length === 0 ? "Upload a plan to get started." : "Select a page to view it.")}
             </div>
           )}
         </div>
@@ -144,9 +122,9 @@ export default function TakeoffV2Page({ jobId = "dev-job-1" }) {
 
 const S = {
   page: { display: "flex", flexDirection: "column", height: "100vh", background: "#f1f5f9", fontFamily: "system-ui, sans-serif" },
-  diagnostics: { display: "flex", flexWrap: "wrap", gap: 16, padding: "6px 12px", background: "#0f172a", color: "#7dd3fc", fontSize: 11, fontFamily: "monospace", flexShrink: 0 },
   body: { flex: 1, display: "flex", minHeight: 0 },
   sidebar: { width: 300, flexShrink: 0, borderRight: "1px solid #e2e8f0", background: "#fff", display: "flex", flexDirection: "column", overflowY: "auto" },
   main: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 },
   emptyViewer: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: 14 },
 };
+

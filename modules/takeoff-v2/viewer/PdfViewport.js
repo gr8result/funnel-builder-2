@@ -35,9 +35,24 @@ function dataUrlToUint8Array(dataUrl) {
   return bytes;
 }
 
-export async function loadPdfDocument(originalFileUrl) {
+async function pdfSourceToUint8Array(source) {
+  if (source instanceof Uint8Array) return source;
+  if (source instanceof ArrayBuffer) return new Uint8Array(source);
+  if (typeof Blob !== "undefined" && source instanceof Blob) {
+    return new Uint8Array(await source.arrayBuffer());
+  }
+  if (typeof source === "string") {
+    if (source.startsWith("data:")) return dataUrlToUint8Array(source);
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`Could not read PDF source (${response.status}).`);
+    return new Uint8Array(await response.arrayBuffer());
+  }
+  throw new Error("Unsupported PDF source.");
+}
+
+export async function loadPdfDocument(pdfSource) {
   const pdfjsLib = await loadPdfjsLib();
-  const data = dataUrlToUint8Array(originalFileUrl);
+  const data = await pdfSourceToUint8Array(pdfSource);
   const loadingTask = pdfjsLib.getDocument({ data });
   return loadingTask.promise;
 }
@@ -56,9 +71,10 @@ export async function getPageDimensions(pdfDocument, pageNumber) {
 export function createPageRenderer(canvas) {
   let activeTask = null;
 
-  async function render({ pdfDocument, pageNumber, rotation, scale }) {
+  async function render({ pdfDocument, pageNumber, rotation, scale, displayScale = scale }) {
     const page = await pdfDocument.getPage(pageNumber);
     const viewport = page.getViewport({ scale, rotation });
+    const displayViewport = displayScale === scale ? viewport : page.getViewport({ scale: displayScale, rotation });
 
     if (activeTask) {
       activeTask.cancel();
@@ -68,8 +84,8 @@ export function createPageRenderer(canvas) {
     const pixelRatio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     canvas.width = Math.ceil(viewport.width * pixelRatio);
     canvas.height = Math.ceil(viewport.height * pixelRatio);
-    canvas.style.width = `${Math.ceil(viewport.width)}px`;
-    canvas.style.height = `${Math.ceil(viewport.height)}px`;
+    canvas.style.width = `${Math.ceil(displayViewport.width)}px`;
+    canvas.style.height = `${Math.ceil(displayViewport.height)}px`;
 
     const context = canvas.getContext("2d");
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -82,7 +98,7 @@ export function createPageRenderer(canvas) {
     } finally {
       if (activeTask === task) activeTask = null;
     }
-    return { viewport, page };
+    return { viewport: displayViewport, renderViewport: viewport, page };
   }
 
   function cancel() {

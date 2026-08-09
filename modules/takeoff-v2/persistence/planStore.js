@@ -32,18 +32,58 @@ function removeKey(key) {
   window.localStorage.removeItem(key);
 }
 
+const DOCUMENT_FIELDS_NOT_STORED_LOCALLY = [
+  "originalFileUrl",
+  "sourceUrl",
+  "detectedRaster",
+  "rasterImage",
+  "rasterPages",
+  "debugImage",
+  "previewImage",
+  "thumbnailDataUrl",
+];
+
+const PAGE_FIELDS_NOT_STORED_LOCALLY = [
+  "sourceUrl",
+  "rasterImage",
+  "rasterDataUrl",
+  "debugImage",
+  "previewImage",
+  "thumbnailDataUrl",
+];
+
+function omitFields(value, fieldNames) {
+  const safeValue = { ...(value || {}) };
+  fieldNames.forEach((fieldName) => {
+    delete safeValue[fieldName];
+  });
+  return safeValue;
+}
+
+function sanitizeDocument(document) {
+  const safeDocument = omitFields(document, DOCUMENT_FIELDS_NOT_STORED_LOCALLY);
+  return {
+    ...safeDocument,
+    fileStorageKey: safeDocument.fileStorageKey || safeDocument.id,
+  };
+}
+
+function sanitizePage(page) {
+  return omitFields(page, PAGE_FIELDS_NOT_STORED_LOCALLY);
+}
+
 // ---------- documents ----------
 
 export function listDocuments(jobId) {
-  return readJson(DOCUMENTS_KEY(jobId), []);
+  return readJson(DOCUMENTS_KEY(jobId), []).map(sanitizeDocument);
 }
 
 export function saveDocument(document) {
   const documents = listDocuments(document.jobId);
   const next = documents.filter((doc) => doc.id !== document.id);
-  next.push(document);
+  next.push(sanitizeDocument(document));
   writeJson(DOCUMENTS_KEY(document.jobId), next);
-  return document;
+  return sanitizeDocument(document);
 }
 
 export function getDocument(jobId, documentId) {
@@ -67,13 +107,13 @@ export function deleteDocument(jobId, documentId) {
 // ---------- pages ----------
 
 export function listPages(documentId) {
-  return readJson(PAGES_KEY(documentId), []);
+  return readJson(PAGES_KEY(documentId), []).map(sanitizePage);
 }
 
 export function savePage(page) {
   const pages = listPages(page.documentId);
   const next = pages.filter((existing) => existing.id !== page.id);
-  next.push({ ...page, updatedAt: new Date().toISOString() });
+  next.push(sanitizePage({ ...page, updatedAt: new Date().toISOString() }));
   next.sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(page.documentId), next);
   return next.find((existing) => existing.id === page.id);
@@ -84,7 +124,7 @@ export function getPage(documentId, pageId) {
 }
 
 export function savePages(documentId, pages) {
-  const sorted = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
+  const sorted = pages.map(sanitizePage).sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(documentId), sorted);
   return sorted;
 }

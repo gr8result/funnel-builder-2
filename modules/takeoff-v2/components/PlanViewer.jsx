@@ -9,9 +9,35 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
   const dragRef = useRef(null);
+  const fitScaleRef = useRef(1);
+  const renderRequestRef = useRef(0);
 
   const [view, setView] = useState({ viewport: null, zoomScale: 1, panX: 0, panY: 0 });
   const [status, setStatus] = useState("");
+
+  const renderAtZoom = useCallback(async (zoomScale) => {
+    if (!pdfDocument || !page || !canvasRef.current) return;
+    if (!rendererRef.current) rendererRef.current = createPageRenderer(canvasRef.current);
+
+    const requestId = renderRequestRef.current + 1;
+    renderRequestRef.current = requestId;
+
+    try {
+      const { viewport } = await rendererRef.current.render({
+        pdfDocument,
+        pageNumber: page.pageNumber,
+        rotation: page.rotation,
+        scale: fitScaleRef.current * zoomScale,
+        displayScale: fitScaleRef.current,
+      });
+      if (renderRequestRef.current === requestId) {
+        setView((prev) => ({ ...prev, viewport }));
+        setStatus("");
+      }
+    } catch (err) {
+      if (err?.name !== "RenderingCancelledException") setStatus(`Render failed: ${err.message}`);
+    }
+  }, [pdfDocument, page?.pageNumber, page?.rotation]);
 
   const fitTo = useCallback(async (mode) => {
     if (!pdfDocument || !page || !canvasRef.current || !containerRef.current) return;
@@ -30,11 +56,13 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
     });
 
     try {
+      fitScaleRef.current = fitScale;
       const { viewport } = await rendererRef.current.render({
         pdfDocument,
         pageNumber: page.pageNumber,
         rotation: page.rotation,
         scale: fitScale,
+        displayScale: fitScale,
       });
       const panX = Math.max(0, (container.clientWidth - viewport.width) / 2);
       const panY = Math.max(0, (container.clientHeight - viewport.height) / 2);
@@ -50,6 +78,16 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
     fitTo("fit-page");
     return () => rendererRef.current?.cancel();
   }, [fitTo]);
+
+  const hasViewport = Boolean(view.viewport);
+
+  useEffect(() => {
+    if (!hasViewport || view.zoomScale === 1) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      renderAtZoom(view.zoomScale);
+    }, 120);
+    return () => window.clearTimeout(timeoutId);
+  }, [hasViewport, renderAtZoom, view.zoomScale]);
 
   const handleWheelRef = useRef(() => {});
   handleWheelRef.current = useCallback((event) => {
