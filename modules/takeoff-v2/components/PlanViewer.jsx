@@ -1,10 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { computeFitScale, createPageRenderer } from "../viewer/PdfViewport.js";
+import { clampSharpRenderScale, computeFitScale, createPageRenderer } from "../viewer/PdfViewport.js";
+import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
+import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
 
-export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRight, onResetRotation }) {
+const CLICK_THRESHOLD_PX = 6;
+const TOOL_CURSORS = {
+  "set-scale": "crosshair",
+  area: "crosshair",
+  "exterior-wall": "crosshair",
+  "internal-wall": "crosshair",
+  "edit-walls": "crosshair",
+  "exterior-highlighter": "crosshair",
+  "plan-region": "crosshair",
+};
+
+export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex, onRotateLeft, onRotateRight, onResetRotation }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
@@ -14,6 +27,43 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
 
   const [view, setView] = useState({ viewport: null, zoomScale: 1, panX: 0, panY: 0 });
   const [status, setStatus] = useState("");
+
+  const eventToPagePoint = useCallback((event) => {
+    if (!view.viewport || !containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+    return screenToPagePoint(
+      { viewport: view.viewport, panX: view.panX, panY: view.panY, zoomScale: view.zoomScale },
+      event.clientX - rect.left,
+      event.clientY - rect.top
+    );
+  }, [view.panX, view.panY, view.viewport, view.zoomScale]);
+
+  const handleToolClick = useCallback((event) => {
+    const point = eventToPagePoint(event);
+    if (!point || !tools) return;
+    const options = { zoomScale: view.zoomScale, shiftKey: event.shiftKey, altKey: event.altKey };
+    if (tools.activeTool === "set-scale" || tools.activeTool === "measure") tools.placePointerPoint?.(point, options);
+    else if (tools.activeTool === "area") tools.handleAreaCanvasClick?.(point, options);
+    else if (tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall") tools.handleWallDrawClick?.(point, options);
+    else if (tools.activeTool === "edit-walls" || tools.activeTool === "edit") tools.handleEditToolClick?.(point, options);
+    else if (tools.activeTool === "plan-region") tools.handlePlanRegionClick?.(point, options);
+    else if (["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool)) tools.handleOpeningCanvasClick?.(point, options);
+    else if (tools.activeTool === "exterior-highlighter") tools.toggleExteriorHighlightedWall?.();
+  }, [eventToPagePoint, tools, view.zoomScale]);
+
+  const updateToolHover = useCallback((event) => {
+    const point = eventToPagePoint(event);
+    if (!point || !tools) return;
+    const options = { zoomScale: view.zoomScale, shiftKey: event.shiftKey, altKey: event.altKey };
+    tools.setHoverPoint?.(point);
+    tools.updatePointerHover?.(point, options);
+    tools.updateWallDrawHover?.(point, options);
+    tools.updateWallEditHover?.(point, options);
+    tools.updateAreaHover?.(point, options);
+    tools.updatePlanRegionHover?.(point, options);
+    tools.updateOpeningHover?.(point, options);
+    tools.updateExteriorHighlighterHover?.(point, { ...options, sourceCanvas: canvasRef.current });
+  }, [eventToPagePoint, tools, view.zoomScale]);
 
   const renderAtZoom = useCallback(async (zoomScale) => {
     if (!pdfDocument || !page || !canvasRef.current) return;
@@ -27,7 +77,14 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
         pdfDocument,
         pageNumber: page.pageNumber,
         rotation: page.rotation,
-        scale: fitScaleRef.current * zoomScale,
+        scale: clampSharpRenderScale({
+          baseScale: fitScaleRef.current,
+          zoomScale,
+          unrotatedWidth: page.sourceWidth,
+          unrotatedHeight: page.sourceHeight,
+          rotation: page.rotation,
+          pixelRatio: typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+        }),
         displayScale: fitScaleRef.current,
       });
       if (renderRequestRef.current === requestId) {
@@ -122,17 +179,44 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
   }, []);
 
   const handleMouseDown = useCallback((event) => {
-    dragRef.current = { startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
-  }, [view.panX, view.panY]);
+    const forcePan = event.code === "Space" || event.buttons === 4 || tools?.activeTool === "pan" || event.getModifierState?.("Space");
+    const point = eventToPagePoint(event);
+    if (tools?.activeTool === "area" && tools.areaMode === "rectangle" && point && !forcePan) {
+      tools.beginAreaRectangle?.(point);
+      dragRef.current = { mode: "area-rectangle" };
+      return;
+    }
+    dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
+  }, [eventToPagePoint, tools, view.panX, view.panY]);
 
   const handleMouseMove = useCallback((event) => {
+    updateToolHover(event);
     if (!dragRef.current) return;
+    if (dragRef.current.mode === "area-rectangle") {
+      const point = eventToPagePoint(event);
+      if (point) tools?.updateAreaRectangle?.(point);
+      return;
+    }
     const dx = event.clientX - dragRef.current.startX;
     const dy = event.clientY - dragRef.current.startY;
     setView((prev) => ({ ...prev, panX: dragRef.current.panX + dx, panY: dragRef.current.panY + dy }));
-  }, []);
+  }, [eventToPagePoint, tools, updateToolHover]);
 
-  const handleMouseUp = useCallback(() => { dragRef.current = null; }, []);
+  const handleMouseUp = useCallback((event) => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag) return;
+    if (drag.mode === "area-rectangle") {
+      tools?.finishAreaRectangle?.();
+      return;
+    }
+    const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (drag.mode === "pan" && moved <= CLICK_THRESHOLD_PX && tools?.activeTool !== "pan") {
+      handleToolClick(event);
+    }
+  }, [handleToolClick, tools]);
+
+  const cursor = tools?.activeTool === "pan" ? "grab" : (TOOL_CURSORS[tools?.activeTool] || "grab");
 
   return (
     <div style={S.wrap}>
@@ -151,7 +235,7 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
 
       <div
         ref={containerRef}
-        style={S.viewport}
+        style={{ ...S.viewport, cursor }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -168,6 +252,15 @@ export default function PlanViewer({ pdfDocument, page, onRotateLeft, onRotateRi
           }}
         >
           <canvas ref={canvasRef} data-testid="plan-canvas" />
+          {view.viewport && tools && (
+            <TakeoffCanvasOverlay
+              page={page}
+              tools={tools}
+              viewport={view.viewport}
+              planGeometryIndex={planGeometryIndex}
+              sourceCanvas={canvasRef.current}
+            />
+          )}
         </div>
       </div>
     </div>

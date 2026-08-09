@@ -8,6 +8,8 @@
 // Namespaced separately from the legacy key so V2 can be developed and torn down
 // without ever touching legacy state.
 
+import { withPlanPageDefaults } from "../types.js";
+
 const DOCUMENTS_KEY = (jobId) => `gr8:takeoff-v2:documents:${jobId || "unassigned"}`;
 const PAGES_KEY = (documentId) => `gr8:takeoff-v2:pages:${documentId}`;
 const SELECTED_PAGE_KEY = (jobId) => `gr8:takeoff-v2:selectedPage:${jobId || "unassigned"}`;
@@ -107,13 +109,13 @@ export function deleteDocument(jobId, documentId) {
 // ---------- pages ----------
 
 export function listPages(documentId) {
-  return readJson(PAGES_KEY(documentId), []).map(sanitizePage);
+  return readJson(PAGES_KEY(documentId), []).map(sanitizePage).map(withPlanPageDefaults);
 }
 
 export function savePage(page) {
   const pages = listPages(page.documentId);
   const next = pages.filter((existing) => existing.id !== page.id);
-  next.push(sanitizePage({ ...page, updatedAt: new Date().toISOString() }));
+  next.push(withPlanPageDefaults(sanitizePage({ ...page, updatedAt: new Date().toISOString() })));
   next.sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(page.documentId), next);
   return next.find((existing) => existing.id === page.id);
@@ -124,7 +126,7 @@ export function getPage(documentId, pageId) {
 }
 
 export function savePages(documentId, pages) {
-  const sorted = pages.map(sanitizePage).sort((a, b) => a.pageNumber - b.pageNumber);
+  const sorted = pages.map(sanitizePage).map(withPlanPageDefaults).sort((a, b) => a.pageNumber - b.pageNumber);
   writeJson(PAGES_KEY(documentId), sorted);
   return sorted;
 }

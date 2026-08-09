@@ -30,7 +30,7 @@ assert.match(pdfViewport, /fetch\(source\)/, "PDF.js loader must accept object U
 assert.match(pdfViewport, /displayScale = scale/, "PDF renderer must separate display scale from render scale.");
 assert.match(pdfViewport, /renderViewport/, "PDF renderer must expose the high-resolution render viewport.");
 
-assert.match(planViewer, /scale: fitScaleRef\.current \* zoomScale/, "Zoom must request a higher-resolution PDF render.");
+assert.match(planViewer, /baseScale: fitScaleRef\.current,[\s\S]*zoomScale,/, "Zoom must request a higher-resolution PDF render.");
 assert.match(planViewer, /displayScale: fitScaleRef\.current/, "Zoom must keep viewer coordinates tied to the fit-page display scale.");
 assert.doesNotMatch(takeoffPage, /state-diagnostics|DOCUMENT COUNT|SOURCE URL PRESENT/, "Developer diagnostics must not render above the production viewer.");
 

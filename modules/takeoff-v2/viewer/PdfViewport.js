@@ -8,6 +8,9 @@
 
 let pdfjsLibPromise = null;
 
+export const MAX_RENDER_CANVAS_DIMENSION = 8000;
+export const MAX_RENDER_CANVAS_PIXELS = 30_000_000;
+
 async function loadPdfjsLib() {
   if (typeof window === "undefined") {
     throw new Error("PdfViewport can only be used in the browser.");
@@ -122,6 +125,27 @@ export function computeFitScale({ pageWidth, pageHeight, containerWidth, contain
   const heightScale = containerHeight / pageHeight;
   if (mode === "fit-width") return widthScale;
   return Math.min(widthScale, heightScale);
+}
+
+export function clampSharpRenderScale({ baseScale, zoomScale, unrotatedWidth, unrotatedHeight, rotation, pixelRatio = 1 }) {
+  const requestedScale = baseScale * zoomScale;
+  if (!unrotatedWidth || !unrotatedHeight || !requestedScale) return requestedScale;
+
+  const sideways = rotation === 90 || rotation === 270;
+  const width = sideways ? unrotatedHeight : unrotatedWidth;
+  const height = sideways ? unrotatedWidth : unrotatedHeight;
+
+  const backingWidth = width * requestedScale * pixelRatio;
+  const backingHeight = height * requestedScale * pixelRatio;
+
+  const dimensionLimit = Math.min(
+    MAX_RENDER_CANVAS_DIMENSION / backingWidth,
+    MAX_RENDER_CANVAS_DIMENSION / backingHeight,
+    1
+  );
+  const pixelLimit = Math.min(Math.sqrt(MAX_RENDER_CANVAS_PIXELS / (backingWidth * backingHeight)), 1);
+
+  return requestedScale * Math.min(dimensionLimit, pixelLimit);
 }
 
 /** True at 90/270 where PDF.js swaps width/height in the viewport for you. */
