@@ -1,4 +1,4 @@
-import { fetchTraderHistory } from "./history.js";
+import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 
@@ -111,13 +111,13 @@ function validateMarketData({ quote, history }) {
     adjustedClose: Number.isFinite(latest?.adjClose) ? priceDifference(latest.close, latest.adjClose) : null,
   };
 
-  if (!Number.isFinite(round(quote?.c))) issues.push("Finnhub did not return a valid current price.");
+  if (!Number.isFinite(round(quote?.c))) issues.push("Market data provider did not return a valid current price.");
   if (!latest) issues.push(`${history?.source || "The market data provider"} did not return a latest candle.`);
   if (quoteDate && latest?.date && !String(latest.date).startsWith(quoteDate)) issues.push(`Quote date ${quoteDate} does not match candle date ${latest.date}.`);
-  if (materialPriceMismatch(round(quote?.c), latest?.close)) issues.push(`Finnhub current price differs materially from ${history?.source || "the candle provider"} latest close.`);
-  if (materialPriceMismatch(round(quote?.o), latest?.open, 0.5)) warnings.push(`Finnhub open differs from ${history?.source || "the candle provider"} open.`);
-  if (materialPriceMismatch(round(quote?.h), latest?.high, 0.5)) warnings.push(`Finnhub day high differs from ${history?.source || "the candle provider"} high.`);
-  if (materialPriceMismatch(round(quote?.l), latest?.low, 0.5)) warnings.push(`Finnhub day low differs from ${history?.source || "the candle provider"} low.`);
+  if (quoteDate && latest?.date && quoteDate !== latest.date && materialPriceMismatch(round(quote?.c), latest?.close)) issues.push(`Current price differs materially from ${history?.source || "the candle provider"} latest close.`);
+  if (materialPriceMismatch(round(quote?.o), latest?.open, 0.5)) warnings.push(`Quote open differs from ${history?.source || "the candle provider"} open.`);
+  if (materialPriceMismatch(round(quote?.h), latest?.high, 0.5)) warnings.push(`Quote day high differs from ${history?.source || "the candle provider"} high.`);
+  if (materialPriceMismatch(round(quote?.l), latest?.low, 0.5)) warnings.push(`Quote day low differs from ${history?.source || "the candle provider"} low.`);
   if (comparisons.adjustedClose && Math.abs(comparisons.adjustedClose.percent) > 0.05) {
     warnings.push("Adjusted close differs from raw close; trading calculations use raw OHLC prices.");
   }
@@ -127,7 +127,7 @@ function validateMarketData({ quote, history }) {
     validated: issues.length === 0,
     issues,
     warnings,
-    quoteSource: "Finnhub",
+    quoteSource: history?.source || "Twelve Data",
     historySource: history?.source || "Candle provider",
     quoteTimestamp: Number.isFinite(Number(quote?.t)) ? Number(quote.t) : null,
     quoteDate,
@@ -152,7 +152,7 @@ function reconcileLatestCandleWithQuote(candles, quote, marketData) {
   if (Number.isFinite(quoteHigh)) latest.high = Math.max(quoteHigh, quoteClose, latest.high);
   if (Number.isFinite(quoteLow)) latest.low = Math.min(quoteLow, quoteClose, latest.low);
   latest.priceValidated = true;
-  latest.priceSource = "Finnhub quote reconciled with connected candle provider";
+  latest.priceSource = "Quote reconciled with connected candle provider";
   return next;
 }
 
@@ -173,20 +173,38 @@ function getMeta(symbol) {
   return TRADER_WATCHLIST.find((item) => item.symbol === symbol) || { symbol, companyName: symbol, exchange: "NASDAQ", sector: "Trading Watchlist" };
 }
 
-async function fetchQuote(symbol) {
-  const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json().catch(() => null);
-    if (!response.ok) return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-    return { ok: true, data, error: null };
-  } catch (error) {
-    console.error("Freedom Trader quote failed:", error);
-    return { ok: false, error: "Live quote temporarily unavailable.", data: null };
-  }
+function snapshotToInputs(symbol, snapshot) {
+  const candles = Array.isArray(snapshot?.candles?.daily) ? snapshot.candles.daily : [];
+  const latest = candles[candles.length - 1] || null;
+  const previous = candles[candles.length - 2] || null;
+  return {
+    quoteResult: {
+      ok: Number.isFinite(Number(snapshot?.quote?.price)),
+      data: {
+        c: snapshot?.quote?.price,
+        pc: snapshot?.quote?.previousClose ?? previous?.close ?? null,
+        d: snapshot?.quote?.change,
+        dp: snapshot?.quote?.changePercent,
+        o: latest?.open,
+        h: latest?.high,
+        l: latest?.low,
+        t: latest?.timestamp,
+      },
+      error: snapshot?.error || null,
+    },
+    history: {
+      ok: snapshot?.dataQuality !== "unavailable" && candles.length > 0,
+      symbol,
+      provider: snapshot?.source || "Twelve Data",
+      source: snapshot?.source || "Twelve Data",
+      exchange: snapshot?.exchange,
+      currency: snapshot?.currency,
+      candles,
+      candleCount: candles.length,
+      error: snapshot?.error || null,
+      cache: snapshot?.cache || null,
+    },
+  };
 }
 
 function scoreStatus(score) {
@@ -407,13 +425,11 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   };
 }
 
-export async function analyseSymbol(symbol) {
+export async function analyseSymbol(symbol, snapshotInput = null) {
   const requestedRange = "1y";
   const requestedInterval = "1d";
-  const [quoteResult, history] = await Promise.all([
-    fetchQuote(symbol),
-    fetchTraderHistory(symbol, requestedRange, requestedInterval),
-  ]);
+  const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: requestedRange, interval: "1day" });
+  const { quoteResult, history } = snapshotToInputs(symbol, snapshot);
   const cleanHistoryCandles = Array.isArray(history?.candles)
     ? history.candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])))
     : [];
@@ -440,7 +456,7 @@ export async function analyseSymbol(symbol) {
         validated: false,
         issues: [quoteResult.error || "Live quote temporarily unavailable."],
         warnings: [],
-        quoteSource: "Finnhub",
+        quoteSource: history?.source || "Twelve Data",
         historySource: history?.source || "Candle provider",
       },
       candleCount: history?.candles?.length || 0,
@@ -469,7 +485,7 @@ export async function analyseSymbol(symbol) {
         validated: false,
         issues: [history.error || "Historical data temporarily unavailable."],
         warnings: [],
-        quoteSource: "Finnhub",
+        quoteSource: history?.source || "Twelve Data",
         historySource: history?.source || "Candle provider",
       },
       candleCount: 0,

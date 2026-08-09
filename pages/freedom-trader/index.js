@@ -6,10 +6,11 @@ import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
+const LATEST_SCAN_KEY = "freedom-trader-latest-market-scan";
 const WATCHLIST = ["MSFT", "AVGO", "NVDA", "AMD", "TSLA", "AMZN", "META", "PLTR"];
 
 function formatCurrency(value, currency = "USD") {
-  return Number.isFinite(Number(value))
+  return Number.isFinite(Number(value)) && Number(value) > 0
     ? new Intl.NumberFormat(currency === "AUD" ? "en-AU" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(Number(value))
     : "--";
 }
@@ -34,6 +35,9 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [snapshot, setSnapshot] = useState(null);
   const [analysisRows, setAnalysisRows] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [scanSummary, setScanSummary] = useState(null);
+  const [topFive, setTopFive] = useState([]);
+  const [topOpportunity, setTopOpportunity] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,18 +50,47 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     let cancelled = false;
     async function loadDashboard() {
       setLoading(true);
-      const [paperResponse, analysisResponse, alertsResponse] = await Promise.allSettled([
+      try {
+        const cachedScan = JSON.parse(window.localStorage.getItem(LATEST_SCAN_KEY) || "null");
+        if (cachedScan?.scanSummary) {
+          setScanSummary(cachedScan.scanSummary);
+          setTopFive(Array.isArray(cachedScan.topFive) ? cachedScan.topFive : []);
+          setTopOpportunity(cachedScan.topOpportunity || cachedScan.bestCurrentTrade || cachedScan.bestSetupToWatch || null);
+        }
+      } catch {}
+      const [paperResponse, analysisResponse, alertsResponse, scannerResponse] = await Promise.allSettled([
         fetch("/api/freedom-trader/paper-account"),
         fetch(`/api/freedom-trader/analysis?symbols=${WATCHLIST.join(",")}`),
         fetch("/api/freedom-trader/alerts"),
+        fetch("/api/freedom-trader/scanner", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markets: ["US"], chunkSize: 48, force: false }),
+        }),
       ]);
       if (cancelled) return;
       const paperData = paperResponse.status === "fulfilled" ? await paperResponse.value.json().catch(() => null) : null;
       const analysisData = analysisResponse.status === "fulfilled" ? await analysisResponse.value.json().catch(() => null) : null;
       const alertsData = alertsResponse.status === "fulfilled" ? await alertsResponse.value.json().catch(() => null) : null;
+      const scannerData = scannerResponse.status === "fulfilled" ? await scannerResponse.value.json().catch(() => null) : null;
       setSnapshot(paperData?.ok ? paperData : null);
       setAnalysisRows(Array.isArray(analysisData?.analysis) ? analysisData.analysis : []);
       setAlerts(Array.isArray(alertsData?.alerts) ? alertsData.alerts.slice(0, 5) : []);
+      if (scannerData?.ok && scannerData.scanSummary) {
+        setScanSummary(scannerData.scanSummary);
+        setTopFive(Array.isArray(scannerData.topFive) ? scannerData.topFive : []);
+        setTopOpportunity(scannerData.topOpportunity || scannerData.bestCurrentTrade || scannerData.bestSetupToWatch || null);
+        window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({
+          scanSummary: scannerData.scanSummary,
+          topFive: scannerData.topFive || [],
+          results: scannerData.results || [],
+          topOpportunity: scannerData.topOpportunity || null,
+          bestCurrentTrade: scannerData.bestCurrentTrade || null,
+          bestSetupToWatch: scannerData.bestSetupToWatch || null,
+          opportunityRanking: scannerData.opportunityRanking || null,
+          updatedAt: scannerData.updatedAt || new Date().toISOString(),
+        }));
+      }
       setLoading(false);
     }
     loadDashboard();
@@ -109,6 +142,49 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           <Card label="Invested Value" value={formatCurrency(account?.currentInvestedValue, account?.currency || "AUD")} />
           <Card label="Total Value" value={formatCurrency(account?.totalAccountValue, account?.currency || "AUD")} />
           <Card label="Open Profit/Loss" value={formatCurrency(account?.openProfitLoss, account?.currency || "AUD")} tone={Number(account?.openProfitLoss) >= 0 ? "profit" : "loss"} />
+        </div>
+      </section>
+
+      <section className="panel" id="market-scan">
+        <div className="panelHeader"><h2>TODAY'S BEST OPPORTUNITIES</h2><Link href="/freedom-trader/market-opportunities">Open Market Opportunities</Link></div>
+        <div className="summaryGrid">
+          <Card label="Tradable Universe" value={scanSummary?.tradableUniverse ?? "--"} />
+          <Card label="Requested" value={scanSummary?.requested ?? "--"} />
+          <Card label="Successfully Analysed" value={scanSummary?.successfullyAnalysed ?? "--"} />
+          <Card label="Unavailable" value={scanSummary?.unavailable ?? "--"} tone={Number(scanSummary?.unavailable) > 0 ? "loss" : "profit"} />
+        </div>
+        {topOpportunity ? (
+          <div className="bestLine">
+            <span>{topOpportunity.status === "READY" ? "BEST CURRENT TRADE" : "BEST SETUP TO WATCH"}</span>
+            <strong>#{1} {topOpportunity.companyName} ({topOpportunity.symbol})</strong>
+            <em>{topOpportunity.status === "READY" ? "READY" : `${topOpportunity.status}. Do not buy yet.`}</em>
+            <p>{topOpportunity.reason}</p>
+          </div>
+        ) : scanSummary ? (
+          <div className="bestLine">
+            <span>NO TRADE READY</span>
+            <strong>Wait.</strong>
+            <p>Freedom analysed {scanSummary.successfullyAnalysed} companies. None currently meets all trading rules.</p>
+          </div>
+        ) : null}
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>Company</th><th>Ticker</th><th>Score</th><th>Status</th><th>Current</th><th>Preferred Buy</th><th>Safety Exit</th><th>Reason</th></tr></thead>
+            <tbody>
+              {topFive.length ? topFive.map((row, index) => (
+                <tr key={row.symbol}>
+                  <td><Link href={`/freedom-trader/company/${row.symbol}?from=dashboard`}>#{index + 1} {row.companyName}</Link></td>
+                  <td>{row.symbol}</td>
+                  <td>{Number.isFinite(Number(row.tradingScore)) ? Number(row.tradingScore).toFixed(2) : "--"}</td>
+                  <td>{row.status || "--"}</td>
+                  <td>{formatCurrency(row.currentPrice, row.currency || "USD")}</td>
+                  <td>{formatCurrency(row.preferredBuy ?? row.recommendedEntry, row.currency || "USD")}</td>
+                  <td>{formatCurrency(row.safetyExit ?? row.stopLoss, row.currency || "USD")}</td>
+                  <td>{row.reason || "--"}</td>
+                </tr>
+              )) : <tr><td colSpan="8">No completed market scan is available yet.</td></tr>}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -202,7 +278,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid{grid-template-columns:1fr}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span,.bestLine span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article,.bestLine{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.bestLine{margin:0 16px 16px}.bestLine strong{display:block;font-size:24px;margin-top:6px}.bestLine em{color:#b8f4e6;display:block;font-style:normal;font-weight:950;margin-top:6px}.bestLine p{margin-top:6px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid{grid-template-columns:1fr}}
   `}</style>;
 }
 

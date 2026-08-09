@@ -10,6 +10,7 @@ import { normalizeSignalLabel, signalClassName } from "../../../lib/freedom/sign
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-trader-unlocked";
+const LATEST_SCAN_KEY = "freedom-trader-latest-market-scan";
 const PLANNER_STORAGE_KEY = "freedom-trader-visual-levels";
 const CHART_RANGE_STORAGE_KEY = "freedom-trader-chart-ranges";
 const CHART_TYPE_STORAGE_KEY = "freedom-trader-chart-type";
@@ -80,6 +81,45 @@ function formatPercent(value) {
 
 function formatNumber(value) {
   return Number.isFinite(value) ? number.format(value) : "--";
+}
+
+function traderRecommendationStatus(value) {
+  const status = String(value || "").trim().toUpperCase();
+  if (["READY", "WAIT", "DEVELOPING", "SKIP", "DATA UNAVAILABLE"].includes(status)) return status;
+  if (status === "BUY" || status === "BUY NOW" || status === "STRONG BUY") return "READY";
+  if (status === "WAIT FOR ENTRY" || status === "WATCH") return "WAIT";
+  if (status === "HOLD" || status === "NO TRADE") return "DEVELOPING";
+  return "DATA UNAVAILABLE";
+}
+
+function plainRecommendationFromSetup(setup, opportunity) {
+  if (opportunity) {
+    return {
+      status: traderRecommendationStatus(opportunity.status),
+      currentPrice: opportunity.currentPrice,
+      entry: opportunity.preferredBuy ?? opportunity.recommendedEntry,
+      stop: opportunity.safetyExit ?? opportunity.stopLoss,
+      target: opportunity.finalExit ?? opportunity.target,
+      reason: opportunity.reason || "Freedom ranked this from the latest completed market scan.",
+      plainEnglish: Array.isArray(opportunity.plainEnglish) ? opportunity.plainEnglish : [],
+    };
+  }
+  const status = traderRecommendationStatus(setup.status || setup.signalResult?.overallSignal);
+  const current = Number(setup.currentPrice);
+  const entry = Number(setup.entry);
+  let reason = "Freedom is waiting for a complete short-term setup.";
+  if (status === "READY") reason = "The planned buy area is currently reachable and the setup can be reviewed.";
+  else if (status === "WAIT" && Number.isFinite(current) && Number.isFinite(entry) && current > entry) reason = "Current price is still above the preferred buying range.";
+  else if (status === "DEVELOPING") reason = "The setup is promising, but it is not strong enough to act on yet.";
+  return {
+    status,
+    currentPrice: setup.currentPrice,
+    entry: setup.entry,
+    stop: setup.stop,
+    target: setup.target,
+    reason,
+    plainEnglish: [reason],
+  };
 }
 
 function clamp(value, min = 0, max = 100) {
@@ -421,6 +461,7 @@ export default function TraderCompany({ passwordHash }) {
   const [checkingStorage, setCheckingStorage] = useState(true);
   const [quote, setQuote] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [scannerOpportunity, setScannerOpportunity] = useState(null);
   const [candles, setCandles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -484,6 +525,17 @@ export default function TraderCompany({ passwordHash }) {
   }, [chartType, checkingStorage]);
 
   useEffect(() => {
+    if (!unlocked || !symbol) return;
+    try {
+      const scan = JSON.parse(window.localStorage.getItem(LATEST_SCAN_KEY) || "null");
+      const rows = [...(Array.isArray(scan?.topFive) ? scan.topFive : []), ...(Array.isArray(scan?.results) ? scan.results : [])];
+      setScannerOpportunity(rows.find((row) => String(row.symbol || row.ticker).toUpperCase() === symbol) || null);
+    } catch {
+      setScannerOpportunity(null);
+    }
+  }, [symbol, unlocked]);
+
+  useEffect(() => {
     async function load() {
       if (!unlocked || !symbol) return;
       const tabHidden = typeof document !== "undefined" && document.hidden;
@@ -537,6 +589,7 @@ export default function TraderCompany({ passwordHash }) {
 
   const fallbackSetup = useMemo(() => analyseSetup(symbol, quote || {}, candles), [symbol, quote, candles]);
   const setup = useMemo(() => mapServerAnalysisToSetup(symbol, analysis, fallbackSetup), [symbol, analysis, fallbackSetup]);
+  const recommendation = useMemo(() => plainRecommendationFromSetup(setup, scannerOpportunity), [setup, scannerOpportunity]);
   const closes = useMemo(() => candles.map((candle) => candle.close), [candles]);
   const visualMetrics = useMemo(() => {
     if (!levelsComplete(visualLevels)) return { riskReward: null, percentageReturn: null, expectedProfit: null, maximumLoss: null, capitalRequired: null, positionSize: 0, riskLimit: null };
@@ -1525,8 +1578,8 @@ export default function TraderCompany({ passwordHash }) {
             </p>
           </div>
           <div className="analysisSignalBox">
-            <span>Analysis Signal</span>
-            <SignalBadge signal={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
+            <span>Freedom Recommendation</span>
+            <SignalBadge signal={`${recommendation.status} (${centralSignal.timeframe || "1D"})`} />
             <small>{Number.isFinite(centralSignal.confidence) ? `${centralSignal.confidence}% confidence` : "Confidence pending"}</small>
           </div>
         </div>
@@ -1550,6 +1603,30 @@ export default function TraderCompany({ passwordHash }) {
       {saveMessage ? <section className="notice">{saveMessage}</section> : null}
       {currentBlockers.length ? <section className="dataWarning"><strong>Trade setup blocked</strong><span>{currentBlockers[0]}</span></section> : null}
 
+      <section className="recommendationPanel">
+        <div>
+          <span>Freedom recommendation</span>
+          <h2>{recommendation.status}</h2>
+          {recommendation.status === "WAIT" ? <strong>Do not buy yet.</strong> : null}
+          <p>{recommendation.reason}</p>
+        </div>
+        <div className="recommendationGrid">
+          <Metric label="Current price" value={formatCurrency(recommendation.currentPrice)} />
+          <Metric label={recommendation.status === "READY" ? "Buy Price" : "Buy only at"} value={formatCurrency(recommendation.entry)} />
+          <Metric label="Safety Exit" value={formatCurrency(recommendation.stop)} />
+          <Metric label="Final Exit" value={formatCurrency(recommendation.target)} />
+        </div>
+        {recommendation.plainEnglish?.length ? (
+          <div className="plainReasons">
+            {recommendation.plainEnglish.slice(0, 4).map((reason) => <p key={reason}>{reason}</p>)}
+          </div>
+        ) : null}
+        <div className="recommendationActions">
+          <a href="#trade-chart">Show Chart</a>
+          <a href="#technical-details">Show Technical Details</a>
+        </div>
+      </section>
+
       {openPosition ? (
         <section className="positionBand">
           <div>
@@ -1572,11 +1649,11 @@ export default function TraderCompany({ passwordHash }) {
         </section>
       ) : null}
 
-      <section className="chartPanel">
+      <section className="chartPanel" id="trade-chart">
         <div className="panelHeader">
           <div>
             <h2>Trade Chart</h2>
-            <p>ANALYSIS SIGNAL: {centralSignal.overallSignal} ({centralSignal.timeframe || "1D"}). PROPOSED TRADE PLAN - NOT YET EXECUTED.</p>
+            <p>FREEDOM RECOMMENDATION: {recommendation.status} ({centralSignal.timeframe || "1D"}). PROPOSED TRADE PLAN - NOT YET EXECUTED.</p>
           </div>
           <div className="chartControls">
             <span>Range</span>
@@ -1729,8 +1806,8 @@ export default function TraderCompany({ passwordHash }) {
             </div>
           ) : null}
         </div>
-        <div className="visualPlannerPanel">
-          <Metric label="Analysis Signal" value={`${centralSignal.overallSignal} (${centralSignal.timeframe || "1D"})`} />
+        <div className="visualPlannerPanel" id="technical-details">
+          <Metric label="Freedom Recommendation" value={`${recommendation.status} (${centralSignal.timeframe || "1D"})`} />
           <Metric label="Paper Position" value={openPosition ? tradeStatus : "No open paper position"} />
           <Metric label="BUY" value={formatCurrency(visualLevels.entry)} />
           <Metric label="STOP LOSS" value={formatCurrency(visualLevels.stop)} />
@@ -1847,7 +1924,7 @@ export default function TraderCompany({ passwordHash }) {
         .boot, .page { background: #05080b; color: #f5f7f8; font-family: Inter, ui-sans-serif, system-ui; min-height: 100vh; }
         .boot { align-items: center; display: flex; font-weight: 900; justify-content: center; }
         .page { padding: 96px 28px 28px; }
-        .hero, .cards, .chartPanel, .split, footer, .alert, .notice, .dataWarning { margin-left: auto; margin-right: auto; max-width: 1760px; }
+        .hero, .cards, .chartPanel, .split, footer, .alert, .notice, .dataWarning, .recommendationPanel { margin-left: auto; margin-right: auto; max-width: 1760px; }
         .platformBanner { align-items: center; background: #0057d9; box-shadow: 0 10px 28px rgba(0,0,0,.32); display: flex; gap: 14px; justify-content: space-between; left: 0; padding: 14px 28px; position: fixed; right: 0; top: 0; z-index: 100; }
         .platformBanner strong { align-items: center; color: #fff; display: inline-flex; gap: 10px; font-size: clamp(24px,2.6vw,34px); font-weight: 950; }
         .platformBanner span { color: #fff; font-size: clamp(14px,1.4vw,18px); font-weight: 900; }
@@ -1869,7 +1946,17 @@ export default function TraderCompany({ passwordHash }) {
         h1 { font-size: 48px; line-height: 1; }
         .hero p, footer, .panelHeader p, .reason { color: #aebdc4; }
         .cards { display: grid; gap: 14px; grid-template-columns: repeat(6, minmax(0, 1fr)); margin-top: 18px; }
-        .chartPanel, .panel, :global(.metric) { background: rgba(8,14,17,.92); border: 1px solid rgba(179,199,207,.13); border-radius: 8px; }
+        .chartPanel, .panel, .recommendationPanel, :global(.metric) { background: rgba(8,14,17,.92); border: 1px solid rgba(179,199,207,.13); border-radius: 8px; }
+        .recommendationPanel { display: grid; gap: 16px; margin-top: 18px; padding: 20px; }
+        .recommendationPanel > div:first-child span { color: #aebdc4; display: block; font-size: 12px; font-weight: 950; text-transform: uppercase; }
+        .recommendationPanel h2 { font-size: 38px; margin: 6px 0 0; }
+        .recommendationPanel strong { color: #ffd7a1; display: block; margin-top: 8px; }
+        .recommendationPanel p { color: #d8e5ea; margin: 8px 0 0; }
+        .recommendationGrid { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .plainReasons { display: grid; gap: 8px; }
+        .plainReasons p { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); border-radius: 7px; padding: 10px 12px; }
+        .recommendationActions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .recommendationActions a { background: rgba(29,155,255,.12); border: 1px solid rgba(29,155,255,.3); border-radius: 7px; color: #d7efff; display: inline-flex; font-weight: 950; min-height: 38px; align-items: center; padding: 0 12px; text-decoration: none; }
         :global(.metric) { padding: 16px; }
         :global(.metric span) { color: #aebdc4; display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; }
         :global(.metric strong) { color: #fff; display: block; font-size: 22px; margin-top: 8px; }
@@ -1984,7 +2071,7 @@ export default function TraderCompany({ passwordHash }) {
 
 function SignalBadge({ signal }) {
   const normalized = String(signal || "WATCH").toUpperCase();
-  const className = normalized.includes("TARGET") ? "strong" : normalized.includes("ACTIVE") ? "buy" : signalClassName(normalized);
+  const className = normalized.includes("READY") ? "buy" : normalized.includes("WAIT") ? "wait" : normalized.includes("DEVELOPING") ? "watch" : normalized.includes("SKIP") || normalized.includes("UNAVAILABLE") ? "noTrade" : normalized.includes("TARGET") ? "strong" : normalized.includes("ACTIVE") ? "buy" : signalClassName(normalized);
   return <span className={`signal ${className}`}>{normalized}</span>;
 }
 
