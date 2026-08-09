@@ -16,6 +16,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
   const dragRef = useRef(null);
   const imageUploadRef = useRef(null);
+  const imageReplaceObjectIdRef = useRef("");
   const exportPagesRef = useRef(null);
   const activePage = getActivePage(draft);
   const selectedObjectId = draft.selection?.lastSelectedObjectId || "";
@@ -93,6 +94,36 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
       startX: event.clientX,
       startY: event.clientY,
     };
+  }
+
+  function activateDetectedRegion(objectId) {
+    const page = getActivePage(draft);
+    const object = page?.objects?.find((item) => item.id === objectId);
+    if (!object || readonly) return;
+    const activation = object.data?.detectedRegion === true || String(object.data?.overlayMode || "").includes("-activation");
+    if (!activation) return;
+    const isText = object.type === "text" || object.type === "dynamicField";
+    const nextDocument = updatePage(draft, page.id, (activePage) => updateObjectOnPage(activePage, object.id, (item) => ({
+      ...item,
+      locked: false,
+      style: {
+        ...(item.style || {}),
+        ...(isText ? { backgroundColor: item.style?.backgroundColor || "#ffffff" } : {}),
+      },
+      data: {
+        ...(item.data || {}),
+        edited: true,
+        acceptedEdit: true,
+        maskOriginal: true,
+      },
+    })));
+    commitDocument({ ...nextDocument, selection: selectObject(draft.selection, objectId) }, { silent: true });
+    onStatus?.(isText ? "Text region activated." : "Image region activated.");
+    if (isText) setTextEditingObjectId(objectId);
+    else {
+      imageReplaceObjectIdRef.current = objectId;
+      imageUploadRef.current?.click();
+    }
   }
 
   function startResizeObject(objectId, direction, event) {
@@ -276,10 +307,17 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   function replaceSelectedImage(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !selectedObject || !["image", "logo"].includes(selectedObject.type)) return;
+    const page = getActivePage(draft);
+    const targetId = imageReplaceObjectIdRef.current || selectedObject?.id || "";
+    imageReplaceObjectIdRef.current = "";
+    const targetObject = page?.objects?.find((object) => object.id === targetId) || selectedObject;
+    if (!file || !targetObject || !["image", "logo"].includes(targetObject.type)) return;
     const reader = new FileReader();
     reader.onload = () => {
-      updateSelectedObject({ data: { imageRef: reader.result, alt: file.name, edited: true } });
+      updateActivePage((currentPage) => updateObjectOnPage(currentPage, targetObject.id, (object) => ({
+        ...object,
+        data: { ...object.data, imageRef: reader.result, alt: file.name, edited: true, acceptedEdit: true, maskOriginal: true },
+      })), "Image replaced.");
       onStatus?.("Image replaced.");
     };
     reader.readAsDataURL(file);
@@ -292,7 +330,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         {draft.pages.map((page, index) => (
           <button key={page.id} type="button" style={{ ...styles.pageButton, ...(page.id === draft.activePageId ? styles.pageButtonActive : {}) }} onClick={() => selectPage(page.id)}>
             <span>{index + 1}. {page.name}</span>
-            <small>{page.objects.length} editable block{page.objects.length === 1 ? "" : "s"}</small>
+            <small>{visibleOverlayCount(page)} visible edit{visibleOverlayCount(page) === 1 ? "" : "s"}{detectedRegionCount(page) ? ` - ${detectedRegionCount(page)} detected` : ""}</small>
           </button>
         ))}
         {mode === "edit" ? (
@@ -353,6 +391,13 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             onSelectObject={selectAndDragObject}
             onResizeObject={startResizeObject}
             onTextEditStart={(objectId) => {
+              const page = getActivePage(draft);
+              const object = page?.objects?.find((item) => item.id === objectId);
+              const activation = object?.data?.detectedRegion === true || String(object?.data?.overlayMode || "").includes("-activation");
+              if (activation && !object?.data?.edited && !object?.data?.acceptedEdit) {
+                activateDetectedRegion(objectId);
+                return;
+              }
               commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
               setTextEditingObjectId(objectId);
             }}
@@ -596,6 +641,24 @@ function typeLabel(type = "") {
 
 function safeHex(value, fallback) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
+function isDetectedActivationObject(object) {
+  return object?.data?.detectedRegion === true || String(object?.data?.overlayMode || "").includes("-activation");
+}
+
+function isAcceptedOverlayObject(object) {
+  return !isDetectedActivationObject(object) || object?.data?.edited || object?.data?.acceptedEdit;
+}
+
+function visibleOverlayCount(page) {
+  return (page?.objects || []).filter(isAcceptedOverlayObject).length;
+}
+
+function detectedRegionCount(page) {
+  const metadataCount = Array.isArray(page?.data?.detectedRegions) ? page.data.detectedRegions.length : 0;
+  const objectCount = (page?.objects || []).filter(isDetectedActivationObject).length;
+  return Math.max(metadataCount, objectCount);
 }
 
 const styles = {

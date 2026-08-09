@@ -8142,6 +8142,7 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
   const slideImages = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
+    const pageId = `standard-inclusions-pdf-page-${Date.now()}-${pageNumber}`;
     const viewport = page.getViewport({ scale: 2.5 });
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
@@ -8169,6 +8170,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
     const context = canvas.getContext("2d", { alpha: false });
     await page.render({ canvasContext: context, viewport }).promise;
     const objects = [];
+    const detectedRegions = [];
     if (mode === "editable-text") {
       const textContent = await page.getTextContent().catch(() => null);
       (textContent?.items || []).forEach((item, index) => {
@@ -8177,23 +8179,53 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
         const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
         const x = tx[4];
         const y = canvas.height - tx[5];
-        objects.push(createObject("text", {
-          name: `Extracted text ${index + 1}`,
+        const regionId = `pdf-text-region-${pageNumber}-${index + 1}`;
+        const boundingBox = {
           x: (x / canvas.width) * 794,
           y: (y / canvas.height) * 1123,
           width: Math.min(700, Math.max(80, Number(item.width || 80) * (794 / canvas.width))),
           height: 24,
+        };
+        detectedRegions.push({
+          id: regionId,
+          pageId,
+          type: "text",
+          boundingBox,
+          detectedText: text,
+          confidence: 0,
+        });
+        objects.push(createObject("text", {
+          name: `Extracted text ${index + 1}`,
+          x: boundingBox.x,
+          y: boundingBox.y,
+          width: boundingBox.width,
+          height: boundingBox.height,
           style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
-          data: { text },
+          data: {
+            text,
+            regionId,
+            detectedRegion: true,
+            overlayMode: "pdf-text-activation",
+            edited: false,
+            acceptedEdit: false,
+            maskOriginal: false,
+          },
         }));
         editableTextCount += 1;
       });
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
+    const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
     pages.push(createA4Page({
-      id: `standard-inclusions-pdf-page-${Date.now()}-${pageNumber}`,
+      id: pageId,
       name: `PDF Page ${pageNumber}`,
-      background: { color: "#ffffff", imageRef: canvas.toDataURL("image/jpeg", 0.94) },
+      background: { color: "#ffffff", imageRef: originalPageAsset },
+      data: {
+        originalPageAsset,
+        detectedRegions,
+        acceptedEdits: [],
+        acceptedMasks: [],
+      },
       objects,
     }));
   }
