@@ -1,20 +1,27 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileUp, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload } from "lucide-react";
+import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileDown, FileUp, FolderOpen, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload, X } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
+  GARAGE_DOOR_SELECTION_KEY,
   PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
   PRODUCT_LIBRARY_IMPORT_COLUMNS,
+  PRODUCT_LIBRARY_SELECTIONS_KEY,
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   createProductEntity,
+  createSelectionFromProduct,
   familiesForArea,
   familyByKey,
+  productLibrarySelectionsFromJobFile,
   productsForFamily,
+  productsForGarageDoors,
   selectionQueryForFamily,
+  selectionKeyForFamily,
   previewProductImportRows,
+  writeProductLibrarySelectionToJobFile,
 } from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
 
@@ -47,6 +54,9 @@ const EMPTY_PRODUCT = {
   active: true,
 };
 
+const PRODUCT_LIBRARY_JOB_STORAGE_KEY = "gr8:product-library:job-file";
+const DEFAULT_JOB_FILE_NAME = "product-library-selections.gr8job";
+
 function slugify(value) {
   return String(value || "")
     .trim()
@@ -54,6 +64,18 @@ function slugify(value) {
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+function downloadJson(fileName, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function money(value) {
@@ -190,6 +212,10 @@ export default function BuilderProductLibraryPage() {
   const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
   const [selectedProductCode, setSelectedProductCode] = useState("");
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [routeHydrated, setRouteHydrated] = useState(false);
+  const [jobFile, setJobFile] = useState({ [PRODUCT_LIBRARY_SELECTIONS_KEY]: {}, workbook: { [PRODUCT_LIBRARY_SELECTIONS_KEY]: {} } });
+  const [jobFileName, setJobFileName] = useState(DEFAULT_JOB_FILE_NAME);
   const [adminOpen, setAdminOpen] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
@@ -223,9 +249,15 @@ export default function BuilderProductLibraryPage() {
   }, [selectedArea, selectedCategory]);
   const visibleProducts = useMemo(() => {
     if (!selectedFamily) return [];
+    if (selectedAreaKey === "exterior" && selectedCategoryKey === "exterior-garage-doors" && selectedFamily.familyKey === "garage-doors") {
+      return productsForGarageDoors(orgProducts, workspaceId || "demo-organisation");
+    }
     return productsForFamily(orgProducts, selectedFamily);
-  }, [orgProducts, selectedFamily]);
+  }, [orgProducts, selectedAreaKey, selectedCategoryKey, selectedFamily, workspaceId]);
   const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
+  const selectedVariant = selectedProduct?.variants?.[selectedVariantIndex] || selectedProduct?.variants?.[0] || null;
+  const selections = productLibrarySelectionsFromJobFile(jobFile);
+  const garageDoorSelection = selections[GARAGE_DOOR_SELECTION_KEY] || null;
   const selectionQuery = selectedFamily ? selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey }) : null;
   const bannerTitle = selectedFamily?.displayName || selectedCategory?.category || selectedArea?.displayName || "Product Library";
   const bannerSubtitle = selectedFamily
@@ -242,7 +274,41 @@ export default function BuilderProductLibraryPage() {
   }, [workspaceId]);
 
   useEffect(() => {
+    if (!router.isReady || routeHydrated) return;
+    const area = typeof router.query.area === "string" ? router.query.area : "";
+    const category = typeof router.query.category === "string" ? router.query.category : "";
+    const family = typeof router.query.family === "string" ? router.query.family : "";
+    if (area) setSelectedAreaKey(area);
+    if (category) setSelectedCategoryKey(category);
+    if (family) setSelectedFamilyKey(family);
+    setRouteHydrated(true);
+  }, [routeHydrated, router.isReady, router.query.area, router.query.category, router.query.family]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(PRODUCT_LIBRARY_JOB_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      setJobFile(saved.jobFile || saved);
+      setJobFileName(saved.fileName || DEFAULT_JOB_FILE_NAME);
+    } catch {
+      setJobFile({ [PRODUCT_LIBRARY_SELECTIONS_KEY]: {}, workbook: { [PRODUCT_LIBRARY_SELECTIONS_KEY]: {} } });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!routeHydrated || !router.isReady) return;
+    const query = {};
+    if (selectedAreaKey) query.area = selectedAreaKey;
+    if (selectedCategoryKey) query.category = selectedCategoryKey;
+    if (selectedFamilyKey) query.family = selectedFamilyKey;
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [routeHydrated, router, selectedAreaKey, selectedCategoryKey, selectedFamilyKey]);
+
+  useEffect(() => {
     setSelectedProductCode("");
+    setSelectedVariantIndex(0);
     setProductForm(EMPTY_PRODUCT);
     setEditingProductId("");
   }, [selectedFamilyKey]);
@@ -311,6 +377,9 @@ export default function BuilderProductLibraryPage() {
   }
 
   function countProductsForFamily(familyItem) {
+    if (familyItem?.topLevelArea === "exterior" && familyItem.familyKey === "garage-doors") {
+      return productsForGarageDoors(orgProducts, workspaceId || "demo-organisation").length;
+    }
     return productsForFamily(orgProducts, familyItem).length;
   }
 
@@ -610,10 +679,74 @@ export default function BuilderProductLibraryPage() {
     setSaving(false);
   }
 
+  function persistJobFile(nextJobFile, nextFileName = jobFileName) {
+    setJobFile(nextJobFile);
+    setJobFileName(nextFileName || DEFAULT_JOB_FILE_NAME);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(PRODUCT_LIBRARY_JOB_STORAGE_KEY, JSON.stringify({ fileName: nextFileName || DEFAULT_JOB_FILE_NAME, jobFile: nextJobFile }));
+    }
+  }
+
+  function saveJobFile() {
+    const fileName = String(jobFileName || DEFAULT_JOB_FILE_NAME).toLowerCase().endsWith(".gr8job") ? jobFileName : `${jobFileName || "product-library-selections"}.gr8job`;
+    const payload = {
+      ...jobFile,
+      fileType: "gr8job",
+      savedAt: new Date().toISOString(),
+      productLibrarySelections: productLibrarySelectionsFromJobFile(jobFile),
+    };
+    persistJobFile(payload, fileName);
+    downloadJson(fileName, payload);
+    setSuccess(`Saved Garage Door selections to ${fileName}.`);
+  }
+
+  function openJobFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || "{}"));
+        const selectionsFromFile = productLibrarySelectionsFromJobFile(parsed);
+        const nextJobFile = {
+          ...parsed,
+          [PRODUCT_LIBRARY_SELECTIONS_KEY]: selectionsFromFile,
+          workbook: {
+            ...(parsed.workbook || {}),
+            [PRODUCT_LIBRARY_SELECTIONS_KEY]: selectionsFromFile,
+          },
+        };
+        persistJobFile(nextJobFile, file.name || DEFAULT_JOB_FILE_NAME);
+        setSuccess(`Opened ${file.name || "job file"} with ${Object.keys(selectionsFromFile).length} product selection${Object.keys(selectionsFromFile).length === 1 ? "" : "s"}.`);
+      } catch {
+        setError("Could not open that .gr8job file.");
+      }
+    };
+    reader.onerror = () => setError("Could not read that .gr8job file.");
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  function closeProductLibrary() {
+    setSelectedAreaKey("");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedProductCode("");
+    setSelectedVariantIndex(0);
+    router.push("/modules/builders");
+  }
+
   function addToSelection(entity) {
     if (!selectedFamily || !entity) return;
-    const query = selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey });
-    setSuccess(`Added ${entity.productName} to selections context ${query.area} / ${query.familyKey} / ${query.linkedQuoteItemCode}.`);
+    const selection = createSelectionFromProduct(entity, selectedFamily, selectedVariant);
+    const nextJobFile = writeProductLibrarySelectionToJobFile(jobFile, selection);
+    persistJobFile(nextJobFile);
+    setSelectedAreaKey("exterior");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedProductCode("");
+    setSelectedVariantIndex(0);
+    setSuccess(`Added ${entity.productName} to Garage Door selections.`);
   }
 
   return (
@@ -636,9 +769,16 @@ export default function BuilderProductLibraryPage() {
           </div>
           <div className="banner-meta">
             <span>{workspaceLoading ? "Loading organisation..." : activeWorkspace?.name || "No organisation selected"}</span>
-            <span>{loading ? "Loading..." : success || "Saved to organisation catalogue"}</span>
+            <span>{loading ? "Loading..." : success || `${Object.keys(selections).length} selection${Object.keys(selections).length === 1 ? "" : "s"} in ${jobFileName}`}</span>
             <div className="file-controls">
               <button type="button" onClick={loadLibrary} disabled={!workspaceId || loading}><RefreshCw size={16} /> Refresh</button>
+              <label className="file-button">
+                <FolderOpen size={16} />
+                Open .gr8job
+                <input type="file" accept=".gr8job,application/json" onChange={openJobFile} />
+              </label>
+              <button type="button" onClick={saveJobFile}><FileDown size={16} /> Save .gr8job</button>
+              <button type="button" onClick={closeProductLibrary}><X size={16} /> Close</button>
             </div>
           </div>
         </header>
@@ -680,13 +820,14 @@ export default function BuilderProductLibraryPage() {
             <div className="tile-grid category-grid">
               {visibleCategories.map((categoryItem) => {
                 const count = countProductsForCategory(categoryItem);
+                const selected = categoryItem.key === "exterior-garage-doors" ? garageDoorSelection : null;
                 return (
                   <button key={categoryItem.key} type="button" className="visual-tile" onClick={() => openCategory(categoryItem.key)} data-category-key={categoryItem.key}>
-                    <span className="tile-image" style={{ backgroundImage: `url(${categoryItem.image})` }} />
+                    <span className="tile-image" style={{ backgroundImage: `url(${selected?.primaryImage || categoryItem.image})` }} />
                     <span className="tile-body">
                       <strong>{categoryItem.category}</strong>
                       <small>{count} product{count === 1 ? "" : "s"}</small>
-                      <em>{statusForCount(count)}</em>
+                      <em>{selected ? `Selected: ${selected.productName}` : statusForCount(count)}</em>
                     </span>
                   </button>
                 );
@@ -707,14 +848,14 @@ export default function BuilderProductLibraryPage() {
                   const count = countProductsForFamily(familyItem);
                   return (
                     <button key={familyItem.familyKey} type="button" className="visual-tile" onClick={() => openFamily(familyItem.familyKey)} data-family-key={familyItem.familyKey}>
-                      <span className="tile-image" style={{ backgroundImage: `url(${familyItem.image || selectedCategory.image})` }} />
-                      <span className="tile-body">
-                        <strong>{familyItem.displayName}</strong>
-                        <small>{count} product{count === 1 ? "" : "s"}</small>
-                        <em>{statusForCount(count)}</em>
-                      </span>
-                    </button>
-                  );
+                    <span className="tile-image" style={{ backgroundImage: `url(${familyItem.image || selectedCategory.image})` }} />
+                    <span className="tile-body">
+                      <strong>{familyItem.displayName}</strong>
+                      <small>{count} product{count === 1 ? "" : "s"}</small>
+                      <em>{selectionKeyForFamily(familyItem) === GARAGE_DOOR_SELECTION_KEY && garageDoorSelection ? `Selected: ${garageDoorSelection.productName}` : statusForCount(count)}</em>
+                    </span>
+                  </button>
+                );
                 })}
               </div>
             ) : (
@@ -764,9 +905,13 @@ export default function BuilderProductLibraryPage() {
                   >
                     <img src={product.primaryImage || selectedFamily.image} alt={product.imageAltText || product.productName} />
                     <strong>{product.productName}</strong>
-                    <small>{product.supplier} / {product.brand}</small>
-                    <small>{product.range} / {product.colour || product.finish || product.size}</small>
-                    <span>{money(product.clientPrice || product.builderCost)}</span>
+                    <small>Supplier: {product.supplier || "Not set"}</small>
+                    <small>Brand: {product.brand || "Not set"}</small>
+                    <small>Range: {product.range || "Not set"}</small>
+                    <small>Model: {product.model || "Not set"}</small>
+                    <small>Size: {product.size || "Not set"}</small>
+                    <small>Finish/colour: {[product.finish, product.colour].filter(Boolean).join(" / ") || "Not set"}</small>
+                    <span>{product.priceReviewRequired ? "Price not set" : product.priceStatus || money(product.clientPrice || product.builderCost)}</span>
                   </button>
                 ))}
               </div>
@@ -791,6 +936,11 @@ export default function BuilderProductLibraryPage() {
               {selectedProduct ? (
                 <div className="selected-product">
                   <img src={selectedProduct.primaryImage || selectedFamily.image} alt={selectedProduct.imageAltText || selectedProduct.productName} />
+                  <div className="gallery" data-gallery-count={(selectedProduct.galleryImages || []).length}>
+                    {(selectedProduct.galleryImages?.length ? selectedProduct.galleryImages : [selectedProduct.primaryImage || selectedFamily.image]).map((image, index) => (
+                      <img key={`${image}-${index}`} src={image} alt={`${selectedProduct.productName} gallery ${index + 1}`} />
+                    ))}
+                  </div>
                   <h3>{selectedProduct.productName}</h3>
                   <p>{selectedProduct.description}</p>
                   <div className="swatches">
@@ -798,6 +948,36 @@ export default function BuilderProductLibraryPage() {
                       <span key={swatch}>{swatch}</span>
                     ))}
                   </div>
+                  {selectedProduct.variants?.length ? (
+                    <div className="variant-list">
+                      <strong>Sizes</strong>
+                      {selectedProduct.variants.map((variant, index) => (
+                        <button key={`${variant.variantName || "variant"}-${index}`} type="button" className={selectedVariantIndex === index ? "variant selected" : "variant"} onClick={() => setSelectedVariantIndex(index)}>
+                          {variant.variantName || `Variant ${index + 1}`} {variant.size ? `- ${variant.size}` : ""}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <dl>
+                    <dt>Supplier</dt>
+                    <dd>{selectedProduct.supplier || "Not set"}</dd>
+                    <dt>Brand / Range / Model</dt>
+                    <dd>{[selectedProduct.brand, selectedProduct.range, selectedProduct.model].filter(Boolean).join(" / ") || "Not set"}</dd>
+                    <dt>Specifications</dt>
+                    <dd>{[selectedProduct.size, selectedProduct.width, selectedProduct.height, selectedProduct.depth].filter(Boolean).join(" / ") || "Not set"}</dd>
+                    <dt>Colours</dt>
+                    <dd>{[selectedProduct.colour, selectedProduct.finish].filter(Boolean).join(" / ") || "Not set"}</dd>
+                    <dt>Official Product URL</dt>
+                    <dd>{selectedProduct.officialProductURL ? <a href={selectedProduct.officialProductURL} target="_blank" rel="noreferrer">{selectedProduct.officialProductURL}</a> : "Not supplied"}</dd>
+                    <dt>Specification URL</dt>
+                    <dd>{selectedProduct.specificationURL ? <a href={selectedProduct.specificationURL} target="_blank" rel="noreferrer">{selectedProduct.specificationURL}</a> : "Not supplied"}</dd>
+                    <dt>Price</dt>
+                    <dd>{selectedProduct.priceReviewRequired ? selectedProduct.priceStatus || "Price not set" : money(selectedProduct.clientPrice || selectedProduct.builderCost || selectedProduct.RRP)}</dd>
+                    <dt>Allowance</dt>
+                    <dd>{selectedProduct.allowance ? money(selectedProduct.allowance) : "No allowance set"}</dd>
+                    <dt>Variation</dt>
+                    <dd>{selectedProduct.upgradePrice || selectedProduct.clientPrice ? money(selectedProduct.upgradePrice || selectedProduct.clientPrice) : "No variation set"}</dd>
+                  </dl>
                   <button type="button" onClick={() => addToSelection(selectedProduct)}><Check size={16} /> Add to Selections</button>
                 </div>
               ) : (
@@ -1225,6 +1405,39 @@ export default function BuilderProductLibraryPage() {
         .selected-product img {
           height: 190px;
           border-radius: 8px;
+        }
+        .selected-product a {
+          color: #1f6feb;
+          overflow-wrap: anywhere;
+          font-weight: 800;
+        }
+        .gallery {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+        }
+        .gallery img {
+          height: 72px;
+          border-radius: 6px;
+        }
+        .variant-list {
+          display: grid;
+          gap: 8px;
+        }
+        .variant-list > strong {
+          font-size: 13px;
+          text-transform: uppercase;
+          color: #64748b;
+        }
+        .variant {
+          justify-content: flex-start;
+          background: #ffffff;
+          color: #172033;
+          border-color: #cbd5e1;
+        }
+        .variant.selected {
+          border-color: #1f6feb;
+          box-shadow: inset 0 0 0 1px #1f6feb;
         }
         .selected-product h3,
         .selected-product p {
