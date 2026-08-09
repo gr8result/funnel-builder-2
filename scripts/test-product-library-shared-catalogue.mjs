@@ -12,9 +12,11 @@ import {
   TOP_LEVEL_AREAS,
   buildProductFamilyDefinitions,
   buildProductLibraryTaxonomy,
+  createProductEntity,
   familyByKey,
   familiesForArea,
   parseApprovedProductLibraryCsv,
+  previewProductImportRows,
   selectionQueryForFamily,
 } from "../lib/product-library/catalogueModel.js";
 
@@ -119,8 +121,152 @@ assertFamilyAttributes("internal-doors", ["supplier", "brand", "range", "design"
 const kitchenStoneQuery = selectionQueryForFamily({ areaKey: "kitchen", familyKey: "stone-20mm-tops" });
 assert.equal(kitchenStoneQuery.area, "kitchen", "family selection query must stay area-scoped");
 assert.throws(() => selectionQueryForFamily({ areaKey: "exterior", familyKey: "stone-20mm-tops" }), /does not belong/, "wrong-area queries must fail");
-assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("supplier_name"), "supplier data must stay organisation import data");
-assert.ok(PRODUCT_LIBRARY_IMPORT_COLUMNS.includes("official_product_url"), "family model must support supplier URLs through imports");
+assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
+  "product_code",
+  "linked_quote_item_code",
+  "supplier_name",
+  "brand",
+  "range",
+  "product_name",
+  "model",
+  "product_family",
+  "colour",
+  "finish",
+  "size",
+  "width",
+  "height",
+  "depth",
+  "variant_name",
+  "primary_image",
+  "gallery_images",
+  "official_product_url",
+  "specification_url",
+  "rrp",
+  "builder_cost",
+  "client_price",
+  "currency",
+  "gst_treatment",
+  "price_effective_date",
+  "active",
+  "discontinued",
+], "supplier product CSV import columns must match the reusable organisation catalogue contract");
+
+const orgAProduct = createProductEntity({
+  product_code: "ORG-A-OVEN-1",
+  linked_quote_item_code: "approved-family:ovens",
+  supplier_name: "Organisation A Supplier",
+  brand: "Private Brand",
+  range: "Series 1",
+  product_name: "Organisation A Built-in Oven",
+  model: "OV-60",
+  product_family: "ovens",
+  colour: "Black",
+  finish: "Glass",
+  size: "600mm",
+  width: "600",
+  height: "600",
+  depth: "580",
+  variant_name: "Black Glass",
+  primary_image: "https://example.com/oven.jpg",
+  gallery_images: "https://example.com/oven-1.jpg|https://example.com/oven-2.jpg",
+  official_product_url: "https://example.com/oven",
+  specification_url: "https://example.com/oven.pdf",
+  rrp: "1200",
+  builder_cost: "900",
+  client_price: "1100",
+  currency: "AUD",
+  gst_treatment: "GST inclusive",
+  price_effective_date: "2026-08-09",
+  active: "true",
+  discontinued: "false",
+}, "org-a");
+assert.equal(orgAProduct.organisationId, "org-a", "actual products must be organisation scoped");
+["productId", "productCode", "organisationId", "linkedQuoteItemCode", "familyKey", "supplier", "brand", "range", "model", "productName", "description", "colour", "finish", "size", "width", "height", "depth", "dimensions", "variants", "primaryImage", "thumbnail", "galleryImages", "colourSwatches", "officialProductURL", "specificationURL", "supplierURL", "RRP", "builderCost", "clientPrice", "allowance", "upgradePrice", "currency", "gstTreatment", "priceSource", "priceEffectiveDate", "active", "discontinued", "archived", "unavailable"].forEach((field) => {
+  assert.ok(Object.hasOwn(orgAProduct, field), `actual product must support ${field}`);
+});
+assert.equal(orgAProduct.width, "600", "actual product must expose width");
+assert.equal(orgAProduct.dimensions.depth, "580", "actual product dimensions must preserve depth");
+assert.equal(orgAProduct.variants[0].variantName, "Black Glass", "actual product must preserve variant name");
+assert.equal(orgAProduct.priceEffectiveDate, "2026-08-09", "actual product must preserve price effective date");
+
+const orgBProduct = createProductEntity({ product_code: "ORG-A-OVEN-1", product_name: "Org B Oven", product_family: "ovens" }, "org-b");
+assert.notEqual(orgAProduct.organisationId, orgBProduct.organisationId, "same product code in different organisations must remain private to each builder");
+
+const importPreview = previewProductImportRows([
+  {
+    product_code: "ORG-A-OVEN-1",
+    linked_quote_item_code: "approved-family:ovens",
+    supplier_name: "Organisation A Supplier",
+    brand: "Private Brand",
+    range: "Series 1",
+    product_name: "Organisation A Built-in Oven Updated",
+    model: "OV-60",
+    product_family: "ovens",
+    primary_image: "https://example.com/oven.jpg",
+    official_product_url: "https://example.com/oven",
+    specification_url: "https://example.com/oven.pdf",
+    currency: "AUD",
+    gst_treatment: "GST inclusive",
+    active: "true",
+    discontinued: "false",
+  },
+  {
+    product_code: "ORG-A-OVEN-1",
+    product_family: "ovens",
+  },
+  {
+    product_code: "BAD-URL",
+    product_family: "ovens",
+    product_name: "Bad URL",
+    primary_image: "not-a-url",
+  },
+  {
+    product_code: "NEW-TAP",
+    product_family: "tapware",
+    product_name: "New Mixer",
+    primary_image: "https://example.com/tap.jpg",
+  },
+], { organisationId: "org-a", existingProducts: [orgAProduct] });
+assert.equal(importPreview[0].action, "update", "changed existing organisation product must update");
+assert.ok(importPreview[0].familyMapping.displayName, "import preview must expose family mapping");
+assert.ok(importPreview[0].quoteItemMapping, "import preview must expose quote-item mapping");
+assert.equal(importPreview[0].imagePreview, "https://example.com/oven.jpg", "import preview must expose image preview");
+assert.equal(importPreview[1].action, "error", "duplicate product codes inside one import must be row-level errors");
+assert.ok(importPreview[1].errors.includes("Duplicate product_code in import"), "duplicate detection must report row-level error");
+assert.equal(importPreview[2].action, "error", "invalid image URL must be a row-level error");
+assert.ok(importPreview[2].errors.includes("Invalid primary_image URL"), "URL validation must report the invalid field");
+assert.equal(importPreview[3].action, "create", "new valid organisation product must create");
+
+const unchangedPreview = previewProductImportRows([{
+  product_code: "ORG-A-OVEN-1",
+  linked_quote_item_code: "approved-family:ovens",
+  supplier_name: "Organisation A Supplier",
+  brand: "Private Brand",
+  range: "Series 1",
+  product_name: "Organisation A Built-in Oven",
+  model: "OV-60",
+  product_family: "ovens",
+  colour: "Black",
+  finish: "Glass",
+  size: "600mm",
+  width: "600",
+  height: "600",
+  depth: "580",
+  variant_name: "Black Glass",
+  primary_image: "https://example.com/oven.jpg",
+  gallery_images: "https://example.com/oven-1.jpg|https://example.com/oven-2.jpg",
+  official_product_url: "https://example.com/oven",
+  specification_url: "https://example.com/oven.pdf",
+  rrp: "1200",
+  builder_cost: "900",
+  client_price: "1100",
+  currency: "AUD",
+  gst_treatment: "GST inclusive",
+  price_effective_date: "2026-08-09",
+  active: "true",
+  discontinued: "false",
+}], { organisationId: "org-a", existingProducts: [orgAProduct] });
+assert.equal(unchangedPreview[0].action, "skip-unchanged", "unchanged import rows must be skipped");
 
 const pageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
 assert.match(pageSource, /data-area-key=\{area\.key\}/, "normal Product Library must render area cards");
@@ -136,6 +282,13 @@ assert.match(pageSource, /@media \(max-width: 560px\)/, "mobile layout must have
 assert.match(pageSource, /grid-template-columns: 1fr;/, "mobile grids must collapse to one column instead of clipping");
 assert.doesNotMatch(pageSource, /window\.history\.back/, "normal Back must not use random browser history");
 assert.doesNotMatch(pageSource, /sourceRow|headingRows|manualReviewRows/, "normal Product Library must not expose raw CSV row internals");
+["Add Supplier", "Add Brand", "Add Range", "Add Product", "Add Variant", "Edit", "Duplicate", "Archive", "Import CSV"].forEach((label) => {
+  assert.match(pageSource, new RegExp(label), `Product Library Admin must expose ${label}`);
+});
+assert.match(pageSource, /workspace_id", workspaceId/, "Product Library writes must include active organisation scope");
+assert.match(pageSource, /\.eq\("workspace_id", workspaceId\)/, "Product Library updates must be constrained to the active organisation");
+assert.match(pageSource, /skip-unchanged/, "Product import must skip unchanged rows");
+assert.match(pageSource, /imagePreview/, "Product import preview must include image previews");
 
 const requiredVisualCategories = [
   ["exterior", "Bricks", "brick"],

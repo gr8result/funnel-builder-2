@@ -1,7 +1,7 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Boxes, Check, Edit3, FileUp, ImagePlus, Package, Plus, RefreshCw, Upload } from "lucide-react";
+import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileUp, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
   PRODUCT_ENTITY_FIELDS,
@@ -14,7 +14,7 @@ import {
   familyByKey,
   productsForFamily,
   selectionQueryForFamily,
-  validateProductImportRows,
+  previewProductImportRows,
 } from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
 
@@ -31,8 +31,19 @@ const EMPTY_PRODUCT = {
   primary_image: "",
   official_product_url: "",
   specification_url: "",
+  supplier_url: "",
+  width: "",
+  height: "",
+  depth: "",
+  variant_name: "",
+  gallery_images: "",
+  rrp: "",
   builder_cost: "",
   client_price: "",
+  currency: "AUD",
+  gst_treatment: "GST inclusive",
+  price_effective_date: "",
+  discontinued: false,
   active: true,
 };
 
@@ -133,9 +144,12 @@ function mapDbProductToEntity(product, categoryName = "", supplierName = "", bra
     colour: entity.colour || product.metadata?.colour || "",
     finish: entity.finish || product.metadata?.finish || "",
     size: entity.size || product.metadata?.size || "",
+    width: entity.width || entity.dimensions?.width || "",
+    height: entity.height || entity.dimensions?.height || "",
+    depth: entity.depth || entity.dimensions?.depth || "",
     dimensions: entity.dimensions || {},
     variants: entity.variants || [],
-    primaryImage: product.primary_image_url || entity.primaryImage || "",
+      primaryImage: product.primary_image_url || entity.primaryImage || "",
     thumbnail: product.primary_image_url || entity.thumbnail || "",
     galleryImages: entity.galleryImages || [],
     colourSwatches: entity.colourSwatches || [],
@@ -143,7 +157,7 @@ function mapDbProductToEntity(product, categoryName = "", supplierName = "", bra
     imageSource: entity.imageSource || "",
     officialProductURL: product.product_url || entity.officialProductURL || "",
     specificationURL: product.datasheet_pdf_url || entity.specificationURL || "",
-    supplierURL: product.supplier_website_url || entity.supplierURL || "",
+      supplierURL: product.supplier_website_url || entity.supplierURL || "",
     RRP: entity.RRP || 0,
     builderCost: entity.builderCost || Number(product.base_allowance || 0),
     clientPrice: entity.clientPrice || Number(product.upgrade_cost || 0),
@@ -152,7 +166,8 @@ function mapDbProductToEntity(product, categoryName = "", supplierName = "", bra
     currency: entity.currency || "AUD",
     gstTreatment: entity.gstTreatment || "GST inclusive",
     priceSource: entity.priceSource || "workspace product",
-    effectiveDate: entity.effectiveDate || "",
+    priceEffectiveDate: entity.priceEffectiveDate || entity.effectiveDate || "",
+    effectiveDate: entity.priceEffectiveDate || entity.effectiveDate || "",
     priceStatus: entity.priceStatus || "workspace",
     active: product.active !== false,
     discontinued: entity.discontinued || false,
@@ -178,6 +193,7 @@ export default function BuilderProductLibraryPage() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
+  const [editingProductId, setEditingProductId] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -228,6 +244,7 @@ export default function BuilderProductLibraryPage() {
   useEffect(() => {
     setSelectedProductCode("");
     setProductForm(EMPTY_PRODUCT);
+    setEditingProductId("");
   }, [selectedFamilyKey]);
 
   async function loadLibrary() {
@@ -308,39 +325,18 @@ export default function BuilderProductLibraryPage() {
   }
 
   function exportTemplateCsv() {
+    const example = {
+      product_code: "ORG-STONE-WHITE-001",
+      linked_quote_item_code: "approved-family:stone-benchtops",
+      product_family: "stone-benchtops",
+      currency: "AUD",
+      gst_treatment: "GST inclusive",
+      active: "true",
+      discontinued: "false",
+    };
     downloadCsv("product-library-supplier-import-template.csv", [
       PRODUCT_LIBRARY_IMPORT_COLUMNS,
-      [
-        "DEMO-STONE-WHITE",
-        "approved-family:stone-benchtops",
-        "Generic Stone Supplier",
-        "Generic Stone",
-        "Essentials",
-        "Generic Stone Range - White",
-        "",
-        "Benchtops",
-        "Stone Tops",
-        "stone-benchtops",
-        "White",
-        "Honed",
-        "20mm",
-        "",
-        "",
-        "",
-        "White / Honed",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "AUD",
-        "GST inclusive",
-        "",
-        "true",
-        "false",
-      ],
+      PRODUCT_LIBRARY_IMPORT_COLUMNS.map((column) => example[column] || ""),
     ]);
   }
 
@@ -350,7 +346,7 @@ export default function BuilderProductLibraryPage() {
     const reader = new FileReader();
     reader.onload = () => {
       const records = csvRecords(String(reader.result || ""));
-      const preview = validateProductImportRows(records, workspaceId || "");
+      const preview = previewProductImportRows(records, { organisationId: workspaceId || "", existingProducts: orgProducts });
       setImportPreview({ fileName: file.name, records, preview });
       setAdminOpen(true);
       setSuccess(`Previewed ${preview.length} row${preview.length === 1 ? "" : "s"} from ${file.name}.`);
@@ -405,6 +401,8 @@ export default function BuilderProductLibraryPage() {
   }
 
   async function saveEntityProduct(entity, mode = "create") {
+    if (!workspaceId) throw new Error("Choose an organisation before saving products.");
+    if (entity.organisationId && entity.organisationId !== workspaceId) throw new Error("Product organisation does not match the active organisation.");
     const familyItem = familyByKey(entity.familyKey);
     const categoryId = await ensureCategory(familyItem);
     const supplierId = await ensureSupplier(entity.supplier);
@@ -421,6 +419,7 @@ export default function BuilderProductLibraryPage() {
       primary_image_url: entity.primaryImage,
       product_url: entity.officialProductURL,
       datasheet_pdf_url: entity.specificationURL,
+      supplier_website_url: entity.supplierURL,
       base_allowance: entity.builderCost || entity.allowance || 0,
       upgrade_cost: entity.clientPrice || entity.upgradePrice || 0,
       quote_structure_section: familyItem.category,
@@ -438,11 +437,34 @@ export default function BuilderProductLibraryPage() {
         colour: entity.colour,
         finish: entity.finish,
         size: entity.size,
+        width: entity.width,
+        height: entity.height,
+        depth: entity.depth,
+        dimensions: entity.dimensions,
+        variants: entity.variants,
+        galleryImages: entity.galleryImages,
+        colourSwatches: entity.colourSwatches,
+        officialProductURL: entity.officialProductURL,
+        specificationURL: entity.specificationURL,
+        supplierURL: entity.supplierURL,
+        RRP: entity.RRP,
+        builderCost: entity.builderCost,
+        clientPrice: entity.clientPrice,
+        allowance: entity.allowance,
+        upgradePrice: entity.upgradePrice,
+        currency: entity.currency,
+        gstTreatment: entity.gstTreatment,
+        priceSource: entity.priceSource,
+        priceEffectiveDate: entity.priceEffectiveDate,
+        active: entity.active,
+        discontinued: entity.discontinued,
+        archived: entity.archived,
+        unavailable: entity.unavailable,
         approvedSourceKey: entity.approvedSourceKey,
       },
       updated_at: new Date().toISOString(),
     };
-    const existing = products.find((product) => product.sku && product.sku === entity.productCode);
+    const existing = products.find((product) => product.workspace_id === workspaceId && product.sku && product.sku === entity.productCode);
     const request = existing && mode !== "duplicate"
       ? supabase.from("builder_products").update(payload).eq("workspace_id", workspaceId).eq("id", existing.id).select("*").single()
       : supabase.from("builder_products").insert(payload).select("*").single();
@@ -457,11 +479,15 @@ export default function BuilderProductLibraryPage() {
     setSaving(true);
     setError("");
     try {
-      const validRows = importPreview.preview.filter((row) => !row.errors.length && row.entity);
-      for (const row of validRows) {
-        await saveEntityProduct(row.entity);
+      const actionableRows = importPreview.preview.filter((row) => !row.errors.length && row.entity && row.action !== "skip-unchanged");
+      for (const row of actionableRows) {
+        await saveEntityProduct(row.entity, row.action === "update" ? "update" : "create");
       }
-      setSuccess(`Imported ${validRows.length} product${validRows.length === 1 ? "" : "s"}. Rows with errors were skipped.`);
+      const created = actionableRows.filter((row) => row.action === "create").length;
+      const updated = actionableRows.filter((row) => row.action === "update").length;
+      const skipped = importPreview.preview.filter((row) => row.action === "skip-unchanged").length;
+      const errored = importPreview.preview.filter((row) => row.errors.length).length;
+      setSuccess(`Import complete: ${created} created, ${updated} updated, ${skipped} unchanged skipped, ${errored} row error${errored === 1 ? "" : "s"}.`);
       setImportPreview(null);
       await loadLibrary();
     } catch (saveError) {
@@ -483,17 +509,103 @@ export default function BuilderProductLibraryPage() {
         supplier: productForm.supplier_name,
         familyKey: selectedFamily.familyKey,
         linkedQuoteItemCode: selectedFamily.linkedQuoteItemCode || selectedFamily.approvedSourceKey,
+        width: productForm.width,
+        height: productForm.height,
+        depth: productForm.depth,
+        variantName: productForm.variant_name,
         primaryImage: productForm.primary_image,
+        galleryImages: productForm.gallery_images,
         officialProductURL: productForm.official_product_url,
         specificationURL: productForm.specification_url,
+        supplierURL: productForm.supplier_url,
+        rrp: productForm.rrp,
         builderCost: productForm.builder_cost,
         clientPrice: productForm.client_price,
+        currency: productForm.currency,
+        gstTreatment: productForm.gst_treatment,
+        priceEffectiveDate: productForm.price_effective_date,
+        active: productForm.active,
+        discontinued: productForm.discontinued,
       }, workspaceId);
-      await saveEntityProduct(entity);
+      await saveEntityProduct(entity, editingProductId ? "update" : "create");
       setProductForm(EMPTY_PRODUCT);
+      setEditingProductId("");
       setSuccess(`${entity.productName} saved to ${selectedFamily.displayName}.`);
     } catch (saveError) {
       setError(saveError.message || "Could not save product.");
+    }
+    setSaving(false);
+  }
+
+  function editProduct(entity) {
+    if (!entity) return;
+    setSelectedProductCode(entity.productCode || entity.productId);
+    setEditingProductId(entity.productId || entity.raw?.id || "");
+    setProductForm({
+      product_code: entity.productCode || "",
+      product_name: entity.productName || "",
+      supplier_name: entity.supplier || "",
+      brand: entity.brand || "",
+      range: entity.range || "",
+      model: entity.model || "",
+      colour: entity.colour || "",
+      finish: entity.finish || "",
+      size: entity.size || "",
+      width: entity.width || entity.dimensions?.width || "",
+      height: entity.height || entity.dimensions?.height || "",
+      depth: entity.depth || entity.dimensions?.depth || "",
+      variant_name: entity.variants?.[0]?.variantName || "",
+      primary_image: entity.primaryImage || "",
+      gallery_images: (entity.galleryImages || []).join("|"),
+      official_product_url: entity.officialProductURL || "",
+      specification_url: entity.specificationURL || "",
+      supplier_url: entity.supplierURL || "",
+      rrp: entity.RRP || "",
+      builder_cost: entity.builderCost || "",
+      client_price: entity.clientPrice || "",
+      currency: entity.currency || "AUD",
+      gst_treatment: entity.gstTreatment || "GST inclusive",
+      price_effective_date: entity.priceEffectiveDate || "",
+      active: entity.active !== false,
+      discontinued: entity.discontinued || false,
+    });
+    setAdminOpen(true);
+  }
+
+  function duplicateProduct(entity) {
+    if (!entity) return;
+    editProduct({
+      ...entity,
+      productId: "",
+      productCode: `${entity.productCode || slugify(entity.productName)}-copy`,
+      productName: `${entity.productName} Copy`,
+    });
+    setEditingProductId("");
+    setSuccess("Duplicating product. Review the new code and save when ready.");
+  }
+
+  async function archiveProduct(entity) {
+    if (!entity?.raw?.id || entity.organisationId !== workspaceId) return;
+    setSaving(true);
+    setError("");
+    const archivedEntity = { ...entity, active: false, archived: true };
+    const { error: archiveError } = await supabase
+      .from("builder_products")
+      .update({
+        active: false,
+        metadata: {
+          ...(entity.raw.metadata || {}),
+          productEntity: archivedEntity,
+          archived: true,
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", workspaceId)
+      .eq("id", entity.raw.id);
+    if (archiveError) setError(archiveError.message || "Could not archive product.");
+    else {
+      setSuccess("Product archived.");
+      await loadLibrary();
     }
     setSaving(false);
   }
@@ -706,11 +818,14 @@ export default function BuilderProductLibraryPage() {
           {adminOpen ? (
             <div className="admin-body">
               <div className="admin-actions">
-                <button type="button" onClick={() => setProductForm(EMPTY_PRODUCT)}><Plus size={16} /> Add Product</button>
+                <button type="button" onClick={() => { setProductForm(EMPTY_PRODUCT); setEditingProductId(""); }}><Plus size={16} /> Add Product</button>
                 <button type="button" onClick={() => setSuccess("Add Supplier: enter supplier_name in the import CSV or save a product with a new supplier.")}>Add Supplier</button>
                 <button type="button" onClick={() => setSuccess("Add Brand: enter brand in the import CSV or save a product with a new brand.")}>Add Brand</button>
                 <button type="button" onClick={() => setSuccess("Add Range: enter range on a product or import row.")}>Add Range</button>
                 <button type="button" onClick={() => setSuccess("Add Variant: enter colour, finish, size or variant_name in the import CSV.")}>Add Variant</button>
+                <button type="button" onClick={() => selectedProduct && editProduct(selectedProduct)} disabled={!selectedProduct}><Pencil size={16} /> Edit</button>
+                <button type="button" onClick={() => selectedProduct && duplicateProduct(selectedProduct)} disabled={!selectedProduct}><Copy size={16} /> Duplicate</button>
+                <button type="button" onClick={() => selectedProduct && archiveProduct(selectedProduct)} disabled={!selectedProduct || saving}><Archive size={16} /> Archive</button>
                 <label className="file-button">
                   <Upload size={16} />
                   Import CSV
@@ -723,7 +838,7 @@ export default function BuilderProductLibraryPage() {
                 <form className="product-form" onSubmit={saveManualProduct}>
                   <div className="panel-title">
                     <Edit3 size={18} />
-                    <strong>Add Product to {selectedFamily.displayName}</strong>
+                    <strong>{editingProductId ? "Edit" : "Add"} Product to {selectedFamily.displayName}</strong>
                   </div>
                   <div className="form-grid">
                     <input value={productForm.product_code} onChange={(event) => setProductForm((current) => ({ ...current, product_code: event.target.value }))} placeholder="product_code" required />
@@ -735,13 +850,32 @@ export default function BuilderProductLibraryPage() {
                     <input value={productForm.colour} onChange={(event) => setProductForm((current) => ({ ...current, colour: event.target.value }))} placeholder="colour" />
                     <input value={productForm.finish} onChange={(event) => setProductForm((current) => ({ ...current, finish: event.target.value }))} placeholder="finish" />
                     <input value={productForm.size} onChange={(event) => setProductForm((current) => ({ ...current, size: event.target.value }))} placeholder="size" />
+                    <input value={productForm.width} onChange={(event) => setProductForm((current) => ({ ...current, width: event.target.value }))} placeholder="width" />
+                    <input value={productForm.height} onChange={(event) => setProductForm((current) => ({ ...current, height: event.target.value }))} placeholder="height" />
+                    <input value={productForm.depth} onChange={(event) => setProductForm((current) => ({ ...current, depth: event.target.value }))} placeholder="depth" />
+                    <input value={productForm.variant_name} onChange={(event) => setProductForm((current) => ({ ...current, variant_name: event.target.value }))} placeholder="variant_name" />
                     <input value={productForm.primary_image} onChange={(event) => setProductForm((current) => ({ ...current, primary_image: event.target.value }))} placeholder="primary_image" />
+                    <input value={productForm.gallery_images} onChange={(event) => setProductForm((current) => ({ ...current, gallery_images: event.target.value }))} placeholder="gallery_images" />
                     <input value={productForm.official_product_url} onChange={(event) => setProductForm((current) => ({ ...current, official_product_url: event.target.value }))} placeholder="official_product_url" />
                     <input value={productForm.specification_url} onChange={(event) => setProductForm((current) => ({ ...current, specification_url: event.target.value }))} placeholder="specification_url" />
+                    <input value={productForm.supplier_url} onChange={(event) => setProductForm((current) => ({ ...current, supplier_url: event.target.value }))} placeholder="supplier_url" />
+                    <input value={productForm.rrp} onChange={(event) => setProductForm((current) => ({ ...current, rrp: event.target.value }))} placeholder="rrp" />
                     <input value={productForm.builder_cost} onChange={(event) => setProductForm((current) => ({ ...current, builder_cost: event.target.value }))} placeholder="builder_cost" />
                     <input value={productForm.client_price} onChange={(event) => setProductForm((current) => ({ ...current, client_price: event.target.value }))} placeholder="client_price" />
+                    <input value={productForm.currency} onChange={(event) => setProductForm((current) => ({ ...current, currency: event.target.value }))} placeholder="currency" />
+                    <input value={productForm.gst_treatment} onChange={(event) => setProductForm((current) => ({ ...current, gst_treatment: event.target.value }))} placeholder="gst_treatment" />
+                    <input value={productForm.price_effective_date} onChange={(event) => setProductForm((current) => ({ ...current, price_effective_date: event.target.value }))} placeholder="price_effective_date" />
+                    <label className="check-field">
+                      <input type="checkbox" checked={Boolean(productForm.active)} onChange={(event) => setProductForm((current) => ({ ...current, active: event.target.checked }))} />
+                      Active
+                    </label>
+                    <label className="check-field">
+                      <input type="checkbox" checked={Boolean(productForm.discontinued)} onChange={(event) => setProductForm((current) => ({ ...current, discontinued: event.target.checked }))} />
+                      Discontinued
+                    </label>
                   </div>
                   <button type="submit" disabled={saving || !workspaceId}><ImagePlus size={16} /> Save Product</button>
+                  {editingProductId ? <button type="button" className="secondary" onClick={() => { setProductForm(EMPTY_PRODUCT); setEditingProductId(""); }}>Cancel Edit</button> : null}
                 </form>
               ) : (
                 <p className="admin-note">Choose a product family before adding a product manually. Imports can still be previewed from any page.</p>
@@ -753,12 +887,22 @@ export default function BuilderProductLibraryPage() {
                     <FileUp size={18} />
                     <strong>Import Preview: {importPreview.fileName}</strong>
                   </div>
-                  <p>{importPreview.preview.length} rows previewed. {importPreview.preview.filter((row) => row.errors.length).length} row-level error(s).</p>
+                  <p>
+                    {importPreview.preview.length} rows previewed.{" "}
+                    {importPreview.preview.filter((row) => row.action === "create").length} create,{" "}
+                    {importPreview.preview.filter((row) => row.action === "update").length} update,{" "}
+                    {importPreview.preview.filter((row) => row.action === "skip-unchanged").length} unchanged,{" "}
+                    {importPreview.preview.filter((row) => row.errors.length).length} row-level error(s).
+                  </p>
                   <div className="preview-list">
                     {importPreview.preview.slice(0, 12).map((row) => (
                       <div key={row.rowNumber} className={row.errors.length ? "preview-row error" : "preview-row"}>
+                        {row.imagePreview ? <img src={row.imagePreview} alt={`${row.record.product_name || "Product"} preview`} /> : <span className="preview-image-empty">No image</span>}
                         <strong>Row {row.rowNumber}</strong>
-                        <span>{row.record.product_name || "Unnamed product"}</span>
+                        <span>
+                          {row.record.product_name || "Unnamed product"}
+                          <small>{row.familyMapping ? row.familyMapping.displayName : "No family"} / {row.quoteItemMapping || "No quote item"}</small>
+                        </span>
                         <small>{row.errors.length ? row.errors.join("; ") : row.action}</small>
                       </div>
                     ))}
@@ -1153,13 +1297,31 @@ export default function BuilderProductLibraryPage() {
           padding: 10px 11px;
           font: inherit;
         }
+        .check-field {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 9px 11px;
+          font-weight: 800;
+        }
+        .check-field input {
+          width: auto;
+        }
+        .product-form button.secondary {
+          background: #ffffff;
+          color: #172033;
+          border-color: #cbd5e1;
+        }
         .preview-list {
           display: grid;
           gap: 8px;
         }
         .preview-row {
           display: grid;
-          grid-template-columns: 90px minmax(0, 1fr) minmax(120px, auto);
+          grid-template-columns: 74px 80px minmax(0, 1fr) minmax(120px, auto);
           gap: 8px;
           align-items: center;
           border: 1px solid #d7deea;
@@ -1173,6 +1335,21 @@ export default function BuilderProductLibraryPage() {
         }
         .preview-row small {
           color: #64748b;
+        }
+        .preview-row img,
+        .preview-image-empty {
+          width: 64px;
+          height: 48px;
+          border-radius: 6px;
+          object-fit: cover;
+          background: #e2e8f0;
+        }
+        .preview-image-empty {
+          display: grid;
+          place-items: center;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 800;
         }
         .entity-model p {
           margin: 0;
