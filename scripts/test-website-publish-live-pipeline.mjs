@@ -14,8 +14,10 @@ const publicationStore = read("lib/website-builder/publicationStore.js");
 const siteRenderer = read("pages/sites/[...slug].js");
 const slugRenderer = read("pages/[slug].js");
 const rootRenderer = read("pages/index.js");
+const visualBuilder = read("pages/modules/website-builder/visual-builder.js");
 
 assert.match(publishRoute, /assembleWebsiteForRendering/, "Publish API must assemble from the canonical rendering source used by preview.");
+assert.match(publishRoute, /sourceDraftRevision/, "Publish diagnostics must capture the draft revision used for the publish write.");
 assert.doesNotMatch(publishRoute, /createPublicationPayload/, "Publish API must not serialize through the legacy publication payload builder.");
 assert.match(previewProjectsApi, /assembleWebsiteForRendering/, "Preview/builder project loading must use the canonical rendering assembly function.");
 assert.match(publishRoute, /writePublishedWebsiteRow/, "Publish API must write through the exact-row publish helper.");
@@ -39,10 +41,15 @@ assert.doesNotMatch(publicationStore, /limit\(1\)\s*\.maybeSingle\(\)/, "Live re
 });
 
 assert.match(siteRenderer, /usesVerifiedSnapshot/, "Live renderer must distinguish verified published snapshots.");
-assert.match(siteRenderer, /usesVerifiedSnapshot\s*\?\s*\(project\?\.pageBlocks \|\| \{\}\)/, "Live verified snapshots must render stored page blocks directly.");
-assert.match(siteRenderer, /usesVerifiedSnapshot && rawGlobalFooterBlock\?\.type === "footer"/, "Live verified snapshots must render the stored global footer directly.");
+assert.match(siteRenderer, /normalizePublishedWebsiteBlocks\(/, "Live renderer must normalize and render published page blocks from the stored snapshot.");
+assert.match(siteRenderer, /normalizePublishedGlobalFooterBlock\(/, "Live renderer must normalize and render published global footer blocks from the stored snapshot.");
 assert.match(siteRenderer, /X-GR8-Footer-Roles/, "Live route must expose footer role diagnostics.");
 assert.match(siteRenderer, /X-GR8-Nav-Sticky-Mode/, "Live route must expose sticky nav diagnostics.");
 assert.match(siteRenderer, /X-GR8-Media-Block-Count/, "Live route must expose media block diagnostics.");
+
+assert.match(visualBuilder, /_saveError:\s*true/, "Visual Builder save failures must propagate explicit _saveError markers.");
+assert.match(visualBuilder, /Canonical cloud persistence failed, so Publish is blocked until Save succeeds\./, "Visual Builder must report canonical save failure and block publish.");
+assert.match(visualBuilder, /if \(savedBeforePublish\?\._saveError\)/, "Publish preflight must stop when latest save fails canonical persistence.");
+assert.doesNotMatch(visualBuilder, /Saved locally ✓ .*Cloud backup failed; retry Save when the server is reachable\./, "Visual Builder must not report local-only cloud save failures as successful saves.");
 
 console.log("Website publish/live pipeline regression checks passed.");
