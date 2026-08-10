@@ -1,91 +1,64 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Check, FileText, RefreshCw, Shield } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, ExternalLink, FileUp, PackagePlus } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
 import {
+  KITCHEN_AREA_LABEL,
+  KITCHEN_REQUIREMENTS,
+  PRICE_STATES,
+  areaTotals,
+  createSelectionPayloadFromProduct,
+  filtersForRequirement,
+  kitchenRequirementByKey,
+  priceStateForProduct,
+  productAllowance,
+  productClientPrice,
+  productsForRequirement,
+  projectTotals,
+  requirementFinancials,
+  requirementImage,
+  selectedByRequirement,
+  statusForRequirement,
+  statusTone,
+  variationFor,
+} from "../../../lib/builders/clientSelectionWorkflow";
+import {
   DEFAULT_WARNING_THRESHOLD_PERCENT,
-  SELECTION_CATEGORIES,
-  calculateSelectionFinancials,
   calculateSessionBudget,
-  clientPriceImpactLabel,
   numberValue,
   roundMoney,
 } from "../../../lib/builders/selectionBudget";
+import { familyByKey } from "../../../lib/product-library/catalogueModel";
 
 const INTERNAL_ROLES = new Set(["owner", "admin", "builder_admin", "builder_staff", "interior_designer"]);
-const COST_ROLES = new Set(["owner", "admin", "builder_admin", "builder_staff"]);
-const GST_RATE = 10;
-
-const initialForm = {
-  category: "appliances",
-  subcategory: "",
-  room: "",
-  brand: "",
-  productName: "",
-  modelNumber: "",
-  supplierSku: "",
-  manufacturerSku: "",
-  imageUrl: "",
-  specificationUrl: "",
-  installationGuideUrl: "",
-  warrantyUrl: "",
-  finish: "",
-  colour: "",
-  description: "",
-  includedAllowance: 0,
-  supplierCost: 0,
-  builderCost: 0,
-  installationCost: 0,
-  builderMarkupPercent: 20,
-  fixedBuilderMarkup: 0,
-  gstRate: GST_RATE,
-  manualOverridePrice: "",
-  selectionStatus: "not_selected",
-  supplierId: "",
-  supplierName: "",
-  sourceQuoteRowId: "",
-  requiredBy: "",
-  notes: "",
-};
+const SELECTION_COLUMNS = "id, session_id, snapshot_id, category, subcategory, room, title, description, allowance_amount, selected_product_name, selected_supplier_name, selected_colour, selected_finish, selected_details, status, selected_at, metadata, created_at, updated_at, brand, product_name, model_number, image_url, specification_url, finish, colour, included_allowance, client_selection_price, calculated_client_selection_price, variation_amount, selection_status, is_active";
+const SESSION_COLUMNS = "id, project_id, snapshot_id, session_name, original_estimate_total, private_upgrade_ceiling, current_net_selection_variation, current_updated_estimate_total, warning_threshold_percent, selection_budget_status, status, metadata, created_at, updated_at";
+const PRODUCT_COLUMNS = "*, builder_product_suppliers(supplier_name), builder_product_manufacturers(manufacturer_name), builder_product_categories(category_name)";
 
 export default function BuilderClientSelectionsPage() {
   const { workspaceId, role, loading: workspaceLoading } = useWorkspace();
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
-  const [boqItems, setBoqItems] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [selections, setSelections] = useState([]);
-  const [variations, setVariations] = useState([]);
-  const [budgetSettings, setBudgetSettings] = useState(null);
-  const [budgetSettingsForm, setBudgetSettingsForm] = useState({
-    privateUpgradeCeiling: 0,
-    warningThresholdPercent: DEFAULT_WARNING_THRESHOLD_PERCENT,
-    defaultBuilderMarkupPercent: 20,
-    defaultGstRate: GST_RATE,
-  });
+  const [products, setProducts] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedSnapshotId, setSelectedSnapshotId] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [form, setForm] = useState(initialForm);
-  const [confirmation, setConfirmation] = useState(null);
-  const [showInternalSummary, setShowInternalSummary] = useState(false);
+  const [screen, setScreen] = useState("areas");
+  const [selectedRequirementKey, setSelectedRequirementKey] = useState("");
+  const [filters, setFilters] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const isInternal = INTERNAL_ROLES.has(role);
-  const canViewCosts = COST_ROLES.has(role);
-  const canEditCosts = COST_ROLES.has(role);
-  const canEditBudgetSettings = COST_ROLES.has(role);
-  const isDesigner = role === "interior_designer";
-  const canManageSelections = isInternal || role === "client";
-  const safeSelectionColumns = "id, session_id, snapshot_id, category, subcategory, room, title, description, included_in_contract, selected_product_name, selected_colour, selected_finish, status, required_by, selected_at, approved_at, brand, product_name, model_number, image_url, specification_url, installation_guide_url, warranty_url, finish, colour, variation_amount, selection_status, is_included_selection, is_active, created_at, updated_at";
-  const internalSelectionColumns = `${safeSelectionColumns}, boq_item_id, variation_id, source_quote_row_id, allowance_amount, selected_supplier_id, selected_supplier_name, selected_details, metadata, supplier_sku, manufacturer_sku, included_allowance, gst_rate, calculated_client_selection_price, manual_override_price, has_manual_override, client_selection_price, notes, supplier_cost, builder_cost, installation_cost, builder_markup_percent, fixed_builder_markup`;
+  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
+  const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
+  const selectedSession = useMemo(() => sessions.find((session) => session.id === selectedSessionId) || null, [sessions, selectedSessionId]);
 
   useEffect(() => {
     if (!workspaceId) {
@@ -93,7 +66,6 @@ export default function BuilderClientSelectionsPage() {
       setSelectedProjectId("");
       return;
     }
-
     let cancelled = false;
     async function loadProjects() {
       setLoading(true);
@@ -103,7 +75,6 @@ export default function BuilderClientSelectionsPage() {
         .select("id, project_name, client_name, site_address, status, currency, original_estimate_total, contract_total, updated_at, created_at")
         .eq("workspace_id", workspaceId)
         .order("updated_at", { ascending: false });
-
       if (cancelled) return;
       if (loadError) {
         setError(loadError.message || "Could not load projects.");
@@ -116,7 +87,6 @@ export default function BuilderClientSelectionsPage() {
       }
       setLoading(false);
     }
-
     loadProjects();
     return () => {
       cancelled = true;
@@ -128,22 +98,16 @@ export default function BuilderClientSelectionsPage() {
       setSnapshots([]);
       setSessions([]);
       setSelections([]);
-      setSuppliers([]);
-      setVariations([]);
-      setBudgetSettings(null);
+      setProducts([]);
       setSelectedSnapshotId("");
       setSelectedSessionId("");
       return;
     }
-
     let cancelled = false;
     async function loadProjectData() {
       setLoading(true);
       setError("");
-      const sessionSelect = isInternal
-        ? "id, project_id, snapshot_id, session_name, original_estimate_total, private_upgrade_ceiling, current_net_selection_variation, current_updated_estimate_total, warning_threshold_percent, selection_budget_status, status, variation_id, metadata, created_at, updated_at"
-        : "id, project_id, snapshot_id, session_name, original_estimate_total, current_net_selection_variation, current_updated_estimate_total, status, variation_id, created_at, updated_at";
-      const [snapshotResult, sessionResult, selectionResult, supplierResult, variationResult, settingsResult] = await Promise.all([
+      const [snapshotResult, sessionResult, selectionResult, productResult] = await Promise.all([
         supabase
           .from("builder_estimate_snapshots")
           .select("id, snapshot_number, snapshot_label, status, source_quote_number, final_quote_total, created_at")
@@ -152,125 +116,48 @@ export default function BuilderClientSelectionsPage() {
           .order("snapshot_number", { ascending: false }),
         supabase
           .from("builder_selection_sessions")
-          .select(sessionSelect)
+          .select(SESSION_COLUMNS)
           .eq("workspace_id", workspaceId)
           .eq("project_id", selectedProjectId)
           .order("created_at", { ascending: false }),
         supabase
           .from("builder_client_selections")
-          .select(isInternal ? internalSelectionColumns : safeSelectionColumns)
+          .select(SELECTION_COLUMNS)
           .eq("workspace_id", workspaceId)
           .eq("project_id", selectedProjectId)
-          .order("category", { ascending: true })
-          .order("created_at", { ascending: true }),
+          .order("updated_at", { ascending: false }),
         supabase
-          .from("builder_suppliers")
-          .select("id, name, email, phone, trade_category, status")
+          .from("builder_products")
+          .select(PRODUCT_COLUMNS)
           .eq("workspace_id", workspaceId)
-          .order("name", { ascending: true }),
-        supabase
-          .from("builder_variations")
-          .select("id, variation_number, title, status, total, metadata, created_at")
-          .eq("workspace_id", workspaceId)
-          .eq("project_id", selectedProjectId)
-          .order("created_at", { ascending: false }),
-        isInternal
-          ? supabase
-              .from("builder_selection_budget_settings")
-              .select("id, project_id, session_id, private_upgrade_ceiling, warning_threshold_percent, category_markup_overrides, default_builder_markup_percent, default_gst_rate, updated_at")
-              .eq("workspace_id", workspaceId)
-              .eq("project_id", selectedProjectId)
-              .order("updated_at", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
+          .eq("active", true)
+          .order("updated_at", { ascending: false }),
       ]);
-
       if (cancelled) return;
-      const firstError = snapshotResult.error || sessionResult.error || selectionResult.error || supplierResult.error || variationResult.error || settingsResult.error;
+      const firstError = snapshotResult.error || sessionResult.error || selectionResult.error || productResult.error;
       if (firstError) {
-        setError(firstError.message || "Could not load selections.");
+        setError(firstError.message || "Could not load Client Selections.");
         setSnapshots([]);
         setSessions([]);
         setSelections([]);
-        setSuppliers([]);
-        setVariations([]);
+        setProducts([]);
       } else {
         const snapshotRows = snapshotResult.data || [];
         const sessionRows = sessionResult.data || [];
         setSnapshots(snapshotRows);
         setSessions(sessionRows);
         setSelections(selectionResult.data || []);
-        setSuppliers(supplierResult.data || []);
-        setVariations(variationResult.data || []);
-        setBudgetSettings((settingsResult.data || [])[0] || null);
+        setProducts((productResult.data || []).map(mapDbProductToEntity));
         setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || sessionRows[0]?.snapshot_id || snapshotRows[0]?.id || "");
         setSelectedSessionId((current) => sessionRows.find((session) => session.id === current)?.id || sessionRows[0]?.id || "");
       }
       setLoading(false);
     }
-
     loadProjectData();
     return () => {
       cancelled = true;
     };
-  }, [isInternal, workspaceId, selectedProjectId]);
-
-  useEffect(() => {
-    if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
-      setBoqItems([]);
-      return;
-    }
-
-    let cancelled = false;
-    async function loadBoqItems() {
-      const { data, error: loadError } = await supabase
-        .from("builder_boq_items")
-        .select("id, source_quote_row_id, source_section_name, item_name, description, quantity, unit, unit_rate, line_total, status, sort_order")
-        .eq("workspace_id", workspaceId)
-        .eq("project_id", selectedProjectId)
-        .eq("snapshot_id", selectedSnapshotId)
-        .order("sort_order", { ascending: true });
-
-      if (cancelled) return;
-      if (loadError) {
-        setError(loadError.message || "Could not load BOQ rows.");
-        setBoqItems([]);
-      } else {
-        setBoqItems(data || []);
-      }
-    }
-
-    loadBoqItems();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceId, selectedProjectId, selectedSnapshotId]);
-
-  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
-  const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
-  const selectedSession = useMemo(() => sessions.find((session) => session.id === selectedSessionId) || null, [sessions, selectedSessionId]);
-  const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier])), [suppliers]);
-
-  useEffect(() => {
-    setBudgetSettingsForm({
-      privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling ?? budgetSettings?.private_upgrade_ceiling ?? 0,
-      warningThresholdPercent: selectedSession?.warning_threshold_percent ?? budgetSettings?.warning_threshold_percent ?? DEFAULT_WARNING_THRESHOLD_PERCENT,
-      defaultBuilderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? 20,
-      defaultGstRate: budgetSettings?.default_gst_rate ?? GST_RATE,
-    });
-  }, [budgetSettings, selectedSession]);
-
-  useEffect(() => {
-    if (!budgetSettings) return;
-    setForm((current) => ({
-      ...current,
-      builderMarkupPercent: current.builderMarkupPercent === initialForm.builderMarkupPercent
-        ? budgetSettings.default_builder_markup_percent ?? current.builderMarkupPercent
-        : current.builderMarkupPercent,
-      gstRate: current.gstRate === initialForm.gstRate
-        ? budgetSettings.default_gst_rate ?? current.gstRate
-        : current.gstRate,
-    }));
-  }, [budgetSettings]);
+  }, [workspaceId, selectedProjectId]);
 
   const sessionSelections = useMemo(() => {
     return selections.filter((selection) => {
@@ -281,11 +168,13 @@ export default function BuilderClientSelectionsPage() {
   }, [selectedSessionId, selectedSnapshotId, selections]);
 
   const activeSelections = useMemo(
-    () => sessionSelections.filter((selection) => selection.is_active !== false && !["replaced", "removed"].includes(selection.selection_status)),
+    () => sessionSelections.filter((selection) => selection.is_active !== false && !["replaced", "removed"].includes(selection.selection_status || selection.status)),
     [sessionSelections]
   );
-
-  const budget = useMemo(() => {
+  const selectedMap = useMemo(() => selectedByRequirement(activeSelections), [activeSelections]);
+  const kitchenTotals = useMemo(() => areaTotals(KITCHEN_REQUIREMENTS, selectedMap), [selectedMap]);
+  const runningProjectTotals = useMemo(() => projectTotals([kitchenTotals]), [kitchenTotals]);
+  const selectionBudget = useMemo(() => {
     const originalEstimateTotal = selectedSession?.original_estimate_total || selectedSnapshot?.final_quote_total || selectedProject?.original_estimate_total || selectedProject?.contract_total || 0;
     return calculateSessionBudget({
       originalEstimateTotal,
@@ -294,64 +183,35 @@ export default function BuilderClientSelectionsPage() {
       selections: activeSelections,
     });
   }, [activeSelections, selectedProject, selectedSession, selectedSnapshot]);
-
-  const categorySummaries = useMemo(() => {
-    const map = new Map();
-    activeSelections.forEach((selection) => {
-      const key = selection.category || "other";
-      const current = map.get(key) || { category: key, originalAllowance: 0, selectedValue: 0, netDifference: 0, rows: [] };
-      current.originalAllowance += numberValue(selection.included_allowance || selection.allowance_amount);
-      current.selectedValue += numberValue(selection.client_selection_price || selection.selected_details?.clientSelectionPrice);
-      current.netDifference += numberValue(selection.variation_amount || selection.selected_details?.variationAmount);
-      current.rows.push(selection);
-      map.set(key, current);
+  const selectedRequirement = useMemo(() => kitchenRequirementByKey(selectedRequirementKey) || KITCHEN_REQUIREMENTS[0], [selectedRequirementKey]);
+  const requirementProducts = useMemo(() => productsForRequirement(products, selectedRequirement), [products, selectedRequirement]);
+  const availableFilters = useMemo(() => filtersForRequirement(selectedRequirement, requirementProducts), [selectedRequirement, requirementProducts]);
+  const visibleProducts = useMemo(() => {
+    return requirementProducts.filter((product) => {
+      return availableFilters.every((filter) => {
+        const selected = filters[filter.key];
+        if (!selected) return true;
+        const entity = product.metadata?.productEntity || product;
+        return (entity[filter.key] || product[filter.key] || product.metadata?.[filter.key] || "") === selected;
+      });
     });
-    return Array.from(map.values()).map((summary) => ({
-      ...summary,
-      originalAllowance: roundMoney(summary.originalAllowance),
-      selectedValue: roundMoney(summary.selectedValue),
-      netDifference: roundMoney(summary.netDifference),
-    }));
-  }, [activeSelections]);
+  }, [availableFilters, filters, requirementProducts]);
 
-  const filteredSelections = useMemo(() => {
-    return sessionSelections.filter((selection) => categoryFilter === "all" || selection.category === categoryFilter);
-  }, [categoryFilter, sessionSelections]);
+  function openKitchenChecklist() {
+    setScreen("checklist");
+    setSelectedRequirementKey("");
+    setFilters({});
+  }
 
-  const formFinancials = useMemo(() => calculateSelectionFinancials(form), [form]);
-  const activeSelectedByCategory = useMemo(() => {
-    const map = new Map();
-    activeSelections.forEach((selection) => {
-      if (["selected", "approved"].includes(selection.selection_status)) map.set(selection.category || "other", selection);
-    });
-    return map;
-  }, [activeSelections]);
-
-  function updateForm(field, value) {
-    setForm((current) => {
-      const next = { ...current, [field]: value };
-      if (field === "supplierId") next.supplierName = supplierById.get(value)?.name || next.supplierName;
-      if (field === "category") {
-        const override = budgetSettings?.category_markup_overrides?.[value] ?? selectedSession?.metadata?.categoryMarkupOverrides?.[value];
-        if (override !== undefined && override !== null) next.builderMarkupPercent = override;
-      }
-      if (field === "sourceQuoteRowId") {
-        const source = boqItems.find((item) => item.source_quote_row_id === value || item.id === value);
-        if (source) {
-          next.productName = next.productName || source.item_name || "";
-          next.description = next.description || source.description || source.item_name || "";
-          next.includedAllowance = next.includedAllowance || source.line_total || 0;
-          next.category = categoryFromSource(source.source_section_name) || next.category;
-        }
-      }
-      return next;
-    });
+  function openRequirement(requirementKey) {
+    setSelectedRequirementKey(requirementKey);
+    setScreen("product");
+    setFilters({});
   }
 
   async function ensureSession() {
     if (selectedSession) return selectedSession;
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) throw new Error("Select a project and estimate snapshot first.");
-
     const { data: authData } = await supabase.auth.getUser();
     const userId = authData?.user?.id || null;
     const originalEstimateTotal = numberValue(selectedSnapshot?.final_quote_total || selectedProject?.original_estimate_total || selectedProject?.contract_total);
@@ -366,118 +226,23 @@ export default function BuilderClientSelectionsPage() {
       current_updated_estimate_total: originalEstimateTotal,
       warning_threshold_percent: DEFAULT_WARNING_THRESHOLD_PERCENT,
       selection_budget_status: "within_budget",
+      status: "draft",
+      metadata: { source: "client_selection_checklist" },
       created_by: userId,
       updated_by: userId,
     };
-    const { data, error: insertError } = await supabase.from("builder_selection_sessions").insert(payload).select("*").single();
+    const { data, error: insertError } = await supabase.from("builder_selection_sessions").insert(payload).select(SESSION_COLUMNS).single();
     if (insertError) throw insertError;
     setSessions((current) => [data, ...current]);
     setSelectedSessionId(data.id);
     return data;
   }
 
-  async function saveBudgetSettings() {
-    if (!canEditBudgetSettings) {
-      setError("Only builder roles can edit private budget settings.");
-      return;
-    }
-    if (!workspaceId || !selectedProjectId) {
-      setError("Select a project before saving budget settings.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const session = await ensureSession();
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const nextBudget = calculateSessionBudget({
-        originalEstimateTotal: session.original_estimate_total,
-        privateUpgradeCeiling: budgetSettingsForm.privateUpgradeCeiling,
-        warningThresholdPercent: budgetSettingsForm.warningThresholdPercent,
-        selections: activeSelections,
-      });
-      const now = new Date().toISOString();
-      const oldValue = {
-        privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling ?? budgetSettings?.private_upgrade_ceiling ?? 0,
-        warningThresholdPercent: selectedSession?.warning_threshold_percent ?? budgetSettings?.warning_threshold_percent ?? DEFAULT_WARNING_THRESHOLD_PERCENT,
-        defaultBuilderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? 20,
-        defaultGstRate: budgetSettings?.default_gst_rate ?? GST_RATE,
-      };
-      const sessionPayload = {
-        private_upgrade_ceiling: numberValue(budgetSettingsForm.privateUpgradeCeiling),
-        warning_threshold_percent: numberValue(budgetSettingsForm.warningThresholdPercent) || DEFAULT_WARNING_THRESHOLD_PERCENT,
-        current_net_selection_variation: nextBudget.currentNetSelectionVariation,
-        current_updated_estimate_total: nextBudget.currentUpdatedEstimateTotal,
-        selection_budget_status: nextBudget.selectionBudgetStatus,
-        updated_by: userId,
-        updated_at: now,
-      };
-      const settingsPayload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        session_id: session.id,
-        private_upgrade_ceiling: sessionPayload.private_upgrade_ceiling,
-        warning_threshold_percent: sessionPayload.warning_threshold_percent,
-        category_markup_overrides: budgetSettings?.category_markup_overrides || {},
-        default_builder_markup_percent: numberValue(budgetSettingsForm.defaultBuilderMarkupPercent),
-        default_gst_rate: numberValue(budgetSettingsForm.defaultGstRate) || GST_RATE,
-        created_by: userId,
-        updated_by: userId,
-        updated_at: now,
-      };
-
-      const [{ data: updatedSession, error: sessionError }, { data: updatedSettings, error: settingsError }] = await Promise.all([
-        supabase
-          .from("builder_selection_sessions")
-          .update(sessionPayload)
-          .eq("workspace_id", workspaceId)
-          .eq("id", session.id)
-          .select("*")
-          .single(),
-        supabase
-          .from("builder_selection_budget_settings")
-          .upsert(settingsPayload, { onConflict: "workspace_id,project_id,session_id" })
-          .select("*")
-          .single(),
-      ]);
-      if (sessionError) throw sessionError;
-      if (settingsError) throw settingsError;
-
-      setSessions((current) => current.map((row) => row.id === session.id ? updatedSession : row));
-      setBudgetSettings(updatedSettings);
-      await auditHistory({
-        sessionId: session.id,
-        action: "upgrade_ceiling_changed",
-        userId,
-        oldValue,
-        newValue: settingsPayload,
-        reason: "Private budget settings updated",
-      });
-      setSuccess("Private budget settings saved.");
-    } catch (settingsError) {
-      setError(settingsError.message || "Could not save private budget settings.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function createSelection() {
+  async function selectProduct(product) {
     if (!workspaceId || !selectedProjectId || !selectedSnapshotId) {
-      setError("Select a workspace, project and estimate snapshot first.");
+      setError("Select a project and estimate snapshot first.");
       return;
     }
-    if (!form.productName.trim()) {
-      setError("Product name is required.");
-      return;
-    }
-    if (!canManageSelections) {
-      setError("Your role cannot update selections.");
-      return;
-    }
-
     setSaving(true);
     setError("");
     setSuccess("");
@@ -485,167 +250,33 @@ export default function BuilderClientSelectionsPage() {
       const session = await ensureSession();
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id || null;
-      const supplier = form.supplierId ? supplierById.get(form.supplierId) : null;
-      const source = form.sourceQuoteRowId ? boqItems.find((item) => item.source_quote_row_id === form.sourceQuoteRowId || item.id === form.sourceQuoteRowId) : null;
-      const financials = calculateSelectionFinancials(form);
-      const payload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        snapshot_id: selectedSnapshotId,
-        session_id: session.id,
-        boq_item_id: source?.id || null,
-        source_quote_row_id: source?.source_quote_row_id || form.sourceQuoteRowId || null,
-        category: form.category,
-        subcategory: form.subcategory.trim(),
-        room: form.room.trim(),
-        title: form.productName.trim(),
-        description: form.description.trim(),
-        included_in_contract: financials.variationAmount === 0,
-        allowance_amount: financials.includedAllowance,
-        selected_product_name: form.productName.trim(),
-        selected_supplier_id: form.supplierId || null,
-        selected_supplier_name: supplier?.name || form.supplierName.trim(),
-        selected_colour: form.colour.trim(),
-        selected_finish: form.finish.trim(),
-        brand: form.brand.trim(),
-        product_name: form.productName.trim(),
-        model_number: form.modelNumber.trim(),
-        supplier_sku: form.supplierSku.trim(),
-        manufacturer_sku: form.manufacturerSku.trim(),
-        image_url: form.imageUrl.trim(),
-        specification_url: form.specificationUrl.trim(),
-        installation_guide_url: form.installationGuideUrl.trim(),
-        warranty_url: form.warrantyUrl.trim(),
-        finish: form.finish.trim(),
-        colour: form.colour.trim(),
-        included_allowance: financials.includedAllowance,
-        supplier_cost: canEditCosts ? numberValue(form.supplierCost) : 0,
-        builder_cost: canEditCosts ? numberValue(form.builderCost) : 0,
-        installation_cost: numberValue(form.installationCost),
-        builder_markup_percent: canEditCosts ? numberValue(form.builderMarkupPercent) : 0,
-        fixed_builder_markup: canEditCosts ? numberValue(form.fixedBuilderMarkup) : 0,
-        gst_rate: financials.gstRate,
-        calculated_client_selection_price: financials.calculatedClientSelectionPrice,
-        manual_override_price: financials.hasManualOverride ? financials.clientSelectionPrice : null,
-        has_manual_override: financials.hasManualOverride,
-        client_selection_price: financials.clientSelectionPrice,
-        variation_amount: financials.variationAmount,
-        selection_status: form.selectionStatus,
-        is_included_selection: financials.isIncludedSelection,
-        is_active: true,
-        status: form.selectionStatus === "not_selected" ? "pending" : form.selectionStatus,
-        selected_at: ["selected", "approved"].includes(form.selectionStatus) ? new Date().toISOString() : null,
-        approved_at: form.selectionStatus === "approved" ? new Date().toISOString() : null,
-        selected_details: {
-          clientSelectionPrice: financials.clientSelectionPrice,
-          calculatedClientSelectionPrice: financials.calculatedClientSelectionPrice,
-          variationAmount: financials.variationAmount,
-          impactType: financials.impactType,
-          hasManualOverride: financials.hasManualOverride,
-        },
-        required_by: form.requiredBy || null,
-        metadata: { source: "selections_budget_manager" },
-        notes: isInternal ? form.notes.trim() : "",
-        created_by: userId,
-        updated_by: userId,
-      };
-
-      const { data, error: insertError } = await supabase
-        .from("builder_client_selections")
-        .insert(payload)
-        .select("*")
-        .single();
-      if (insertError) throw insertError;
-
-      const nextSelections = [data, ...activeSelections];
-      await persistBudget(session.id, nextSelections, userId);
-      await auditHistory({
+      const payload = createSelectionPayloadFromProduct({
+        workspaceId,
+        projectId: selectedProjectId,
+        snapshotId: selectedSnapshotId,
         sessionId: session.id,
-        selectionId: data.id,
-        action: "product_selected",
+        requirement: selectedRequirement,
+        product,
         userId,
-        oldValue: null,
-        newValue: payload,
-        newVariation: financials.variationAmount,
-        reason: "Selection product created",
       });
-      setSelections((current) => [data, ...current]);
-      setForm({
-        ...initialForm,
-        category: form.category,
-        builderMarkupPercent: budgetSettings?.default_builder_markup_percent ?? initialForm.builderMarkupPercent,
-        gstRate: budgetSettings?.default_gst_rate ?? initialForm.gstRate,
-      });
-      setSuccess(`Selection "${data.product_name || data.title}" saved.`);
-    } catch (saveError) {
-      setError(saveError.message || "Could not save selection.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function openSelectionConfirm(selection) {
-    const current = budget.currentNetSelectionVariation;
-    const previous = activeSelectedByCategory.get(selection.category);
-    const previousVariation = previous && previous.id !== selection.id ? numberValue(previous.variation_amount) : 0;
-    const next = roundMoney(current - previousVariation + numberValue(selection.variation_amount));
-    setConfirmation({ selection, previous: previous?.id !== selection.id ? previous : null, current, next });
-  }
-
-  async function confirmSelection() {
-    if (!confirmation) return;
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const { selection, previous } = confirmation;
-      const now = new Date().toISOString();
-
-      if (previous) {
+      const previous = selectedMap.get(selectedRequirement.requirementKey);
+      if (previous?.id) {
         const { error: previousError } = await supabase
           .from("builder_client_selections")
-          .update({ selection_status: "replaced", status: "changed", is_active: false, updated_by: userId, updated_at: now })
+          .update({ selection_status: "replaced", status: "changed", is_active: false, updated_by: userId, updated_at: new Date().toISOString() })
           .eq("workspace_id", workspaceId)
           .eq("id", previous.id);
         if (previousError) throw previousError;
       }
+      const { data: inserted, error: insertError } = await supabase.from("builder_client_selections").insert(payload).select(SELECTION_COLUMNS).single();
+      if (insertError) throw insertError;
 
-      const { data: updated, error: updateError } = await supabase
-        .from("builder_client_selections")
-        .update({ selection_status: "selected", status: "selected", selected_at: now, is_active: true, updated_by: userId, updated_at: now })
-        .eq("workspace_id", workspaceId)
-        .eq("id", selection.id)
-        .select(isInternal ? internalSelectionColumns : safeSelectionColumns)
-        .single();
-      if (updateError) throw updateError;
-
-      const nextAll = selections.map((row) => {
-        if (previous && row.id === previous.id) return { ...row, selection_status: "replaced", status: "changed", is_active: false };
-        if (row.id === updated.id) return updated;
-        return row;
-      });
-      const nextActive = nextAll.filter((row) => row.session_id === selectedSessionId && row.is_active !== false && !["replaced", "removed"].includes(row.selection_status));
-      await persistBudget(selectedSessionId, nextActive, userId);
-      await auditHistory({
-        sessionId: selectedSessionId,
-        selectionId: updated.id,
-        previousSelectionId: previous?.id || null,
-        replacementSelectionId: updated.id,
-        action: previous ? "product_replaced" : "product_selected",
-        userId,
-        oldValue: previous || null,
-        newValue: updated,
-        previousVariation: previous ? numberValue(previous.variation_amount) : null,
-        newVariation: numberValue(updated.variation_amount),
-        reason: previous ? "Selection replaced from product card" : "Selection confirmed from product card",
-      });
-      setSelections(nextAll);
-      setConfirmation(null);
-      setSuccess(previous ? "Selection replaced and budget totals updated." : "Selection confirmed and budget totals updated.");
-    } catch (confirmError) {
-      setError(confirmError.message || "Could not confirm selection.");
+      const nextSelections = [inserted, ...selections.map((selection) => previous?.id === selection.id ? { ...selection, selection_status: "replaced", status: "changed", is_active: false } : selection)];
+      setSelections(nextSelections);
+      await persistBudget(session.id, nextSelections.filter((selection) => selection.session_id === session.id && selection.is_active !== false && !["replaced", "removed"].includes(selection.selection_status || selection.status)), userId);
+      setSuccess(`${selectedRequirement.label} selection saved.`);
+    } catch (saveError) {
+      setError(saveError.message || "Could not save product selection.");
     } finally {
       setSaving(false);
     }
@@ -654,188 +285,42 @@ export default function BuilderClientSelectionsPage() {
   async function persistBudget(sessionId, rows, userId) {
     if (!sessionId) return;
     const nextBudget = calculateSessionBudget({
-      originalEstimateTotal: budget.originalEstimateTotal,
+      originalEstimateTotal: selectionBudget.originalEstimateTotal,
       privateUpgradeCeiling: selectedSession?.private_upgrade_ceiling || 0,
       warningThresholdPercent: selectedSession?.warning_threshold_percent || DEFAULT_WARNING_THRESHOLD_PERCENT,
       selections: rows,
     });
-    const sessionPayload = {
+    const payload = {
       current_net_selection_variation: nextBudget.currentNetSelectionVariation,
       current_updated_estimate_total: nextBudget.currentUpdatedEstimateTotal,
       selection_budget_status: nextBudget.selectionBudgetStatus,
       updated_by: userId,
       updated_at: new Date().toISOString(),
     };
-    const { data, error: updateError } = await supabase
-      .from("builder_selection_sessions")
-      .update(sessionPayload)
-      .eq("workspace_id", workspaceId)
-      .eq("id", sessionId)
-      .select("*")
-      .single();
+    const { data, error: updateError } = await supabase.from("builder_selection_sessions").update(payload).eq("workspace_id", workspaceId).eq("id", sessionId).select(SESSION_COLUMNS).single();
     if (updateError) throw updateError;
     setSessions((current) => current.map((session) => session.id === sessionId ? data : session));
-
-    const summaries = categorySummariesFromRows(rows).map((summary) => ({
-      workspace_id: workspaceId,
-      project_id: selectedProjectId,
-      session_id: sessionId,
-      category: summary.category,
-      original_allowance: summary.originalAllowance,
-      selected_value: summary.selectedValue,
-      net_difference: summary.netDifference,
-      created_by: userId,
-      updated_by: userId,
-    }));
-    if (isInternal && summaries.length) {
-      await supabase.from("builder_selection_categories").upsert(summaries, { onConflict: "workspace_id,session_id,category" });
-    }
   }
 
-  async function auditHistory({ sessionId, selectionId = null, previousSelectionId = null, replacementSelectionId = null, action, userId, oldValue, newValue, previousVariation = null, newVariation = null, reason = "" }) {
-    await supabase.from("builder_selection_history").insert({
-      workspace_id: workspaceId,
-      project_id: selectedProjectId,
-      session_id: sessionId,
-      selection_id: selectionId,
-      previous_selection_id: previousSelectionId,
-      replacement_selection_id: replacementSelectionId,
-      action,
-      user_id: userId,
-      user_role: role,
-      changed_by: userId,
-      previous_variation: previousVariation,
-      new_variation: newVariation,
-      old_value: oldValue,
-      new_value: newValue,
-      reason,
-      created_by: userId,
-      updated_by: userId,
-    });
-  }
-
-  async function createDraftVariationFromSummary() {
-    if (!isInternal) {
-      setError("Only builder and designer roles can create selection variations.");
-      return;
-    }
-    const rows = activeSelections.filter((selection) => numberValue(selection.variation_amount) !== 0);
-    if (!rows.length) {
-      setError("There are no upgrade or credit lines to send to Variations.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    setSuccess("");
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData?.user?.id || null;
-      const subtotal = roundMoney(rows.reduce((total, row) => total + variationExGst(row), 0));
-      const total = roundMoney(rows.reduce((sum, row) => sum + numberValue(row.variation_amount), 0));
-      const gstTotal = roundMoney(total - subtotal);
-      const variationPayload = {
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        snapshot_id: selectedSnapshotId,
-        variation_number: nextVariationNumber(variations),
-        title: "Selections Summary Variation",
-        reason: "Client selections above/below original estimate",
-        status: "draft",
-        subtotal,
-        gst_total: gstTotal,
-        total,
-        margin_total: 0,
-        metadata: {
-          uiStatus: "draft",
-          source: "selections_budget_manager",
-          selectionSessionId: selectedSessionId,
-          netSelectionVariation: budget.currentNetSelectionVariation,
-          originalEstimateTotal: budget.originalEstimateTotal,
-          updatedEstimatedPrice: budget.currentUpdatedEstimateTotal,
-        },
-        notes: "Draft created from approved selections summary. Review before sending or approving.",
-        created_by: userId,
-        updated_by: userId,
-      };
-      const { data: variation, error: variationError } = await supabase.from("builder_variations").insert(variationPayload).select("*").single();
-      if (variationError) throw variationError;
-
-      const itemPayloads = rows.map((row) => ({
-        workspace_id: workspaceId,
-        project_id: selectedProjectId,
-        variation_id: variation.id,
-        snapshot_id: selectedSnapshotId,
-        boq_item_id: row.boq_item_id || null,
-        source_quote_row_id: row.source_quote_row_id || null,
-        source_section_name: titleCase(row.category),
-        description: `${titleCase(row.category)} - ${row.brand ? `${row.brand} ` : ""}${row.product_name || row.title}${row.model_number ? ` (${row.model_number})` : ""}`,
-        quantity: 1,
-        unit: "ea",
-        unit_cost: canViewCosts ? numberValue(row.builder_cost) + numberValue(row.installation_cost) : 0,
-        unit_price: variationExGst(row),
-        gst_rate: numberValue(row.gst_rate || GST_RATE),
-        cost_total: canViewCosts ? numberValue(row.builder_cost) + numberValue(row.installation_cost) : 0,
-        line_total: variationExGst(row),
-        status: "active",
-        metadata: {
-          source: "selections_budget_manager",
-          selectionId: row.id,
-          selectionSessionId: selectedSessionId,
-          category: row.category,
-          includedAllowance: numberValue(row.included_allowance || row.allowance_amount),
-          selectedClientPrice: numberValue(row.client_selection_price),
-          variationAmount: numberValue(row.variation_amount),
-          modelNumber: row.model_number || null,
-          imageUrl: row.image_url || null,
-        },
-        created_by: userId,
-      }));
-      const { error: itemError } = await supabase.from("builder_variation_items").insert(itemPayloads);
-      if (itemError) {
-        await supabase.from("builder_variations").delete().eq("workspace_id", workspaceId).eq("id", variation.id);
-        throw itemError;
-      }
-
-      await supabase
-        .from("builder_selection_sessions")
-        .update({ status: "variation_created", variation_id: variation.id, updated_by: userId, updated_at: new Date().toISOString() })
-        .eq("workspace_id", workspaceId)
-        .eq("id", selectedSessionId);
-      await auditHistory({
-        sessionId: selectedSessionId,
-        action: "variation_created",
-        userId,
-        oldValue: null,
-        newValue: variationPayload,
-        newVariation: total,
-        reason: "Draft variation created from selections summary",
-      });
-      setVariations((current) => [variation, ...current]);
-      setSuccess(`Draft variation ${variation.variation_number} created.`);
-    } catch (variationError) {
-      setError(variationError.message || "Could not create draft variation.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const privateAlert = privateBudgetAlert(budget);
+  const bannerArea = screen === "areas" ? "Interior" : KITCHEN_AREA_LABEL;
+  const bannerSelection = screen === "product" ? selectedRequirement.label : screen === "checklist" ? "Selection Checklist" : "Areas";
 
   return (
     <>
       <Head>
-        <title>Client Selections Budget Manager</title>
+        <title>Inclusions & Selections</title>
       </Head>
       <main style={styles.page}>
-        <header style={styles.header}>
+        <header style={styles.banner}>
           <div>
-            <div style={styles.eyebrow}>Gr8 Result Client Selections</div>
-            <h1 style={styles.title}>Selections Budget Manager</h1>
-            <p style={styles.subtitle}>Compare product selections against the original estimate while keeping private budget controls visible only to authorised project roles.</p>
+            <div style={styles.eyebrow}>Inclusions & Selections</div>
+            <h1 style={styles.title}>{selectedProject?.project_name || "Select a Project"}</h1>
+            <p style={styles.subtitle}>{selectedProject?.client_name || "Client"}{selectedSnapshot?.source_quote_number ? ` · Job ${selectedSnapshot.source_quote_number}` : ""}</p>
           </div>
-          <div style={styles.headerActions}>
-            <Link href="/modules/builders/selections-book" style={styles.secondaryLink}>Selections Book</Link>
-            <Link href="/modules/builders/variations" style={styles.primaryLink}>Variations</Link>
+          <div style={styles.bannerMeta}>
+            <span>Current Area: <strong>{bannerArea}</strong></span>
+            <span>Current Selection: <strong>{bannerSelection}</strong></span>
+            {screen === "product" ? <button type="button" onClick={openKitchenChecklist} style={styles.bannerButton}><ArrowLeft size={16} />Back to Kitchen</button> : null}
           </div>
         </header>
 
@@ -861,458 +346,383 @@ export default function BuilderClientSelectionsPage() {
               {sessions.map((session) => <option key={session.id} value={session.id}>{session.session_name || "Client Selections"} - {titleCase(session.status)}</option>)}
             </select>
           </label>
-          <label style={styles.field}>
-            <span style={styles.label}>Category</span>
-            <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} style={styles.select}>
-              <option value="all">All categories</option>
-              {SELECTION_CATEGORIES.map((category) => <option key={category} value={category}>{titleCase(category)}</option>)}
-            </select>
-          </label>
+          <div style={styles.headerLinks}>
+            <Link href="/modules/builders/product-library" style={styles.secondaryLink}>Product Library</Link>
+            {isInternal ? <Link href="/modules/builders/selections-book" style={styles.secondaryLink}>Selections Book</Link> : null}
+          </div>
         </section>
 
         {error ? <div style={styles.error}>{error}</div> : null}
         {success ? <div style={styles.success}>{success}</div> : null}
-        {workspaceLoading ? <div style={styles.notice}>Loading workspace...</div> : null}
+        {workspaceLoading || loading ? <div style={styles.notice}>Loading selections...</div> : null}
 
-        <section style={styles.summaryDock}>
-          <FinancialTile label="Original Estimate Price" value={money(budget.originalEstimateTotal, selectedProject?.currency)} />
-          <FinancialTile label={budget.currentNetSelectionVariation < 0 ? "Selections Credit" : "Current Selections Above Estimate"} value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} tone={budget.currentNetSelectionVariation > 0 ? "upgrade" : budget.currentNetSelectionVariation < 0 ? "credit" : ""} />
-          <FinancialTile label="Updated Estimated Price" value={money(budget.currentUpdatedEstimateTotal, selectedProject?.currency)} emphasis />
-        </section>
+        <RunningSummary areaTotals={kitchenTotals} projectTotals={runningProjectTotals} currency={selectedProject?.currency} />
 
-        {isInternal ? (
-          <section style={styles.privatePanel}>
-            <div style={styles.privateHeader}>
-              <Shield size={20} />
-              <div>
-                <h2 style={styles.panelTitle}>Private Budget Panel</h2>
-                <p style={styles.panelText}>Visible to builder and interior designer roles only.</p>
-              </div>
-            </div>
-            {privateAlert ? <div style={{ ...styles.privateAlert, ...(budget.selectionBudgetStatus === "over_limit" ? styles.privateAlertDanger : {}) }}><AlertTriangle size={18} />{privateAlert}</div> : null}
-            <div style={styles.privateGrid}>
-              <MiniTotal label="Private Upgrade Ceiling" value={money(budget.privateUpgradeCeiling, selectedProject?.currency)} />
-              <MiniTotal label="Current Net Upgrades" value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} />
-              <MiniTotal label="Remaining Capacity" value={money(budget.remainingCapacity, selectedProject?.currency)} tone={budget.remainingCapacity < 0 ? "bad" : "good"} />
-              <MiniTotal label="Percentage Used" value={`${budget.percentageUsed}%`} />
-              <MiniTotal label="Budget Status" value={titleCase(budget.selectionBudgetStatus)} tone={budget.selectionBudgetStatus === "over_limit" ? "bad" : budget.selectionBudgetStatus === "within_budget" ? "good" : ""} />
-            </div>
-            {canEditBudgetSettings ? (
-              <div style={styles.settingsGrid}>
-                <NumberField label="Private Upgrade Ceiling" value={budgetSettingsForm.privateUpgradeCeiling} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, privateUpgradeCeiling: value }))} />
-                <NumberField label="Warning Threshold %" value={budgetSettingsForm.warningThresholdPercent} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, warningThresholdPercent: value }))} />
-                <NumberField label="Default Markup %" value={budgetSettingsForm.defaultBuilderMarkupPercent} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, defaultBuilderMarkupPercent: value }))} />
-                <NumberField label="Default GST %" value={budgetSettingsForm.defaultGstRate} onChange={(value) => setBudgetSettingsForm((current) => ({ ...current, defaultGstRate: value }))} />
-                <button type="button" onClick={saveBudgetSettings} disabled={saving} style={styles.primaryDarkButton}>Save Settings</button>
-              </div>
-            ) : null}
-          </section>
+        {screen === "areas" ? (
+          <AreasView totals={kitchenTotals} onOpenKitchen={openKitchenChecklist} currency={selectedProject?.currency} />
         ) : null}
-
-        <section style={styles.layout}>
-          {isInternal ? (
-            <section style={styles.panel}>
-              <div style={styles.panelHeader}>
-                <div>
-                  <h2 style={styles.panelTitle}>Add Product Option</h2>
-                  <p style={styles.panelText}>{isDesigner ? "Designer access can create selections and view budget warnings, but cost and margin fields remain controlled by builder roles." : "Store calculated and overridden client prices without exposing cost fields to clients."}</p>
-                </div>
-              </div>
-              <div style={styles.formGrid}>
-                <SelectField label="Category" value={form.category} onChange={(value) => updateForm("category", value)} options={SELECTION_CATEGORIES.map((category) => ({ value: category, label: titleCase(category) }))} />
-                <TextField label="Room" value={form.room} onChange={(value) => updateForm("room", value)} />
-                <TextField label="Brand" value={form.brand} onChange={(value) => updateForm("brand", value)} />
-                <TextField label="Product Name" value={form.productName} onChange={(value) => updateForm("productName", value)} />
-                <TextField label="Model Number" value={form.modelNumber} onChange={(value) => updateForm("modelNumber", value)} />
-                <TextField label="Finish / Colour" value={form.finish || form.colour} onChange={(value) => { updateForm("finish", value); updateForm("colour", value); }} />
-                <TextField label="Image URL" value={form.imageUrl} onChange={(value) => updateForm("imageUrl", value)} wide />
-                <TextField label="Specification URL" value={form.specificationUrl} onChange={(value) => updateForm("specificationUrl", value)} />
-                <TextField label="Warranty URL" value={form.warrantyUrl} onChange={(value) => updateForm("warrantyUrl", value)} />
-                <TextField label="Installation Guide URL" value={form.installationGuideUrl} onChange={(value) => updateForm("installationGuideUrl", value)} />
-                <SelectField label="Supplier" value={form.supplierId} onChange={(value) => updateForm("supplierId", value)} options={[{ value: "", label: "Manual supplier" }, ...suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name }))]} />
-                <TextField label="Supplier Name" value={form.supplierName} onChange={(value) => updateForm("supplierName", value)} />
-                <SelectField label="Source Quote Row" value={form.sourceQuoteRowId} onChange={(value) => updateForm("sourceQuoteRowId", value)} options={[{ value: "", label: "No source row" }, ...boqItems.map((item) => ({ value: item.source_quote_row_id || item.id, label: `${item.source_quote_row_id || item.id} - ${item.item_name || item.description}` }))]} wide />
-                <TextArea label="Brief Description" value={form.description} onChange={(value) => updateForm("description", value)} wide />
-                <NumberField label="Included Allowance" value={form.includedAllowance} onChange={(value) => updateForm("includedAllowance", value)} />
-                {canEditCosts ? (
-                  <>
-                    <NumberField label="Supplier Cost" value={form.supplierCost} onChange={(value) => updateForm("supplierCost", value)} />
-                    <NumberField label="Builder Cost" value={form.builderCost} onChange={(value) => updateForm("builderCost", value)} />
-                    <NumberField label="Installation Cost" value={form.installationCost} onChange={(value) => updateForm("installationCost", value)} />
-                    <NumberField label="Builder Markup %" value={form.builderMarkupPercent} onChange={(value) => updateForm("builderMarkupPercent", value)} />
-                    <NumberField label="Fixed Builder Markup" value={form.fixedBuilderMarkup} onChange={(value) => updateForm("fixedBuilderMarkup", value)} />
-                  </>
-                ) : null}
-                <NumberField label="GST Rate %" value={form.gstRate} onChange={(value) => updateForm("gstRate", value)} />
-                <NumberField label="Manual Final Price" value={form.manualOverridePrice} onChange={(value) => updateForm("manualOverridePrice", value)} />
-                <SelectField label="Selection Status" value={form.selectionStatus} onChange={(value) => updateForm("selectionStatus", value)} options={["not_selected", "selected", "approved"].map((status) => ({ value: status, label: titleCase(status) }))} />
-                <TextArea label="Internal Notes" value={form.notes} onChange={(value) => updateForm("notes", value)} wide />
-              </div>
-              <div style={styles.calcStrip}>
-                <MiniTotal label="Client Price" value={money(formFinancials.clientSelectionPrice, selectedProject?.currency)} />
-                <MiniTotal label="Price Impact" value={clientPriceImpactLabel(formFinancials.variationAmount)} tone={formFinancials.variationAmount > 0 ? "bad" : formFinancials.variationAmount < 0 ? "good" : ""} />
-                {canViewCosts ? <MiniTotal label="Calculated Ex GST" value={money(formFinancials.priceBeforeGst, selectedProject?.currency)} /> : null}
-              </div>
-              <button type="button" onClick={createSelection} disabled={saving || loading} style={{ ...styles.createButton, ...((saving || loading) ? styles.disabledButton : {}) }}>
-                {saving ? "Saving..." : "Save Product Option"}
-              </button>
-            </section>
-          ) : null}
-
-          <section style={styles.panel}>
-            <div style={styles.panelHeader}>
-              <div>
-                <h2 style={styles.panelTitle}>Selection Product Cards</h2>
-                <p style={styles.panelText}>{filteredSelections.length} product option{filteredSelections.length === 1 ? "" : "s"} available for this session.</p>
-              </div>
-            </div>
-            {!filteredSelections.length ? <div style={styles.empty}>No selections have been created for this project yet.</div> : null}
-            <div style={styles.productGrid}>
-              {filteredSelections.map((selection) => (
-                <ProductCard
-                  key={selection.id}
-                  selection={selection}
-                  currency={selectedProject?.currency}
-                  isInternal={isInternal}
-                  canViewCosts={canViewCosts}
-                  onSelect={() => openSelectionConfirm(selection)}
-                />
-              ))}
-            </div>
-          </section>
-        </section>
-
-        <section style={styles.summarySection}>
-          <div style={styles.panelHeader}>
-            <div>
-              <h2 style={styles.panelTitle}>{isInternal && showInternalSummary ? "Internal Summary" : "Client Summary"}</h2>
-              <p style={styles.panelText}>Category totals are grouped from active selections only.</p>
-            </div>
-            <div style={styles.headerActions}>
-              {isInternal ? <button type="button" onClick={() => setShowInternalSummary((value) => !value)} style={styles.utilityButton}>{showInternalSummary ? "Client Summary" : "Internal Summary"}</button> : null}
-              {isInternal ? <button type="button" onClick={createDraftVariationFromSummary} disabled={saving || !activeSelections.length} style={styles.primaryDarkButton}><FileText size={16} />Create Draft Variation</button> : null}
-            </div>
-          </div>
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  {isInternal && showInternalSummary ? <th>Included Amount</th> : null}
-                  {isInternal && showInternalSummary ? <th>Selected Amount</th> : null}
-                  <th>{isInternal && showInternalSummary ? "Difference" : "Client Impact"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {categorySummaries.map((summary) => (
-                  <tr key={summary.category}>
-                    <td>{titleCase(summary.category)}</td>
-                    {isInternal && showInternalSummary ? <td>{money(summary.originalAllowance, selectedProject?.currency)}</td> : null}
-                    {isInternal && showInternalSummary ? <td>{money(summary.selectedValue, selectedProject?.currency)}</td> : null}
-                    <td>{isInternal && showInternalSummary ? signedMoney(summary.netDifference, selectedProject?.currency) : categoryClientLabel(summary.netDifference, selectedProject?.currency)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div style={styles.bottomTotals}>
-            <MiniTotal label="Original Estimate" value={money(budget.originalEstimateTotal, selectedProject?.currency)} />
-            <MiniTotal label="Total Selection Upgrades" value={signedMoney(totalBySign(activeSelections, 1), selectedProject?.currency)} />
-            <MiniTotal label="Total Selection Credits" value={signedMoney(totalBySign(activeSelections, -1), selectedProject?.currency)} />
-            <MiniTotal label="Net Selection Variation" value={signedMoney(budget.currentNetSelectionVariation, selectedProject?.currency)} />
-            <MiniTotal label="Updated Estimated Price" value={money(budget.currentUpdatedEstimateTotal, selectedProject?.currency)} />
-          </div>
-        </section>
-
-        {confirmation ? (
-          <div style={styles.modalBackdrop}>
-            <div style={styles.modal}>
-              <h2 style={styles.modalTitle}>{confirmation.previous ? "Replace Selection" : "Confirm Selection"}</h2>
-              <p style={styles.modalText}>
-                This selection will {numberValue(confirmation.selection.variation_amount) >= 0 ? "add" : "credit"} {money(Math.abs(numberValue(confirmation.selection.variation_amount)), selectedProject?.currency)} {numberValue(confirmation.selection.variation_amount) >= 0 ? "above" : "below"} the amount included in the original estimate.
-              </p>
-              <div style={styles.modalTotals}>
-                <MiniTotal label="Current selections above estimate" value={signedMoney(confirmation.current, selectedProject?.currency)} />
-                <MiniTotal label="After this change" value={signedMoney(confirmation.next, selectedProject?.currency)} />
-              </div>
-              <div style={styles.modalActions}>
-                <button type="button" onClick={() => setConfirmation(null)} style={styles.utilityButton}>Choose Another</button>
-                <button type="button" onClick={confirmSelection} disabled={saving} style={styles.primaryDarkButton}><Check size={16} />Confirm Selection</button>
-              </div>
-            </div>
-          </div>
+        {screen === "checklist" ? (
+          <KitchenChecklist
+            requirements={KITCHEN_REQUIREMENTS}
+            selectedMap={selectedMap}
+            totals={kitchenTotals}
+            currency={selectedProject?.currency}
+            onOpenRequirement={openRequirement}
+          />
+        ) : null}
+        {screen === "product" ? (
+          <ProductSelectionView
+            requirement={selectedRequirement}
+            requirements={KITCHEN_REQUIREMENTS}
+            selectedMap={selectedMap}
+            products={visibleProducts}
+            allProducts={requirementProducts}
+            filters={filters}
+            setFilters={setFilters}
+            availableFilters={availableFilters}
+            currency={selectedProject?.currency}
+            saving={saving}
+            onOpenRequirement={openRequirement}
+            onBack={openKitchenChecklist}
+            onSelect={selectProduct}
+          />
         ) : null}
       </main>
     </>
   );
 }
 
-function ProductCard({ selection, currency, isInternal, canViewCosts, onSelect }) {
-  const variation = numberValue(selection.variation_amount || selection.selected_details?.variationAmount);
-  const status = selection.selection_status || selection.status || "not_selected";
-  const productName = selection.product_name || selection.selected_product_name || selection.title;
-  const imageUrl = selection.image_url || `https://placehold.co/640x420/e2e8f0/334155?text=${encodeURIComponent(productName || "Selection")}`;
+function AreasView({ totals, onOpenKitchen, currency }) {
+  const complete = totals.completed === totals.total;
   return (
-    <article style={{ ...styles.productCard, ...(status === "selected" || status === "approved" ? styles.productCardSelected : {}) }}>
-      <div style={styles.productImageWrap}>
-        <img src={imageUrl} alt={productName || "Selection product"} style={styles.productImage} />
-        <span style={{ ...styles.impactBadge, ...(variation > 0 ? styles.badgeUpgrade : variation < 0 ? styles.badgeCredit : styles.badgeIncluded) }}>{clientPriceImpactLabel(variation)}</span>
+    <section style={styles.areaGrid}>
+      <button type="button" onClick={onOpenKitchen} style={styles.areaCard}>
+        <div>
+          <span style={styles.areaEyebrow}>Interior</span>
+          <h2 style={styles.areaTitle}>Kitchen {complete ? "✓" : ""}</h2>
+          <p style={styles.panelText}>{totals.completed} / {totals.total} selections complete</p>
+        </div>
+        <div style={styles.areaTotals}>
+          <MiniTotal label="Allowance" value={money(totals.allowance, currency)} />
+          <MiniTotal label="Selected" value={money(totals.selected, currency)} />
+          <MiniTotal label={totals.variation < 0 ? "Credit" : "Variation"} value={signedMoney(totals.variation, currency)} tone={totals.variation > 0 ? "bad" : totals.variation < 0 ? "good" : ""} />
+        </div>
+        <ChevronRight size={22} />
+      </button>
+      {["Bathroom 0/12", "Ensuite 0/10", "Laundry 0/6", "Bedrooms 0/15"].map((label) => (
+        <div key={label} style={styles.futureArea}>{label}</div>
+      ))}
+    </section>
+  );
+}
+
+function KitchenChecklist({ requirements, selectedMap, totals, currency, onOpenRequirement }) {
+  return (
+    <section style={styles.panel}>
+      <div style={styles.panelHeader}>
+        <div>
+          <h2 style={styles.panelTitle}>Kitchen Selection Checklist</h2>
+          <p style={styles.panelText}>{totals.completed} of {totals.total} completed</p>
+        </div>
+        <div style={styles.compactTotals}>
+          <MiniTotal label="Allowance Total" value={money(totals.allowance, currency)} />
+          <MiniTotal label="Selected Total" value={money(totals.selected, currency)} />
+          <MiniTotal label={totals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(totals.variation, currency)} tone={totals.variation > 0 ? "bad" : totals.variation < 0 ? "good" : ""} />
+        </div>
       </div>
-      <div style={styles.productBody}>
-        <div style={styles.cardHeader}>
+      <div style={styles.checklistRows}>
+        {requirements.map((requirement) => {
+          const selection = selectedMap.get(requirement.requirementKey);
+          return (
+            <RequirementRow
+              key={requirement.requirementKey}
+              requirement={requirement}
+              selection={selection}
+              currency={currency}
+              onOpen={() => onOpenRequirement(requirement.requirementKey)}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ProductSelectionView({ requirement, requirements, selectedMap, products, allProducts, filters, setFilters, availableFilters, currency, saving, onOpenRequirement, onBack, onSelect }) {
+  return (
+    <section style={styles.selectionLayout}>
+      <aside style={styles.progressNav}>
+        <div style={styles.navHeader}>
+          <h2>{KITCHEN_AREA_LABEL}</h2>
+          <button type="button" onClick={onBack} style={styles.textButton}><ArrowLeft size={15} />Back</button>
+        </div>
+        {requirements.map((item) => {
+          const status = statusForRequirement(item, selectedMap.get(item.requirementKey));
+          const active = item.requirementKey === requirement.requirementKey;
+          return (
+            <button key={item.requirementKey} type="button" onClick={() => onOpenRequirement(item.requirementKey)} style={{ ...styles.navItem, ...(active ? styles.navItemActive : {}) }}>
+              <StatusDot status={status} />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </aside>
+      <section style={styles.productPanel}>
+        <div style={styles.panelHeader}>
           <div>
-            <p style={styles.cardMeta}>{selection.brand || selection.selected_supplier_name || "Selection"}</p>
-            <h3 style={styles.cardTitle}>{productName}</h3>
-            <p style={styles.cardMeta}>{selection.model_number ? `Model ${selection.model_number}` : "Model not recorded"}</p>
+            <h2 style={styles.panelTitle}>Kitchen / {requirement.label}</h2>
+            <p style={styles.panelText}>{products.length} product{products.length === 1 ? "" : "s"} matched from the shared Product Library.</p>
           </div>
-          <span style={{ ...styles.statusPill, ...statusStyle(status) }}>{titleCase(status)}</span>
+          <button type="button" onClick={onBack} style={styles.primaryLightButton}><ArrowLeft size={16} />Back to Kitchen</button>
         </div>
-        <p style={styles.descriptionText}>{selection.description || [selection.finish, selection.colour].filter(Boolean).join(" / ") || "Product details available during the selections appointment."}</p>
-        <p style={styles.finishLine}>{selection.finish || selection.colour || selection.selected_finish || selection.selected_colour || "Finish to be confirmed"}</p>
-        <div style={styles.linkRow}>
-          <DocLink href={selection.specification_url} label="Specifications" />
-          <DocLink href={selection.warranty_url} label="Warranty" />
-          <DocLink href={selection.installation_guide_url} label="Install Guide" />
-        </div>
-        {isInternal ? (
-          <div style={styles.internalMini}>
-            <MiniTotal label="Original Allowance" value={money(selection.included_allowance || selection.allowance_amount, currency)} />
-            <MiniTotal label="Selected Value" value={money(selection.client_selection_price, currency)} />
-            {canViewCosts ? <MiniTotal label="Builder Cost" value={money(numberValue(selection.builder_cost) + numberValue(selection.installation_cost), currency)} /> : null}
+        {availableFilters.length ? (
+          <div style={styles.filterBar}>
+            {availableFilters.map((filter) => (
+              <label key={filter.key} style={styles.filterField}>
+                <span style={styles.label}>{filter.label}</span>
+                <select value={filters[filter.key] || ""} onChange={(event) => setFilters((current) => ({ ...current, [filter.key]: event.target.value }))} style={styles.select}>
+                  <option value="">All</option>
+                  {filter.values.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+            ))}
           </div>
         ) : null}
+        {!allProducts.length ? (
+          <div style={styles.empty}>
+            <strong>No products have been added for {requirement.label}.</strong>
+            <div style={styles.emptyActions}>
+              <Link href="/modules/builders/product-library" style={styles.primaryDarkButton}><PackagePlus size={16} />Add Product</Link>
+              <Link href="/modules/builders/product-library" style={styles.utilityButton}><FileUp size={16} />Import Products</Link>
+              <button type="button" onClick={onBack} style={styles.utilityButton}>Back to Kitchen</button>
+            </div>
+          </div>
+        ) : null}
+        {allProducts.length && !products.length ? <div style={styles.empty}>No {requirement.label} products match the selected filters.</div> : null}
+        <div style={styles.productGrid}>
+          {products.map((product) => (
+            <ProductCard key={product.productId || product.id || product.productCode} requirement={requirement} product={product} currency={currency} saving={saving} onSelect={() => onSelect(product)} />
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function RequirementRow({ requirement, selection, currency, onOpen }) {
+  const status = statusForRequirement(requirement, selection);
+  const financials = requirementFinancials(requirement, selection);
+  const productName = selection?.selected_product_name || selection?.product_name || "";
+  return (
+    <article style={{ ...styles.requirementRow, ...styles[`row_${statusTone(status)}`] }}>
+      <StatusDot status={status} />
+      <img src={requirementImage(requirement, selection)} alt="" style={styles.requirementImage} />
+      <div style={styles.requirementMain}>
+        <h3>{requirement.label}</h3>
+        <p>{productName ? `Selected: ${productName}` : "Not selected"}</p>
+        {selection?.selected_details?.priceState ? <span style={styles.priceState}>{selection.selected_details.priceState}</span> : null}
+      </div>
+      <div style={styles.rowMoney}>
+        <span>Allowance {money(financials.allowance, currency)}</span>
+        <span>Selected {selection ? money(financials.selectedPrice, currency) : "Not selected"}</span>
+        <strong>{signedMoney(financials.variation, currency)}</strong>
+      </div>
+      <button type="button" onClick={onOpen} style={status === "complete" ? styles.selectButton : styles.primaryDarkButton}>{selection ? "Change Selection" : "Select"}</button>
+    </article>
+  );
+}
+
+function ProductCard({ requirement, product, currency, saving, onSelect }) {
+  const state = priceStateForProduct(product);
+  const price = productClientPrice(product);
+  const allowance = productAllowance(product, requirement);
+  const quantity = requirement.defaultQuantity || 1;
+  const variation = variationFor({ selectedPrice: price, allowance, quantity });
+  const entity = product.metadata?.productEntity || product;
+  return (
+    <article style={styles.productCard}>
+      <img src={requirementImage(requirement, product)} alt={entity.productName || "Product"} style={styles.productImage} />
+      <div style={styles.productBody}>
+        <div>
+          <p style={styles.cardMeta}>{entity.brand || entity.supplier || "Product Library"}</p>
+          <h3 style={styles.cardTitle}>{entity.productName || product.product_name}</h3>
+          <p style={styles.cardMeta}>{entity.model ? `Model ${entity.model}` : entity.range || "Model not recorded"}</p>
+        </div>
+        <p style={styles.descriptionText}>{entity.description || product.description || "Product details available from the supplier."}</p>
+        <p style={styles.finishLine}>{[entity.finish, entity.colour, entity.size || entity.width].filter(Boolean).join(" / ") || "Variant to be confirmed"}</p>
+        <div style={styles.cardTotals}>
+          <MiniTotal label="Price" value={state === PRICE_STATES.current ? money(price, currency) : state} tone={state === PRICE_STATES.current ? "" : "warn"} />
+          <MiniTotal label="Allowance" value={money(allowance, currency)} />
+          <MiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+        </div>
         <div style={styles.productActions}>
-          <button type="button" onClick={onSelect} style={styles.selectButton}>{status === "selected" || status === "approved" ? "Replace Selection" : "Select"}</button>
-          <button type="button" onClick={onSelect} style={styles.utilityButton}><RefreshCw size={15} />View Details</button>
+          <button type="button" onClick={onSelect} disabled={saving} style={styles.selectButton}>{saving ? "Saving..." : "Add To My Selections"}</button>
+          {entity.specificationURL ? <a href={entity.specificationURL} target="_blank" rel="noreferrer" style={styles.utilityButton}>View Details</a> : <span style={styles.disabledButton}>View Details</span>}
+          {entity.officialProductURL || entity.supplierURL ? <a href={entity.officialProductURL || entity.supplierURL} target="_blank" rel="noreferrer" style={styles.utilityButton}>Official Page <ExternalLink size={14} /></a> : null}
         </div>
       </div>
     </article>
   );
 }
 
-function DocLink({ href, label }) {
-  if (!href) return <span style={styles.disabledDoc}>{label}</span>;
-  return <a href={href} target="_blank" rel="noreferrer" style={styles.docLink}>{label}</a>;
+function RunningSummary({ areaTotals: kitchen, projectTotals: project, currency }) {
+  return (
+    <section style={styles.runningDock}>
+      <div>
+        <span style={styles.label}>Selection Budget</span>
+        <strong>{project.completed} / {project.total} completed</strong>
+      </div>
+      <MiniTotal label="Total Allowances" value={money(project.allowance, currency)} />
+      <MiniTotal label="Selections To Date" value={money(project.selected, currency)} />
+      <MiniTotal label="Current Variation" value={signedMoney(project.variation, currency)} tone={project.variation > 0 ? "bad" : project.variation < 0 ? "good" : ""} />
+      <MiniTotal label="Kitchen Variation" value={signedMoney(kitchen.variation, currency)} tone={kitchen.variation > 0 ? "bad" : kitchen.variation < 0 ? "good" : ""} />
+    </section>
+  );
 }
 
-function FinancialTile({ label, value, tone = "", emphasis = false }) {
-  return (
-    <div style={{ ...styles.financialTile, ...(emphasis ? styles.financialTileEmphasis : {}), ...(tone === "upgrade" ? styles.financialTileUpgrade : {}), ...(tone === "credit" ? styles.financialTileCredit : {}) }}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
+function StatusDot({ status }) {
+  return <span style={{ ...styles.statusDot, ...styles[`dot_${statusTone(status)}`] }}>{status === "complete" ? <Check size={14} /> : null}</span>;
 }
 
 function MiniTotal({ label, value, tone = "" }) {
   return (
-    <div style={{ ...styles.miniTotal, ...(tone === "bad" ? styles.miniTotalBad : {}), ...(tone === "good" ? styles.miniTotalGood : {}) }}>
+    <div style={{ ...styles.miniTotal, ...(tone === "bad" ? styles.miniTotalBad : {}), ...(tone === "good" ? styles.miniTotalGood : {}), ...(tone === "warn" ? styles.miniTotalWarn : {}) }}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
   );
 }
 
-function TextField({ label, value, onChange, wide = false }) {
-  return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
-    </label>
-  );
-}
-
-function NumberField({ label, value, onChange }) {
-  return (
-    <label style={styles.field}>
-      <span style={styles.label}>{label}</span>
-      <input type="number" step="0.01" value={value} onChange={(event) => onChange(event.target.value)} style={styles.input} />
-    </label>
-  );
-}
-
-function TextArea({ label, value, onChange, wide = false }) {
-  return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} style={styles.textarea} />
-    </label>
-  );
-}
-
-function SelectField({ label, value, onChange, options, wide = false }) {
-  return (
-    <label style={wide ? styles.fieldWide : styles.field}>
-      <span style={styles.label}>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} style={styles.select}>
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function categorySummariesFromRows(rows) {
-  const map = new Map();
-  rows.forEach((selection) => {
-    const key = selection.category || "other";
-    const current = map.get(key) || { category: key, originalAllowance: 0, selectedValue: 0, netDifference: 0 };
-    current.originalAllowance += numberValue(selection.included_allowance || selection.allowance_amount);
-    current.selectedValue += numberValue(selection.client_selection_price);
-    current.netDifference += numberValue(selection.variation_amount);
-    map.set(key, current);
-  });
-  return Array.from(map.values()).map((summary) => ({
-    ...summary,
-    originalAllowance: roundMoney(summary.originalAllowance),
-    selectedValue: roundMoney(summary.selectedValue),
-    netDifference: roundMoney(summary.netDifference),
-  }));
-}
-
-function privateBudgetAlert(budget) {
-  if (budget.selectionBudgetStatus === "approaching_limit") return "The client is approaching their approved upgrade ceiling.";
-  if (budget.selectionBudgetStatus === "limit_reached") return "The client has reached their approved upgrade ceiling.";
-  if (budget.selectionBudgetStatus === "over_limit") return `The client has exceeded their approved upgrade ceiling by ${money(Math.abs(budget.remainingCapacity))}.`;
-  return "";
-}
-
-function variationExGst(selection) {
-  const gstRate = numberValue(selection.gst_rate || GST_RATE);
-  return roundMoney(numberValue(selection.variation_amount) / (1 + gstRate / 100));
-}
-
-function totalBySign(rows, sign) {
-  return roundMoney(rows.reduce((total, row) => {
-    const value = numberValue(row.variation_amount);
-    if (sign > 0 && value > 0) return total + value;
-    if (sign < 0 && value < 0) return total + value;
-    return total;
-  }, 0));
-}
-
-function categoryClientLabel(value, currency) {
-  const number = numberValue(value);
-  if (number < 0) return `Category Credit: ${signedMoney(number, currency)}`;
-  return `Category Upgrade: ${signedMoney(number, currency)}`;
-}
-
-function categoryFromSource(value) {
-  const key = String(value || "").toLowerCase();
-  return SELECTION_CATEGORIES.find((category) => key.includes(category.replace(/_/g, " "))) || "";
-}
-
-function nextVariationNumber(existing = []) {
-  const max = existing.reduce((highest, variation) => {
-    const match = String(variation.variation_number || "").match(/VAR-(\d+)/i);
-    return match ? Math.max(highest, Number(match[1])) : highest;
-  }, 0);
-  return `VAR-${String(max + 1).padStart(3, "0")}`;
+function mapDbProductToEntity(product) {
+  const entity = product.metadata?.productEntity || {};
+  const supplier = product.builder_product_suppliers?.supplier_name || entity.supplier || "";
+  const brand = product.builder_product_manufacturers?.manufacturer_name || entity.brand || "";
+  const family = familyByKey(entity.familyKey || product.metadata?.familyKey || product.selection_type);
+  return {
+    ...entity,
+    raw: product,
+    id: product.id,
+    productId: product.id,
+    productCode: product.sku || entity.productCode || "",
+    organisationId: product.workspace_id || entity.organisationId || "",
+    linkedQuoteItemCode: product.quote_structure_row_id || entity.linkedQuoteItemCode || family?.linkedQuoteItemCode || "",
+    familyKey: entity.familyKey || product.metadata?.familyKey || product.selection_type || "",
+    topLevelArea: entity.topLevelArea || product.metadata?.topLevelArea || family?.topLevelArea || "",
+    category: product.builder_product_categories?.category_name || entity.category || product.quote_structure_section || family?.category || "",
+    subcategory: entity.subcategory || product.selection_type || family?.subcategory || "",
+    productName: product.product_name || entity.productName || "",
+    supplier,
+    brand,
+    range: entity.range || product.metadata?.range || "",
+    model: product.model || entity.model || "",
+    description: product.description || entity.description || "",
+    colour: entity.colour || product.metadata?.colour || "",
+    finish: entity.finish || product.metadata?.finish || "",
+    size: entity.size || product.metadata?.size || "",
+    width: entity.width || product.metadata?.width || "",
+    fuelType: entity.fuelType || product.metadata?.fuelType || "",
+    variants: entity.variants || [],
+    primaryImage: product.primary_image_url || entity.primaryImage || family?.image || "",
+    officialProductURL: product.product_url || entity.officialProductURL || "",
+    specificationURL: product.datasheet_pdf_url || entity.specificationURL || "",
+    supplierURL: product.supplier_website_url || entity.supplierURL || "",
+    clientPrice: entity.clientPrice || Number(product.upgrade_cost || 0),
+    allowance: entity.allowance || Number(product.base_allowance || 0),
+    builderCost: entity.builderCost || Number(product.base_allowance || 0),
+    RRP: entity.RRP || 0,
+    upgradePrice: Number(product.upgrade_cost || 0),
+    priceStatus: entity.priceStatus || product.metadata?.priceStatus || (Number(product.upgrade_cost || 0) ? PRICE_STATES.current : PRICE_STATES.pending),
+    priceReviewRequired: entity.priceReviewRequired || (!Number(product.upgrade_cost || 0) && !Number(product.base_allowance || 0)),
+    metadata: { ...product.metadata, productEntity: entity },
+  };
 }
 
 function money(value, currency = "AUD") {
-  const number = Number(value);
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: currency || "AUD",
-    maximumFractionDigits: 2,
-  }).format(Number.isFinite(number) ? number : 0);
+  return new Intl.NumberFormat("en-AU", { style: "currency", currency: currency || "AUD", maximumFractionDigits: 2 }).format(Number.isFinite(Number(value)) ? Number(value) : 0);
 }
 
 function signedMoney(value, currency = "AUD") {
-  const number = numberValue(value);
+  const number = roundMoney(value);
   if (number === 0) return money(0, currency);
-  const formatted = money(Math.abs(number), currency);
-  return `${number > 0 ? "+" : "-"}${formatted}`;
+  return `${number > 0 ? "+" : "-"}${money(Math.abs(number), currency)}`;
 }
 
 function titleCase(value) {
-  return String(value || "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function statusStyle(status) {
-  if (status === "approved" || status === "selected") return { background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0" };
-  if (status === "replaced") return { background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe" };
-  if (status === "removed") return { background: "#fff1f2", color: "#b91c1c", borderColor: "#fecaca" };
-  return { background: "#f8fafc", color: "#475569", borderColor: "#cbd5e1" };
+  return String(value || "").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const styles = {
   page: { minHeight: "100vh", background: "#f5f7fb", color: "#111827", padding: 18 },
-  header: { background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "22px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 18, boxShadow: "0 18px 45px rgba(17, 24, 39, 0.16)" },
-  eyebrow: { color: "#5eead4", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em" },
-  title: { margin: "4px 0", fontSize: 34, lineHeight: 1.08, fontWeight: 850 },
-  subtitle: { margin: 0, color: "#cbd5e1", fontSize: 15, maxWidth: 760 },
-  headerActions: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" },
-  primaryLink: { background: "#ffffff", color: "#111827", border: "1px solid rgba(255,255,255,0.7)", borderRadius: 8, padding: "10px 14px", textDecoration: "none", fontWeight: 800, whiteSpace: "nowrap" },
-  secondaryLink: { background: "rgba(255,255,255,0.08)", color: "#ffffff", border: "1px solid rgba(255,255,255,0.28)", borderRadius: 8, padding: "10px 14px", textDecoration: "none", fontWeight: 800, whiteSpace: "nowrap" },
-  controls: { marginTop: 16, background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 },
+  banner: { background: "#111827", color: "#fff", borderRadius: 8, padding: "20px 22px", display: "flex", justifyContent: "space-between", gap: 18, alignItems: "center", boxShadow: "0 18px 45px rgba(17,24,39,.16)" },
+  eyebrow: { color: "#5eead4", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".08em" },
+  title: { margin: "4px 0", fontSize: 32, lineHeight: 1.08, fontWeight: 900 },
+  subtitle: { margin: 0, color: "#cbd5e1", fontWeight: 700 },
+  bannerMeta: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, fontSize: 14, color: "#e5e7eb", fontWeight: 700 },
+  bannerButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#fff", color: "#111827", border: "1px solid #fff", borderRadius: 8, padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
+  controls: { marginTop: 16, background: "#fff", border: "1px solid #d7dee8", borderRadius: 8, padding: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, alignItems: "end" },
   field: { display: "flex", flexDirection: "column", gap: 6, minWidth: 0 },
-  fieldWide: { display: "flex", flexDirection: "column", gap: 6, minWidth: 0, gridColumn: "1 / -1" },
-  label: { color: "#475569", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" },
-  select: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700 },
-  input: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700 },
-  textarea: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 700, resize: "vertical" },
-  error: { marginTop: 12, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  success: { marginTop: 12, border: "1px solid #a7f3d0", background: "#ecfdf5", color: "#047857", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  notice: { marginTop: 12, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  summaryDock: { position: "sticky", top: 0, zIndex: 5, marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12, background: "rgba(245, 247, 251, 0.92)", padding: "8px 0", backdropFilter: "blur(8px)" },
-  financialTile: { background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 14, display: "flex", flexDirection: "column", gap: 5, minHeight: 82 },
-  financialTileEmphasis: { borderColor: "#0f766e", background: "#f0fdfa" },
-  financialTileUpgrade: { borderColor: "#fed7aa", background: "#fff7ed" },
-  financialTileCredit: { borderColor: "#bbf7d0", background: "#f0fdf4" },
-  privatePanel: { marginTop: 16, background: "#ffffff", border: "1px solid #99f6e4", borderRadius: 8, padding: 16 },
-  privateHeader: { display: "flex", alignItems: "center", gap: 10, marginBottom: 12, color: "#0f766e" },
-  privateGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 },
-  settingsGrid: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #ccfbf1", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10, alignItems: "end" },
-  privateAlert: { marginBottom: 12, display: "flex", alignItems: "center", gap: 8, border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
-  privateAlertDanger: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
-  layout: { marginTop: 16, display: "grid", gridTemplateColumns: "minmax(360px, 0.85fr) minmax(0, 1.15fr)", gap: 16, alignItems: "start" },
-  panel: { background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 14, marginBottom: 14 },
-  panelTitle: { margin: 0, fontSize: 19, lineHeight: 1.2, fontWeight: 850 },
-  panelText: { margin: "4px 0 0", color: "#64748b", fontSize: 14, fontWeight: 600 },
-  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 },
-  calcStrip: { marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
-  createButton: { width: "100%", marginTop: 14, background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "12px 14px", fontWeight: 900, cursor: "pointer" },
-  disabledButton: { opacity: 0.55, cursor: "not-allowed" },
-  productGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 },
-  productCard: { border: "1px solid #d7dee8", borderRadius: 8, overflow: "hidden", background: "#ffffff", display: "flex", flexDirection: "column" },
-  productCardSelected: { borderColor: "#0f766e", boxShadow: "0 10px 30px rgba(15, 118, 110, 0.12)" },
-  productImageWrap: { position: "relative", aspectRatio: "16 / 10", background: "#e2e8f0", overflow: "hidden" },
-  productImage: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  impactBadge: { position: "absolute", right: 10, bottom: 10, borderRadius: 8, padding: "7px 9px", fontSize: 13, fontWeight: 900, border: "1px solid" },
-  badgeUpgrade: { background: "#fff7ed", color: "#9a3412", borderColor: "#fed7aa" },
-  badgeCredit: { background: "#f0fdf4", color: "#15803d", borderColor: "#bbf7d0" },
-  badgeIncluded: { background: "#f8fafc", color: "#334155", borderColor: "#cbd5e1" },
-  productBody: { padding: 13, display: "flex", flexDirection: "column", gap: 10, flex: 1 },
-  cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
-  cardTitle: { margin: 0, fontSize: 17, fontWeight: 900 },
-  cardMeta: { margin: "2px 0", color: "#64748b", fontSize: 13, fontWeight: 750 },
-  descriptionText: { margin: 0, color: "#334155", fontSize: 14, fontWeight: 600, lineHeight: 1.45 },
-  finishLine: { margin: 0, color: "#111827", fontSize: 13, fontWeight: 850 },
-  linkRow: { display: "flex", gap: 8, flexWrap: "wrap" },
-  docLink: { border: "1px solid #cbd5e1", borderRadius: 8, color: "#1d4ed8", textDecoration: "none", padding: "6px 8px", fontSize: 12, fontWeight: 850 },
-  disabledDoc: { border: "1px solid #e2e8f0", borderRadius: 8, color: "#94a3b8", padding: "6px 8px", fontSize: 12, fontWeight: 850 },
-  internalMini: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8 },
-  productActions: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" },
-  selectButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer" },
-  utilityButton: { display: "inline-flex", alignItems: "center", gap: 6, background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 11px", fontWeight: 850, cursor: "pointer" },
-  primaryDarkButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#111827", color: "#ffffff", border: "1px solid #111827", borderRadius: 8, padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
+  label: { color: "#475569", fontSize: 12, fontWeight: 850, textTransform: "uppercase", letterSpacing: ".04em" },
+  select: { width: "100%", border: "1px solid #cbd5e1", borderRadius: 8, background: "#fff", color: "#111827", padding: "10px 11px", fontSize: 14, fontWeight: 750 },
+  headerLinks: { display: "flex", gap: 8, flexWrap: "wrap" },
+  secondaryLink: { background: "#fff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", textDecoration: "none", fontWeight: 850 },
+  error: { marginTop: 12, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontWeight: 850 },
+  success: { marginTop: 12, border: "1px solid #a7f3d0", background: "#ecfdf5", color: "#047857", borderRadius: 8, padding: "10px 12px", fontWeight: 850 },
+  notice: { marginTop: 12, border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1e40af", borderRadius: 8, padding: "10px 12px", fontWeight: 850 },
+  runningDock: { position: "sticky", top: 0, zIndex: 5, marginTop: 16, background: "rgba(245,247,251,.94)", backdropFilter: "blur(8px)", padding: "8px 0", display: "grid", gridTemplateColumns: "minmax(150px,.8fr) repeat(4,minmax(150px,1fr))", gap: 10, alignItems: "stretch" },
+  panel: { marginTop: 16, background: "#fff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
+  panelHeader: { display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", marginBottom: 14 },
+  panelTitle: { margin: 0, fontSize: 22, lineHeight: 1.2, fontWeight: 900 },
+  panelText: { margin: "4px 0 0", color: "#64748b", fontSize: 14, fontWeight: 650 },
+  compactTotals: { display: "grid", gridTemplateColumns: "repeat(3,minmax(140px,1fr))", gap: 8, minWidth: 460 },
   miniTotal: { border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 11px", background: "#f8fafc", display: "flex", flexDirection: "column", gap: 4, minWidth: 0 },
-  miniTotalBad: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
+  miniTotalBad: { borderColor: "#fed7aa", background: "#fff7ed", color: "#9a3412" },
   miniTotalGood: { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" },
-  empty: { border: "1px dashed #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#475569", padding: 18, fontWeight: 700 },
-  summarySection: { marginTop: 16, background: "#ffffff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
-  tableWrap: { overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 8 },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 },
-  bottomTotals: { marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 },
-  statusPill: { border: "1px solid", borderRadius: 999, padding: "4px 8px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" },
-  modalBackdrop: { position: "fixed", inset: 0, zIndex: 20, background: "rgba(17, 24, 39, 0.58)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 },
-  modal: { width: "min(560px, 100%)", background: "#ffffff", borderRadius: 8, padding: 18, boxShadow: "0 25px 70px rgba(17, 24, 39, 0.25)" },
-  modalTitle: { margin: 0, fontSize: 22, fontWeight: 900 },
-  modalText: { margin: "10px 0 0", color: "#334155", fontSize: 15, fontWeight: 650 },
-  modalTotals: { marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
-  modalActions: { marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" },
+  miniTotalWarn: { borderColor: "#fde68a", background: "#fffbeb", color: "#92400e" },
+  areaGrid: { marginTop: 16, display: "grid", gridTemplateColumns: "minmax(320px,1.2fr) repeat(auto-fit,minmax(180px,1fr))", gap: 12 },
+  areaCard: { textAlign: "left", border: "1px solid #0f766e", background: "#fff", borderRadius: 8, padding: 16, display: "grid", gridTemplateColumns: "1fr auto auto", gap: 14, alignItems: "center", cursor: "pointer" },
+  areaEyebrow: { color: "#0f766e", fontSize: 12, fontWeight: 900, textTransform: "uppercase" },
+  areaTitle: { margin: "4px 0", fontSize: 24, fontWeight: 900 },
+  areaTotals: { display: "grid", gridTemplateColumns: "repeat(3, minmax(120px, 1fr))", gap: 8 },
+  futureArea: { border: "1px solid #d7dee8", borderRadius: 8, background: "#fff", padding: 16, color: "#64748b", fontWeight: 850 },
+  checklistRows: { display: "grid", gap: 10 },
+  requirementRow: { border: "1px solid #d7dee8", borderRadius: 8, background: "#fff", padding: 12, display: "grid", gridTemplateColumns: "28px 74px minmax(180px,1fr) minmax(180px,.8fr) auto", gap: 12, alignItems: "center" },
+  row_grey: { borderColor: "#d7dee8" },
+  row_amber: { borderColor: "#fde68a", background: "#fffbeb" },
+  row_green: { borderColor: "#a7f3d0", background: "#f0fdf4" },
+  row_red: { borderColor: "#fecaca", background: "#fff1f2" },
+  requirementImage: { width: 74, height: 58, borderRadius: 8, objectFit: "cover", background: "#e2e8f0" },
+  requirementMain: { minWidth: 0 },
+  priceState: { display: "inline-flex", marginTop: 5, border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: 999, padding: "3px 7px", fontSize: 12, fontWeight: 850 },
+  rowMoney: { display: "flex", flexDirection: "column", gap: 4, color: "#475569", fontSize: 13, fontWeight: 750 },
+  statusDot: { width: 24, height: 24, borderRadius: 999, border: "2px solid", display: "inline-flex", alignItems: "center", justifyContent: "center" },
+  dot_grey: { background: "#f1f5f9", color: "#64748b", borderColor: "#cbd5e1" },
+  dot_amber: { background: "#fef3c7", color: "#92400e", borderColor: "#f59e0b" },
+  dot_green: { background: "#dcfce7", color: "#15803d", borderColor: "#22c55e" },
+  dot_red: { background: "#fee2e2", color: "#b91c1c", borderColor: "#ef4444" },
+  selectionLayout: { marginTop: 16, display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, alignItems: "start" },
+  progressNav: { position: "sticky", top: 92, background: "#fff", border: "1px solid #d7dee8", borderRadius: 8, padding: 12 },
+  navHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 },
+  textButton: { display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", color: "#0f766e", border: 0, padding: 0, fontWeight: 900, cursor: "pointer" },
+  navItem: { width: "100%", display: "flex", alignItems: "center", gap: 9, background: "#fff", border: "1px solid transparent", borderRadius: 8, padding: "8px 9px", color: "#111827", fontWeight: 800, cursor: "pointer", textAlign: "left" },
+  navItemActive: { background: "#eff6ff", borderColor: "#bfdbfe", color: "#1d4ed8" },
+  productPanel: { background: "#fff", border: "1px solid #d7dee8", borderRadius: 8, padding: 16 },
+  primaryLightButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#f8fafc", color: "#111827", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 12px", fontWeight: 900, cursor: "pointer" },
+  filterBar: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 10, marginBottom: 14 },
+  filterField: { display: "flex", flexDirection: "column", gap: 6 },
+  empty: { border: "1px dashed #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#475569", padding: 18, fontWeight: 800 },
+  emptyActions: { marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" },
+  productGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))", gap: 14 },
+  productCard: { border: "1px solid #d7dee8", borderRadius: 8, overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" },
+  productImage: { width: "100%", aspectRatio: "16 / 10", objectFit: "cover", background: "#e2e8f0" },
+  productBody: { padding: 13, display: "flex", flexDirection: "column", gap: 10, flex: 1 },
+  cardMeta: { margin: "2px 0", color: "#64748b", fontSize: 13, fontWeight: 750 },
+  cardTitle: { margin: 0, fontSize: 18, fontWeight: 900 },
+  descriptionText: { margin: 0, color: "#334155", fontSize: 14, fontWeight: 650, lineHeight: 1.45 },
+  finishLine: { margin: 0, color: "#111827", fontSize: 13, fontWeight: 850 },
+  cardTotals: { display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 },
+  productActions: { display: "flex", gap: 8, flexWrap: "wrap", marginTop: "auto" },
+  selectButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#0f766e", color: "#fff", border: "1px solid #0f766e", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer", textDecoration: "none" },
+  primaryDarkButton: { display: "inline-flex", alignItems: "center", gap: 7, background: "#111827", color: "#fff", border: "1px solid #111827", borderRadius: 8, padding: "9px 12px", fontWeight: 900, cursor: "pointer", textDecoration: "none" },
+  utilityButton: { display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: 8, padding: "9px 11px", fontWeight: 850, cursor: "pointer", textDecoration: "none" },
+  disabledButton: { border: "1px solid #e2e8f0", borderRadius: 8, color: "#94a3b8", padding: "9px 11px", fontWeight: 850 },
 };
