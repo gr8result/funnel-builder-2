@@ -1,5 +1,4 @@
 import Head from "next/head";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
@@ -9,8 +8,6 @@ import { supabase } from "../../../utils/supabase-client";
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 
 const DEFAULT_ROOMS = [
-  "Site Works",
-  "Concrete",
   "External Walls",
   "Roof",
   "Windows",
@@ -32,8 +29,6 @@ const DEFAULT_ROOMS = [
 ];
 
 const ROOM_TEMPLATES = {
-  "Site Works": ["Site Clearance", "Bulk Earthworks", "Retaining Walls", "Temporary Fencing & Security", "Construction Access"],
-  Concrete: ["Concrete Slab", "Footings", "Termite Treatment", "Waterproof Membrane", "Concrete Finish"],
   "External Walls": ["Brickwork", "External Cladding", "Wall Wrap", "External Feature Cladding", "External Paint"],
   External: ["External Colours", "Driveway Finish", "Pathways", "Letterbox", "Clothesline"],
   "Powder Room": ["Vanity", "Basin", "Tap", "Mirror", "Toilet", "Toilet Roll Holder", "Exhaust Fan", "Light", "Paint", "Floor Tile", "Wall Tile", "Skirting", "Door", "Door Handle"],
@@ -350,7 +345,7 @@ function coverBuilderName(value) {
 }
 
 function missingCoverField(fieldName) {
-  return `Missing field: ${fieldName}`;
+  return "";
 }
 
 function coverDisplayValue(value, fieldName, invalidValues = []) {
@@ -623,7 +618,6 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [debugOpen, setDebugOpen] = useState(true);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
@@ -711,18 +705,6 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   useEffect(() => {
     setCoverDraft(book.cover);
   }, [book.cover]);
-
-  useEffect(() => {
-    if (!selectedProject && !selectedSnapshot) return;
-    console.info("[Client Selections Cover fields]", {
-      clientName: coverDebugFields.clientName,
-      jobNumber: coverDebugFields.quoteNumber,
-      siteAddress: coverDebugFields.siteAddress,
-      builderName: coverDebugFields.builderName,
-      builderLogo: coverDebugFields.builderLogo,
-      selectionStandard: coverDebugFields.selectionStandard,
-    });
-  }, [selectedProject, selectedSnapshot, coverDebugFields]);
 
   async function loadInitialData() {
     setLoading(true);
@@ -1171,67 +1153,36 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     setImporting(false);
   }
 
+  const sectionOptions = [
+    { value: "cover", label: "Cover" },
+    { value: "project", label: "Project Info" },
+    ...book.rooms.map((room) => ({ value: `room:${room.id}`, label: room.name })),
+  ];
+  const activeSectionValue = activePage === "room" ? `room:${activeRoomId}` : activePage;
+  const activeSectionIndex = Math.max(0, sectionOptions.findIndex((option) => option.value === activeSectionValue));
+
+  function openSection(value) {
+    if (value === "cover" || value === "project") {
+      setActivePage(value);
+      return;
+    }
+    if (value.startsWith("room:")) {
+      setActivePage("room");
+      setActiveRoomId(value.replace("room:", ""));
+    }
+  }
+
+  function moveSection(direction) {
+    const nextIndex = clamp(activeSectionIndex + direction, 0, sectionOptions.length - 1, activeSectionIndex);
+    openSection(sectionOptions[nextIndex]?.value || activeSectionValue);
+  }
+
   return (
     <>
       <Head>
         <title>Selections Book | Builders Platform</title>
       </Head>
       <main className="screen">
-        <aside className="sidebar">
-          <div className="brandStrip">
-            <img src={displayCover.logoUrl || DEFAULT_BUILDER_TEMPLATE_BRAND.logoUrl} alt={displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name} />
-            <div>
-              <strong>{displayCover.builderName || DEFAULT_BUILDER_TEMPLATE_BRAND.name}</strong>
-              <span>Selections Book</span>
-            </div>
-          </div>
-          <label>
-            Project
-            <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
-              <option value="">Select project</option>
-              {projects.map((project) => <option key={project.id} value={project.id}>{project.project_name}</option>)}
-            </select>
-          </label>
-          <label>
-            Snapshot
-            <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)}>
-              <option value="">No snapshot</option>
-              {snapshots.map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.snapshot_label || `Snapshot ${snapshot.snapshot_number}`}</option>)}
-            </select>
-          </label>
-          <label>
-            Builder Standard
-            <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
-              {templates.map((template) => <option key={template.id} value={template.id}>{template.template_name}</option>)}
-            </select>
-          </label>
-
-          <nav className="pages">
-            <button className={activePage === "cover" ? "active" : ""} onClick={() => setActivePage("cover")}>1 Cover</button>
-            <button className={activePage === "project" ? "active" : ""} onClick={() => setActivePage("project")}>2 Project Info</button>
-            {book.rooms.map((room, index) => (
-              <button
-                key={room.id}
-                className={activePage === "room" && activeRoomId === room.id ? "active" : ""}
-                onClick={() => {
-                  setActivePage("room");
-                  setActiveRoomId(room.id);
-                }}
-              >
-                {index + 3} {room.name}
-              </button>
-            ))}
-          </nav>
-
-          <div className="roomTools">
-            <input value={newRoomName} onChange={(event) => setNewRoomName(event.target.value)} placeholder="New room name" />
-            <select value={newRoomTemplate} onChange={(event) => setNewRoomTemplate(event.target.value)}>
-              {Object.keys(ROOM_TEMPLATES).map((name) => <option key={name} value={name}>{name}</option>)}
-            </select>
-            <button onClick={addRoom}>Add New Room</button>
-          </div>
-        </aside>
-
         <section className="workspace">
           <header className="standardBanner">
             <button type="button" className="standardBack" onClick={() => window.history.back()} aria-label="Back">
@@ -1243,29 +1194,55 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
             </div>
             <div className="standardCopy">
               <h1>Inclusions & Selections</h1>
-              <p>Choose project areas, products and finishes and prepare the completed selections schedule.</p>
+              <p>Project: {selectedProject?.project_name || book.cover.projectName || "Not selected"} · Current Section: {activePage === "room" ? activeRoom?.name : activePage === "project" ? "Project Info" : "Cover"}</p>
             </div>
             <div className="standardMeta">
-              <span>{selectedProject?.project_name || "No project selected"}</span>
+              <span>Job Number: {displayCover.jobNumber || displayCover.quoteNumber || ""}</span>
               <span>{saving ? "Saving..." : success || "Changes saved when you press Save Progress"}</span>
+              <div className="bannerActions">
+                <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
+                <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
+                {activePage === "cover" && (
+                  <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
+                    {coverSettingsOpen ? "Hide Cover Settings" : "Edit Cover Settings"}
+                  </button>
+                )}
+              </div>
             </div>
           </header>
-          <header className="topbar">
-            <div>
-              <p>{workspaceLoading || loading ? "Loading..." : "Luxury Selections Schedule Builder"}</p>
-              <h1>{book.cover.projectName || "Inclusions & Selections Schedule"}</h1>
+
+          <section className="scheduleControls" aria-label="Schedule navigation">
+            <label>
+              Project
+              <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
+                <option value="">Select project</option>
+                {projects.map((project) => <option key={project.id} value={project.id}>{project.project_name}</option>)}
+              </select>
+            </label>
+            <label>
+              Snapshot
+              <select value={selectedSnapshotId} onChange={(event) => setSelectedSnapshotId(event.target.value)}>
+                <option value="">No snapshot</option>
+                {snapshots.map((snapshot) => <option key={snapshot.id} value={snapshot.id}>{snapshot.snapshot_label || `Snapshot ${snapshot.snapshot_number}`}</option>)}
+              </select>
+            </label>
+            <label>
+              Builder Standard
+              <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                {templates.map((template) => <option key={template.id} value={template.id}>{template.template_name}</option>)}
+              </select>
+            </label>
+            <label className="sectionSelect">
+              Section
+              <select value={activeSectionValue} onChange={(event) => openSection(event.target.value)}>
+                {sectionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <div className="sectionButtons">
+              <button type="button" onClick={() => moveSection(-1)} disabled={activeSectionIndex <= 0}>Previous</button>
+              <button type="button" onClick={() => moveSection(1)} disabled={activeSectionIndex >= sectionOptions.length - 1}>Next</button>
             </div>
-            <div className="actions">
-              <Link href="/modules/builders/client-selections">Open Imported Records</Link>
-              {activePage === "cover" && (
-                <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
-                  {coverSettingsOpen ? "Hide Cover Settings" : "Edit Cover Settings"}
-                </button>
-              )}
-              <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
-              <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
-            </div>
-          </header>
+          </section>
 
           {error && <div className="alert error">{error}</div>}
           {success && <div className="alert success">{success}</div>}
@@ -1273,21 +1250,6 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
           <div className="documentWrap">
             {activePage === "cover" && (
               <>
-                <SelectionsBookDebugPanel
-                  open={debugOpen}
-                  onToggle={() => setDebugOpen((current) => !current)}
-                  fields={{
-                    renderingFilePath: "pages/modules/builders/selections-book.js -> CoverPage / ProjectInfoPage / LogoBox",
-                    selectedProject: selectedProjectId ? `${selectedProjectId} / ${selectedProject?.project_name || selectedProject?.name || ""}` : "",
-                    selectedSnapshot: selectedSnapshotId ? `${selectedSnapshotId} / ${selectedSnapshot?.snapshot_label || selectedSnapshot?.snapshot_number || ""}` : "",
-                    clientName: coverValue(displayCover.clientName, [displayCover.projectName]),
-                    fullSiteAddress: coverDebugFields.fullSiteAddress || coverValue(displayCover.siteAddress),
-                    estimatorName: coverDebugFields.estimatorName,
-                    quoteNumber: coverDebugFields.quoteNumber,
-                    jobNumber: coverDebugFields.jobNumber || coverValue(displayCover.jobNumber),
-                    builderLogoUrl: coverValue(displayCover.logoUrl),
-                  }}
-                />
                 <CoverPage cover={displayCover} onLogoChange={changeBuilderLogo} />
                 {coverSettingsOpen && (
                   <CoverSettingsPanel
@@ -1302,21 +1264,6 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
             )}
             {activePage === "project" && (
               <>
-                <SelectionsBookDebugPanel
-                  open={debugOpen}
-                  onToggle={() => setDebugOpen((current) => !current)}
-                  fields={{
-                    renderingFilePath: "pages/modules/builders/selections-book.js -> ProjectInfoPage",
-                    selectedProject: selectedProjectId ? `${selectedProjectId} / ${selectedProject?.project_name || selectedProject?.name || ""}` : "",
-                    selectedSnapshot: selectedSnapshotId ? `${selectedSnapshotId} / ${selectedSnapshot?.snapshot_label || selectedSnapshot?.snapshot_number || ""}` : "",
-                    clientName: projectInfoDisplay.clientName,
-                    fullSiteAddress: projectInfoDisplay.fullSiteAddress,
-                    estimatorName: projectInfoDisplay.estimatorName,
-                    quoteNumber: projectInfoDisplay.quoteNumber,
-                    jobNumber: projectInfoDisplay.jobNumber,
-                    builderLogoUrl: coverValue(displayCover.logoUrl),
-                  }}
-                />
                 <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} onChange={updateProjectInfo} />
               </>
             )}
@@ -1424,28 +1371,6 @@ function CoverPage({ cover, onLogoChange }) {
         <span>Page 1</span>
       </footer>
     </section>
-  );
-}
-
-function SelectionsBookDebugPanel({ fields, open, onToggle }) {
-  return (
-    <div className="coverDebugPanel">
-      <button type="button" onClick={onToggle}>{open ? "Hide" : "Show"} selections book debug</button>
-      {open ? (
-        <div>
-          <strong>Selections book render debug</strong>
-          <span>active rendering file/component: {fields.renderingFilePath}</span>
-          <span>selected project: {fields.selectedProject || missingCoverField("selectedProject")}</span>
-          <span>selected snapshot: {fields.selectedSnapshot || missingCoverField("selectedSnapshot")}</span>
-          <span>clientName value: {fields.clientName || missingCoverField("clientName")}</span>
-          <span>fullSiteAddress value: {fields.fullSiteAddress || missingCoverField("fullSiteAddress")}</span>
-          <span>estimatorName value: {fields.estimatorName || "Estimator missing"}</span>
-          <span>quoteNumber value: {fields.quoteNumber || missingCoverField("quoteNumber")}</span>
-          <span>jobNumber value: {fields.jobNumber || missingCoverField("jobNumber")}</span>
-          <span>builderLogoUrl value: {fields.builderLogoUrl || missingCoverField("builderLogoUrl")}</span>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -1656,46 +1581,8 @@ function InfoField({ label, value, type = "text", multiline = false, onChange })
 
 function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
   const roomUpgrade = room.rows.reduce((sum, row) => sum + numberValue(row.upgradeCost), 0);
-  const roomImage = room.imageUrl || room.rows.find((row) => row.imageUrl)?.imageUrl || book.cover.backgroundImageUrl;
-  const roomInclusions = room.rows.filter((row) => row.included).slice(0, 5);
-  const roomLabel = isRoomLike(room.name) ? "Room" : "Section";
   return (
     <section className="page roomPage contractPage">
-      <aside className="documentSpine">
-        <div className="spineBrand">
-          <img src={book.cover.logoUrl} alt={book.cover.builderName} />
-          <strong>{book.cover.builderName}</strong>
-          <span>{book.cover.tagline}</span>
-        </div>
-        <div className="spineTitle">
-          <small>{book.cover.kicker}</small>
-          <h2>{book.cover.title}</h2>
-          <i />
-          <b>{book.cover.projectName || "Project Selections"}</b>
-        </div>
-        <div className="spineMeta">
-          <span>Client</span>
-          <strong>{book.cover.clientName || "Client details pending"}</strong>
-          <span>Site Address</span>
-          <strong>{book.cover.siteAddress || "Address pending"}</strong>
-          <span>Job Number</span>
-          <strong>{book.cover.quoteNumber || "Not entered"}</strong>
-          <span>Issue Date</span>
-          <strong>{book.cover.issueDate || today()}</strong>
-          <span>Version</span>
-          <strong>{book.cover.version}</strong>
-        </div>
-        <nav className="spineRooms">
-          {rooms.slice(0, 19).map((item, index) => (
-            <button key={item.id} className={item.id === activeRoomId ? "active" : ""} onClick={() => onOpenRoom(item.id)}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              {item.name}
-            </button>
-          ))}
-        </nav>
-        <em>{book.cover.footerText?.split("|")?.[0] || "Building dreams. Creating lifestyles."}</em>
-      </aside>
-
       <main className="roomSheet">
         <header className="roomHero">
           <div>
@@ -1712,20 +1599,19 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
           </div>
         </header>
 
-        <div className="roomTabs">
-          {rooms.slice(0, 6).map((item) => (
-            <button key={item.id} className={item.id === activeRoomId ? "active" : ""} onClick={() => onOpenRoom(item.id)}>
-              {item.name}
-            </button>
-          ))}
-          <button className="ghost" type="button">+ Add New Room</button>
-          <span />
-          <button type="button" onClick={onDuplicate}>Duplicate Room</button>
-          <button type="button" className="danger" onClick={onRemove}>Remove Room</button>
-        </div>
-
       <div className="selectionTableWrap">
         <table className="selectionTable">
+          <colgroup>
+            <col className="colItem" />
+            <col className="colDescription" />
+            <col className="colBrand" />
+            <col className="colProduct" />
+            <col className="colFinish" />
+            <col className="colSupplier" />
+            <col className="colImage" />
+            <col className="colIncluded" />
+            <col className="colUpgrade" />
+          </colgroup>
           <thead>
             <tr>
               <th>Item</th>
@@ -1793,35 +1679,6 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
         <div><strong>Room Upgrade Total</strong><span>{money(roomUpgrade)}</span></div>
       </div>
       </main>
-
-      <aside className="roomSidePanel">
-        <section>
-          <h3>About This {roomLabel}</h3>
-          <textarea value={room.about || aboutTextForRoom(room.name)} onChange={(event) => onRoomChange({ about: event.target.value })} />
-        </section>
-        <section>
-          <h3>Inclusions</h3>
-          <ul>
-            {roomInclusions.map((row) => <li key={row.id}>{row.selectedProduct || row.item}</li>)}
-          </ul>
-        </section>
-        <section>
-          <h3>Specification Summary</h3>
-          <dl>
-            <dt>Style</dt><dd>{String(book.templateName || "").includes("Higher") ? "Premium" : "Modern"}</dd>
-            <dt>Colour Palette</dt><dd>Neutral</dd>
-            <dt>Overall Finish</dt><dd>{room.rows.find((row) => row.finishColour)?.finishColour || "Chrome / selected finishes"}</dd>
-            <dt>Adjustment</dt><dd>{money(roomUpgrade)}</dd>
-          </dl>
-        </section>
-        <section>
-          <h3>Room Image</h3>
-          <button className="roomImageButton" onClick={() => onPreviewImage({ url: roomImage, alt: room.name })}>
-            <img src={roomImage} alt={room.name} />
-          </button>
-          <input value={room.imageUrl || ""} onChange={(event) => onRoomChange({ imageUrl: event.target.value })} placeholder="Room image URL" />
-        </section>
-      </aside>
 
       <footer className="contractFooter">
         <span>{book.cover.builderName} Pty Ltd</span>
@@ -2062,7 +1919,7 @@ function createRooms({ templateItems = [], products = [], manufacturerById, supp
     const exists = room.rows.some((existing) => existing.item.toLowerCase() === row.item.toLowerCase());
     if (!exists) room.rows.push(row);
   });
-  return rooms.filter((room) => room.rows.length || ["Site Works", "Kitchen", "Main Bathroom"].includes(room.name));
+  return rooms.filter((room) => room.rows.length || ["Kitchen", "Main Bathroom"].includes(room.name));
 }
 
 function rowsForRoomTemplate(roomName, quality, context) {
@@ -2266,7 +2123,7 @@ function replaceAt(rows, index, next) {
 }
 
 const styles = `
-  .screen { min-height: 100vh; display: grid; grid-template-columns: 260px minmax(0, 1fr); background: #e8edf3; color: #07111f; font-family: Inter, Arial, sans-serif; }
+  .screen { min-height: 100vh; display: block; background: #f5f7fb; color: #07111f; font-family: Inter, Arial, sans-serif; }
   .sidebar { background: #071827; color: #e8edf3; padding: 16px; overflow: auto; max-height: 100vh; position: sticky; top: 0; }
   .brandStrip { display: grid; grid-template-columns: 54px 1fr; gap: 10px; align-items: center; margin-bottom: 18px; }
   .brandStrip img { width: 54px; height: 44px; object-fit: contain; background: white; border-radius: 6px; }
@@ -2282,12 +2139,20 @@ const styles = `
   .pages button.active { background: #c99735; color: #071827; }
   .roomTools { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid #244057; }
   .workspace { min-width: 0; padding: 16px 18px 28px; overflow: auto; }
-  .standardBanner { display: grid; grid-template-columns: auto 48px minmax(0, 1fr) minmax(220px, auto); gap: 14px; align-items: center; max-width: 1500px; margin: 0 auto 14px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+  .standardBanner { display: grid; grid-template-columns: auto 48px minmax(0, 1fr) minmax(300px, auto); gap: 14px; align-items: center; width: 100%; box-sizing: border-box; margin: 0 0 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
   .standardBack { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #172033; cursor: pointer; font-weight: 800; padding: 9px 12px; }
   .standardIcon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 8px; background: #1f6feb; color: #ffffff; }
   .standardCopy h1 { margin: 0; font-size: 48px; line-height: 1; letter-spacing: 0; }
   .standardCopy p { margin: 6px 0 0; color: #58657a; font-size: 18px; }
   .standardMeta { display: grid; gap: 6px; justify-items: end; color: #64748b; font-size: 13px; font-weight: 700; }
+  .bannerActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .bannerActions button { background: #ffffff; color: #071827; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; font-weight: 850; cursor: pointer; }
+  .bannerActions button:first-child { background: #071827; color: #ffffff; }
+  .scheduleControls { width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .75fr) minmax(190px, .9fr) minmax(220px, 1.1fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
+  .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .scheduleControls select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; background: #ffffff; color: #071827; font-weight: 800; }
+  .sectionButtons { display: flex; gap: 8px; }
+  .sectionButtons button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; font-weight: 850; padding: 8px 10px; cursor: pointer; }
   .topbar { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin: 0 auto 14px; max-width: 1500px; }
   .topbar p { margin: 0; color: #64748b; font-size: 12px; font-weight: 800; text-transform: uppercase; }
   .topbar h1 { margin: 4px 0 0; font-size: 24px; }
@@ -2297,8 +2162,8 @@ const styles = `
   .alert { padding: 10px 12px; border-radius: 6px; margin: 0 auto 12px; max-width: 1500px; font-weight: 700; }
   .alert.error { background: #fee2e2; color: #991b1b; }
   .alert.success { background: #dcfce7; color: #166534; }
-  .documentWrap { display: grid; justify-content: center; justify-items: center; gap: 16px; }
-  .page { width: min(1500px, 100%); min-height: 920px; background: #fff; box-shadow: 0 20px 60px rgba(15, 23, 42, .18); position: relative; overflow: hidden; }
+  .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
+  .page { width: 100%; min-height: 760px; background: #fff; box-shadow: 0 12px 34px rgba(15, 23, 42, .1); position: relative; overflow: hidden; box-sizing: border-box; }
   .page input, .page textarea, .page select { background: #fff !important; color: #071827 !important; border-color: #d8dee8 !important; box-shadow: none !important; }
   .page input:focus, .page textarea:focus, .page select:focus { outline: 2px solid rgba(201,151,53,.22); border-color: #d7a640 !important; }
   .coverPage { width: min(1123px, 100%); max-width: 1123px; aspect-ratio: 297 / 210; height: auto; min-height: 0; box-sizing: border-box; background-size: cover; background-position: center; color: var(--cover-text); padding: clamp(24px, 3.2vw, 42px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: clamp(8px, 1.4vw, 14px); }
@@ -2362,7 +2227,7 @@ const styles = `
   .revisionTable th { background: #071827; color: white; font-size: 11px; text-transform: uppercase; }
   .signatureGrid { display: grid; grid-template-columns: 1fr 160px; gap: 18px; margin-top: 14px; }
   .signatureGrid span { border-bottom: 1px solid #94a3b8; padding: 12px 0; }
-  .contractPage { display: grid; grid-template-columns: 220px minmax(760px, 1fr) 210px; grid-template-rows: 1fr 42px; min-height: 940px; background: #fff; }
+  .contractPage { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 42px; min-height: 760px; background: #fff; }
   .documentSpine { grid-row: 1 / 3; background: linear-gradient(180deg, #071827 0%, #04111f 100%); color: white; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
   .spineBrand { display: grid; gap: 4px; }
   .spineBrand img { width: 150px; height: 88px; object-fit: contain; background: rgba(255,255,255,.96); padding: 4px; }
@@ -2380,8 +2245,8 @@ const styles = `
   .spineRooms button span { color: #d7a640; font-size: 15px; font-weight: 950; }
   .spineRooms button.active { background: linear-gradient(90deg, rgba(215,166,64,.95), rgba(215,166,64,.16)); color: white; padding-left: 6px; }
   .documentSpine em { color: #d7a640; font-family: Georgia, serif; margin-top: auto; font-size: 15px; }
-  .roomSheet { min-width: 0; padding: 24px 16px 18px 28px; }
-  .roomHero { display: grid; grid-template-columns: minmax(320px, 1fr) 330px 112px; gap: 18px; align-items: start; border-bottom: 1px solid #dce3ea; padding-bottom: 14px; }
+  .roomSheet { min-width: 0; padding: 20px 22px 18px; }
+  .roomHero { display: grid; grid-template-columns: minmax(420px, 1fr) 280px 112px; gap: 18px; align-items: start; border-bottom: 1px solid #dce3ea; padding-bottom: 14px; margin-bottom: 12px; }
   .roomName { border: 0; font-size: 33px; font-weight: 950; letter-spacing: .01em; text-transform: uppercase; padding: 0; line-height: 1; }
   .roomHero textarea { border: 0; min-height: 44px; color: #475569; resize: none; padding-left: 0; }
   .specMark { text-align: center; padding-top: 2px; }
@@ -2395,22 +2260,31 @@ const styles = `
   .roomTabs button.active { background: #071827; color: white; }
   .roomTabs button.ghost { border-style: dashed; color: #64748b; }
   .roomTabs button.danger { border-color: #ef4444; color: #dc2626; }
-  .selectionTableWrap { overflow: auto; border: 1px solid #dce3ea; }
-  .selectionTable { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 11px; }
-  .selectionTable th { background: #071827; color: white; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 9px 7px; border-right: 1px solid rgba(255,255,255,.16); }
-  .selectionTable td { border: 1px solid #e2e8f0; padding: 6px; vertical-align: middle; background: #fff; }
+  .selectionTableWrap { overflow: auto; border: 1px solid #dce3ea; width: 100%; }
+  .selectionTable { width: 100%; min-width: 1460px; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .colItem { width: 12%; }
+  .colDescription { width: 18%; }
+  .colBrand { width: 10%; }
+  .colProduct { width: 22%; }
+  .colFinish { width: 12%; }
+  .colSupplier { width: 10%; }
+  .colImage { width: 8%; }
+  .colIncluded { width: 6%; }
+  .colUpgrade { width: 12%; }
+  .selectionTable th { background: #071827; color: white; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 11px 9px; border-right: 1px solid rgba(255,255,255,.16); }
+  .selectionTable td { border: 1px solid #e2e8f0; padding: 9px; vertical-align: middle; background: #fff; }
   .selectionTable tr:nth-child(even) td { background: #fbfcfe; }
-  .selectionTable input, .selectionTable textarea { border: 0 !important; background: transparent !important; border-radius: 0; padding: 2px; font-size: 11px; color: #071827 !important; }
-  .selectionTable textarea { min-height: 42px; resize: vertical; line-height: 1.35; }
-  .itemCell { display: grid; grid-template-columns: 30px 1fr; gap: 7px; align-items: center; min-width: 145px; font-weight: 900; }
+  .selectionTable input, .selectionTable textarea { border: 0 !important; background: transparent !important; border-radius: 0; padding: 2px; font-size: 13px; color: #071827 !important; }
+  .selectionTable textarea { min-height: 58px; resize: vertical; line-height: 1.45; }
+  .itemCell { display: grid; grid-template-columns: 30px 1fr; gap: 7px; align-items: center; min-width: 0; font-weight: 900; }
   .itemIcon { width: 26px; height: 26px; display: grid; place-items: center; border: 1px solid #cbd5e1; color: #64748b; font-size: 16px; }
-  .productChoice { display: grid; gap: 4px; min-width: 180px; }
-  .productChoice select { border: 1px solid #e5c48b !important; background: #fffaf0 !important; font-size: 10px; font-weight: 800; padding: 5px 7px; color: #071827 !important; }
-  .productChoice strong { font-size: 10px; color: #475569; font-weight: 800; }
-  .libraryButton { background: transparent; color: #071827; border: 1px dashed #cbd5e1; font-size: 10px; padding: 4px 6px; text-align: left; }
+  .productChoice { display: grid; gap: 5px; min-width: 0; }
+  .productChoice select { width: 100%; min-width: 0; border: 1px solid #e5c48b !important; background: #fffaf0 !important; font-size: 12px; font-weight: 800; padding: 7px 8px; color: #071827 !important; }
+  .productChoice strong { font-size: 12px; color: #475569; font-weight: 800; line-height: 1.35; }
+  .libraryButton { background: transparent; color: #071827; border: 1px dashed #cbd5e1; font-size: 11px; padding: 5px 7px; text-align: left; }
   .libraryButton:hover { border-color: #d7a640; background: #fffaf0; }
-  .thumbButton { width: 110px; height: 58px; padding: 0; overflow: hidden; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
-  .thumbButton img { width: 100%; height: 100%; object-fit: cover; }
+  .thumbButton { width: 84px; height: 70px; padding: 0; overflow: hidden; background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; }
+  .thumbButton img { width: 100%; height: 100%; object-fit: contain; }
   .includedTick { width: 34px; height: 30px; display: grid; place-items: center; margin: 0 auto; border-radius: 50%; background: white; color: #16a34a; font-size: 19px; }
   .includedTick.no { color: #dc2626; }
   .upgradeCell { display: grid; gap: 5px; min-width: 92px; }
@@ -2432,7 +2306,7 @@ const styles = `
   .roomSidePanel dd { margin: 0; font-weight: 700; }
   .roomImageButton { width: 100%; height: 184px; padding: 0; background: #f1f5f9; overflow: hidden; margin-bottom: 8px; }
   .roomImageButton img { width: 100%; height: 100%; object-fit: cover; }
-  .contractFooter { grid-column: 2 / 4; background: #071827; color: white; display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 0 24px; font-size: 11px; }
+  .contractFooter { grid-column: 1; background: #071827; color: white; display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 0 24px; font-size: 11px; }
   .contractFooter span:nth-child(2) { color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pageFooter { position: absolute; left: 34px; right: 34px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #071827; padding-top: 8px; color: #334155; font-size: 12px; }
   .modalBackdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(2, 6, 23, .72); display: grid; place-items: center; padding: 24px; }
@@ -2451,12 +2325,12 @@ const styles = `
   @page { size: A4 portrait; margin: 0; }
   @media print {
     .screen { display: block; background: white; }
-    .sidebar, .standardBanner, .topbar, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
+    .sidebar, .standardBanner, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
     .workspace { padding: 0; overflow: visible; }
     .documentWrap { display: block; }
     .page { box-shadow: none; page-break-after: always; break-after: page; }
     .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
-  @media (max-width: 1380px) { .contractPage { grid-template-columns: 200px minmax(720px, 1fr) 190px; } .roomTabs { grid-template-columns: repeat(4, minmax(92px, auto)) 1fr auto auto; } .roomTabs button:nth-child(n+5):nth-child(-n+6) { display: none; } }
-  @media (max-width: 980px) { .screen { grid-template-columns: 1fr; } .sidebar { position: static; max-height: none; } .standardBanner { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .documentSpine, .roomSidePanel, .contractFooter { grid-column: 1; grid-row: auto; } .roomHero, .roomTabs, .notesRow { grid-template-columns: 1fr; } }
+  @media (max-width: 1380px) { .selectionTable { min-width: 1360px; } .scheduleControls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 980px) { .standardBanner, .roomHero, .notesRow, .scheduleControls { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .bannerActions, .sectionButtons { justify-content: flex-start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .selectionTable { min-width: 1120px; } }
 `;
