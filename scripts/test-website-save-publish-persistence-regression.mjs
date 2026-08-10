@@ -7,8 +7,8 @@ import {
   resolveWebsiteUrls,
 } from "../lib/website-builder/publishConfig.js";
 import {
+  buildExpectedWebsitePersistenceProject,
   diffWebsitePersistence,
-  scopeWebsitePersistenceProject,
   websitePersistenceHash,
 } from "../lib/website-builder/documentVersion.js";
 import { normalizeFooterNavigationBlock } from "../lib/website-builder/footerNavigation.js";
@@ -161,24 +161,32 @@ const fullReadbackWithMorePages = {
     Pricing: { blocks: project.pageBlocks.Pricing },
   },
 };
+const expectedAfterEmailSave = buildExpectedWebsitePersistenceProject(fullReadbackWithMorePages, pageScopedEmailPayload, "Email");
+assert.deepEqual(
+  diffWebsitePersistence(expectedAfterEmailSave, fullReadbackWithMorePages),
+  [],
+  "page-scoped save verification must compare the full expected post-save project, including retained database pages"
+);
+assert.equal(expectedAfterEmailSave.pageBlocks.Modules[0].props.title, "Modules", "expected post-save project must retain unsubmitted page blocks");
+assert.equal(expectedAfterEmailSave.chaiData.Home.blocks[0].id, "home-hero", "expected post-save project must retain unsubmitted chaiData");
 assert.deepEqual(
   diffWebsitePersistence(
-    scopeWebsitePersistenceProject(pageScopedEmailPayload, "Email"),
-    scopeWebsitePersistenceProject(fullReadbackWithMorePages, "Email")
+    expectedAfterEmailSave,
+    fullReadbackWithMorePages
   ),
   [],
-  "page-scoped save verification must not fail because database readback contains other pages"
+  "page-scoped save verification must not fail when the database retains the submitted page and existing full project"
 );
 
 const readbackWithLostEmailField = JSON.parse(JSON.stringify(fullReadbackWithMorePages));
 delete readbackWithLostEmailField.pageBlocks.Email[0].props.unknownNested;
 const lostEmailFieldDiffs = diffWebsitePersistence(
-  scopeWebsitePersistenceProject(pageScopedEmailPayload, "Email"),
-  scopeWebsitePersistenceProject(readbackWithLostEmailField, "Email")
+  expectedAfterEmailSave,
+  readbackWithLostEmailField
 );
 assert.ok(
   lostEmailFieldDiffs.some((diff) => diff.path === "pageBlocks.Email[0].props.unknownNested"),
-  "page-scoped save verification must still report genuine submitted page data loss"
+  "full post-save verification must still report genuine submitted page data loss"
 );
 
 assert.equal(resolveWebsitePublicationStatus({

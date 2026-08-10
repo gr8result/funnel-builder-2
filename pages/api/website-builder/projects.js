@@ -11,9 +11,9 @@ import {
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
 import {
+  buildExpectedWebsitePersistenceProject,
   buildWebsiteProjectVersion,
   diffWebsitePersistence,
-  scopeWebsitePersistenceProject,
   summarizeWebsitePage,
   summarizeWebsitePersistence,
   websitePersistenceHash,
@@ -354,9 +354,9 @@ function getVideoRetentionError(verificationIssues = [], fallbackError = "Save f
     : fallbackError;
 }
 
-function compareProjectPersistenceForSave(expectedProject, storedProject, pageName = "") {
-  const expectedForComparison = scopeWebsitePersistenceProject(expectedProject, pageName);
-  const storedForComparison = scopeWebsitePersistenceProject(storedProject, pageName);
+function compareProjectPersistenceForSave(expectedProject, storedProject, pageName = "", baseProject = null) {
+  const expectedForComparison = buildExpectedWebsitePersistenceProject(baseProject, expectedProject, pageName);
+  const storedForComparison = storedProject || {};
   const expectedHash = websitePersistenceHash(expectedForComparison);
   const storedHash = websitePersistenceHash(storedForComparison);
   const diffs = expectedHash === storedHash ? [] : diffWebsitePersistence(expectedForComparison, storedForComparison);
@@ -738,7 +738,7 @@ async function handler(req, res) {
       if (missingVideos.length) {
         verificationIssues.push({ type: "video-asset-not-retained", missingVideos });
       }
-      const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+      const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage, currentSplitProject);
       if (!persistenceVerification.ok) {
         verificationIssues.push({
           type: "structural-hash-mismatch",
@@ -1005,7 +1005,7 @@ async function handler(req, res) {
         missingVideos,
       });
     }
-    const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+    const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage, currentSplitProject);
     if (!persistenceVerification.ok) {
       verificationIssues.push({
         type: "structural-hash-mismatch",
