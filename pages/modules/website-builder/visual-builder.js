@@ -2338,7 +2338,11 @@ export default function VisualBuilderPage() {
       } catch (serverErr) {
         console.warn("[forceSaveBlockPage] server sync failed:", serverErr);
         if (isPreviewSave) {
-          return { ...projectWithPatch, _cloudSaveWarning: serverErr?.message || "Cloud sync failed" };
+          return {
+            ...projectWithPatch,
+            _saveError: true,
+            _saveErrorMessage: serverErr?.message || "Cloud sync failed",
+          };
         }
         // Still write to localStorage so the preview tab can load the latest local copy.
         if (!getWebsiteProject(currentProject.id)) {
@@ -2346,21 +2350,34 @@ export default function VisualBuilderPage() {
         }
         updateWebsiteProject(currentProject.id, projectWithPatch);
         setProject(projectWithPatch);
-        flashNotice(`Saved locally ✓ ${pageName}. Cloud backup failed; retry Save when the server is reachable.`, "success", 10000);
-        return { ...projectWithPatch, _cloudSaveWarning: serverErr?.message || "Cloud sync failed" };
+        const saveErrorMessage = serverErr?.message || "Cloud sync failed";
+        flashNotice(`Save failed for ${pageName}. Canonical cloud persistence failed, so Publish is blocked until Save succeeds.`, "error", 12000);
+        return {
+          ...projectWithPatch,
+          _saveError: true,
+          _saveErrorMessage: saveErrorMessage,
+        };
       }
 
       if (serverSynced?._saveError) {
         if (isPreviewSave) {
-          const localPreviewProject = { ...projectWithPatch, _cloudSaveWarning: serverSynced._saveErrorMessage || "Cloud sync failed" };
+          const localPreviewProject = {
+            ...projectWithPatch,
+            _saveError: true,
+            _saveErrorMessage: serverSynced._saveErrorMessage || "Cloud sync failed",
+          };
           updateWebsiteProject(currentProject.id, localPreviewProject);
           setProject(localPreviewProject);
           return localPreviewProject;
         }
         updateWebsiteProject(currentProject.id, projectWithPatch);
         setProject(projectWithPatch);
-        flashNotice(`Saved locally ✓ ${pageName}. Cloud backup failed; retry Save when the server is reachable.`, "success", 10000);
-        return { ...projectWithPatch, _cloudSaveWarning: serverSynced._saveErrorMessage || "Cloud sync failed" };
+        flashNotice(`Save failed for ${pageName}. Canonical cloud persistence failed, so Publish is blocked until Save succeeds.`, "error", 12000);
+        return {
+          ...projectWithPatch,
+          _saveError: true,
+          _saveErrorMessage: serverSynced._saveErrorMessage || "Cloud sync failed",
+        };
       }
 
       logWebsiteBuilderSaveDebug("server sync response received", {
