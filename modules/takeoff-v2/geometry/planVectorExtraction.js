@@ -16,6 +16,8 @@
 // match and extraction safely yields fewer/no segments (caught by the
 // try/catch in extractVectorSegments and the low-segment-count fallback in
 // planGeometryService.js) rather than corrupting coordinates.
+import { getPdfJs, PDFJS_OPS } from "../viewer/pdfjsClient.js";
+
 const LOCAL_PATH_OP = { MOVE_TO: 0, LINE_TO: 1, CLOSE_PATH: 4 };
 
 const IDENTITY_MATRIX = [1, 0, 0, 1, 0, 0];
@@ -213,13 +215,9 @@ export async function extractVectorSegments(pdfDocument, pageNumber, { pageWidth
       const page = await pdfDocument.getPage(pageNumber);
       operatorList = await page.getOperatorList();
       if (typeof window === "undefined") {
-        const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        OPS = pdfjsLib.OPS;
+        OPS = PDFJS_OPS;
       } else {
-        const { getOperatorListForPage } = await import("../viewer/PdfViewport.js");
-        const fromViewer = await getOperatorListForPage(pdfDocument, pageNumber);
-        operatorList = fromViewer.operatorList;
-        OPS = fromViewer.OPS;
+        OPS = (await getPdfJs()).OPS;
       }
     } catch {
       const { getOperatorListForPage } = await import("../viewer/PdfViewport.js");

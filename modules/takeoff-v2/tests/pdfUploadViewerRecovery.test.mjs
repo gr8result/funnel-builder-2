@@ -8,6 +8,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 const documentList = read("modules/takeoff-v2/components/PlanDocumentList.jsx");
 const planStore = read("modules/takeoff-v2/persistence/planStore.js");
 const pdfViewport = read("modules/takeoff-v2/viewer/PdfViewport.js");
+const pdfjsClient = read("modules/takeoff-v2/viewer/pdfjsClient.js");
 const planViewer = read("modules/takeoff-v2/components/PlanViewer.jsx");
 const usePdfDocument = read("modules/takeoff-v2/viewer/usePdfDocument.js");
 const takeoffPage = read("modules/takeoff-v2/components/TakeoffV2Page.jsx");
@@ -29,6 +30,10 @@ assert.match(pdfViewport, /source instanceof Blob/, "PDF.js loader must accept B
 assert.match(pdfViewport, /fetch\(source\)/, "PDF.js loader must accept object URL sources.");
 assert.match(pdfViewport, /displayScale = scale/, "PDF renderer must separate display scale from render scale.");
 assert.match(pdfViewport, /renderViewport/, "PDF renderer must expose the high-resolution render viewport.");
+assert.doesNotMatch(pdfViewport, /import\(["']pdfjs-dist["']\)/, "PdfViewport must not depend on a generated async pdfjs-dist Next chunk.");
+assert.match(pdfViewport, /getPdfJs\(\)/, "PdfViewport must use the shared PDF.js client loader.");
+assert.match(pdfjsClient, /import \* as pdfjsLib from "pdfjs-dist\/legacy\/build\/pdf\.mjs"/, "PDF.js must have one static browser import path.");
+assert.match(pdfjsClient, /PDFJS_WORKER_SRC = "\/pdfjs\/pdf\.worker\.min\.mjs"/, "PDF.js worker must be project-controlled.");
 
 assert.match(planViewer, /baseScale: fitScaleRef\.current,[\s\S]*zoomScale,/, "Zoom must request a higher-resolution PDF render.");
 assert.match(planViewer, /displayScale: fitScaleRef\.current/, "Zoom must keep viewer coordinates tied to the fit-page display scale.");

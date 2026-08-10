@@ -1,34 +1,13 @@
-// Takeoff Engine V2 — PDF.js wrapper.
+// Takeoff Engine V2 PDF.js wrapper.
 //
-// Loads pdfjs-dist as a real npm dependency (not the legacy CDN <script> tag) and
-// renders using page.rotation directly as the viewport rotation, per spec. Each
-// renderer returned by createPageRenderer() owns its own in-flight render task, so
+// Uses the shared PDF.js client loader and renders with page.rotation directly
+// as the viewport rotation. Each renderer owns its own in-flight render task, so
 // the main viewer and page-strip thumbnails can render concurrently without
 // cancelling each other.
-
-let pdfjsLibPromise = null;
+import { getPdfJs, PDFJS_INIT_ERROR_MESSAGE } from "./pdfjsClient.js";
 
 export const MAX_RENDER_CANVAS_DIMENSION = 8000;
 export const MAX_RENDER_CANVAS_PIXELS = 30_000_000;
-
-async function loadPdfjsLib() {
-  if (typeof window === "undefined") {
-    throw new Error("PdfViewport can only be used in the browser.");
-  }
-  if (!pdfjsLibPromise) {
-    // The worker is served as a static asset from public/pdfjs/ (copied from
-    // node_modules/pdfjs-dist/build/ at the version pinned in package.json) rather
-    // than resolved via `new URL(..., import.meta.url)` — Next.js's webpack config
-    // fails to bundle that pattern for an ESM package specifier ("Module not found:
-    // ESM packages ... need to be imported"). Re-copy the file if pdfjs-dist's
-    // version is ever bumped.
-    pdfjsLibPromise = import("pdfjs-dist").then((pdfjsLib) => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
-      return pdfjsLib;
-    });
-  }
-  return pdfjsLibPromise;
-}
 
 function dataUrlToUint8Array(dataUrl) {
   const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
@@ -54,10 +33,19 @@ async function pdfSourceToUint8Array(source) {
 }
 
 export async function loadPdfDocument(pdfSource) {
-  const pdfjsLib = await loadPdfjsLib();
+  const pdfjsLib = await getPdfJs().catch((error) => {
+    console.error("[takeoff-v2] PDF document load could not initialise PDF.js.", error);
+    throw new Error(PDFJS_INIT_ERROR_MESSAGE);
+  });
   const data = await pdfSourceToUint8Array(pdfSource);
   const loadingTask = pdfjsLib.getDocument({ data });
   return loadingTask.promise;
+}
+
+export async function getOperatorListForPage(pdfDocument, pageNumber) {
+  const pdfjsLib = await getPdfJs();
+  const page = await pdfDocument.getPage(pageNumber);
+  return { operatorList: await page.getOperatorList(), OPS: pdfjsLib.OPS };
 }
 
 export async function getPageDimensions(pdfDocument, pageNumber) {
@@ -66,11 +54,6 @@ export async function getPageDimensions(pdfDocument, pageNumber) {
   return { width: viewport.width, height: viewport.height };
 }
 
-/**
- * Creates an independent renderer bound to one canvas. Call `render` again with a
- * new rotation/scale to re-render (e.g. after a rotate click) — any in-flight
- * render task for THIS renderer is cancelled first, per spec.
- */
 export function createPageRenderer(canvas) {
   let activeTask = null;
 
@@ -114,11 +97,6 @@ export function createPageRenderer(canvas) {
   return { render, cancel };
 }
 
-/**
- * Scale that fits the (already-rotated) viewport dimensions inside a container,
- * for fit-page / fit-width. Pass swapped source dims yourself if you need
- * unrotated math elsewhere — this takes already-rotation-aware page dimensions.
- */
 export function computeFitScale({ pageWidth, pageHeight, containerWidth, containerHeight, mode }) {
   if (!pageWidth || !pageHeight || !containerWidth || !containerHeight) return 1;
   const widthScale = containerWidth / pageWidth;
@@ -148,7 +126,6 @@ export function clampSharpRenderScale({ baseScale, zoomScale, unrotatedWidth, un
   return requestedScale * Math.min(dimensionLimit, pixelLimit);
 }
 
-/** True at 90/270 where PDF.js swaps width/height in the viewport for you. */
 export function isSideways(rotation) {
   return rotation === 90 || rotation === 270;
 }
