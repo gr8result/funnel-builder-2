@@ -54,11 +54,27 @@ function row(symbol, overrides = {}) {
       setupReasoning: overrides.setupReasoning ?? "Pullback setup with a defined stop and target.",
       setupExpiryDate: "2026-08-21T00:00:00.000Z",
     },
+    setupClassification: {
+      setupType: overrides.setupType ?? "PULLBACK_REVERSAL",
+      recentHigh: overrides.recentHigh ?? 112,
+      pullbackLow: overrides.pullbackLow ?? 94,
+      pullbackPercent: overrides.pullbackPercent ?? 16.07,
+      pullbackDuration: overrides.pullbackDuration ?? 12,
+      distanceFromRecentHigh: overrides.distanceFromRecentHigh ?? 12,
+      riseFromPullbackLow: overrides.riseFromPullbackLow ?? 6.38,
+      reversalState: overrides.reversalState ?? "REVERSAL_CONFIRMED",
+      reversalConfirmation: overrides.reversalConfirmation ?? entry,
+      preferredEntry: entry,
+      distanceFromPreferredEntry: ((currentPrice - entry) / entry) * 100,
+      overextended: overrides.overextended ?? false,
+      evidence: overrides.evidence ?? ["higher low", "price holding near support", "break above short-term confirmation", "short-term trend turning upward"],
+      qualityScore: overrides.qualityScore ?? 88,
+    },
   };
 }
 
 test("100 analysed rows returns five displayed opportunities and counts qualified rows", () => {
-  const rows = Array.from({ length: 100 }, (_, index) => row(`T${index}`, { currentPrice: 100 + (index % 4), entry: 100, tradingScore: 82 + (index % 12) }));
+  const rows = Array.from({ length: 100 }, (_, index) => row(`T${index}`, { currentPrice: 100 + (index % 2) * 0.25, entry: 100, tradingScore: 82 + (index % 12) }));
   const ranking = rankMarketOpportunities(rows, settings, { now: "2026-08-09T00:00:00Z" });
   assert.equal(ranking.topFive.length, 5);
   assert.equal(ranking.qualified.length, 100);
@@ -87,7 +103,7 @@ test("highest raw technical score is not automatically best executable trade", (
 });
 
 test("READY outranks distant WAIT where appropriate", () => {
-  const wait = row("WAIT", { currentPrice: 106, entry: 100, tradingScore: 94 });
+  const wait = row("WAIT", { currentPrice: 104, entry: 100, tradingScore: 94, overextended: true });
   const ready = row("READY", { currentPrice: 100.4, entry: 100, tradingScore: 86 });
   const ranking = rankMarketOpportunities([wait, ready], settings, { now: "2026-08-09T00:00:00Z" });
   assert.equal(ranking.topFive[0].symbol, "READY");
@@ -106,11 +122,11 @@ test("stale data, insufficient liquidity and poor reward risk are excluded", () 
 
 test("price already beyond entry is skipped and entry not reached is wait", () => {
   const ranking = rankMarketOpportunities([
-    row("CHASE", { currentPrice: 112, entry: 100 }),
-    row("PULL", { currentPrice: 104, entry: 100 }),
+    row("CHASE", { currentPrice: 112, entry: 100, overextended: true }),
+    row("PULL", { currentPrice: 98, entry: 100, reversalState: "REVERSAL_DEVELOPING" }),
   ], settings, { now: "2026-08-09T00:00:00Z" });
-  assert.equal(ranking.ranked.find((item) => item.symbol === "CHASE").status, "SKIP");
-  assert.equal(ranking.ranked.find((item) => item.symbol === "PULL").status, "WAIT");
+  assert.equal(ranking.ranked.find((item) => item.symbol === "CHASE").status, "OVEREXTENDED");
+  assert.equal(ranking.ranked.find((item) => item.symbol === "PULL").status, "REVERSAL DEVELOPING");
 });
 
 test("ranking is deterministic and explains why number one ranked first", () => {
@@ -134,10 +150,60 @@ test("dashboard and opportunities page can use the identical ranked payload", ()
 });
 
 test("scanner can display developing setups without treating them as ready trades", () => {
-  const developing = row("DEV", { tradingScore: 78, currentPrice: 100, entry: 100 });
+  const developing = row("DEV", { tradingScore: 78, currentPrice: 100, entry: 100, reversalState: "REVERSAL_DEVELOPING" });
   const ranking = rankMarketOpportunities([developing], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
   assert.equal(ranking.bestCurrentTrade, null);
   assert.equal(ranking.qualified.length, 0);
   assert.equal(ranking.topFive.length, 1);
-  assert.equal(ranking.topFive[0].status, "DEVELOPING");
+  assert.equal(ranking.topFive[0].status, "REVERSAL DEVELOPING");
+});
+
+test("clean pullback with confirmed reversal becomes READY", () => {
+  const ranking = rankMarketOpportunities([row("REV", { currentPrice: 100.2, entry: 100 })], settings, { now: "2026-08-09T00:00:00Z" });
+  assert.equal(ranking.bestCurrentTrade.symbol, "REV");
+  assert.equal(ranking.topFive[0].primarySetupType, "PULLBACK_REVERSAL");
+});
+
+test("pullback still falling waits for reversal", () => {
+  const ranking = rankMarketOpportunities([row("FALL", { setupType: "FALLING_NO_REVERSAL", reversalState: "STILL_FALLING" })], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.topFive[0].status, "WAIT FOR REVERSAL");
+  assert.equal(ranking.bestCurrentTrade, null);
+});
+
+test("large rally after reversal becomes overextended", () => {
+  const ranking = rankMarketOpportunities([row("LATE", { currentPrice: 111, entry: 100, overextended: true, riseFromPullbackLow: 18 })], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.topFive[0].status, "OVEREXTENDED");
+  assert.equal(ranking.bestCurrentTrade, null);
+});
+
+test("strong momentum without pullback is not primary READY", () => {
+  const ranking = rankMarketOpportunities([row("MOMO", { currentPrice: 100, entry: 100, setupType: "MOMENTUM_CONTINUATION", pullbackPercent: 1.2, qualityScore: 40 })], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.topFive[0].status, "WAIT FOR PULLBACK");
+  assert.equal(ranking.bestCurrentTrade, null);
+});
+
+test("breakout without pullback is not primary READY", () => {
+  const ranking = rankMarketOpportunities([row("BRK", { currentPrice: 100, entry: 100, setupType: "BREAKOUT", pullbackPercent: 1.5 })], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.topFive[0].status, "WAIT FOR PULLBACK");
+});
+
+test("ABNB-style rally after pullback is not READY from momentum alone", () => {
+  const abnbLike = row("ABNB", {
+    currentPrice: 178.07,
+    entry: 171.5,
+    stop: 164.5,
+    target: 187,
+    changePercent: 17.43,
+    relativeVolume: 3.69,
+    setupType: "OVEREXTENDED",
+    recentHigh: 178.48,
+    pullbackLow: 164.7,
+    pullbackPercent: 7.72,
+    riseFromPullbackLow: 8.12,
+    overextended: true,
+    qualityScore: 55,
+  });
+  const ranking = rankMarketOpportunities([abnbLike], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.bestCurrentTrade, null);
+  assert.equal(ranking.topFive[0].status, "OVEREXTENDED");
 });

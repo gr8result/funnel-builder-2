@@ -86,8 +86,8 @@ async function runCompleteScan(settings) {
   const unavailableRows = rows.filter((row) => row.status === "DATA UNAVAILABLE");
   const analysedRows = rows.filter((row) => row.status !== "DATA UNAVAILABLE");
   const readyCount = countStatus(rows, "READY");
-  const waitCount = countStatus(rows, "WAIT");
-  const developingCount = countStatus(rows, "DEVELOPING");
+  const waitCount = rows.filter((row) => ["WAIT FOR REVERSAL", "WAIT FOR PULLBACK"].includes(row.status)).length;
+  const developingCount = countStatus(rows, "REVERSAL DEVELOPING");
   discovery.coverage.US.detailedAnalyses = detailedUniverse.filter((row) => row.market === "US").length;
   discovery.coverage.US.successfullyScreened = analysis.filter((row) => row.country === "United States" && row.dataStatus?.readyForScore).length;
   discovery.coverage.ASX.detailedAnalyses = detailedUniverse.filter((row) => row.market === "ASX").length;

@@ -1,6 +1,7 @@
 import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
+import { classifyPullbackReversal } from "../../../lib/freedom-trader/pullbackReversal.js";
 
 function round(value, decimals = 2) {
   const number = Number(value);
@@ -304,24 +305,36 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   let setupReasoning = dataStatus.readyForScore ? "Waiting for complete setup inputs." : dataStatus.status;
   let expectedHoldingPeriod = null;
   let setupExpiryDate = null;
+  let setupClassification = null;
 
   if (enoughCore) {
-    const nearResistance = distanceFromResistance <= 2;
-    const nearSupport = distanceFromSupport <= 5;
-    plannedEntry = round(nearResistance && relativeVolume >= 1.2 ? resistance * 1.005 : nearSupport ? currentPrice : support + atr * 0.5);
-    stop = round(Math.min(support - atr * 0.35, plannedEntry - atr));
+    setupClassification = classifyPullbackReversal(clean, {
+      currentPrice,
+      changePercent,
+      volatilityPercent: volatility,
+    });
+    plannedEntry = round(setupClassification.preferredEntry ?? currentPrice);
+    const structuralSupport = Number.isFinite(setupClassification.pullbackLow) ? setupClassification.pullbackLow : support;
+    stop = round(Math.min(structuralSupport - atr * 0.35, plannedEntry - atr * 0.8));
     riskPerShare = Number.isFinite(plannedEntry) && Number.isFinite(stop) ? round(plannedEntry - stop) : null;
-    const minimumTarget = Number.isFinite(riskPerShare) ? plannedEntry + riskPerShare * 2 : null;
-    target = Number.isFinite(resistance) && resistance > plannedEntry ? round(Math.max(resistance, minimumTarget)) : round(minimumTarget);
+    const realisticRecovery = Number.isFinite(setupClassification.recentHigh) && setupClassification.recentHigh > plannedEntry
+      ? setupClassification.recentHigh
+      : resistance;
+    const maximumTarget = Number.isFinite(riskPerShare) ? plannedEntry + riskPerShare * 3 : null;
+    target = Number.isFinite(realisticRecovery) && Number.isFinite(maximumTarget)
+      ? round(Math.min(realisticRecovery, maximumTarget))
+      : round(realisticRecovery);
     rewardPerShare = Number.isFinite(target) && Number.isFinite(plannedEntry) ? round(target - plannedEntry) : null;
     riskRewardRatio = Number.isFinite(rewardPerShare) && Number.isFinite(riskPerShare) && riskPerShare > 0 ? round(rewardPerShare / riskPerShare) : null;
     if (!Number.isFinite(riskRewardRatio) || riskRewardRatio < 2 || riskPerShare <= 0) {
       setupReasoning = "No disciplined setup yet: risk/reward is below 2:1 or stop placement is not valid.";
+    } else if (setupClassification.setupType === "PULLBACK_REVERSAL") {
+      setupReasoning = `Pullback reversal setup: price pulled back ${setupClassification.pullbackPercent}% from its recent high, support is forming near ${setupClassification.pullbackLow}, and confirmation is ${setupClassification.reversalState.toLowerCase().replace(/_/g, " ")}.`;
+      expectedHoldingPeriod = "2 days to 3 weeks";
+      setupExpiryDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     } else {
-      setupReasoning = nearResistance
-        ? "Breakout setup: price is near resistance with sufficient relative volume. Entry waits for confirmation above resistance."
-        : "Pullback setup: price is near recent support with a defined stop below support/ATR and target at resistance or better.";
-      expectedHoldingPeriod = tradingScore >= 85 ? "2 days to 1 week" : "1 to 6 weeks";
+      setupReasoning = `${setupClassification.setupType.replace(/_/g, " ")}: this is not Grant's primary pullback reversal setup.`;
+      expectedHoldingPeriod = "Watch only";
       setupExpiryDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
     }
   }
@@ -418,6 +431,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     confidence,
     scoreExplanation: components,
     setup,
+    setupClassification,
     marketData,
     dataStatus,
     candleCount: clean.length,

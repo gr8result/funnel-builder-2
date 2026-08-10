@@ -85,7 +85,7 @@ function formatNumber(value) {
 
 function traderRecommendationStatus(value) {
   const status = String(value || "").trim().toUpperCase();
-  if (["READY", "WAIT", "DEVELOPING", "SKIP", "DATA UNAVAILABLE"].includes(status)) return status;
+  if (["READY", "WAIT", "DEVELOPING", "SKIP", "DATA UNAVAILABLE", "WAIT FOR REVERSAL", "REVERSAL DEVELOPING", "WAIT FOR PULLBACK", "OVEREXTENDED"].includes(status)) return status;
   if (status === "BUY" || status === "BUY NOW" || status === "STRONG BUY") return "READY";
   if (status === "WAIT FOR ENTRY" || status === "WATCH") return "WAIT";
   if (status === "HOLD" || status === "NO TRADE") return "DEVELOPING";
@@ -110,6 +110,10 @@ function plainRecommendationFromSetup(setup, opportunity) {
   let reason = "Freedom is waiting for a complete short-term setup.";
   if (status === "READY") reason = "The planned buy area is currently reachable and the setup can be reviewed.";
   else if (status === "WAIT" && Number.isFinite(current) && Number.isFinite(entry) && current > entry) reason = "Current price is still above the preferred buying range.";
+  else if (status === "WAIT FOR REVERSAL") reason = "The share has pulled back, but the reversal is not confirmed yet.";
+  else if (status === "REVERSAL DEVELOPING") reason = "A pullback reversal is beginning to form, but it is not confirmed yet.";
+  else if (status === "WAIT FOR PULLBACK") reason = "Freedom is waiting for a better pullback entry.";
+  else if (status === "OVEREXTENDED") reason = "The reversal entry has probably already been missed.";
   else if (status === "DEVELOPING") reason = "The setup is promising, but it is not strong enough to act on yet.";
   return {
     status,
