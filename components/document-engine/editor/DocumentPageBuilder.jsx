@@ -5,6 +5,7 @@ import { bringForward, sendBackward } from "../core/layerEngine.js";
 import { createObject, duplicateObject, moveObject, resizeObject } from "../core/objectEngine.js";
 import { clearSelection, selectObject } from "../core/selectionEngine.js";
 import { PageRenderer } from "../renderer/pageRenderer.jsx";
+import { createPdfHybridPageModel } from "../../../lib/standard-inclusions/pdfPageImportModel.js";
 
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
@@ -108,8 +109,19 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     if (!activation) return;
     const isText = object.type === "text" || object.type === "dynamicField";
     if (!isText) {
-      commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
-      onStatus?.("Image region selected.");
+      const nextDocument = updatePage(draft, page.id, (activePage) => updateObjectOnPage(activePage, object.id, (item) => ({
+        ...item,
+        locked: false,
+        data: {
+          ...(item.data || {}),
+          acceptedEdit: true,
+          maskOriginal: false,
+        },
+      })));
+      commitDocument({ ...nextDocument, selection: selectObject(draft.selection, objectId) }, { silent: true });
+      imageReplaceObjectIdRef.current = objectId;
+      imageUploadRef.current?.click();
+      onStatus?.("Image region selected. Choose a replacement image.");
       return;
     }
     const nextDocument = updatePage(draft, page.id, (activePage) => updateObjectOnPage(activePage, object.id, (item) => ({
@@ -315,11 +327,14 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
       const pdf = await PDFDocument.create();
       const pageNodes = Array.from(exportPagesRef.current?.querySelectorAll?.("[data-document-page-id]") || []);
       if (!pageNodes.length) throw new Error("No document pages were available for PDF export.");
-      for (const node of pageNodes) {
+      for (const [index, node] of pageNodes.entries()) {
+        const sourcePage = draft.pages[index] || {};
+        const pdfWidth = 595.28;
+        const pdfHeight = pdfWidth * (Number(sourcePage.height || 1123) / Math.max(1, Number(sourcePage.width || 794)));
         const canvas = await html2canvas(node, { backgroundColor: "#ffffff", scale: 2, useCORS: true, logging: false });
         const image = await pdf.embedPng(canvas.toDataURL("image/png"));
-        const pdfPage = pdf.addPage([595.28, 841.89]);
-        pdfPage.drawImage(image, { x: 0, y: 0, width: 595.28, height: 841.89 });
+        const pdfPage = pdf.addPage([pdfWidth, pdfHeight]);
+        pdfPage.drawImage(image, { x: 0, y: 0, width: pdfWidth, height: pdfHeight });
       }
       const bytes = await pdf.save();
       const blob = new Blob([bytes], { type: "application/pdf" });
@@ -495,7 +510,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         ))}
         {mode === "edit" ? (
           <>
-            <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Page</button>
+            <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={addPage}>Add Blank Page</button>
             <button type="button" disabled={readonly || !activePage} style={styles.secondaryButton} onClick={duplicatePage}>Duplicate Page</button>
             <button type="button" disabled={readonly || !activePage || draft.pages.length <= 1} style={styles.dangerButton} onClick={deletePage}>Delete Page</button>
             <button type="button" disabled={readonly || draft.pages.findIndex((page) => page.id === draft.activePageId) <= 0} style={styles.secondaryButton} onClick={() => movePage(-1)}>Move Up</button>
@@ -877,38 +892,56 @@ function detectedRegionCount(page) {
 }
 
 function syncDocumentEditData(document) {
+  const pages = (document.pages || []).map((page, index) => {
+    const edits = (page.objects || [])
+      .filter((object) => object?.data?.acceptedEdit || (object?.data?.manualRegion && object?.data?.edited))
+      .map((object) => ({
+        id: object.id,
+        regionId: object.data?.regionId || object.id,
+        type: object.type === "logo" ? "image" : object.type,
+        bounds: { x: object.x, y: object.y, width: object.width, height: object.height },
+        content: object.data?.text || "",
+        style: { ...(object.style || {}) },
+        sourceAsset: object.data?.imageRef || "",
+        mask: Boolean(object.data?.maskOriginal),
+        zIndex: object.layer,
+      }));
+    const acceptedMasks = edits.filter((edit) => edit.mask).map((edit) => ({
+      id: `${edit.id}-mask`,
+      regionId: edit.regionId,
+      bounds: edit.bounds,
+    }));
+    const pageWithEditData = {
+      ...page,
+      data: {
+        ...(page.data || {}),
+        baseArtwork: page.data?.baseArtwork || page.data?.originalPageAsset || page.background?.imageRef || "",
+        originalPageAsset: page.data?.originalPageAsset || page.background?.imageRef || "",
+        detectedRegions: Array.isArray(page.data?.detectedRegions) ? page.data.detectedRegions : [],
+        edits,
+        acceptedEdits: edits,
+        masks: acceptedMasks,
+        acceptedMasks,
+      },
+    };
+    const hybridModel = createPdfHybridPageModel(pageWithEditData, index);
+    return {
+      ...pageWithEditData,
+      data: {
+        ...pageWithEditData.data,
+        hybridPageModel: hybridModel,
+        blocks: hybridModel.blocks,
+        masks: hybridModel.masks,
+      },
+    };
+  });
   return {
     ...document,
-    pages: (document.pages || []).map((page) => {
-      const edits = (page.objects || [])
-        .filter((object) => object?.data?.acceptedEdit || (object?.data?.manualRegion && object?.data?.edited))
-        .map((object) => ({
-          id: object.id,
-          regionId: object.data?.regionId || object.id,
-          type: object.type === "logo" ? "image" : object.type,
-          bounds: { x: object.x, y: object.y, width: object.width, height: object.height },
-          content: object.data?.text || "",
-          style: { ...(object.style || {}) },
-          sourceAsset: object.data?.imageRef || "",
-          mask: Boolean(object.data?.maskOriginal),
-          zIndex: object.layer,
-        }));
-      return {
-        ...page,
-        data: {
-          ...(page.data || {}),
-          originalPageAsset: page.data?.originalPageAsset || page.background?.imageRef || "",
-          detectedRegions: Array.isArray(page.data?.detectedRegions) ? page.data.detectedRegions : [],
-          edits,
-          acceptedEdits: edits,
-          acceptedMasks: edits.filter((edit) => edit.mask).map((edit) => ({
-            id: `${edit.id}-mask`,
-            regionId: edit.regionId,
-            bounds: edit.bounds,
-          })),
-        },
-      };
-    }),
+    pages,
+    metadata: {
+      ...(document.metadata || {}),
+      hybridPages: pages.map((page, index) => createPdfHybridPageModel(page, index)),
+    },
   };
 }
 

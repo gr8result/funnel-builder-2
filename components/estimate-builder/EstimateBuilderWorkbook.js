@@ -30,7 +30,7 @@ import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/cons
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
-import { createPdfDetectedImageRegion, createPdfDetectedTextRegion, createPdfImportBatchId, createStableImportedPdfPageId } from "../../lib/standard-inclusions/pdfPageImportModel";
+import { createPdfDetectedImageRegion, createPdfDetectedTextRegion, createPdfImportBatchId, createPdfHybridPageModel, createPdfImportReviewSummary, createStableImportedPdfPageId } from "../../lib/standard-inclusions/pdfPageImportModel";
 import { createPremierInclusionsWorkingCopy } from "../document-engine/templates/premierInclusionsMasterTemplate";
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
@@ -6955,8 +6955,20 @@ export function StandardInclusionsSheet({ sheet }) {
 
   function saveDocumentBuilder(nextDocument) {
     const document = markStandardDocumentSaved(nextDocument, standard);
+    const masterTemplate = {
+      id: "standard-inclusions-master-template",
+      name: document.name || "Standard Inclusions Master Template",
+      version: Number(standard.masterTemplate?.version || 0) + 1,
+      savedAt: new Date().toISOString(),
+      source: document.metadata?.documentSource || standard.activeDocumentSource || "document-builder",
+      sourceFileName: document.metadata?.sourceFileName || standard.pdfSourceName || standard.pptxSourceName || "",
+      pageCount: Array.isArray(document.pages) ? document.pages.length : 0,
+      importReview: document.metadata?.importReview || document.metadata?.importReviewSummary || null,
+      documentBuilder: cloneJson(document),
+    };
     saveStandard({
       documentBuilder: document,
+      masterTemplate,
       source: document.metadata?.documentSource || standard.activeDocumentSource || "document-builder",
       scheduleDeleted: false,
       isDeleted: false,
@@ -6971,7 +6983,7 @@ export function StandardInclusionsSheet({ sheet }) {
       pptxSourceName: "",
       pdfEditorMode: "document-page-builder",
     }, { persist: true });
-    setStandardStatus("Standard Inclusions document saved.");
+    setStandardStatus("Standard Inclusions document saved as master template.");
   }
 
   async function saveStandardWithRevision(patch, action, source = "", options = {}) {
@@ -7235,10 +7247,22 @@ export function StandardInclusionsSheet({ sheet }) {
         sourceFileName: importPreview.fileName || importPreview.document.metadata?.sourceFileName || "",
       },
     }, { ...standard, activeDocumentSource: importSource });
+    const masterTemplate = {
+      id: "standard-inclusions-master-template",
+      name: document.name || "Standard Inclusions Master Template",
+      version: Number(standard.masterTemplate?.version || 0) + 1,
+      savedAt: new Date().toISOString(),
+      source: importSource,
+      sourceFileName: importPreview.fileName || "",
+      pageCount: previewPages.length,
+      importReview: importPreview.importReview || document.metadata?.importReview || null,
+      documentBuilder: cloneJson(document),
+    };
     let persistedStandard = null;
     try {
       persistedStandard = await saveStandardWithRevision({
       documentBuilder: document,
+      masterTemplate,
       source: importSource,
       scheduleDeleted: false,
       isDeleted: false,
@@ -7334,6 +7358,8 @@ export function StandardInclusionsSheet({ sheet }) {
             />
           )}
           onReplace={loadSavedSchedules}
+          onImportPdf={() => pdfUploadRef.current?.click()}
+          onSaveMaster={() => saveDocumentBuilder(activeDocument)}
           onDelete={deleteCurrentSchedule}
           onChange={saveDocumentBuilder}
           onStatus={setStandardStatus}
@@ -7347,6 +7373,7 @@ export function StandardInclusionsSheet({ sheet }) {
           savedScheduleLoading={savedScheduleLoading}
           importPreview={importPreview}
           pendingPdfFile={pendingPdfFile}
+          onImportExisting={loadSavedSchedules}
           onUploadPptx={() => pptxUploadRef.current?.click()}
           onUploadPdf={() => pdfUploadRef.current?.click()}
           onRestore={restorePreviousVersion}
@@ -7866,6 +7893,8 @@ function StandardScheduleLoadedEditor({
   workbook,
   contextPanel,
   onReplace,
+  onImportPdf,
+  onSaveMaster,
   onDelete,
   onChange,
   onStatus,
@@ -7874,7 +7903,9 @@ function StandardScheduleLoadedEditor({
     <section style={styles.standardScheduleLoadedEditor}>
       <StandardScheduleActiveSummary summary={activeSummary} />
       <div style={styles.standardScheduleEditorToolbar}>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Replace Schedule</button>
+        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onReplace}>Import Existing Schedule</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onImportPdf}>Import PDF</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onSaveMaster}>SAVE AS STANDARD INCLUSIONS</button>
         <button type="button" disabled={readonly} style={styles.dangerButton} onClick={onDelete}>Delete Schedule</button>
         <span style={styles.dashboardPanelSubtitle}>Save, Preview and Export PDF are available in the editor toolbar below.</span>
       </div>
@@ -7989,14 +8020,17 @@ function StandardScheduleContextPanel({
       {managementMode === "import-preview" && importPreview ? (
         <div style={styles.standardSchedulePanel}>
           <div style={styles.proposalMiniActions}>
-            <strong>Import Preview</strong>
+            <strong>{importPreview.importReview?.status || "IMPORT COMPLETE"}</strong>
             <button type="button" style={styles.secondaryButton} onClick={onCancelManagement}>Cancel</button>
-            <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConfirmImport}>Confirm Replacement</button>
+            <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onConfirmImport}>Review Imported Pages</button>
           </div>
-          <p style={styles.dashboardPanelSubtitle}>
-            {importPreview.fileName} - {importPreview.pageCount} page{importPreview.pageCount === 1 ? "" : "s"}.
-            Editable text blocks: {importPreview.editableTextCount}. Fixed visual elements: {importPreview.fixedVisualCount}.
-          </p>
+          <div style={styles.standardScheduleImportStats}>
+            <span>Pages imported: <strong>{importPreview.pageCount}</strong></span>
+            <span>Editable text blocks: <strong>{importPreview.editableTextCount}</strong></span>
+            <span>Editable image blocks: <strong>{importPreview.editableImageCount || 0}</strong></span>
+            <span>Preserved visual elements: <strong>{importPreview.preservedElementCount || importPreview.fixedVisualCount || 0}</strong></span>
+          </div>
+          <p style={styles.dashboardPanelSubtitle}>{importPreview.fileName}</p>
           {importPreview.warnings?.length ? (
             <ul style={styles.standardScheduleWarningList}>{importPreview.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>
           ) : null}
@@ -8008,7 +8042,9 @@ function StandardScheduleContextPanel({
                   <strong>{index + 1}</strong>
                 </div>
                 <span>{page.name}</span>
-                <small>{page.objects.length} editable/fixed block{page.objects.length === 1 ? "" : "s"}</small>
+                <small>Editable: {page.objects.filter((object) => object.data?.reviewStatus === "Editable").length}</small>
+                <small>Needs Review: {page.objects.filter((object) => object.data?.reviewStatus === "Needs Review").length}</small>
+                <small>Preserved: base page artwork</small>
               </article>
             ))}
           </div>
@@ -8026,6 +8062,7 @@ function StandardScheduleEmptyState({
   savedScheduleLoading,
   importPreview,
   pendingPdfFile,
+  onImportExisting,
   onUploadPptx,
   onUploadPdf,
   onRestore,
@@ -8041,8 +8078,9 @@ function StandardScheduleEmptyState({
     <section style={styles.standardScheduleEmptyState}>
       <h3>No Standard Inclusions Schedule is currently loaded.</h3>
       <div style={styles.proposalMiniActions}>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onImportExisting}>Import Existing Schedule</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadPdf}>Import PDF</button>
         <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onUploadPptx}>Upload PowerPoint</button>
-        <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUploadPdf}>Upload PDF</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onStartBlank}>Create Blank Schedule</button>
         <button type="button" disabled={readonly || !revisionHistory.length} style={styles.secondaryButton} onClick={onRestore}>Restore Previous Version</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onUsePremierTemplate}>Use Premier Template</button>
@@ -8286,7 +8324,7 @@ async function loadStandardInclusionsPdfJs() {
   }
 }
 
-function detectPdfImageRegionsFromCanvas(canvas, pageId) {
+function detectPdfImageRegionsFromCanvas(canvas, pageId, pageSize = { width: 794, height: 1123 }, textRegions = []) {
   const width = canvas.width;
   const height = canvas.height;
   const sampleWidth = 160;
@@ -8339,19 +8377,21 @@ function detectPdfImageRegionsFromCanvas(canvas, pageId) {
         queue.push(next);
       });
     }
-    const boxWidth = ((maxX - minX + 1) / sampleWidth) * 794;
-    const boxHeight = ((maxY - minY + 1) / sampleHeight) * 1123;
+    const boxWidth = ((maxX - minX + 1) / sampleWidth) * pageSize.width;
+    const boxHeight = ((maxY - minY + 1) / sampleHeight) * pageSize.height;
     const area = boxWidth * boxHeight;
     if (area < 5000 || boxWidth < 45 || boxHeight < 35) continue;
+    const boundingBox = {
+      x: Math.max(0, (minX / sampleWidth) * pageSize.width - 4),
+      y: Math.max(0, (minY / sampleHeight) * pageSize.height - 4),
+      width: Math.min(pageSize.width, boxWidth + 8),
+      height: Math.min(pageSize.height, boxHeight + 8),
+    };
+    if (textRegions.some((region) => boxesOverlap(boundingBox, region.boundingBox || {}) && overlapAreaRatio(boundingBox, region.boundingBox || {}) > 0.35)) continue;
     regions.push(createPdfDetectedImageRegion({
       pageId,
       index: regions.length,
-      boundingBox: {
-        x: Math.max(0, (minX / sampleWidth) * 794 - 4),
-        y: Math.max(0, (minY / sampleHeight) * 1123 - 4),
-        width: Math.min(794, boxWidth + 8),
-        height: Math.min(1123, boxHeight + 8),
-      },
+      boundingBox,
       confidence: Math.min(0.92, Math.max(0.45, count / (sampleWidth * sampleHeight))),
     }));
   }
@@ -8360,60 +8400,112 @@ function detectPdfImageRegionsFromCanvas(canvas, pageId) {
     .slice(0, 12);
 }
 
+function boxesOverlap(a = {}, b = {}) {
+  const ax2 = Number(a.x) + Number(a.width);
+  const ay2 = Number(a.y) + Number(a.height);
+  const bx2 = Number(b.x) + Number(b.width);
+  const by2 = Number(b.y) + Number(b.height);
+  return Number(a.x) < bx2 && ax2 > Number(b.x) && Number(a.y) < by2 && ay2 > Number(b.y);
+}
+
+function overlapAreaRatio(a = {}, b = {}) {
+  const left = Math.max(Number(a.x) || 0, Number(b.x) || 0);
+  const top = Math.max(Number(a.y) || 0, Number(b.y) || 0);
+  const right = Math.min((Number(a.x) || 0) + (Number(a.width) || 0), (Number(b.x) || 0) + (Number(b.width) || 0));
+  const bottom = Math.min((Number(a.y) || 0) + (Number(a.height) || 0), (Number(b.y) || 0) + (Number(b.height) || 0));
+  const overlap = Math.max(0, right - left) * Math.max(0, bottom - top);
+  const smaller = Math.min(Math.max(1, (Number(a.width) || 0) * (Number(a.height) || 0)), Math.max(1, (Number(b.width) || 0) * (Number(b.height) || 0)));
+  return overlap / smaller;
+}
+
+function cleanPdfFontFamily(fontFamily = "") {
+  const cleaned = String(fontFamily || "")
+    .replace(/^["']|["']$/g, "")
+    .replace(/^[A-Z]{6}\+/, "")
+    .replace(/[-_](Bold|Italic|Regular|Medium|SemiBold|Black|Light).*$/i, "")
+    .trim();
+  return cleaned || "Arial";
+}
+
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
   const pdfjsLib = await loadStandardInclusionsPdfJs();
   const bytes = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes), disableWorker: true }).promise;
   const pages = [];
   let editableTextCount = 0;
+  let editableImageCount = 0;
   const warnings = [];
   const importId = createPdfImportBatchId(file.name);
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const pageId = createStableImportedPdfPageId(importId, pageNumber);
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 4.1667 });
+    const nativeViewport = page.getViewport({ scale: 1 });
+    const pageWidth = 794;
+    const pageHeight = Math.max(1, Math.round((nativeViewport.height / Math.max(1, nativeViewport.width)) * pageWidth));
+    const renderViewport = page.getViewport({ scale: Math.max(4.1667, pageWidth * 3 / Math.max(1, nativeViewport.width)) });
     const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
+    canvas.width = Math.ceil(renderViewport.width);
+    canvas.height = Math.ceil(renderViewport.height);
     const context = canvas.getContext("2d", { alpha: false });
-    await page.render({ canvasContext: context, viewport }).promise;
+    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
     const objects = [];
     const detectedRegions = [];
+    const textRegions = [];
     if (mode === "editable-text") {
       const textContent = await page.getTextContent().catch(() => null);
+      const fontStyles = textContent?.styles || {};
       (textContent?.items || []).forEach((item, index) => {
         const text = String(item.str || "").trim();
         if (!text) return;
-        const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+        const tx = pdfjsLib.Util.transform(renderViewport.transform, item.transform);
+        const fontHeight = Math.max(6, Math.hypot(tx[2], tx[3]) || Number(item.height) || 12);
+        const scaledWidth = Math.max(1, Number(item.width || 0) * (renderViewport.scale || 1));
         const x = tx[4];
-        const y = canvas.height - tx[5];
+        const y = tx[5] - fontHeight;
+        const style = fontStyles[item.fontName] || {};
+        const fontFamily = cleanPdfFontFamily(style.fontFamily || item.fontName || "Arial");
+        const fontWeight = /bold|black|heavy|semibold/i.test(`${fontFamily} ${item.fontName || ""}`) ? "700" : "400";
+        const fontStyle = /italic|oblique/i.test(`${fontFamily} ${item.fontName || ""}`) ? "italic" : "normal";
         const boundingBox = {
-          x: (x / canvas.width) * 794,
-          y: (y / canvas.height) * 1123,
-          width: Math.min(700, Math.max(80, Number(item.width || 80) * (794 / canvas.width))),
-          height: 24,
+          x: clampNumber((x / canvas.width) * pageWidth, 0, pageWidth - 1),
+          y: clampNumber((y / canvas.height) * pageHeight, 0, pageHeight - 1),
+          width: clampNumber((scaledWidth / canvas.width) * pageWidth, 8, pageWidth),
+          height: clampNumber((fontHeight * 1.18 / canvas.height) * pageHeight, 8, 96),
         };
         const region = createPdfDetectedTextRegion({
           pageId,
           index,
           text,
           boundingBox,
-          confidence: 0,
+          confidence: 0.86,
         });
         detectedRegions.push(region);
+        textRegions.push(region);
         objects.push(createObject("text", {
           name: `Extracted text ${index + 1}`,
           x: boundingBox.x,
           y: boundingBox.y,
           width: boundingBox.width,
           height: boundingBox.height,
-          style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
+          locked: true,
+          style: {
+            fontFamily,
+            fontSize: clampNumber(Math.round(boundingBox.height * 0.82), 6, 96),
+            fontWeight,
+            fontStyle,
+            color: "#111827",
+            lineHeight: 1.1,
+            textAlign: "left",
+            backgroundColor: "#ffffff",
+          },
           data: {
             text,
             detectedText: text,
             regionId: region.id,
             detectedRegion: true,
             overlayMode: "pdf-text-activation",
+            editableSource: "pdf",
+            reviewStatus: "Editable",
             edited: false,
             acceptedEdit: false,
             maskOriginal: false,
@@ -8424,7 +8516,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
     const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
-    const imageRegions = detectPdfImageRegionsFromCanvas(canvas, pageId);
+    const imageRegions = mode === "editable-text" ? detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions) : [];
     imageRegions.forEach((region, index) => {
       const box = region.boundingBox || {};
       detectedRegions.push(region);
@@ -8440,26 +8532,43 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
           detectedRegion: true,
           overlayMode: "pdf-image-activation",
           editableSource: "pdf",
+          reviewStatus: "Needs Review",
           edited: false,
           acceptedEdit: false,
           maskOriginal: false,
         },
       }));
+      editableImageCount += 1;
     });
     pages.push(createA4Page({
       id: pageId,
       name: `PDF Page ${pageNumber}`,
+      width: pageWidth,
+      height: pageHeight,
       background: { color: "#ffffff", imageRef: originalPageAsset },
       data: {
+        baseArtwork: originalPageAsset,
         originalPageAsset,
         detectedRegions,
         acceptedEdits: [],
         acceptedMasks: [],
+        masks: [],
+        thumbnail: originalPageAsset,
+        baseLayer: { type: "pdf-page-render", source: "canvas", status: "Preserved" },
       },
       objects,
     }));
   }
   const timestamp = new Date().toISOString();
+  const hybridPages = pages.map((page, index) => createPdfHybridPageModel(page, index));
+  const preservedElementCount = pages.length + warnings.length;
+  const importReview = createPdfImportReviewSummary({
+    pageCount: pages.length,
+    editableTextCount,
+    editableImageCount,
+    preservedElementCount,
+    needsReviewCount: pages.reduce((count, page) => count + page.objects.filter((object) => object.data?.reviewStatus === "Needs Review").length, 0),
+  });
   const documentBuilder = createDocument({
     id: importId,
     name: file.name.replace(/\.pdf$/i, "") || "Imported PDF Standard Inclusions",
@@ -8470,11 +8579,22 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       documentSource: "pdf-import",
       importMode: mode,
       sourceFileName: file.name,
+      sourcePath: file.name,
       importedAt: timestamp,
       lastSavedAt: timestamp,
+      pageCount: pages.length,
+      editableTextCount,
+      editableImageCount,
+      preservedElementCount,
+      importReview,
+      importReviewSummary: importReview,
+      hybridArchitecture: "original-page-artwork-plus-editable-overlay-blocks",
+      hybridPages,
+      visualBaseSource: "pdf-rendered-page-artwork",
+      editableSource: "pdf-text-objects-and-review-image-regions",
     },
   });
-  return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, fixedVisualCount: mode === "background" ? pages.length : warnings.length, warnings };
+  return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, editableImageCount, fixedVisualCount: preservedElementCount, preservedElementCount, importReview, warnings };
 }
 
 async function importPptxAsStandardDocumentPreview(file) {
@@ -14949,6 +15069,7 @@ const styles = {
   standardScheduleThumbnail: { width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc" },
   standardScheduleThumbnailPlaceholder: { width: "100%", aspectRatio: "4 / 3", display: "grid", placeItems: "center", borderRadius: 8, border: "1px dashed #cbd5e1", color: "#64748b", background: "#f8fafc", fontWeight: 900 },
   standardScheduleRevisionRow: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gridTemplateColumns: "minmax(0, 1fr) repeat(3, auto)", gap: 8, alignItems: "center", color: "#0f172a" },
+  standardScheduleImportStats: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, border: "1px solid #bae6fd", background: "#eff6ff", borderRadius: 10, padding: 10, color: "#0f172a", fontSize: 13 },
   standardScheduleWarningList: { margin: 0, paddingLeft: 18, color: "#92400e", fontWeight: 800 },
   standardSchedulePreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 },
   standardSchedulePreviewCard: { border: "1px solid #e2e8f0", background: "#ffffff", borderRadius: 10, padding: 8, display: "grid", gap: 6, color: "#0f172a", fontSize: 12, fontWeight: 800 },
