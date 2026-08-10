@@ -309,6 +309,22 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   };
   const normalizedManual = withPlanPageDefaults({ id: "p2", exteriorWalls: manual });
   assert.equal(normalizedManual.exteriorWalls.segments.length, 1);
+
+  const currentAutoCandidate = {
+    source: "auto-detector-v2",
+    schemaVersion: 2,
+    vertices: [{ id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 }, { id: "c", x: 100, y: 100 }],
+    segments: [
+      { id: "s1", aId: "a", bId: "b", source: "automatic", wallType: "exterior", confirmed: true },
+      { id: "s2", aId: "b", bId: "c", source: "automatic", wallType: "exterior", confirmed: true },
+    ],
+    exteriorPerimeter: { points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }], closed: true, gapCount: 0 },
+    detectedSnapshot: { vertices: [], segments: [] },
+  };
+  assert.equal(isLegacyAutomaticExteriorWalls(currentAutoCandidate), false);
+  const normalizedAutoCandidate = withPlanPageDefaults({ id: "p3", exteriorWalls: currentAutoCandidate });
+  assert.equal(normalizedAutoCandidate.exteriorWalls.vertices.length, 3);
+  assert.equal(normalizedAutoCandidate.exteriorWalls.segments.length, 2);
 }
 
 // ---- wall-object detection creates independent classified wall objects -----

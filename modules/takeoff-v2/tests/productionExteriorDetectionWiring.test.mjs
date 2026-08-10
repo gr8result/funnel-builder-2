@@ -24,6 +24,6 @@ assert.doesNotMatch(finishBody, /EXTERIOR_GENERATION_DISABLED/, "Finish Exterior
 
 assert.match(overlay, /const exteriorWalls = page\?\.exteriorWalls;/, "overlay must read exterior walls from page.exteriorWalls");
 assert.match(overlay, /visibleExteriorSegments\.map\(\(segment\) => \(/, "overlay must render exterior wall segments");
-assert.match(overlay, /data-testid="wall-segment"/, "overlay must expose visible wall-segment elements for browser verification");
+assert.match(overlay, /data-testid=\{missingSection \? "missing-section-indicator" : "wall-segment"\}/, "overlay must expose visible wall-segment elements separately from missing-section indicators");
 
 console.log("productionExteriorDetectionWiring.test.mjs passed");

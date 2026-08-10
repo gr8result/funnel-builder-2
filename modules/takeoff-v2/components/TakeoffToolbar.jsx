@@ -55,10 +55,10 @@ export default function TakeoffToolbar({ page, tools }) {
         </ToolButton>
         <ToolButton
           active={tools.activeTool === "exterior-wall"}
-          onClick={() => tools.setActiveTool("exterior-wall")}
+          onClick={tools.traceMissingExteriorSections || (() => tools.setActiveTool("exterior-wall"))}
           testId="tool-trace-exterior"
         >
-          Trace Exterior
+          Trace Missing Sections
         </ToolButton>
         <ToolButton
           disabled={!hasWalls || wallsConfirmed || tools.wallDetectionBusy}
@@ -223,6 +223,19 @@ export default function TakeoffToolbar({ page, tools }) {
         {tools.wallDetectionMessage && (
           <span style={tools.wallDetectionStatus === "incomplete" ? S.wallWarning : S.wallMessage} data-testid="wall-detection-message">{tools.wallDetectionMessage}</span>
         )}
+        {hasWalls && !wallsConfirmed && (
+          <>
+            <button type="button" style={S.miniButton} onClick={tools.confirmExteriorWalls} disabled={!tools.wallValidation?.valid} data-testid="accept-detected-exterior">
+              Accept Detected
+            </button>
+            <button type="button" style={S.miniButton} onClick={tools.traceMissingExteriorSections} data-testid="trace-missing-sections">
+              Trace Missing Sections
+            </button>
+            <button type="button" style={S.miniButton} onClick={tools.requestClearExterior} data-testid="clear-candidate">
+              Clear Candidate
+            </button>
+          </>
+        )}
         {wallsConfirmed && tools.areaValidation.valid && (
           <button type="button" style={S.miniButton} onClick={() => tools.setAreaDialogOpen(true)} data-testid="tool-confirm-area">
             Confirm Area
@@ -334,13 +347,13 @@ function scaleStatusText(page, tools) {
 
 function wallStatusText(page, tools) {
   const walls = page?.exteriorWalls || {};
+  const stats = tools?.exteriorCandidateStats || {};
   const isManualTrace = walls.source === "manual-trace-v2" || walls.segments?.some((segment) => segment.source === "manual");
   if (!isManualTrace && (walls.detectionUseful === false || tools.wallDetectionStatus === "incomplete")) {
     return "Exterior detection failed - no valid closed building perimeter found";
   }
   if (walls.exteriorPerimeter?.closed) {
-    const count = walls.exteriorPerimeter.points?.length || 0;
-    return `Exterior candidate found - ${count} perimeter points - Review Exterior`;
+    return `Exterior candidate found - Boundary corners: ${stats.corners || walls.vertices?.length || 0} - Detected exterior wall sections: ${stats.detectedSegments || 0} - Missing sections: ${stats.missingSections || 0}`;
   }
   return "Exterior needs review";
 }
@@ -351,9 +364,10 @@ function workflowReadiness(page, tools) {
   const scaleState = !page?.calibration
     ? (tools.activeTool === "set-scale" ? "In progress" : "Not started")
     : (scale.status === "confirmed" ? "Confirmed" : scale.status === "invalid" ? "Failed" : "Needs review");
+  const exteriorStats = tools?.exteriorCandidateStats || {};
   const exteriorState = !page?.exteriorWalls?.segments?.length
     ? (tools.wallDetectionBusy ? "In progress" : tools.wallDetectionStatus === "incomplete" ? "Failed" : "Not started")
-    : (page.exteriorWalls.confirmed ? "Confirmed" : "Needs review");
+    : (page.exteriorWalls.confirmed ? "Confirmed" : (exteriorStats.missingSections > 0 ? "Needs completion" : "Needs review"));
   return {
     orientation: orientationConfirmed ? "Confirmed" : (page?.orientationSource ? "Needs review" : "Not started"),
     scale: scaleState,

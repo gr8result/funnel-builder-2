@@ -172,6 +172,14 @@ export function createDefaultLayerVisibility() {
 }
 
 export function isLegacyAutomaticExteriorWalls(exteriorWalls) {
+  if (
+    exteriorWalls?.source === EXTERIOR_SOURCE_AUTO_DETECTOR_V2 &&
+    (exteriorWalls.schemaVersion || CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION) >= CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION &&
+    Array.isArray(exteriorWalls.vertices) &&
+    Array.isArray(exteriorWalls.segments)
+  ) {
+    return false;
+  }
   return Boolean(
     exteriorWalls &&
     (

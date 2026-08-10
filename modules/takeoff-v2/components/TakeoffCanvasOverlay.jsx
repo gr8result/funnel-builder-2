@@ -38,7 +38,8 @@ const OPENING_COLOR = {
   "garage-door": "#f97316",
   "open-opening": "#eab308",
 };
-const AUTOMATIC_UNCONFIRMED = "#dc2626";
+const EXTERIOR_CANDIDATE = "#16a34a";
+const MISSING_SECTION = "#65a30d";
 
 function openingLayerFor(openingType) {
   if (openingType === "window") return "windows";
@@ -48,6 +49,10 @@ function openingLayerFor(openingType) {
 
 function isAutomaticCandidate(segment) {
   return segment?.source === "automatic" && segment.confirmed === false;
+}
+
+function isMissingSectionIndicator(segment) {
+  return Boolean(segment?.missingSectionIndicator || segment?.bridgedGapLength > 0);
 }
 
 // Purely visual overlay, rendered as a sibling to the two plan canvases
@@ -226,7 +231,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         ))}
 
         {/* Wall vertices, numbered — shown while editing or drawing that graph */}
-        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "exterior-wall") && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
+        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "exterior-wall" || (exteriorWalls?.source === "auto-detector-v2" && !exteriorWalls?.confirmed)) && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
           <WallVertexDot key={vertex.id} vertex={vertex} index={index} project={project}
             selected={tools.selectedField === "exteriorWalls" && tools.selectedVertexId === vertex.id} />
         ))}
@@ -621,16 +626,26 @@ function WallSegmentLine({ segment, vertexById, project, selected }) {
   const pa = project(a);
   const pb = project(b);
   const unconfirmedAutomatic = segment.source === "automatic" && !segment.confirmed;
-  const color = unconfirmedAutomatic ? AUTOMATIC_UNCONFIRMED : WALL_COLOR[segment.wallType] || WALL_COLOR.exterior;
+  const missingSection = isMissingSectionIndicator(segment);
+  const color = missingSection ? MISSING_SECTION : unconfirmedAutomatic ? EXTERIOR_CANDIDATE : WALL_COLOR[segment.wallType] || WALL_COLOR.exterior;
   return (
-    <line
-      x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-      stroke={selected ? "#f97316" : color}
-      strokeWidth={selected ? 4 : 3}
-      strokeDasharray={unconfirmedAutomatic ? "6 4" : undefined}
-      data-testid="wall-segment"
-      data-wall-type={segment.wallType}
-    />
+    <g data-testid={missingSection ? "missing-section-indicator" : "wall-segment"} data-wall-type={segment.wallType}>
+      <line
+        x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+        stroke={selected ? "#f97316" : color}
+        strokeWidth={selected ? 4 : 3}
+        strokeLinecap="round"
+        strokeDasharray={missingSection ? "7 7" : undefined}
+        opacity={missingSection ? 0.75 : 1}
+      />
+      {missingSection && (
+        <>
+          <circle cx={pa.x} cy={pa.y} r={5} fill="#fff" stroke={MISSING_SECTION} strokeWidth={2} />
+          <circle cx={pb.x} cy={pb.y} r={5} fill="#fff" stroke={MISSING_SECTION} strokeWidth={2} />
+          <text x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 - 6} textAnchor="middle" fontSize={13} fontWeight={900} fill={MISSING_SECTION}>?</text>
+        </>
+      )}
+    </g>
   );
 }
 

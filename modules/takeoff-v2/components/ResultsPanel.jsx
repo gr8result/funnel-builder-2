@@ -30,8 +30,8 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
   const detectedWallSummary = tools?.detectedWallSummary || { total: 0, exterior: 0, interior: 0, unknown: 0, lowConfidence: 0, averageConfidence: 0 };
   const activeExteriorClosed = Boolean(tools?.activeExteriorWallsClosed);
   const activeExteriorCount = tools?.activeExteriorWallSegmentCount || 0;
+  const exteriorStats = tools?.exteriorCandidateStats || {};
   const canTrustExteriorQuantity = Boolean(scaleStatus.valid && activeExteriorClosed);
-  const exteriorQuantityLabel = exteriorWalls?.confirmed ? "Confirmed" : "Automatically detected - unconfirmed";
   const perimeterAreaValidation = validatePerimeterForArea(page);
   const canTrustArea = Boolean(scaleStatus.valid && perimeterAreaValidation.valid);
 
@@ -53,11 +53,13 @@ export default function ResultsPanel({ page, tools, onZoomToGeometry }) {
       </SummarySection>
 
       <SummarySection title="EXTERIOR WALLS" onSelect={() => zoomToGraph(exteriorWalls)}>
-        {activeExteriorCount > 0 ? (
+        {activeExteriorCount > 0 || exteriorStats.corners > 0 ? (
           <>
-            <Metric label="Segments" value={activeExteriorCount} />
+            <Metric label="Status" value={exteriorWalls?.confirmed ? "Confirmed" : (exteriorStats.missingSections > 0 ? "Needs completion" : "Needs review")} />
+            <Metric label="Boundary corners" value={exteriorStats.corners || exteriorWalls?.vertices?.length || 0} />
+            <Metric label={exteriorWalls?.confirmed ? "Segments" : "Detected segments"} value={activeExteriorCount} />
+            {!exteriorWalls?.confirmed && <Metric label="Missing sections" value={exteriorStats.missingSections || 0} />}
             <Metric label="Total Length" value={canTrustExteriorQuantity ? formatLength(tools?.totalExteriorWallLengthMm || 0) : "Exterior length unavailable"} />
-            {canTrustExteriorQuantity && <Metric label="Status" value={exteriorQuantityLabel} />}
           </>
         ) : (
           <Metric label="Status" value="Not started" />

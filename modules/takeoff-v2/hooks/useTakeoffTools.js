@@ -97,8 +97,12 @@ function isAutomaticCandidateSegment(segment) {
   return segment?.source === "automatic" && segment.confirmed === false;
 }
 
+function isMissingSectionIndicator(segment) {
+  return Boolean(segment?.missingSectionIndicator || segment?.bridgedGapLength > 0);
+}
+
 function activeWallSegments(graph) {
-  return (graph?.segments || []).filter((segment) => !isAutomaticCandidateSegment(segment));
+  return (graph?.segments || []).filter((segment) => !isAutomaticCandidateSegment(segment) && !isMissingSectionIndicator(segment));
 }
 
 function activeWallVertexIds(graph) {
@@ -803,14 +807,12 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         planRegion: page?.planRegion?.confirmed ? page.planRegion : null,
         stitchToleranceDocUnits: 6,
       });
-      const valid = Boolean(
-        result?.exteriorPerimeter?.closed &&
-        result?.segments?.length >= 3 &&
-        result?.vertices?.length >= 3 &&
-        result.exteriorPerimeter.gapCount === 0 &&
-        result.exteriorPerimeter.selfIntersectionCount === 0
-      );
-      if (!valid) {
+      const candidateSegments = Array.isArray(result?.segments) ? result.segments : [];
+      const candidateVertices = Array.isArray(result?.vertices) ? result.vertices : [];
+      const missingSectionCount = Number(result?.exteriorPerimeter?.gapCount ?? result?.openGaps ?? 0) || 0;
+      const hasCandidate = Boolean(result?.exteriorPerimeter?.closed && candidateSegments.length >= 3 && candidateVertices.length >= 3);
+      const hasSelfIntersections = Number(result?.exteriorPerimeter?.selfIntersectionCount ?? result?.exteriorPerimeter?.selfIntersections ?? 0) > 0;
+      if (!hasCandidate || hasSelfIntersections) {
         commitPage({
           exteriorWalls: null,
           wallDetectionDiagnostics: result?.diagnostics || null,
@@ -821,26 +823,32 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         setWallDetectionCode("NO_EXTERIOR_BOUNDARY");
         return;
       }
+      const candidateReady = missingSectionCount === 0;
       const exteriorWalls = {
         boundaryBasis: page?.exteriorWalls?.boundaryBasis || "outside",
         wallThicknessMm: page?.exteriorWalls?.wallThicknessMm ?? 200,
         schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
         source: EXTERIOR_SOURCE_AUTO_DETECTOR_V2,
-        vertices: result.vertices,
-        segments: result.segments.map((segment) => ({
-          ...segment,
-          wallType: "exterior",
-          source: "automatic",
-          confirmed: true,
-          confidence: segment.confidence || "high",
-        })),
-        isClosed: true,
+        vertices: candidateVertices,
+        segments: candidateSegments.map((segment) => {
+          const missingSectionIndicator = isMissingSectionIndicator(segment);
+          return {
+            ...segment,
+            wallType: "exterior",
+            source: "automatic",
+            confirmed: candidateReady && !missingSectionIndicator,
+            confidence: segment.confidence || "high",
+            missingSectionIndicator,
+          };
+        }),
+        isClosed: candidateReady,
         confirmed: false,
         confirmedAt: null,
+        reviewStatus: candidateReady ? "candidate-ready" : "candidate-incomplete",
         detectionConfidence: result.detectionConfidence ?? result.exteriorPerimeter.confidence ?? null,
         detectionCompleteness: result.completeness ?? null,
         connectedComponents: result.connectedComponents ?? null,
-        openGaps: result.openGaps ?? result.exteriorPerimeter.gapCount ?? 0,
+        openGaps: missingSectionCount,
         detectionWarnings: result.warnings || [],
         detectionUseful: result.useful ?? true,
         detectionDiagnostics: result.diagnostics || null,
@@ -864,10 +872,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       setSelectedField("exteriorWalls");
       setSelectedVertexId(null);
       setSelectedSegmentId(null);
-      setWallDetectionStatus("closed-needs-review");
-      setWallDetectionMessage(`Exterior detected - ${result.exteriorPerimeter.points.length} point boundary. Click Finish Exterior to confirm.`);
+      setWallDetectionStatus(candidateReady ? "candidate-ready" : "candidate-incomplete");
+      setWallDetectionMessage(`Exterior detected - ${result.exteriorPerimeter.points.length} boundary corners, ${activeWallSegments(exteriorWalls).length} exterior wall sections${missingSectionCount ? `, ${missingSectionCount} missing sections` : ""}.`);
       setWallDetectionCode(null);
-      setActiveToolState("select");
+      setActiveToolState("edit-walls");
     } finally {
       setWallDetectionBusy(false);
     }
@@ -1042,6 +1050,17 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return graph.segments.filter(isAutomaticCandidateSegment).length;
   }, [page]);
 
+  const exteriorCandidateStats = useMemo(() => {
+    const graph = page?.exteriorWalls;
+    const segments = graph?.segments || [];
+    return {
+      corners: graph?.vertices?.length || 0,
+      detectedSegments: activeWallSegments(graph).length,
+      missingSections: segments.filter(isMissingSectionIndicator).length || Number(graph?.openGaps || 0) || 0,
+      reviewStatus: graph?.reviewStatus || null,
+    };
+  }, [page]);
+
   const activeExteriorWallSegmentCount = useMemo(() => activeWallSegments(page?.exteriorWalls).length, [page]);
   const activeInternalWallSegmentCount = useMemo(() => activeWallSegments(page?.internalWalls).length, [page]);
   const detectedWallSummary = useMemo(() => page?.wallDetectionSummary || summarizeDetectedWalls(page?.detectedWalls || []), [page]);
@@ -1079,6 +1098,21 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     commitPage({ layerVisibility: next });
     setActiveTool("edit-walls");
   }, [page, layerVisibility, commitPage, setActiveTool]);
+
+  const traceMissingExteriorSections = useCallback(() => {
+    const graph = page?.exteriorWalls;
+    if (!graph) return;
+    const firstGap = (graph.segments || []).find(isMissingSectionIndicator);
+    const next = { ...(page?.layerVisibility || layerVisibility), automaticCandidates: true, exteriorWalls: true };
+    setLayerVisibilityState(next);
+    commitPage({ layerVisibility: next });
+    setSelectedField("exteriorWalls");
+    setSelectedVertexId(firstGap?.aId || null);
+    setSelectedSegmentId(null);
+    setWallDrawChainVertexId(firstGap?.aId || null);
+    setWallDrawHoverPreview(null);
+    setActiveToolState("exterior-wall");
+  }, [page, layerVisibility, commitPage]);
 
   const rejectAutomaticCandidates = useCallback((field = "exteriorWalls") => {
     const graph = page?.[field];
@@ -2208,6 +2242,13 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         usedVertexId = newVertex.id;
       }
       if (chainStart && chainStart !== usedVertexId) {
+        nextGraph = {
+          ...nextGraph,
+          segments: nextGraph.segments.filter((segment) => !(
+            isMissingSectionIndicator(segment) &&
+            ((segment.aId === chainStart && segment.bId === usedVertexId) || (segment.aId === usedVertexId && segment.bId === chainStart))
+          )),
+        };
         nextGraph = addSegment(nextGraph, chainStart, usedVertexId, { wallType: field === "exteriorWalls" ? "exterior" : "internal" });
       }
       return nextGraph;
@@ -2264,9 +2305,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     exteriorHighlightGap,
     updateExteriorHighlighterHover, toggleExteriorHighlightedWall, finishHighlightedExterior,
     suggestExteriorProposal,
-    highConfidenceUnconfirmedCount, automaticCandidateCount,
+    highConfidenceUnconfirmedCount, automaticCandidateCount, exteriorCandidateStats,
     activeExteriorWallSegmentCount, activeInternalWallSegmentCount, activeExteriorWallsClosed,
-    acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates,
+    acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates, traceMissingExteriorSections,
     suggestedPlanRegion, planRegionDraftCorner, planRegionHoverPoint,
     updatePlanRegionHover, handlePlanRegionClick, acceptSuggestedPlanRegion, clearPlanRegion,
     findWallVertexNear, handleWallCanvasClick,
