@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
@@ -683,8 +683,10 @@ export default function BuilderSelectionsBookPage({
   const [coverSettingsOpen, setCoverSettingsOpen] = useState(false);
   const [activePage, setActivePage] = useState("cover");
   const [activeRoomId, setActiveRoomId] = useState("");
-  const [viewMode, setViewMode] = useState("single");
+  const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
+  const [viewerPageWidth, setViewerPageWidth] = useState(0);
+  const [viewerHeight, setViewerHeight] = useState(900);
   const [selectorRow, setSelectorRow] = useState(null);
   const [selectorSearch, setSelectorSearch] = useState("");
   const [selectorCategory, setSelectorCategory] = useState("all");
@@ -696,6 +698,8 @@ export default function BuilderSelectionsBookPage({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const viewerRef = useRef(null);
+  const pageRefs = useRef(new Map());
   const embeddedProject = useMemo(() => embeddedSelectionsProject({
     projectId: providedProjectId,
     workbook: embeddedWorkbook,
@@ -1301,25 +1305,91 @@ export default function BuilderSelectionsBookPage({
     setImporting(false);
   }
 
-  const documentPages = [
+  const documentPages = useMemo(() => [
     { value: "cover", label: "Cover", type: "cover", pageNumber: 1 },
     { value: "project", label: "Project Info", type: "project", pageNumber: 2 },
     ...book.rooms.map((room, index) => ({ value: `room:${room.id}`, label: room.name, type: "room", room, pageNumber: index + 3 })),
-  ];
+  ], [book.rooms]);
   const sectionOptions = documentPages.map((page) => ({ value: page.value, label: page.label }));
   const activeSectionValue = activePage === "room" ? `room:${activeRoomId}` : activePage;
   const activePageIndex = Math.max(0, documentPages.findIndex((page) => page.value === activeSectionValue));
   const activeDocumentPage = documentPages[activePageIndex] || documentPages[0];
   const totalPageCount = documentPages.length;
+  const zoomScale = zoomMode === "zoom-75" ? 0.75 : zoomMode === "zoom-125" ? 1.25 : zoomMode === "zoom-150" ? 1.5 : 1;
+  const fitPageWidth = Math.max(320, Math.min(viewerPageWidth || 900, (viewerHeight - 190) * (297 / 210)));
+  const pageDisplayWidth = zoomMode === "fit-page" ? fitPageWidth : Math.max(320, (viewerPageWidth || 900) * zoomScale);
+  const measuredPageWidth = `${Math.round(pageDisplayWidth)}px`;
+  const viewerStyle = { "--viewer-page-width": measuredPageWidth };
 
-  function openSection(value) {
+  useEffect(() => {
+    if (!viewerRef.current || typeof ResizeObserver === "undefined") return undefined;
+    const updateWidth = () => {
+      const viewerWidth = viewerRef.current?.clientWidth || 0;
+      const horizontalPadding = viewerWidth < 760 ? 24 : 48;
+      setViewerPageWidth(Math.max(320, viewerWidth - horizontalPadding));
+      setViewerHeight(window.innerHeight || 900);
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(viewerRef.current);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (viewMode !== "continuous" || typeof IntersectionObserver === "undefined") return undefined;
+    const ratios = new Map();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        ratios.set(entry.target.dataset.pageValue, entry.intersectionRatio);
+      });
+      const mostVisible = documentPages
+        .map((page) => ({ page, ratio: ratios.get(page.value) || 0 }))
+        .sort((a, b) => b.ratio - a.ratio)[0];
+      if (!mostVisible?.page || mostVisible.ratio <= 0) return;
+      if (mostVisible.page.type === "room") {
+        setActivePage("room");
+        setActiveRoomId(mostVisible.page.room?.id || "");
+      } else {
+        setActivePage(mostVisible.page.value);
+      }
+    }, {
+      root: null,
+      rootMargin: "-18% 0px -55% 0px",
+      threshold: [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9],
+    });
+    documentPages.forEach((page) => {
+      const element = pageRefs.current.get(page.value);
+      if (element) observer.observe(element);
+    });
+    return () => observer.disconnect();
+  }, [documentPages, viewMode]);
+
+  function setPageFrameRef(value, element) {
+    if (element) pageRefs.current.set(value, element);
+    else pageRefs.current.delete(value);
+  }
+
+  function scrollPageIntoView(value) {
+    if (viewMode !== "continuous") return;
+    window.requestAnimationFrame(() => {
+      pageRefs.current.get(value)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function openSection(value, options = {}) {
     if (value === "cover" || value === "project") {
       setActivePage(value);
+      if (options.scroll !== false) scrollPageIntoView(value);
       return;
     }
     if (value.startsWith("room:")) {
       setActivePage("room");
       setActiveRoomId(value.replace("room:", ""));
+      if (options.scroll !== false) scrollPageIntoView(value);
     }
   }
 
@@ -1467,16 +1537,39 @@ export default function BuilderSelectionsBookPage({
           {error && <div className="alert error">{error}</div>}
           {success && <div className="alert success">{success}</div>}
 
-          <div className={`documentViewer ${viewMode} ${zoomMode}`} data-view-mode={viewMode} data-zoom-mode={zoomMode} data-page-count={totalPageCount}>
+          <div
+            ref={viewerRef}
+            className={`documentViewer ${viewMode} ${zoomMode}`}
+            data-view-mode={viewMode}
+            data-zoom-mode={zoomMode}
+            data-page-count={totalPageCount}
+            data-fit-width={viewerPageWidth}
+            style={viewerStyle}
+          >
             <div className="documentPages">
               {viewMode === "continuous"
                 ? documentPages.map((page) => (
-                  <div key={page.value} className="documentPageFrame" data-page-number={page.pageNumber} data-page-title={page.label}>
+                  <div
+                    key={page.value}
+                    id={`schedule-page-${slug(page.value)}`}
+                    ref={(element) => setPageFrameRef(page.value, element)}
+                    className="documentPageFrame"
+                    data-page-value={page.value}
+                    data-page-number={page.pageNumber}
+                    data-page-title={page.label}
+                  >
                     {renderDocumentPage(page)}
                   </div>
                 ))
                 : (
-                  <div className="documentPageFrame" data-page-number={activeDocumentPage?.pageNumber} data-page-title={activeDocumentPage?.label}>
+                  <div
+                    id={`schedule-page-${slug(activeDocumentPage?.value)}`}
+                    ref={(element) => setPageFrameRef(activeDocumentPage?.value, element)}
+                    className="documentPageFrame"
+                    data-page-value={activeDocumentPage?.value}
+                    data-page-number={activeDocumentPage?.pageNumber}
+                    data-page-title={activeDocumentPage?.label}
+                  >
                     {renderDocumentPage(activeDocumentPage)}
                   </div>
                 )}
@@ -2356,15 +2449,13 @@ const styles = `
   .alert.error { background: #fee2e2; color: #991b1b; }
   .alert.success { background: #dcfce7; color: #166534; }
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
-  .documentViewer { --viewer-page-width: min(100%, 1320px); width: 100%; box-sizing: border-box; display: grid; justify-items: center; background: #eef2f7; border: 1px solid #d7deea; border-radius: 8px; padding: 24px; overflow: visible; }
-  .documentViewer.fit-page { --viewer-page-width: min(100%, 940px); }
-  .documentViewer.zoom-75 { --viewer-page-width: min(75%, 990px); }
-  .documentViewer.zoom-100 { --viewer-page-width: min(100%, 1123px); }
-  .documentViewer.zoom-125 { --viewer-page-width: min(100%, 1404px); }
-  .documentViewer.zoom-150 { --viewer-page-width: min(100%, 1685px); }
+  .documentViewer { --viewer-page-width: calc(100% - 48px); width: 100%; max-width: none; box-sizing: border-box; display: grid; justify-items: center; background: #eef2f7; border: 1px solid #d7deea; border-radius: 8px; padding: 24px; overflow: visible; }
+  .documentViewer.fit-width { overflow-x: hidden; }
+  .documentViewer.fit-page { overflow-x: hidden; }
+  .documentViewer.zoom-75, .documentViewer.zoom-100, .documentViewer.zoom-125, .documentViewer.zoom-150 { overflow-x: auto; }
   .documentPages { width: 100%; display: grid; justify-items: center; gap: 32px; }
   .documentViewer.single .documentPages { gap: 0; }
-  .documentPageFrame { width: var(--viewer-page-width); max-width: 100%; display: grid; justify-items: stretch; }
+  .documentPageFrame { width: var(--viewer-page-width); max-width: none; display: grid; justify-items: stretch; scroll-margin-top: 118px; }
   .page { width: 100%; min-height: 760px; background: #fff; box-shadow: 0 12px 34px rgba(15, 23, 42, .1); position: relative; overflow: hidden; box-sizing: border-box; }
   .page input, .page textarea, .page select { background: #fff !important; color: #071827 !important; border-color: #d8dee8 !important; box-shadow: none !important; }
   .page input:focus, .page textarea:focus, .page select:focus { outline: 2px solid rgba(201,151,53,.22); border-color: #d7a640 !important; }
@@ -2407,7 +2498,7 @@ const styles = `
   .coverSettingsPanel small { color: #64748b; font-weight: 800; }
   .coverSettingsPanel p { margin: 0; color: #64748b; font-size: 13px; font-weight: 750; }
   .coverSettingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .infoPage { max-width: 1180px; width: min(1180px, 100%); padding: 38px; display: grid; gap: 18px; }
+  .infoPage { max-width: none; width: 100%; padding: 38px; display: grid; gap: 18px; }
   .docHeader { display: grid; grid-template-columns: 150px 1fr auto; gap: 18px; align-items: center; margin-bottom: 28px; }
   .docHeader img { width: 140px; height: 84px; object-fit: contain; }
   .docHeaderLogoFallback { width: 140px; height: 84px; display: grid; place-items: center; border: 1px solid #d8dee8; color: #071827; font-size: 11px; font-weight: 950; text-align: center; padding: 6px; box-sizing: border-box; }

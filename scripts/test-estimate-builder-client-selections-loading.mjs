@@ -48,7 +48,7 @@ assert.ok(selectionsSource.includes("console.error(\"[Client Selections] missing
 assert.ok(selectionsSource.includes("console.error(\"[Client Selections] file-state error\""), "File-state load errors must be logged");
 assert.ok(selectionsSource.includes("console.error(\"[Client Selections] parser or book load error\""), "Parser/book load errors must be logged");
 
-assert.ok(selectionsSource.includes('const [viewMode, setViewMode] = useState("single")'), "Schedule viewer layout must remain Single Page by default");
+assert.ok(selectionsSource.includes('const [viewMode, setViewMode] = useState("continuous")'), "Schedule viewer layout must default to Continuous");
 assert.ok(selectionsSource.includes('const [zoomMode, setZoomMode] = useState("fit-width")'), "Schedule viewer layout must remain Fit Width by default");
 assert.ok(selectionsSource.includes("CoverPage cover={displayCover}"), "Cover page must still render from the selections schedule");
 assert.ok(selectionsSource.includes('Kitchen: ["Oven"'), "Kitchen schedule data must remain available");
