@@ -136,7 +136,20 @@ export default function StandardInclusionsPhase1QaPage() {
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         } catch {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, standardInclusions: { ...next.standardInclusions, documentBuilder: null } }));
+          const lightweightStandard = {
+            ...next.standardInclusions,
+            documentBuilder: null,
+            masterTemplate: next.standardInclusions?.masterTemplate
+              ? {
+                ...next.standardInclusions.masterTemplate,
+                documentBuilder: null,
+              }
+              : null,
+            revisionHistory: [],
+            builderCopies: [],
+            pdfPages: [],
+          };
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, standardInclusions: lightweightStandard }));
         }
         resolve(next);
         return next;

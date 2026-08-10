@@ -49,12 +49,14 @@ assert(!activeReturn.includes("<StandardScheduleManagementPanel"), "StandardIncl
 assert(activeReturn.includes("<StandardScheduleLoadedEditor"), "StandardInclusionsSheet must render the loaded editor component");
 assert(activeReturn.includes("<StandardScheduleEmptyState"), "StandardInclusionsSheet must render an empty state when no document is loaded");
 assert(activeReturn.includes("activeDocument ?"), "DocumentPageBuilder must render only when a workbook document exists");
-assert(loadedEditorBody.includes("Replace Schedule"), "Loaded editor toolbar must expose Replace Schedule");
+assert(loadedEditorBody.includes("Import Existing Schedule"), "Loaded editor toolbar must expose Import Existing Schedule");
+assert(loadedEditorBody.includes("Import PDF"), "Loaded editor toolbar must expose Import PDF");
+assert(loadedEditorBody.includes("SAVE AS STANDARD INCLUSIONS"), "Loaded editor toolbar must expose Save as Standard Inclusions");
 assert(loadedEditorBody.includes("Delete Schedule"), "Loaded editor toolbar must expose Delete Schedule");
 assert(loadedEditorBody.includes("<DocumentPageBuilder"), "Loaded editor component must host the native document page builder");
 assert(emptyStateBody.includes("No Standard Inclusions Schedule is currently loaded."), "Empty state copy must match the required wording");
 assert(emptyStateBody.includes("Upload PowerPoint"), "Empty state must expose Upload PowerPoint once");
-assert(emptyStateBody.includes("Upload PDF"), "Empty state must expose Upload PDF once");
+assert(emptyStateBody.includes("Import PDF"), "Empty state must expose Import PDF once");
 assert(emptyStateBody.includes("Create Blank Schedule"), "Empty state must expose Create Blank Schedule");
 assert(emptyStateBody.includes("Restore Previous Version"), "Empty state must expose Restore Previous Version");
 assert(emptyStateBody.includes("Use Premier Template"), "Empty state must expose deliberate Premier Template loading");
@@ -69,7 +71,7 @@ assert(contextPanelBody.includes("High-quality fixed-page import"), "PDF choices
 assert(!activeBody.includes("createPremierInclusionsDocument("), "The three-page fallback must not be used in the active Standard Inclusions workflow");
 
 [
-  "Add Page",
+  "Add Blank Page",
   "Duplicate Page",
   "Delete Page",
   "Move Up",

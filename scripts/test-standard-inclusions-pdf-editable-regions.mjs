@@ -53,7 +53,7 @@ assert(renderer.includes("if (showOriginal && importedOrManualEdit && acceptedEd
 assert(pageRenderer.includes("showOriginal={showOriginal}"), "The page renderer must pass Show Original state to objects.");
 assert(workbook.includes("detectPdfImageRegionsFromCanvas"), "PDF import must create image activation regions from rendered page data.");
 assert(workbook.includes('overlayMode: "pdf-image-activation"'), "PDF image regions must be hidden activation regions, not automatic image overlays.");
-assert(workbook.includes("getViewport({ scale: 4.1667 })"), "Imported PDF pages must render at A4 300-DPI equivalent resolution.");
+assert(workbook.includes("Math.max(4.1667") && workbook.includes("page.getViewport({ scale:"), "Imported PDF pages must render at A4 300-DPI equivalent resolution or sharper.");
 assert(workbookHook.includes("standardDocumentName") && workbookHook.includes('documentSource === "pdf-import"'), "PDF-imported schedules must persist under their own active job identity, not the master template name.");
 assert(workbookHook.includes("saveStoredTemplate(currentWorkbook.templateName || MASTER_TEMPLATE_NAME") && workbookHook.includes('documentType === "standardInclusions"'), "Persisted Standard Inclusions documents must also update the active template reload source.");
 assert(exportRenderer.includes("renderDocumentForPdf"), "Export must use the document renderer payload.");
