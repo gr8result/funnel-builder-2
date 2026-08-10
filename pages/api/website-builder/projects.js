@@ -13,6 +13,7 @@ import {
 import {
   buildWebsiteProjectVersion,
   diffWebsitePersistence,
+  scopeWebsitePersistenceProject,
   summarizeWebsitePage,
   summarizeWebsitePersistence,
   websitePersistenceHash,
@@ -354,16 +355,18 @@ function getVideoRetentionError(verificationIssues = [], fallbackError = "Save f
 }
 
 function compareProjectPersistenceForSave(expectedProject, storedProject, pageName = "") {
-  const expectedHash = websitePersistenceHash(expectedProject);
-  const storedHash = websitePersistenceHash(storedProject);
-  const diffs = expectedHash === storedHash ? [] : diffWebsitePersistence(expectedProject, storedProject);
+  const expectedForComparison = scopeWebsitePersistenceProject(expectedProject, pageName);
+  const storedForComparison = scopeWebsitePersistenceProject(storedProject, pageName);
+  const expectedHash = websitePersistenceHash(expectedForComparison);
+  const storedHash = websitePersistenceHash(storedForComparison);
+  const diffs = expectedHash === storedHash ? [] : diffWebsitePersistence(expectedForComparison, storedForComparison);
   return {
     ok: expectedHash === storedHash,
     expectedHash,
     storedHash,
     diffs,
-    expected: summarizeWebsitePersistence(expectedProject, pageName),
-    stored: summarizeWebsitePersistence(storedProject, pageName),
+    expected: summarizeWebsitePersistence(expectedForComparison, pageName),
+    stored: summarizeWebsitePersistence(storedForComparison, pageName),
   };
 }
 

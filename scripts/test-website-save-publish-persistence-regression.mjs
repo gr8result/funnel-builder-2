@@ -8,6 +8,7 @@ import {
 } from "../lib/website-builder/publishConfig.js";
 import {
   diffWebsitePersistence,
+  scopeWebsitePersistenceProject,
   websitePersistenceHash,
 } from "../lib/website-builder/documentVersion.js";
 import { normalizeFooterNavigationBlock } from "../lib/website-builder/footerNavigation.js";
@@ -142,6 +143,43 @@ assert.equal(pricingUrls.primaryPublicUrl, "https://gr8result.solutions/pricing"
 const readBackHash = websitePersistenceHash(JSON.parse(JSON.stringify(siteData)));
 assert.equal(readBackHash, websitePersistenceHash(siteData), "published snapshot hash must survive JSON database round trip");
 assert.deepEqual(diffWebsitePersistence(siteData, JSON.parse(JSON.stringify(siteData))), [], "canonical persistence diff must be empty after JSON round trip");
+
+const pageScopedEmailPayload = {
+  ...project,
+  pageBlocks: { Email: project.pageBlocks.Email },
+  pagesContent: { Email: "" },
+  chaiData: { Email: { blocks: project.pageBlocks.Email, theme: { preset: "test" } } },
+};
+const fullReadbackWithMorePages = {
+  ...pageScopedEmailPayload,
+  pageBlocks: project.pageBlocks,
+  pagesContent: project.pagesContent,
+  chaiData: {
+    Home: { blocks: project.pageBlocks.Home },
+    Modules: { blocks: project.pageBlocks.Modules },
+    Email: pageScopedEmailPayload.chaiData.Email,
+    Pricing: { blocks: project.pageBlocks.Pricing },
+  },
+};
+assert.deepEqual(
+  diffWebsitePersistence(
+    scopeWebsitePersistenceProject(pageScopedEmailPayload, "Email"),
+    scopeWebsitePersistenceProject(fullReadbackWithMorePages, "Email")
+  ),
+  [],
+  "page-scoped save verification must not fail because database readback contains other pages"
+);
+
+const readbackWithLostEmailField = JSON.parse(JSON.stringify(fullReadbackWithMorePages));
+delete readbackWithLostEmailField.pageBlocks.Email[0].props.unknownNested;
+const lostEmailFieldDiffs = diffWebsitePersistence(
+  scopeWebsitePersistenceProject(pageScopedEmailPayload, "Email"),
+  scopeWebsitePersistenceProject(readbackWithLostEmailField, "Email")
+);
+assert.ok(
+  lostEmailFieldDiffs.some((diff) => diff.path === "pageBlocks.Email[0].props.unknownNested"),
+  "page-scoped save verification must still report genuine submitted page data loss"
+);
 
 assert.equal(resolveWebsitePublicationStatus({
   id: project.id,
