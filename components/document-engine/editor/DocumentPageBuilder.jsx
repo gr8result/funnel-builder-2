@@ -14,6 +14,9 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   const [mode, setMode] = useState("preview");
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [textEditingObjectId, setTextEditingObjectId] = useState("");
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [manualRegionType, setManualRegionType] = useState("");
+  const [manualRegionDraft, setManualRegionDraft] = useState(null);
   const dragRef = useRef(null);
   const imageUploadRef = useRef(null);
   const imageReplaceObjectIdRef = useRef("");
@@ -69,7 +72,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   }, [mode, readonly, selectedObject, textEditingObjectId, draft]);
 
   function commitDocument(nextDocument, options = {}) {
-    const next = hydrateDocument(nextDocument);
+    const next = syncDocumentEditData(hydrateDocument(nextDocument));
     setDraft(next);
     onChange?.(serializeDocument(next));
     if (!options.silent) onStatus?.("Document page builder updated.");
@@ -87,6 +90,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     const object = page?.objects?.find((item) => item.id === objectId);
     commitDocument({ ...draft, selection: selectObject(draft.selection, objectId, { multi: event.shiftKey }) }, { silent: true });
     if (!object || object.locked || readonly) return;
+    if (isDetectedActivationObject(object) && !isAcceptedOverlayObject(object)) return;
     dragRef.current = {
       pageId: page.id,
       objectId,
@@ -103,6 +107,11 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     const activation = object.data?.detectedRegion === true || String(object.data?.overlayMode || "").includes("-activation");
     if (!activation) return;
     const isText = object.type === "text" || object.type === "dynamicField";
+    if (!isText) {
+      commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
+      onStatus?.("Image region selected.");
+      return;
+    }
     const nextDocument = updatePage(draft, page.id, (activePage) => updateObjectOnPage(activePage, object.id, (item) => ({
       ...item,
       locked: false,
@@ -269,8 +278,31 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   }
 
   function saveDocument() {
-    onChange?.(serializeDocument(draft));
+    onChange?.(serializeDocument(syncDocumentEditData(draft)));
     onStatus?.("Document saved.");
+  }
+
+  function restoreSelectedOriginal() {
+    if (!selectedObject || readonly || !activePage) return;
+    const manual = selectedObject.data?.manualRegion === true;
+    const next = updatePage(draft, activePage.id, (page) => {
+      if (manual) return removeObjectFromPage(page, selectedObject.id);
+      return updateObjectOnPage(page, selectedObject.id, (object) => ({
+        ...object,
+        data: {
+          ...(object.data || {}),
+          text: object.data?.detectedText || object.data?.text || "",
+          imageRef: object.data?.sourceImageRef || "",
+          edited: false,
+          acceptedEdit: false,
+          maskOriginal: false,
+          restoredOriginal: true,
+        },
+      }));
+    });
+    setTextEditingObjectId("");
+    commitDocument({ ...next, selection: clearSelection() });
+    onStatus?.("Original region restored.");
   }
 
   async function exportPdf() {
@@ -316,11 +348,139 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     reader.onload = () => {
       updateActivePage((currentPage) => updateObjectOnPage(currentPage, targetObject.id, (object) => ({
         ...object,
+        locked: false,
         data: { ...object.data, imageRef: reader.result, alt: file.name, edited: true, acceptedEdit: true, maskOriginal: true },
       })), "Image replaced.");
       onStatus?.("Image replaced.");
     };
     reader.readAsDataURL(file);
+  }
+
+  function pagePointFromEvent(event) {
+    const pageNode = event.currentTarget.querySelector?.("[data-document-page-id]");
+    const rect = pageNode?.getBoundingClientRect?.();
+    if (!pageNode || !rect || !activePage) return null;
+    return {
+      x: Math.min(activePage.width, Math.max(0, ((event.clientX - rect.left) / rect.width) * activePage.width)),
+      y: Math.min(activePage.height, Math.max(0, ((event.clientY - rect.top) / rect.height) * activePage.height)),
+    };
+  }
+
+  function startManualRegion(event) {
+    if (mode !== "edit" || !manualRegionType || readonly || !activePage) return false;
+    const point = pagePointFromEvent(event);
+    if (!point) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    setTextEditingObjectId("");
+    setManualRegionDraft({ type: manualRegionType, startX: point.x, startY: point.y, x: point.x, y: point.y, width: 1, height: 1 });
+    return true;
+  }
+
+  function moveManualRegion(event) {
+    if (!manualRegionDraft || !activePage) return;
+    const point = pagePointFromEvent(event);
+    if (!point) return;
+    const x = Math.min(manualRegionDraft.startX, point.x);
+    const y = Math.min(manualRegionDraft.startY, point.y);
+    setManualRegionDraft({
+      ...manualRegionDraft,
+      x,
+      y,
+      width: Math.abs(point.x - manualRegionDraft.startX),
+      height: Math.abs(point.y - manualRegionDraft.startY),
+    });
+  }
+
+  function finishManualRegion() {
+    if (!manualRegionDraft || !activePage) return;
+    const region = normaliseManualRegion(manualRegionDraft);
+    setManualRegionDraft(null);
+    setManualRegionType("");
+    if (!region) return;
+    const id = `${activePage.id}-manual-${region.type}-${Date.now().toString(36)}`;
+    const object = createObject(region.type === "image" ? "image" : "text", {
+      id,
+      name: region.type === "image" ? "Manual image region" : "Manual text region",
+      x: region.x,
+      y: region.y,
+      width: region.width,
+      height: region.height,
+      style: region.type === "image"
+        ? { objectFit: "contain", backgroundColor: "#ffffff" }
+        : { fontFamily: "Arial", fontSize: Math.max(11, Math.round(region.height * 0.45)), fontWeight: "600", color: "#0f172a", lineHeight: 1.2, textAlign: "left", backgroundColor: "#ffffff" },
+      data: {
+        text: region.type === "text" ? textInsideRegion(activePage, region) : undefined,
+        regionId: id,
+        manualRegion: true,
+        detectedRegion: region.type === "image",
+        overlayMode: region.type === "image" ? "pdf-image-activation" : "manual-text-edit",
+        edited: region.type === "text",
+        acceptedEdit: region.type === "text",
+        maskOriginal: region.type === "text",
+      },
+    });
+    const next = updatePage(draft, activePage.id, (page) => addObjectToPage(page, object));
+    commitDocument({ ...next, selection: selectObject(draft.selection, object.id) });
+    if (region.type === "text") setTextEditingObjectId(object.id);
+    onStatus?.(region.type === "image" ? "Manual image region added." : "Manual text region added.");
+  }
+
+  function addManualImageRegion() {
+    if (!activePage || readonly) return;
+    setManualRegionType("");
+    setManualRegionDraft(null);
+    const id = `${activePage.id}-manual-image-${Date.now().toString(36)}`;
+    const object = createObject("image", {
+      id,
+      name: "Manual image region",
+      x: 260,
+      y: 170,
+      width: 220,
+      height: 135,
+      style: { objectFit: "contain", backgroundColor: "#ffffff" },
+      data: {
+        regionId: id,
+        manualRegion: true,
+        detectedRegion: true,
+        overlayMode: "pdf-image-activation",
+        edited: false,
+        acceptedEdit: false,
+        maskOriginal: false,
+      },
+    });
+    const next = updatePage(draft, activePage.id, (page) => addObjectToPage(page, object));
+    commitDocument({ ...next, selection: selectObject(draft.selection, object.id) });
+    onStatus?.("Manual image region added.");
+  }
+
+  function addManualTextRegion() {
+    if (!activePage || readonly) return;
+    setManualRegionType("");
+    setManualRegionDraft(null);
+    const id = `${activePage.id}-manual-text-${Date.now().toString(36)}`;
+    const object = createObject("text", {
+      id,
+      name: "Manual text region",
+      x: 90,
+      y: 170,
+      width: 220,
+      height: 72,
+      style: { fontFamily: "Arial", fontSize: 18, fontWeight: "600", color: "#0f172a", lineHeight: 1.2, textAlign: "left", backgroundColor: "#ffffff" },
+      data: {
+        text: "",
+        regionId: id,
+        manualRegion: true,
+        overlayMode: "manual-text-edit",
+        edited: true,
+        acceptedEdit: true,
+        maskOriginal: true,
+      },
+    });
+    const next = updatePage(draft, activePage.id, (page) => addObjectToPage(page, object));
+    commitDocument({ ...next, selection: selectObject(draft.selection, object.id) });
+    setTextEditingObjectId(object.id);
+    onStatus?.("Manual text region added.");
   }
 
   return (
@@ -330,7 +490,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         {draft.pages.map((page, index) => (
           <button key={page.id} type="button" style={{ ...styles.pageButton, ...(page.id === draft.activePageId ? styles.pageButtonActive : {}) }} onClick={() => selectPage(page.id)}>
             <span>{index + 1}. {page.name}</span>
-            <small>{visibleOverlayCount(page)} visible edit{visibleOverlayCount(page) === 1 ? "" : "s"}{detectedRegionCount(page) ? ` - ${detectedRegionCount(page)} detected` : ""}</small>
+            <small>{visibleOverlayCount(page)} edit{visibleOverlayCount(page) === 1 ? "" : "s"}{detectedRegionCount(page) ? ` - ${detectedRegionCount(page)} detected regions` : ""}</small>
           </button>
         ))}
         {mode === "edit" ? (
@@ -351,6 +511,9 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             style={mode === "edit" ? styles.primaryButton : styles.secondaryButton}
             onClick={() => {
               setTextEditingObjectId("");
+              setManualRegionType("");
+              setManualRegionDraft(null);
+              setShowOriginal(false);
               commitDocument({ ...draft, selection: clearSelection() }, { silent: true });
               setMode(mode === "edit" ? "preview" : "edit");
             }}
@@ -367,7 +530,41 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
                   </button>
                 ))}
               </div>
+              <div style={styles.addGroup}>
+                <strong>Add Editable Region</strong>
+                {["text", "image"].map((type) => (
+                  <button
+                    key={`manual-${type}`}
+                    type="button"
+                    disabled={readonly}
+                    style={manualRegionType === type ? styles.primaryButton : styles.secondaryButton}
+                    onClick={() => {
+                      setTextEditingObjectId("");
+                      if (type === "text") {
+                        addManualTextRegion();
+                        return;
+                      }
+                      if (type === "image") {
+                        addManualImageRegion();
+                        return;
+                      }
+                      setManualRegionType(manualRegionType === type ? "" : type);
+                    }}
+                  >
+                    {typeLabel(type)}
+                  </button>
+                ))}
+              </div>
               <TextFormattingToolbar object={selectedObject} readonly={readonly} onPatchStyle={patchSelectedTextStyle} onPatchText={(text) => commitTextEdit(selectedObject?.id, text)} />
+              <button
+                type="button"
+                style={showOriginal ? styles.primaryButton : styles.secondaryButton}
+                onMouseDown={() => setShowOriginal(true)}
+                onMouseUp={() => setShowOriginal(false)}
+                onMouseLeave={() => setShowOriginal(false)}
+              >
+                Show Original
+              </button>
             </>
           ) : null}
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={saveDocument}>Save</button>
@@ -375,34 +572,41 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
           <button type="button" style={styles.primaryButton} onClick={exportPdf}>Export PDF</button>
         </div>
         <div
-          style={styles.canvasWrap}
-          onMouseDown={() => {
+          style={{ ...styles.canvasWrap, ...(manualRegionType ? styles.canvasWrapSelecting : {}) }}
+          onMouseDown={(event) => {
             if (mode !== "edit") return;
+            if (startManualRegion(event)) return;
             setTextEditingObjectId("");
             commitDocument({ ...draft, selection: clearSelection() }, { silent: true });
           }}
+          onMouseMove={moveManualRegion}
+          onMouseUp={finishManualRegion}
         >
-          <PageRenderer
-            page={activePage}
-            workbook={workbook}
-            selection={mode === "edit" ? draft.selection : clearSelection()}
-            editing={mode === "edit"}
-            textEditingObjectId={textEditingObjectId}
-            onSelectObject={selectAndDragObject}
-            onResizeObject={startResizeObject}
-            onTextEditStart={(objectId) => {
-              const page = getActivePage(draft);
-              const object = page?.objects?.find((item) => item.id === objectId);
-              const activation = object?.data?.detectedRegion === true || String(object?.data?.overlayMode || "").includes("-activation");
-              if (activation && !object?.data?.edited && !object?.data?.acceptedEdit) {
-                activateDetectedRegion(objectId);
-                return;
-              }
-              commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
-              setTextEditingObjectId(objectId);
-            }}
-            onTextCommit={commitTextEdit}
-          />
+          <div style={{ position: "relative", width: activePage?.width || 794, height: activePage?.height || 1123 }}>
+            <PageRenderer
+              page={activePage}
+              workbook={workbook}
+              selection={mode === "edit" ? draft.selection : clearSelection()}
+              editing={mode === "edit"}
+              showOriginal={showOriginal}
+              textEditingObjectId={textEditingObjectId}
+              onSelectObject={selectAndDragObject}
+              onResizeObject={startResizeObject}
+              onTextEditStart={(objectId) => {
+                const page = getActivePage(draft);
+                const object = page?.objects?.find((item) => item.id === objectId);
+                const activation = object?.data?.detectedRegion === true || String(object?.data?.overlayMode || "").includes("-activation");
+                if (activation && !object?.data?.edited && !object?.data?.acceptedEdit) {
+                  activateDetectedRegion(objectId);
+                  return;
+                }
+                commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
+                setTextEditingObjectId(objectId);
+              }}
+              onTextCommit={commitTextEdit}
+            />
+            {manualRegionDraft ? <div style={manualRegionPreviewStyle(manualRegionDraft)} /> : null}
+          </div>
         </div>
       </main>
 
@@ -418,6 +622,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             onDelete={deleteSelected}
             onLayer={layerSelected}
             onReplaceImage={() => imageUploadRef.current?.click()}
+            onRestoreOriginal={restoreSelectedOriginal}
           />
         ) : (
           <p style={styles.helpText}>Select a block on the page to edit text, images, sizing, colour, alignment, layer order and position.</p>
@@ -472,10 +677,19 @@ function TextFormattingToolbar({ object, readonly, onPatchStyle, onPatchText }) 
   );
 }
 
-function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, onDelete, onLayer, onReplaceImage }) {
+function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, onDelete, onLayer, onReplaceImage, onRestoreOriginal }) {
+  const activation = isDetectedActivationObject(object);
+  const accepted = isAcceptedOverlayObject(object);
   return (
     <div style={styles.objectPanel}>
       <strong>{object.name || typeLabel(object.type)}</strong>
+      {activation && !accepted && (object.type === "image" || object.type === "logo") ? (
+        <div style={styles.replacePrompt}>
+          <strong>Replace Image</strong>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onReplaceImage}>Upload Image</button>
+          <button type="button" disabled style={styles.secondaryButton}>Media Library</button>
+        </div>
+      ) : null}
       {(object.type === "text" || object.type === "dynamicField") ? (
         <>
           <label style={styles.field}>Text<textarea disabled={readonly} style={styles.textarea} value={object.data?.text || ""} onChange={(event) => onPatch({ data: { text: event.target.value, edited: true } })} /></label>
@@ -513,6 +727,7 @@ function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, 
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => onLayer(1)}>Bring Forward</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => onLayer(-1)}>Send Backward</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onDuplicate}>Duplicate</button>
+        {activation || object.data?.manualRegion ? <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={onRestoreOriginal}>Restore Original</button> : null}
         <button type="button" disabled={readonly} style={styles.dangerButton} onClick={onDelete}>Delete</button>
       </div>
     </div>
@@ -661,6 +876,89 @@ function detectedRegionCount(page) {
   return Math.max(metadataCount, objectCount);
 }
 
+function syncDocumentEditData(document) {
+  return {
+    ...document,
+    pages: (document.pages || []).map((page) => {
+      const edits = (page.objects || [])
+        .filter((object) => object?.data?.acceptedEdit || (object?.data?.manualRegion && object?.data?.edited))
+        .map((object) => ({
+          id: object.id,
+          regionId: object.data?.regionId || object.id,
+          type: object.type === "logo" ? "image" : object.type,
+          bounds: { x: object.x, y: object.y, width: object.width, height: object.height },
+          content: object.data?.text || "",
+          style: { ...(object.style || {}) },
+          sourceAsset: object.data?.imageRef || "",
+          mask: Boolean(object.data?.maskOriginal),
+          zIndex: object.layer,
+        }));
+      return {
+        ...page,
+        data: {
+          ...(page.data || {}),
+          originalPageAsset: page.data?.originalPageAsset || page.background?.imageRef || "",
+          detectedRegions: Array.isArray(page.data?.detectedRegions) ? page.data.detectedRegions : [],
+          edits,
+          acceptedEdits: edits,
+          acceptedMasks: edits.filter((edit) => edit.mask).map((edit) => ({
+            id: `${edit.id}-mask`,
+            regionId: edit.regionId,
+            bounds: edit.bounds,
+          })),
+        },
+      };
+    }),
+  };
+}
+
+function normaliseManualRegion(region) {
+  if (!region) return null;
+  const width = Math.max(1, Number(region.width) || 0);
+  const height = Math.max(1, Number(region.height) || 0);
+  if (width < 12 || height < 12) return null;
+  return {
+    type: region.type,
+    x: Math.round(Number(region.x) || 0),
+    y: Math.round(Number(region.y) || 0),
+    width: Math.round(width),
+    height: Math.round(height),
+  };
+}
+
+function textInsideRegion(page, region) {
+  const detected = Array.isArray(page?.data?.detectedRegions) ? page.data.detectedRegions : [];
+  return detected
+    .filter((item) => item.type === "text" && boxesOverlap(region, item.boundingBox || {}))
+    .map((item) => item.detectedText)
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function boxesOverlap(a, b) {
+  const ax2 = Number(a.x) + Number(a.width);
+  const ay2 = Number(a.y) + Number(a.height);
+  const bx2 = Number(b.x) + Number(b.width);
+  const by2 = Number(b.y) + Number(b.height);
+  return Number(a.x) < bx2 && ax2 > Number(b.x) && Number(a.y) < by2 && ay2 > Number(b.y);
+}
+
+function manualRegionPreviewStyle(region) {
+  const box = normaliseManualRegion(region) || region;
+  return {
+    position: "absolute",
+    left: box.x,
+    top: box.y,
+    width: box.width,
+    height: box.height,
+    border: "2px solid #0f766e",
+    background: "rgba(15, 118, 110, 0.08)",
+    pointerEvents: "none",
+    zIndex: 5000,
+  };
+}
+
 const styles = {
   shell: { display: "grid", gridTemplateColumns: "220px minmax(0, 1fr) 320px", gap: 14, alignItems: "start" },
   previewShell: { display: "grid", gridTemplateColumns: "220px minmax(0, 1fr)", gap: 14, alignItems: "start" },
@@ -677,6 +975,7 @@ const styles = {
   iconButton: { minWidth: 34, height: 34, border: "1px solid #cbd5e1", background: "#f8fafc", color: "#0f172a", borderRadius: 6, padding: "0 8px", fontSize: 12, fontWeight: 950, cursor: "pointer" },
   compactLabel: { display: "inline-flex", alignItems: "center", gap: 4, color: "#475569", fontSize: 11, fontWeight: 950 },
   canvasWrap: { overflow: "auto", border: "1px solid #cbd5e1", background: "#e5e7eb", borderRadius: 14, padding: 18, display: "grid", justifyItems: "center", minHeight: 760 },
+  canvasWrapSelecting: { cursor: "crosshair", position: "relative" },
   properties: { position: "sticky", top: 90, display: "grid", gap: 10, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 12, padding: 12, maxHeight: "calc(100vh - 120px)", overflow: "auto" },
   panelTitle: { margin: 0, color: "#0b2545", fontSize: 22, lineHeight: 1.15 },
   helpText: { margin: 0, color: "#475569", fontSize: 13, lineHeight: 1.45, fontWeight: 700 },
@@ -687,6 +986,7 @@ const styles = {
   color: { width: "100%", height: 36, border: "1px solid #94a3b8", borderRadius: 7, background: "#ffffff" },
   geometryGrid: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 },
   buttonRow: { display: "flex", flexWrap: "wrap", gap: 6 },
+  replacePrompt: { display: "grid", gap: 8, border: "1px solid #99f6e4", background: "#f0fdfa", borderRadius: 8, padding: 10 },
   primaryButton: { border: "1px solid #0f766e", background: "#0f766e", color: "#ffffff", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer" },
   secondaryButton: { border: "1px solid #cbd5e1", background: "#f8fafc", color: "#0f172a", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer" },
   dangerButton: { border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "9px 11px", fontWeight: 900, cursor: "pointer" },

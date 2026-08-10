@@ -11,7 +11,7 @@ const workbook = read("components/estimate-builder/EstimateBuilderWorkbook.js");
 const normaliser = read("lib/builders/standardInclusions.js");
 
 assert(renderer.includes("if (activationRegion && !acceptedEdit && !editing) return null"), "Normal display must not render unaccepted OCR/PDF activation regions.");
-assert(renderer.includes("activationRegion && !acceptedEdit ? { background: \"transparent\", backgroundColor: \"transparent\" }"), "Edit mode activation regions must remain transparent hit regions.");
+assert(renderer.includes("pendingActivation ? { background: \"transparent\", backgroundColor: \"transparent\" }"), "Edit mode activation regions must remain transparent hit regions.");
 assert(renderer.includes("if (editing && activationRegion && !acceptedEdit)"), "Double-clicking a detected region must activate only that region.");
 assert(editor.includes("acceptedEdit: true"), "Activated regions must become explicit accepted edits.");
 assert(editor.includes("maskOriginal: true"), "Activated regions must mask only the accepted edit region.");

@@ -894,6 +894,15 @@ export function useEstimateBuilderWorkbook(initialValues = {}, options = {}) {
     const draft = prepareWorkbookForJobSave(nextWorkbook, savedAt);
     saveLocalDraftMetadata(draft, savedAt);
     await saveStoredJob(draft, savedAt);
+    if (standardInclusions.documentBuilder?.metadata?.documentType === "standardInclusions") {
+      await saveStoredTemplate(currentWorkbook.templateName || MASTER_TEMPLATE_NAME, {
+        ...nextWorkbook,
+        savedAt,
+      }, {
+        key: currentWorkbook.templateKey || MASTER_TEMPLATE_KEY,
+        templateType: currentWorkbook.templateType || "job",
+      }).catch(() => {});
+    }
     rememberRecentJob(draft, savedAt);
     setRecentJobs(loadRecentEstimateJobs());
     setLastSavedAt(savedAt);
@@ -6093,7 +6102,10 @@ function saveAllowUnlinkedJobSave(value) {
 function workbookJobKey(workbook = {}) {
   const registeredId = String(workbook?.registeredJob?.jobId || "").trim();
   if (registeredId) return `job:${registeredId}`;
-  const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "new-job";
+  const standardDocumentName = workbook.standardInclusions?.documentBuilder?.metadata?.documentSource === "pdf-import"
+    ? workbook.standardInclusions?.activeDocumentName || workbook.standardInclusions?.documentBuilder?.name || ""
+    : "";
+  const projectName = dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || standardDocumentName || workbook?.templateName || "new-job";
   const slugged = slug(projectName) || "new-job";
   return `job:${slugged}`;
 }
@@ -6132,7 +6144,10 @@ function resolveLastActiveWorkbookPage(workbook = {}) {
 }
 
 function workbookJobName(workbook = {}) {
-  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || workbook?.templateName || "New estimate job";
+  const standardDocumentName = workbook.standardInclusions?.documentBuilder?.metadata?.documentSource === "pdf-import"
+    ? workbook.standardInclusions?.activeDocumentName || workbook.standardInclusions?.documentBuilder?.name || ""
+    : "";
+  return dataValue(workbook, "projectName") || workbook?.registeredJob?.jobName || standardDocumentName || workbook?.templateName || "New estimate job";
 }
 
 function slug(input) {

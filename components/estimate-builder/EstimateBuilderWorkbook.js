@@ -30,7 +30,7 @@ import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/cons
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
-import { createPdfDetectedTextRegion, createPdfImportBatchId, createStableImportedPdfPageId } from "../../lib/standard-inclusions/pdfPageImportModel";
+import { createPdfDetectedImageRegion, createPdfDetectedTextRegion, createPdfImportBatchId, createStableImportedPdfPageId } from "../../lib/standard-inclusions/pdfPageImportModel";
 import { createPremierInclusionsWorkingCopy } from "../document-engine/templates/premierInclusionsMasterTemplate";
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
@@ -8286,6 +8286,80 @@ async function loadStandardInclusionsPdfJs() {
   }
 }
 
+function detectPdfImageRegionsFromCanvas(canvas, pageId) {
+  const width = canvas.width;
+  const height = canvas.height;
+  const sampleWidth = 160;
+  const sampleHeight = Math.max(1, Math.round((height / width) * sampleWidth));
+  const sampleCanvas = document.createElement("canvas");
+  sampleCanvas.width = sampleWidth;
+  sampleCanvas.height = sampleHeight;
+  const sampleContext = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  sampleContext.drawImage(canvas, 0, 0, sampleWidth, sampleHeight);
+  const pixels = sampleContext.getImageData(0, 0, sampleWidth, sampleHeight).data;
+  const marked = new Uint8Array(sampleWidth * sampleHeight);
+  for (let y = 0; y < sampleHeight; y += 1) {
+    for (let x = 0; x < sampleWidth; x += 1) {
+      const offset = (y * sampleWidth + x) * 4;
+      const r = pixels[offset];
+      const g = pixels[offset + 1];
+      const b = pixels[offset + 2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const saturation = max ? (max - min) / max : 0;
+      const darkness = (r + g + b) / 3;
+      if ((saturation > 0.18 && darkness < 245) || darkness < 72) marked[y * sampleWidth + x] = 1;
+    }
+  }
+  const visited = new Uint8Array(marked.length);
+  const regions = [];
+  for (let start = 0; start < marked.length; start += 1) {
+    if (!marked[start] || visited[start]) continue;
+    const queue = [start];
+    visited[start] = 1;
+    let minX = start % sampleWidth;
+    let maxX = minX;
+    let minY = Math.floor(start / sampleWidth);
+    let maxY = minY;
+    let count = 0;
+    for (let index = 0; index < queue.length; index += 1) {
+      const point = queue[index];
+      count += 1;
+      const x = point % sampleWidth;
+      const y = Math.floor(point / sampleWidth);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].forEach(([nx, ny]) => {
+        if (nx < 0 || ny < 0 || nx >= sampleWidth || ny >= sampleHeight) return;
+        const next = ny * sampleWidth + nx;
+        if (!marked[next] || visited[next]) return;
+        visited[next] = 1;
+        queue.push(next);
+      });
+    }
+    const boxWidth = ((maxX - minX + 1) / sampleWidth) * 794;
+    const boxHeight = ((maxY - minY + 1) / sampleHeight) * 1123;
+    const area = boxWidth * boxHeight;
+    if (area < 5000 || boxWidth < 45 || boxHeight < 35) continue;
+    regions.push(createPdfDetectedImageRegion({
+      pageId,
+      index: regions.length,
+      boundingBox: {
+        x: Math.max(0, (minX / sampleWidth) * 794 - 4),
+        y: Math.max(0, (minY / sampleHeight) * 1123 - 4),
+        width: Math.min(794, boxWidth + 8),
+        height: Math.min(1123, boxHeight + 8),
+      },
+      confidence: Math.min(0.92, Math.max(0.45, count / (sampleWidth * sampleHeight))),
+    }));
+  }
+  return regions
+    .sort((a, b) => (Number(b.boundingBox.width) * Number(b.boundingBox.height)) - (Number(a.boundingBox.width) * Number(a.boundingBox.height)))
+    .slice(0, 12);
+}
+
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
   const pdfjsLib = await loadStandardInclusionsPdfJs();
   const bytes = await file.arrayBuffer();
@@ -8297,7 +8371,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const pageId = createStableImportedPdfPageId(importId, pageNumber);
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 2.25 });
+    const viewport = page.getViewport({ scale: 4.1667 });
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
@@ -8336,6 +8410,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
           style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
           data: {
             text,
+            detectedText: text,
             regionId: region.id,
             detectedRegion: true,
             overlayMode: "pdf-text-activation",
@@ -8349,6 +8424,28 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
     const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
+    const imageRegions = detectPdfImageRegionsFromCanvas(canvas, pageId);
+    imageRegions.forEach((region, index) => {
+      const box = region.boundingBox || {};
+      detectedRegions.push(region);
+      objects.push(createObject("image", {
+        name: `Detected image ${index + 1}`,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        style: { objectFit: "cover", backgroundColor: "#ffffff" },
+        data: {
+          regionId: region.id,
+          detectedRegion: true,
+          overlayMode: "pdf-image-activation",
+          editableSource: "pdf",
+          edited: false,
+          acceptedEdit: false,
+          maskOriginal: false,
+        },
+      }));
+    });
     pages.push(createA4Page({
       id: pageId,
       name: `PDF Page ${pageNumber}`,

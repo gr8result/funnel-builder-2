@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { resolveDynamicText } from "../fields/workbookFieldResolver.js";
 
 function isActivationRegion(object) {
@@ -10,11 +10,20 @@ function isAcceptedEdit(object) {
   return Boolean(object?.data?.edited || object?.data?.acceptedEdit);
 }
 
+const maskStyle = {
+  position: "absolute",
+  inset: 0,
+  background: "#ffffff",
+  zIndex: 0,
+  pointerEvents: "none",
+};
+
 export function ObjectRenderer({
   object,
   selected = false,
   workbook = null,
   editing = false,
+  showOriginal = false,
   textEditing = false,
   onSelect,
   onResize,
@@ -22,6 +31,7 @@ export function ObjectRenderer({
   onTextCommit,
 }) {
   const textEditRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
   useEffect(() => {
     if (!textEditing || !textEditRef.current) return;
     const element = textEditRef.current;
@@ -38,7 +48,11 @@ export function ObjectRenderer({
   if (!object || object.visible === false) return null;
   const activationRegion = isActivationRegion(object);
   const acceptedEdit = isAcceptedEdit(object);
+  const importedOrManualEdit = activationRegion || object.data?.manualRegion;
+  if (showOriginal && importedOrManualEdit && acceptedEdit) return null;
   if (activationRegion && !acceptedEdit && !editing) return null;
+  const pendingActivation = activationRegion && !acceptedEdit;
+  const masksOriginal = importedOrManualEdit && acceptedEdit && object.data?.maskOriginal;
   const style = {
     position: "absolute",
     left: object.x,
@@ -50,10 +64,11 @@ export function ObjectRenderer({
     transformOrigin: "center center",
     zIndex: object.layer,
     boxSizing: "border-box",
-    cursor: editing && !object.locked ? (activationRegion && !acceptedEdit ? "pointer" : "move") : "default",
-    outline: editing && selected ? "2px solid #2563eb" : "none",
+    cursor: editing && !object.locked ? (pendingActivation ? "pointer" : "move") : "default",
+    outline: editing && selected ? "2px solid #2563eb" : pendingActivation && hovered ? "1px solid rgba(37, 99, 235, 0.55)" : "none",
     ...baseObjectStyle(object),
-    ...(activationRegion && !acceptedEdit ? { background: "transparent", backgroundColor: "transparent" } : {}),
+    ...(pendingActivation ? { background: "transparent", backgroundColor: "transparent" } : {}),
+    ...(masksOriginal ? { background: object.style?.backgroundColor || "#ffffff" } : {}),
   };
 
   return (
@@ -61,8 +76,11 @@ export function ObjectRenderer({
       data-document-object-id={object.id}
       data-document-object-name={object.name || object.type}
       data-document-object-type={object.type}
+      data-document-detected-text={object.data?.detectedText || object.data?.text || ""}
       style={style}
       onMouseDown={(event) => editing ? onSelect?.(object.id, event) : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onDoubleClick={(event) => {
         if (editing && activationRegion && !acceptedEdit) {
           event.stopPropagation();
@@ -74,6 +92,7 @@ export function ObjectRenderer({
         onTextEditStart?.(object.id);
       }}
     >
+      {masksOriginal ? <div style={maskStyle} /> : null}
       {editing && selected && acceptedEdit ? <ElementBadge object={object} /> : null}
       {renderObjectContent(object, workbook, { editing, textEditing, textEditRef, onTextCommit, activationRegion, acceptedEdit })}
       {editing && selected && acceptedEdit && !textEditing ? <ResizeHandles object={object} onResize={onResize} /> : null}
