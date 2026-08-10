@@ -1,5 +1,4 @@
 import React from "react";
-import RichText from "../RichText";
 import { FaArrowDown, FaArrowRight } from "react-icons/fa";
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { getAssetFromLibrary, resolveAssetField } from "../../lib/website-builder/mediaAssets";
@@ -38,6 +37,7 @@ import { normalizeFooterNavigationProps } from "../../lib/website-builder/footer
 import { listItemAltText, resolveListItemImage } from "../../lib/website-builder/listBlockItems";
 import { resolveGridSectionItemImageUrl } from "../../lib/website-builder/gridSectionImages";
 import { resolveBlockImageUrl } from "../../lib/website-builder/blockImageResolver";
+import { inferCtaLinkType, resolvePreferredCtaHref, resolveRenderedCtaHref } from "../../lib/website-builder/buttonLinks";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -224,19 +224,21 @@ function ContactFormSendEmailButton({ formId, props, buttonStyle }) {
 function resolvePageAwareCta(props = {}, navigationContext = null) {
   const cta = props.cta && typeof props.cta === "object" ? props.cta : {};
   const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
-  const linkType = String(cta.linkType || "").trim();
-  const rawHref = String(cta.href || props.ctaLink || props.buttonLink || props.link || props.href || "").trim();
+  const rawHref = resolvePreferredCtaHref(
+    cta.href || "",
+    props.ctaLink || props.buttonLink || props.link || props.href || "",
+    cta.linkType || "",
+  );
+  const linkType = inferCtaLinkType(rawHref, cta.linkType || "");
   const newTab = !!cta.newTab || !!cta.openInNewTab || !!props.ctaNewTab;
   if (!text) return { text: "", href: "", newTab: false };
   if (linkType === "none") return { text, href: "", newTab: false };
-  if (linkType === "page" || cta.pageId) {
-    const pageMap = navigationContext?.pageMap;
-    const key = String(cta.pageId || "").trim();
-    const match = pageMap instanceof Map ? pageMap.get(key) : pageMap?.[key];
-    const href = match && typeof match === "object" ? match.href : match;
-    return { text, href: href || rawHref || "#", newTab };
-  }
-  return { text, href: rawHref || "#", newTab };
+  const href = resolveRenderedCtaHref({
+    linkType,
+    href: rawHref,
+    pageId: cta.pageId || "",
+  }, navigationContext);
+  return { text, href: href || "#", newTab };
 }
 
 function resolveSecondaryHeroCta(props = {}, navigationContext = null) {
@@ -833,8 +835,8 @@ function TemplateShowcaseBlock({ props, compact = false, editor = false, navigat
           <h1 style={{ margin: 0, color: textColor, fontSize: compact ? 42 : 76, lineHeight: 0.96, fontWeight: 900, maxWidth: 760 }}>{props.headline || "Launch a site that already feels custom"}</h1>
           <p style={{ margin: 0, color: muted, fontSize: compact ? 18 : 21, lineHeight: 1.58, maxWidth: 650 }}>{props.subheadline || "Pick a proven layout, let AI shape the copy, then customise every section."}</p>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            {props.ctaText ? <a href={editor ? undefined : resolvePublishedNavHref({ href: props.ctaLink || "#contact-us" }, navigationContext)} style={{ textDecoration: "none", color: "#04111a", background: `linear-gradient(135deg, ${accent}, #7df9a1)`, minHeight: 50, padding: "0 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, boxShadow: `0 18px 44px ${colorWithAlpha(accent, 0.3)}` }}>{props.ctaText}</a> : null}
-            {props.secondaryCtaText ? <a href={editor ? undefined : resolvePublishedNavHref({ href: props.secondaryCtaLink || "#templates" }, navigationContext)} style={{ textDecoration: "none", color: textColor, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", minHeight: 50, padding: "0 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>{props.secondaryCtaText}</a> : null}
+            {primaryCta.text ? <a href={editor ? undefined : (primaryCta.href || "#")} target={!editor && primaryCta.newTab ? "_blank" : undefined} rel={!editor && primaryCta.newTab ? "noopener noreferrer" : undefined} onClick={(event) => { if (editor) event.preventDefault(); }} style={{ textDecoration: "none", color: "#04111a", background: `linear-gradient(135deg, ${accent}, #7df9a1)`, minHeight: 50, padding: "0 22px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, boxShadow: `0 18px 44px ${colorWithAlpha(accent, 0.3)}` }}>{primaryCta.text}</a> : null}
+            {secondaryCta.text ? <a href={editor ? undefined : (secondaryCta.href || "#")} target={!editor && secondaryCta.newTab ? "_blank" : undefined} rel={!editor && secondaryCta.newTab ? "noopener noreferrer" : undefined} onClick={(event) => { if (editor) event.preventDefault(); }} style={{ textDecoration: "none", color: textColor, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", minHeight: 50, padding: "0 20px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16 }}>{secondaryCta.text}</a> : null}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr 1fr" : "repeat(3, minmax(0, 1fr))", gap: 12, maxWidth: 620 }}>
             {stats.slice(0, 4).map((stat, index) => (
@@ -1094,14 +1096,32 @@ function WbTextEditableContent({ props, onChangeBlock, compact }) {
   );
 
   return (
-    <RichText
-      value={cleanTextSectionHtml(props.text)}
-      onChange={(html) => {
-        if (typeof onChangeBlock === "function") {
-          onChangeBlock({ ...props, text: cleanInlineEditorHtml(html) });
-        }
+    <div
+      className="wb-text-block"
+      data-website-inline-editor="true"
+      data-text-prop="text"
+      data-placeholder="Click to edit text…"
+      contentEditable
+      suppressContentEditableWarning
+      onBlur={(event) => {
+        if (typeof onChangeBlock !== "function") return;
+        onChangeBlock({ ...props, text: cleanInlineEditorHtml(event.currentTarget.innerHTML) });
       }}
-      placeholder="Click to edit text…"
+      style={{
+        margin: 0,
+        width: "100%",
+        maxWidth: "100%",
+        boxSizing: "border-box",
+        minHeight: compact ? 120 : 160,
+        "--wb-text-line-height": textLineHeight,
+        fontSize: Math.max(12, Number(props.textFontSize || 18)),
+        lineHeight: textLineHeight,
+        ...bodyTypography(props),
+        outline: "1px dashed rgba(14,165,233,0.35)",
+        borderRadius: 8,
+        padding: "4px 6px",
+      }}
+      dangerouslySetInnerHTML={{ __html: cleanTextSectionHtml(props.text) }}
     />
   );
 }

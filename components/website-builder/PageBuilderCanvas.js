@@ -13,7 +13,12 @@ import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } fr
 import { openSharedMediaPicker } from "../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { GRID_ICON_LIBRARY, renderGridLibraryIcon } from "./gridIconLibrary";
-import RichText from "../RichText";
+import {
+  applyStylePatchToElement,
+  isTextSectionEditableNode,
+  replaceSelectionBlockTag,
+  resolveSelectionBlockElement,
+} from "../../lib/website-builder/textSectionEditorDom";
 import {
   ImageEditModal,
   formatLabel, isImageField, isColorField, isLongTextField, getSelectOptions,
@@ -747,10 +752,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
+    const selectionBlock = resolveSelectionBlockElement(editable, selection);
     const computed = window.getComputedStyle(styleSource);
+    const alignSource = selectionBlock || styleSource || editable;
+    const alignComputed = window.getComputedStyle(alignSource);
     const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
     const backgroundComputed = window.getComputedStyle(backgroundTarget);
-    const tagName = String(editable.tagName || "P").toUpperCase();
+    const tagName = String(selectionBlock?.tagName || editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
       .replace(/["']/g, "")
@@ -771,7 +779,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontWeight: String(computed.fontWeight || "400"),
       fontStyle: String(computed.fontStyle || "normal"),
       textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
-      textAlign: String(computed.textAlign || currentBlock?.props?.textAlign || currentBlock?.props?.alignment || "left"),
+      textAlign: String(alignComputed.textAlign || computed.textAlign || currentBlock?.props?.textAlign || currentBlock?.props?.alignment || "left"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -2545,8 +2553,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const editable = activeEditableRef.current;
     if (!editable) return;
     const selection = window.getSelection?.();
+    const selectionBlock = resolveSelectionBlockElement(editable, selection);
     const styleSource = getSelectionStyleSource(editable, selection) || editable;
     const computed = window.getComputedStyle(styleSource);
+    const alignSource = selectionBlock || styleSource || editable;
+    const alignComputed = window.getComputedStyle(alignSource);
     // Read font-size using the computed style of the element directly containing the
     // cursor/selection. This correctly reflects inherited sizes from CSS classes (e.g.
     // h1 font-size) and inline spans, regardless of whether a colour-only span was just
@@ -2555,7 +2566,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const editableComputed = window.getComputedStyle(editable);
     const backgroundTarget = getEditableBackgroundTarget(editable) || editable;
     const backgroundComputed = window.getComputedStyle(backgroundTarget);
-    const tagName = String(editable.tagName || "P").toUpperCase();
+    const tagName = String(selectionBlock?.tagName || editable.tagName || "P").toUpperCase();
     const fontFamilyRaw = String(computed.fontFamily || "Arial")
       .split(",")[0]
       .replace(/["']/g, "")
@@ -2588,6 +2599,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       fontWeight: String(computed.fontWeight || "400"),
       fontStyle: String(computed.fontStyle || "normal"),
       textDecoration: String(computed.textDecorationLine || computed.textDecoration || "none"),
+      textAlign: String(alignComputed.textAlign || computed.textAlign || prev.textAlign || "left"),
       blockType: ["H1", "H2", "H3", "P"].includes(tagName) ? tagName : prev.blockType || "P",
       canStyleBox: editable.hasAttribute?.("data-layer-editor"),
       boxBackgroundColor: normalizeToolbarBackgroundColor(backgroundComputed.backgroundColor),
@@ -2936,9 +2948,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
 
     if (Object.keys(inlineStylePatch).length) {
-      const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
-      nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
-      editable.innerHTML = nextHtml;
+      const liveSelection = typeof window !== "undefined" ? window.getSelection?.() : null;
+      const activeSelectionRange = liveSelection?.rangeCount ? liveSelection.getRangeAt(0) : null;
+      const collapsedSelection = !activeSelectionRange || activeSelectionRange.collapsed;
+      const selectedBlockElement = resolveSelectionBlockElement(editable, liveSelection);
+      const applyToCurrentTextBlockOnly = isTextSectionEditableNode(editable)
+        && collapsedSelection
+        && selectedBlockElement
+        && selectedBlockElement !== editable;
+
+      if (applyToCurrentTextBlockOnly) {
+        applyStylePatchToElement(selectedBlockElement, inlineStylePatch);
+        nextProps = applyInlinePropPatch(nextProps, propPath, stripEditorArtifacts(editable.innerHTML));
+      } else {
+        const nextHtml = wrapEditableHtmlWithStyles(editable, inlineStylePatch);
+        nextProps = applyInlinePropPatch(nextProps, propPath, nextHtml);
+        editable.innerHTML = nextHtml;
+      }
 
       if (isFeatureTextBlock && Object.keys(textBlockStylePatch).length) {
         const itemIndex = Number(featureTextBlockMatch[1]);
@@ -2963,7 +2989,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
       const selection = window.getSelection?.();
       const nextRange = document.createRange();
-      nextRange.selectNodeContents(editable);
+      const rangeTarget = applyToCurrentTextBlockOnly && selectedBlockElement ? selectedBlockElement : editable;
+      nextRange.selectNodeContents(rangeTarget);
       selection?.removeAllRanges();
       selection?.addRange(nextRange);
       selectionRangeRef.current = nextRange.cloneRange();
@@ -3070,6 +3097,49 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     if (command === "formatBlock") {
       const blockKey = String(nextValue || "P").toUpperCase();
       const stylePreset = BLOCK_TYPE_STYLE_PRESETS[blockKey] || BLOCK_TYPE_STYLE_PRESETS.P;
+      const targetTag = blockKey === "P" ? "p" : blockKey.toLowerCase();
+
+      if (isTextSectionEditableNode(editable)) {
+        const selection = window.getSelection?.();
+        const range = getActiveSelectionRange();
+        let appliedSemanticTag = false;
+
+        if (range && !range.collapsed) {
+          try {
+            document.execCommand("formatBlock", false, blockKey === "P" ? "p" : `<${targetTag}>`);
+            appliedSemanticTag = true;
+          } catch {
+            appliedSemanticTag = false;
+          }
+        } else {
+          const currentBlockElement = resolveSelectionBlockElement(editable, selection);
+          if (currentBlockElement && currentBlockElement !== editable) {
+            const nextBlockElement = replaceSelectionBlockTag(currentBlockElement, targetTag);
+            if (nextBlockElement) {
+              applyStylePatchToElement(nextBlockElement, stylePreset);
+              const nextRange = document.createRange();
+              nextRange.selectNodeContents(nextBlockElement);
+              selection?.removeAllRanges();
+              selection?.addRange(nextRange);
+              selectionRangeRef.current = nextRange.cloneRange();
+              appliedSemanticTag = true;
+            }
+          }
+        }
+
+        if (appliedSemanticTag) {
+          syncActiveEditableToBlock(latestBlocksRef.current);
+          finishTextCommand();
+          setTextToolbarState((prev) => ({
+            ...prev,
+            blockType: blockKey,
+            fontSize: Number.parseInt(stylePreset.fontSize, 10) || prev.fontSize,
+            lineHeight: Number.parseFloat(stylePreset.lineHeight) || prev.lineHeight,
+          }));
+          return;
+        }
+      }
+
       applyStyleCommand(stylePreset);
       setTextToolbarState((prev) => ({
         ...prev,
