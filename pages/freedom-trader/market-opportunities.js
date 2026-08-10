@@ -18,7 +18,6 @@ const DEFAULT_SETTINGS = {
   maximumVolatility: 9,
   excludedIndustries: "",
   scanFrequency: "during-session",
-  chunkSize: 30,
 };
 
 const frequencyMs = {
@@ -37,6 +36,14 @@ function formatCurrency(value) {
 
 function formatNumber(value) {
   return Number.isFinite(Number(value)) ? number.format(Number(value)) : "--";
+}
+
+function formatAge(value) {
+  const ms = Number(value);
+  if (!Number.isFinite(ms)) return "--";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60 * 1000) return `${Math.round(ms / 1000)}s`;
+  return `${Math.round(ms / 60000)}m`;
 }
 
 async function browserHashPassword(password) {
@@ -140,7 +147,7 @@ export default function MarketOpportunities({ passwordHash }) {
     if (loading) return;
     try {
       setLoading(true);
-      setScanMessage("Checking market... Requested: 48. Completed: 0. Analysed: 0. Waiting/retrying: 0. Unavailable: 0.");
+      setScanMessage("Checking the supported market universe... Broad pre-screen is running before detailed analysis.");
       const response = await fetch(`/api/freedom-trader/scanner?offset=${append ? offset : 0}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,12 +164,12 @@ export default function MarketOpportunities({ passwordHash }) {
         incoming.forEach((item) => bySymbol.set(item.symbol, item));
         return Array.from(bySymbol.values()).sort((a, b) => b.tradingScore - a.tradingScore).slice(0, 100);
       });
-      saveScannerWatchlist((data.results || []).filter((item) => item.qualified));
-      notifyNewSetups((data.results || []).filter((item) => item.qualified));
+      saveScannerWatchlist((data.topFive || []).filter((item) => ["READY", "WAIT"].includes(item.status)));
+      notifyNewSetups((data.topFive || []).filter((item) => item.status === "READY"));
       setUpdatedAt(data.updatedAt || new Date().toISOString());
       window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: data.scanSummary || null, topFive: data.topFive || [], results: data.results || [], topOpportunity: data.topOpportunity || null, bestCurrentTrade: data.bestCurrentTrade || null, bestSetupToWatch: data.bestSetupToWatch || null, opportunityRanking: data.opportunityRanking || null, updatedAt: data.updatedAt || new Date().toISOString() }));
       setScanMessage(data.scanSummary?.status === "complete"
-        ? `Market scan complete. Companies checked: ${data.scanSummary.requested}. Successfully analysed: ${data.scanSummary.successfullyAnalysed}. Qualified opportunities: ${data.scanSummary.qualified}.`
+        ? `Market scan complete. Broad screened: ${data.scanSummary.broadScreenRequested}. Detailed analyses: ${data.scanSummary.requested}. READY trades: ${data.scanSummary.ready}.`
         : "Freedom could not analyse enough of the configured market reliably.");
     } catch (err) {
       setScanMessage(err.message || "Market scanner failed.");
@@ -195,8 +202,8 @@ export default function MarketOpportunities({ passwordHash }) {
       <section className="settings">
         <label>Markets scanned
           <select multiple value={settings.markets} onChange={(event) => updateSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}>
-            <option value="US">S&P 500 / Nasdaq supported US shares</option>
-            <option value="ASX">ASX 200 supported Australian shares</option>
+            <option value="US">Provider-supported US common stocks</option>
+            <option value="ASX">Provider-supported Australian common stocks</option>
           </select>
         </label>
         <label>Minimum score<input type="number" value={settings.minimumScore} onChange={(event) => updateSetting("minimumScore", Number(event.target.value))} /></label>
@@ -217,16 +224,29 @@ export default function MarketOpportunities({ passwordHash }) {
       {scanMessage ? <section className="notice">{scanMessage}</section> : null}
       {scanSummary ? (
         <section className="scanSummary">
-          <article><span>Tradable universe</span><strong>{scanSummary.tradableUniverse ?? scanSummary.universe}</strong></article>
-          <article><span>Requested</span><strong>{scanSummary.requested}</strong></article>
-          <article><span>Successfully analysed</span><strong>{scanSummary.successfullyAnalysed}</strong></article>
+          <article><span>US supported universe</span><strong>{scanSummary.coverage?.US?.totalSupported ?? "--"}</strong></article>
+          <article><span>US pre-screen eligible</span><strong>{scanSummary.coverage?.US?.eligibleForScreening ?? "--"}</strong></article>
+          <article><span>US detailed analyses</span><strong>{scanSummary.coverage?.US?.detailedAnalyses ?? "--"}</strong></article>
+          <article><span>ASX supported universe</span><strong>{scanSummary.coverage?.ASX?.totalSupported ?? "--"}</strong></article>
+          <article><span>ASX pre-screen eligible</span><strong>{scanSummary.coverage?.ASX?.eligibleForScreening ?? "--"}</strong></article>
+          <article><span>ASX detailed analyses</span><strong>{scanSummary.coverage?.ASX?.detailedAnalyses ?? "--"}</strong></article>
+          <article><span>Total analysed</span><strong>{scanSummary.successfullyAnalysed}</strong></article>
           <article><span>Unavailable</span><strong>{scanSummary.unavailable ?? scanSummary.dataUnavailable}</strong></article>
-          <article><span>Qualified</span><strong>{scanSummary.qualified}</strong></article>
+          <article><span>Qualified</span><strong>{scanSummary.qualified ?? 0}</strong></article>
+          <article><span>READY</span><strong>{scanSummary.ready ?? scanSummary.qualified}</strong></article>
+          <article><span>WAIT</span><strong>{scanSummary.wait ?? 0}</strong></article>
+          <article><span>Developing</span><strong>{scanSummary.developing ?? 0}</strong></article>
           <article><span>Elapsed</span><strong>{Number.isFinite(Number(scanSummary.elapsedMs)) ? `${Math.round(Number(scanSummary.elapsedMs) / 1000)}s` : "--"}</strong></article>
-          <article><span>Provider calls</span><strong>{scanSummary.providerDiagnostics?.historyProviderCalls ?? "--"}</strong></article>
-          <article><span>Cache hits</span><strong>{scanSummary.providerDiagnostics?.historyCacheHits ?? "--"}</strong></article>
+          <article><span>Provider calls</span><strong>{scanSummary.providerDiagnostics?.totalProviderCalls ?? scanSummary.providerDiagnostics?.historyProviderCalls ?? "--"}</strong></article>
+          <article><span>Cache hits</span><strong>{scanSummary.providerDiagnostics?.totalCacheHits ?? scanSummary.providerDiagnostics?.historyCacheHits ?? "--"}</strong></article>
+          <article><span>Data source</span><strong>{scanSummary.dataSource || "--"}</strong></article>
+          <article><span>Oldest market-data age</span><strong>{formatAge(scanSummary.oldestMarketDataAgeMs)}</strong></article>
+          <article><span>Newest market-data age</span><strong>{formatAge(scanSummary.newestMarketDataAgeMs)}</strong></article>
+          <article><span>Last provider refresh</span><strong>{scanSummary.lastProviderRefresh ? new Date(scanSummary.lastProviderRefresh).toLocaleTimeString() : "--"}</strong></article>
         </section>
       ) : null}
+      {scanSummary?.coverage?.ASX?.unavailableReason ? <section className="notice"><strong>ASX SCANNING UNAVAILABLE</strong> {scanSummary.coverage.ASX.unavailableReason}</section> : null}
+      {scanSummary?.broadScreenLimitReason ? <section className="notice">{scanSummary.broadScreenLimitReason}</section> : null}
 
       {scanSummary && topOpportunity ? (
         <section className="bestOpportunity">
@@ -249,7 +269,7 @@ export default function MarketOpportunities({ passwordHash }) {
 
       <main className="panel">
         <div className="panelHeader">
-          <h2>Today's Best Opportunities</h2>
+          <h2>{(scanSummary?.ready ?? 0) > 0 ? "Today's Best Opportunities" : "Best Setups To Watch"}</h2>
           <span>{results.length} shown</span>
         </div>
         <div className="tableWrap">

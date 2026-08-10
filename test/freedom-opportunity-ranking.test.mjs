@@ -132,3 +132,12 @@ test("dashboard and opportunities page can use the identical ranked payload", ()
   const payload = { topFive: ranking.topFive, topOpportunity: ranking.topOpportunity };
   assert.equal(payload.topFive[0].symbol, payload.topOpportunity.symbol);
 });
+
+test("scanner can display developing setups without treating them as ready trades", () => {
+  const developing = row("DEV", { tradingScore: 78, currentPrice: 100, entry: 100 });
+  const ranking = rankMarketOpportunities([developing], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
+  assert.equal(ranking.bestCurrentTrade, null);
+  assert.equal(ranking.qualified.length, 0);
+  assert.equal(ranking.topFive.length, 1);
+  assert.equal(ranking.topFive[0].status, "DEVELOPING");
+});

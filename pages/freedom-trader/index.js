@@ -65,7 +65,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         fetch("/api/freedom-trader/scanner", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ markets: ["US"], chunkSize: 48, force: false }),
+          body: JSON.stringify({ markets: ["US"], force: false }),
         }),
       ]);
       if (cancelled) return;
@@ -148,11 +148,12 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       <section className="panel" id="market-scan">
         <div className="panelHeader"><h2>TODAY'S BEST OPPORTUNITIES</h2><Link href="/freedom-trader/market-opportunities">Open Market Opportunities</Link></div>
         <div className="summaryGrid">
-          <Card label="Tradable Universe" value={scanSummary?.tradableUniverse ?? "--"} />
-          <Card label="Requested" value={scanSummary?.requested ?? "--"} />
-          <Card label="Successfully Analysed" value={scanSummary?.successfullyAnalysed ?? "--"} />
+          <Card label="US Supported" value={scanSummary?.coverage?.US?.totalSupported ?? "--"} />
+          <Card label="US Pre-screen Eligible" value={scanSummary?.coverage?.US?.eligibleForScreening ?? "--"} />
+          <Card label="Detailed Analyses" value={scanSummary?.successfullyAnalysed ?? "--"} />
           <Card label="Unavailable" value={scanSummary?.unavailable ?? "--"} tone={Number(scanSummary?.unavailable) > 0 ? "loss" : "profit"} />
         </div>
+        {scanSummary?.coverage?.ASX?.unavailableReason ? <div className="bestLine"><span>ASX SCANNING UNAVAILABLE</span><p>{scanSummary.coverage.ASX.unavailableReason}</p></div> : null}
         {topOpportunity ? (
           <div className="bestLine">
             <span>{topOpportunity.status === "READY" ? "BEST CURRENT TRADE" : "BEST SETUP TO WATCH"}</span>

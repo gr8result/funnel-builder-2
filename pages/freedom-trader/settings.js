@@ -42,7 +42,6 @@ export default function TraderSettings({ passwordHash }) {
     maximumVolatility: 9,
     excludedIndustries: "",
     scanFrequency: "during-session",
-    chunkSize: 30,
   });
   const [paperSettings, setPaperSettings] = useState({ startingBalance: 100000, confirmation: "", message: "" });
 
@@ -144,7 +143,7 @@ export default function TraderSettings({ passwordHash }) {
         <h2>D. Scanner Settings</h2>
         <p>The scanner searches for opportunities outside your existing watchlists and creates alerts only.</p>
         <div className="formGrid">
-          <label>Markets scanned<select multiple value={scannerSettings.markets} onChange={(event) => updateScannerSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}><option value="US">S&P 500 / Nasdaq supported US shares</option><option value="ASX">ASX 200 supported Australian shares</option></select></label>
+          <label>Markets scanned<select multiple value={scannerSettings.markets} onChange={(event) => updateScannerSetting("markets", Array.from(event.target.selectedOptions).map((option) => option.value))}><option value="US">Provider-supported US common stocks</option><option value="ASX">Provider-supported Australian common stocks</option></select></label>
           <label>Minimum score<input type="number" value={scannerSettings.minimumScore} onChange={(event) => updateScannerSetting("minimumScore", Number(event.target.value))} /></label>
           <label>Minimum daily volume<input type="number" value={scannerSettings.minimumDailyVolume} onChange={(event) => updateScannerSetting("minimumDailyVolume", Number(event.target.value))} /></label>
           <label>Minimum risk/reward<input type="number" value={scannerSettings.minimumRiskReward} onChange={(event) => updateScannerSetting("minimumRiskReward", Number(event.target.value))} /></label>
