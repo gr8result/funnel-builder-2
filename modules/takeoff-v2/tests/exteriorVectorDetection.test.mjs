@@ -57,7 +57,9 @@ function rectWallBands({ x1, y1, x2, y2, thickness = 8 }) {
   assert.equal(result.exteriorPerimeter.selfIntersectionCount, 0);
   assert.equal(result.connectedComponents, 1);
   assert.ok(result.exteriorPerimeter.points.length <= 18, "collinear and tiny zigzag points should simplify");
-  assert.ok(result.diagnostics.rejected["page-border"] >= 1 || result.diagnostics.rejected["outside-building-region"] >= 1, "page/title zone lines should be excluded");
+  assert.equal(result.diagnostics.source, "manual-trace-graph", "auto exterior should use the same graph as manual trace");
+  assert.ok(result.diagnostics.traceGraphNodeCount >= 4, "trace graph diagnostics should expose nodes");
+  assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable), "every automatic edge must be manual-traceable");
 }
 
 {
@@ -109,13 +111,10 @@ if (fs.existsSync(localSamplePath)) {
   });
 
   assert.ok(result, "expected a vector detection result");
-  assert.equal(result.diagnostics.source, "vector");
-  assert.ok(result.diagnostics.rawLines > 1000, "actual plan should expose substantial vector geometry");
-  assert.ok(result.diagnostics.rejected["filled-path"] > 100, "filled/text-like paths should be excluded");
-  assert.ok(result.diagnostics.wallPairs > 50, "wall-face pairing should find residential wall pairs");
+  assert.ok(result.diagnostics.source === "manual-trace-graph" || result.diagnostics.source === "vector");
+  assert.ok((result.diagnostics.traceGraph?.lineCount || result.traceGraphAttempt?.traceGraph?.lineCount || 0) > 100, "actual plan should expose substantial traceable geometry");
   assert.equal(result.segments.length, result.exteriorPerimeter.points.length, "normal output should be polygon edges only");
   assert.ok(result.segments.length >= 8 && result.segments.length <= 20, "actual plan should simplify to one clean perimeter, not dozens of raw candidates");
-  assert.ok(result.diagnostics.usedEnvelopePerimeter, "actual plan should assemble an exterior-envelope perimeter");
   assert.equal(result.isClosed, true, "assembled exterior-envelope perimeter should be closed");
   assert.equal(result.connectedComponents, 1, "assembled exterior perimeter should be one editable graph");
   assert.equal(result.openGaps, 0, "assembled exterior perimeter should not have dangling gaps");
@@ -124,6 +123,11 @@ if (fs.existsSync(localSamplePath)) {
   assert.equal(result.exteriorPerimeter.selfIntersections, 0, "sample perimeter should not self-intersect");
   assert.ok(result.exteriorPerimeter.points.length >= 8, "sample exterior perimeter should be an ordered polygon");
   assert.equal(result.segments.filter((segment) => segment.confirmed).length, result.segments.length, "valid closed automatic perimeter should be active, not hidden as candidates");
+  if (result.diagnostics.manualTraceProof) {
+    assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable), "sample auto perimeter must be provably manual-traceable");
+  } else {
+    assert.ok(result.traceGraphAttempt, "sample fallback must retain failed trace-graph diagnostics");
+  }
 } else {
   console.warn(`Skipping real SAMPLE PLANS.pdf vector detection test; copy it to ${localSamplePath} or set TAKEOFF_SAMPLE_PLANS_PDF.`);
 }

@@ -82,7 +82,8 @@ function boundaryUsesStroke(points, stroke, tolerance = 2) {
   assert.equal(result.exteriorPerimeter.gapCount, 0);
   assert.equal(result.exteriorPerimeter.selfIntersectionCount, 0);
   assert.ok(result.exteriorPerimeter.wallSupportRatio >= 0.7);
-  assert.ok(result.diagnostics.rejected["outside-building-region"] >= 1 || result.diagnostics.rejected["rejected tag title-block-rule"] >= 1);
+  assert.equal(result.diagnostics.source, "manual-trace-graph");
+  assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable), "auto boundary must reuse trace-snap geometry");
 
   const boundaryPoints = result.exteriorPerimeter.points;
   assert.equal(stairTreads.some((tread) => boundaryUsesStroke(boundaryPoints, tread)), false, "stair treads must not appear in the exterior boundary");

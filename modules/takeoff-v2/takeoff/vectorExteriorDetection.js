@@ -4,6 +4,7 @@ import { isSimplePolygon, polygonAreaDocUnits2, polygonPerimeter } from "./geome
 import { pointInRegion, polylineWithinRegion } from "./planRegion.js";
 import { createWallSegment, createWallVertex, generateId } from "../types.js";
 import { boundarySupportRatio, detectBuildingRegion, segmentInBuildingRegion } from "./buildingRegionDetection.js";
+import { detectExteriorFromTraceGraph } from "./traceGraph.js";
 
 const MIN_LINE_LENGTH = 8;
 const MERGE_TOLERANCE = 1.8;
@@ -671,6 +672,11 @@ function graphFromPolygon(points, stitchToleranceDocUnits) {
 }
 
 export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, planRegion = null, stitchToleranceDocUnits = 6 } = {}) {
+  const traceGraphResult = detectExteriorFromTraceGraph({ planGeometryIndex, page, planRegion });
+  if (traceGraphResult?.useful) {
+    return traceGraphResult;
+  }
+
   const rawSegments = typeof planGeometryIndex?.getCandidateWallSegments === "function"
     ? planGeometryIndex.getCandidateWallSegments()
     : planGeometryIndex?.segments;
@@ -888,6 +894,7 @@ export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, 
     useful: true,
     warnings: quality.warnings,
     diagnostics,
+    traceGraphAttempt: traceGraphResult?.diagnostics || null,
     message: `Exterior candidate found - one closed building perimeter from ${diagnostics.wallPairs} wall-band pair${diagnostics.wallPairs !== 1 ? "s" : ""}.`,
   };
 }

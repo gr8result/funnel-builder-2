@@ -316,7 +316,10 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {showPlanGeometryDebug && (
-          <PlanGeometryDebugOverlay planGeometryIndex={planGeometryIndex} project={project} />
+          <>
+            <PlanGeometryDebugOverlay planGeometryIndex={planGeometryIndex} project={project} />
+            <TraceGraphDebugOverlay diagnostics={page?.exteriorWalls?.detectionDiagnostics || page?.wallDetectionDiagnostics} project={project} />
+          </>
         )}
       </svg>
 
@@ -363,6 +366,48 @@ function PlanGeometryDebugOverlay({ planGeometryIndex, project }) {
             <circle cx={p.x} cy={p.y} r={3.5} fill="#16a34a" opacity={0.8} />
             <text x={p.x + 4} y={p.y - 4} fontSize={8} fill="#166534">{intersection.type}</text>
           </g>
+        );
+      })}
+    </g>
+  );
+}
+
+function TraceGraphDebugOverlay({ diagnostics, project }) {
+  const debug = diagnostics?.traceGraphDebug;
+  const loop = diagnostics?.finalLoop;
+  if (!debug && !loop) return null;
+  const start = loop?.points?.find((point) => point.id === diagnostics?.startNodeId) || loop?.points?.[0] || null;
+  return (
+    <g data-testid="trace-graph-debug-overlay">
+      {loop?.edges?.map((edge) => {
+        const a = project(edge.from);
+        const b = project(edge.to);
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        return (
+          <g key={edge.id} data-testid="trace-graph-debug-chosen-edge" data-edge-id={edge.id}>
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#22c55e" strokeWidth={2.5} opacity={0.9} strokeDasharray={edge.bridgedGapLength ? "5 4" : undefined} />
+            <text x={mid.x + 4} y={mid.y + 4} fontSize={9} fontWeight={800} fill="#15803d">{edge.id}</text>
+          </g>
+        );
+      })}
+      {loop?.points?.map((point) => {
+        const p = project(point);
+        const isStart = point.id === diagnostics?.startNodeId || point === start;
+        return (
+          <g key={point.id} data-testid={isStart ? "trace-graph-debug-start-node" : "trace-graph-debug-visited-node"} data-node-id={point.id}>
+            <circle cx={p.x} cy={p.y} r={isStart ? 6 : 4} fill={isStart ? "#f97316" : "#84cc16"} stroke="#052e16" strokeWidth={1} />
+            <text x={p.x + 7} y={p.y - 7} fontSize={9} fontWeight={900} fill={isStart ? "#c2410c" : "#3f6212"}>
+              {isStart ? `START NODE: ${point.id}` : point.id}
+            </text>
+          </g>
+        );
+      })}
+      {debug?.steps?.map((step, index) => {
+        if (!step.rejected?.length) return null;
+        return (
+          <text key={`${step.nodeId}-${index}`} x={8} y={18 + index * 12} fontSize={10} fill="#7f1d1d" data-testid="trace-graph-debug-rejected-edge">
+            {step.nodeId}: rejected {step.rejected.map((item) => `${item.edgeId} (${item.reason})`).join(", ")}
+          </text>
         );
       })}
     </g>

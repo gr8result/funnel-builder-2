@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clampSharpRenderScale, computeFitScale, createPageRenderer } from "../viewer/PdfViewport.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
+import { CLICK_THRESHOLD_PX, isClickPan, panViewFromDrag, shouldForcePan } from "../viewer/dragInteraction.js";
 import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
 
-const CLICK_THRESHOLD_PX = 6;
 const TOOL_CURSORS = {
   "set-scale": "crosshair",
   area: "crosshair",
@@ -179,7 +179,8 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
   }, []);
 
   const handleMouseDown = useCallback((event) => {
-    const forcePan = event.code === "Space" || event.buttons === 4 || tools?.activeTool === "pan" || event.getModifierState?.("Space");
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+    const forcePan = shouldForcePan(event, tools?.activeTool);
     const point = eventToPagePoint(event);
     if (tools?.activeTool === "area" && tools.areaMode === "rectangle" && point && !forcePan) {
       tools.beginAreaRectangle?.(point);
@@ -191,30 +192,41 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
 
   const handleMouseMove = useCallback((event) => {
     updateToolHover(event);
-    if (!dragRef.current) return;
-    if (dragRef.current.mode === "area-rectangle") {
+    const drag = dragRef.current;
+    if (!drag) return;
+    if (drag.mode === "area-rectangle") {
       const point = eventToPagePoint(event);
       if (point) tools?.updateAreaRectangle?.(point);
       return;
     }
-    const dx = event.clientX - dragRef.current.startX;
-    const dy = event.clientY - dragRef.current.startY;
-    setView((prev) => ({ ...prev, panX: dragRef.current.panX + dx, panY: dragRef.current.panY + dy }));
+    setView((prev) => panViewFromDrag(prev, drag, event));
   }, [eventToPagePoint, tools, updateToolHover]);
 
   const handleMouseUp = useCallback((event) => {
     const drag = dragRef.current;
     dragRef.current = null;
+    event.currentTarget?.releasePointerCapture?.(event.pointerId);
     if (!drag) return;
     if (drag.mode === "area-rectangle") {
       tools?.finishAreaRectangle?.();
       return;
     }
-    const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-    if (drag.mode === "pan" && moved <= CLICK_THRESHOLD_PX && tools?.activeTool !== "pan") {
+    if (isClickPan(drag, event, CLICK_THRESHOLD_PX) && tools?.activeTool !== "pan") {
       handleToolClick(event);
     }
   }, [handleToolClick, tools]);
+
+  useEffect(() => {
+    const clearDrag = () => { dragRef.current = null; };
+    window.addEventListener("mouseup", clearDrag);
+    window.addEventListener("pointerup", clearDrag);
+    window.addEventListener("blur", clearDrag);
+    return () => {
+      window.removeEventListener("mouseup", clearDrag);
+      window.removeEventListener("pointerup", clearDrag);
+      window.removeEventListener("blur", clearDrag);
+    };
+  }, []);
 
   const cursor = tools?.activeTool === "pan" ? "grab" : (TOOL_CURSORS[tools?.activeTool] || "grab");
 
@@ -236,10 +248,11 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
       <div
         ref={containerRef}
         style={{ ...S.viewport, cursor }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onPointerDown={handleMouseDown}
+        onPointerMove={handleMouseMove}
+        onPointerUp={handleMouseUp}
+        onPointerCancel={handleMouseUp}
+        onPointerLeave={handleMouseUp}
         data-testid="plan-viewport"
       >
         <div
