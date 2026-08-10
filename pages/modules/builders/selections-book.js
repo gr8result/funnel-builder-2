@@ -607,6 +607,8 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   const [coverSettingsOpen, setCoverSettingsOpen] = useState(false);
   const [activePage, setActivePage] = useState("cover");
   const [activeRoomId, setActiveRoomId] = useState("");
+  const [viewMode, setViewMode] = useState("single");
+  const [zoomMode, setZoomMode] = useState("fit-width");
   const [selectorRow, setSelectorRow] = useState(null);
   const [selectorSearch, setSelectorSearch] = useState("");
   const [selectorCategory, setSelectorCategory] = useState("all");
@@ -1153,13 +1155,16 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     setImporting(false);
   }
 
-  const sectionOptions = [
-    { value: "cover", label: "Cover" },
-    { value: "project", label: "Project Info" },
-    ...book.rooms.map((room) => ({ value: `room:${room.id}`, label: room.name })),
+  const documentPages = [
+    { value: "cover", label: "Cover", type: "cover", pageNumber: 1 },
+    { value: "project", label: "Project Info", type: "project", pageNumber: 2 },
+    ...book.rooms.map((room, index) => ({ value: `room:${room.id}`, label: room.name, type: "room", room, pageNumber: index + 3 })),
   ];
+  const sectionOptions = documentPages.map((page) => ({ value: page.value, label: page.label }));
   const activeSectionValue = activePage === "room" ? `room:${activeRoomId}` : activePage;
-  const activeSectionIndex = Math.max(0, sectionOptions.findIndex((option) => option.value === activeSectionValue));
+  const activePageIndex = Math.max(0, documentPages.findIndex((page) => page.value === activeSectionValue));
+  const activeDocumentPage = documentPages[activePageIndex] || documentPages[0];
+  const totalPageCount = documentPages.length;
 
   function openSection(value) {
     if (value === "cover" || value === "project") {
@@ -1172,9 +1177,54 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     }
   }
 
-  function moveSection(direction) {
-    const nextIndex = clamp(activeSectionIndex + direction, 0, sectionOptions.length - 1, activeSectionIndex);
-    openSection(sectionOptions[nextIndex]?.value || activeSectionValue);
+  function movePage(direction) {
+    const nextIndex = clamp(activePageIndex + direction, 0, documentPages.length - 1, activePageIndex);
+    openSection(documentPages[nextIndex]?.value || activeSectionValue);
+  }
+
+  function renderDocumentPage(page) {
+    if (!page) return null;
+    if (page.type === "cover") {
+      return (
+        <>
+          <CoverPage cover={displayCover} onLogoChange={changeBuilderLogo} />
+          {coverSettingsOpen && viewMode === "single" && (
+            <CoverSettingsPanel
+              cover={coverDraft}
+              dirty={hasCoverDraftChanges}
+              onChange={updateCoverDraft}
+              onReset={() => setCoverDraft(book.cover)}
+              onResetFromProject={resetCoverFromProjectData}
+            />
+          )}
+        </>
+      );
+    }
+    if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} onChange={updateProjectInfo} />;
+    if (page.type === "room" && page.room) {
+      return (
+        <RoomPage
+          room={page.room}
+          rooms={book.rooms}
+          activeRoomId={page.room.id}
+          pageNumber={page.pageNumber}
+          book={book}
+          totals={totals}
+          onOpenRoom={(roomId) => {
+            setActivePage("room");
+            setActiveRoomId(roomId);
+          }}
+          onRoomChange={(patch) => updateRoom(page.room.id, patch)}
+          onRowChange={(rowId, patch) => updateRow(page.room.id, rowId, patch)}
+          onApplyOption={(rowId, optionId) => applyRowOption(page.room.id, rowId, optionId)}
+          onSelectProduct={(rowId) => openSelector(page.room.id, rowId)}
+          onPreviewImage={setImagePreview}
+          onDuplicate={() => duplicateRoom(page.room.id)}
+          onRemove={() => removeRoom(page.room.id)}
+        />
+      );
+    }
+    return null;
   }
 
   return (
@@ -1238,56 +1288,53 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
                 {sectionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
+            <label className="pageSelect">
+              Page {activePageIndex + 1} of {totalPageCount}
+              <select value={activeSectionValue} onChange={(event) => openSection(event.target.value)}>
+                {documentPages.map((page) => <option key={page.value} value={page.value}>{page.pageNumber}. {page.label}</option>)}
+              </select>
+            </label>
+            <label>
+              View
+              <select value={viewMode} onChange={(event) => setViewMode(event.target.value)}>
+                <option value="single">Single Page</option>
+                <option value="continuous">Continuous</option>
+              </select>
+            </label>
+            <label>
+              Zoom
+              <select value={zoomMode} onChange={(event) => setZoomMode(event.target.value)}>
+                <option value="fit-width">Fit Width</option>
+                <option value="fit-page">Fit Page</option>
+                <option value="zoom-75">75%</option>
+                <option value="zoom-100">100%</option>
+                <option value="zoom-125">125%</option>
+                <option value="zoom-150">150%</option>
+              </select>
+            </label>
             <div className="sectionButtons">
-              <button type="button" onClick={() => moveSection(-1)} disabled={activeSectionIndex <= 0}>Previous</button>
-              <button type="button" onClick={() => moveSection(1)} disabled={activeSectionIndex >= sectionOptions.length - 1}>Next</button>
+              <button type="button" onClick={() => movePage(-1)} disabled={activePageIndex <= 0}>Previous</button>
+              <button type="button" onClick={() => movePage(1)} disabled={activePageIndex >= totalPageCount - 1}>Next</button>
             </div>
           </section>
 
           {error && <div className="alert error">{error}</div>}
           {success && <div className="alert success">{success}</div>}
 
-          <div className="documentWrap">
-            {activePage === "cover" && (
-              <>
-                <CoverPage cover={displayCover} onLogoChange={changeBuilderLogo} />
-                {coverSettingsOpen && (
-                  <CoverSettingsPanel
-                    cover={coverDraft}
-                    dirty={hasCoverDraftChanges}
-                    onChange={updateCoverDraft}
-                    onReset={() => setCoverDraft(book.cover)}
-                    onResetFromProject={resetCoverFromProjectData}
-                  />
+          <div className={`documentViewer ${viewMode} ${zoomMode}`} data-view-mode={viewMode} data-zoom-mode={zoomMode} data-page-count={totalPageCount}>
+            <div className="documentPages">
+              {viewMode === "continuous"
+                ? documentPages.map((page) => (
+                  <div key={page.value} className="documentPageFrame" data-page-number={page.pageNumber} data-page-title={page.label}>
+                    {renderDocumentPage(page)}
+                  </div>
+                ))
+                : (
+                  <div className="documentPageFrame" data-page-number={activeDocumentPage?.pageNumber} data-page-title={activeDocumentPage?.label}>
+                    {renderDocumentPage(activeDocumentPage)}
+                  </div>
                 )}
-              </>
-            )}
-            {activePage === "project" && (
-              <>
-                <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} onChange={updateProjectInfo} />
-              </>
-            )}
-            {activePage === "room" && activeRoom && (
-              <RoomPage
-                room={activeRoom}
-                rooms={book.rooms}
-                activeRoomId={activeRoom.id}
-                pageNumber={book.rooms.findIndex((room) => room.id === activeRoom.id) + 3}
-                book={book}
-                totals={totals}
-                onOpenRoom={(roomId) => {
-                  setActivePage("room");
-                  setActiveRoomId(roomId);
-                }}
-                onRoomChange={(patch) => updateRoom(activeRoom.id, patch)}
-                onRowChange={(rowId, patch) => updateRow(activeRoom.id, rowId, patch)}
-                onApplyOption={(rowId, optionId) => applyRowOption(activeRoom.id, rowId, optionId)}
-                onSelectProduct={(rowId) => openSelector(activeRoom.id, rowId)}
-                onPreviewImage={setImagePreview}
-                onDuplicate={() => duplicateRoom(activeRoom.id)}
-                onRemove={() => removeRoom(activeRoom.id)}
-              />
-            )}
+            </div>
           </div>
         </section>
 
@@ -2148,7 +2195,7 @@ const styles = `
   .bannerActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .bannerActions button { background: #ffffff; color: #071827; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; font-weight: 850; cursor: pointer; }
   .bannerActions button:first-child { background: #071827; color: #ffffff; }
-  .scheduleControls { width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .75fr) minmax(190px, .9fr) minmax(220px, 1.1fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
+  .scheduleControls { position: sticky; top: 0; z-index: 20; width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(160px, .9fr) minmax(140px, .7fr) minmax(170px, .8fr) minmax(190px, 1fr) minmax(170px, .8fr) minmax(130px, .6fr) minmax(130px, .6fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
   .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .scheduleControls select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; background: #ffffff; color: #071827; font-weight: 800; }
   .sectionButtons { display: flex; gap: 8px; }
@@ -2163,10 +2210,19 @@ const styles = `
   .alert.error { background: #fee2e2; color: #991b1b; }
   .alert.success { background: #dcfce7; color: #166534; }
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
+  .documentViewer { --viewer-page-width: min(100%, 1320px); width: 100%; box-sizing: border-box; display: grid; justify-items: center; background: #eef2f7; border: 1px solid #d7deea; border-radius: 8px; padding: 24px; overflow: visible; }
+  .documentViewer.fit-page { --viewer-page-width: min(100%, 940px); }
+  .documentViewer.zoom-75 { --viewer-page-width: min(75%, 990px); }
+  .documentViewer.zoom-100 { --viewer-page-width: min(100%, 1123px); }
+  .documentViewer.zoom-125 { --viewer-page-width: min(100%, 1404px); }
+  .documentViewer.zoom-150 { --viewer-page-width: min(100%, 1685px); }
+  .documentPages { width: 100%; display: grid; justify-items: center; gap: 32px; }
+  .documentViewer.single .documentPages { gap: 0; }
+  .documentPageFrame { width: var(--viewer-page-width); max-width: 100%; display: grid; justify-items: stretch; }
   .page { width: 100%; min-height: 760px; background: #fff; box-shadow: 0 12px 34px rgba(15, 23, 42, .1); position: relative; overflow: hidden; box-sizing: border-box; }
   .page input, .page textarea, .page select { background: #fff !important; color: #071827 !important; border-color: #d8dee8 !important; box-shadow: none !important; }
   .page input:focus, .page textarea:focus, .page select:focus { outline: 2px solid rgba(201,151,53,.22); border-color: #d7a640 !important; }
-  .coverPage { width: min(1123px, 100%); max-width: 1123px; aspect-ratio: 297 / 210; height: auto; min-height: 0; box-sizing: border-box; background-size: cover; background-position: center; color: var(--cover-text); padding: clamp(24px, 3.2vw, 42px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: clamp(8px, 1.4vw, 14px); }
+  .coverPage { width: 100%; aspect-ratio: 297 / 210; height: auto; min-height: 0; box-sizing: border-box; background-size: cover; background-position: center; color: var(--cover-text); padding: clamp(24px, 3.2vw, 42px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: clamp(8px, 1.4vw, 14px); }
   .coverBrand { display: flex; align-items: center; gap: 18px; max-width: 100%; min-width: 0; }
   .coverBrand strong { display: block; color: var(--cover-text); font-size: clamp(19px, 2.7vw, 28px); font-weight: 950; line-height: 1.04; margin: 0 0 5px; overflow-wrap: anywhere; }
   .coverBrand span { display: block; margin-top: 3px; color: var(--accent); letter-spacing: 1px; text-transform: none; font-size: clamp(11px, 1.5vw, 15px); font-weight: 850; }
@@ -2327,10 +2383,10 @@ const styles = `
     .screen { display: block; background: white; }
     .sidebar, .standardBanner, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
     .workspace { padding: 0; overflow: visible; }
-    .documentWrap { display: block; }
+    .documentViewer, .documentPages, .documentPageFrame { display: block; width: auto; max-width: none; padding: 0; border: 0; background: white; }
     .page { box-shadow: none; page-break-after: always; break-after: page; }
     .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
-  @media (max-width: 1380px) { .selectionTable { min-width: 1360px; } .scheduleControls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 980px) { .standardBanner, .roomHero, .notesRow, .scheduleControls { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .bannerActions, .sectionButtons { justify-content: flex-start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .selectionTable { min-width: 1120px; } }
+  @media (max-width: 1380px) { .selectionTable { min-width: 1360px; } .scheduleControls { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 980px) { .standardBanner, .roomHero, .notesRow, .scheduleControls { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .bannerActions, .sectionButtons { justify-content: flex-start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .documentViewer { padding: 12px; } .selectionTable { min-width: 1120px; } }
 `;
