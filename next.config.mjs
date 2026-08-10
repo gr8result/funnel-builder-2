@@ -61,15 +61,26 @@ const nextConfig = {
       ...(config.resolve.alias || {}),
       immer: require.resolve("immer"),
     };
+    const loaderAliases = {
+      ...(config.resolveLoader?.alias || {}),
+      "next-swc-loader": require.resolve("next/dist/build/webpack/loaders/next-swc-loader"),
+    };
 
     if (dev && nextRuntime !== "edge") {
       aliases["private-next-pages/_app"] = path.join(__dirname, "pages", "_app.js");
+      aliases["private-next-pages/_app.js"] = path.join(__dirname, "pages", "_app.js");
       aliases["private-next-pages/_error"] = path.join(__dirname, "pages", "_error.js");
+      aliases["private-next-pages/_error.js"] = path.join(__dirname, "pages", "_error.js");
       aliases["private-next-pages/_document"] = path.join(__dirname, "pages", "_document.js");
+      aliases["private-next-pages/_document.js"] = path.join(__dirname, "pages", "_document.js");
     }
 
     config.resolve.alias = {
       ...aliases,
+    };
+    config.resolveLoader = {
+      ...(config.resolveLoader || {}),
+      alias: loaderAliases,
     };
     return config;
   },
