@@ -512,6 +512,72 @@ function mergeProjectFields(primary = {}, secondary = {}) {
   }, {});
 }
 
+function embeddedSelectionsProject({ projectId = "", workbook = null, projectContext = {}, fileState = {} } = {}) {
+  if (!workbook && !projectContext?.projectName && !fileState?.fileName) return null;
+  const resolved = getSelectionsBookProjectDetails(null, {
+    workbook_snapshot: workbook,
+    workbook_metadata: workbook?.jobFileMeta || {},
+  });
+  const fileName = firstText(fileState?.fileName, fileState?.openedFileName, fileState?.sourceFileName, workbook?.openedFileName, workbook?.sourceFileName);
+  const id = firstText(projectId, projectContext?.projectId, workbook?.registeredJobId, workbook?.id, fileName ? `embedded:${slug(fileName)}` : "embedded:current-job");
+  const metadata = {
+    ...(workbook?.jobFileMeta || {}),
+    projectName: firstText(projectContext?.projectName, resolved.projectName),
+    clientName: firstText(projectContext?.client, resolved.clientName),
+    jobNumber: firstText(projectContext?.jobNumber, resolved.jobNumber),
+    siteAddress: firstText(projectContext?.siteAddress, resolved.siteAddress),
+    address: firstText(projectContext?.siteAddress, resolved.siteAddress),
+    builderName: firstText(projectContext?.builder, resolved.builderName),
+    estimatorName: firstText(projectContext?.estimator, resolved.estimatorName),
+    currentFileName: fileName,
+    sourceWorkbookFileName: fileName,
+  };
+  return {
+    id,
+    project_name: firstText(projectContext?.projectName, resolved.projectName, fileName, "Current Job"),
+    client_name: metadata.clientName,
+    job_number: metadata.jobNumber,
+    site_address: metadata.siteAddress,
+    address: metadata.address,
+    builder_name: metadata.builderName,
+    source_workbook_file_name: fileName,
+    metadata,
+    project_metadata: metadata,
+  };
+}
+
+function embeddedSelectionsSnapshot({ snapshotId = "", workbook = null, projectContext = {}, fileState = {} } = {}) {
+  if (!workbook) return null;
+  const fileName = firstText(fileState?.fileName, workbook?.openedFileName, workbook?.sourceFileName);
+  const id = firstText(snapshotId, fileName ? `embedded-snapshot:${slug(fileName)}` : "embedded-snapshot:current-job");
+  return {
+    id,
+    snapshot_label: "Current .gr8job",
+    snapshot_number: 1,
+    workbook_snapshot: workbook,
+    workbook_metadata: {
+      ...(workbook?.jobFileMeta || {}),
+      projectName: projectContext?.projectName || "",
+      jobNumber: projectContext?.jobNumber || "",
+      clientName: projectContext?.client || "",
+      siteAddress: projectContext?.siteAddress || "",
+      sourceWorkbookFileName: fileName,
+    },
+  };
+}
+
+function selectionBookFromEmbeddedWorkbook(workbook = null) {
+  const candidates = [
+    workbook?.selectionsBook,
+    workbook?.clientSelectionsBook,
+    workbook?.builderSelectionsBook,
+    workbook?.selections?.book,
+    workbook?.data?.selectionsBook,
+    workbook?.data?.clientSelectionsBook,
+  ];
+  return candidates.find((candidate) => candidate?.documentType === "luxury_selections_book" || Array.isArray(candidate?.rooms)) || null;
+}
+
 function productOption(brand, productName, model, finish, supplier, description, allowance, selectedCost, priceBand, colour) {
   return {
     id: slug(`${brand}-${productName}-${model}`),
@@ -587,9 +653,19 @@ function rowFromOption(option, itemName, sortOrder, options = []) {
   };
 }
 
-export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspaceId = "", workbook: embeddedWorkbook = null } = {}) {
+export default function BuilderSelectionsBookPage({
+  workspaceId: providedWorkspaceId = "",
+  organisationId: providedOrganisationId = "",
+  projectId: providedProjectId = "",
+  estimateSnapshotId: providedEstimateSnapshotId = "",
+  snapshotId: providedSnapshotId = "",
+  workbook: embeddedWorkbook = null,
+  projectContext = {},
+  fileState = {},
+  onEmbeddedMount = null,
+} = {}) {
   const { workspaceId: activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
-  const workspaceId = providedWorkspaceId || activeWorkspaceId;
+  const workspaceId = providedWorkspaceId || providedOrganisationId || projectContext?.workspaceId || projectContext?.organisationId || activeWorkspaceId;
   const [projects, setProjects] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -620,9 +696,20 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const embeddedProject = useMemo(() => embeddedSelectionsProject({
+    projectId: providedProjectId,
+    workbook: embeddedWorkbook,
+    projectContext,
+    fileState,
+  }), [providedProjectId, embeddedWorkbook, projectContext, fileState]);
 
-  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
-  const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
+  const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || embeddedProject || null, [projects, selectedProjectId, embeddedProject]);
+  const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || embeddedSelectionsSnapshot({
+    snapshotId: selectedSnapshotId || providedSnapshotId || providedEstimateSnapshotId,
+    workbook: embeddedWorkbook,
+    projectContext,
+    fileState,
+  }), [snapshots, selectedSnapshotId, providedSnapshotId, providedEstimateSnapshotId, embeddedWorkbook, projectContext, fileState]);
   const selectedTemplate = useMemo(() => templates.find((template) => template.id === selectedTemplateId) || null, [templates, selectedTemplateId]);
   const activeRoom = useMemo(() => book.rooms.find((room) => room.id === activeRoomId) || book.rooms[0] || null, [book.rooms, activeRoomId]);
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category.category_name])), [categories]);
@@ -686,6 +773,10 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   }), [book.projectInfo, coverDebugFields]);
 
   useEffect(() => {
+    onEmbeddedMount?.();
+  }, [onEmbeddedMount]);
+
+  useEffect(() => {
     if (!workspaceId) return;
     loadInitialData();
   }, [workspaceId]);
@@ -711,71 +802,108 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
   async function loadInitialData() {
     setLoading(true);
     setError("");
-    const [projectResult, templateResult, productResult, categoryResult, manufacturerResult, supplierResult] = await Promise.all([
-      supabase
-        .from("builder_commercial_projects")
-        .select("*")
-        .eq("workspace_id", workspaceId)
-        .order("updated_at", { ascending: false }),
-      supabase
-        .from("builder_standard_specifications")
-        .select("id, template_key, specification_name, description, price_band, is_platform_default")
-        .eq("is_platform_default", true)
-        .order("price_band", { ascending: true }),
-      supabase
-        .from("builder_products")
-        .select("id, product_name, category_id, manufacturer_id, supplier_id, sku, model, description, price_band, standard_included, base_allowance, upgrade_cost, primary_image_url, datasheet_pdf_url, warranty_document_url, product_url, notes, active")
-        .eq("workspace_id", workspaceId)
-        .order("product_name", { ascending: true }),
-      supabase.from("builder_product_categories").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("category_name"),
-      supabase.from("builder_product_manufacturers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("manufacturer_name"),
-      supabase.from("builder_product_suppliers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("supplier_name"),
-    ]);
+    try {
+      const [projectResult, templateResult, productResult, categoryResult, manufacturerResult, supplierResult] = await Promise.all([
+        supabase
+          .from("builder_commercial_projects")
+          .select("*")
+          .eq("workspace_id", workspaceId)
+          .order("updated_at", { ascending: false }),
+        supabase
+          .from("builder_standard_specifications")
+          .select("id, template_key, specification_name, description, price_band, is_platform_default")
+          .eq("is_platform_default", true)
+          .order("price_band", { ascending: true }),
+        supabase
+          .from("builder_products")
+          .select("id, product_name, category_id, manufacturer_id, supplier_id, sku, model, description, price_band, standard_included, base_allowance, upgrade_cost, primary_image_url, datasheet_pdf_url, warranty_document_url, product_url, notes, active")
+          .eq("workspace_id", workspaceId)
+          .order("product_name", { ascending: true }),
+        supabase.from("builder_product_categories").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("category_name"),
+        supabase.from("builder_product_manufacturers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("manufacturer_name"),
+        supabase.from("builder_product_suppliers").select("*").or(`workspace_id.is.null,workspace_id.eq.${workspaceId}`).order("supplier_name"),
+      ]);
 
-    if (projectResult.error) setError(projectResult.error.message || "Could not load projects.");
-    const projectRows = projectResult.data || [];
-    setProjects(projectRows);
-    setSelectedProjectId((current) => projectRows.find((project) => project.id === current)?.id || projectRows[0]?.id || "");
+      if (projectResult.error) console.error("[Client Selections] missing project context", projectResult.error);
+      const projectRows = projectResult.data || [];
+      const mergedProjectRows = embeddedProject && !projectRows.some((project) => project.id === embeddedProject.id)
+        ? [embeddedProject, ...projectRows]
+        : projectRows;
+      setProjects(mergedProjectRows);
+      setSelectedProjectId((current) => mergedProjectRows.find((project) => project.id === current)?.id || (providedProjectId && mergedProjectRows.find((project) => project.id === providedProjectId)?.id) || embeddedProject?.id || mergedProjectRows[0]?.id || "");
 
-    const templateRows = (templateResult.data || []).map((row) => ({
-      id: row.id,
-      template_key: row.template_key || row.price_band,
-      template_name: row.specification_name,
-      quality_level: row.price_band,
-    }));
-    const fallbackTemplates = [
-      { id: "fallback-mid", template_key: "mid_range", template_name: "Mid Range Residential", quality_level: "mid_range" },
-      { id: "fallback-higher", template_key: "higher_end", template_name: "Higher End Residential", quality_level: "higher_end" },
-    ];
-    setTemplates(templateRows.length ? templateRows : fallbackTemplates);
-    setSelectedTemplateId((current) => {
-      const rows = templateRows.length ? templateRows : fallbackTemplates;
-      return rows.find((template) => template.id === current)?.id || rows.find((template) => String(template.template_key).includes("mid"))?.id || rows[0]?.id || "";
-    });
+      const templateRows = (templateResult.data || []).map((row) => ({
+        id: row.id,
+        template_key: row.template_key || row.price_band,
+        template_name: row.specification_name,
+        quality_level: row.price_band,
+      }));
+      const fallbackTemplates = [
+        { id: "fallback-mid", template_key: "mid_range", template_name: "Mid Range Residential", quality_level: "mid_range" },
+        { id: "fallback-higher", template_key: "higher_end", template_name: "Higher End Residential", quality_level: "higher_end" },
+      ];
+      setTemplates(templateRows.length ? templateRows : fallbackTemplates);
+      setSelectedTemplateId((current) => {
+        const rows = templateRows.length ? templateRows : fallbackTemplates;
+        return rows.find((template) => template.id === current)?.id || rows.find((template) => String(template.template_key).includes("mid"))?.id || rows[0]?.id || "";
+      });
 
-    setProducts(productResult.data || []);
-    setCategories(categoryResult.data || []);
-    setManufacturers(manufacturerResult.data || []);
-    setSuppliers(supplierResult.data || []);
-    if (templateResult.error) setError("Standard specification templates are not available yet. Using built-in room templates.");
-    setLoading(false);
+      setProducts(productResult.data || []);
+      setCategories(categoryResult.data || []);
+      setManufacturers(manufacturerResult.data || []);
+      setSuppliers(supplierResult.data || []);
+      if (templateResult.error) setError("Standard specification templates are not available yet. Using built-in room templates.");
+    } catch (loadError) {
+      console.error("[Client Selections] parser or file-state error", loadError);
+      if (embeddedProject) {
+        setProjects([embeddedProject]);
+        setSelectedProjectId(embeddedProject.id);
+      }
+      setTemplates([
+        { id: "fallback-mid", template_key: "mid_range", template_name: "Mid Range Residential", quality_level: "mid_range" },
+        { id: "fallback-higher", template_key: "higher_end", template_name: "Higher End Residential", quality_level: "higher_end" },
+      ]);
+      setSelectedTemplateId((current) => current || "fallback-mid");
+      setError(loadError?.message || "Could not load selections data.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadSnapshots() {
-    const { data, error: loadError } = await supabase
-      .from("builder_estimate_snapshots")
-      .select("*")
-      .eq("workspace_id", workspaceId)
-      .eq("project_id", selectedProjectId)
-      .order("snapshot_number", { ascending: false });
-    if (loadError) {
-      setError(loadError.message || "Could not load estimate snapshots.");
-      setSnapshots([]);
-      return;
+    try {
+      const { data, error: loadError } = await supabase
+        .from("builder_estimate_snapshots")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("project_id", selectedProjectId)
+        .order("snapshot_number", { ascending: false });
+      if (loadError) {
+        console.error("[Client Selections] missing snapshot", loadError);
+      }
+      const embeddedSnapshot = embeddedSelectionsSnapshot({
+        snapshotId: providedSnapshotId || providedEstimateSnapshotId,
+        workbook: embeddedWorkbook,
+        projectContext,
+        fileState,
+      });
+      const rows = data || [];
+      const mergedRows = embeddedSnapshot && !rows.some((snapshot) => snapshot.id === embeddedSnapshot.id)
+        ? [embeddedSnapshot, ...rows]
+        : rows;
+      setSnapshots(mergedRows);
+      setSelectedSnapshotId((current) => mergedRows.find((snapshot) => snapshot.id === current)?.id || embeddedSnapshot?.id || mergedRows[0]?.id || "");
+    } catch (loadError) {
+      console.error("[Client Selections] snapshot load error", loadError);
+      const embeddedSnapshot = embeddedSelectionsSnapshot({
+        snapshotId: providedSnapshotId || providedEstimateSnapshotId,
+        workbook: embeddedWorkbook,
+        projectContext,
+        fileState,
+      });
+      setSnapshots(embeddedSnapshot ? [embeddedSnapshot] : []);
+      setSelectedSnapshotId(embeddedSnapshot?.id || "");
     }
-    const rows = data || [];
-    setSnapshots(rows);
-    setSelectedSnapshotId((current) => rows.find((snapshot) => snapshot.id === current)?.id || rows[0]?.id || "");
   }
 
   async function loadTemplateItems(templateId = selectedTemplateId) {
@@ -804,29 +932,47 @@ export default function BuilderSelectionsBookPage({ workspaceId: providedWorkspa
     setLoading(true);
     setError("");
     const items = templateItems.length ? templateItems : await loadTemplateItems(selectedTemplateId);
-    const { data, error: loadError } = await supabase
-      .from("builder_selection_books")
-      .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
-      .eq("workspace_id", workspaceId)
-      .eq("project_id", selectedProjectId)
-      .eq("inclusion_template_id", selectedTemplateId)
-      .order("updated_at", { ascending: false })
-      .limit(1);
-
-    if (loadError) {
-      setBookId("");
-      const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+    const embeddedBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
+    if (embeddedBook) {
+      const next = normaliseDocumentBook(embeddedBook, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      setBookId(embeddedBook.id || "");
       setBook(next);
-      setActiveRoomId(next.rooms[0]?.id || "");
+      setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
       setLoading(false);
       return;
     }
-    if (data?.[0]?.book_data) {
-      const next = normaliseDocumentBook(data[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
-      setBookId(data[0].id);
-      setBook(next);
-      setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
-    } else {
+    try {
+      const { data, error: loadError } = await supabase
+        .from("builder_selection_books")
+        .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
+        .eq("workspace_id", workspaceId)
+        .eq("project_id", selectedProjectId)
+        .eq("inclusion_template_id", selectedTemplateId)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (loadError) {
+        console.error("[Client Selections] file-state error", loadError);
+        setBookId("");
+        const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+        setBook(next);
+        setActiveRoomId(next.rooms[0]?.id || "");
+        setLoading(false);
+        return;
+      }
+      if (data?.[0]?.book_data) {
+        const next = normaliseDocumentBook(data[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+        setBookId(data[0].id);
+        setBook(next);
+        setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
+      } else {
+        const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+        setBookId("");
+        setBook(next);
+        setActiveRoomId(next.rooms[0]?.id || "");
+      }
+    } catch (loadError) {
+      console.error("[Client Selections] parser or book load error", loadError);
       const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId("");
       setBook(next);

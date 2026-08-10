@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { Component, memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import {
@@ -97,10 +97,7 @@ const CommercialProcurementSchedulePage = dynamic(() => import("../../pages/modu
   loading: () => <CommercialModuleLoading label="Procurement Schedule" />,
 });
 
-const CommercialClientSelectionsPage = dynamic(() => import("../../pages/modules/builders/selections-book"), {
-  ssr: false,
-  loading: () => <CommercialModuleLoading label="Selections Book" />,
-});
+const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book");
 
 const PremierInclusionsCanvasEditor = dynamic(() => import("./standard-inclusions/PremierInclusionsCanvasEditor"), {
   ssr: false,
@@ -416,14 +413,34 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
+    organisationId: workspaceId,
     workspaceId,
     workbook: sheet.workbook,
     calculated: sheet.preview,
     projectId: commercialSyncStatus.projectId || "",
     estimateSnapshotId: commercialSyncStatus.snapshotId || "",
     snapshotId: commercialSyncStatus.snapshotId || "",
+    projectContext: {
+      organisationId: workspaceId,
+      workspaceId,
+      projectId: commercialSyncStatus.projectId || "",
+      projectName: openJobDetails.projectName,
+      jobNumber: openJobDetails.jobNumber,
+      client: jobFilePayload.clientName || workbookDataValue(sheet.workbook, "clientName") || workbookDataValue(sheet.workbook, "customerName") || "",
+      siteAddress: openJobDetails.projectAddress,
+      builder: workbookDataValue(sheet.workbook, "builderName") || sheet.workbook?.jobFileMeta?.builderName || "",
+      estimator: workbookDataValue(sheet.workbook, "estimatorName") || "",
+      currentFileName: openJobDetails.fileName,
+    },
+    fileState: {
+      fileName: openJobDetails.fileName,
+      openedFileName: sheet.workbook?.openedFileName || "",
+      sourceFileName: sheet.workbook?.sourceFileName || "",
+      lastSavedAt: sheet.lastSavedAt || "",
+      saveStatus: saveStatus.state,
+    },
     onSyncSnapshot: handleCommercialSnapshotSync,
-  }), [workspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId]);
+  }), [workspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
@@ -791,7 +808,12 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
           {sheet.workbook.page === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
           {sheet.workbook.page === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "clientSelections" && <CommercialClientSelectionsPage {...commercialModuleContext} />}
+          {sheet.workbook.page === "clientSelections" && (
+            <ClientSelectionsModuleHost
+              moduleContext={commercialModuleContext}
+              onBackToDashboard={() => sheet.setPage("projectDashboard")}
+            />
+          )}
           {sheet.workbook.page === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
           {sheet.workbook.page === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
           {sheet.workbook.page === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
@@ -894,6 +916,106 @@ function FloatingSaveJob({ saveStatus, onSaveJob }) {
       <button style={styles.floatingSaveJobButton} disabled={isSaving} onClick={onSaveJob}>
         {isSaving ? "Saving..." : "Save Job"}
       </button>
+    </div>
+  );
+}
+
+function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
+  const [LoadedClientSelectionsPage, setLoadedClientSelectionsPage] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      if (cancelled || mountedRef.current) return;
+      const error = new Error("Client Selections module did not mount within 10 seconds.");
+      console.error("[Client Selections] module mount timeout", {
+        fileName: moduleContext?.fileState?.fileName,
+        projectId: moduleContext?.projectId,
+        workspaceId: moduleContext?.workspaceId,
+      });
+      setLoadError(error);
+    }, 10000);
+
+    setLoadedClientSelectionsPage(null);
+    setLoadError(null);
+    mountedRef.current = false;
+
+    loadCommercialClientSelectionsPage()
+      .then((module) => {
+        if (cancelled) return;
+        const Component = module?.default;
+        if (!Component) throw new Error("Current selections-book module did not export a default component.");
+        setLoadedClientSelectionsPage(() => Component);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("[Client Selections] import error", error);
+        setLoadError(error);
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [retryKey, moduleContext?.fileState?.fileName, moduleContext?.projectId, moduleContext?.workspaceId]);
+
+  const retry = () => {
+    setRetryKey((current) => current + 1);
+  };
+
+  if (loadError) {
+    return (
+      <ClientSelectionsErrorPanel
+        error={loadError}
+        onRetry={retry}
+        onBackToDashboard={onBackToDashboard}
+      />
+    );
+  }
+
+  if (!LoadedClientSelectionsPage) {
+    return <CommercialModuleLoading label="Selections Book" />;
+  }
+
+  return (
+    <ClientSelectionsErrorBoundary onError={setLoadError}>
+      <LoadedClientSelectionsPage
+        {...moduleContext}
+        onEmbeddedMount={() => {
+          mountedRef.current = true;
+        }}
+      />
+    </ClientSelectionsErrorBoundary>
+  );
+}
+
+class ClientSelectionsErrorBoundary extends Component {
+  componentDidCatch(error, info) {
+    console.error("[Client Selections] component mount error", error, info);
+    this.props.onError?.(error);
+  }
+
+  render() {
+    return this.props.children;
+  }
+}
+
+function ClientSelectionsErrorPanel({ error, onRetry, onBackToDashboard }) {
+  return (
+    <div style={styles.clientSelectionsErrorPanel} role="alert">
+      <strong>Client Selections could not be opened.</strong>
+      <span>The current selections schedule failed to load inside the Estimate Builder workspace.</span>
+      <div style={styles.clientSelectionsErrorActions}>
+        <button type="button" style={styles.primaryButton} onClick={onRetry}>Retry</button>
+        <button type="button" style={styles.secondaryButton} onClick={onBackToDashboard}>Back to Project Dashboard</button>
+      </div>
+      <details style={styles.clientSelectionsErrorDetails}>
+        <summary>Developer details</summary>
+        <pre>{error?.stack || error?.message || String(error || "Unknown error")}</pre>
+      </details>
     </div>
   );
 }
@@ -14868,6 +14990,9 @@ const styles = {
   luxurySignatureGrid: { display: "grid", gridTemplateColumns: "1fr 220px", gap: 22, margin: "30px 0" },
   luxurySignatureLine: { minHeight: 110, borderBottom: "2px solid #0f172a", color: "#64748b", display: "flex", alignItems: "flex-end", paddingBottom: 10, fontWeight: 850 },
   commercialModuleLoading: { minHeight: 240, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, color: "#475569", fontSize: 16 },
+  clientSelectionsErrorPanel: { minHeight: 260, display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "center", gap: 12, background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, color: "#7c2d12", padding: 24, fontSize: 15 },
+  clientSelectionsErrorActions: { display: "flex", flexWrap: "wrap", gap: 10 },
+  clientSelectionsErrorDetails: { width: "100%", color: "#7c2d12" },
   clientPageShell: { display: "flex", flexDirection: "column", gap: 12 },
   clientToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
   clientEditor: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 },
