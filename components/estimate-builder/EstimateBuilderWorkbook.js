@@ -30,6 +30,7 @@ import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/cons
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
+import { createPdfDetectedTextRegion, createPdfImportBatchId, createStableImportedPdfPageId } from "../../lib/standard-inclusions/pdfPageImportModel";
 import { createPremierInclusionsWorkingCopy } from "../document-engine/templates/premierInclusionsMasterTemplate";
 import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
@@ -6847,7 +6848,7 @@ export function StandardInclusionsSheet({ sheet }) {
       pdfSourceName: "",
       pptxSourceName: "",
       pdfEditorMode: "document-page-builder",
-    });
+    }, { persist: true });
     setStandardStatus("Standard Inclusions document saved.");
   }
 
@@ -8142,7 +8143,6 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
   const slideImages = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
-    const pageId = `standard-inclusions-pdf-page-${Date.now()}-${pageNumber}`;
     const viewport = page.getViewport({ scale: 2.5 });
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
@@ -8154,14 +8154,26 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
   return slideImages;
 }
 
+async function loadStandardInclusionsPdfJs() {
+  try {
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+    return pdfjsLib;
+  } catch {
+    return loadPdfJs();
+  }
+}
+
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
-  const pdfjsLib = await loadPdfJs();
+  const pdfjsLib = await loadStandardInclusionsPdfJs();
   const bytes = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes), disableWorker: true }).promise;
   const pages = [];
   let editableTextCount = 0;
   const warnings = [];
+  const importId = createPdfImportBatchId(file.name);
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const pageId = createStableImportedPdfPageId(importId, pageNumber);
     const page = await pdf.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 2.25 });
     const canvas = document.createElement("canvas");
@@ -8179,21 +8191,20 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
         const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
         const x = tx[4];
         const y = canvas.height - tx[5];
-        const regionId = `pdf-text-region-${pageNumber}-${index + 1}`;
         const boundingBox = {
           x: (x / canvas.width) * 794,
           y: (y / canvas.height) * 1123,
           width: Math.min(700, Math.max(80, Number(item.width || 80) * (794 / canvas.width))),
           height: 24,
         };
-        detectedRegions.push({
-          id: regionId,
+        const region = createPdfDetectedTextRegion({
           pageId,
-          type: "text",
+          index,
+          text,
           boundingBox,
-          detectedText: text,
           confidence: 0,
         });
+        detectedRegions.push(region);
         objects.push(createObject("text", {
           name: `Extracted text ${index + 1}`,
           x: boundingBox.x,
@@ -8203,7 +8214,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
           style: { fontFamily: "Arial", fontSize: 13, fontWeight: "500", color: "#0f172a", lineHeight: 1.2, textAlign: "left" },
           data: {
             text,
-            regionId,
+            regionId: region.id,
             detectedRegion: true,
             overlayMode: "pdf-text-activation",
             edited: false,
@@ -8231,7 +8242,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
   }
   const timestamp = new Date().toISOString();
   const documentBuilder = createDocument({
-    id: `standard-inclusions-pdf-${Date.now()}`,
+    id: importId,
     name: file.name.replace(/\.pdf$/i, "") || "Imported PDF Standard Inclusions",
     pages,
     activePageId: pages[0]?.id || null,
