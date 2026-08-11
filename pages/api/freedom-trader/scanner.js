@@ -1,7 +1,9 @@
 import { analyseSymbol } from "./analysis.js";
 import { getMarketDataMetrics, getMarketSnapshotBatch, resetMarketDataMetrics } from "../../../lib/freedom-trader/marketDataService.js";
+import { marketMeta } from "../../../lib/freedom-trader/marketData.js";
 import { buildMarketDiscovery } from "../../../lib/freedom-trader/marketUniverse.js";
 import { rankMarketOpportunities } from "../../../lib/freedom-trader/opportunityRanking.js";
+import { loadPaperAccount } from "./paper-account.js";
 
 const DEFAULT_SETTINGS = {
   markets: ["US"],
@@ -27,22 +29,48 @@ function cleanSettings(input = {}) {
     excludedIndustries: Array.isArray(input.excludedIndustries)
       ? input.excludedIndustries.map((item) => String(item).trim().toLowerCase()).filter(Boolean)
       : String(input.excludedIndustries || "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean),
+    symbols: Array.isArray(input.symbols)
+      ? input.symbols.map((item) => String(item).trim().toUpperCase()).filter(Boolean)
+      : String(input.symbols || "").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean),
   };
 }
 
 function scanCacheKey(settings) {
-  return JSON.stringify({ markets: settings.markets, excludedIndustries: settings.excludedIndustries, minimumDailyVolume: settings.minimumDailyVolume });
+  return JSON.stringify({
+    markets: settings.markets,
+    excludedIndustries: settings.excludedIndustries,
+    minimumDailyVolume: settings.minimumDailyVolume,
+    broadScreenLimit: settings.broadScreenLimit || null,
+    detailedAnalysisLimit: settings.detailedAnalysisLimit || null,
+    symbols: settings.symbols || [],
+  });
 }
 
 function countStatus(rows, status) {
   return rows.filter((row) => row.status === status).length;
 }
 
-async function runCompleteScan(settings) {
+async function runCompleteScan(settings, account = null) {
   resetMarketDataMetrics();
   const startedAt = new Date().toISOString();
   const discovery = await buildMarketDiscovery(settings);
-  const detailedUniverse = discovery.detailedCandidates;
+  const detailedUniverse = settings.symbols?.length
+    ? settings.symbols.map((symbol) => {
+      const meta = marketMeta(symbol);
+      return {
+        symbol: meta.symbol,
+        companyName: meta.companyName,
+        exchange: meta.exchange,
+        country: meta.currency === "AUD" ? "Australia" : "United States",
+        currency: meta.currency,
+        market: meta.currency === "AUD" ? "ASX" : "US",
+        assetType: "common stock",
+        broadScore: null,
+        volume: null,
+        changePercent: null,
+      };
+    })
+    : discovery.detailedCandidates;
   const requestedSymbols = detailedUniverse.map((item) => item.symbol);
   const snapshots = await getMarketSnapshotBatch(requestedSymbols, { range: "1y", interval: "1day" });
   const analysis = [];
@@ -81,7 +109,7 @@ async function runCompleteScan(settings) {
     }
   }
 
-  const ranking = rankMarketOpportunities(analysis, settings, { includeDevelopingTopFive: true });
+  const ranking = rankMarketOpportunities(analysis, settings, { includeDevelopingTopFive: true, account });
   const rows = ranking.ranked;
   const unavailableRows = rows.filter((row) => row.status === "DATA UNAVAILABLE");
   const analysedRows = rows.filter((row) => row.status !== "DATA UNAVAILABLE");
@@ -139,6 +167,7 @@ async function runCompleteScan(settings) {
   };
 
   const safeBestCurrentTrade = unavailableRows.length ? null : ranking.bestCurrentTrade;
+  const safeBestTradePlan = unavailableRows.length ? null : ranking.bestTradePlan;
   const safeTopOpportunity = safeBestCurrentTrade || ranking.bestSetupToWatch || ranking.topFive[0] || null;
   const payload = {
     ok: true,
@@ -153,10 +182,12 @@ async function runCompleteScan(settings) {
     topFive: ranking.topFive,
     topOpportunity: safeTopOpportunity,
     bestCurrentTrade: safeBestCurrentTrade,
+    bestTradePlan: safeBestTradePlan,
     bestSetupToWatch: ranking.bestSetupToWatch || ranking.topFive[0] || null,
     opportunityRanking: {
       topSymbol: safeTopOpportunity?.symbol || null,
       bestCurrentTradeSymbol: safeBestCurrentTrade?.symbol || null,
+      bestTradePlanSymbol: safeBestTradePlan?.symbol || null,
       bestSetupToWatchSymbol: (ranking.bestSetupToWatch || ranking.topFive[0])?.symbol || null,
       whyRankedFirst: safeTopOpportunity?.whyRankedFirst || [],
     },
@@ -198,7 +229,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ ...payload, alreadyRunning: true, message: "Market check already running." });
   }
   try {
-    const promise = runCompleteScan(settings).finally(() => activeScans.delete(key));
+    const accountSnapshot = await loadPaperAccount(req).catch(() => null);
+    const promise = runCompleteScan(settings, accountSnapshot?.account || null).finally(() => activeScans.delete(key));
     activeScans.set(key, promise);
     return res.status(200).json(await promise);
   } catch (error) {

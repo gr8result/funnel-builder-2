@@ -71,6 +71,8 @@ export default function MarketOpportunities({ passwordHash }) {
   const [scanSummary, setScanSummary] = useState(null);
   const [updatedAt, setUpdatedAt] = useState("");
   const [topOpportunity, setTopOpportunity] = useState(null);
+  const [bestTradePlan, setBestTradePlan] = useState(null);
+  const [handoffMessage, setHandoffMessage] = useState("");
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
@@ -83,6 +85,7 @@ export default function MarketOpportunities({ passwordHash }) {
       if (latest?.scanSummary) {
         setScanSummary(latest.scanSummary);
         setTopOpportunity(latest.topOpportunity || latest.bestCurrentTrade || latest.bestSetupToWatch || null);
+        setBestTradePlan(latest.bestTradePlan || null);
         setResults(Array.isArray(latest.topFive) ? latest.topFive : []);
         setUpdatedAt(latest.updatedAt || latest.scanSummary.scanCompletedAt || "");
       }
@@ -159,6 +162,7 @@ export default function MarketOpportunities({ passwordHash }) {
       setOffset(data.nextOffset || 0);
       setScanSummary(data.scanSummary || null);
       setTopOpportunity(data.topOpportunity || null);
+      setBestTradePlan(data.bestTradePlan || null);
       setResults((current) => {
         const bySymbol = new Map((append ? current : []).map((item) => [item.symbol, item]));
         incoming.forEach((item) => bySymbol.set(item.symbol, item));
@@ -167,7 +171,7 @@ export default function MarketOpportunities({ passwordHash }) {
       saveScannerWatchlist((data.topFive || []).filter((item) => ["READY", "WAIT"].includes(item.status)));
       notifyNewSetups((data.topFive || []).filter((item) => item.status === "READY"));
       setUpdatedAt(data.updatedAt || new Date().toISOString());
-      window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: data.scanSummary || null, topFive: data.topFive || [], results: data.results || [], topOpportunity: data.topOpportunity || null, bestCurrentTrade: data.bestCurrentTrade || null, bestSetupToWatch: data.bestSetupToWatch || null, opportunityRanking: data.opportunityRanking || null, updatedAt: data.updatedAt || new Date().toISOString() }));
+      window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: data.scanSummary || null, topFive: data.topFive || [], results: data.results || [], topOpportunity: data.topOpportunity || null, bestCurrentTrade: data.bestCurrentTrade || null, bestTradePlan: data.bestTradePlan || null, bestSetupToWatch: data.bestSetupToWatch || null, opportunityRanking: data.opportunityRanking || null, updatedAt: data.updatedAt || new Date().toISOString() }));
       setScanMessage(data.scanSummary?.status === "complete"
         ? `Market scan complete. Broad screened: ${data.scanSummary.broadScreenRequested}. Detailed analyses: ${data.scanSummary.requested}. READY trades: ${data.scanSummary.ready}.`
         : "Freedom could not analyse enough of the configured market reliably.");
@@ -176,6 +180,17 @@ export default function MarketOpportunities({ passwordHash }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function markOrderEntered() {
+    if (!bestTradePlan?.cmcOrder) return;
+    const response = await fetch("/api/freedom-trader/watchlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan: { ...bestTradePlan, quantity: bestTradePlan.positionSizing?.quantity } }),
+    });
+    const data = await response.json().catch(() => null);
+    setHandoffMessage(response.ok && data?.ok ? "Market Watch is now WAITING FOR ENTRY." : data?.error || "Market Watch handoff failed.");
   }
 
   if (checking) return <div className="boot">Opening Market Opportunities...</div>;
@@ -250,10 +265,31 @@ export default function MarketOpportunities({ passwordHash }) {
 
       {scanSummary && topOpportunity ? (
         <section className="bestOpportunity">
-          <span>{topOpportunity.status === "READY" ? "BEST CURRENT TRADE" : "BEST SETUP TO WATCH"}</span>
+          <span>{bestTradePlan?.cmcOrder ? "TODAY'S BEST TRADE" : "TODAY'S BEST OPPORTUNITY"}</span>
           <h2>#{1} {topOpportunity.companyName} ({topOpportunity.symbol})</h2>
-          <strong>{topOpportunity.status === "READY" ? "READY" : `${topOpportunity.status}. Do not buy yet.`}</strong>
+          <strong>{bestTradePlan?.cmcOrder ? "PREPARE THIS TRADE" : `${topOpportunity.status}. Do not buy yet.`}</strong>
           <p>{topOpportunity.reason}</p>
+          {bestTradePlan?.cmcOrder ? (
+            <div className="tradePlan">
+              <article><span>Buy only at</span><strong>{formatCurrency(bestTradePlan.buyTrigger)}</strong></article>
+              <article><span>Safety Exit</span><strong>{formatCurrency(bestTradePlan.safetyExit)}</strong></article>
+              <article><span>Take Some Profit</span><strong>{formatCurrency(bestTradePlan.takeSomeProfit)}</strong></article>
+              <article><span>Final Exit</span><strong>{formatCurrency(bestTradePlan.finalExit)}</strong></article>
+              <article><span>Quantity</span><strong>{bestTradePlan.positionSizing?.quantity ?? "--"} shares</strong></article>
+              <article><span>Capital required</span><strong>{formatCurrency(bestTradePlan.positionSizing?.capitalRequired)}</strong></article>
+              <article><span>Maximum planned loss</span><strong>{formatCurrency(bestTradePlan.positionSizing?.maximumPlannedLoss)}</strong></article>
+              <article><span>Potential final profit</span><strong>{formatCurrency(bestTradePlan.positionSizing?.potentialProfitAtFinalExit)}</strong></article>
+            </div>
+          ) : null}
+          {bestTradePlan?.cmcOrder ? (
+            <section className="cmcBox">
+              <h3>Prepare CMC Order</h3>
+              <p>Broker: CMC / Symbol: {bestTradePlan.symbol} / Action: BUY / Order type: LIMIT / Quantity: {bestTradePlan.cmcOrder.quantity} / Limit price: {formatCurrency(bestTradePlan.cmcOrder.limitPrice)}</p>
+              <p>Freedom has not placed this trade. Review and enter the order manually in CMC.</p>
+              <button type="button" onClick={markOrderEntered}>ORDER ENTERED IN CMC</button>
+            </section>
+          ) : null}
+          {handoffMessage ? <p className="handoffMessage">{handoffMessage}</p> : null}
           <div>
             {(topOpportunity.whyRankedFirst || []).slice(0, 4).map((reason) => <small key={reason}>{reason}</small>)}
           </div>
@@ -328,7 +364,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.settings,.panel,.notice,.scanSummary,.bestOpportunity,footer{margin:0 auto;max-width:1760px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.settings,.notice,.scanSummary,.bestOpportunity,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{display:flex;gap:28px;justify-content:space-between;padding:28px}.platformSwitch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.platformSwitch a,.hero a{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#d8e5ea;font-weight:950;padding:9px 13px;text-decoration:none}.platformSwitch a.active{background:#0057d9;border-color:#0057d9;color:#fff}h1,h2,p{margin:0}h1{font-size:52px}p,footer{color:#aebdc4}.heroStats{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));min-width:360px}.heroStats article,.settings label,.scanSummary article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.heroStats span,label,.scanSummary span,.bestOpportunity span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.heroStats strong,.scanSummary strong{display:block;font-size:28px;margin-top:8px}.bestOpportunity{margin-top:18px;padding:20px}.bestOpportunity h2{font-size:30px;margin-top:8px}.bestOpportunity strong{color:#b8f4e6;display:block;font-size:18px;margin-top:8px}.bestOpportunity p{margin-top:8px}.bestOpportunity div{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.bestOpportunity small{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;color:#d8e5ea;font-weight:850;padding:7px 10px}.bestOpportunity a{background:#ff9900;border-radius:7px;color:#061014;display:inline-flex;font-weight:950;margin-top:14px;min-height:38px;align-items:center;padding:0 12px;text-decoration:none}.settings,.scanSummary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;padding:16px}label{display:grid;gap:8px}input,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:42px;padding:8px 10px}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:42px;padding:0 14px}.notice{color:#b8f4e6;font-weight:850;margin-top:18px;padding:14px 16px}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;padding:18px 20px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1920px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px 14px;text-align:left;vertical-align:top}th{background:rgba(255,255,255,.04);color:#aebdc4;font-size:12px;text-transform:uppercase;white-space:nowrap}td{color:#e7eef2;font-size:13px}td a{color:#d7efff;display:block;font-weight:950;text-decoration:none}td small{color:#aebdc4;display:block;font-size:11px;font-weight:900;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px;white-space:nowrap}.status.ready{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);color:#b8f4e6}.status.waitforreversal,.status.reversaldeveloping{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.waitforpullback,.status.overextended{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.skip,.status.dataunavailable{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}footer{font-size:13px;margin-top:20px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.hero{flex-direction:column}.settings,.scanSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.heroStats{min-width:0}}@media(max-width:720px){.page{padding:88px 16px 16px}.settings,.heroStats,.scanSummary{grid-template-columns:1fr}h1{font-size:40px}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.settings,.panel,.notice,.scanSummary,.bestOpportunity,footer{margin:0 auto;max-width:1760px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.settings,.notice,.scanSummary,.bestOpportunity,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{display:flex;gap:28px;justify-content:space-between;padding:28px}.platformSwitch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.platformSwitch a,.hero a{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#d8e5ea;font-weight:950;padding:9px 13px;text-decoration:none}.platformSwitch a.active{background:#0057d9;border-color:#0057d9;color:#fff}h1,h2,h3,p{margin:0}h1{font-size:52px}p,footer{color:#aebdc4}.heroStats{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));min-width:360px}.heroStats article,.settings label,.scanSummary article,.tradePlan article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.heroStats span,label,.scanSummary span,.bestOpportunity span,.tradePlan span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.heroStats strong,.scanSummary strong{display:block;font-size:28px;margin-top:8px}.bestOpportunity{margin-top:18px;padding:20px}.bestOpportunity h2{font-size:30px;margin-top:8px}.bestOpportunity strong{color:#b8f4e6;display:block;font-size:18px;margin-top:8px}.bestOpportunity p{margin-top:8px}.bestOpportunity div{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.bestOpportunity .tradePlan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}.tradePlan strong{font-size:18px}.cmcBox{background:rgba(255,153,0,.08);border:1px solid rgba(255,153,0,.24);border-radius:8px;display:grid;gap:10px;margin-top:14px;padding:14px}.cmcBox button{justify-self:start}.handoffMessage{color:#b8f4e6!important;font-weight:900}.bestOpportunity small{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;color:#d8e5ea;font-weight:850;padding:7px 10px}.bestOpportunity a{background:#ff9900;border-radius:7px;color:#061014;display:inline-flex;font-weight:950;margin-top:14px;min-height:38px;align-items:center;padding:0 12px;text-decoration:none}.settings,.scanSummary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;padding:16px}label{display:grid;gap:8px}input,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:42px;padding:8px 10px}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:42px;padding:0 14px}.notice{color:#b8f4e6;font-weight:850;margin-top:18px;padding:14px 16px}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;padding:18px 20px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1920px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px 14px;text-align:left;vertical-align:top}th{background:rgba(255,255,255,.04);color:#aebdc4;font-size:12px;text-transform:uppercase;white-space:nowrap}td{color:#e7eef2;font-size:13px}td a{color:#d7efff;display:block;font-weight:950;text-decoration:none}td small{color:#aebdc4;display:block;font-size:11px;font-weight:900;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px;white-space:nowrap}.status.ready{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);color:#b8f4e6}.status.waitforreversal,.status.reversaldeveloping{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.waitforpullback,.status.overextended{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.skip,.status.dataunavailable{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}footer{font-size:13px;margin-top:20px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.hero{flex-direction:column}.settings,.scanSummary,.bestOpportunity .tradePlan{grid-template-columns:repeat(2,minmax(0,1fr))}.heroStats{min-width:0}}@media(max-width:720px){.page{padding:88px 16px 16px}.settings,.heroStats,.scanSummary,.bestOpportunity .tradePlan{grid-template-columns:1fr}h1{font-size:40px}}
   `}</style>;
 }
 

@@ -15,6 +15,12 @@ function formatCurrency(value, currency = "USD") {
     : "--";
 }
 
+function bestAction(topOpportunity, tradePlan) {
+  if (tradePlan?.cmcOrder) return "PREPARE ONE TRADE";
+  if (topOpportunity) return "WAIT";
+  return "NO TRADE READY";
+}
+
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
@@ -38,6 +44,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [scanSummary, setScanSummary] = useState(null);
   const [topFive, setTopFive] = useState([]);
   const [topOpportunity, setTopOpportunity] = useState(null);
+  const [bestTradePlan, setBestTradePlan] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -56,6 +63,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           setScanSummary(cachedScan.scanSummary);
           setTopFive(Array.isArray(cachedScan.topFive) ? cachedScan.topFive : []);
           setTopOpportunity(cachedScan.topOpportunity || cachedScan.bestCurrentTrade || cachedScan.bestSetupToWatch || null);
+          setBestTradePlan(cachedScan.bestTradePlan || null);
         }
       } catch {}
       const [paperResponse, analysisResponse, alertsResponse, scannerResponse] = await Promise.allSettled([
@@ -80,12 +88,14 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         setScanSummary(scannerData.scanSummary);
         setTopFive(Array.isArray(scannerData.topFive) ? scannerData.topFive : []);
         setTopOpportunity(scannerData.topOpportunity || scannerData.bestCurrentTrade || scannerData.bestSetupToWatch || null);
+        setBestTradePlan(scannerData.bestTradePlan || null);
         window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({
           scanSummary: scannerData.scanSummary,
           topFive: scannerData.topFive || [],
           results: scannerData.results || [],
           topOpportunity: scannerData.topOpportunity || null,
           bestCurrentTrade: scannerData.bestCurrentTrade || null,
+          bestTradePlan: scannerData.bestTradePlan || null,
           bestSetupToWatch: scannerData.bestSetupToWatch || null,
           opportunityRanking: scannerData.opportunityRanking || null,
           updatedAt: scannerData.updatedAt || new Date().toISOString(),
@@ -156,10 +166,18 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         {scanSummary?.coverage?.ASX?.unavailableReason ? <div className="bestLine"><span>ASX SCANNING UNAVAILABLE</span><p>{scanSummary.coverage.ASX.unavailableReason}</p></div> : null}
         {topOpportunity ? (
           <div className="bestLine">
-            <span>{topOpportunity.status === "READY" ? "BEST CURRENT TRADE" : "BEST SETUP TO WATCH"}</span>
+            <span>{bestAction(topOpportunity, bestTradePlan)}</span>
             <strong>#{1} {topOpportunity.companyName} ({topOpportunity.symbol})</strong>
-            <em>{topOpportunity.status === "READY" ? "READY" : `${topOpportunity.status}. Do not buy yet.`}</em>
+            <em>{bestTradePlan?.cmcOrder ? "READY. Prepare this CMC trade." : `${topOpportunity.status}. Do not buy yet.`}</em>
             <p>{topOpportunity.reason}</p>
+            {bestTradePlan?.cmcOrder ? (
+              <div className="planMini">
+                <b>Buy only at: {formatCurrency(bestTradePlan.buyTrigger, bestTradePlan.currency)}</b>
+                <b>Safety Exit: {formatCurrency(bestTradePlan.safetyExit, bestTradePlan.currency)}</b>
+                <b>Final Exit: {formatCurrency(bestTradePlan.finalExit, bestTradePlan.currency)}</b>
+                <b>Quantity: {bestTradePlan.positionSizing?.quantity ?? "--"} shares</b>
+              </div>
+            ) : null}
           </div>
         ) : scanSummary ? (
           <div className="bestLine">
@@ -279,7 +297,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span,.bestLine span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article,.bestLine{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.bestLine{margin:0 16px 16px}.bestLine strong{display:block;font-size:24px;margin-top:6px}.bestLine em{color:#b8f4e6;display:block;font-style:normal;font-weight:950;margin-top:6px}.bestLine p{margin-top:6px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid{grid-template-columns:1fr}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span,.bestLine span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article,.bestLine{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.bestLine{margin:0 16px 16px}.bestLine strong{display:block;font-size:24px;margin-top:6px}.bestLine em{color:#b8f4e6;display:block;font-style:normal;font-weight:950;margin-top:6px}.bestLine p{margin-top:6px}.planMini{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}.planMini b{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:10px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid,.planMini{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid,.planMini{grid-template-columns:1fr}}
   `}</style>;
 }
 

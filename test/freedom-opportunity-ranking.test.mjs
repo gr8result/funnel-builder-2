@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { rankMarketOpportunities } from "../lib/freedom-trader/opportunityRanking.js";
+import { buildFreedomTradePlan, calculateFreedomPositionSize, rankMarketOpportunities } from "../lib/freedom-trader/opportunityRanking.js";
 
 const settings = {
   minimumScore: 82,
@@ -48,6 +48,8 @@ function row(symbol, overrides = {}) {
       plannedEntry: entry,
       stop,
       target,
+      takeSomeProfit: overrides.takeSomeProfit ?? target,
+      finalExit: overrides.finalExit ?? target,
       riskPerShare: risk,
       rewardPerShare: reward,
       riskRewardRatio: overrides.riskReward ?? reward / risk,
@@ -118,6 +120,62 @@ test("stale data, insufficient liquidity and poor reward risk are excluded", () 
   ], settings, { now: "2026-08-09T00:00:00Z" });
   assert.equal(ranking.qualified.length, 0);
   assert.equal(ranking.ranked.every((item) => item.status !== "READY" && item.status !== "WAIT"), true);
+});
+
+test("unavailable data is excluded from best trade selection", () => {
+  const ranking = rankMarketOpportunities([
+    row("BAD", { readyForScore: false }),
+    row("GOOD", { currentPrice: 100.1, entry: 100 }),
+  ], settings, { now: "2026-08-09T00:00:00Z" });
+  assert.equal(ranking.ranked.find((item) => item.symbol === "BAD").status, "DATA UNAVAILABLE");
+  assert.equal(ranking.bestCurrentTrade.symbol, "GOOD");
+});
+
+test("invalid trade-plan ordering rejects a READY-looking setup", () => {
+  const ranking = rankMarketOpportunities([row("BADPLAN", { stop: 102 })], settings, { now: "2026-08-09T00:00:00Z" });
+  assert.equal(ranking.bestCurrentTrade, null);
+  assert.match(ranking.ranked[0].eligibilityReasons.join(" "), /safety exit/i);
+});
+
+test("best current trade includes complete CMC plan and position sizing", () => {
+  const ranking = rankMarketOpportunities([row("PLAN", { currentPrice: 100.2, entry: 100, stop: 94, target: 118 })], settings, {
+    now: "2026-08-09T00:00:00Z",
+    account: { currency: "USD", availableCash: 20_000 },
+    positionSettings: { maximumCapitalPerTrade: 2500, maximumAcceptableLoss: 300 },
+  });
+  assert.equal(ranking.bestTradePlan.symbol, "PLAN");
+  assert.equal(ranking.bestTradePlan.cmcOrder.broker, "CMC");
+  assert.equal(ranking.bestTradePlan.cmcOrder.orderType, "LIMIT");
+  assert.equal(ranking.bestTradePlan.positionSizing.quantity, 25);
+  assert.equal(ranking.bestTradePlan.positionSizing.capitalRequired, 2500);
+  assert.equal(ranking.bestTradePlan.positionSizing.maximumPlannedLoss, 150);
+});
+
+test("insufficient cash and whole-share sizing are respected", () => {
+  const plan = { currency: "USD", buyTrigger: 100, safetyExit: 90, takeSomeProfit: 120, finalExit: 130 };
+  const sized = calculateFreedomPositionSize(plan, { currency: "USD", availableCash: 150 }, { maximumCapitalPerTrade: 1000, maximumAcceptableLoss: 100 });
+  assert.equal(sized.quantity, 1);
+  assert.equal(sized.ok, true);
+  const none = calculateFreedomPositionSize(plan, { currency: "USD", availableCash: 50 }, { maximumCapitalPerTrade: 1000, maximumAcceptableLoss: 100 });
+  assert.equal(none.ok, false);
+  assert.match(none.errors.join(" "), /zero/i);
+});
+
+test("CMC instructions contain no Tiger wording in current workflow", () => {
+  const plan = buildFreedomTradePlan({
+    status: "READY",
+    symbol: "CMC",
+    companyName: "CMC Test",
+    currency: "USD",
+    currentPrice: 100,
+    recommendedEntry: 100,
+    safetyExit: 94,
+    takeSomeProfit: 112,
+    finalExit: 118,
+    riskReward: 3,
+  }, { currency: "USD", availableCash: 10_000 });
+  assert.match(JSON.stringify(plan.cmcOrder), /CMC/);
+  assert.doesNotMatch(JSON.stringify(plan), /Tiger/i);
 });
 
 test("price already beyond entry is skipped and entry not reached is wait", () => {

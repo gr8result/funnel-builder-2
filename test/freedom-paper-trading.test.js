@@ -9,6 +9,7 @@ import {
   shouldTriggerExit,
   validateBuyOrder,
 } from "../lib/freedom-trader/paperTrading.js";
+import { oneShareExitOptions, recordLocalMarketWatchFill, registerLocalMarketWatchPlan } from "../lib/freedom-trader/localPaperStore.js";
 
 const account = { id: "account-1", available_cash: 100000 };
 const validPrice = {
@@ -86,4 +87,36 @@ test("duplicate execution can be detected with filled status", () => {
 
 test("missing price data is unusable", () => {
   assert.equal(priceIsUsable({ price: null, provider: "Unit Test", exchange: "ASX", currency: "AUD", lastUpdated: new Date().toISOString() }), false);
+});
+
+test("one-share exit handling requires an explicit target choice", () => {
+  const result = oneShareExitOptions({ quantity: 1 });
+  assert.equal(result.requiresChoice, true);
+  assert.deepEqual(result.choices, ["Sell at first target", "Hold for final target"]);
+});
+
+test("multi-share exit handling can take some profit", () => {
+  const result = oneShareExitOptions({ quantity: 4 });
+  assert.equal(result.requiresChoice, false);
+  assert.equal(result.action, "TAKE_SOME_PROFIT");
+});
+
+test("Market Watch handoff stores CMC entered plan and actual fill price", async () => {
+  const symbol = `UT${Date.now()}`;
+  const entered = await registerLocalMarketWatchPlan({
+    symbol,
+    companyName: "Unit Test Corp",
+    buyTrigger: 100,
+    safetyExit: 94,
+    takeSomeProfit: 112,
+    finalExit: 118,
+    quantity: 3,
+    currency: "USD",
+  });
+  assert.equal(entered.broker, "CMC");
+  assert.equal(entered.state, "WAITING_FOR_ENTRY");
+  const filled = await recordLocalMarketWatchFill({ id: entered.id, actualFillPrice: 100.25, quantity: 3, filledAt: "2026-08-09T10:00:00Z" });
+  assert.equal(filled.state, "POSITION_ACTIVE");
+  assert.equal(filled.actualFillPrice, 100.25);
+  assert.equal(filled.actualQuantity, 3);
 });

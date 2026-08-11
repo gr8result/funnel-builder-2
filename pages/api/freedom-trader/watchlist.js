@@ -10,19 +10,35 @@ const WATCHLIST = [
   { symbol: "MSTR", companyName: "MicroStrategy", exchange: "NASDAQ", sector: "Bitcoin Treasury" },
   { symbol: "AVGO", companyName: "Broadcom", exchange: "NASDAQ", sector: "Semiconductors" },
 ];
+import { loadLocalMarketWatch, recordLocalMarketWatchFill, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
 
 export const TRADER_WATCHLIST = WATCHLIST;
 
-export default function handler(req, res) {
-  if (req.method !== "GET") {
-    res.setHeader("Allow", "GET");
+export default async function handler(req, res) {
+  if (!["GET", "POST", "PATCH"].includes(req.method)) {
+    res.setHeader("Allow", "GET, POST, PATCH");
     return res.status(405).json({ ok: false, watchlist: [], error: "Method not allowed." });
   }
 
-  return res.status(200).json({
-    ok: true,
-    watchlist: WATCHLIST,
-    count: WATCHLIST.length,
-    updatedAt: new Date().toISOString(),
-  });
+  try {
+    if (req.method === "POST") {
+      const item = await registerLocalMarketWatchPlan(req.body?.plan || req.body || {});
+      return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "CMC order marked entered. Market Watch is waiting for entry.", error: null });
+    }
+    if (req.method === "PATCH") {
+      const item = await recordLocalMarketWatchFill(req.body || {});
+      return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "Actual fill recorded. Market Watch is using the actual fill price.", error: null });
+    }
+    const marketWatch = await loadLocalMarketWatch();
+    return res.status(200).json({
+      ok: true,
+      watchlist: WATCHLIST,
+      marketWatch: marketWatch.marketWatch,
+      count: WATCHLIST.length,
+      updatedAt: new Date().toISOString(),
+      error: null,
+    });
+  } catch (error) {
+    return res.status(400).json({ ok: false, watchlist: WATCHLIST, error: error.message || "Market Watch update failed." });
+  }
 }
