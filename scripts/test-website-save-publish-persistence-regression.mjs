@@ -7,6 +7,7 @@ import {
   resolveWebsiteUrls,
 } from "../lib/website-builder/publishConfig.js";
 import {
+  buildExpectedSiteOnlyWebsitePersistenceProject,
   buildExpectedWebsitePersistenceProject,
   diffWebsitePersistence,
   websitePersistenceHash,
@@ -187,6 +188,42 @@ const lostEmailFieldDiffs = diffWebsitePersistence(
 assert.ok(
   lostEmailFieldDiffs.some((diff) => diff.path === "pageBlocks.Email[0].props.unknownNested"),
   "full post-save verification must still report genuine submitted page data loss"
+);
+
+const siteOnlyPayload = {
+  ...project,
+  name: "Gr8 Result Digital Solutions Updated",
+  customDomain: "gr8result.solutions",
+};
+delete siteOnlyPayload.pageBlocks;
+delete siteOnlyPayload.pagesContent;
+delete siteOnlyPayload.chaiData;
+delete siteOnlyPayload.brandAssets;
+
+const siteOnlyReadback = {
+  ...fullReadbackWithMorePages,
+  name: siteOnlyPayload.name,
+  customDomain: siteOnlyPayload.customDomain,
+};
+const expectedAfterSiteOnlySave = buildExpectedSiteOnlyWebsitePersistenceProject(fullReadbackWithMorePages, siteOnlyPayload);
+assert.deepEqual(
+  diffWebsitePersistence(expectedAfterSiteOnlySave, siteOnlyReadback),
+  [],
+  "siteOnly save verification must preserve canonical page maps omitted by transport"
+);
+assert.equal(expectedAfterSiteOnlySave.pageBlocks.Email[0].id, "email-hero", "siteOnly expected project must retain canonical pageBlocks");
+assert.equal(expectedAfterSiteOnlySave.pagesContent.Email, "", "siteOnly expected project must retain canonical pagesContent");
+assert.equal(expectedAfterSiteOnlySave.chaiData.Home.blocks[0].id, "home-hero", "siteOnly expected project must retain canonical chaiData");
+
+const siteOnlyReadbackWithLostPageData = JSON.parse(JSON.stringify(siteOnlyReadback));
+siteOnlyReadbackWithLostPageData.pageBlocks.Email = [];
+const lostSiteOnlyPageDiffs = diffWebsitePersistence(
+  expectedAfterSiteOnlySave,
+  siteOnlyReadbackWithLostPageData
+);
+assert.ok(
+  lostSiteOnlyPageDiffs.some((diff) => diff.path === "pageBlocks.Email[0]"),
+  "siteOnly verification must still fail when canonical page data is genuinely lost"
 );
 
 assert.equal(resolveWebsitePublicationStatus({
