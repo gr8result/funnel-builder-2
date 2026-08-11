@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, ChevronRight, ExternalLink, Eye, Home } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Download, ExternalLink, Eye, FileText, Home, RefreshCw } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import { supabase } from "../../../utils/supabase-client";
 import {
@@ -33,6 +33,12 @@ import {
   roundMoney,
 } from "../../../lib/builders/selectionBudget";
 import { GENERIC_IMAGE_URLS, familyByKey } from "../../../lib/product-library/catalogueModel";
+import {
+  createFinalInclusionsDocumentVersion,
+  createProjectInclusionsSnapshot,
+  isFinalInclusionsDocumentOutOfDate,
+  renderFinalInclusionsScheduleHtml,
+} from "../../../lib/builders/finalInclusionsSchedule";
 
 const SELECTION_COLUMNS = "id, session_id, snapshot_id, category, subcategory, room, title, description, allowance_amount, selected_product_name, selected_supplier_name, selected_colour, selected_finish, selected_details, status, selected_at, metadata, created_at, updated_at, brand, product_name, model_number, image_url, specification_url, finish, colour, included_allowance, client_selection_price, calculated_client_selection_price, variation_amount, selection_status, is_active";
 const SESSION_COLUMNS = "id, project_id, snapshot_id, session_name, original_estimate_total, private_upgrade_ceiling, current_net_selection_variation, current_updated_estimate_total, warning_threshold_percent, selection_budget_status, status, metadata, created_at, updated_at";
@@ -83,6 +89,7 @@ export default function BuilderClientSelectionsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [finalScheduleDocument, setFinalScheduleDocument] = useState(null);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
@@ -189,6 +196,17 @@ export default function BuilderClientSelectionsPage() {
       selections: activeSelections,
     });
   }, [activeSelections, selectedProject, selectedSession, selectedSnapshot]);
+  const finalScheduleSnapshot = useMemo(() => createProjectInclusionsSnapshot({
+    project: selectedProject || { id: selectedProjectId || "demo-project", project_name: "Project Selections", currency: "AUD" },
+    workspaceId: workspaceId || "demo-workspace",
+    selections: activeSelections,
+    session: selectedSession || { id: selectedSessionId || "demo-session", project_id: selectedProjectId || "demo-project", snapshot_id: selectedSnapshotId || "demo-snapshot", status: activeSelections.length ? "ready" : "draft" },
+    estimateSnapshot: selectedSnapshot || { id: selectedSnapshotId || "demo-snapshot" },
+    generatedBy: "client-selections-ui",
+    masterTemplate: { id: "premier-inclusions-master", version: "native-master", pageCount: 10 },
+    masterPdfRef: { storagePath: "standard-inclusions/premier-inclusions-master.pdf", pageCount: 10 },
+  }), [activeSelections, selectedProject, selectedProjectId, selectedSession, selectedSessionId, selectedSnapshot, selectedSnapshotId, workspaceId]);
+  const finalScheduleOutOfDate = useMemo(() => isFinalInclusionsDocumentOutOfDate(finalScheduleDocument, activeSelections), [activeSelections, finalScheduleDocument]);
 
   const selectedRequirement = useMemo(() => guidedRequirementByKey(selectedRequirementKey) || KITCHEN_REQUIREMENTS[7], [selectedRequirementKey]);
   const activeRequirementList = selectedRequirement?.areaKey === "exterior" ? EXTERIOR_REQUIREMENTS : KITCHEN_REQUIREMENTS;
@@ -347,6 +365,32 @@ export default function BuilderClientSelectionsPage() {
     setSessions((current) => current.map((session) => session.id === sessionId ? data : session));
   }
 
+  function generateFinalSchedule() {
+    const generatedAt = new Date().toISOString();
+    const document = createFinalInclusionsDocumentVersion({
+      snapshot: finalScheduleSnapshot,
+      previousDocuments: finalScheduleDocument ? [finalScheduleDocument] : [],
+      generatedAt,
+    });
+    setFinalScheduleDocument(document);
+    setSuccess(`${document.title} v${document.version} generated for Project Estimate inclusions.`);
+  }
+
+  function downloadFinalScheduleHtml() {
+    const document = finalScheduleDocument || createFinalInclusionsDocumentVersion({ snapshot: finalScheduleSnapshot, generatedAt: new Date().toISOString() });
+    const html = renderFinalInclusionsScheduleHtml(document.metadata.selectionSnapshot);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = window.document.createElement("a");
+    anchor.href = url;
+    anchor.download = document.fileName.replace(/\.pdf$/i, ".html");
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    if (!finalScheduleDocument) setFinalScheduleDocument(document);
+  }
+
   const areaTotalsByKey = { exterior: exteriorTotals, interior: projectTotals([interiorTotals, kitchenTotals]) };
   const currentAreaTitle = selectedArea ? titleCase(selectedArea) : "Choose an Area";
 
@@ -380,6 +424,14 @@ export default function BuilderClientSelectionsPage() {
         {workspaceLoading || loading ? <div className="alert notice">Loading selections...</div> : null}
 
         <RunningSummary project={runningProjectTotals} currency={selectedProject?.currency} />
+        <FinalInclusionsSchedulePanel
+          snapshot={finalScheduleSnapshot}
+          document={finalScheduleDocument}
+          outOfDate={finalScheduleOutOfDate}
+          currency={selectedProject?.currency}
+          onGenerate={generateFinalSchedule}
+          onDownload={downloadFinalScheduleHtml}
+        />
 
         {screen === "areas" ? <AreasView totalsByKey={areaTotalsByKey} onOpenArea={openArea} currency={selectedProject?.currency} /> : null}
         {screen === "area" ? <AreaCategories areaKey={selectedArea} title={currentAreaTitle} selectedMap={selectedMap} kitchenTotals={kitchenTotals} onOpenCategory={openCategory} currency={selectedProject?.currency} /> : null}
@@ -574,6 +626,36 @@ function RunningSummary({ project, currency }) {
   return <section className="runningBar" data-testid="showroom-running-variation"><div><span>SELECTIONS SUMMARY</span><strong>{project.completed} / {project.total}</strong></div><MiniTotal label="Allowance" value={money(project.allowance, currency)} /><MiniTotal label="Selected" value={money(project.selected, currency)} /><MiniTotal label="Variation" value={signedMoney(project.variation, currency)} tone={project.variation > 0 ? "bad" : project.variation < 0 ? "good" : ""} /></section>;
 }
 
+function FinalInclusionsSchedulePanel({ snapshot, document, outOfDate, currency, onGenerate, onDownload }) {
+  const variation = snapshot?.summary?.currentNetSelectionVariation || 0;
+  const generatedLabel = document?.uploadedAt ? new Date(document.uploadedAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" }) : "";
+  return (
+    <section className="finalSchedulePanel" data-testid="final-inclusions-schedule-panel">
+      <div className="finalScheduleTitle">
+        <span><FileText size={17} />PROJECT INCLUSIONS</span>
+        <h2>Final Inclusions Schedule</h2>
+        <p>{document ? `Generated v${document.version}${generatedLabel ? ` - ${generatedLabel}` : ""}` : "Generate the client-facing inclusions schedule from the current approved selections."}</p>
+      </div>
+      <div className="summaryTiles">
+        <MiniTotal label="Selections" value={String(snapshot?.summary?.productCount || 0)} />
+        <MiniTotal label="Dynamic Pages" value={String(snapshot?.summary?.dynamicPageCount || 0)} />
+        <MiniTotal label="Template Pages" value={String(snapshot?.summary?.masterPageCount || 0)} />
+        <MiniTotal label="Variation" value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+      </div>
+      {document ? (
+        <div className={outOfDate ? "scheduleStatus warn" : "scheduleStatus"}>
+          <strong>{outOfDate ? "Out of date" : "Current"}</strong>
+          <span>{document.storagePath}</span>
+        </div>
+      ) : null}
+      <div className="finalScheduleActions">
+        <button type="button" className="primary" onClick={onGenerate}>{document ? <RefreshCw size={16} /> : <FileText size={16} />}{document ? "Regenerate PDF" : "Generate PDF"}</button>
+        <button type="button" onClick={onDownload}><Download size={16} />Download Preview</button>
+      </div>
+    </section>
+  );
+}
+
 function MiniTotal({ label, value, tone = "" }) {
   return <div className={`miniTotal ${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
@@ -713,7 +795,7 @@ const showroomCss = `
   .backButton, .showroom button, .showroom a { min-height: 38px; border-radius: 8px; font-weight: 900; cursor: pointer; text-decoration: none; }
   .backButton { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: #fff; padding: 9px 12px; }
   .bannerIcon { width: 50px; height: 50px; display: grid; place-items: center; border-radius: 8px; background: #d6a23a; color: #0b1d2f; }
-  .bannerCopy span, .sectionHeader span, .checklistHeader span, .runningBar span, .setupControls span, .miniTotal span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .bannerCopy span, .sectionHeader span, .checklistHeader span, .runningBar span, .setupControls span, .miniTotal span, .finalScheduleTitle span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
   .bannerCopy h1, .sectionHeader h2, .checklistHeader h2 { margin: 4px 0; color: inherit; font-size: 30px; line-height: 1.08; letter-spacing: 0; }
   .bannerCopy p, .sectionHeader p, .checklistHeader p { margin: 0; color: #64748b; font-weight: 750; }
   .bannerCopy p { color: #dbe5ee; }
@@ -737,6 +819,17 @@ const showroomCss = `
   .miniTotal.bad strong, .upgradeText { color: #c2410c !important; }
   .miniTotal.good strong, .creditText { color: #15803d !important; }
   .miniTotal.warn { background: #fffbeb; border-color: #fde68a; }
+  .finalSchedulePanel { margin-top: 12px; display: grid; grid-template-columns: minmax(220px,.9fr) minmax(360px,1.4fr) minmax(220px,.8fr); gap: 12px; align-items: center; border: 1px solid #d7e0e7; border-radius: 8px; background: #fff; padding: 14px; }
+  .finalScheduleTitle { display: grid; gap: 5px; min-width: 0; }
+  .finalScheduleTitle span { display: inline-flex; align-items: center; gap: 7px; }
+  .finalScheduleTitle h2 { margin: 0; color: #102033; font-size: 23px; line-height: 1.1; }
+  .finalScheduleTitle p { margin: 0; color: #64748b; font-weight: 750; }
+  .scheduleStatus { grid-column: 1 / 3; display: grid; gap: 3px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #047857; border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  .scheduleStatus.warn { border-color: #fde68a; background: #fffbeb; color: #b45309; }
+  .scheduleStatus span { overflow-wrap: anywhere; color: inherit; font-size: 12px; font-weight: 800; }
+  .finalScheduleActions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .finalScheduleActions button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 9px 11px; }
+  .finalScheduleActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
   .showroomSection { margin-top: 16px; display: grid; gap: 14px; }
   .sectionHeader { display: grid; gap: 3px; }
   .areaGrid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 16px; }
@@ -806,6 +899,6 @@ const showroomCss = `
   .swatches { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .swatches strong { margin-right: 4px; }
   .swatches span { width: 32px; height: 32px; border-radius: 999px; border: 2px solid #fff; box-shadow: 0 0 0 1px #cbd5e1; }
-  @media (max-width: 1020px) { .setupControls, .checklistHeader, .productLayout, .detailPanel { grid-template-columns: 1fr; } .progressNav { position: static; } .runningBar { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 1020px) { .setupControls, .checklistHeader, .productLayout, .detailPanel, .finalSchedulePanel { grid-template-columns: 1fr; } .progressNav { position: static; } .runningBar { grid-template-columns: repeat(2, minmax(0,1fr)); } .scheduleStatus { grid-column: auto; } .finalScheduleActions { justify-content: flex-start; } }
   @media (max-width: 720px) { .showroom { padding: 12px; } .showroomBanner { grid-template-columns: 1fr; } .bannerMeta { justify-items: start; } .areaGrid, .categoryGrid, .productGrid, .summaryTiles, .runningBar { grid-template-columns: 1fr; } .requirementRow { grid-template-columns: 26px 64px minmax(0,1fr); } .rowMoney, .requirementRow button { grid-column: 1 / -1; } .setupControls { grid-template-columns: 1fr; } }
 `;
