@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { clampSharpRenderScale, computeFitScale, createPageRenderer } from "../viewer/PdfViewport.js";
 import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { CLICK_THRESHOLD_PX, isClickPan, panViewFromDrag, shouldForcePan } from "../viewer/dragInteraction.js";
+import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
 
 const MIN_ZOOM = 0.2;
@@ -45,7 +46,19 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     if (tools.activeTool === "set-scale" || tools.activeTool === "measure") tools.placePointerPoint?.(point, options);
     else if (tools.activeTool === "area") tools.handleAreaCanvasClick?.(point, options);
     else if (tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall") tools.handleWallDrawClick?.(point, options);
-    else if (tools.activeTool === "edit-walls" || tools.activeTool === "edit") tools.handleEditToolClick?.(point, options);
+    else if (tools.activeTool === "edit-walls" || tools.activeTool === "edit") {
+      if (event.detail >= 2) {
+        const hitFields = tools.activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
+        for (const field of hitFields) {
+          const hit = tools.findWallSegmentNear?.(point, { field, zoomScale: view.zoomScale, toleranceScreenPx: 18 });
+          if (hit?.segment?.id) {
+            tools.insertWallPointAt?.(point, { field, zoomScale: view.zoomScale });
+            return;
+          }
+        }
+      }
+      tools.handleEditToolClick?.(point, options);
+    }
     else if (tools.activeTool === "plan-region") tools.handlePlanRegionClick?.(point, options);
     else if (["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool)) tools.handleOpeningCanvasClick?.(point, options);
     else if (tools.activeTool === "exterior-highlighter") tools.toggleExteriorHighlightedWall?.();
@@ -182,13 +195,42 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     event.currentTarget?.setPointerCapture?.(event.pointerId);
     const forcePan = shouldForcePan(event, tools?.activeTool);
     const point = eventToPagePoint(event);
-    if (tools?.activeTool === "area" && tools.areaMode === "rectangle" && point && !forcePan) {
-      tools.beginAreaRectangle?.(point);
+    if ((tools?.activeTool === "edit-walls" || tools?.activeTool === "edit") && point && !forcePan) {
+      if (event.detail >= 2) {
+        const hitFields = tools.activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
+        for (const field of hitFields) {
+          const hit = tools.findWallSegmentNear?.(point, { field, zoomScale: view.zoomScale, toleranceScreenPx: 18 });
+          if (hit?.segment?.id) {
+            tools.insertWallPointAt?.(point, { field, zoomScale: view.zoomScale });
+            dragRef.current = null;
+            return;
+          }
+        }
+      }
+      const vertexHit = tools.findWallVertexNearAny?.(point, { zoomScale: view.zoomScale });
+      if (vertexHit?.vertex?.id) {
+        tools.beginWallVertexDrag?.(vertexHit.vertex.id, vertexHit.field || "exteriorWalls");
+        dragRef.current = { mode: "vertex" };
+        return;
+      }
+    }
+    if (tools?.activeTool === "area" && point && !forcePan) {
+      const areaVertexHit = tools.findAreaVertexNear?.(point, { zoomScale: view.zoomScale });
+      if (areaVertexHit) {
+        tools.beginAreaVertexDrag?.(areaVertexHit.areaId, areaVertexHit.vertexIndex);
+        dragRef.current = { mode: "area-vertex" };
+        return;
+      }
+      if (tools.areaMode !== "rectangle") {
+        dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
+        return;
+      }
+      tools.beginAreaRectangle?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
       dragRef.current = { mode: "area-rectangle" };
       return;
     }
     dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
-  }, [eventToPagePoint, tools, view.panX, view.panY]);
+  }, [eventToPagePoint, tools, view.panX, view.panY, view.zoomScale]);
 
   const handleMouseMove = useCallback((event) => {
     updateToolHover(event);
@@ -196,11 +238,21 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     if (!drag) return;
     if (drag.mode === "area-rectangle") {
       const point = eventToPagePoint(event);
-      if (point) tools?.updateAreaRectangle?.(point);
+      if (point) tools?.updateAreaRectangle?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
+      return;
+    }
+    if (drag.mode === "area-vertex") {
+      const point = eventToPagePoint(event);
+      if (point) tools?.updateAreaVertexDrag?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
+      return;
+    }
+    if (drag.mode === "vertex") {
+      const point = eventToPagePoint(event);
+      if (point) tools?.updateWallVertexDrag?.(point, { zoomScale: view.zoomScale, disableSnap: event.altKey });
       return;
     }
     setView((prev) => panViewFromDrag(prev, drag, event));
-  }, [eventToPagePoint, tools, updateToolHover]);
+  }, [eventToPagePoint, tools, updateToolHover, view.zoomScale]);
 
   const handleMouseUp = useCallback((event) => {
     const drag = dragRef.current;
@@ -208,13 +260,35 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     event.currentTarget?.releasePointerCapture?.(event.pointerId);
     if (!drag) return;
     if (drag.mode === "area-rectangle") {
-      tools?.finishAreaRectangle?.();
+      const point = eventToPagePoint(event);
+      tools?.finishAreaRectangle?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
+      return;
+    }
+    if (drag.mode === "area-vertex") {
+      tools?.endAreaVertexDrag?.();
+      return;
+    }
+    if (drag.mode === "vertex") {
+      tools?.endWallVertexDrag?.({ zoomScale: view.zoomScale });
       return;
     }
     if (isClickPan(drag, event, CLICK_THRESHOLD_PX) && tools?.activeTool !== "pan") {
       handleToolClick(event);
     }
-  }, [handleToolClick, tools]);
+  }, [eventToPagePoint, handleToolClick, tools, view.zoomScale]);
+
+  const handleDoubleClick = useCallback((event) => {
+    const point = eventToPagePoint(event);
+    if (!point || !tools || (tools.activeTool !== "edit-walls" && tools.activeTool !== "edit")) return;
+    const hitFields = tools.activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
+    for (const field of hitFields) {
+      const hit = tools.findWallSegmentNear?.(point, { field, zoomScale: view.zoomScale, toleranceScreenPx: 18 });
+      if (hit?.segment?.id) {
+        tools.insertWallPointAt?.(point, { field, zoomScale: view.zoomScale });
+        return;
+      }
+    }
+  }, [eventToPagePoint, tools, view.zoomScale]);
 
   useEffect(() => {
     const clearDrag = () => { dragRef.current = null; };
@@ -228,7 +302,12 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     };
   }, []);
 
-  const cursor = tools?.activeTool === "pan" ? "grab" : (TOOL_CURSORS[tools?.activeTool] || "grab");
+  const cursor = cursorForPlanViewer({
+    activeTool: tools?.activeTool,
+    dragMode: dragRef.current?.mode,
+    editHoverTarget: tools?.wallEditHoverTarget,
+    areaHoverTarget: tools?.areaEditHoverTarget,
+  }) || TOOL_CURSORS[tools?.activeTool] || "grab";
 
   return (
     <div style={S.wrap}>
@@ -253,6 +332,7 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
         onPointerUp={handleMouseUp}
         onPointerCancel={handleMouseUp}
         onPointerLeave={handleMouseUp}
+        onDoubleClick={handleDoubleClick}
         data-testid="plan-viewport"
       >
         <div

@@ -11,6 +11,7 @@ import { extractVectorSegmentsFromOperatorList } from "../geometry/planVectorExt
 import { buildPlanGeometryIndex } from "../geometry/planGeometryIndex.js";
 import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
+import { rectangleAreaMetrics, rectangleVerticesFromCorners } from "../takeoff/rectangleArea.js";
 import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
 import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 import { findRasterWallBandInImage, findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
@@ -112,6 +113,7 @@ for (const rotation of [0, 90, 180, 270]) {
   assert.equal(cursorForPlanViewer({ activeTool: "edit-walls", editHoverTarget: { type: "point" } }), "grab");
   assert.equal(cursorForPlanViewer({ activeTool: "edit-walls", editHoverTarget: { type: "segment" } }), "pointer");
   assert.equal(cursorForPlanViewer({ activeTool: "edit-walls", dragMode: "vertex" }), "grabbing");
+  assert.equal(cursorForPlanViewer({ activeTool: "area", dragMode: "area-vertex" }), "grabbing");
 }
 
 // ---- traced points remain document-stable across zoom and pan --------------
@@ -250,14 +252,30 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   assert.equal(result.snap, null);
 }
 
-// ---- close local corner snaps, distant/line candidates do not --------------
+// ---- close local corner and wall-edge candidates snap; Alt/raw does not ----
 {
   const raw = { x: 100, y: 100 };
   const closeCorner = { type: "intersection", point: { x: 102, y: 99 }, distance: 2 };
   assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner }).point, closeCorner.point);
   const lineCandidate = { type: "line", point: { x: 100, y: 80 }, distance: 1 };
-  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: lineCandidate }).point, raw);
+  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: lineCandidate }).point, lineCandidate.point);
   assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner, disableSnap: true }).point, raw);
+}
+
+// ---- rectangle area supports click-drag in any direction ------------------
+{
+  const forward = rectangleVerticesFromCorners({ x: 10, y: 20 }, { x: 50, y: 80 });
+  const reverse = rectangleVerticesFromCorners({ x: 50, y: 80 }, { x: 10, y: 20 });
+  assert.deepEqual(reverse, forward);
+  assert.deepEqual(forward, [
+    { x: 10, y: 20 },
+    { x: 50, y: 20 },
+    { x: 50, y: 80 },
+    { x: 10, y: 80 },
+  ]);
+  const metrics = rectangleAreaMetrics(forward, 1000);
+  assert.equal(metrics.calculatedAreaM2, 2400);
+  assert.equal(metrics.confirmedAreaM2, 2400);
 }
 
 // ---- no automatic wall extension: two clicks create one exact segment ------
@@ -585,10 +603,15 @@ for (const extra of [
 // ---- highlight and area point rendering use reduced visible widths --------
 {
   const overlay = fs.readFileSync(new URL("../components/TakeoffCanvasOverlay.jsx", import.meta.url), "utf8");
+  const toolbar = fs.readFileSync(new URL("../components/TakeoffToolbar.jsx", import.meta.url), "utf8");
   assert.ok(overlay.includes("const strokeWidth = selected ? 2.5 : hovered ? 2 : 2"), "selected exterior highlight should render at 2-3px");
   assert.ok(overlay.includes('data-testid="exterior-highlight-junction-hit-area"'), "exterior junction hit area should remain separate");
   assert.ok(overlay.includes("r={10} fill=\"transparent\""), "exterior/area hit radius should remain easy to grab");
   assert.ok(overlay.includes("r={i === 0 ? 3.8 : 3.2}"), "area point visible radius should be reduced");
+  assert.ok(overlay.includes('data-testid="area-vertex-handle"'), "saved rectangle areas should expose corner handles");
+  assert.ok(!toolbar.includes("area-mode-room-detect"), "Area Tool should offer Rectangle and Manual Polygon only");
+  assert.ok(toolbar.includes("area-mode-rectangle"));
+  assert.ok(toolbar.includes("area-mode-manual-polygon"));
 }
 
 // ---- real sample plan rejects parallel annotation clutter -----------------

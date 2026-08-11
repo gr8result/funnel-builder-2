@@ -165,9 +165,6 @@ export default function TakeoffToolbar({ page, tools }) {
 
         {tools.activeTool === "area" && (
           <>
-            <SegmentedButton active={tools.areaMode === "room-detect"} onClick={() => tools.setAreaMode("room-detect")} testId="area-mode-room-detect">
-              Room Detect
-            </SegmentedButton>
             <SegmentedButton active={tools.areaMode === "rectangle"} onClick={() => tools.setAreaMode("rectangle")} testId="area-mode-rectangle">
               Rectangle
             </SegmentedButton>
@@ -188,11 +185,8 @@ export default function TakeoffToolbar({ page, tools }) {
                 Cancel Trace
               </button>
             )}
-            {tools.areaMode === "room-detect" && (
-              <span style={S.wallStatus} data-testid="area-room-detect-hint">Click inside a room to detect its wall boundary.</span>
-            )}
             {tools.areaMode === "rectangle" && (
-              <span style={S.wallStatus} data-testid="area-rectangle-hint">Drag over a room. The rectangle is only a search region.</span>
+              <span style={S.wallStatus} data-testid="area-rectangle-hint">Drag to create a rectangle area.</span>
             )}
             {wallsConfirmed && tools.areaValidation.valid && (
               <button type="button" style={S.miniButton} onClick={() => tools.setAreaDialogOpen(true)} data-testid="area-from-exterior">

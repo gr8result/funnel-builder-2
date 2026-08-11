@@ -44,6 +44,7 @@ import {
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
 import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
 import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
+import { rectangleAreaMetrics, rectangleVerticesFromCorners } from "../takeoff/rectangleArea.js";
 import {
   validateExteriorWallsForConfirmation,
   validatePerimeterForArea,
@@ -53,7 +54,7 @@ import {
 import { polygonAreaDocUnits2, isSimplePolygon } from "../takeoff/geometry.js";
 import { offsetPolygonInward, offsetPolygonOutward } from "../takeoff/polygonOffset.js";
 import { defaultPlanRegion, normalizeRegionCorners } from "../takeoff/planRegion.js";
-import { detectRoomBoundary, rectFromCorners } from "../takeoff/roomBoundaryDetection.js";
+import { detectRoomBoundary } from "../takeoff/roomBoundaryDetection.js";
 
 const UNDO_LIMIT = 50;
 const VERTEX_HIT_TOLERANCE_SCREEN_PX = 12;
@@ -395,7 +396,7 @@ export function tracedSegmentHasWallEvidence(from, to, planGeometryIndex, tolera
 }
 
 export function resolveManualTracePoint(rawPoint, { snapCandidate = null, lastVertex = null, rotation = 0, forcedAxis = null, disableSnap = false } = {}) {
-  if (!disableSnap && snapCandidate && snapCandidate.type !== "line") {
+  if (!disableSnap && snapCandidate) {
     return { point: snapCandidate.point, axis: null, angleDegrees: null, locked: false, snap: snapCandidateToMetadata(snapCandidate) };
   }
   if (lastVertex) {
@@ -459,10 +460,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [openingStart, setOpeningStart] = useState(null); // Point | null — first click, awaiting the second
 
   // Manual Area tracing (click each corner, Finish/first-point closes it).
-  const [areaMode, setAreaMode] = useState("manual-polygon"); // "room-detect" | "rectangle" | "manual-polygon"
+  const [areaMode, setAreaMode] = useState("rectangle"); // "room-detect" | "rectangle" | "manual-polygon"
   const [areaDraftVertices, setAreaDraftVertices] = useState([]);
   const [areaHoverPoint, setAreaHoverPoint] = useState(null);
   const [areaSearchDraft, setAreaSearchDraft] = useState(null); // { start, end } | null
+  const [draggingAreaVertex, setDraggingAreaVertex] = useState(null); // { areaId, vertexIndex, vertices }
 
   const [layerVisibility, setLayerVisibilityState] = useState(() => ({ ...createDefaultLayerVisibility(), ...(page?.layerVisibility || {}) }));
 
@@ -489,6 +491,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setAreaDraftVertices([]);
     setAreaHoverPoint(null);
     setAreaSearchDraft(null);
+    setDraggingAreaVertex(null);
     setManualAreaDialogOpen(false);
     setCloseShapeError(null);
     setCloseShapeSuccessMessage("");
@@ -1676,6 +1679,31 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const insertPointOnSelectedSegment = splitSelectedSegment;
 
+  const insertWallPointAt = useCallback((rawPoint, { field = selectedField, zoomScale = 1 } = {}) => {
+    const hit = findWallSegmentNear(rawPoint, { field, zoomScale });
+    const graph = page?.[field];
+    const segment = hit?.segment;
+    if (!graph || !segment || segment.locked) return null;
+    const a = graph.vertices.find((v) => v.id === segment.aId);
+    const b = graph.vertices.find((v) => v.id === segment.bId);
+    if (!a || !b) return null;
+    const { point: projected } = projectOntoWall(hit.point || rawPoint, a, b);
+    const planCandidate = bestSnapCandidate(projected, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex, page });
+    const insertPoint = planCandidate ? planCandidate.point : projected;
+    let insertedVertexId = null;
+    mutateWallField(field, (g) => {
+      const next = splitSegment(g, segment.id, insertPoint);
+      const beforeIds = new Set((g.vertices || []).map((vertex) => vertex.id));
+      insertedVertexId = next.vertices.find((vertex) => !beforeIds.has(vertex.id))?.id || null;
+      return next;
+    });
+    setSelectedField(field);
+    setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
+    setSelectedVertexId(insertedVertexId);
+    return insertedVertexId;
+  }, [selectedField, page, findWallSegmentNear, mutateWallField, planGeometryIndex]);
+
   // Validates *before* mutating — a failed close (e.g. the closing segment
   // would cross another wall) leaves the graph untouched and surfaces the
   // spec-exact reason via closeShapeError, rather than silently no-op'ing or
@@ -1865,12 +1893,39 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // exterior perimeter must work equally well" for area, and a traced area
   // need not correspond to any wall perimeter at all (a patio, a void, etc).
 
-  const updateAreaHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
-    const candidates = buildSnapCandidates(page);
-    const { point } = snapPoint(rawPoint, candidates, { zoomScale });
-    const planCandidate = bestSnapCandidate(rawPoint, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
-    setAreaHoverPoint(planCandidate ? planCandidate.point : point);
+  const resolveAreaSnapPoint = useCallback((rawPoint, { zoomScale = 1, disableSnap = false, altKey = false } = {}) => {
+    if (disableSnap || altKey) return rawPoint;
+    const planCandidate = bestSnapCandidate(rawPoint, {
+      toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX,
+      zoomScale,
+      planGeometryIndex,
+      page,
+    });
+    return planCandidate ? planCandidate.point : rawPoint;
   }, [page, planGeometryIndex]);
+
+  const areaMetricsForVertices = useCallback((vertices) => {
+    return rectangleAreaMetrics(vertices, page?.calibration?.mmPerDocumentUnit);
+  }, [page?.calibration]);
+
+  const createRectangleArea = useCallback((vertices) => {
+    const metrics = areaMetricsForVertices(vertices);
+    return createArea({
+      id: generateId("area"),
+      name: "Rectangle Area",
+      areaType: "Custom",
+      vertices,
+      outerBoundary: vertices,
+      source: "manual-rectangle",
+      confirmed: true,
+      confirmedAt: new Date().toISOString(),
+      ...metrics,
+    });
+  }, [areaMetricsForVertices]);
+
+  const updateAreaHover = useCallback((rawPoint, options = {}) => {
+    setAreaHoverPoint(resolveAreaSnapPoint(rawPoint, options));
+  }, [resolveAreaSnapPoint]);
 
   const [manualAreaDialogOpen, setManualAreaDialogOpen] = useState(false);
   const [detectedRoomCandidate, setDetectedRoomCandidate] = useState(null);
@@ -1892,26 +1947,23 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       return;
     }
     if (areaMode === "rectangle") {
+      const snapped = resolveAreaSnapPoint(rawPoint, { zoomScale });
       if (!areaSearchDraft?.start) {
-        setAreaSearchDraft({ start: rawPoint, end: rawPoint });
+        setAreaSearchDraft({ start: snapped, end: snapped });
         return;
       }
-      const searchRect = rectFromCorners(areaSearchDraft.start, rawPoint || areaSearchDraft.end || areaSearchDraft.start);
-      const candidate = detectRoomBoundary({
-        page,
-        searchRect,
-        exclusionCandidates: page?.roomExclusionCandidates || [],
-        wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
-      });
+      const vertices = rectangleVerticesFromCorners(areaSearchDraft.start, snapped);
       setAreaSearchDraft(null);
-      applyDetectedRoomCandidate(candidate);
+      if (!vertices.length) return;
+      pushUndo("areas", page?.areas || []);
+      commitPage({ areas: [...(page?.areas || []), createRectangleArea(vertices)] });
       return;
     }
     if (areaMode !== "manual-polygon") return;
     const candidates = buildSnapCandidates(page);
     const { point } = snapPoint(rawPoint, candidates, { zoomScale });
     const planCandidate = bestSnapCandidate(rawPoint, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
-    const finalPoint = planCandidate ? planCandidate.point : point;
+    const finalPoint = resolveAreaSnapPoint(planCandidate ? planCandidate.point : point, { zoomScale });
 
     if (areaDraftVertices.length >= 3) {
       const closeToleranceDocUnits = SNAP_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01);
@@ -1928,29 +1980,95 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     planGeometryIndex,
     areaDraftVertices,
     applyDetectedRoomCandidate,
+    resolveAreaSnapPoint,
+    createRectangleArea,
+    pushUndo,
+    commitPage,
   ]);
 
-  const beginAreaRectangle = useCallback((rawPoint) => {
-    setAreaSearchDraft({ start: rawPoint, end: rawPoint });
-  }, []);
+  const beginAreaRectangle = useCallback((rawPoint, options = {}) => {
+    const point = resolveAreaSnapPoint(rawPoint, options);
+    setAreaSearchDraft({ start: point, end: point });
+  }, [resolveAreaSnapPoint]);
 
-  const updateAreaRectangle = useCallback((rawPoint) => {
-    setAreaSearchDraft((current) => (current ? { ...current, end: rawPoint } : current));
-  }, []);
+  const updateAreaRectangle = useCallback((rawPoint, options = {}) => {
+    const point = resolveAreaSnapPoint(rawPoint, options);
+    setAreaSearchDraft((current) => (current ? { ...current, end: point } : current));
+  }, [resolveAreaSnapPoint]);
 
-  const finishAreaRectangle = useCallback((rawPoint, startPoint = null) => {
+  const finishAreaRectangle = useCallback((rawPoint = null, options = {}, startPoint = null) => {
     const start = startPoint || areaSearchDraft?.start;
     if (!start) return;
-    const searchRect = rectFromCorners(start, rawPoint || areaSearchDraft?.end || start);
-    const candidate = detectRoomBoundary({
-      page,
-      searchRect,
-      exclusionCandidates: page?.roomExclusionCandidates || [],
-      wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
-    });
+    const end = rawPoint ? resolveAreaSnapPoint(rawPoint, options) : areaSearchDraft?.end || start;
+    const vertices = rectangleVerticesFromCorners(start, end);
     setAreaSearchDraft(null);
-    applyDetectedRoomCandidate(candidate);
-  }, [areaSearchDraft, page, applyDetectedRoomCandidate]);
+    if (!vertices.length) return;
+    pushUndo("areas", page?.areas || []);
+    commitPage({ areas: [...(page?.areas || []), createRectangleArea(vertices)] });
+  }, [areaSearchDraft, page, commitPage, pushUndo, resolveAreaSnapPoint, createRectangleArea]);
+
+  const findAreaVertexNear = useCallback((point, { zoomScale = 1, toleranceScreenPx = VERTEX_HIT_TOLERANCE_SCREEN_PX } = {}) => {
+    const toleranceDocUnits = toleranceScreenPx / Math.max(zoomScale, 0.01);
+    let best = null;
+    let bestDistance = toleranceDocUnits;
+    (page?.areas || []).forEach((area) => {
+      const vertices = area.outerBoundary || area.vertices || [];
+      vertices.forEach((vertex, vertexIndex) => {
+        const d = distance(vertex, point);
+        if (d <= bestDistance) {
+          best = { areaId: area.id, vertexIndex, vertex };
+          bestDistance = d;
+        }
+      });
+    });
+    return best;
+  }, [page]);
+
+  const beginAreaVertexDrag = useCallback((areaId, vertexIndex) => {
+    const area = (page?.areas || []).find((candidate) => candidate.id === areaId);
+    const vertices = area?.outerBoundary || area?.vertices || [];
+    if (!area || !vertices[vertexIndex]) return;
+    setDraggingAreaVertex({ areaId, vertexIndex, vertices: vertices.map((vertex) => ({ x: vertex.x, y: vertex.y })) });
+  }, [page]);
+
+  const updateAreaVertexDrag = useCallback((rawPoint, options = {}) => {
+    const point = resolveAreaSnapPoint(rawPoint, options);
+    setDraggingAreaVertex((current) => {
+      if (!current) return current;
+      const nextVertices = current.vertices.map((vertex) => ({ ...vertex }));
+      const index = current.vertexIndex;
+      if (nextVertices.length === 4) {
+        const opposite = nextVertices[(index + 2) % 4];
+        return { ...current, vertices: rectangleVerticesFromCorners(opposite, point) };
+      }
+      nextVertices[index] = point;
+      return { ...current, vertices: nextVertices };
+    });
+  }, [resolveAreaSnapPoint]);
+
+  const endAreaVertexDrag = useCallback(() => {
+    setDraggingAreaVertex((current) => {
+      if (!current) return null;
+      const areas = page?.areas || [];
+      const area = areas.find((candidate) => candidate.id === current.areaId);
+      if (!area || current.vertices.length < 3 || !isSimplePolygon(current.vertices)) return null;
+      const metrics = areaMetricsForVertices(current.vertices);
+      pushUndo("areas", areas);
+      commitPage({
+        areas: areas.map((candidate) => candidate.id === current.areaId
+          ? {
+            ...candidate,
+            vertices: current.vertices,
+            outerBoundary: current.vertices,
+            ...metrics,
+            confirmed: true,
+            confirmedAt: candidate.confirmedAt || new Date().toISOString(),
+          }
+          : candidate),
+      });
+      return null;
+    });
+  }, [page, areaMetricsForVertices, pushUndo, commitPage]);
 
   // Toolbar's Finish action — closes the polygon without needing to click
   // back on the first point.
@@ -2197,10 +2315,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // and continue the chain, double-click or Finish to end the run. Escape
   // (handled by resetDrafts) cancels only the segment in progress.
 
-  const resolveWallDrawPoint = useCallback((rawPoint, { rotation = 0, zoomScale = 1, disableSnap = false } = {}) => {
+  const resolveWallDrawPoint = useCallback((rawPoint, { rotation = 0, zoomScale = 1, disableSnap = false, altKey = false } = {}) => {
     const field = wallFieldForTool(activeTool);
     if (!field) return null;
-    const candidate = disableSnap ? null : bestSnapCandidate(rawPoint, {
+    const snapDisabled = disableSnap || altKey;
+    const candidate = snapDisabled ? null : bestSnapCandidate(rawPoint, {
       toleranceScreenPx: field === "exteriorWalls" ? WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX : SNAP_TOLERANCE_SCREEN_PX,
       zoomScale,
       planGeometryIndex,
@@ -2208,7 +2327,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       excludeVertexId: wallDrawChainVertexId,
     });
     const lastVertex = wallDrawChainVertexId ? page?.[field]?.vertices.find((v) => v.id === wallDrawChainVertexId) : null;
-    return resolveManualTracePoint(rawPoint, { snapCandidate: candidate, lastVertex, rotation, forcedAxis, disableSnap });
+    return resolveManualTracePoint(rawPoint, { snapCandidate: candidate, lastVertex, rotation, forcedAxis, disableSnap: snapDisabled });
   }, [activeTool, wallDrawChainVertexId, page, forcedAxis, planGeometryIndex]);
 
   const updateWallDrawHover = useCallback((rawPoint, options) => {
@@ -2317,7 +2436,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     acceptAllHighConfidenceSegments, reviewAutomaticCandidates, rejectAutomaticCandidates, traceMissingExteriorSections,
     suggestedPlanRegion, planRegionDraftCorner, planRegionHoverPoint,
     updatePlanRegionHover, handlePlanRegionClick, acceptSuggestedPlanRegion, clearPlanRegion,
-    findWallVertexNear, handleWallCanvasClick,
+    findWallVertexNear, findWallSegmentNear, handleWallCanvasClick,
     findWallVertexNearAny, handleEditToolClick,
     beginWallVertexDrag, updateWallVertexDrag, endWallVertexDrag, draggingVertex,
     updateWallEditHover, wallEditHoverTarget, wallEditSnapPreview, wallEditValidation,
@@ -2326,7 +2445,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     canDeleteWallSelection, deleteSelectedWallItem,
     changeSelectedSegmentWallType, setSelectedSegmentThickness,
     setSelectedSegmentLocked, moveSelectedSegmentToWallGraph,
-    convertSelectedSegmentToManual, splitSelectedSegment, insertPointOnSelectedSegment,
+    convertSelectedSegmentToManual, splitSelectedSegment, insertPointOnSelectedSegment, insertWallPointAt,
     closeWallPerimeter, closeShapeError, closeShapeSuccessMessage, canCloseShape,
     canClearExterior, clearExteriorConfirmOpen, requestClearExterior, cancelClearExterior, confirmClearExterior,
     wallValidation, confirmExteriorWalls, totalPerimeterMm,
@@ -2350,6 +2469,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     areaMode, setAreaMode,
     areaDraftVertices, areaHoverPoint, areaSearchDraft,
     updateAreaHover, handleAreaCanvasClick, beginAreaRectangle, updateAreaRectangle, finishAreaRectangle,
+    draggingAreaVertex, findAreaVertexNear, beginAreaVertexDrag, updateAreaVertexDrag, endAreaVertexDrag,
     finishAreaTrace, cancelAreaTrace,
     manualAreaDialogOpen, setManualAreaDialogOpen, manualAreaCandidate, confirmManualArea,
     updateArea, deleteArea,

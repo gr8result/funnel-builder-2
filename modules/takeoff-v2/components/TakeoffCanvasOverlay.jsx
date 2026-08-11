@@ -158,13 +158,24 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
         {/* Confirmed area polygon fills */}
         {!isExteriorHighlighter && showLayer("areas") && (page?.areas || []).map((area) => {
-          const boundary = area.outerBoundary || area.vertices || [];
+          const boundary = tools.draggingAreaVertex?.areaId === area.id
+            ? tools.draggingAreaVertex.vertices
+            : area.outerBoundary || area.vertices || [];
           const pts = boundary.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
           const areaCenter = project(centroid(boundary));
           return (
             <g key={area.id} data-testid="area-polygon">
               <polygon points={pts} fill="rgba(124,58,237,0.15)" stroke="#7c3aed" strokeWidth={1.5} opacity={area.included === false ? 0.4 : 1} />
               <text x={areaCenter.x} y={areaCenter.y} textAnchor="middle" fontSize={11} fontWeight={700} fill="#5b21b6">{area.name}</text>
+              {isAreaTool && boundary.map((vertex, vertexIndex) => (
+                <AreaVertexHandle
+                  key={`${area.id}-${vertexIndex}`}
+                  vertex={vertex}
+                  vertexIndex={vertexIndex}
+                  project={project}
+                  dragging={tools.draggingAreaVertex?.areaId === area.id && tools.draggingAreaVertex.vertexIndex === vertexIndex}
+                />
+              ))}
               {(area.holes || []).map((hole) => {
                 const holePts = hole.vertices.map((p) => project(p)).map((p) => `${p.x},${p.y}`).join(" ");
                 return <polygon key={hole.id} points={holePts} fill="rgba(249,115,22,0.20)" stroke="#f97316" strokeWidth={1.2} strokeDasharray="4 3" data-testid="area-exclusion-polygon" />;
@@ -732,6 +743,17 @@ function ManualAreaDraft({ vertices, hoverPoint, project }) {
           <circle cx={p.x} cy={p.y} r={0.9} fill={i === 0 ? "#7c3aed" : "#fff"} />
         </g>
       ))}
+    </g>
+  );
+}
+
+function AreaVertexHandle({ vertex, vertexIndex, project, dragging }) {
+  const p = project(vertex);
+  return (
+    <g data-testid="area-vertex-handle" data-vertex-index={vertexIndex} data-dragging={dragging ? "true" : "false"}>
+      <circle cx={p.x} cy={p.y} r={10} fill="transparent" stroke="transparent" data-testid="area-vertex-hit-area" />
+      <circle cx={p.x} cy={p.y} r={dragging ? 5 : 4} fill="#fff" stroke="#7c3aed" strokeWidth={1.8} />
+      <circle cx={p.x} cy={p.y} r={1.2} fill="#7c3aed" />
     </g>
   );
 }
