@@ -673,9 +673,24 @@ function graphFromPolygon(points, stitchToleranceDocUnits) {
 
 export function detectExteriorWallsFromGeometry({ planGeometryIndex, page = {}, planRegion = null, stitchToleranceDocUnits = 6 } = {}) {
   const traceGraphResult = detectExteriorFromTraceGraph({ planGeometryIndex, page, planRegion });
-  if (traceGraphResult?.useful) {
-    return traceGraphResult;
-  }
+  // Production Detect Exterior is trace-graph only. The older wall-band/envelope
+  // code below is intentionally unreachable so it cannot create unsupported
+  // free-space polygon edges on the plan.
+  return traceGraphResult || {
+    connected: true,
+    vertices: [],
+    segments: [],
+    isClosed: false,
+    exteriorPerimeter: null,
+    detectionConfidence: 0,
+    completeness: 0,
+    connectedComponents: 0,
+    openGaps: 0,
+    useful: false,
+    warnings: ["Automatic exterior not detected reliably. Use Trace Exterior."],
+    diagnostics: { source: "manual-trace-graph", disabledFallback: "vector-envelope-polygon" },
+    message: "Automatic exterior not detected reliably. Use Trace Exterior.",
+  };
 
   const rawSegments = typeof planGeometryIndex?.getCandidateWallSegments === "function"
     ? planGeometryIndex.getCandidateWallSegments()

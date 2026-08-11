@@ -812,14 +812,21 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       const missingSectionCount = Number(result?.exteriorPerimeter?.gapCount ?? result?.openGaps ?? 0) || 0;
       const hasCandidate = Boolean(result?.exteriorPerimeter?.closed && candidateSegments.length >= 3 && candidateVertices.length >= 3);
       const hasSelfIntersections = Number(result?.exteriorPerimeter?.selfIntersectionCount ?? result?.exteriorPerimeter?.selfIntersections ?? 0) > 0;
-      if (!hasCandidate || hasSelfIntersections) {
+      const manualTraceProof = Array.isArray(result?.diagnostics?.manualTraceProof) ? result.diagnostics.manualTraceProof : [];
+      const everySegmentTraceable = candidateSegments.length > 0 &&
+        manualTraceProof.length === candidateSegments.length &&
+        manualTraceProof.every((item) => item.traceEdgeId && item.manualTraceable === true && item.manualTraceValidation === "PASS");
+      if (!hasCandidate || hasSelfIntersections || !everySegmentTraceable) {
+        const traceableSectionCount = Number(result?.diagnostics?.traceGraphEdgeCount || 0);
         commitPage({
           exteriorWalls: null,
           wallDetectionDiagnostics: result?.diagnostics || null,
           wallDetectionSummary: null,
         });
         setWallDetectionStatus("unavailable");
-        setWallDetectionMessage("Exterior not detected reliably. Use Trace Exterior.");
+        setWallDetectionMessage(traceableSectionCount > 0
+          ? `Automatic exterior not detected reliably. Detected traceable exterior sections: ${traceableSectionCount}. Use Trace Exterior.`
+          : "Automatic exterior not detected reliably. Use Trace Exterior.");
         setWallDetectionCode("NO_EXTERIOR_BOUNDARY");
         return;
       }

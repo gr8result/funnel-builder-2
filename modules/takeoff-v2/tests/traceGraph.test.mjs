@@ -38,7 +38,8 @@ const rectangle = [
 
   const walked = walkExteriorBoundary(graph, { planGeometryIndex: index });
   assert.equal(walked.ok, true, "clockwise outside-face traversal should close the rectangle");
-  assert.equal(walked.loop.points.length, 4, "internal branch must be rejected from the exterior loop");
+  assert.equal(walked.loop.edges.some((edge) => edge.lineIds.includes("internal-branch")), false, "internal branch must be rejected from the exterior loop");
+  assert.equal(walked.loop.edges.every((edge) => edge.traceable && edge.id.startsWith("te-")), true, "closed loop must use connected traceable TraceEdges only");
   assert.equal(walked.loop.bridgedGaps.length, 0, "solid rectangle should have no gaps");
   walked.loop.edges.forEach((edge, edgeIndex) => {
     assert.equal(
@@ -64,10 +65,8 @@ const rectangle = [
   ];
   const index = indexFor(opened);
   const result = detectExteriorFromTraceGraph({ planGeometryIndex: index });
-  assert.equal(result.useful, true, "small compatible opening should be bridged");
-  assert.equal(result.exteriorPerimeter.bridgedGaps.length, 1, "small opening bridge should be recorded");
-  assert.equal(result.exteriorPerimeter.selfIntersectionCount, 0, "bridged loop must not self-intersect");
-  assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable), "bridged auto result must still prove trace snap reachability");
+  assert.equal(result.useful, false, "nearest-point bridge must be rejected instead of auto-completed");
+  assert.equal(result.exteriorPerimeter, null, "small blank opening must not render a fake perimeter");
 }
 
 {
@@ -81,6 +80,33 @@ const rectangle = [
   const result = detectExteriorFromTraceGraph({ planGeometryIndex: indexFor(largeGap) });
   assert.equal(result.useful, false, "large blank gap must reject automatic exterior");
   assert.equal(result.exteriorPerimeter, null, "large gap must not render a partial fake perimeter");
+}
+
+{
+  const index = indexFor(rectangle);
+  assert.equal(
+    manualTraceCanSnapTo({
+      a: { x: 20, y: 20 },
+      b: { x: 180, y: 140 },
+      lineIds: ["top", "right"],
+      bridgedGapLength: 0,
+    }, { planGeometryIndex: index }),
+    false,
+    "unsupported free-space diagonal must be rejected"
+  );
+  assert.equal(
+    manualTraceCanSnapTo({
+      a: { x: 94, y: 20 },
+      b: { x: 102, y: 20 },
+      lineIds: ["top-a", "top-b"],
+      bridgedGapLength: 8,
+    }, { planGeometryIndex: indexFor([
+      line("top-a", { x: 20, y: 20 }, { x: 94, y: 20 }),
+      line("top-b", { x: 102, y: 20 }, { x: 180, y: 20 }),
+    ]) }),
+    false,
+    "blank-space crossing bridge must be rejected"
+  );
 }
 
 {

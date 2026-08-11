@@ -111,22 +111,18 @@ if (fs.existsSync(localSamplePath)) {
   });
 
   assert.ok(result, "expected a vector detection result");
-  assert.ok(result.diagnostics.source === "manual-trace-graph" || result.diagnostics.source === "vector");
-  assert.ok((result.diagnostics.traceGraph?.lineCount || result.traceGraphAttempt?.traceGraph?.lineCount || 0) > 100, "actual plan should expose substantial traceable geometry");
-  assert.equal(result.segments.length, result.exteriorPerimeter.points.length, "normal output should be polygon edges only");
-  assert.ok(result.segments.length >= 8 && result.segments.length <= 20, "actual plan should simplify to one clean perimeter, not dozens of raw candidates");
-  assert.equal(result.isClosed, true, "assembled exterior-envelope perimeter should be closed");
-  assert.equal(result.connectedComponents, 1, "assembled exterior perimeter should be one editable graph");
-  assert.equal(result.openGaps, 0, "assembled exterior perimeter should not have dangling gaps");
-  assert.equal(result.exteriorPerimeter.closed, true, "sample should produce a closed exterior perimeter object");
-  assert.equal(result.exteriorPerimeter.gapCount, 0, "sample perimeter should have no gaps");
-  assert.equal(result.exteriorPerimeter.selfIntersections, 0, "sample perimeter should not self-intersect");
-  assert.ok(result.exteriorPerimeter.points.length >= 8, "sample exterior perimeter should be an ordered polygon");
-  assert.equal(result.segments.filter((segment) => segment.confirmed).length, result.segments.length, "valid closed automatic perimeter should be active, not hidden as candidates");
-  if (result.diagnostics.manualTraceProof) {
-    assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable), "sample auto perimeter must be provably manual-traceable");
+  assert.equal(result.diagnostics.source, "manual-trace-graph", "production auto exterior must use the manual trace graph only");
+  assert.ok((result.diagnostics.traceGraph?.lineCount || 0) > 100, "actual plan should expose substantial traceable geometry");
+  if (result.useful) {
+    assert.equal(result.segments.length, result.exteriorPerimeter.points.length, "normal output should be trace-edge polygon edges only");
+    assert.equal(result.segments.every((segment) => segment.sourceTraceEdgeId?.startsWith("te-")), true, "every auto segment must reference a TraceEdge");
+    assert.equal(result.isClosed, true, "trace-edge perimeter should be closed when returned");
+    assert.equal(result.openGaps, 0, "trace-edge perimeter must not bridge dangling gaps");
+    assert.equal(result.exteriorPerimeter.gapCount, 0, "sample perimeter should have no gaps");
+    assert.ok(result.diagnostics.manualTraceProof.every((item) => item.manualTraceable && item.manualTraceValidation === "PASS"), "sample auto perimeter must be provably manual-traceable");
   } else {
-    assert.ok(result.traceGraphAttempt, "sample fallback must retain failed trace-graph diagnostics");
+    assert.equal(result.segments.length, 0, "failed trace graph must not render fallback wall-band segments");
+    assert.equal(result.exteriorPerimeter, null, "failed trace graph must return no confirmable polygon");
   }
 } else {
   console.warn(`Skipping real SAMPLE PLANS.pdf vector detection test; copy it to ${localSamplePath} or set TAKEOFF_SAMPLE_PLANS_PDF.`);

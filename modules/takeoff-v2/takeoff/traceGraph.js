@@ -5,7 +5,7 @@ import { buildPlanGeometryIndex } from "../geometry/planGeometryIndex.js";
 
 const NODE_TOLERANCE = 3;
 const MIN_EDGE_LENGTH = 4;
-const DEFAULT_SMALL_GAP_TOLERANCE = 10;
+const DEFAULT_SMALL_GAP_TOLERANCE = 0;
 
 function angle(a, b) {
   return Math.atan2(b.y - a.y, b.x - a.x);
@@ -118,6 +118,8 @@ function addEdge(edges, nodes, startNodeId, endNodeId, lineIds, bridgedGapLength
     length,
     angle: normalizeAngle(angle(a.point, b.point)),
     wallEvidence: Math.max(1, lineIds.filter(Boolean).length),
+    wallSupport: Math.max(1, lineIds.filter(Boolean).length),
+    traceable: bridgedGapLength === 0 && lineIds.filter(Boolean).length > 0,
     bridgedGapLength,
   };
   edges.set(key, edge);
@@ -238,7 +240,7 @@ export function buildTraceGraphFromPlanGeometry(planGeometryIndex, { planRegion 
     if (!byAxis.has(key)) byAxis.set(key, []);
     byAxis.get(key).push({ line, horizontal, fixed, bounds: lineBounds(line) });
   });
-  byAxis.forEach((group) => {
+  if (smallGapTolerance > 0) byAxis.forEach((group) => {
     group.sort((a, b) => (a.horizontal ? a.bounds.minX - b.bounds.minX : a.bounds.minY - b.bounds.minY));
     for (let i = 0; i < group.length - 1; i += 1) {
       const current = group[i];
@@ -374,18 +376,13 @@ function simplifyCollinearLoop(loop) {
 
 export function manualTraceCanSnapTo(segment, { planGeometryIndex, zoomScale = 1 } = {}) {
   if (!segment?.a || !segment?.b || !planGeometryIndex) return false;
-  if (segment.bridgedGapLength > 0 && segment.lineIds?.length >= 2) {
-    const aSnap = bestSnapCandidate(segment.a, { planGeometryIndex, toleranceScreenPx: 12, zoomScale });
-    const bSnap = bestSnapCandidate(segment.b, { planGeometryIndex, toleranceScreenPx: 12, zoomScale });
-    return Boolean(aSnap && bSnap);
-  }
+  if (segment.bridgedGapLength > 0) return false;
+  const lineIds = new Set(segment.lineIds || []);
+  if (!lineIds.size) return false;
   const midpoint = { x: (segment.a.x + segment.b.x) / 2, y: (segment.a.y + segment.b.y) / 2 };
   const snap = bestSnapCandidate(midpoint, { planGeometryIndex, toleranceScreenPx: 12, zoomScale });
   if (!snap) return false;
-  if (snap.type === "line") return Boolean(segment.lineIds?.includes(snap.lineId));
-  if (snap.type === "endpoint") return true;
-  if (snap.type === "intersection") return true;
-  return false;
+  return snap.type === "line" && lineIds.has(snap.lineId);
 }
 
 export function walkExteriorBoundary(graph, { planGeometryIndex = null, minArea = 1000 } = {}) {
@@ -398,15 +395,15 @@ export function walkExteriorBoundary(graph, { planGeometryIndex = null, minArea 
       if (!isSimplePolygon(loop.points)) return;
       const area = polygonAreaDocUnits2(loop.points);
       if (area < minArea) return;
-      const simplified = simplifyCollinearLoop(loop);
-      const unsupported = simplified.edges.filter((edge, index) => {
-        const a = simplified.points[index];
-        const b = simplified.points[(index + 1) % simplified.points.length];
+      const unsupported = loop.edges.filter((edge, index) => {
+        const a = loop.points[index];
+        const b = loop.points[(index + 1) % loop.points.length];
+        if (!edge.traceable || edge.bridgedGapLength > 0 || !graph.nodeById.has(edge.startNodeId) || !graph.nodeById.has(edge.endNodeId)) return true;
         return !manualTraceCanSnapTo({ a, b, lineIds: edge.lineIds, bridgedGapLength: edge.bridgedGapLength }, { planGeometryIndex });
       });
       if (unsupported.length) return;
-      simplified.debug.visitedNodeIds = loop.nodeIds;
-      loops.push({ ...simplified, area: polygonAreaDocUnits2(simplified.points), perimeter: polygonPerimeter(simplified.points), bridgedGaps: simplified.edges.filter((edge) => edge.bridgedGapLength > 0) });
+      loop.debug.visitedNodeIds = loop.nodeIds;
+      loops.push({ ...loop, area: polygonAreaDocUnits2(loop.points), perimeter: polygonPerimeter(loop.points), bridgedGaps: loop.edges.filter((edge) => edge.bridgedGapLength > 0) });
     });
   });
   loops.sort((a, b) => b.area - a.area || a.points.length - b.points.length);
@@ -463,7 +460,7 @@ export function detectExteriorFromTraceGraph({ planGeometryIndex, page = {}, pla
       openGaps: 0,
       useful: false,
       warnings: [walked.reason],
-      diagnostics: { traceGraph: graph.diagnostics, traceGraphNodeCount: graph.nodes.length, traceGraphEdgeCount: graph.edges.length, traceGraphDebug: walked.debug },
+      diagnostics: { source: "manual-trace-graph", traceGraph: graph.diagnostics, traceGraphNodeCount: graph.nodes.length, traceGraphEdgeCount: graph.edges.length, traceGraphDebug: walked.debug },
       message: "Automatic exterior not detected reliably. Use Trace Exterior.",
     };
   }
@@ -499,6 +496,17 @@ export function detectExteriorFromTraceGraph({ planGeometryIndex, page = {}, pla
       traceGraph: graph.diagnostics,
       traceGraphNodeCount: graph.nodes.length,
       traceGraphEdgeCount: graph.edges.length,
+      traceGraphNodes: graph.nodes.map((node) => ({ id: node.id, x: node.point.x, y: node.point.y, connectedEdgeIds: node.connectedEdgeIds })),
+      traceGraphEdges: graph.edges.map((edge) => ({
+        id: edge.id,
+        startNodeId: edge.startNodeId,
+        endNodeId: edge.endNodeId,
+        sourceLineIds: edge.lineIds,
+        angle: edge.angle,
+        length: edge.length,
+        wallSupport: edge.wallSupport,
+        traceable: edge.traceable,
+      })),
       traceGraphDebug: walked.debug,
       startNodeId: walked.debug.startNodeId,
       finalLoop: {
@@ -507,19 +515,32 @@ export function detectExteriorFromTraceGraph({ planGeometryIndex, page = {}, pla
           id: edge.id,
           from: walked.loop.points[index],
           to: walked.loop.points[(index + 1) % walked.loop.points.length],
+          startNodeId: edge.startNodeId,
+          endNodeId: edge.endNodeId,
           lineIds: edge.lineIds,
           bridgedGapLength: edge.bridgedGapLength,
+          whySelected: "outer-face clockwise traceable edge walk",
         })),
       },
       manualTraceProof: exteriorGraph.segments.map((segment, index) => ({
         segmentId: segment.id,
         traceEdgeId: segment.sourceTraceEdgeId,
-      manualTraceable: manualTraceCanSnapTo({
+        sourceLineIds: segment.sourceLineIds,
+        startNodeId: walked.loop.edges[index]?.startNodeId || null,
+        endNodeId: walked.loop.edges[index]?.endNodeId || null,
+        whySelected: "outer-face clockwise traceable edge walk",
+        manualTraceable: manualTraceCanSnapTo({
           a: walked.loop.points[index],
           b: walked.loop.points[(index + 1) % walked.loop.points.length],
           lineIds: segment.sourceLineIds,
           bridgedGapLength: segment.bridgedGapLength,
         }, { planGeometryIndex: normalizedIndex }),
+        manualTraceValidation: manualTraceCanSnapTo({
+          a: walked.loop.points[index],
+          b: walked.loop.points[(index + 1) % walked.loop.points.length],
+          lineIds: segment.sourceLineIds,
+          bridgedGapLength: segment.bridgedGapLength,
+        }, { planGeometryIndex: normalizedIndex }) ? "PASS" : "FAIL",
       })),
     },
     message: `Exterior candidate found - one closed perimeter from ${walked.loop.points.length} trace-graph corners.`,
