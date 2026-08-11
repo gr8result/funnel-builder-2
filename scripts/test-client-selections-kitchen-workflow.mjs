@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  EXTERIOR_REQUIREMENTS,
+  INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
   PRICE_STATES,
   areaTotals,
@@ -24,6 +26,8 @@ const sessionId = "session-test";
 const ovenRequirement = kitchenRequirementByKey("oven");
 const cooktopRequirement = kitchenRequirementByKey("cooktop");
 const sinkRequirement = kitchenRequirementByKey("sink");
+const bricksRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
+const roofingRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "roofing");
 
 const oven = createProductEntity({
   product_code: "OVEN-WEST-900",
@@ -90,6 +94,11 @@ const ovenPayload = createSelectionPayloadFromProduct({
 });
 
 assert.equal(KITCHEN_REQUIREMENTS.length, 15, "Kitchen opens as a 15-item checklist");
+assert.equal(EXTERIOR_REQUIREMENTS.length, 15, "Exterior opens as a polished 15-card category showroom");
+assert.equal(INTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "kitchen")?.imageKey, "kitchen", "Interior category card uses the Kitchen image key");
+assert.equal(bricksRequirement.imageKey, "bricks", "Bricks category card uses the bricks image key");
+assert.equal(roofingRequirement.imageKey, "roofing", "Roofing category card uses the roofing image key");
+assert.ok(!EXTERIOR_REQUIREMENTS.some((item) => /roof colour/i.test(item.label)), "Roof colour is consolidated inside Roofing");
 assert.equal(statusForRequirement(ovenRequirement, null), "not_started", "Oven starts grey / not selected");
 assert.equal(statusTone(statusForRequirement(ovenRequirement, null)), "grey", "Incomplete untouched item is grey");
 assert.equal(productsForRequirement([oven, cooktop, brick], ovenRequirement).length, 1, "Oven catalogue shows oven products only");
@@ -147,8 +156,21 @@ const savedJob = writeProductLibrarySelectionToJobFile({}, {
 assert.equal(productLibrarySelectionsFromJobFile(savedJob)[ovenPayload.selected_details.selectionKey].productName, "Westinghouse 900mm Oven", ".gr8job round trip preserves status/pricing shape");
 
 const pageSource = await import("node:fs/promises").then((fs) => fs.readFile(new URL("../pages/modules/builders/client-selections.js", import.meta.url), "utf8"));
-assert.ok(pageSource.includes("Kitchen Selection Checklist"), "Kitchen checklist renders as checklist");
+assert.ok(pageSource.includes("showroom-choose-area"), "Choose Area showroom screen has a stable test marker");
+assert.ok(pageSource.includes("showroom-exterior-categories"), "Exterior category screen has a stable test marker");
+assert.ok(pageSource.includes("showroom-interior-categories"), "Interior category screen has a stable test marker");
+assert.ok(pageSource.includes("showroom-kitchen-checklist"), "Kitchen checklist renders as a guided checklist");
+assert.ok(pageSource.includes("showroom-product-detail"), "Product detail opens as a showroom detail panel");
+assert.ok(pageSource.includes("Next Selection"), "Next Selection action is visible after selecting a product");
+assert.ok(pageSource.includes("Visualise Room"), "Room visualisation placeholder is reserved without building 3D");
+assert.ok(pageSource.includes("grid-template-columns: 1fr; } .requirementRow"), "Mobile layout collapses to card rows without table columns");
 assert.ok(!pageSource.includes("Category fallback"), "Checklist does not render competing product fallback");
+assert.ok(!pageSource.includes("selectionTable"), "Old schedule table is not the primary Client Selections workflow");
+assert.ok(!pageSource.includes("approved rows connected"), "Technical CSV row counts are hidden from clients");
+assert.ok(!pageSource.includes("source CSV"), "Source/debug CSV language is hidden from clients");
+assert.ok(!pageSource.includes("Add Product"), "Supplier admin add-product controls are hidden from clients");
+assert.ok(!pageSource.includes("Import Products"), "Supplier admin import controls are hidden from clients");
+assert.ok(!pageSource.includes("Product Library"), "Product Library admin navigation is hidden from clients");
 assert.ok(pageSource.includes("Back to Kitchen"), "Back returns to Kitchen checklist");
 
 console.log("Client Selections Kitchen workflow tests passed.");
