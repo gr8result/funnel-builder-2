@@ -3,11 +3,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
+  ALL_GUIDED_REQUIREMENTS,
+  EXTERIOR_REQUIREMENTS,
+  INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
   PRICE_STATES,
   areaTotals as guidedAreaTotals,
+  guidedRequirementByKey,
   kitchenRequirementByKey,
   priceStateForProduct,
+  productAllowance,
+  productClientPrice,
+  productsForRequirement,
   projectTotals as guidedProjectTotals,
   requirementImage,
   statusForRequirement,
@@ -220,19 +227,19 @@ const GUIDED_AREA_CARDS = [
 ];
 
 const EXTERIOR_CATEGORY_CARDS = [
-  ["bricks", "Bricks", GENERIC_IMAGE_URLS.bricks],
+  ["bricks", "Bricks", GENERIC_IMAGE_URLS.bricks, "bricks"],
   ["cladding", "Cladding", GENERIC_IMAGE_URLS.cladding],
-  ["roof", "Roof", GENERIC_IMAGE_URLS.roofing],
+  ["roof", "Roof", GENERIC_IMAGE_URLS.roofing, "roof"],
   ["roof-colour", "Roof Colour", GENERIC_IMAGE_URLS.roofColour],
   ["windows", "Windows", GENERIC_IMAGE_URLS.windows],
-  ["entry-door", "Entry Door", GENERIC_IMAGE_URLS.entryDoors],
-  ["garage-door", "Garage Door", GENERIC_IMAGE_URLS.garageDoors],
+  ["entry-door", "Entry Door", GENERIC_IMAGE_URLS.entryDoors, "entry-door"],
+  ["garage-door", "Garage Door", GENERIC_IMAGE_URLS.garageDoors, "garage-door"],
   ["gutters", "Gutters", GENERIC_IMAGE_URLS.gutters],
   ["fascia", "Fascia", GENERIC_IMAGE_URLS.fascia],
   ["balustrades", "Balustrades", GENERIC_IMAGE_URLS.balustrades],
   ["exterior-paint", "Exterior Paint", GENERIC_IMAGE_URLS.exteriorPaint],
   ["external-lighting", "External Lighting", GENERIC_IMAGE_URLS.externalLighting],
-].map(([key, label, image]) => ({ key, label, image }));
+].map(([key, label, image, requirementKey]) => ({ key, label, image, requirementKey }));
 
 const INTERIOR_CATEGORY_CARDS = [
   ["kitchen", "Kitchen", GENERIC_IMAGE_URLS.kitchen],
@@ -242,7 +249,8 @@ const INTERIOR_CATEGORY_CARDS = [
   ["bedrooms", "Bedrooms", GENERIC_IMAGE_URLS.bedrooms],
   ["living", "Living", GENERIC_IMAGE_URLS.living],
   ["garage-interior", "Garage Interior", GENERIC_IMAGE_URLS.garage],
-].map(([key, label, image]) => ({ key, label, image }));
+  ["internal-doors", "Internal Doors", GENERIC_IMAGE_URLS.internalDoors, "internal-doors"],
+].map(([key, label, image, requirementKey]) => ({ key, label, image, requirementKey }));
 
 const REQUIREMENT_OPTION_KEY = {
   cabinetry: "cabinet doors",
@@ -744,6 +752,8 @@ export default function BuilderSelectionsBookPage({
   const [templates, setTemplates] = useState([]);
   const [templateItems, setTemplateItems] = useState([]);
   const [products, setProducts] = useState([]);
+  const [approvedCatalogueProducts, setApprovedCatalogueProducts] = useState([]);
+  const [approvedCatalogueAudit, setApprovedCatalogueAudit] = useState(null);
   const [categories, setCategories] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -759,6 +769,7 @@ export default function BuilderSelectionsBookPage({
   const [guidedScreen, setGuidedScreen] = useState("areas");
   const [guidedArea, setGuidedArea] = useState("");
   const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
+  const [guidedProductDetails, setGuidedProductDetails] = useState(null);
   const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
   const [viewerPageWidth, setViewerPageWidth] = useState(0);
@@ -799,9 +810,13 @@ export default function BuilderSelectionsBookPage({
   const guidedSelections = useMemo(() => guidedSelectionsFromBook(book), [book]);
   const guidedSelectionMap = useMemo(() => guidedSelectedByRequirement(guidedSelections), [guidedSelections]);
   const guidedKitchenTotals = useMemo(() => guidedAreaTotals(KITCHEN_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
-  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals]), [guidedKitchenTotals]);
-  const guidedRequirement = useMemo(() => kitchenRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
-  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement), [guidedRequirement]);
+  const guidedExteriorTotals = useMemo(() => guidedAreaTotals(EXTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const guidedInteriorTotals = useMemo(() => guidedAreaTotals(INTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]);
+  const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
+  const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey), [guidedRequirement.areaKey]);
+  const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
+  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts), [guidedRequirement, approvedCatalogueProducts]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -865,6 +880,7 @@ export default function BuilderSelectionsBookPage({
   useEffect(() => {
     if (!workspaceId) return;
     loadInitialData();
+    loadApprovedClientSelectionCatalogue();
   }, [workspaceId]);
 
   useEffect(() => {
@@ -884,6 +900,20 @@ export default function BuilderSelectionsBookPage({
   useEffect(() => {
     setCoverDraft(book.cover);
   }, [book.cover]);
+
+  async function loadApprovedClientSelectionCatalogue() {
+    try {
+      const response = await fetch(`/api/product-library/approved-client-selection-catalogue?workspaceId=${encodeURIComponent(workspaceId || "approved-template")}`);
+      if (!response.ok) throw new Error("Approved catalogue API failed.");
+      const payload = await response.json();
+      setApprovedCatalogueProducts(Array.isArray(payload.products) ? payload.products : []);
+      setApprovedCatalogueAudit(payload.audit || null);
+    } catch (loadError) {
+      console.error("[Client Selections] approved catalogue load error", loadError);
+      setApprovedCatalogueProducts([]);
+      setApprovedCatalogueAudit(null);
+    }
+  }
 
   async function loadInitialData() {
     setLoading(true);
@@ -1237,11 +1267,20 @@ export default function BuilderSelectionsBookPage({
     setGuidedScreen("product");
   }
 
+  function openGuidedRequirementKey(requirementKey) {
+    const next = guidedRequirementByKey(requirementKey);
+    if (!next) return;
+    setGuidedArea(next.areaKey === "exterior" ? "exterior" : "interior");
+    setGuidedRequirementKey(next.requirementKey);
+    setGuidedScreen("product");
+  }
+
   function selectGuidedProduct(requirement, option) {
-    const kitchenRoom = ensureKitchenRoom(book);
-    const row = rowForRequirement(kitchenRoom, requirement);
+    const guidedRoom = ensureGuidedRoom(book, requirement);
+    const row = rowForRequirement(guidedRoom, requirement);
     if (!row || !option) return;
-    const allowance = numberValue(option.allowance ?? requirement.defaultAllowance);
+    const entity = option.metadata?.productEntity || option;
+    const allowance = numberValue(option.allowance ?? entity.allowance ?? requirement.defaultAllowance);
     const selectedCost = priceStateForGuidedOption(option) === PRICE_STATES.current ? numberValue(option.selectedCost) : 0;
     const quantity = numberValue(requirement.defaultQuantity) || 1;
     const upgradeCost = priceStateForGuidedOption(option) === PRICE_STATES.current
@@ -1263,11 +1302,11 @@ export default function BuilderSelectionsBookPage({
       status: selectedCost > 0 ? "selected" : "pending",
       guidedSelection: {
         source: "guided_client_selections",
-        area: "interior",
-        room: "Kitchen",
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
         requirementKey: requirement.requirementKey,
         requirementLabel: requirement.label,
-        productCode: option.id,
+        productCode: entity.productCode || option.id,
         quoteItemCode: requirement.familyKey,
         selectedProduct: option.productName,
         variant: {
@@ -1286,19 +1325,19 @@ export default function BuilderSelectionsBookPage({
       },
     };
     setBook((current) => {
-      const nextKitchen = ensureKitchenRoom(current);
-      const kitchenExists = current.rooms.some((room) => room.id === nextKitchen.id);
-      const nextRows = rowsWithGuidedRequirement(nextKitchen.rows, requirement).map((item) => (
+      const nextRoom = ensureGuidedRoom(current, requirement);
+      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
+      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
         item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
           ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
           : item
       ));
-      const updatedKitchen = { ...nextKitchen, rows: nextRows };
+      const updatedRoom = { ...nextRoom, rows: nextRows };
       return {
         ...current,
-        rooms: kitchenExists
-          ? current.rooms.map((room) => room.id === nextKitchen.id ? updatedKitchen : room)
-          : [...current.rooms, updatedKitchen],
+        rooms: roomExists
+          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
+          : [...current.rooms, updatedRoom],
         updatedAt: new Date().toISOString(),
       };
     });
@@ -1754,15 +1793,18 @@ export default function BuilderSelectionsBookPage({
               screen={guidedScreen}
               area={guidedArea}
               requirement={guidedRequirement}
-              requirements={KITCHEN_REQUIREMENTS}
+              requirements={activeGuidedRequirements}
               selections={guidedSelectionMap}
-              kitchenTotals={guidedKitchenTotals}
+              areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
               products={guidedProducts}
+              catalogueAudit={approvedCatalogueAudit}
               onOpenArea={openGuidedArea}
               onOpenKitchen={openGuidedKitchen}
+              onOpenRequirementKey={openGuidedRequirementKey}
               onOpenRequirement={openGuidedRequirement}
               onSelectProduct={selectGuidedProduct}
+              onViewDetails={(product) => setGuidedProductDetails(product)}
             />
           )}
         </section>
@@ -1791,6 +1833,10 @@ export default function BuilderSelectionsBookPage({
             </div>
           </div>
         )}
+
+        {guidedProductDetails && (
+          <GuidedProductDetailsModal product={guidedProductDetails} onClose={() => setGuidedProductDetails(null)} />
+        )}
       </main>
 
       <style jsx>{styles}</style>
@@ -1804,13 +1850,16 @@ function GuidedSelectionsWorkflow({
   requirement,
   requirements,
   selections,
-  kitchenTotals,
+  areaTotals,
   runningTotals,
   products,
+  catalogueAudit,
   onOpenArea,
   onOpenKitchen,
+  onOpenRequirementKey,
   onOpenRequirement,
   onSelectProduct,
+  onViewDetails,
 }) {
   if (screen === "areas") {
     return (
@@ -1838,7 +1887,10 @@ function GuidedSelectionsWorkflow({
     return (
       <section className="guidedShell" data-testid="guided-exterior-categories">
         <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Exterior" cards={EXTERIOR_CATEGORY_CARDS} onOpen={() => {}} />
+        <GuidedCardGrid title="Exterior" cards={EXTERIOR_CATEGORY_CARDS} onOpen={(key) => {
+          const card = EXTERIOR_CATEGORY_CARDS.find((item) => item.key === key);
+          if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
+        }} />
       </section>
     );
   }
@@ -1847,7 +1899,11 @@ function GuidedSelectionsWorkflow({
     return (
       <section className="guidedShell" data-testid="guided-interior-categories">
         <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Interior" cards={INTERIOR_CATEGORY_CARDS} onOpen={(key) => key === "kitchen" && onOpenKitchen()} />
+        <GuidedCardGrid title="Interior" cards={INTERIOR_CATEGORY_CARDS} onOpen={(key) => {
+          if (key === "kitchen") onOpenKitchen();
+          const card = INTERIOR_CATEGORY_CARDS.find((item) => item.key === key);
+          if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
+        }} />
       </section>
     );
   }
@@ -1858,7 +1914,7 @@ function GuidedSelectionsWorkflow({
         <GuidedBudgetDock totals={runningTotals} />
         <div className="guidedProductLayout">
           <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
-            <h2>Kitchen</h2>
+            <h2>{requirement.areaLabel}</h2>
             {requirements.map((item) => {
               const selection = selections.get(item.requirementKey);
               const status = statusForRequirement(item, selection);
@@ -1877,12 +1933,13 @@ function GuidedSelectionsWorkflow({
           </aside>
           <main className="guidedProductPanel">
             <div className="guidedSectionHeader">
-              <span>Kitchen / {requirement.label}</span>
+              <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
+              {catalogueAudit ? <em>{catalogueAudit.usableRows} approved CSV rows connected.</em> : null}
             </div>
             <div className="guidedProductGrid">
               {products.map((product) => (
-                <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} />
+                <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} />
               ))}
             </div>
           </main>
@@ -1897,12 +1954,12 @@ function GuidedSelectionsWorkflow({
       <div className="guidedChecklistHeader">
         <div>
           <span>Kitchen</span>
-          <strong>{kitchenTotals.completed} of {kitchenTotals.total} complete</strong>
+          <strong>{areaTotals.completed} of {areaTotals.total} complete</strong>
         </div>
         <div className="guidedTotals">
-          <GuidedMiniTotal label="Allowance Total" value={money(kitchenTotals.allowance)} />
-          <GuidedMiniTotal label="Selected Total" value={money(kitchenTotals.selected)} />
-          <GuidedMiniTotal label={kitchenTotals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(kitchenTotals.variation)} tone={kitchenTotals.variation > 0 ? "bad" : kitchenTotals.variation < 0 ? "good" : ""} />
+          <GuidedMiniTotal label="Allowance Total" value={money(areaTotals.allowance)} />
+          <GuidedMiniTotal label="Selected Total" value={money(areaTotals.selected)} />
+          <GuidedMiniTotal label={areaTotals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(areaTotals.variation)} tone={areaTotals.variation > 0 ? "bad" : areaTotals.variation < 0 ? "good" : ""} />
         </div>
       </div>
       <div className="guidedChecklistRows">
@@ -1962,13 +2019,13 @@ function GuidedRequirementRow({ requirement, selection, onOpen }) {
   );
 }
 
-function GuidedProductCard({ requirement, product, onSelect }) {
+function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
   const priceState = priceStateForGuidedOption(product);
   const selectedPrice = priceState === PRICE_STATES.current ? numberValue(product.selectedCost) : 0;
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
   const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   return (
-    <article className="guidedProductCard" data-testid={`guided-product-${slug(product.productName)}`}>
+    <article className="guidedProductCard" data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
       <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
       <div>
         <span>{product.brand}</span>
@@ -1982,11 +2039,38 @@ function GuidedProductCard({ requirement, product, onSelect }) {
         <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
       </div>
       <div className="guidedProductActions">
-        <button type="button">View Details</button>
-        <button type="button">View Product Website</button>
+        <button type="button" onClick={onViewDetails}>View Details</button>
+        <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>View Product Website</button>
         <button type="button" className="primary" onClick={onSelect}>Select</button>
       </div>
     </article>
+  );
+}
+
+function GuidedProductDetailsModal({ product, onClose }) {
+  const priceState = priceStateForGuidedOption(product);
+  return (
+    <div className="modalBackdrop" onClick={onClose}>
+      <div className="guidedDetailsModal" onClick={(event) => event.stopPropagation()} data-testid="guided-product-details">
+        <button type="button" onClick={onClose}>Close</button>
+        <img src={product.imageUrl} alt={product.productName} />
+        <span>{product.brand}</span>
+        <h2>{product.productName}</h2>
+        <p>{product.description}</p>
+        <dl>
+          <div><dt>Model</dt><dd>{product.model || "To be confirmed"}</dd></div>
+          <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
+          <div><dt>Size</dt><dd>{product.size || "To be confirmed"}</dd></div>
+          <div><dt>Colour / Finish</dt><dd>{product.finish || "To be confirmed"}</dd></div>
+          <div><dt>Price</dt><dd>{priceState === PRICE_STATES.current ? money(product.selectedCost) : priceState}</dd></div>
+          <div><dt>Allowance</dt><dd>{money(product.allowance)}</dd></div>
+        </dl>
+        <div className="guidedProductActions">
+          <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>Official product link</button>
+          <button type="button" disabled={!product.specificationUrl} onClick={() => product.specificationUrl && window.open(product.specificationUrl, "_blank", "noopener,noreferrer")}>Specification link</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2888,15 +2972,35 @@ function guidedRequirementFinancials(requirement, selection) {
   };
 }
 
-function guidedProductsForRequirement(requirement) {
-  const optionKey = REQUIREMENT_OPTION_KEY[requirement?.requirementKey] || requirement?.requirementKey || "";
-  const options = PRODUCT_OPTION_LIBRARY[optionKey] || [];
-  return options.map((option, index) => ({
-    ...option,
-    id: option.id || `${requirement.requirementKey}-${slug(option.productName || option.model || String(index))}`,
-    imageUrl: option.imageUrl || requirementImage(requirement),
-    size: option.size || sizeFromOption(option),
-  }));
+function guidedProductsForRequirement(requirement, catalogueProducts = []) {
+  const approvedProducts = productsForRequirement(catalogueProducts, requirement);
+  return approvedProducts.map((product, index) => {
+    const entity = product.metadata?.productEntity || product;
+    const priceState = priceStateForProduct(entity);
+    const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
+    return {
+      ...product,
+      id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
+      productName: entity.productName || product.product_name || "",
+      brand: entity.brand || "",
+      supplier: entity.supplier || "",
+      model: entity.model || "",
+      range: entity.range || "",
+      finish: entity.finish || entity.colour || "",
+      size: entity.size || sizeFromOption(entity),
+      description: entity.description || "",
+      allowance: productAllowance(entity, requirement),
+      selectedCost,
+      priceState,
+      imageUrl: entity.primaryImage || entity.genericCategoryImage || requirementImage(requirement),
+      productUrl: entity.officialProductURL || "",
+      specificationUrl: entity.specificationURL || "",
+      metadata: {
+        ...(product.metadata || {}),
+        productEntity: entity,
+      },
+    };
+  });
 }
 
 function priceStateForGuidedOption(option) {
@@ -2908,6 +3012,19 @@ function priceStateForGuidedOption(option) {
 
 function ensureKitchenRoom(book) {
   return book?.rooms?.find((room) => slug(room.name) === "kitchen") || { id: "missing-kitchen", name: "Kitchen", rows: [] };
+}
+
+function ensureGuidedRoom(book, requirement) {
+  if (requirement?.areaKey === "kitchen") return ensureKitchenRoom(book);
+  const roomName = requirement?.areaLabel || titleCase(requirement?.areaKey || "Selections");
+  return book?.rooms?.find((room) => slug(room.name) === slug(roomName)) || { id: `guided-${slug(roomName)}`, name: roomName, rows: [] };
+}
+
+function requirementsForGuidedArea(areaKey) {
+  if (areaKey === "exterior") return EXTERIOR_REQUIREMENTS;
+  if (areaKey === "interior") return INTERIOR_REQUIREMENTS;
+  if (areaKey === "kitchen") return KITCHEN_REQUIREMENTS;
+  return ALL_GUIDED_REQUIREMENTS.filter((requirement) => requirement.areaKey === areaKey);
 }
 
 function rowForRequirement(room, requirement) {
@@ -2957,6 +3074,11 @@ function rowMatchesRequirement(row, requirement) {
     flooring: ["flooring"],
     lighting: ["lighting"],
     paint: ["paint"],
+    bricks: ["bricks", "brickwork"],
+    roof: ["roof", "roofing"],
+    "garage-door": ["garage-door", "garage-doors"],
+    "entry-door": ["entry-door", "entry-doors"],
+    "internal-doors": ["internal-doors", "internal-door", "door"],
   };
   return (aliases[requirement.requirementKey] || [requirement.requirementKey]).includes(key);
 }
@@ -3069,6 +3191,16 @@ const styles = `
   .guidedProductActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 13px 13px; }
   .guidedProductActions button { border-radius: 8px; background: #ffffff; color: #071827; border: 1px solid #cbd5e1; }
   .guidedProductActions button.primary { background: #0f766e; color: #ffffff; border-color: #0f766e; }
+  .guidedProductActions button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
+  .guidedDetailsModal > button { justify-self: end; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 8px 12px; font-weight: 850; }
+  .guidedDetailsModal img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .guidedDetailsModal h2 { margin: 0; font-size: 28px; line-height: 1.15; }
+  .guidedDetailsModal p { margin: 0; color: #475569; font-weight: 700; }
+  .guidedDetailsModal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .guidedDetailsModal dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; }
+  .guidedDetailsModal dt { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+  .guidedDetailsModal dd { margin: 4px 0 0; font-weight: 850; }
   .scheduleControls { position: sticky; top: 0; z-index: 20; width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(160px, .9fr) minmax(140px, .7fr) minmax(170px, .8fr) minmax(190px, 1fr) minmax(170px, .8fr) minmax(130px, .6fr) minmax(130px, .6fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
   .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .scheduleControls select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; background: #ffffff; color: #071827; font-weight: 800; }
