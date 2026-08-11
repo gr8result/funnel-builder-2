@@ -118,16 +118,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
     if (!activation) return;
     const isText = object.type === "text" || object.type === "dynamicField";
     if (!isText) {
-      const nextDocument = updatePage(draft, page.id, (activePage) => updateObjectOnPage(activePage, object.id, (item) => ({
-        ...item,
-        locked: false,
-        data: {
-          ...(item.data || {}),
-          acceptedEdit: true,
-          maskOriginal: false,
-        },
-      })));
-      commitDocument({ ...nextDocument, selection: selectObject(draft.selection, objectId) }, { silent: true });
+      commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
       imageReplaceObjectIdRef.current = objectId;
       imageUploadRef.current?.click();
       onStatus?.("Image region selected. Choose a replacement image.");

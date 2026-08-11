@@ -8449,6 +8449,10 @@ async function extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderVi
       continue;
     }
     if (fn === ops.transform) {
+      if (!Array.isArray(args) || args.length < 6) {
+        preservedRegions.push({ boundingBox: null, reason: "invalid-transform-operator", operatorIndex: index });
+        continue;
+      }
       ctm = matrix.transform(ctm, args);
       continue;
     }
@@ -8486,12 +8490,12 @@ async function extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderVi
         alt: `PDF image ${objects.length + 1}`,
         regionId: region.id,
         detectedRegion: true,
-        overlayMode: "pdf-image-object",
+        overlayMode: "pdf-image-activation",
         editableSource: "pdf-image-xobject",
-        reviewStatus: "Editable",
-        edited: true,
-        acceptedEdit: true,
-        maskOriginal: true,
+        reviewStatus: "Needs Review",
+        edited: false,
+        acceptedEdit: false,
+        maskOriginal: false,
       },
     }));
   }
@@ -8677,17 +8681,49 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
     const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
-    const extractedImages = mode === "editable-text"
-      ? await extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport, pageId, pageSize: { width: pageWidth, height: pageHeight }, textRegions })
-      : { objects: [], regions: [], preservedRegions: [] };
+    let extractedImages = { objects: [], regions: [], preservedRegions: [] };
+    if (mode === "editable-text") {
+      try {
+        extractedImages = await extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport, pageId, pageSize: { width: pageWidth, height: pageHeight }, textRegions });
+      } catch (error) {
+        warnings.push(`Page ${pageNumber}: image extraction was preserved as page artwork (${error?.message || "unsupported PDF image operator"}).`);
+      }
+    }
     detectedRegions.push(...extractedImages.regions);
     objects.push(...extractedImages.objects);
     editableImageCount += extractedImages.objects.length;
     const preservedImageRegions = mode === "editable-text" && !extractedImages.objects.length
       ? detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions)
       : [];
-    preservedImageRegions.forEach((region) => {
+    preservedImageRegions
+      .filter((region) => {
+        const box = region.boundingBox || {};
+        return (Number(box.width || 0) * Number(box.height || 0)) < (pageWidth * pageHeight * 0.65);
+      })
+      .slice(0, 8)
+      .forEach((region, index) => {
+      const box = region.boundingBox || {};
       detectedRegions.push({ ...region, reviewStatus: "Preserved", preservedReason: "raster-or-vector-artwork-not-separable" });
+      objects.push(createObject("image", {
+        name: `Needs review image region ${index + 1}`,
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        locked: false,
+        style: { objectFit: "contain", backgroundColor: "#ffffff" },
+        data: {
+          regionId: region.id,
+          detectedRegion: true,
+          overlayMode: "pdf-image-activation",
+          editableSource: "pdf-raster-region",
+          reviewStatus: "Needs Review",
+          edited: false,
+          acceptedEdit: false,
+          maskOriginal: false,
+        },
+      }));
+      editableImageCount += 1;
     });
     pages.push(createA4Page({
       id: pageId,

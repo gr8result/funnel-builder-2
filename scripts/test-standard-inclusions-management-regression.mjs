@@ -72,6 +72,9 @@ assert(!activeBody.includes("createPremierInclusionsDocument("), "The three-page
 
 [
   "Add Blank Page",
+  "Previous",
+  "Next",
+  "Zoom",
   "Duplicate Page",
   "Delete Page",
   "Move Up",

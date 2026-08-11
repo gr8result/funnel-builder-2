@@ -81,5 +81,7 @@ assert(workbookSource.includes("editableImageCount"), "PDF import must report ed
 assert(workbookSource.includes("Review Imported Pages"), "Import review must expose the requested review action.");
 assert(editorSource.includes("hybridPageModel"), "Editor save/reload must sync the hybrid page model.");
 assert(editorSource.includes("acceptedMasks") && editorSource.includes("masks: acceptedMasks"), "Editor must persist local masks.");
+assert(editorSource.includes("pageThumbnail") && editorSource.includes("Previous") && editorSource.includes("Next"), "Editor must expose thumbnails and previous/next page navigation.");
+assert(editorSource.includes("const [zoom, setZoom]") && editorSource.includes("scale(${zoom})"), "Editor must expose zoom controls for imported pages.");
 
 console.log("Standard Inclusions hybrid PDF model persistence checks passed.");
