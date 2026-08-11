@@ -87,7 +87,13 @@ export function ObjectRenderer({
           onTextEditStart?.(object.id);
           return;
         }
-        if (!editing || object.locked || !["text", "dynamicField"].includes(object.type)) return;
+        if (!editing || object.locked) return;
+        if (["image", "logo"].includes(object.type)) {
+          event.stopPropagation();
+          onTextEditStart?.(object.id);
+          return;
+        }
+        if (!["text", "dynamicField"].includes(object.type)) return;
         event.stopPropagation();
         onTextEditStart?.(object.id);
       }}

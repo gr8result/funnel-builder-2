@@ -18,11 +18,13 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   const [showOriginal, setShowOriginal] = useState(false);
   const [manualRegionType, setManualRegionType] = useState("");
   const [manualRegionDraft, setManualRegionDraft] = useState(null);
+  const [zoom, setZoom] = useState(1);
   const dragRef = useRef(null);
   const imageUploadRef = useRef(null);
   const imageReplaceObjectIdRef = useRef("");
   const exportPagesRef = useRef(null);
   const activePage = getActivePage(draft);
+  const activePageIndex = draft.pages.findIndex((page) => page.id === draft.activePageId);
   const selectedObjectId = draft.selection?.lastSelectedObjectId || "";
   const selectedObject = activePage?.objects?.find((object) => object.id === selectedObjectId) || null;
 
@@ -82,6 +84,13 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   function selectPage(pageId) {
     setTextEditingObjectId("");
     commitDocument({ ...setActivePage(draft, pageId), selection: clearSelection() }, { silent: true });
+  }
+
+  function selectRelativePage(direction) {
+    const nextIndex = activePageIndex + direction;
+    const page = draft.pages[nextIndex];
+    if (!page) return;
+    selectPage(page.id);
   }
 
   function selectAndDragObject(objectId, event) {
@@ -504,6 +513,11 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
         <strong>Pages</strong>
         {draft.pages.map((page, index) => (
           <button key={page.id} type="button" style={{ ...styles.pageButton, ...(page.id === draft.activePageId ? styles.pageButtonActive : {}) }} onClick={() => selectPage(page.id)}>
+            <span style={styles.pageThumbnail}>
+              {page.data?.thumbnail || page.data?.baseArtwork || page.data?.originalPageAsset || page.background?.imageRef
+                ? <img src={page.data?.thumbnail || page.data?.baseArtwork || page.data?.originalPageAsset || page.background?.imageRef} alt="" style={styles.pageThumbnailImage} />
+                : <span style={styles.pageThumbnailBlank} />}
+            </span>
             <span>{index + 1}. {page.name}</span>
             <small>{visibleOverlayCount(page)} edit{visibleOverlayCount(page) === 1 ? "" : "s"}{detectedRegionCount(page) ? ` - ${detectedRegionCount(page)} detected regions` : ""}</small>
           </button>
@@ -583,6 +597,19 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
             </>
           ) : null}
           <button type="button" disabled={readonly} style={styles.primaryButton} onClick={saveDocument}>Save</button>
+          <button type="button" disabled={activePageIndex <= 0} style={styles.secondaryButton} onClick={() => selectRelativePage(-1)}>Previous</button>
+          <button type="button" disabled={activePageIndex < 0 || activePageIndex >= draft.pages.length - 1} style={styles.secondaryButton} onClick={() => selectRelativePage(1)}>Next</button>
+          <label style={styles.zoomControl}>
+            Zoom
+            <select value={String(zoom)} style={styles.toolbarInput} onChange={(event) => setZoom(Number(event.target.value) || 1)}>
+              <option value="0.5">50%</option>
+              <option value="0.75">75%</option>
+              <option value="1">100%</option>
+              <option value="1.25">125%</option>
+              <option value="1.5">150%</option>
+              <option value="2">200%</option>
+            </select>
+          </label>
           <button type="button" style={styles.secondaryButton} onClick={() => setPdfPreviewOpen(true)}>Preview</button>
           <button type="button" style={styles.primaryButton} onClick={exportPdf}>Export PDF</button>
         </div>
@@ -597,7 +624,7 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
           onMouseMove={moveManualRegion}
           onMouseUp={finishManualRegion}
         >
-          <div style={{ position: "relative", width: activePage?.width || 794, height: activePage?.height || 1123 }}>
+          <div style={{ position: "relative", width: activePage?.width || 794, height: activePage?.height || 1123, transform: `scale(${zoom})`, transformOrigin: "top center", marginBottom: activePage ? Math.max(0, (activePage.height || 1123) * (zoom - 1)) : 0 }}>
             <PageRenderer
               page={activePage}
               workbook={workbook}
@@ -611,6 +638,12 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
                 const page = getActivePage(draft);
                 const object = page?.objects?.find((item) => item.id === objectId);
                 const activation = object?.data?.detectedRegion === true || String(object?.data?.overlayMode || "").includes("-activation");
+                if (["image", "logo"].includes(object?.type)) {
+                  commitDocument({ ...draft, selection: selectObject(draft.selection, objectId) }, { silent: true });
+                  imageReplaceObjectIdRef.current = objectId;
+                  imageUploadRef.current?.click();
+                  return;
+                }
                 if (activation && !object?.data?.edited && !object?.data?.acceptedEdit) {
                   activateDetectedRegion(objectId);
                   return;
@@ -998,11 +1031,15 @@ const styles = {
   pageList: { position: "sticky", top: 90, display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10, maxHeight: "calc(100vh - 120px)", overflow: "auto" },
   pageButton: { width: "100%", border: "1px solid #d1fae5", background: "#f8fafc", color: "#0f172a", borderRadius: 8, padding: "9px 10px", display: "grid", gap: 3, textAlign: "left", fontWeight: 900, cursor: "pointer" },
   pageButtonActive: { background: "#166534", color: "#ffffff", borderColor: "#166534" },
+  pageThumbnail: { width: "100%", aspectRatio: "3 / 4", border: "1px solid rgba(15,23,42,0.12)", borderRadius: 6, background: "#e5e7eb", overflow: "hidden", display: "block", marginBottom: 4 },
+  pageThumbnailImage: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  pageThumbnailBlank: { width: "100%", height: "100%", display: "block", background: "#f8fafc" },
   workspace: { display: "grid", gap: 12, minWidth: 0 },
   toolbar: { display: "flex", flexWrap: "wrap", gap: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", borderRadius: 12, padding: 10 },
   addGroup: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, borderLeft: "1px solid #bbf7d0", paddingLeft: 8, color: "#14532d", fontSize: 12, fontWeight: 950 },
   formatToolbar: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 8, padding: 6 },
   toolbarInput: { height: 34, border: "1px solid #94a3b8", borderRadius: 6, background: "#ffffff", color: "#0f172a", fontSize: 12, fontWeight: 800, padding: "0 7px" },
+  zoomControl: { display: "inline-flex", alignItems: "center", gap: 6, color: "#0f172a", fontWeight: 900, fontSize: 13 },
   toolbarNumber: { width: 58, height: 34, boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 6, background: "#ffffff", color: "#0f172a", fontSize: 12, fontWeight: 800, padding: "0 6px" },
   toolbarColor: { width: 34, height: 34, border: "1px solid #94a3b8", borderRadius: 6, background: "#ffffff", padding: 2 },
   iconButton: { minWidth: 34, height: 34, border: "1px solid #cbd5e1", background: "#f8fafc", color: "#0f172a", borderRadius: 6, padding: "0 8px", fontSize: 12, fontWeight: 950, cursor: "pointer" },

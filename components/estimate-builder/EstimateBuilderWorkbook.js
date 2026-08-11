@@ -8043,8 +8043,8 @@ function StandardScheduleContextPanel({
                 </div>
                 <span>{page.name}</span>
                 <small>Editable: {page.objects.filter((object) => object.data?.reviewStatus === "Editable").length}</small>
-                <small>Needs Review: {page.objects.filter((object) => object.data?.reviewStatus === "Needs Review").length}</small>
-                <small>Preserved: base page artwork</small>
+                <small>Needs Review: {page.data?.preservedRegions?.length || 0}</small>
+                <small>Preserved: base artwork{page.data?.preservedRegions?.length ? ` + ${page.data.preservedRegions.length} region${page.data.preservedRegions.length === 1 ? "" : "s"}` : ""}</small>
               </article>
             ))}
           </div>
@@ -8427,6 +8427,167 @@ function cleanPdfFontFamily(fontFamily = "") {
   return cleaned || "Arial";
 }
 
+async function extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport, pageId, pageSize, textRegions = [] }) {
+  const operatorList = await page.getOperatorList().catch(() => null);
+  if (!operatorList?.fnArray?.length) return { objects: [], regions: [], preservedRegions: [] };
+  const ops = pdfjsLib.OPS || {};
+  const matrix = pdfjsLib.Util;
+  const stack = [];
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const objects = [];
+  const regions = [];
+  const preservedRegions = [];
+  for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+    const fn = operatorList.fnArray[index];
+    const args = operatorList.argsArray[index] || [];
+    if (fn === ops.save) {
+      stack.push(ctm);
+      continue;
+    }
+    if (fn === ops.restore) {
+      ctm = stack.pop() || [1, 0, 0, 1, 0, 0];
+      continue;
+    }
+    if (fn === ops.transform) {
+      ctm = matrix.transform(ctm, args);
+      continue;
+    }
+    if (![ops.paintImageXObject, ops.paintJpegXObject, ops.paintInlineImageXObject].includes(fn)) continue;
+    const boundingBox = pdfCtmUnitBoxToPageBox(pdfjsLib, renderViewport, ctm, pageSize);
+    if (!boundingBox || boundingBox.width < 8 || boundingBox.height < 8) continue;
+    if (textRegions.some((region) => boxesOverlap(boundingBox, region.boundingBox || {}) && overlapAreaRatio(boundingBox, region.boundingBox || {}) > 0.45)) {
+      preservedRegions.push({ boundingBox, reason: "overlaps-text", operatorIndex: index });
+      continue;
+    }
+    const imageData = fn === ops.paintInlineImageXObject ? args[0] : await resolvePdfImageObject(page, args[0]);
+    const imageRef = await pdfImageDataToDataUrl(imageData);
+    if (!imageRef) {
+      preservedRegions.push({ boundingBox, reason: "image-data-unavailable", operatorIndex: index });
+      continue;
+    }
+    const region = createPdfDetectedImageRegion({
+      pageId,
+      index: objects.length,
+      boundingBox,
+      confidence: 0.94,
+    });
+    regions.push(region);
+    objects.push(createObject("image", {
+      name: `PDF image ${objects.length + 1}`,
+      x: boundingBox.x,
+      y: boundingBox.y,
+      width: boundingBox.width,
+      height: boundingBox.height,
+      locked: false,
+      style: { objectFit: "cover", backgroundColor: "#ffffff" },
+      data: {
+        imageRef,
+        sourceImageRef: imageRef,
+        alt: `PDF image ${objects.length + 1}`,
+        regionId: region.id,
+        detectedRegion: true,
+        overlayMode: "pdf-image-object",
+        editableSource: "pdf-image-xobject",
+        reviewStatus: "Editable",
+        edited: true,
+        acceptedEdit: true,
+        maskOriginal: true,
+      },
+    }));
+  }
+  return { objects, regions, preservedRegions };
+}
+
+function pdfCtmUnitBoxToPageBox(pdfjsLib, viewport, ctm, pageSize) {
+  const transform = pdfjsLib.Util.transform(viewport.transform, ctm);
+  const points = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => pdfjsLib.Util.applyTransform([x, y], transform));
+  const xs = points.map((point) => point[0]);
+  const ys = points.map((point) => point[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const x = (minX / viewport.width) * pageSize.width;
+  const y = (minY / viewport.height) * pageSize.height;
+  const width = ((maxX - minX) / viewport.width) * pageSize.width;
+  const height = ((maxY - minY) / viewport.height) * pageSize.height;
+  if (![x, y, width, height].every(Number.isFinite)) return null;
+  return {
+    x: clampNumber(x, 0, pageSize.width - 1),
+    y: clampNumber(y, 0, pageSize.height - 1),
+    width: clampNumber(width, 1, pageSize.width),
+    height: clampNumber(height, 1, pageSize.height),
+  };
+}
+
+function resolvePdfImageObject(page, name) {
+  return new Promise((resolve) => {
+    if (!name) return resolve(null);
+    const stores = [page.objs, page.commonObjs].filter(Boolean);
+    let pending = stores.length;
+    const done = (value) => {
+      if (value) resolve(value);
+      else if ((pending -= 1) <= 0) resolve(null);
+    };
+    stores.forEach((store) => {
+      try {
+        if (store.has?.(name)) {
+          const value = store.get(name);
+          if (value) return done(value);
+        }
+        store.get?.(name, done);
+      } catch {
+        done(null);
+      }
+    });
+  });
+}
+
+async function pdfImageDataToDataUrl(imageData) {
+  if (!imageData || typeof document === "undefined") return "";
+  if (typeof HTMLImageElement !== "undefined" && imageData instanceof HTMLImageElement) return imageElementToDataUrl(imageData);
+  if (typeof ImageBitmap !== "undefined" && imageData instanceof ImageBitmap) return bitmapToDataUrl(imageData);
+  const width = Number(imageData.width || 0);
+  const height = Number(imageData.height || 0);
+  const data = imageData.data;
+  if (!width || !height || !data?.length) return "";
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  if (data.length >= width * height * 4) {
+    rgba.set(data.slice(0, rgba.length));
+  } else if (data.length >= width * height * 3) {
+    for (let source = 0, target = 0; target < rgba.length; source += 3, target += 4) {
+      rgba[target] = data[source];
+      rgba[target + 1] = data[source + 1];
+      rgba[target + 2] = data[source + 2];
+      rgba[target + 3] = 255;
+    }
+  } else {
+    return "";
+  }
+  context.putImageData(new ImageData(rgba, width, height), 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+function imageElementToDataUrl(image) {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  canvas.getContext("2d").drawImage(image, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+function bitmapToDataUrl(bitmap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
   const pdfjsLib = await loadStandardInclusionsPdfJs();
   const bytes = await file.arrayBuffer();
@@ -8487,7 +8648,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
           y: boundingBox.y,
           width: boundingBox.width,
           height: boundingBox.height,
-          locked: true,
+          locked: false,
           style: {
             fontFamily,
             fontSize: clampNumber(Math.round(boundingBox.height * 0.82), 6, 96),
@@ -8506,9 +8667,9 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
             overlayMode: "pdf-text-activation",
             editableSource: "pdf",
             reviewStatus: "Editable",
-            edited: false,
-            acceptedEdit: false,
-            maskOriginal: false,
+            edited: true,
+            acceptedEdit: true,
+            maskOriginal: true,
           },
         }));
         editableTextCount += 1;
@@ -8516,29 +8677,17 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
     const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
-    const imageRegions = mode === "editable-text" ? detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions) : [];
-    imageRegions.forEach((region, index) => {
-      const box = region.boundingBox || {};
-      detectedRegions.push(region);
-      objects.push(createObject("image", {
-        name: `Detected image ${index + 1}`,
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-        style: { objectFit: "cover", backgroundColor: "#ffffff" },
-        data: {
-          regionId: region.id,
-          detectedRegion: true,
-          overlayMode: "pdf-image-activation",
-          editableSource: "pdf",
-          reviewStatus: "Needs Review",
-          edited: false,
-          acceptedEdit: false,
-          maskOriginal: false,
-        },
-      }));
-      editableImageCount += 1;
+    const extractedImages = mode === "editable-text"
+      ? await extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport, pageId, pageSize: { width: pageWidth, height: pageHeight }, textRegions })
+      : { objects: [], regions: [], preservedRegions: [] };
+    detectedRegions.push(...extractedImages.regions);
+    objects.push(...extractedImages.objects);
+    editableImageCount += extractedImages.objects.length;
+    const preservedImageRegions = mode === "editable-text" && !extractedImages.objects.length
+      ? detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions)
+      : [];
+    preservedImageRegions.forEach((region) => {
+      detectedRegions.push({ ...region, reviewStatus: "Preserved", preservedReason: "raster-or-vector-artwork-not-separable" });
     });
     pages.push(createA4Page({
       id: pageId,
@@ -8555,19 +8704,23 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
         masks: [],
         thumbnail: originalPageAsset,
         baseLayer: { type: "pdf-page-render", source: "canvas", status: "Preserved" },
+        preservedRegions: [
+          ...extractedImages.preservedRegions,
+          ...preservedImageRegions.map((region) => ({ boundingBox: region.boundingBox, reason: "raster-or-vector-artwork-not-separable" })),
+        ],
       },
       objects,
     }));
   }
   const timestamp = new Date().toISOString();
   const hybridPages = pages.map((page, index) => createPdfHybridPageModel(page, index));
-  const preservedElementCount = pages.length + warnings.length;
+  const preservedElementCount = pages.length + pages.reduce((count, page) => count + (page.data?.preservedRegions?.length || 0), 0) + warnings.length;
   const importReview = createPdfImportReviewSummary({
     pageCount: pages.length,
     editableTextCount,
     editableImageCount,
     preservedElementCount,
-    needsReviewCount: pages.reduce((count, page) => count + page.objects.filter((object) => object.data?.reviewStatus === "Needs Review").length, 0),
+    needsReviewCount: pages.reduce((count, page) => count + (page.data?.preservedRegions?.length || 0), 0),
   });
   const documentBuilder = createDocument({
     id: importId,
@@ -8591,7 +8744,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       hybridArchitecture: "original-page-artwork-plus-editable-overlay-blocks",
       hybridPages,
       visualBaseSource: "pdf-rendered-page-artwork",
-      editableSource: "pdf-text-objects-and-review-image-regions",
+      editableSource: "pdf-text-objects-and-image-xobjects",
     },
   });
   return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, editableImageCount, fixedVisualCount: preservedElementCount, preservedElementCount, importReview, warnings };
