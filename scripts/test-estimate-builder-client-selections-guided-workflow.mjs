@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const workbookSource = await readFile(new URL("../components/estimate-builder/EstimateBuilderWorkbook.js", import.meta.url), "utf8");
+const selectionsBookSource = await readFile(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
+
+assert.ok(workbookSource.includes('const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book")'), "Estimate Builder Client Selections card must load the selections-book module");
+assert.ok(workbookSource.includes('page: "clientSelections"'), "Estimate Builder dashboard must keep the Client Selections entry point");
+assert.ok(selectionsBookSource.includes("GuidedSelectionsWorkflow"), "Selections Book must render the guided workflow component");
+assert.ok(selectionsBookSource.includes('guidedScreen === "review"'), "Schedule table must be gated behind review mode");
+assert.ok(selectionsBookSource.includes("Review Schedule"), "Old schedule remains available as Review Schedule");
+assert.ok(selectionsBookSource.includes("Choose an Area"), "Default Client Selections UI must start with Choose Area");
+assert.ok(selectionsBookSource.includes("guided-client-selections-home"), "Guided home test marker must exist");
+assert.ok(selectionsBookSource.includes("guided-kitchen-checklist"), "Kitchen checklist test marker must exist");
+assert.ok(selectionsBookSource.includes("guided-left-progress-menu"), "Product page left progress menu marker must exist");
+assert.ok(selectionsBookSource.includes("APPROVED_SELECTIONS_CSV_PATH"), "Approved CSV path must drive the requirement source marker");
+assert.ok(!selectionsBookSource.includes("Site Works") && !selectionsBookSource.includes("Soil Tests"), "Old estimating categories must not be introduced into the guided workflow");
+
+const reviewGateIndex = selectionsBookSource.indexOf('guidedScreen === "review"');
+const tableIndex = selectionsBookSource.indexOf('className="selectionTable"');
+assert.ok(reviewGateIndex > -1 && tableIndex > -1, "Review gate and legacy table must both exist");
+assert.ok(reviewGateIndex < tableIndex, "Legacy schedule table must be downstream of the review gate, not the primary screen");
+
+console.log("Estimate Builder guided Client Selections regression tests passed.");

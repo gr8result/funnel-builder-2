@@ -2,8 +2,21 @@ import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
+import {
+  KITCHEN_REQUIREMENTS,
+  PRICE_STATES,
+  areaTotals as guidedAreaTotals,
+  kitchenRequirementByKey,
+  priceStateForProduct,
+  projectTotals as guidedProjectTotals,
+  requirementImage,
+  statusForRequirement,
+  statusTone,
+  variationFor,
+} from "../../../lib/builders/clientSelectionWorkflow";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
+import { APPROVED_SELECTIONS_CSV_PATH, GENERIC_IMAGE_URLS } from "../../../lib/product-library/catalogueModel";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 
@@ -190,6 +203,66 @@ const COVER_BRAND_FALLBACK = {
   tagline: "Luxury selections schedule",
   footerText: "",
 };
+
+const GUIDED_AREA_CARDS = [
+  {
+    key: "exterior",
+    label: "Exterior",
+    description: "External envelope, street-facing finishes and outdoor selections.",
+    image: GENERIC_IMAGE_URLS.exterior,
+  },
+  {
+    key: "interior",
+    label: "Interior",
+    description: "Kitchen, wet areas, bedrooms, living finishes and fixtures.",
+    image: GENERIC_IMAGE_URLS.interior,
+  },
+];
+
+const EXTERIOR_CATEGORY_CARDS = [
+  ["bricks", "Bricks", GENERIC_IMAGE_URLS.bricks],
+  ["cladding", "Cladding", GENERIC_IMAGE_URLS.cladding],
+  ["roof", "Roof", GENERIC_IMAGE_URLS.roofing],
+  ["roof-colour", "Roof Colour", GENERIC_IMAGE_URLS.roofColour],
+  ["windows", "Windows", GENERIC_IMAGE_URLS.windows],
+  ["entry-door", "Entry Door", GENERIC_IMAGE_URLS.entryDoors],
+  ["garage-door", "Garage Door", GENERIC_IMAGE_URLS.garageDoors],
+  ["gutters", "Gutters", GENERIC_IMAGE_URLS.gutters],
+  ["fascia", "Fascia", GENERIC_IMAGE_URLS.fascia],
+  ["balustrades", "Balustrades", GENERIC_IMAGE_URLS.balustrades],
+  ["exterior-paint", "Exterior Paint", GENERIC_IMAGE_URLS.exteriorPaint],
+  ["external-lighting", "External Lighting", GENERIC_IMAGE_URLS.externalLighting],
+].map(([key, label, image]) => ({ key, label, image }));
+
+const INTERIOR_CATEGORY_CARDS = [
+  ["kitchen", "Kitchen", GENERIC_IMAGE_URLS.kitchen],
+  ["bathroom", "Bathroom", GENERIC_IMAGE_URLS.bathroom],
+  ["ensuite", "Ensuite", GENERIC_IMAGE_URLS.bathroom],
+  ["laundry", "Laundry", GENERIC_IMAGE_URLS.laundry],
+  ["bedrooms", "Bedrooms", GENERIC_IMAGE_URLS.bedrooms],
+  ["living", "Living", GENERIC_IMAGE_URLS.living],
+  ["garage-interior", "Garage Interior", GENERIC_IMAGE_URLS.garage],
+].map(([key, label, image]) => ({ key, label, image }));
+
+const REQUIREMENT_OPTION_KEY = {
+  cabinetry: "cabinet doors",
+  "cabinet-finish": "cabinet doors",
+  handles: "cabinet handles",
+  benchtop: "benchtop",
+  splashback: "splashback",
+  sink: "sink",
+  "sink-mixer": "kitchen tap",
+  oven: "oven",
+  cooktop: "cooktop",
+  rangehood: "rangehood",
+  dishwasher: "dishwasher",
+  microwave: "microwave",
+  flooring: "flooring",
+  lighting: "lighting",
+  paint: "wall paint",
+};
+
+const REQUIREMENT_SOURCE_NOTE = `Requirement source: ${APPROVED_SELECTIONS_CSV_PATH}`;
 
 function today() {
   const now = new Date();
@@ -683,6 +756,9 @@ export default function BuilderSelectionsBookPage({
   const [coverSettingsOpen, setCoverSettingsOpen] = useState(false);
   const [activePage, setActivePage] = useState("cover");
   const [activeRoomId, setActiveRoomId] = useState("");
+  const [guidedScreen, setGuidedScreen] = useState("areas");
+  const [guidedArea, setGuidedArea] = useState("");
+  const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
   const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
   const [viewerPageWidth, setViewerPageWidth] = useState(0);
@@ -720,6 +796,12 @@ export default function BuilderSelectionsBookPage({
   const manufacturerById = useMemo(() => new Map(manufacturers.map((manufacturer) => [manufacturer.id, manufacturer.manufacturer_name])), [manufacturers]);
   const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier.supplier_name])), [suppliers]);
   const totals = useMemo(() => selectionTotals(book), [book]);
+  const guidedSelections = useMemo(() => guidedSelectionsFromBook(book), [book]);
+  const guidedSelectionMap = useMemo(() => guidedSelectedByRequirement(guidedSelections), [guidedSelections]);
+  const guidedKitchenTotals = useMemo(() => guidedAreaTotals(KITCHEN_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals]), [guidedKitchenTotals]);
+  const guidedRequirement = useMemo(() => kitchenRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
+  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement), [guidedRequirement]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -1137,6 +1219,92 @@ export default function BuilderSelectionsBookPage({
     setSelectorRow(null);
   }
 
+  function openGuidedArea(areaKey) {
+    setGuidedArea(areaKey);
+    setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
+    setGuidedRequirementKey("");
+  }
+
+  function openGuidedKitchen() {
+    setGuidedArea("interior");
+    setGuidedScreen("kitchen");
+    setGuidedRequirementKey("");
+  }
+
+  function openGuidedRequirement(requirementKey) {
+    setGuidedArea("interior");
+    setGuidedRequirementKey(requirementKey);
+    setGuidedScreen("product");
+  }
+
+  function selectGuidedProduct(requirement, option) {
+    const kitchenRoom = ensureKitchenRoom(book);
+    const row = rowForRequirement(kitchenRoom, requirement);
+    if (!row || !option) return;
+    const allowance = numberValue(option.allowance ?? requirement.defaultAllowance);
+    const selectedCost = priceStateForGuidedOption(option) === PRICE_STATES.current ? numberValue(option.selectedCost) : 0;
+    const quantity = numberValue(requirement.defaultQuantity) || 1;
+    const upgradeCost = priceStateForGuidedOption(option) === PRICE_STATES.current
+      ? variationFor({ selectedPrice: selectedCost, allowance, quantity })
+      : 0;
+    const patch = {
+      selectedOptionId: option.id,
+      selectedProduct: option.productName,
+      productModel: option.model,
+      brand: option.brand,
+      description: option.description,
+      supplier: option.supplier,
+      finishColour: option.finish,
+      imageUrl: option.imageUrl || requirementImage(requirement),
+      allowanceAmount: allowance,
+      selectedCost,
+      upgradeCost,
+      included: upgradeCost === 0,
+      status: selectedCost > 0 ? "selected" : "pending",
+      guidedSelection: {
+        source: "guided_client_selections",
+        area: "interior",
+        room: "Kitchen",
+        requirementKey: requirement.requirementKey,
+        requirementLabel: requirement.label,
+        productCode: option.id,
+        quoteItemCode: requirement.familyKey,
+        selectedProduct: option.productName,
+        variant: {
+          model: option.model,
+          finish: option.finish,
+          size: option.size || "",
+        },
+        quantity,
+        allowance,
+        selectedPrice: selectedCost,
+        variation: upgradeCost,
+        supplier: option.supplier,
+        image: option.imageUrl || requirementImage(requirement),
+        priceState: priceStateForGuidedOption(option),
+        selectedAt: new Date().toISOString(),
+      },
+    };
+    setBook((current) => {
+      const nextKitchen = ensureKitchenRoom(current);
+      const kitchenExists = current.rooms.some((room) => room.id === nextKitchen.id);
+      const nextRows = rowsWithGuidedRequirement(nextKitchen.rows, requirement).map((item) => (
+        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
+          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
+          : item
+      ));
+      const updatedKitchen = { ...nextKitchen, rows: nextRows };
+      return {
+        ...current,
+        rooms: kitchenExists
+          ? current.rooms.map((room) => room.id === nextKitchen.id ? updatedKitchen : room)
+          : [...current.rooms, updatedKitchen],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    setSuccess(`${requirement.label} selected. Save Progress will store it with this selections book.`);
+  }
+
   function applyRowOption(roomId, rowId, optionId) {
     const room = book.rooms.find((item) => item.id === roomId);
     const row = room?.rows.find((item) => item.id === rowId);
@@ -1451,7 +1619,7 @@ export default function BuilderSelectionsBookPage({
       <main className="screen">
         <section className="workspace">
           <header className="standardBanner">
-            <button type="button" className="standardBack" onClick={() => window.history.back()} aria-label="Back">
+            <button type="button" className="standardBack" onClick={() => handleGuidedBack({ guidedScreen, setGuidedScreen, setGuidedArea, setGuidedRequirementKey })} aria-label="Back">
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
@@ -1468,6 +1636,9 @@ export default function BuilderSelectionsBookPage({
               <div className="bannerActions">
                 <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
                 <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
+                <button type="button" onClick={() => setGuidedScreen(guidedScreen === "review" ? "areas" : "review")}>
+                  {guidedScreen === "review" ? "Guided Selections" : "Review Schedule"}
+                </button>
                 {activePage === "cover" && (
                   <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
                     {coverSettingsOpen ? "Hide Cover Settings" : "Edit Cover Settings"}
@@ -1477,6 +1648,8 @@ export default function BuilderSelectionsBookPage({
             </div>
           </header>
 
+          {guidedScreen === "review" ? (
+            <>
           <section className="scheduleControls" aria-label="Schedule navigation">
             <label>
               Project
@@ -1575,6 +1748,23 @@ export default function BuilderSelectionsBookPage({
                 )}
             </div>
           </div>
+            </>
+          ) : (
+            <GuidedSelectionsWorkflow
+              screen={guidedScreen}
+              area={guidedArea}
+              requirement={guidedRequirement}
+              requirements={KITCHEN_REQUIREMENTS}
+              selections={guidedSelectionMap}
+              kitchenTotals={guidedKitchenTotals}
+              runningTotals={guidedRunningTotals}
+              products={guidedProducts}
+              onOpenArea={openGuidedArea}
+              onOpenKitchen={openGuidedKitchen}
+              onOpenRequirement={openGuidedRequirement}
+              onSelectProduct={selectGuidedProduct}
+            />
+          )}
         </section>
 
         {selectorRow && (
@@ -1606,6 +1796,225 @@ export default function BuilderSelectionsBookPage({
       <style jsx>{styles}</style>
     </>
   );
+}
+
+function GuidedSelectionsWorkflow({
+  screen,
+  area,
+  requirement,
+  requirements,
+  selections,
+  kitchenTotals,
+  runningTotals,
+  products,
+  onOpenArea,
+  onOpenKitchen,
+  onOpenRequirement,
+  onSelectProduct,
+}) {
+  if (screen === "areas") {
+    return (
+      <section className="guidedShell" data-testid="guided-client-selections-home">
+        <GuidedBudgetDock totals={runningTotals} />
+        <div className="guidedIntro">
+          <span>Choose an Area</span>
+          <strong>Start with the part of the home the client is selecting.</strong>
+          <em>{REQUIREMENT_SOURCE_NOTE}</em>
+        </div>
+        <div className="guidedAreaGrid">
+          {GUIDED_AREA_CARDS.map((card) => (
+            <button key={card.key} type="button" className="guidedImageCard" onClick={() => onOpenArea(card.key)}>
+              <img src={card.image} alt={card.label} />
+              <span>{card.label}</span>
+              <small>{card.description}</small>
+            </button>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (screen === "exterior") {
+    return (
+      <section className="guidedShell" data-testid="guided-exterior-categories">
+        <GuidedBudgetDock totals={runningTotals} />
+        <GuidedCardGrid title="Exterior" cards={EXTERIOR_CATEGORY_CARDS} onOpen={() => {}} />
+      </section>
+    );
+  }
+
+  if (screen === "interior") {
+    return (
+      <section className="guidedShell" data-testid="guided-interior-categories">
+        <GuidedBudgetDock totals={runningTotals} />
+        <GuidedCardGrid title="Interior" cards={INTERIOR_CATEGORY_CARDS} onOpen={(key) => key === "kitchen" && onOpenKitchen()} />
+      </section>
+    );
+  }
+
+  if (screen === "product") {
+    return (
+      <section className="guidedShell" data-testid="guided-product-page">
+        <GuidedBudgetDock totals={runningTotals} />
+        <div className="guidedProductLayout">
+          <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
+            <h2>Kitchen</h2>
+            {requirements.map((item) => {
+              const selection = selections.get(item.requirementKey);
+              const status = statusForRequirement(item, selection);
+              return (
+                <button
+                  key={item.requirementKey}
+                  type="button"
+                  className={`guidedProgressItem ${item.requirementKey === requirement.requirementKey ? "active" : ""}`}
+                  onClick={() => onOpenRequirement(item.requirementKey)}
+                >
+                  <GuidedStatusDot status={status} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </aside>
+          <main className="guidedProductPanel">
+            <div className="guidedSectionHeader">
+              <span>Kitchen / {requirement.label}</span>
+              <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
+            </div>
+            <div className="guidedProductGrid">
+              {products.map((product) => (
+                <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} />
+              ))}
+            </div>
+          </main>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="guidedShell" data-testid="guided-kitchen-checklist">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedChecklistHeader">
+        <div>
+          <span>Kitchen</span>
+          <strong>{kitchenTotals.completed} of {kitchenTotals.total} complete</strong>
+        </div>
+        <div className="guidedTotals">
+          <GuidedMiniTotal label="Allowance Total" value={money(kitchenTotals.allowance)} />
+          <GuidedMiniTotal label="Selected Total" value={money(kitchenTotals.selected)} />
+          <GuidedMiniTotal label={kitchenTotals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(kitchenTotals.variation)} tone={kitchenTotals.variation > 0 ? "bad" : kitchenTotals.variation < 0 ? "good" : ""} />
+        </div>
+      </div>
+      <div className="guidedChecklistRows">
+        {requirements.map((item) => (
+          <GuidedRequirementRow
+            key={item.requirementKey}
+            requirement={item}
+            selection={selections.get(item.requirementKey)}
+            onOpen={() => onOpenRequirement(item.requirementKey)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GuidedCardGrid({ title, cards, onOpen }) {
+  return (
+    <>
+      <div className="guidedIntro">
+        <span>{title}</span>
+        <strong>Choose a selection category.</strong>
+        <em>{REQUIREMENT_SOURCE_NOTE}</em>
+      </div>
+      <div className="guidedCategoryGrid">
+        {cards.map((card) => (
+          <button key={card.key} type="button" className="guidedImageCard" onClick={() => onOpen(card.key)}>
+            <img src={card.image} alt={card.label} />
+            <span>{card.label}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function GuidedRequirementRow({ requirement, selection, onOpen }) {
+  const status = statusForRequirement(requirement, selection);
+  const financials = guidedRequirementFinancials(requirement, selection);
+  const productName = selection?.selected_product_name || "";
+  return (
+    <article className={`guidedRequirementRow ${statusTone(status)}`} data-testid={`guided-requirement-${requirement.requirementKey}`}>
+      <GuidedStatusDot status={status} />
+      <img src={selection?.image_url || requirementImage(requirement)} alt="" />
+      <div>
+        <strong>{requirement.label}</strong>
+        <span>{productName || "Not selected"}</span>
+        {selection?.selected_details?.priceState && selection.selected_details.priceState !== PRICE_STATES.current ? <em>{selection.selected_details.priceState}</em> : null}
+      </div>
+      <div className="guidedRowMoney">
+        <span>Allowance {money(financials.allowance)}</span>
+        <span>{selection ? `Selected ${money(financials.selectedPrice)}` : "Not selected"}</span>
+        <b>{signedMoney(financials.variation)}</b>
+      </div>
+      <button type="button" onClick={onOpen}>{selection ? "Change" : "Select"}</button>
+    </article>
+  );
+}
+
+function GuidedProductCard({ requirement, product, onSelect }) {
+  const priceState = priceStateForGuidedOption(product);
+  const selectedPrice = priceState === PRICE_STATES.current ? numberValue(product.selectedCost) : 0;
+  const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
+  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+  return (
+    <article className="guidedProductCard" data-testid={`guided-product-${slug(product.productName)}`}>
+      <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
+      <div>
+        <span>{product.brand}</span>
+        <strong>{product.productName}</strong>
+        <em>Model {product.model || "not recorded"}</em>
+        <p>{product.finish || "Finish to be confirmed"}</p>
+      </div>
+      <div className="guidedProductMoney">
+        <GuidedMiniTotal label="Price" value={priceState === PRICE_STATES.current ? money(selectedPrice) : priceState} tone={priceState === PRICE_STATES.current ? "" : "warn"} />
+        <GuidedMiniTotal label="Allowance" value={money(allowance)} />
+        <GuidedMiniTotal label={variation < 0 ? "Credit" : "Upgrade"} value={signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
+      </div>
+      <div className="guidedProductActions">
+        <button type="button">View Details</button>
+        <button type="button">View Product Website</button>
+        <button type="button" className="primary" onClick={onSelect}>Select</button>
+      </div>
+    </article>
+  );
+}
+
+function GuidedBudgetDock({ totals }) {
+  return (
+    <div className="guidedBudgetDock" data-testid="guided-running-budget">
+      <div>
+        <span>Selections Budget</span>
+        <strong>{totals.completed} / {totals.total} completed</strong>
+      </div>
+      <GuidedMiniTotal label="Total Allowances" value={money(totals.allowance)} />
+      <GuidedMiniTotal label="Selections To Date" value={money(totals.selected)} />
+      <GuidedMiniTotal label="Current Variation" value={signedMoney(totals.variation)} tone={totals.variation > 0 ? "bad" : totals.variation < 0 ? "good" : ""} />
+    </div>
+  );
+}
+
+function GuidedMiniTotal({ label, value, tone = "" }) {
+  return (
+    <div className={`guidedMiniTotal ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function GuidedStatusDot({ status }) {
+  return <span className={`guidedStatusDot ${statusTone(status)}`}>{status === "complete" ? "✓" : ""}</span>;
 }
 
 function CoverPage({ cover, onLogoChange }) {
@@ -2408,6 +2817,173 @@ function replaceAt(rows, index, next) {
   return rows.map((row, rowIndex) => rowIndex === index ? next : row);
 }
 
+function signedMoney(value) {
+  const amount = numberValue(value);
+  if (!amount) return money(0);
+  return `${amount > 0 ? "+" : "-"}${money(Math.abs(amount))}`;
+}
+
+function guidedSelectionsFromBook(book) {
+  const kitchen = ensureKitchenRoom(book);
+  return KITCHEN_REQUIREMENTS.map((requirement) => {
+    const row = rowForRequirement(kitchen, requirement);
+    if (!row?.selectedProduct && !row?.guidedSelection) return null;
+    const guided = row.guidedSelection || {};
+    const allowance = numberValue(guided.allowance ?? row.allowanceAmount ?? requirement.defaultAllowance);
+    const selectedPrice = numberValue(guided.selectedPrice ?? row.selectedCost);
+    const variation = numberValue(guided.variation ?? row.upgradeCost);
+    const priceState = guided.priceState || (selectedPrice > 0 ? PRICE_STATES.current : PRICE_STATES.pending);
+    return {
+      id: row.id,
+      category: "interior",
+      room: "Kitchen",
+      title: requirement.label,
+      selected_product_name: row.selectedProduct,
+      product_name: row.selectedProduct,
+      model_number: row.productModel,
+      brand: row.brand,
+      selected_supplier_name: row.supplier,
+      image_url: row.imageUrl,
+      included_allowance: allowance,
+      allowance_amount: allowance,
+      client_selection_price: selectedPrice,
+      variation_amount: priceState === PRICE_STATES.current ? variation : 0,
+      selection_status: priceState === PRICE_STATES.current ? "selected" : "not_selected",
+      status: priceState === PRICE_STATES.current ? "selected" : "pending",
+      is_active: true,
+      selected_details: {
+        area: "kitchen",
+        room: "Kitchen",
+        requirementKey: requirement.requirementKey,
+        requirementLabel: requirement.label,
+        familyKey: requirement.familyKey,
+        quantity: numberValue(guided.quantity ?? requirement.defaultQuantity) || 1,
+        allowance,
+        selectedPrice,
+        variationAmount: priceState === PRICE_STATES.current ? variation : 0,
+        priceState,
+      },
+      metadata: {
+        source: "guided_client_selections",
+        area: "kitchen",
+        requirementKey: requirement.requirementKey,
+        familyKey: requirement.familyKey,
+        approvedCsv: APPROVED_SELECTIONS_CSV_PATH,
+      },
+    };
+  }).filter(Boolean);
+}
+
+function guidedSelectedByRequirement(selections) {
+  return new Map(selections.map((selection) => [selection.selected_details.requirementKey, selection]));
+}
+
+function guidedRequirementFinancials(requirement, selection) {
+  const allowance = numberValue(selection?.selected_details?.allowance ?? requirement.defaultAllowance);
+  if (!selection) return { allowance, selectedPrice: 0, variation: 0 };
+  return {
+    allowance,
+    selectedPrice: numberValue(selection.selected_details?.selectedPrice),
+    variation: numberValue(selection.selected_details?.variationAmount),
+  };
+}
+
+function guidedProductsForRequirement(requirement) {
+  const optionKey = REQUIREMENT_OPTION_KEY[requirement?.requirementKey] || requirement?.requirementKey || "";
+  const options = PRODUCT_OPTION_LIBRARY[optionKey] || [];
+  return options.map((option, index) => ({
+    ...option,
+    id: option.id || `${requirement.requirementKey}-${slug(option.productName || option.model || String(index))}`,
+    imageUrl: option.imageUrl || requirementImage(requirement),
+    size: option.size || sizeFromOption(option),
+  }));
+}
+
+function priceStateForGuidedOption(option) {
+  if (option?.priceState) return option.priceState;
+  if (numberValue(option?.selectedCost) > 0) return PRICE_STATES.current;
+  if (numberValue(option?.allowance) > 0) return PRICE_STATES.allowanceOnly;
+  return priceStateForProduct({ priceStatus: PRICE_STATES.pending });
+}
+
+function ensureKitchenRoom(book) {
+  return book?.rooms?.find((room) => slug(room.name) === "kitchen") || { id: "missing-kitchen", name: "Kitchen", rows: [] };
+}
+
+function rowForRequirement(room, requirement) {
+  return rowsWithGuidedRequirement(room?.rows || [], requirement).find((row) => row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement));
+}
+
+function rowsWithGuidedRequirement(rows, requirement) {
+  const hasMatch = rows.some((row) => row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement));
+  if (hasMatch) {
+    return rows.map((row) => row.guidedRequirementKey || !rowMatchesRequirement(row, requirement) ? row : { ...row, guidedRequirementKey: requirement.requirementKey });
+  }
+  return [...rows, {
+    id: uid("row"),
+    item: requirement.label,
+    guidedRequirementKey: requirement.requirementKey,
+    description: "",
+    brand: "",
+    selectedProduct: "",
+    productModel: "",
+    finishColour: "",
+    supplier: "",
+    imageUrl: requirementImage(requirement),
+    allowanceAmount: requirement.defaultAllowance,
+    selectedCost: 0,
+    upgradeCost: 0,
+    included: false,
+    status: "pending",
+    options: guidedProductsForRequirement(requirement),
+  }];
+}
+
+function rowMatchesRequirement(row, requirement) {
+  const key = slug(row?.item || "");
+  const aliases = {
+    cabinetry: ["cabinetry"],
+    "cabinet-finish": ["cabinet-finish", "cabinet-doors"],
+    handles: ["handles", "cabinet-handles"],
+    benchtop: ["benchtop"],
+    splashback: ["splashback"],
+    sink: ["sink"],
+    "sink-mixer": ["sink-mixer", "kitchen-tap", "tap"],
+    oven: ["oven"],
+    cooktop: ["cooktop"],
+    rangehood: ["rangehood"],
+    dishwasher: ["dishwasher"],
+    microwave: ["microwave"],
+    flooring: ["flooring"],
+    lighting: ["lighting"],
+    paint: ["paint"],
+  };
+  return (aliases[requirement.requirementKey] || [requirement.requirementKey]).includes(key);
+}
+
+function sizeFromOption(option) {
+  const match = String(`${option?.productName || ""} ${option?.model || ""}`).match(/\b\d{3,4}mm\b/i);
+  return match?.[0] || "";
+}
+
+function handleGuidedBack({ guidedScreen, setGuidedScreen, setGuidedArea, setGuidedRequirementKey }) {
+  if (guidedScreen === "product") {
+    setGuidedScreen("kitchen");
+    setGuidedRequirementKey("");
+    return;
+  }
+  if (guidedScreen === "kitchen") {
+    setGuidedScreen("interior");
+    return;
+  }
+  if (guidedScreen === "interior" || guidedScreen === "exterior" || guidedScreen === "review") {
+    setGuidedScreen("areas");
+    setGuidedArea("");
+    return;
+  }
+  window.history.back();
+}
+
 const styles = `
   .screen { min-height: 100vh; display: block; background: #f5f7fb; color: #07111f; font-family: Inter, Arial, sans-serif; }
   .sidebar { background: #071827; color: #e8edf3; padding: 16px; overflow: auto; max-height: 100vh; position: sticky; top: 0; }
@@ -2434,6 +3010,65 @@ const styles = `
   .bannerActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .bannerActions button { background: #ffffff; color: #071827; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; font-weight: 850; cursor: pointer; }
   .bannerActions button:first-child { background: #071827; color: #ffffff; }
+  .guidedShell { display: grid; gap: 14px; width: 100%; box-sizing: border-box; }
+  .guidedBudgetDock { position: sticky; top: 0; z-index: 18; display: grid; grid-template-columns: minmax(170px, .9fr) repeat(3, minmax(160px, 1fr)); gap: 10px; align-items: stretch; border: 1px solid #d7deea; background: rgba(255,255,255,.96); border-radius: 8px; padding: 12px; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
+  .guidedBudgetDock > div:first-child { display: grid; gap: 4px; align-content: center; color: #475569; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .guidedBudgetDock > div:first-child strong { color: #071827; font-size: 18px; letter-spacing: 0; text-transform: none; }
+  .guidedMiniTotal { display: grid; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 11px; background: #f8fafc; min-width: 0; }
+  .guidedMiniTotal span { color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+  .guidedMiniTotal strong { color: #071827; font-size: 17px; font-weight: 950; }
+  .guidedMiniTotal.bad { border-color: #fed7aa; background: #fff7ed; }
+  .guidedMiniTotal.good { border-color: #bbf7d0; background: #f0fdf4; }
+  .guidedMiniTotal.warn { border-color: #fde68a; background: #fffbeb; }
+  .guidedIntro { display: grid; gap: 5px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 18px; }
+  .guidedIntro span, .guidedSectionHeader span, .guidedChecklistHeader span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .guidedIntro strong, .guidedSectionHeader strong, .guidedChecklistHeader strong { color: #071827; font-size: 26px; line-height: 1.1; font-weight: 950; }
+  .guidedIntro em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
+  .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .guidedImageCard { min-height: 220px; position: relative; overflow: hidden; display: grid; align-content: end; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #071827; color: #ffffff; text-align: left; box-shadow: 0 12px 28px rgba(15,23,42,.12); }
+  .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; }
+  .guidedImageCard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,24,39,.05), rgba(7,24,39,.82)); }
+  .guidedImageCard span, .guidedImageCard small { position: relative; z-index: 1; }
+  .guidedImageCard span { font-size: 28px; font-weight: 950; }
+  .guidedImageCard small { color: #e2e8f0; font-size: 14px; font-weight: 750; }
+  .guidedChecklistHeader { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
+  .guidedTotals { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 8px; min-width: 460px; }
+  .guidedChecklistRows { display: grid; gap: 10px; }
+  .guidedRequirementRow { display: grid; grid-template-columns: 28px 76px minmax(180px, 1fr) minmax(170px, .75fr) auto; gap: 12px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 12px; }
+  .guidedRequirementRow.green { border-color: #86efac; background: #f0fdf4; }
+  .guidedRequirementRow.amber { border-color: #fde68a; background: #fffbeb; }
+  .guidedRequirementRow.red { border-color: #fecaca; background: #fff1f2; }
+  .guidedRequirementRow img { width: 76px; height: 58px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .guidedRequirementRow div:nth-child(3) { display: grid; gap: 4px; min-width: 0; }
+  .guidedRequirementRow div:nth-child(3) strong { font-size: 17px; font-weight: 950; }
+  .guidedRequirementRow div:nth-child(3) span { color: #475569; font-weight: 750; }
+  .guidedRequirementRow div:nth-child(3) em { color: #92400e; font-style: normal; font-size: 12px; font-weight: 850; }
+  .guidedRowMoney { display: grid; gap: 4px; color: #475569; font-size: 13px; font-weight: 800; }
+  .guidedRowMoney b { color: #071827; font-size: 15px; }
+  .guidedRequirementRow button { border-radius: 8px; background: #0f766e; color: #ffffff; }
+  .guidedStatusDot { width: 24px; height: 24px; border: 2px solid #cbd5e1; border-radius: 999px; display: inline-grid; place-items: center; font-size: 13px; font-weight: 950; background: #f1f5f9; color: #64748b; }
+  .guidedStatusDot.green { border-color: #22c55e; background: #dcfce7; color: #15803d; }
+  .guidedStatusDot.amber { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+  .guidedStatusDot.red { border-color: #ef4444; background: #fee2e2; color: #b91c1c; }
+  .guidedProductLayout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .guidedProgressMenu { position: sticky; top: 92px; display: grid; gap: 6px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
+  .guidedProgressMenu h2 { margin: 0 0 6px; font-size: 20px; font-weight: 950; }
+  .guidedProgressItem { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 8px; font-weight: 850; }
+  .guidedProgressItem.active { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+  .guidedProductPanel { display: grid; gap: 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 16px; }
+  .guidedSectionHeader { display: grid; gap: 5px; }
+  .guidedProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .guidedProductCard { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
+  .guidedProductCard > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
+  .guidedProductCard > div { padding: 0 13px; }
+  .guidedProductCard span { color: #64748b; font-size: 13px; font-weight: 850; }
+  .guidedProductCard strong { display: block; color: #071827; font-size: 18px; font-weight: 950; margin-top: 3px; }
+  .guidedProductCard em { display: block; color: #475569; font-style: normal; font-size: 13px; font-weight: 800; margin-top: 3px; }
+  .guidedProductCard p { margin: 8px 0 0; color: #334155; font-size: 14px; font-weight: 700; }
+  .guidedProductMoney { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .guidedProductActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 13px 13px; }
+  .guidedProductActions button { border-radius: 8px; background: #ffffff; color: #071827; border: 1px solid #cbd5e1; }
+  .guidedProductActions button.primary { background: #0f766e; color: #ffffff; border-color: #0f766e; }
   .scheduleControls { position: sticky; top: 0; z-index: 20; width: 100%; box-sizing: border-box; margin: 0 0 12px; display: grid; grid-template-columns: minmax(160px, .9fr) minmax(140px, .7fr) minmax(170px, .8fr) minmax(190px, 1fr) minmax(170px, .8fr) minmax(130px, .6fr) minmax(130px, .6fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
   .scheduleControls label { display: grid; gap: 5px; color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
   .scheduleControls select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; background: #ffffff; color: #071827; font-weight: 800; }
