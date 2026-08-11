@@ -26,6 +26,7 @@
     "standard-inclusions:upload-master": "node scripts/upload-standard-inclusions-master.mjs",
     "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs",
     "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs && node modules/takeoff-v2/tests/exteriorCandidateReview.test.mjs",
+    "test:takeoff-v3": "node modules/takeoff-v3/tests/run-all.mjs",
     "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs",
     "test:wb-button-links": "node scripts/test-website-builder-button-links-regression.mjs",
     "test:wb-global-nav": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-global-nav-regression.mjs",
