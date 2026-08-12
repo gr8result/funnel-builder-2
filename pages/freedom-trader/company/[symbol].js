@@ -175,6 +175,10 @@ function futureTimeSlots(candles, interval) {
   });
 }
 
+function emptyChartValue(selectedChartType) {
+  return selectedChartType === "line" || selectedChartType === "area" ? null : [null, null, null, null];
+}
+
 function loadStoredChartType() {
   if (typeof window === "undefined") return "candles";
   const stored = window.localStorage.getItem(CHART_TYPE_STORAGE_KEY);
@@ -1126,11 +1130,11 @@ export default function TraderCompany({ passwordHash }) {
       dates,
       candles: [
         ...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]),
-        ...futureDates.map(() => ["-", "-", "-", "-"]),
+        ...futureDates.map(() => emptyChartValue(selectedChartType)),
       ],
-      closeLine: [...displayCandles.map((candle) => candle.close), ...futureDates.map(() => "-")],
-      ohlcBars: [...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]), ...futureDates.map(() => ["-", "-", "-", "-"])],
-      volume: [...candles.map((candle) => candle.volume || 0), ...futureDates.map(() => "-")],
+      closeLine: [...displayCandles.map((candle) => candle.close), ...futureDates.map(() => null)],
+      ohlcBars: [...displayCandles.map((candle) => [candle.open, candle.close, candle.low, candle.high]), ...futureDates.map(() => [null, null, null, null])],
+      volume: [...candles.map((candle) => candle.volume || 0), ...futureDates.map(() => null)],
       tradeMarkers,
       orderMarkers,
       realCount: candles.length,
@@ -1498,7 +1502,7 @@ export default function TraderCompany({ passwordHash }) {
             z: 8,
           } : null,
         ].filter(Boolean),
-      }, { notMerge: false, lazyUpdate: true });
+      }, { notMerge: true, lazyUpdate: true });
       const handleDataZoom = () => {
         const option = chartRef.current?.getOption?.();
         const zoom = Array.isArray(option?.dataZoom) ? option.dataZoom[0] : null;
