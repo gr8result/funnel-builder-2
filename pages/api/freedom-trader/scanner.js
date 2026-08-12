@@ -3,6 +3,9 @@ import { getMarketDataMetrics, getMarketSnapshotBatch, resetMarketDataMetrics } 
 import { marketMeta } from "../../../lib/freedom-trader/marketData.js";
 import { buildMarketDiscovery } from "../../../lib/freedom-trader/marketUniverse.js";
 import { rankMarketOpportunities } from "../../../lib/freedom-trader/opportunityRanking.js";
+import { computeCapitalFlow, capitalFlowSummary } from "../../../lib/freedom-trader/capitalFlow.js";
+import { loadLocalCapitalFlowHistory, saveLocalCapitalFlowSnapshot } from "../../../lib/freedom-trader/localPaperStore.js";
+import { sendFreedomNotification } from "../../../lib/freedom-trader/notifications.js";
 import { loadPaperAccount } from "./paper-account.js";
 
 const DEFAULT_SETTINGS = {
@@ -74,11 +77,12 @@ async function runCompleteScan(settings, account = null) {
   const requestedSymbols = detailedUniverse.map((item) => item.symbol);
   const snapshots = await getMarketSnapshotBatch(requestedSymbols, { range: "1y", interval: "1day" });
   const analysis = [];
+  const previousCapitalFlow = await loadLocalCapitalFlowHistory();
 
   for (const item of detailedUniverse) {
     try {
       const row = await analyseSymbol(item.symbol, snapshots.get(item.symbol));
-      analysis.push({
+      const analysed = {
         ...row,
         companyName: item.companyName || row.companyName,
         sector: item.assetType || row.sector,
@@ -90,7 +94,10 @@ async function runCompleteScan(settings, account = null) {
           volume: item.volume,
           changePercent: item.changePercent,
         },
-      });
+      };
+      analysed.previousCapitalFlow = previousCapitalFlow[analysed.symbol] || null;
+      analysed.capitalFlow = computeCapitalFlow(analysed, analysed.previousCapitalFlow);
+      analysis.push(analysed);
     } catch (error) {
       analysis.push({
         symbol: item.symbol,
@@ -111,6 +118,24 @@ async function runCompleteScan(settings, account = null) {
 
   const ranking = rankMarketOpportunities(analysis, settings, { includeDevelopingTopFive: true, account });
   const rows = ranking.ranked;
+  const completedAt = new Date().toISOString();
+  await saveLocalCapitalFlowSnapshot(rows, completedAt);
+  const flowSummary = capitalFlowSummary(rows);
+  const exceptional = rows.find((row) => ["REVIEW NOW", "TRADE READY"].includes(row.capitalFlowState) && row.buyingSellingPressure === "STRONG BUYING PRESSURE");
+  if (exceptional) {
+    await sendFreedomNotification({
+      symbol: exceptional.symbol,
+      alertType: exceptional.capitalFlowState === "TRADE READY" ? "TRADE_READY" : "REVIEW_NOW",
+      triggerState: exceptional.capitalFlowState,
+      message: exceptional.capitalFlow?.explanation || "Unusual buying activity detected.",
+      capitalFlowScore: exceptional.capitalFlowScore,
+      currentPrice: exceptional.currentPrice,
+      entry: exceptional.recommendedEntry,
+      safetyExit: exceptional.safetyExit,
+      target: exceptional.finalExit,
+      sms: true,
+    }).catch((error) => console.error("Freedom Capital Flow notification failed:", error));
+  }
   const unavailableRows = rows.filter((row) => row.status === "DATA UNAVAILABLE");
   const analysedRows = rows.filter((row) => row.status !== "DATA UNAVAILABLE");
   const readyCount = countStatus(rows, "READY");
@@ -121,7 +146,6 @@ async function runCompleteScan(settings, account = null) {
   discovery.coverage.ASX.detailedAnalyses = detailedUniverse.filter((row) => row.market === "ASX").length;
   discovery.coverage.ASX.successfullyScreened = analysis.filter((row) => row.country === "Australia" && row.dataStatus?.readyForScore).length;
 
-  const completedAt = new Date().toISOString();
   const marketDataMetrics = getMarketDataMetrics();
   const scanSummary = {
     status: unavailableRows.length ? "partial" : "complete",
@@ -143,6 +167,7 @@ async function runCompleteScan(settings, account = null) {
     ready: readyCount,
     wait: waitCount,
     developing: developingCount,
+    capitalFlow: flowSummary,
     notQualified: Math.max(0, analysedRows.length - readyCount),
     totalsBalanced: requestedSymbols.length === analysedRows.length + unavailableRows.length,
     providerDiagnostics: {

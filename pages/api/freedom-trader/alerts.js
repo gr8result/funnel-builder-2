@@ -1,4 +1,5 @@
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin";
+import { loadLocalFreedomNotifications } from "../../../lib/freedom-trader/localPaperStore.js";
 
 function getSupabase() {
   try {
@@ -78,18 +79,38 @@ async function findOrCreatePendingTrade(supabase, alert) {
 }
 
 async function listAlerts(req, res) {
+  const local = await loadLocalFreedomNotifications().catch(() => ({ notifications: [] }));
+  const localAlerts = (local.notifications || []).map((item) => ({
+    id: item.id,
+    tradeId: item.planId,
+    symbol: item.symbol,
+    alertType: item.alertType,
+    triggerPrice: null,
+    direction: "review",
+    message: item.message || item.smsBody || "",
+    priority: item.channel === "in-app+sms" ? "high" : "normal",
+    status: item.smsStatus === "failed" || item.smsStatus === "blocked" ? "active" : item.status || "active",
+    currentPrice: null,
+    distance: null,
+    triggeredAt: item.createdAt,
+    acknowledgedAt: null,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    smsStatus: item.smsStatus,
+    smsError: item.smsError,
+  }));
   const supabase = getSupabase();
-  if (!supabase) return res.status(200).json({ ok: true, alerts: [], databaseUnavailable: true, error: null });
+  if (!supabase) return res.status(200).json({ ok: true, alerts: localAlerts, databaseUnavailable: true, error: null });
   try {
     const { data, error } = await supabase
       .from("trade_alerts")
       .select("*, pending_trade:pending_trades(*)")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return res.status(200).json({ ok: true, alerts: (data || []).map(normalizeAlert), databaseUnavailable: false, error: null });
+    return res.status(200).json({ ok: true, alerts: [...localAlerts, ...(data || []).map(normalizeAlert)], databaseUnavailable: false, error: null });
   } catch (error) {
     console.error("Freedom Trader alerts list failed:", error);
-    return res.status(200).json({ ok: true, alerts: [], databaseUnavailable: true, error: "Alerts database temporarily unavailable." });
+    return res.status(200).json({ ok: true, alerts: localAlerts, databaseUnavailable: true, error: "Alerts database temporarily unavailable." });
   }
 }
 

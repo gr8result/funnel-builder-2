@@ -170,6 +170,8 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const account = snapshot?.account;
   const positions = useMemo(() => snapshot?.positions || [], [snapshot]);
   const primary = dashboardAction(marketWatch, journal, topOpportunity, bestTradePlan);
+  const capitalFlow = scanSummary?.capitalFlow || {};
+  const topCapitalFlow = capitalFlow.top?.[0] || null;
 
   if (checking) return <div className="boot">Opening Freedom Trader...</div>;
   if (!unlocked) return <Gate password={password} setPassword={setPassword} error={passwordError} onSubmit={unlock} />;
@@ -210,6 +212,23 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           <strong>{primary.text}</strong>
           {primary.item ? <p>{primary.item.plan?.companyName} ({primary.item.plan?.symbol}) is {String(primary.item.state).replace(/_/g, " ")}.</p> : null}
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader"><h2>MARKET ACTIVITY</h2></div>
+        <div className="summaryGrid">
+          <Card label="Scanning" value={`${capitalFlow.scanning ?? scanSummary?.requested ?? "--"} companies`} />
+          <Card label="Strong Buying Pressure" value={capitalFlow.strongBuyingPressure ?? "--"} />
+          <Card label="Developing" value={capitalFlow.developing ?? "--"} />
+          <Card label="Review Now" value={capitalFlow.reviewNow ?? "--"} tone={Number(capitalFlow.reviewNow) > 0 ? "profit" : ""} />
+        </div>
+        {topCapitalFlow ? (
+          <div className="bestLine">
+            <span>TOP CAPITAL FLOW</span>
+            <strong>{topCapitalFlow.symbol} - Capital Flow {topCapitalFlow.capitalFlowScore ?? "--"}</strong>
+            <p>{Number.isFinite(Number(topCapitalFlow.priceChangePercent)) ? `${Number(topCapitalFlow.priceChangePercent) > 0 ? "+" : ""}${Number(topCapitalFlow.priceChangePercent).toFixed(2)}%` : "--"} / {topCapitalFlow.relativeVolume ?? "--"}x normal activity / {topCapitalFlow.state}</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel" id="market-scan">

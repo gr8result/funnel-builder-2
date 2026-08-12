@@ -44,6 +44,8 @@ export default function TraderSettings({ passwordHash }) {
     scanFrequency: "during-session",
   });
   const [paperSettings, setPaperSettings] = useState({ startingBalance: 100000, confirmation: "", message: "" });
+  const [notificationSettings, setNotificationSettings] = useState({ smsEnabled: false, mobile: "", mobileMasked: "", sendSMSFor: {} });
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
@@ -51,6 +53,9 @@ export default function TraderSettings({ passwordHash }) {
       const stored = JSON.parse(window.localStorage.getItem(SCANNER_SETTINGS_KEY) || "null");
       if (stored && typeof stored === "object") setScannerSettings((current) => ({ ...current, ...stored }));
     } catch {}
+    fetch("/api/freedom-trader/notifications").then((res) => res.json()).then((data) => {
+      if (data?.ok) setNotificationSettings((current) => ({ ...current, ...(data.settings || {}) }));
+    }).catch(() => {});
     setChecking(false);
   }, []);
 
@@ -92,6 +97,35 @@ export default function TraderSettings({ passwordHash }) {
       ...current,
       message: response.ok && data?.ok ? "Paper account settings updated." : data?.error || "Paper settings action failed.",
     }));
+  }
+
+  function updateNotificationSetting(key, value) {
+    setNotificationSettings((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateSMSFor(key, value) {
+    setNotificationSettings((current) => ({ ...current, sendSMSFor: { ...(current.sendSMSFor || {}), [key]: value } }));
+  }
+
+  async function saveNotificationSettings() {
+    const response = await fetch("/api/freedom-trader/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(notificationSettings),
+    });
+    const data = await response.json().catch(() => null);
+    setNotificationMessage(response.ok && data?.ok ? "Freedom alert settings saved." : data?.error || "Unable to save Freedom alert settings.");
+    if (data?.settings) setNotificationSettings((current) => ({ ...current, ...data.settings }));
+  }
+
+  async function sendTestSMS() {
+    const response = await fetch("/api/freedom-trader/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "test_sms" }),
+    });
+    const data = await response.json().catch(() => null);
+    setNotificationMessage(response.ok && data?.sms?.ok ? "Test SMS sent." : data?.sms?.error || data?.error || "Test SMS could not be sent.");
   }
 
   if (checking) return <div className="boot">Opening Freedom Trader...</div>;
@@ -151,6 +185,24 @@ export default function TraderSettings({ passwordHash }) {
           <label>Excluded industries<input value={scannerSettings.excludedIndustries} onChange={(event) => updateScannerSetting("excludedIndustries", event.target.value)} placeholder="biotech, cannabis" /></label>
         </div>
         <Link className="scannerLink" href="/freedom-trader/market-opportunities">Open Scanner</Link>
+      </main>
+      <main className="panel">
+        <h2>E. Freedom Alerts</h2>
+        <p>SMS notifications reuse the existing Gr8 Result SMSGlobal queue. Freedom still keeps alerts visible if SMS fails.</p>
+        <div className="formGrid">
+          <label>SMS Alerts<select value={notificationSettings.smsEnabled ? "on" : "off"} onChange={(event) => updateNotificationSetting("smsEnabled", event.target.value === "on")}><option value="on">ON</option><option value="off">OFF</option></select></label>
+          <label>Mobile<input value={notificationSettings.mobile || notificationSettings.mobileMasked || ""} onChange={(event) => updateNotificationSetting("mobile", event.target.value)} placeholder="********315" /></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.exceptionalOpportunity !== false} onChange={(event) => updateSMSFor("exceptionalOpportunity", event.target.checked)} /> Exceptional new opportunity</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.tradeReady !== false} onChange={(event) => updateSMSFor("tradeReady", event.target.checked)} /> Trade ready</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.entryReached !== false} onChange={(event) => updateSMSFor("entryReached", event.target.checked)} /> Entry reached</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.safetyExit !== false} onChange={(event) => updateSMSFor("safetyExit", event.target.checked)} /> Safety Exit</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.takeSomeProfit !== false} onChange={(event) => updateSMSFor("takeSomeProfit", event.target.checked)} /> Take Some Profit</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.finalExit !== false} onChange={(event) => updateSMSFor("finalExit", event.target.checked)} /> Final Exit</span></label>
+          <label><span><input type="checkbox" checked={notificationSettings.sendSMSFor?.setupCancelled !== false} onChange={(event) => updateSMSFor("setupCancelled", event.target.checked)} /> Setup cancelled/invalidated</span></label>
+          <button type="button" onClick={saveNotificationSettings}>Save Freedom Alerts</button>
+          <button type="button" onClick={sendTestSMS}>Send Test SMS</button>
+        </div>
+        {notificationMessage ? <p className="paperMessage">{notificationMessage}</p> : null}
       </main>
       <footer>Settings are local UI controls for now. Trades are never placed automatically.</footer>
       <PageStyles />
