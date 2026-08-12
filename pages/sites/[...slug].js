@@ -15,7 +15,7 @@ import { normalizeWebsiteBuilderAssets } from "../../lib/website-builder/mediaAs
 import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../lib/website-builder/publicationStore";
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
-import { isFullWidthPage, normalizePageWidthMode } from "../../lib/website-builder/pageLayout";
+import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 
@@ -429,7 +429,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const requestedAliases = publishedPageAliases(requested || "home");
   const activePage = pages.find((page) => requestedAliases.includes(resolvePublishedPageName(page))) || pages[0] || null;
   const pageBlocks = activePage?.name ? (normalizedPageBlocks || {})[activePage.name] || [] : [];
-  const pageWidthMode = normalizePageWidthMode(activePage?.pageWidthMode);
+  const pageWidthMode = resolvePageWidthMode(project, activePage?.slug || activePage?.name || requested || "");
   const pageFullWidth = isFullWidthPage(pageWidthMode);
   const layoutWidth = pickLayoutWidth(pageBlocks, CONTENT_WIDTH);
   const pageContent = activePage?.name ? (project?.pagesContent || {})[activePage.name] || "" : "";

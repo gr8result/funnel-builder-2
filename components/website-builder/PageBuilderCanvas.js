@@ -11,7 +11,7 @@ import {
   resolveSharedBlockInstance,
 } from "../../lib/website-builder/sharedBlockTemplates";
 import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
-import { normalizePageWidthMode, PAGE_WIDTH_CONTAINED } from "../../lib/website-builder/pageLayout";
+import { normalizePageWidthMode, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
 import { buildWebsitePreviewUrl } from "../../lib/website-builder/previewRoutes";
 import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
@@ -1728,7 +1728,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const responsiveCanvasLayoutWidth = resolveResponsiveLayoutWidth(pageCanvasWidth, previewMode);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const activePageEntry = resolvePreviewPageEntry(project, activePage);
-  const pageWidthMode = normalizePageWidthMode(activePageEntry?.pageWidthMode || PAGE_WIDTH_CONTAINED);
+  const pageWidthMode = resolvePageWidthMode(project, activePageEntry?.slug || activePageEntry?.name || activePage);
   const pageIsFullWidth = pageWidthMode === "full";
   const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
   const resolveCanvasFrameBackground = (entries, entryIndex) => (

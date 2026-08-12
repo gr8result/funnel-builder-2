@@ -30,6 +30,7 @@ import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, apply
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
+import { normalizePageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   detachSharedBlockInstance,
   getSharedBlockTemplates,
@@ -1952,6 +1953,7 @@ export default function VisualBuilderPage() {
       name: pageName,
       title: pageName,
       slug: pageSlug,
+      pageWidthMode: resolvePageWidthMode(project, activePage || existingPages[0]?.name || ""),
       file: `${pageSlug}.json`,
       order: nextOrder,
       showInNavigation: newPageShowInNavigation,
@@ -2286,16 +2288,23 @@ export default function VisualBuilderPage() {
   function updateActivePageSettings(patch = {}, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
+    const nextGlobalPageWidthMode = Object.prototype.hasOwnProperty.call(patch, "pageWidthMode")
+      ? normalizePageWidthMode(patch.pageWidthMode)
+      : "";
     let matched = false;
     const nextPages = (Array.isArray(currentProject?.pages) ? currentProject.pages : []).map((page) => {
       const matches = page?.name === pageName || slugify(page?.name || "") === slugify(pageName) || slugify(page?.slug || "") === slugify(pageName);
       if (matches) matched = true;
+      if (nextGlobalPageWidthMode) return { ...page, pageWidthMode: nextGlobalPageWidthMode };
       return matches ? { ...page, ...patch } : page;
     });
     const pages = matched
       ? nextPages
-      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...patch }];
-    saveProjectPatch({ pages }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
+      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...patch, ...(nextGlobalPageWidthMode ? { pageWidthMode: nextGlobalPageWidthMode } : {}) }];
+    saveProjectPatch({
+      pages,
+      ...(nextGlobalPageWidthMode ? { pageWidthMode: nextGlobalPageWidthMode, globalPageWidthMode: nextGlobalPageWidthMode } : {}),
+    }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
   }
 
   // forceSaveBlockPage: used by the manual Save button / Ctrl+S.

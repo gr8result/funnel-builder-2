@@ -31,6 +31,7 @@
     "test:wb-button-links": "node scripts/test-website-builder-button-links-regression.mjs",
     "test:wb-global-nav": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-global-nav-regression.mjs",
     "test:wb-shared-cta": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-shared-cta-templates.mjs",
+    "test:wb-full-width": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-full-width-layout.mjs",
     "test:wb-hero-cta-independence": "node scripts/test-website-builder-hero-cta-independence.mjs",
     "test:wb-text-section-editor": "node scripts/test-website-builder-text-section-editor-regression.mjs",
     "test:wb-live-pipeline-runtime": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-save-publish-live-pipeline-runtime.mjs"
