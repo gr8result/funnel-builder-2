@@ -77,6 +77,50 @@ function normalizeFreeTrialTemplate(sourceTemplate = null) {
   });
 }
 
+function hydrateLinkedCtaFallback(block, template) {
+  if (!block || typeof block !== "object") return block;
+  const sharedTemplateId = String(block.sharedTemplateId || block.props?.sharedTemplateId || "").trim();
+  if (sharedTemplateId !== SHARED_FREE_TRIAL_CTA_ID) return block;
+  if (String(block.type || "") !== "cta-button") return block;
+
+  return {
+    ...block,
+    sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
+    props: {
+      ...(template.blockData?.props || {}),
+      ...(block.props || {}),
+      text: EXPECTED_TEXT,
+      buttonLabel: EXPECTED_TEXT,
+      link: EXPECTED_URL,
+      href: EXPECTED_URL,
+      linkType: "external",
+      openInNewTab: true,
+      newTab: true,
+      sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
+      sharedTemplateName: SHARED_FREE_TRIAL_CTA_NAME,
+      sharedTemplateType: "shared",
+    },
+  };
+}
+
+function hydrateLinkedCtaFallbacks(project, template) {
+  const pageBlocks = Object.fromEntries(
+    Object.entries(project.pageBlocks || {}).map(([pageName, blocks]) => [
+      pageName,
+      Array.isArray(blocks) ? blocks.map((block) => hydrateLinkedCtaFallback(block, template)) : blocks,
+    ])
+  );
+  const chaiData = Object.fromEntries(
+    Object.entries(project.chaiData || {}).map(([pageName, data]) => [
+      pageName,
+      data && typeof data === "object" && Array.isArray(data.blocks)
+        ? { ...data, blocks: data.blocks.map((block) => hydrateLinkedCtaFallback(block, template)) }
+        : data,
+    ])
+  );
+  return { ...project, pageBlocks, chaiData };
+}
+
 function assertSharedCta(project, source) {
   const usage = getSharedBlockTemplateUsage(project, SHARED_FREE_TRIAL_CTA_ID);
   assert.ok(usage.length > 0, `${source}: expected linked shared CTA usage`);
@@ -127,13 +171,14 @@ async function main() {
   const slug = resolveSlug(draft);
   const published = await getPublishedWebsiteBySlug(slug);
   const publishedTemplate = published?.site_data?.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || null;
+  const canonicalTemplate = normalizeFreeTrialTemplate(
+    draft.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || publishedTemplate
+  );
   const repaired = normalizeSharedBlockTemplateProject({
-    ...draft,
+    ...hydrateLinkedCtaFallbacks(draft, canonicalTemplate),
     sharedBlockTemplates: {
       ...(draft.sharedBlockTemplates || {}),
-      [SHARED_FREE_TRIAL_CTA_ID]: normalizeFreeTrialTemplate(
-        draft.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || publishedTemplate
-      ),
+      [SHARED_FREE_TRIAL_CTA_ID]: canonicalTemplate,
     },
   });
 
