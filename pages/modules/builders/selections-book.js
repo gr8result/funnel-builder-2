@@ -16,7 +16,9 @@ import {
   productClientPrice,
   productsForRequirement,
   projectTotals as guidedProjectTotals,
+  classifyApprovedSelectionRow,
   requirementImage,
+  resolveSelectionImage,
   statusForRequirement,
   statusTone,
   variationFor,
@@ -226,20 +228,20 @@ const GUIDED_AREA_CARDS = [
   },
 ];
 
-const EXTERIOR_CATEGORY_CARDS = [
-  ["bricks", "Bricks", GENERIC_IMAGE_URLS.bricks, "bricks"],
-  ["cladding", "Cladding", GENERIC_IMAGE_URLS.cladding],
-  ["roof", "Roof", GENERIC_IMAGE_URLS.roofing, "roof"],
-  ["roof-colour", "Roof Colour", GENERIC_IMAGE_URLS.roofColour],
-  ["windows", "Windows", GENERIC_IMAGE_URLS.windows],
-  ["entry-door", "Entry Door", GENERIC_IMAGE_URLS.entryDoors, "entry-door"],
-  ["garage-door", "Garage Door", GENERIC_IMAGE_URLS.garageDoors, "garage-door"],
-  ["gutters", "Gutters", GENERIC_IMAGE_URLS.gutters],
-  ["fascia", "Fascia", GENERIC_IMAGE_URLS.fascia],
-  ["balustrades", "Balustrades", GENERIC_IMAGE_URLS.balustrades],
-  ["exterior-paint", "Exterior Paint", GENERIC_IMAGE_URLS.exteriorPaint],
-  ["external-lighting", "External Lighting", GENERIC_IMAGE_URLS.externalLighting],
-].map(([key, label, image, requirementKey]) => ({ key, label, image, requirementKey }));
+const EXTERIOR_CATEGORY_CARDS = EXTERIOR_REQUIREMENTS.map((requirement) => ({
+  key: requirement.requirementKey,
+  label: requirement.label,
+  image: requirementImage(requirement),
+  requirementKey: requirement.requirementKey,
+}));
+
+const BRICK_SUPPLIER_FILTERS = ["All Bricks", "PGH Bricks", "Austral Bricks"];
+const BRICK_FALLBACK_PRODUCTS = [
+  brickFallbackProduct("pgh-premier-face-bricks", "PGH Bricks", "Premier Range", "Face brick selection", "Colour to be selected"),
+  brickFallbackProduct("pgh-premium-face-bricks", "PGH Bricks", "Premium Range", "Face brick selection", "Colour to be selected"),
+  brickFallbackProduct("austral-premier-face-bricks", "Austral Bricks", "Premier Range", "Face brick selection", "Colour to be selected"),
+  brickFallbackProduct("austral-premium-face-bricks", "Austral Bricks", "Premium Range", "Face brick selection", "Colour to be selected"),
+];
 
 const INTERIOR_CATEGORY_CARDS = [
   ["kitchen", "Kitchen", GENERIC_IMAGE_URLS.kitchen],
@@ -770,6 +772,7 @@ export default function BuilderSelectionsBookPage({
   const [guidedArea, setGuidedArea] = useState("");
   const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
   const [guidedProductDetails, setGuidedProductDetails] = useState(null);
+  const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("All Bricks");
   const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
   const [viewerPageWidth, setViewerPageWidth] = useState(0);
@@ -816,7 +819,7 @@ export default function BuilderSelectionsBookPage({
   const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
   const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey), [guidedRequirement.areaKey]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
-  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts), [guidedRequirement, approvedCatalogueProducts]);
+  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts, { brickSupplier: guidedBrickSupplier }), [guidedRequirement, approvedCatalogueProducts, guidedBrickSupplier]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -1253,18 +1256,21 @@ export default function BuilderSelectionsBookPage({
     setGuidedArea(areaKey);
     setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
     setGuidedRequirementKey("");
+    setGuidedBrickSupplier("All Bricks");
   }
 
   function openGuidedKitchen() {
     setGuidedArea("interior");
     setGuidedScreen("kitchen");
     setGuidedRequirementKey("");
+    setGuidedBrickSupplier("All Bricks");
   }
 
   function openGuidedRequirement(requirementKey) {
     setGuidedArea("interior");
     setGuidedRequirementKey(requirementKey);
     setGuidedScreen("product");
+    setGuidedBrickSupplier("All Bricks");
   }
 
   function openGuidedRequirementKey(requirementKey) {
@@ -1273,6 +1279,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedArea(next.areaKey === "exterior" ? "exterior" : "interior");
     setGuidedRequirementKey(next.requirementKey);
     setGuidedScreen("product");
+    setGuidedBrickSupplier("All Bricks");
   }
 
   function selectGuidedProduct(requirement, option) {
@@ -1658,7 +1665,7 @@ export default function BuilderSelectionsBookPage({
       <main className="screen">
         <section className="workspace">
           <header className="standardBanner">
-            <button type="button" className="standardBack" onClick={() => handleGuidedBack({ guidedScreen, setGuidedScreen, setGuidedArea, setGuidedRequirementKey })} aria-label="Back">
+            <button type="button" className="standardBack" onClick={() => handleGuidedBack({ guidedScreen, guidedArea, guidedRequirement, setGuidedScreen, setGuidedArea, setGuidedRequirementKey })} aria-label="Back">
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
@@ -1799,10 +1806,12 @@ export default function BuilderSelectionsBookPage({
               runningTotals={guidedRunningTotals}
               products={guidedProducts}
               catalogueAudit={approvedCatalogueAudit}
+              brickSupplier={guidedBrickSupplier}
               onOpenArea={openGuidedArea}
               onOpenKitchen={openGuidedKitchen}
               onOpenRequirementKey={openGuidedRequirementKey}
               onOpenRequirement={openGuidedRequirement}
+              onBrickSupplierChange={setGuidedBrickSupplier}
               onSelectProduct={selectGuidedProduct}
               onViewDetails={(product) => setGuidedProductDetails(product)}
             />
@@ -1854,10 +1863,12 @@ function GuidedSelectionsWorkflow({
   runningTotals,
   products,
   catalogueAudit,
+  brickSupplier,
   onOpenArea,
   onOpenKitchen,
   onOpenRequirementKey,
   onOpenRequirement,
+  onBrickSupplierChange,
   onSelectProduct,
   onViewDetails,
 }) {
@@ -1937,6 +1948,20 @@ function GuidedSelectionsWorkflow({
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
               {catalogueAudit ? <em>{catalogueAudit.usableRows} approved CSV rows connected.</em> : null}
             </div>
+            {requirement.requirementKey === "bricks" ? (
+              <div className="guidedSupplierTabs" data-testid="guided-brick-supplier-tabs" aria-label="Brick suppliers">
+                {BRICK_SUPPLIER_FILTERS.map((supplier) => (
+                  <button
+                    key={supplier}
+                    type="button"
+                    className={supplier === brickSupplier ? "active" : ""}
+                    onClick={() => onBrickSupplierChange(supplier)}
+                  >
+                    {supplier}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className="guidedProductGrid">
               {products.map((product) => (
                 <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} />
@@ -2032,6 +2057,7 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
         <strong>{product.productName}</strong>
         <em>Model {product.model || "not recorded"}</em>
         <p>{product.finish || "Finish to be confirmed"}</p>
+        {product.imageReviewRequired ? <small>Image review required</small> : null}
       </div>
       <div className="guidedProductMoney">
         <GuidedMiniTotal label="Price" value={priceState === PRICE_STATES.current ? money(selectedPrice) : priceState} tone={priceState === PRICE_STATES.current ? "" : "warn"} />
@@ -2949,7 +2975,7 @@ function guidedSelectionsFromBook(book) {
       },
       metadata: {
         source: "guided_client_selections",
-        area: "kitchen",
+        area: requirement.areaKey,
         requirementKey: requirement.requirementKey,
         familyKey: requirement.familyKey,
         approvedCsv: APPROVED_SELECTIONS_CSV_PATH,
@@ -2972,34 +2998,138 @@ function guidedRequirementFinancials(requirement, selection) {
   };
 }
 
-function guidedProductsForRequirement(requirement, catalogueProducts = []) {
-  const approvedProducts = productsForRequirement(catalogueProducts, requirement);
-  return approvedProducts.map((product, index) => {
-    const entity = product.metadata?.productEntity || product;
-    const priceState = priceStateForProduct(entity);
-    const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
-    return {
-      ...product,
-      id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
-      productName: entity.productName || product.product_name || "",
-      brand: entity.brand || "",
-      supplier: entity.supplier || "",
-      model: entity.model || "",
-      range: entity.range || "",
-      finish: entity.finish || entity.colour || "",
-      size: entity.size || sizeFromOption(entity),
-      description: entity.description || "",
-      allowance: productAllowance(entity, requirement),
-      selectedCost,
-      priceState,
-      imageUrl: entity.primaryImage || entity.genericCategoryImage || requirementImage(requirement),
-      productUrl: entity.officialProductURL || "",
-      specificationUrl: entity.specificationURL || "",
-      metadata: {
-        ...(product.metadata || {}),
-        productEntity: entity,
+function guidedProductsForRequirement(requirement, catalogueProducts = [], filters = {}) {
+  const approvedProducts = productsForRequirement(catalogueProducts, requirement)
+    .filter((product) => {
+      const entity = product.metadata?.productEntity || product;
+      return classifyApprovedSelectionRow(entity) === "actual_product";
+    });
+  if (requirement?.requirementKey === "bricks") {
+    const actualBrickProducts = approvedProducts.map((product, index) => guidedProductFromCatalogue(product, requirement, index));
+    const structuredBrickProducts = [...actualBrickProducts, ...BRICK_FALLBACK_PRODUCTS];
+    const supplier = filters.brickSupplier || "All Bricks";
+    return structuredBrickProducts.filter((product) => supplier === "All Bricks" || product.supplier === supplier);
+  }
+  if (!approvedProducts.length && requirement?.requirementKey === "roofing") {
+    return [
+      guidedFallbackProduct({
+        id: "roofing-colorbond-corrugated-monument",
+        requirement,
+        brand: "Colorbond",
+        supplier: "Roofing Supplier",
+        productName: "Colorbond Corrugated Roofing",
+        model: "Corrugated profile",
+        range: "Metal Roofing",
+        finish: "Monument colour",
+        description: "Metal roofing profile with roof colour captured as part of the Roofing selection.",
+      }),
+      guidedFallbackProduct({
+        id: "roofing-roof-tiles-monument",
+        requirement,
+        brand: "Monier",
+        supplier: "Roofing Supplier",
+        productName: "Roof Tiles",
+        model: "Profile to be confirmed",
+        range: "Concrete Roof Tiles",
+        finish: "Monument colour",
+        description: "Roof tile family option with colour selected inside Roofing.",
+      }),
+    ];
+  }
+  if (!approvedProducts.length) {
+    return [guidedFallbackProduct({
+      id: `${requirement.requirementKey}-selection-pending`,
+      requirement,
+      brand: "Builder Standard",
+      supplier: "Builder supplier",
+      productName: `${requirement.label} selection`,
+      model: "To be confirmed",
+      range: requirement.label,
+      finish: "To be selected",
+      description: `${requirement.label} product family is connected to the approved CSV and requires exact product mapping.`,
+    })];
+  }
+  return approvedProducts.map((product, index) => guidedProductFromCatalogue(product, requirement, index));
+}
+
+function guidedProductFromCatalogue(product, requirement, index = 0) {
+  const entity = product.metadata?.productEntity || product;
+  const priceState = priceStateForProduct(entity);
+  const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
+  return {
+    ...product,
+    id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
+    productName: entity.productName || product.product_name || "",
+    brand: entity.brand || "",
+    supplier: entity.supplier || "",
+    model: entity.model || "",
+    range: entity.range || "",
+    finish: entity.finish || entity.colour || "",
+    size: entity.size || sizeFromOption(entity),
+    description: entity.description || "",
+    allowance: productAllowance(entity, requirement),
+    selectedCost,
+    priceState,
+    imageUrl: resolveSelectionImage({ product, requirement }),
+    productUrl: entity.officialProductURL || "",
+    specificationUrl: entity.specificationURL || "",
+    rowClassification: classifyApprovedSelectionRow(entity),
+    imageReviewRequired: Boolean(entity.imageReviewRequired),
+    metadata: {
+      ...(product.metadata || {}),
+      productEntity: entity,
+    },
+  };
+}
+
+function guidedFallbackProduct({ id, requirement, brand, supplier, productName, model, range, finish, description }) {
+  return {
+    id,
+    productName,
+    brand,
+    supplier,
+    model,
+    range,
+    finish,
+    size: "",
+    description,
+    allowance: requirement.defaultAllowance,
+    selectedCost: 0,
+    priceState: PRICE_STATES.pending,
+    imageUrl: resolveSelectionImage({ requirement }),
+    productUrl: "",
+    specificationUrl: "",
+    rowClassification: "product_family",
+    imageReviewRequired: true,
+    metadata: {
+      productEntity: {
+        productName,
+        brand,
+        supplier,
+        model,
+        range,
+        finish,
+        description,
+        familyKey: requirement.familyKey,
+        topLevelArea: requirement.areaKey,
+        priceStatus: "price_pending",
+        imageReviewRequired: true,
       },
-    };
+    },
+  };
+}
+
+function brickFallbackProduct(id, supplier, range, model, finish) {
+  return guidedFallbackProduct({
+    id,
+    requirement: guidedRequirementByKey("bricks") || EXTERIOR_REQUIREMENTS[0],
+    brand: supplier,
+    supplier,
+    productName: `${supplier} ${range}`,
+    model,
+    range,
+    finish,
+    description: `${supplier} ${range} brick family. Exact brick name, colour swatch and current price require supplier confirmation.`,
   });
 }
 
@@ -3088,9 +3218,15 @@ function sizeFromOption(option) {
   return match?.[0] || "";
 }
 
-function handleGuidedBack({ guidedScreen, setGuidedScreen, setGuidedArea, setGuidedRequirementKey }) {
+function handleGuidedBack({ guidedScreen, guidedArea, guidedRequirement, setGuidedScreen, setGuidedArea, setGuidedRequirementKey }) {
   if (guidedScreen === "product") {
-    setGuidedScreen("kitchen");
+    if (guidedRequirement?.areaKey === "exterior" || guidedArea === "exterior") {
+      setGuidedScreen("exterior");
+    } else if (guidedRequirement?.areaKey === "kitchen" || guidedArea === "kitchen") {
+      setGuidedScreen("kitchen");
+    } else {
+      setGuidedScreen("interior");
+    }
     setGuidedRequirementKey("");
     return;
   }
@@ -3179,6 +3315,9 @@ const styles = `
   .guidedProgressItem.active { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .guidedProductPanel { display: grid; gap: 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 16px; }
   .guidedSectionHeader { display: grid; gap: 5px; }
+  .guidedSupplierTabs { display: flex; flex-wrap: wrap; gap: 8px; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 10px; }
+  .guidedSupplierTabs button { width: auto; border: 1px solid #cbd5e1; background: #ffffff; color: #172033; border-radius: 6px; padding: 9px 12px; font-weight: 900; cursor: pointer; }
+  .guidedSupplierTabs button.active { background: #071827; border-color: #071827; color: #ffffff; }
   .guidedProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
   .guidedProductCard { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
   .guidedProductCard > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }

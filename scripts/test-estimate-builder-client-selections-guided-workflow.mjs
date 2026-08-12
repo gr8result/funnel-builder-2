@@ -13,6 +13,12 @@ assert.ok(selectionsBookSource.includes("Choose an Area"), "Default Client Selec
 assert.ok(selectionsBookSource.includes("guided-client-selections-home"), "Guided home test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-kitchen-checklist"), "Kitchen checklist test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-left-progress-menu"), "Product page left progress menu marker must exist");
+assert.ok(selectionsBookSource.includes("BRICK_SUPPLIER_FILTERS"), "Bricks flow must expose supplier/range grouping");
+assert.ok(selectionsBookSource.includes('"All Bricks", "PGH Bricks", "Austral Bricks"'), "Bricks flow must include All/PGH/Austral supplier filters");
+assert.ok(selectionsBookSource.includes('requirement.requirementKey === "bricks"'), "Bricks supplier filters must be scoped to the Bricks page");
+assert.ok(!selectionsBookSource.includes('["roof-colour", "Roof Colour"'), "Roof Colour must not be a separate Exterior category");
+assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "exterior"'), "Back from Exterior product pages must return to Exterior categories");
+assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "kitchen"'), "Back from Kitchen product pages must return to Kitchen checklist");
 assert.ok(selectionsBookSource.includes("APPROVED_SELECTIONS_CSV_PATH"), "Approved CSV path must drive the requirement source marker");
 assert.ok(!selectionsBookSource.includes("Site Works") && !selectionsBookSource.includes("Soil Tests"), "Old estimating categories must not be introduced into the guided workflow");
 

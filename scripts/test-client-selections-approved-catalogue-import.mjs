@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildApprovedClientSelectionsCatalogue,
+  classifyApprovedCatalogueRow,
   imageForFamilyKey,
   PRODUCT_ENRICHMENT_COLUMNS,
 } from "../lib/product-library/catalogueModel.js";
@@ -12,6 +13,7 @@ import {
   INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
   PRICE_STATES,
+  classifyApprovedSelectionRow,
   createSelectionPayloadFromProduct,
   guidedRequirementByKey,
   priceStateForProduct,
@@ -32,6 +34,11 @@ assert.ok(catalogue.audit.genericRows.length > 300, "generic/specification rows 
 assert.ok(catalogue.audit.rowsMissingPrice.every((row) => row.priceStatus === "price_pending" || row.priceStatus === "quote_required"), "missing prices must retain pending/quote-required states");
 assert.equal(catalogue.products.length, 614, "one catalogue entity must be produced for every usable row");
 assert.ok(catalogue.productFamilies.length >= 16, "approved rows must map to product families");
+assert.equal(classifyApprovedCatalogueRow({ itemDescription: "FACE BRICKS - PREMIER RANGE", familyKey: "bricks" }), "allowance_specification", "brick range rows must not be actual products");
+assert.equal(classifyApprovedCatalogueRow({ itemDescription: "FACE BRICKS - PREMIUM RANGE", familyKey: "bricks" }), "allowance_specification", "premium brick range rows must not be actual products");
+assert.equal(classifyApprovedCatalogueRow({ itemDescription: "METAL ROOFING - COLOUR", familyKey: "metal-roofing" }), "variant", "roof colour rows must be Roofing variants");
+assert.equal(classifyApprovedSelectionRow({ sourceDescription: "FACE BRICKS - PREMIER RANGE", familyKey: "bricks" }), "allowance_specification", "runtime classifier must match catalogue brick row classification");
+assert.equal(classifyApprovedSelectionRow({ sourceDescription: "METAL ROOFING - COLOUR", familyKey: "metal-roofing" }), "variant", "runtime classifier must keep roof colour inside Roofing");
 assert.deepEqual(PRODUCT_ENRICHMENT_COLUMNS, [
   "product_code",
   "family_key",
@@ -66,11 +73,13 @@ const garageRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementK
 const internalDoorRequirement = INTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "internal-doors");
 
 const ovenProducts = productsForRequirement(catalogue.products, ovenRequirement);
+const brickProducts = productsForRequirement(catalogue.products, EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks"));
 const garageProducts = productsForRequirement(catalogue.products, garageRequirement);
 const internalDoorProducts = productsForRequirement(catalogue.products, internalDoorRequirement);
 
 assert.ok(ovenProducts.length > 0, "Oven requirement must query oven products");
 assert.ok(ovenProducts.every((product) => product.familyKey === "ovens"), "Oven query must not include non-oven products");
+assert.ok(!brickProducts.some((product) => /FACE BRICKS - PREM(ier|ium) RANGE/i.test(product.productName || product.sourceDescription || "")), "Bricks product query must not expose allowance range rows as products");
 assert.ok(garageProducts.length > 0, "Garage Door requirement must query garage-door products");
 assert.ok(garageProducts.every((product) => product.familyKey === "garage-doors"), "Garage Door query must not fall back to bricks");
 assert.ok(internalDoorProducts.length > 0, "Internal Doors requirement must query internal-door products");
