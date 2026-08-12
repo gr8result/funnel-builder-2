@@ -73,8 +73,8 @@ export default function TradesPage({ passwordHash }) {
     <div className="page">
       <Head><title>Paper Trades | Freedom Trader</title></Head>
       <section className="platformBanner"><strong>Freedom Trader</strong><span>PAPER TRADING - NO REAL MONEY</span></section>
-      <PaperAccountBar />
       <FreedomModuleNav module="trader" paper />
+      <PaperAccountBar />
       <header className="hero"><h1>Paper Trade History</h1><p>Audit trail for simulated orders and trades.</p></header>
       <section className="filters">
         <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}><option value="all">All statuses</option><option value="open">Open</option><option value="closed">Closed</option><option value="pending">Pending</option><option value="cancelled">Cancelled</option><option value="filled">Filled</option></select>

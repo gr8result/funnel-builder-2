@@ -1573,8 +1573,8 @@ export default function TraderCompany({ passwordHash }) {
         <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong>
         <span>Active Trading & Market Opportunities</span>
       </section>
-      <PaperAccountBar />
       <FreedomModuleNav module="trader" paper />
+      <PaperAccountBar />
       <header className="hero">
         <div className="heroMain">
           <span className="logo">{company.logoText}</span>

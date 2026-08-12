@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { BarChart3, Bell, Briefcase, Eye, FileClock, Home, LineChart, Search, Settings } from "lucide-react";
+import { BarChart3, Bell, BookOpen, Briefcase, Eye, FileClock, Home, LineChart, Search, Settings } from "lucide-react";
 
 const INVESTMENT_ITEMS = [
   { label: "Dashboard", href: "/freedom-investment", match: ["/freedom", "/freedom-investment"], Icon: Home },
@@ -11,11 +11,12 @@ const INVESTMENT_ITEMS = [
 
 const TRADER_ITEMS = [
   { label: "Dashboard", href: "/freedom-trader", match: ["/freedom-trader"], Icon: Home },
-  { label: "Watchlist", href: "/freedom-trader#watchlist", Icon: Eye },
+  { label: "Watchlist", href: "/freedom-trader/watchlist", match: ["/freedom-trader/watchlist"], Icon: Eye },
   { label: "Market Opportunities", href: "/freedom-trader/market-opportunities", match: ["/freedom-trader/market-opportunities"], Icon: LineChart },
   { label: "Alerts", href: "/freedom-trader/alerts", match: ["/freedom-trader/alerts"], Icon: Bell },
   { label: "Portfolio", href: "/freedom-trader/portfolio", match: ["/freedom-trader/portfolio", "/freedom-trader/positions"], Icon: Briefcase },
-  { label: "Trade History", href: "/freedom-trader/trades", match: ["/freedom-trader/trades"], Icon: FileClock },
+  { label: "Trade History", href: "/freedom-trader/trade-history", match: ["/freedom-trader/trade-history", "/freedom-trader/trades"], Icon: FileClock },
+  { label: "Trade Journal", href: "/freedom-trader/trade-journal", match: ["/freedom-trader/trade-journal"], Icon: BookOpen },
   { label: "Settings", href: "/freedom-trader/settings", match: ["/freedom-trader/settings"], Icon: Settings },
 ];
 
@@ -61,6 +62,12 @@ export default function FreedomModuleNav({ module = "trader", paper = false }) {
           margin: 0 auto 18px;
           max-width: 1840px;
           padding: 12px;
+        }
+        body:has(.traderNav) .platformBanner {
+          position: static !important;
+        }
+        body:has(.traderNav) .page {
+          padding-top: 28px !important;
         }
         .freedomModuleNavTop,
         .freedomModuleNavItems {

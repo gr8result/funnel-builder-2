@@ -96,8 +96,8 @@ export default function PaperPortfolio({ passwordHash }) {
     <div className="page">
       <Head><title>Paper Portfolio | Freedom Trader</title></Head>
       <section className="platformBanner"><strong>Freedom Trader</strong><span>PAPER TRADING - NO REAL MONEY</span></section>
-      <PaperAccountBar />
       <FreedomModuleNav module="trader" paper />
+      <PaperAccountBar />
       <header className="hero">
         <h1>Paper Trading Portfolio</h1>
         <p>Simulated orders only. No real brokerage account is connected.</p>

@@ -137,8 +137,8 @@ export default function TraderAlerts({ passwordHash }) {
     <div className="page">
       <Head><title>Alerts | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
-      <PaperAccountBar />
       <FreedomModuleNav module="trader" paper />
+      <PaperAccountBar />
       <header className="hero">
         <h1>Trade Alerts</h1>
         <p>Trader-only alerts. Alerts do not execute trades automatically.</p>
