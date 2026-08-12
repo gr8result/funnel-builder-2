@@ -18,6 +18,7 @@ import {
   guidedRequirementByKey,
   priceStateForProduct,
   productsForRequirement,
+  requirementImage,
   statusForRequirement,
 } from "../lib/builders/clientSelectionWorkflow.js";
 
@@ -41,26 +42,29 @@ assert.equal(classifyApprovedSelectionRow({ sourceDescription: "FACE BRICKS - PR
 assert.equal(classifyApprovedSelectionRow({ sourceDescription: "METAL ROOFING - COLOUR", familyKey: "metal-roofing" }), "variant", "runtime classifier must keep roof colour inside Roofing");
 assert.deepEqual(PRODUCT_ENRICHMENT_COLUMNS, [
   "product_code",
+  "organisation_id",
   "family_key",
-  "brand",
   "supplier",
+  "brand",
   "range",
-  "model",
   "product_name",
   "colour",
+  "texture",
   "finish",
-  "size",
+  "dimensions",
   "primary_image_url",
   "gallery_image_urls",
   "image_source_url",
   "official_product_url",
   "specification_url",
-  "current_price",
+  "rrp",
+  "client_price",
+  "currency",
   "price_source_url",
   "price_verified_at",
-  "price_status",
-  "notes",
-], "web enrichment template columns must remain stable");
+  "active",
+  "discontinued",
+], "brick-ready product import columns must remain stable");
 
 const areas = new Map(catalogue.hierarchy.map((area) => [area.key, area]));
 assert.ok(areas.has("exterior"), "hierarchy must expose Exterior");
@@ -80,6 +84,9 @@ const internalDoorProducts = productsForRequirement(catalogue.products, internal
 assert.ok(ovenProducts.length > 0, "Oven requirement must query oven products");
 assert.ok(ovenProducts.every((product) => product.familyKey === "ovens"), "Oven query must not include non-oven products");
 assert.ok(!brickProducts.some((product) => /FACE BRICKS - PREM(ier|ium) RANGE/i.test(product.productName || product.sourceDescription || "")), "Bricks product query must not expose allowance range rows as products");
+assert.equal(brickProducts.length, 0, "approved allowance CSV must not become actual brick catalogue products");
+assert.ok(requirementImage(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks")).startsWith("data:image/svg+xml"), "brick image fallback must be a brick-specific placeholder, not a bedroom or lifestyle photo");
+assert.ok(!requirementImage(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks")).includes("images.unsplash.com"), "brick image fallback must not use global lifestyle photos");
 assert.ok(garageProducts.length > 0, "Garage Door requirement must query garage-door products");
 assert.ok(garageProducts.every((product) => product.familyKey === "garage-doors"), "Garage Door query must not fall back to bricks");
 assert.ok(internalDoorProducts.length > 0, "Internal Doors requirement must query internal-door products");
@@ -107,5 +114,46 @@ assert.equal(payload.selected_details.productCode, selectedProduct.productCode, 
 assert.equal(payload.source_quote_row_id, selectedProduct.linkedQuoteItemCode, "quote item linkage must persist");
 assert.ok(["complete", "incomplete"].includes(statusForRequirement(ovenRequirement, payload)), "selection status must be derived from price state");
 assert.equal(guidedRequirementByKey("garage-door").familyKey, "garage-doors", "Garage Door visible route must map to garage-door family");
+
+const brickRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
+const importedBrickProducts = [
+  {
+    productId: "brick-1",
+    productName: "Imported Brick One",
+    brand: "Real Supplier A",
+    supplier: "Real Supplier A",
+    range: "Imported Range A",
+    colour: "Red",
+    texture: "Smooth",
+    familyKey: "bricks",
+    topLevelArea: "exterior",
+    rowClassification: "actual_product",
+    primaryImage: "https://example.test/brick-one.jpg",
+  },
+  {
+    productId: "brick-2",
+    productName: "Imported Brick Two",
+    brand: "Real Supplier B",
+    supplier: "Real Supplier B",
+    range: "Imported Range B",
+    colour: "Grey",
+    texture: "Textured",
+    familyKey: "bricks",
+    topLevelArea: "exterior",
+    rowClassification: "actual_product",
+    primaryImage: "https://example.test/brick-two.jpg",
+  },
+  {
+    productId: "brick-range-row",
+    productName: "FACE BRICKS - PREMIER RANGE",
+    familyKey: "bricks",
+    topLevelArea: "exterior",
+    rowClassification: "allowance_specification",
+  },
+];
+const importedBrickMatches = productsForRequirement(importedBrickProducts, brickRequirement);
+assert.equal(importedBrickMatches.length, 2, "only actual imported brick product records may enter the brick workflow");
+assert.deepEqual(new Set(importedBrickMatches.map((product) => product.supplier)), new Set(["Real Supplier A", "Real Supplier B"]), "supplier filtering data must come from actual products");
+assert.deepEqual(new Set(importedBrickMatches.map((product) => product.range)), new Set(["Imported Range A", "Imported Range B"]), "range filtering data must come from actual products");
 
 console.log("Approved Client Selections catalogue import tests passed.");

@@ -13,13 +13,20 @@ assert.ok(selectionsBookSource.includes("Choose an Area"), "Default Client Selec
 assert.ok(selectionsBookSource.includes("guided-client-selections-home"), "Guided home test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-kitchen-checklist"), "Kitchen checklist test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-left-progress-menu"), "Product page left progress menu marker must exist");
-assert.ok(selectionsBookSource.includes("BRICK_SUPPLIER_FILTERS"), "Bricks flow must expose supplier/range grouping");
-assert.ok(selectionsBookSource.includes('"All Bricks", "PGH Bricks", "Austral Bricks"'), "Bricks flow must include All/PGH/Austral supplier filters");
-assert.ok(selectionsBookSource.includes('requirement.requirementKey === "bricks"'), "Bricks supplier filters must be scoped to the Bricks page");
+assert.ok(selectionsBookSource.includes("GuidedBrickWorkflow"), "Bricks flow must use a dedicated supplier/range/product workflow");
+assert.ok(selectionsBookSource.includes("guided-brick-empty-catalogue"), "Bricks flow must render a professional empty catalogue state");
+assert.ok(selectionsBookSource.includes("brickSupplierOptions(products)"), "Bricks suppliers must be derived from actual products");
+assert.ok(selectionsBookSource.includes("brickRangeOptions(products, brickSupplier)"), "Bricks ranges must be derived from actual products");
+assert.ok(selectionsBookSource.includes("No products have been added to this catalogue yet."), "Empty catalogue messaging must replace fabricated products");
+assert.ok(!selectionsBookSource.includes("BRICK_FALLBACK_PRODUCTS"), "Bricks flow must not include fake fallback products");
+assert.ok(!selectionsBookSource.includes("PGH Bricks Premier Range"), "Bricks flow must not fabricate PGH Premier products");
+assert.ok(!selectionsBookSource.includes("Austral Bricks Premium Range"), "Bricks flow must not fabricate Austral Premium products");
 assert.ok(!selectionsBookSource.includes('["roof-colour", "Roof Colour"'), "Roof Colour must not be a separate Exterior category");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "exterior"'), "Back from Exterior product pages must return to Exterior categories");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "kitchen"'), "Back from Kitchen product pages must return to Kitchen checklist");
-assert.ok(selectionsBookSource.includes("APPROVED_SELECTIONS_CSV_PATH"), "Approved CSV path must drive the requirement source marker");
+assert.ok(selectionsBookSource.includes('guidedBrickStep === "products"'), "Back from brick products must return to the brick range step");
+assert.ok(selectionsBookSource.includes('guidedBrickStep === "ranges"'), "Back from brick ranges must return to the brick supplier step");
+assert.ok(!selectionsBookSource.includes("approved CSV rows connected"), "Client UI must hide approved CSV parser counts");
 assert.ok(!selectionsBookSource.includes("Site Works") && !selectionsBookSource.includes("Soil Tests"), "Old estimating categories must not be introduced into the guided workflow");
 
 const reviewGateIndex = selectionsBookSource.indexOf('guidedScreen === "review"');

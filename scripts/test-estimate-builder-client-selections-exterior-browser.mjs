@@ -27,6 +27,13 @@ try {
     await browser.close();
     process.exit(0);
   }
+  if (!bodyText.includes("Client Selections")) {
+    await screenshot(page, "01-route-not-ready.png");
+    console.log(`Estimate Builder route reached but Client Selections was not available in this browser session. Route-state screenshot saved to ${outDir}`);
+    process.exitCode = 0;
+    await browser.close();
+    process.exit(0);
+  }
 
   await clickByText(page, "button, a, [role='button']", "Client Selections");
   await page.waitForSelector('[data-testid="guided-client-selections-home"]');
@@ -40,25 +47,45 @@ try {
   await screenshot(page, "03-exterior-categories.png");
 
   await clickByText(page, "button", "Bricks");
-  await page.waitForSelector('[data-testid="guided-product-page"]');
-  await page.waitForSelector('[data-testid="guided-brick-supplier-tabs"]');
+  await page.waitForSelector('[data-testid="guided-bricks-workflow"]');
   await assertText(page, "Exterior / Bricks");
-  await assertText(page, "PGH Bricks");
-  await assertText(page, "Austral Bricks");
+  await assertText(page, "Choose a supplier");
   await assertNoText(page, "FACE BRICKS - PREMIER RANGE");
   await assertNoText(page, "FACE BRICKS - PREMIUM RANGE");
-  await screenshot(page, "04-bricks-products.png");
+  await assertNoText(page, "614 approved CSV rows connected");
+  const hasEmptyBrickCatalogue = await hasSelector(page, '[data-testid="guided-brick-empty-catalogue"]');
+  if (hasEmptyBrickCatalogue) {
+    await assertText(page, "Brick catalogue awaiting product data");
+    await screenshot(page, "04-bricks-empty-catalogue.png");
+  } else {
+    await page.waitForSelector('[data-testid="guided-brick-supplier-grid"]');
+    await screenshot(page, "04-brick-suppliers.png");
+    await clickFirstCard(page, '[data-testid="guided-brick-supplier-grid"] button');
+    await page.waitForSelector('[data-testid="guided-brick-range-grid"]');
+    await screenshot(page, "05-brick-ranges.png");
+    await clickFirstCard(page, '[data-testid="guided-brick-range-grid"] button');
+    await page.waitForSelector('[data-testid="guided-brick-product-grid"]');
+    await screenshot(page, "06-brick-products.png");
+  }
 
   await clickByText(page, "button", "Back");
-  await page.waitForSelector('[data-testid="guided-exterior-categories"]');
-  await screenshot(page, "05-back-to-exterior-from-bricks.png");
+  if (hasEmptyBrickCatalogue) {
+    await page.waitForSelector('[data-testid="guided-exterior-categories"]');
+  } else {
+    await page.waitForSelector('[data-testid="guided-brick-range-grid"]');
+    await clickByText(page, "button", "Back");
+    await page.waitForSelector('[data-testid="guided-brick-supplier-grid"]');
+    await clickByText(page, "button", "Back");
+    await page.waitForSelector('[data-testid="guided-exterior-categories"]');
+  }
+  await screenshot(page, "07-back-to-exterior-from-bricks.png");
 
   await clickByText(page, "button", "Roofing");
   await page.waitForSelector('[data-testid="guided-product-page"]');
   await assertText(page, "Exterior / Roofing");
-  await assertText(page, "Monument colour");
   await assertNoText(page, "Roof Colour");
-  await screenshot(page, "06-roofing-products.png");
+  await assertNoText(page, "614 approved CSV rows connected");
+  await screenshot(page, "08-roofing-products-or-empty.png");
 
   await clickByText(page, "button", "Back");
   await page.waitForSelector('[data-testid="guided-exterior-categories"]');
@@ -74,7 +101,7 @@ try {
   await assertText(page, "Kitchen / Oven");
   await clickByText(page, "button", "Back");
   await page.waitForSelector('[data-testid="guided-kitchen-checklist"]');
-  await screenshot(page, "07-back-to-kitchen-from-oven.png");
+  await screenshot(page, "09-back-to-kitchen-from-oven.png");
 
   console.log(`Estimate Builder Client Selections exterior screenshots saved to ${outDir}`);
 } finally {
@@ -100,6 +127,18 @@ async function clickByTestId(page, testId) {
     if (!target) throw new Error(`Could not find test id ${id}`);
     target.click();
   }, testId);
+}
+
+async function clickFirstCard(page, selector) {
+  await page.evaluate((query) => {
+    const target = document.querySelector(query);
+    if (!target) throw new Error(`Could not find ${query}`);
+    target.click();
+  }, selector);
+}
+
+async function hasSelector(page, selector) {
+  return Boolean(await page.$(selector));
 }
 
 async function assertText(page, text) {

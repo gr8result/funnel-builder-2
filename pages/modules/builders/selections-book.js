@@ -235,14 +235,6 @@ const EXTERIOR_CATEGORY_CARDS = EXTERIOR_REQUIREMENTS.map((requirement) => ({
   requirementKey: requirement.requirementKey,
 }));
 
-const BRICK_SUPPLIER_FILTERS = ["All Bricks", "PGH Bricks", "Austral Bricks"];
-const BRICK_FALLBACK_PRODUCTS = [
-  brickFallbackProduct("pgh-premier-face-bricks", "PGH Bricks", "Premier Range", "Face brick selection", "Colour to be selected"),
-  brickFallbackProduct("pgh-premium-face-bricks", "PGH Bricks", "Premium Range", "Face brick selection", "Colour to be selected"),
-  brickFallbackProduct("austral-premier-face-bricks", "Austral Bricks", "Premier Range", "Face brick selection", "Colour to be selected"),
-  brickFallbackProduct("austral-premium-face-bricks", "Austral Bricks", "Premium Range", "Face brick selection", "Colour to be selected"),
-];
-
 const INTERIOR_CATEGORY_CARDS = [
   ["kitchen", "Kitchen", GENERIC_IMAGE_URLS.kitchen],
   ["bathroom", "Bathroom", GENERIC_IMAGE_URLS.bathroom],
@@ -271,8 +263,6 @@ const REQUIREMENT_OPTION_KEY = {
   lighting: "lighting",
   paint: "wall paint",
 };
-
-const REQUIREMENT_SOURCE_NOTE = `Requirement source: ${APPROVED_SELECTIONS_CSV_PATH}`;
 
 function today() {
   const now = new Date();
@@ -772,7 +762,9 @@ export default function BuilderSelectionsBookPage({
   const [guidedArea, setGuidedArea] = useState("");
   const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
   const [guidedProductDetails, setGuidedProductDetails] = useState(null);
-  const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("All Bricks");
+  const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
+  const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
+  const [guidedBrickRange, setGuidedBrickRange] = useState("");
   const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
   const [viewerPageWidth, setViewerPageWidth] = useState(0);
@@ -819,7 +811,10 @@ export default function BuilderSelectionsBookPage({
   const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
   const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey), [guidedRequirement.areaKey]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
-  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts, { brickSupplier: guidedBrickSupplier }), [guidedRequirement, approvedCatalogueProducts, guidedBrickSupplier]);
+  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts, {
+    brickSupplier: guidedBrickSupplier,
+    brickRange: guidedBrickRange,
+  }), [guidedRequirement, approvedCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -1256,21 +1251,21 @@ export default function BuilderSelectionsBookPage({
     setGuidedArea(areaKey);
     setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
     setGuidedRequirementKey("");
-    setGuidedBrickSupplier("All Bricks");
+    resetGuidedBrickFlow();
   }
 
   function openGuidedKitchen() {
     setGuidedArea("interior");
     setGuidedScreen("kitchen");
     setGuidedRequirementKey("");
-    setGuidedBrickSupplier("All Bricks");
+    resetGuidedBrickFlow();
   }
 
   function openGuidedRequirement(requirementKey) {
     setGuidedArea("interior");
     setGuidedRequirementKey(requirementKey);
     setGuidedScreen("product");
-    setGuidedBrickSupplier("All Bricks");
+    resetGuidedBrickFlow();
   }
 
   function openGuidedRequirementKey(requirementKey) {
@@ -1279,7 +1274,13 @@ export default function BuilderSelectionsBookPage({
     setGuidedArea(next.areaKey === "exterior" ? "exterior" : "interior");
     setGuidedRequirementKey(next.requirementKey);
     setGuidedScreen("product");
-    setGuidedBrickSupplier("All Bricks");
+    resetGuidedBrickFlow();
+  }
+
+  function resetGuidedBrickFlow() {
+    setGuidedBrickStep("suppliers");
+    setGuidedBrickSupplier("");
+    setGuidedBrickRange("");
   }
 
   function selectGuidedProduct(requirement, option) {
@@ -1665,7 +1666,18 @@ export default function BuilderSelectionsBookPage({
       <main className="screen">
         <section className="workspace">
           <header className="standardBanner">
-            <button type="button" className="standardBack" onClick={() => handleGuidedBack({ guidedScreen, guidedArea, guidedRequirement, setGuidedScreen, setGuidedArea, setGuidedRequirementKey })} aria-label="Back">
+            <button type="button" className="standardBack" onClick={() => handleGuidedBack({
+              guidedScreen,
+              guidedArea,
+              guidedRequirement,
+              guidedBrickStep,
+              setGuidedBrickStep,
+              setGuidedBrickSupplier,
+              setGuidedBrickRange,
+              setGuidedScreen,
+              setGuidedArea,
+              setGuidedRequirementKey,
+            })} aria-label="Back">
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
@@ -1805,13 +1817,16 @@ export default function BuilderSelectionsBookPage({
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
               products={guidedProducts}
-              catalogueAudit={approvedCatalogueAudit}
+              brickStep={guidedBrickStep}
               brickSupplier={guidedBrickSupplier}
+              brickRange={guidedBrickRange}
               onOpenArea={openGuidedArea}
               onOpenKitchen={openGuidedKitchen}
               onOpenRequirementKey={openGuidedRequirementKey}
               onOpenRequirement={openGuidedRequirement}
+              onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
+              onBrickRangeChange={setGuidedBrickRange}
               onSelectProduct={selectGuidedProduct}
               onViewDetails={(product) => setGuidedProductDetails(product)}
             />
@@ -1844,7 +1859,15 @@ export default function BuilderSelectionsBookPage({
         )}
 
         {guidedProductDetails && (
-          <GuidedProductDetailsModal product={guidedProductDetails} onClose={() => setGuidedProductDetails(null)} />
+          <GuidedProductDetailsModal
+            requirement={guidedRequirement}
+            product={guidedProductDetails}
+            onClose={() => setGuidedProductDetails(null)}
+            onSelect={() => {
+              selectGuidedProduct(guidedRequirement, guidedProductDetails);
+              setGuidedProductDetails(null);
+            }}
+          />
         )}
       </main>
 
@@ -1862,13 +1885,16 @@ function GuidedSelectionsWorkflow({
   areaTotals,
   runningTotals,
   products,
-  catalogueAudit,
+  brickStep,
   brickSupplier,
+  brickRange,
   onOpenArea,
   onOpenKitchen,
   onOpenRequirementKey,
   onOpenRequirement,
+  onBrickStepChange,
   onBrickSupplierChange,
+  onBrickRangeChange,
   onSelectProduct,
   onViewDetails,
 }) {
@@ -1879,7 +1905,6 @@ function GuidedSelectionsWorkflow({
         <div className="guidedIntro">
           <span>Choose an Area</span>
           <strong>Start with the part of the home the client is selecting.</strong>
-          <em>{REQUIREMENT_SOURCE_NOTE}</em>
         </div>
         <div className="guidedAreaGrid">
           {GUIDED_AREA_CARDS.map((card) => (
@@ -1920,6 +1945,23 @@ function GuidedSelectionsWorkflow({
   }
 
   if (screen === "product") {
+    if (requirement.requirementKey === "bricks") {
+      return (
+        <GuidedBrickWorkflow
+          requirement={requirement}
+          products={products}
+          runningTotals={runningTotals}
+          brickStep={brickStep}
+          brickSupplier={brickSupplier}
+          brickRange={brickRange}
+          onBrickStepChange={onBrickStepChange}
+          onBrickSupplierChange={onBrickSupplierChange}
+          onBrickRangeChange={onBrickRangeChange}
+          onSelectProduct={onSelectProduct}
+          onViewDetails={onViewDetails}
+        />
+      );
+    }
     return (
       <section className="guidedShell" data-testid="guided-product-page">
         <GuidedBudgetDock totals={runningTotals} />
@@ -1946,27 +1988,14 @@ function GuidedSelectionsWorkflow({
             <div className="guidedSectionHeader">
               <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
-              {catalogueAudit ? <em>{catalogueAudit.usableRows} approved CSV rows connected.</em> : null}
             </div>
-            {requirement.requirementKey === "bricks" ? (
-              <div className="guidedSupplierTabs" data-testid="guided-brick-supplier-tabs" aria-label="Brick suppliers">
-                {BRICK_SUPPLIER_FILTERS.map((supplier) => (
-                  <button
-                    key={supplier}
-                    type="button"
-                    className={supplier === brickSupplier ? "active" : ""}
-                    onClick={() => onBrickSupplierChange(supplier)}
-                  >
-                    {supplier}
-                  </button>
+            {products.length ? (
+              <div className="guidedProductGrid">
+                {products.map((product) => (
+                  <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} />
                 ))}
               </div>
-            ) : null}
-            <div className="guidedProductGrid">
-              {products.map((product) => (
-                <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} />
-              ))}
-            </div>
+            ) : <GuidedEmptyCatalogue requirement={requirement} />}
           </main>
         </div>
       </section>
@@ -2007,7 +2036,6 @@ function GuidedCardGrid({ title, cards, onOpen }) {
       <div className="guidedIntro">
         <span>{title}</span>
         <strong>Choose a selection category.</strong>
-        <em>{REQUIREMENT_SOURCE_NOTE}</em>
       </div>
       <div className="guidedCategoryGrid">
         {cards.map((card) => (
@@ -2018,6 +2046,134 @@ function GuidedCardGrid({ title, cards, onOpen }) {
         ))}
       </div>
     </>
+  );
+}
+
+function GuidedBrickWorkflow({
+  requirement,
+  products,
+  runningTotals,
+  brickStep,
+  brickSupplier,
+  brickRange,
+  onBrickStepChange,
+  onBrickSupplierChange,
+  onBrickRangeChange,
+  onSelectProduct,
+  onViewDetails,
+}) {
+  const suppliers = brickSupplierOptions(products);
+  const ranges = brickRangeOptions(products, brickSupplier);
+  const selectedProducts = brickProductsForStep(products, brickSupplier, brickRange, brickStep);
+  const supplierLabel = brickSupplier || "All Bricks";
+  const rangeLabel = brickRange || "All Ranges";
+
+  return (
+    <section className="guidedShell" data-testid="guided-bricks-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout brickLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-bricks-hierarchy">
+          <h2>Bricks</h2>
+          <button type="button" className={`guidedProgressItem ${brickStep === "suppliers" ? "active" : ""}`} onClick={() => {
+            onBrickStepChange("suppliers");
+            onBrickSupplierChange("");
+            onBrickRangeChange("");
+          }}>
+            <GuidedStatusDot status={brickSupplier ? "complete" : "not_started"} />
+            <span>Supplier</span>
+          </button>
+          <button type="button" className={`guidedProgressItem ${brickStep === "ranges" ? "active" : ""}`} disabled={!brickSupplier && suppliers.length > 1} onClick={() => onBrickStepChange("ranges")}>
+            <GuidedStatusDot status={brickRange ? "complete" : "not_started"} />
+            <span>Range</span>
+          </button>
+          <button type="button" className={`guidedProgressItem ${brickStep === "products" ? "active" : ""}`} disabled={!selectedProducts.length} onClick={() => onBrickStepChange("products")}>
+            <GuidedStatusDot status={selectedProducts.length ? "incomplete" : "not_started"} />
+            <span>Actual Brick</span>
+          </button>
+        </aside>
+        <main className="guidedProductPanel brickShowroom">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Bricks</span>
+            <strong>{brickHeaderForStep(brickStep)}</strong>
+          </div>
+          {!products.length ? (
+            <GuidedBrickEmptyCatalogue />
+          ) : brickStep === "suppliers" ? (
+            <div className="guidedSupplierGrid" data-testid="guided-brick-supplier-grid">
+              {suppliers.map((supplier) => (
+                <button key={supplier.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onBrickSupplierChange(supplier.key === "all" ? "" : supplier.label);
+                  onBrickRangeChange("");
+                  onBrickStepChange("ranges");
+                }}>
+                  <img src={supplier.image} alt="" />
+                  <span>{supplier.label}</span>
+                  <strong>{supplier.count} brick product{supplier.count === 1 ? "" : "s"}</strong>
+                </button>
+              ))}
+            </div>
+          ) : brickStep === "ranges" ? (
+            <div className="guidedSupplierGrid" data-testid="guided-brick-range-grid">
+              {ranges.length ? ranges.map((range) => (
+                <button key={range.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onBrickRangeChange(range.key === "all" ? "" : range.label);
+                  onBrickStepChange("products");
+                }}>
+                  <img src={range.image} alt="" />
+                  <span>{range.label}</span>
+                  <strong>{range.count} actual brick{range.count === 1 ? "" : "s"}</strong>
+                </button>
+              )) : (
+                <GuidedBrickEmptyCatalogue message={`No ranges have been imported for ${supplierLabel}.`} />
+              )}
+            </div>
+          ) : selectedProducts.length ? (
+            <>
+              <div className="brickContextBar" data-testid="guided-brick-context">{supplierLabel} / {rangeLabel}</div>
+              <div className="guidedProductGrid brickProductGrid" data-testid="guided-brick-product-grid">
+                {selectedProducts.map((product) => (
+                  <GuidedProductCard
+                    key={product.id}
+                    requirement={requirement}
+                    product={product}
+                    onSelect={() => onSelectProduct(requirement, product)}
+                    onViewDetails={() => onViewDetails(product)}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <GuidedBrickEmptyCatalogue message="No products have been added to this catalogue yet." />
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function GuidedBrickEmptyCatalogue({ message = "Brick catalogue awaiting product data" }) {
+  return (
+    <div className="guidedEmptyCatalogue" data-testid="guided-brick-empty-catalogue">
+      <strong>{message}</strong>
+      <span>No products have been added to this catalogue yet.</span>
+      <div>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?import=1"; }}>Import Products</button>
+      </div>
+    </div>
+  );
+}
+
+function GuidedEmptyCatalogue({ requirement }) {
+  return (
+    <div className="guidedEmptyCatalogue" data-testid={`guided-empty-catalogue-${requirement.requirementKey}`}>
+      <strong>No products have been added to this catalogue yet.</strong>
+      <span>{requirement.label} will appear here once genuine catalogue records are imported.</span>
+      <div>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?import=1"; }}>Import Products</button>
+      </div>
+    </div>
   );
 }
 
@@ -2049,14 +2205,16 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
   const selectedPrice = priceState === PRICE_STATES.current ? numberValue(product.selectedCost) : 0;
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
   const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+  const isBrick = requirement.requirementKey === "bricks";
   return (
-    <article className="guidedProductCard" data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
+    <article className={`guidedProductCard ${isBrick ? "brickCard" : ""}`} data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
       <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
       <div>
-        <span>{product.brand}</span>
+        <span>{product.brand || product.supplier}</span>
         <strong>{product.productName}</strong>
-        <em>Model {product.model || "not recorded"}</em>
-        <p>{product.finish || "Finish to be confirmed"}</p>
+        <em>{isBrick ? product.range || "Range not recorded" : `Model ${product.model || "not recorded"}`}</em>
+        <p>{isBrick ? [product.colour, product.texture, product.finish].filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed" : product.finish || "Finish to be confirmed"}</p>
+        {isBrick && product.dimensions ? <small>{product.dimensions}</small> : null}
         {product.imageReviewRequired ? <small>Image review required</small> : null}
       </div>
       <div className="guidedProductMoney">
@@ -2067,32 +2225,42 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
       <div className="guidedProductActions">
         <button type="button" onClick={onViewDetails}>View Details</button>
         <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>View Product Website</button>
-        <button type="button" className="primary" onClick={onSelect}>Select</button>
+        <button type="button" className="primary" onClick={onSelect}>{isBrick ? "Select This Brick" : "Select"}</button>
       </div>
     </article>
   );
 }
 
-function GuidedProductDetailsModal({ product, onClose }) {
+function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) {
   const priceState = priceStateForGuidedOption(product);
+  const isBrick = requirement?.requirementKey === "bricks";
+  const gallery = Array.from(new Set([product.imageUrl, ...(product.galleryImages || [])].filter(Boolean)));
   return (
     <div className="modalBackdrop" onClick={onClose}>
       <div className="guidedDetailsModal" onClick={(event) => event.stopPropagation()} data-testid="guided-product-details">
-        <button type="button" onClick={onClose}>Close</button>
+        <button type="button" onClick={onClose}>{isBrick ? "Back to Bricks" : "Close"}</button>
         <img src={product.imageUrl} alt={product.productName} />
+        {gallery.length > 1 ? (
+          <div className="guidedDetailsGallery">
+            {gallery.map((image) => <img key={image} src={image} alt="" />)}
+          </div>
+        ) : null}
         <span>{product.brand}</span>
         <h2>{product.productName}</h2>
         <p>{product.description}</p>
         <dl>
           <div><dt>Model</dt><dd>{product.model || "To be confirmed"}</dd></div>
           <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
-          <div><dt>Size</dt><dd>{product.size || "To be confirmed"}</dd></div>
+          <div><dt>Dimensions</dt><dd>{product.dimensions || product.size || "To be confirmed"}</dd></div>
+          <div><dt>Texture</dt><dd>{product.texture || "To be confirmed"}</dd></div>
           <div><dt>Colour / Finish</dt><dd>{product.finish || "To be confirmed"}</dd></div>
+          <div><dt>Supplier</dt><dd>{product.supplier || "To be confirmed"}</dd></div>
           <div><dt>Price</dt><dd>{priceState === PRICE_STATES.current ? money(product.selectedCost) : priceState}</dd></div>
           <div><dt>Allowance</dt><dd>{money(product.allowance)}</dd></div>
         </dl>
         <div className="guidedProductActions">
-          <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>Official product link</button>
+          <button type="button" className="primary" onClick={onSelect}>{isBrick ? "Select This Brick" : "Select"}</button>
+          <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>View Official Product Page</button>
           <button type="button" disabled={!product.specificationUrl} onClick={() => product.specificationUrl && window.open(product.specificationUrl, "_blank", "noopener,noreferrer")}>Specification link</button>
         </div>
       </div>
@@ -3004,52 +3172,14 @@ function guidedProductsForRequirement(requirement, catalogueProducts = [], filte
       const entity = product.metadata?.productEntity || product;
       return classifyApprovedSelectionRow(entity) === "actual_product";
     });
-  if (requirement?.requirementKey === "bricks") {
-    const actualBrickProducts = approvedProducts.map((product, index) => guidedProductFromCatalogue(product, requirement, index));
-    const structuredBrickProducts = [...actualBrickProducts, ...BRICK_FALLBACK_PRODUCTS];
-    const supplier = filters.brickSupplier || "All Bricks";
-    return structuredBrickProducts.filter((product) => supplier === "All Bricks" || product.supplier === supplier);
-  }
-  if (!approvedProducts.length && requirement?.requirementKey === "roofing") {
-    return [
-      guidedFallbackProduct({
-        id: "roofing-colorbond-corrugated-monument",
-        requirement,
-        brand: "Colorbond",
-        supplier: "Roofing Supplier",
-        productName: "Colorbond Corrugated Roofing",
-        model: "Corrugated profile",
-        range: "Metal Roofing",
-        finish: "Monument colour",
-        description: "Metal roofing profile with roof colour captured as part of the Roofing selection.",
-      }),
-      guidedFallbackProduct({
-        id: "roofing-roof-tiles-monument",
-        requirement,
-        brand: "Monier",
-        supplier: "Roofing Supplier",
-        productName: "Roof Tiles",
-        model: "Profile to be confirmed",
-        range: "Concrete Roof Tiles",
-        finish: "Monument colour",
-        description: "Roof tile family option with colour selected inside Roofing.",
-      }),
-    ];
-  }
-  if (!approvedProducts.length) {
-    return [guidedFallbackProduct({
-      id: `${requirement.requirementKey}-selection-pending`,
-      requirement,
-      brand: "Builder Standard",
-      supplier: "Builder supplier",
-      productName: `${requirement.label} selection`,
-      model: "To be confirmed",
-      range: requirement.label,
-      finish: "To be selected",
-      description: `${requirement.label} product family is connected to the approved CSV and requires exact product mapping.`,
-    })];
-  }
-  return approvedProducts.map((product, index) => guidedProductFromCatalogue(product, requirement, index));
+  return approvedProducts
+    .map((product, index) => guidedProductFromCatalogue(product, requirement, index))
+    .filter((product) => {
+      if (requirement?.requirementKey !== "bricks") return true;
+      const supplierMatch = !filters.brickSupplier || product.supplier === filters.brickSupplier || product.brand === filters.brickSupplier;
+      const rangeMatch = !filters.brickRange || product.range === filters.brickRange;
+      return supplierMatch && rangeMatch;
+    });
 }
 
 function guidedProductFromCatalogue(product, requirement, index = 0) {
@@ -3064,6 +3194,9 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     supplier: entity.supplier || "",
     model: entity.model || "",
     range: entity.range || "",
+    colour: entity.colour || "",
+    texture: entity.texture || entity.metadata?.texture || "",
+    dimensions: entity.dimensions || entity.size || "",
     finish: entity.finish || entity.colour || "",
     size: entity.size || sizeFromOption(entity),
     description: entity.description || "",
@@ -3073,6 +3206,7 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     imageUrl: resolveSelectionImage({ product, requirement }),
     productUrl: entity.officialProductURL || "",
     specificationUrl: entity.specificationURL || "",
+    galleryImages: normaliseGalleryImages(entity.galleryImages || entity.gallery_image_urls || product.galleryImages),
     rowClassification: classifyApprovedSelectionRow(entity),
     imageReviewRequired: Boolean(entity.imageReviewRequired),
     metadata: {
@@ -3082,55 +3216,54 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
   };
 }
 
-function guidedFallbackProduct({ id, requirement, brand, supplier, productName, model, range, finish, description }) {
-  return {
-    id,
-    productName,
-    brand,
-    supplier,
-    model,
-    range,
-    finish,
-    size: "",
-    description,
-    allowance: requirement.defaultAllowance,
-    selectedCost: 0,
-    priceState: PRICE_STATES.pending,
-    imageUrl: resolveSelectionImage({ requirement }),
-    productUrl: "",
-    specificationUrl: "",
-    rowClassification: "product_family",
-    imageReviewRequired: true,
-    metadata: {
-      productEntity: {
-        productName,
-        brand,
-        supplier,
-        model,
-        range,
-        finish,
-        description,
-        familyKey: requirement.familyKey,
-        topLevelArea: requirement.areaKey,
-        priceStatus: "price_pending",
-        imageReviewRequired: true,
-      },
-    },
-  };
+function brickSupplierOptions(products = []) {
+  if (!products.length) return [];
+  const suppliers = Array.from(new Set(products.map((product) => product.supplier || product.brand).filter(Boolean))).sort();
+  const cards = [{ key: "all", label: "All Bricks", count: products.length, image: requirementImage(guidedRequirementByKey("bricks")) }];
+  suppliers.forEach((supplier) => {
+    const supplierProducts = products.filter((product) => product.supplier === supplier || product.brand === supplier);
+    cards.push({ key: supplier, label: supplier, count: supplierProducts.length, image: firstProductImage(supplierProducts) });
+  });
+  return cards;
 }
 
-function brickFallbackProduct(id, supplier, range, model, finish) {
-  return guidedFallbackProduct({
-    id,
-    requirement: guidedRequirementByKey("bricks") || EXTERIOR_REQUIREMENTS[0],
-    brand: supplier,
-    supplier,
-    productName: `${supplier} ${range}`,
-    model,
-    range,
-    finish,
-    description: `${supplier} ${range} brick family. Exact brick name, colour swatch and current price require supplier confirmation.`,
+function brickRangeOptions(products = [], supplier = "") {
+  const supplierProducts = supplier ? products.filter((product) => product.supplier === supplier || product.brand === supplier) : products;
+  if (!supplierProducts.length) return [];
+  const ranges = Array.from(new Set(supplierProducts.map((product) => product.range).filter(Boolean))).sort();
+  if (!ranges.length) return [{ key: "all", label: "All Ranges", count: supplierProducts.length, image: firstProductImage(supplierProducts) }];
+  return [
+    { key: "all", label: "All Ranges", count: supplierProducts.length, image: firstProductImage(supplierProducts) },
+    ...ranges.map((range) => {
+      const rangeProducts = supplierProducts.filter((product) => product.range === range);
+      return { key: range, label: range, count: rangeProducts.length, image: firstProductImage(rangeProducts) };
+    }),
+  ];
+}
+
+function brickProductsForStep(products = [], supplier = "", range = "", step = "suppliers") {
+  if (step !== "products") return [];
+  return products.filter((product) => {
+    const supplierMatch = !supplier || product.supplier === supplier || product.brand === supplier;
+    const rangeMatch = !range || product.range === range;
+    return supplierMatch && rangeMatch;
   });
+}
+
+function brickHeaderForStep(step) {
+  if (step === "products") return "Choose an actual brick";
+  if (step === "ranges") return "Choose a range";
+  return "Choose a supplier";
+}
+
+function firstProductImage(products = []) {
+  return products.find((product) => product.imageUrl)?.imageUrl || requirementImage(guidedRequirementByKey("bricks"));
+}
+
+function normaliseGalleryImages(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (!value) return [];
+  return String(value).split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
 }
 
 function priceStateForGuidedOption(option) {
@@ -3218,8 +3351,35 @@ function sizeFromOption(option) {
   return match?.[0] || "";
 }
 
-function handleGuidedBack({ guidedScreen, guidedArea, guidedRequirement, setGuidedScreen, setGuidedArea, setGuidedRequirementKey }) {
+function handleGuidedBack({
+  guidedScreen,
+  guidedArea,
+  guidedRequirement,
+  guidedBrickStep,
+  setGuidedBrickStep,
+  setGuidedBrickSupplier,
+  setGuidedBrickRange,
+  setGuidedScreen,
+  setGuidedArea,
+  setGuidedRequirementKey,
+}) {
   if (guidedScreen === "product") {
+    if (guidedRequirement?.requirementKey === "bricks") {
+      if (guidedBrickStep === "products") {
+        setGuidedBrickStep("ranges");
+        return;
+      }
+      if (guidedBrickStep === "ranges") {
+        setGuidedBrickStep("suppliers");
+        setGuidedBrickRange("");
+        return;
+      }
+      setGuidedBrickSupplier("");
+      setGuidedBrickRange("");
+      setGuidedScreen("exterior");
+      setGuidedRequirementKey("");
+      return;
+    }
     if (guidedRequirement?.areaKey === "exterior" || guidedArea === "exterior") {
       setGuidedScreen("exterior");
     } else if (guidedRequirement?.areaKey === "kitchen" || guidedArea === "kitchen") {
@@ -3313,14 +3473,26 @@ const styles = `
   .guidedProgressMenu h2 { margin: 0 0 6px; font-size: 20px; font-weight: 950; }
   .guidedProgressItem { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 8px; font-weight: 850; }
   .guidedProgressItem.active { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+  .guidedProgressItem:disabled { opacity: .55; cursor: not-allowed; }
   .guidedProductPanel { display: grid; gap: 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 16px; }
   .guidedSectionHeader { display: grid; gap: 5px; }
-  .guidedSupplierTabs { display: flex; flex-wrap: wrap; gap: 8px; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 10px; }
-  .guidedSupplierTabs button { width: auto; border: 1px solid #cbd5e1; background: #ffffff; color: #172033; border-radius: 6px; padding: 9px 12px; font-weight: 900; cursor: pointer; }
-  .guidedSupplierTabs button.active { background: #071827; border-color: #071827; color: #ffffff; }
+  .guidedSupplierGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .guidedSupplierCard { display: grid; gap: 10px; text-align: left; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 0 0 14px; overflow: hidden; color: #071827; cursor: pointer; }
+  .guidedSupplierCard img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #e2e8f0; }
+  .guidedSupplierCard span { padding: 0 14px; color: #071827; font-size: 20px; font-weight: 950; }
+  .guidedSupplierCard strong { padding: 0 14px; color: #64748b; font-size: 13px; font-weight: 850; }
+  .guidedEmptyCatalogue { display: grid; gap: 10px; align-content: center; justify-items: start; min-height: 260px; border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 8px; padding: 26px; }
+  .guidedEmptyCatalogue strong { color: #071827; font-size: 24px; font-weight: 950; }
+  .guidedEmptyCatalogue span { color: #475569; font-weight: 750; }
+  .guidedEmptyCatalogue div { display: flex; gap: 8px; flex-wrap: wrap; }
+  .guidedEmptyCatalogue button { width: auto; border: 1px solid #0f766e; background: #0f766e; color: #ffffff; border-radius: 8px; padding: 10px 13px; font-weight: 900; }
+  .guidedEmptyCatalogue button + button { background: #ffffff; color: #0f766e; }
+  .brickContextBar { border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 10px 12px; color: #334155; font-weight: 900; }
   .guidedProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .brickProductGrid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .guidedProductCard { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
   .guidedProductCard > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
+  .guidedProductCard.brickCard > img { aspect-ratio: 4 / 3; }
   .guidedProductCard > div { padding: 0 13px; }
   .guidedProductCard span { color: #64748b; font-size: 13px; font-weight: 850; }
   .guidedProductCard strong { display: block; color: #071827; font-size: 18px; font-weight: 950; margin-top: 3px; }
@@ -3334,6 +3506,8 @@ const styles = `
   .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
   .guidedDetailsModal > button { justify-self: end; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 8px 12px; font-weight: 850; }
   .guidedDetailsModal img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .guidedDetailsGallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .guidedDetailsGallery img { width: 100%; aspect-ratio: 1; max-height: none; object-fit: cover; border-radius: 6px; }
   .guidedDetailsModal h2 { margin: 0; font-size: 28px; line-height: 1.15; }
   .guidedDetailsModal p { margin: 0; color: #475569; font-weight: 700; }
   .guidedDetailsModal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
