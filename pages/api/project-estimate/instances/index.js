@@ -15,6 +15,7 @@
 
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { withWorkspace } from "../../../../lib/withWorkspace";
+import { assignCurrentStandardInclusionsToProject } from "../../../../lib/builders/projectInclusionsAssignment";
 import {
   fetchInstanceWithPages,
   fetchTemplateWithPages,
@@ -61,6 +62,16 @@ async function createInstanceFromTemplate({ workspaceId, projectId, templateId, 
   if (insertError) throw insertError;
 
   const pages = await replaceInstancePages(instance.id, template.pages || []);
+  if (projectId) {
+    await assignCurrentStandardInclusionsToProject({
+      workspaceId,
+      projectId,
+      userId: ownerUserId,
+      force: false,
+    }).catch((error) => {
+      console.warn("[project-estimate/instances] Standard Inclusions assignment skipped", error?.message || error);
+    });
+  }
   return { ...shapeInstanceRowForClient(instance), pages };
 }
 

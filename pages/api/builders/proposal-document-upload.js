@@ -75,7 +75,7 @@ function parseStoragePath(value = "") {
 }
 
 function isInclusionsSourceType(sourceType = "") {
-  return ["standard_inclusions", "modified_inclusions"].includes(String(sourceType || ""));
+  return ["standard_inclusions", "modified_inclusions", "project_specific_inclusions"].includes(String(sourceType || ""));
 }
 
 function isQuoteProposalInclusionsRow(row = {}) {
@@ -105,9 +105,9 @@ async function deactivatePreviousInclusions({ workspaceId, projectId, keepId }) 
   const previousIds = previousRows.map((row) => row.id).filter(Boolean);
   if (previousIds.length) {
     const { error } = await supabaseAdmin
-      .from("builder_project_documents")
-      .update({ status: "inactive", updated_at: new Date().toISOString() })
-      .in("id", previousIds);
+        .from("builder_project_documents")
+        .update({ status: "archived", updated_at: new Date().toISOString() })
+        .in("id", previousIds);
     if (error) throw error;
   }
 
@@ -251,8 +251,8 @@ export default async function handler(req, res) {
           project_id: projectId,
           snapshot_id: estimateId && /^[0-9a-f-]{36}$/i.test(estimateId) ? estimateId : null,
           document_type: sourceType === "priced_plans" ? "general" : "other",
-          title: sourceType === "priced_plans" ? "Priced Plans" : "Inclusions Schedule",
-          description: "Imported into quote proposal builder.",
+          title: sourceType === "priced_plans" ? "Priced Plans" : sourceType === "project_specific_inclusions" ? "Project-Specific Inclusions" : "Inclusions Schedule",
+          description: sourceType === "project_specific_inclusions" ? "Project-specific inclusions PDF." : "Imported into quote proposal builder.",
           file_name: fileName,
           mime_type: "application/pdf",
           file_size_bytes: buffer.length,
@@ -263,8 +263,10 @@ export default async function handler(req, res) {
           metadata: {
             source: "quote_proposal_builder",
             sourceType,
+            assignmentType: sourceType === "project_specific_inclusions" ? "project_specific" : "standard",
             projectId: projectId || null,
             estimateId: estimateId || null,
+            assignedAt: new Date().toISOString(),
             active: true,
             fileHash,
             version: fileVersion,

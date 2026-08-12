@@ -2566,6 +2566,40 @@ export function ClientPageSheet({ sheet }) {
 
   useEffect(() => {
     let cancelled = false;
+    async function loadProjectInclusionsAssignment() {
+      const projectId = proposalProjectId(sheet) || estimateProjectId;
+      if (!workspaceId || !projectId) return;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token || "";
+        const params = new URLSearchParams({
+          projectId,
+          estimateId: proposalEstimateId(sheet),
+          workspace_id: workspaceId,
+        });
+        const response = await fetch(`/api/builders/project-inclusions?${params.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (cancelled || !response.ok || !payload.ok || !payload.document) return;
+        const document = normaliseImportedProposalDocument(payload.document);
+        const current = (draftRef.current || builder).importedDocuments?.inclusions || null;
+        if (current?.id === document.id && current?.version === document.version) return;
+        const nextBuilder = replaceActiveInclusionsDocument(draftRef.current || builder, document, document.sourceType || "standard_inclusions");
+        setBuilder(nextBuilder);
+        draftRef.current = nextBuilder;
+      } catch (error) {
+        if (!cancelled) console.warn("[Project Estimate] project inclusions assignment load skipped", error?.message || error);
+      }
+    }
+    loadProjectInclusionsAssignment();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, estimateProjectId, sheet.workbook?.commercialProjectId, sheet.workbook?.projectId, sheet.workbook?.estimateSnapshotId]);
+
+  useEffect(() => {
+    let cancelled = false;
     supabase.auth.getUser()
       .then(({ data }) => {
         if (!cancelled) setIsPlatformAdminUser(isDeveloperEmail(data?.user?.email || ""));
@@ -3313,6 +3347,42 @@ export function ClientPageSheet({ sheet }) {
     }
   };
 
+  const useCurrentStandardInclusions = async () => {
+    if (readonly) return;
+    const projectId = proposalProjectId(sheet) || estimateProjectId;
+    if (!workspaceId || !projectId) {
+      setStatusMessage("Choose an active workspace and project before assigning Standard Inclusions.");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm("This will replace the inclusions schedule currently assigned to this project. Continue?")) return;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const response = await fetch("/api/builders/project-inclusions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          action: "useCurrentStandard",
+          confirmed: true,
+          workspace_id: workspaceId,
+          projectId,
+          estimateId: proposalEstimateId(sheet),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not assign current Standard Inclusions.");
+      const document = normaliseImportedProposalDocument(payload.document);
+      await saveBuilderImmediate(replaceActiveInclusionsDocument(draftRef.current || builder, document, document.sourceType || "standard_inclusions"), "Project inclusions updated from current Standard.");
+      setStatusMessage("Project inclusions updated from current Standard.");
+    } catch (error) {
+      console.error("Use Current Standard failed", error);
+      setStatusMessage(error?.message || "Use Current Standard failed.");
+    }
+  };
+
   const importPlanPdfs = async (event) => {
     const files = Array.from(event.target.files || []).filter((file) => file.type === "application/pdf");
     event.target.value = "";
@@ -3701,6 +3771,7 @@ export function ClientPageSheet({ sheet }) {
               editing={!readonly}
               onInsertStandard={() => inclusionsInputRef.current?.click()}
               onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
+              onUseCurrentStandard={useCurrentStandardInclusions}
               onInsertPlans={() => plansInputRef.current?.click()}
               onReplaceInclusions={() => inclusionsInputRef.current?.click()}
               onRemoveInclusions={removeInclusionsDocument}
@@ -3724,6 +3795,7 @@ export function ClientPageSheet({ sheet }) {
               editing={pageEditMode && !readonly}
               onInsertStandard={() => inclusionsInputRef.current?.click()}
               onInsertModified={() => modifiedInclusionsInputRef.current?.click()}
+              onUseCurrentStandard={useCurrentStandardInclusions}
               onInsertPlans={() => plansInputRef.current?.click()}
               onReplaceInclusions={() => inclusionsInputRef.current?.click()}
               onRemoveInclusions={removeInclusionsDocument}
@@ -3759,7 +3831,7 @@ export function ClientPageSheet({ sheet }) {
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
           <input ref={backgroundInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "background")} />
           <input ref={inclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "standard_inclusions")} />
-          <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "modified_inclusions")} />
+          <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "project_specific_inclusions")} />
           <input ref={plansInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPlanPdfs} />
           </main>
       </div>
@@ -3936,6 +4008,7 @@ function ProposalImportSidebarStatus({
   editing,
   onInsertStandard,
   onInsertModified,
+  onUseCurrentStandard,
   onInsertPlans,
   onReplaceInclusions,
   onRemoveInclusions,
@@ -3978,33 +4051,31 @@ function ProposalImportSidebarStatus({
   }
   return (
     <div style={styles.proposalThemeHint}>
-      <strong>Standard Inclusions Schedule</strong>
+      <strong>PROJECT INCLUSIONS</strong>
       {referencedPdfUrl(inclusionsDocument) ? (
         <>
+          <span>{inclusionsDocument.projectSpecific ? "PROJECT-SPECIFIC INCLUSIONS" : "Using: Premier Inclusions Schedule"}</span>
+          <span>Version {inclusionsDocument.version || inclusionsDocument.sourceMasterVersion || "-"}</span>
+          <span>Assigned: {formatProposalDate(inclusionsDocument.assignedAt || inclusionsDocument.uploadedAt || inclusionsDocument.importedAt)}</span>
           <span>Current file: {inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</span>
           <span>Page count: {Number(inclusionsDocument.pageCount || inclusionsDocument.page_count || inclusionsDocument.pages?.length || 1)}</span>
-          <span>Uploaded {formatProposalDate(inclusionsDocument.uploadedAt || inclusionsDocument.importedAt)}</span>
-          {inclusionsDocument.version || inclusionsDocument.fileHash ? (
-            <span>Version {inclusionsDocument.version || String(inclusionsDocument.fileHash).slice(0, 12)}</span>
-          ) : null}
           <div style={styles.importButtonRow}>
-            <button type="button" style={styles.secondaryButton} onClick={() => onViewDocument?.(inclusionsDocument)}>View PDF</button>
-            <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace PDF</button>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => onViewDocument?.(inclusionsDocument)}>Preview</button>
+            <button type="button" style={styles.secondaryButton} onClick={() => downloadReferencedPdf(inclusionsDocument)}>Download</button>
+            <button type="button" style={styles.primaryButton} onClick={onUseCurrentStandard}>Use Current Standard</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Project-Specific PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
             <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove PDF</button>
           </div>
         </>
       ) : (
         <>
-          <span>Current file: No PDF attached</span>
+          <span>No Project Inclusions Assigned</span>
           <span>Page count: -</span>
           <div style={styles.importButtonRow}>
             <button type="button" style={styles.secondaryButton} disabled>View PDF</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertStandard}>Replace PDF</button>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Upload Standard Inclusions</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Modified Inclusions</button>
+            <button type="button" style={styles.primaryButton} onClick={onUseCurrentStandard}>Use Current Standard</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Project-Specific PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Choose from Document Library</button>
             <button type="button" style={styles.dangerButton} disabled>Remove PDF</button>
           </div>
@@ -4021,6 +4092,7 @@ function ProposalImportedDocumentPage({
   editing,
   onInsertStandard,
   onInsertModified,
+  onUseCurrentStandard,
   onInsertPlans,
   onReplaceInclusions,
   onRemoveInclusions,
@@ -4084,19 +4156,23 @@ function ProposalImportedDocumentPage({
         <p style={styles.importPlaceholderText}>Insert the inclusions schedule applicable to this project.</p>
         {inclusionsDocument?.publicUrl ? (
           <div style={styles.importedSummaryBox}>
+            <span>{inclusionsDocument.projectSpecific ? "PROJECT-SPECIFIC INCLUSIONS" : "Using: Premier Inclusions Schedule"}</span>
+            <span>Version {inclusionsDocument.version || inclusionsDocument.sourceMasterVersion || "-"}</span>
+            <span>Assigned: {formatProposalDate(inclusionsDocument.assignedAt || inclusionsDocument.uploadedAt || inclusionsDocument.importedAt)}</span>
             <strong>{inclusionsDocument.fileName || inclusionsDocument.title || "Inclusions schedule"}</strong>
             <span>{Number(inclusionsDocument.pageCount || 1)} page{Number(inclusionsDocument.pageCount || 1) === 1 ? "" : "s"}</span>
             {editing ? (
               <div style={styles.importButtonRow}>
-                <button type="button" style={styles.secondaryButton} onClick={onReplaceInclusions}>Replace Inclusions Schedule</button>
+                <button type="button" style={styles.secondaryButton} onClick={onUseCurrentStandard}>Use Current Standard</button>
+                <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Project-Specific PDF</button>
                 <button type="button" style={styles.dangerButton} onClick={onRemoveInclusions}>Remove Inclusions Schedule</button>
               </div>
             ) : null}
           </div>
         ) : editing ? (
           <div style={styles.importButtonRow}>
-            <button type="button" style={styles.primaryButton} onClick={onInsertStandard}>Insert Standard Inclusions Schedule</button>
-            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Insert Modified Inclusions Schedule</button>
+            <button type="button" style={styles.primaryButton} onClick={onUseCurrentStandard}>Use Current Standard</button>
+            <button type="button" style={styles.secondaryButton} onClick={onInsertModified}>Upload Project-Specific PDF</button>
             <button type="button" style={styles.secondaryButton} onClick={() => onOpenLibrary("standard_inclusions")}>Select from Document Library</button>
           </div>
         ) : null}
@@ -4428,6 +4504,18 @@ function referencedPdfUrl(document = {}) {
   if (document.publicUrl || document.public_url || document.url) return document.publicUrl || document.public_url || document.url;
   const firstPage = Array.isArray(document.pages) ? document.pages.find((page) => page?.publicUrl || page?.public_url || page?.url) : null;
   return firstPage?.publicUrl || firstPage?.public_url || firstPage?.url || "";
+}
+
+function downloadReferencedPdf(document = {}) {
+  const url = referencedPdfUrl(document);
+  if (!url || typeof window === "undefined") return;
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = document.fileName || document.file_name || "project-inclusions.pdf";
+  link.rel = "noopener noreferrer";
+  window.document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 function referencedPdfDiagnostics(document = {}) {
@@ -6024,6 +6112,7 @@ function ProjectEstimateContextualInspector({
   onViewDocument,
   onUploadStandardInclusions,
   onUploadModifiedInclusions,
+  onUseCurrentStandard,
   onUploadPlans,
   onRemoveInclusions,
   onRemovePlans,
@@ -6070,6 +6159,7 @@ function ProjectEstimateContextualInspector({
         onViewDocument={onViewDocument}
         onUploadStandardInclusions={onUploadStandardInclusions}
         onUploadModifiedInclusions={onUploadModifiedInclusions}
+        onUseCurrentStandard={onUseCurrentStandard}
         onUploadPlans={onUploadPlans}
         onRemoveInclusions={onRemoveInclusions}
         onRemovePlans={onRemovePlans}

@@ -120,7 +120,7 @@ async function parseJsonRequestBody(req) {
 }
 
 function isInclusionsSourceType(sourceType = "") {
-  return ["standard_inclusions", "modified_inclusions"].includes(String(sourceType || ""));
+  return ["standard_inclusions", "modified_inclusions", "project_specific_inclusions"].includes(String(sourceType || ""));
 }
 
 function isQuoteProposalInclusionsRow(row = {}) {
@@ -139,7 +139,7 @@ function activeInclusionsCandidates(importedDocuments = {}) {
       candidates.push(value);
     }
   });
-  return candidates.filter((document) => document.active !== false && !["inactive", "removed"].includes(String(document.status || "")));
+  return candidates.filter((document) => document.active !== false && !["inactive", "removed", "archived", "deleted"].includes(String(document.status || "")));
 }
 
 async function listActiveProjectInclusions({ workspaceId, projectId }) {

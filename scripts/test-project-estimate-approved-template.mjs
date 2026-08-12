@@ -22,8 +22,8 @@ const approvedOrder = [
   "about",
   "standardInclusions",
   "pricedPlans",
-  "pricing",
-  "termsNotes",
+  "pricingSummary",
+  "importantEstimateNotice",
   "acceptance",
 ];
 
@@ -46,8 +46,8 @@ for (const pageId of approvedOrder) {
 
 assert(registry.includes('slotId: "inclusions", placeholderPageId: "standardInclusions"'), "Inclusions slot rule is missing.");
 assert(registry.includes('slotId: "plans", placeholderPageId: "pricedPlans"'), "Plans slot rule is missing.");
-assert(registry.indexOf('placeholderPageId: "pricedPlans"') < registry.indexOf('pageId: "pricing"'), "Pricing must remain after plans.");
-assert(registry.indexOf('pageId: "termsNotes"') < registry.indexOf('pageId: "acceptance"'), "Important Estimate Notice and Acceptance must remain last.");
+assert(registry.indexOf('placeholderPageId: "pricedPlans"') < registry.indexOf('pageId: "pricingSummary"'), "Pricing must remain after plans.");
+assert(registry.indexOf('pageId: "importantEstimateNotice"') < registry.indexOf('pageId: "acceptance"'), "Important Estimate Notice and Acceptance must remain last.");
 
 assert(snapshot.includes("approvedProjectEstimateTemplateSnapshot"), "Source-controlled approved template snapshot is missing.");
 assert(snapshot.includes("oldJobsMustNotReplaceMasterDefinitions: true"), "Snapshot does not record old-job protection.");
