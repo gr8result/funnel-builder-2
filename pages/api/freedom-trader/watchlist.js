@@ -10,7 +10,7 @@ const WATCHLIST = [
   { symbol: "MSTR", companyName: "MicroStrategy", exchange: "NASDAQ", sector: "Bitcoin Treasury" },
   { symbol: "AVGO", companyName: "Broadcom", exchange: "NASDAQ", sector: "Semiconductors" },
 ];
-import { loadLocalMarketWatch, recordLocalMarketWatchFill, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
+import { checkLocalMarketWatch, loadLocalMarketWatch, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
 
 export const TRADER_WATCHLIST = WATCHLIST;
 
@@ -26,6 +26,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "CMC order marked entered. Market Watch is waiting for entry.", error: null });
     }
     if (req.method === "PATCH") {
+      if (req.body?.action === "check") {
+        const result = await checkLocalMarketWatch(req.body || {});
+        return res.status(200).json({ ok: true, reports: result.reports, marketWatch: result.marketWatch, error: null });
+      }
+      if (req.body?.action === "record_sale") {
+        const item = await recordLocalMarketWatchSale(req.body || {});
+        return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: item.state === "TRADE_COMPLETED" ? "Trade completed and journal updated." : "Sale recorded. Position remains active.", error: null });
+      }
       const item = await recordLocalMarketWatchFill(req.body || {});
       return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "Actual fill recorded. Market Watch is using the actual fill price.", error: null });
     }
@@ -34,6 +42,7 @@ export default async function handler(req, res) {
       ok: true,
       watchlist: WATCHLIST,
       marketWatch: marketWatch.marketWatch,
+      journal: marketWatch.journal,
       count: WATCHLIST.length,
       updatedAt: new Date().toISOString(),
       error: null,

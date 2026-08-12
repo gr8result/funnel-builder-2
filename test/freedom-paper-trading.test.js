@@ -9,7 +9,7 @@ import {
   shouldTriggerExit,
   validateBuyOrder,
 } from "../lib/freedom-trader/paperTrading.js";
-import { oneShareExitOptions, recordLocalMarketWatchFill, registerLocalMarketWatchPlan } from "../lib/freedom-trader/localPaperStore.js";
+import { checkLocalMarketWatch, oneShareExitOptions, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan } from "../lib/freedom-trader/localPaperStore.js";
 
 const account = { id: "account-1", available_cash: 100000 };
 const validPrice = {
@@ -119,4 +119,81 @@ test("Market Watch handoff stores CMC entered plan and actual fill price", async
   assert.equal(filled.state, "POSITION_ACTIVE");
   assert.equal(filled.actualFillPrice, 100.25);
   assert.equal(filled.actualQuantity, 3);
+});
+
+async function plan(symbol, overrides = {}) {
+  return registerLocalMarketWatchPlan({
+    symbol,
+    companyName: `${symbol} Corp`,
+    buyTrigger: overrides.buyTrigger ?? 100,
+    safetyExit: overrides.safetyExit ?? 94,
+    takeSomeProfit: overrides.takeSomeProfit ?? 112,
+    finalExit: overrides.finalExit ?? 118,
+    quantity: overrides.quantity ?? 3,
+    currency: "USD",
+    setupExpiryDate: overrides.setupExpiryDate,
+    invalidationPrice: overrides.invalidationPrice,
+  });
+}
+
+test("winner scenario reaches target, records sale and creates journal profit", async () => {
+  const symbol = `WIN${Date.now()}`;
+  const entered = await plan(symbol, { quantity: 3 });
+  const entryReport = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 99, timestamp: "2026-08-12T10:00:00Z" } } });
+  assert.equal(entryReport.reports.find((item) => item.id === entered.id).action, "ENTRY_CONDITION_REACHED");
+  await recordLocalMarketWatchFill({ id: entered.id, actualFillPrice: 100, quantity: 3, filledAt: "2026-08-12T10:05:00Z" });
+  const targetReport = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 119, timestamp: "2026-08-13T10:00:00Z" } } });
+  assert.equal(targetReport.reports.find((item) => item.id === entered.id).action, "FINAL_EXIT");
+  const closed = await recordLocalMarketWatchSale({ id: entered.id, quantitySold: 3, salePrice: 119, soldAt: "2026-08-13T10:05:00Z", reason: "FINAL_EXIT", fees: 9.5 });
+  assert.equal(closed.state, "TRADE_COMPLETED");
+  assert.ok(closed.journalId);
+});
+
+test("loser scenario reaches Safety Exit and journals a loss", async () => {
+  const symbol = `LOS${Date.now()}`;
+  const entered = await plan(symbol, { quantity: 2 });
+  await recordLocalMarketWatchFill({ id: entered.id, actualFillPrice: 100, quantity: 2, filledAt: "2026-08-12T10:05:00Z" });
+  const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 93.5, timestamp: "2026-08-12T11:00:00Z" } } });
+  assert.equal(report.reports.find((item) => item.id === entered.id).action, "SAFETY_EXIT");
+  const closed = await recordLocalMarketWatchSale({ id: entered.id, quantitySold: 2, salePrice: 93.5, soldAt: "2026-08-12T11:05:00Z", reason: "SAFETY_EXIT", fees: 9.5 });
+  assert.equal(closed.state, "TRADE_COMPLETED");
+  const saleEvent = closed.events.find((item) => item.type === "SALE_RECORDED");
+  assert.ok(saleEvent.netProfit < 0);
+});
+
+test("cancel before entry invalidates setup without creating a position", async () => {
+  const symbol = `CAN${Date.now()}`;
+  const entered = await plan(symbol, { invalidationPrice: 90 });
+  const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 89, timestamp: "2026-08-12T10:00:00Z" } } });
+  const item = report.marketWatch.find((row) => row.id === entered.id);
+  assert.equal(report.reports.find((row) => row.id === entered.id).action, "CANCEL_SETUP");
+  assert.equal(item.state, "SETUP_CANCELLED");
+  assert.equal(item.actualFillPrice, null);
+});
+
+test("waiting setup stays WAIT and does not create a purchase", async () => {
+  const symbol = `WAI${Date.now()}`;
+  const entered = await plan(symbol, { buyTrigger: 100 });
+  const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 105, timestamp: "2026-08-12T10:00:00Z" } } });
+  const item = report.marketWatch.find((row) => row.id === entered.id);
+  assert.equal(report.reports.find((row) => row.id === entered.id).action, "WAIT");
+  assert.equal(item.state, "WAITING_FOR_ENTRY");
+  assert.equal(item.actualFillPrice, null);
+});
+
+test("bad market data produces review action and no buy or sell instruction", async () => {
+  const symbol = `BAD${Date.now()}`;
+  const entered = await plan(symbol);
+  const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: false, price: null, timestamp: "2026-08-12T10:00:00Z" } } });
+  assert.equal(report.reports.find((row) => row.id === entered.id).action, "REVIEW_DATA_UNAVAILABLE");
+  assert.doesNotMatch(report.reports.find((row) => row.id === entered.id).reason, /buy|sell/i);
+});
+
+test("Market Watch suppresses duplicate action alerts", async () => {
+  const symbol = `DUP${Date.now()}`;
+  const entered = await plan(symbol);
+  const first = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 99, timestamp: "2026-08-12T10:00:00Z" } } });
+  const second = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 99, timestamp: "2026-08-12T10:00:00Z" } } });
+  assert.equal(first.reports.find((row) => row.id === entered.id).duplicateAlert, false);
+  assert.equal(second.reports.find((row) => row.id === entered.id).duplicateAlert, true);
 });

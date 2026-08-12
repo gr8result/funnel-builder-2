@@ -21,6 +21,18 @@ function bestAction(topOpportunity, tradePlan) {
   return "NO TRADE READY";
 }
 
+function dashboardAction(marketWatch, journal, topOpportunity, tradePlan) {
+  const active = (marketWatch || []).find((item) => ["WAITING_FOR_ENTRY", "POSITION_ACTIVE"].includes(item.state));
+  const lastEvent = active?.events?.[active.events.length - 1];
+  if (["ENTRY_CONDITION_REACHED", "TAKE_SOME_PROFIT", "ONE_SHARE_EXIT_CHOICE_REQUIRED", "FINAL_EXIT", "SAFETY_EXIT", "REVIEW_DATA_UNAVAILABLE"].includes(lastEvent?.type)) {
+    return { label: "ACTION REQUIRED", text: lastEvent.reason || String(lastEvent.type).replace(/_/g, " "), item: active };
+  }
+  if (active?.state === "WAITING_FOR_ENTRY") return { label: "MONITORING", text: "No action required.", item: active };
+  if (active?.state === "POSITION_ACTIVE") return { label: "MONITORING", text: "No action required.", item: active };
+  if ((journal || []).length) return { label: "TRADE COMPLETE", text: `Result: ${formatCurrency(journal[0].netProfit, journal[0].currency || "USD")}`, item: null };
+  return { label: bestAction(topOpportunity, tradePlan), text: tradePlan?.cmcOrder ? "Enter this order in CMC." : topOpportunity ? "Do not buy yet." : "Do nothing.", item: null };
+}
+
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
@@ -45,6 +57,11 @@ export default function FreedomTraderDashboard({ passwordHash }) {
   const [topFive, setTopFive] = useState([]);
   const [topOpportunity, setTopOpportunity] = useState(null);
   const [bestTradePlan, setBestTradePlan] = useState(null);
+  const [marketWatch, setMarketWatch] = useState([]);
+  const [journal, setJournal] = useState([]);
+  const [fillForm, setFillForm] = useState({ actualFillPrice: "", quantity: "", filledAt: "" });
+  const [saleForm, setSaleForm] = useState({ quantitySold: "", salePrice: "", soldAt: "", reason: "manual" });
+  const [watchMessage, setWatchMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -66,7 +83,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           setBestTradePlan(cachedScan.bestTradePlan || null);
         }
       } catch {}
-      const [paperResponse, analysisResponse, alertsResponse, scannerResponse] = await Promise.allSettled([
+      const [paperResponse, analysisResponse, alertsResponse, scannerResponse, watchResponse] = await Promise.allSettled([
         fetch("/api/freedom-trader/paper-account"),
         fetch(`/api/freedom-trader/analysis?symbols=${WATCHLIST.join(",")}`),
         fetch("/api/freedom-trader/alerts"),
@@ -75,15 +92,19 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ markets: ["US"], force: false }),
         }),
+        fetch("/api/freedom-trader/watchlist"),
       ]);
       if (cancelled) return;
       const paperData = paperResponse.status === "fulfilled" ? await paperResponse.value.json().catch(() => null) : null;
       const analysisData = analysisResponse.status === "fulfilled" ? await analysisResponse.value.json().catch(() => null) : null;
       const alertsData = alertsResponse.status === "fulfilled" ? await alertsResponse.value.json().catch(() => null) : null;
       const scannerData = scannerResponse.status === "fulfilled" ? await scannerResponse.value.json().catch(() => null) : null;
+      const watchData = watchResponse.status === "fulfilled" ? await watchResponse.value.json().catch(() => null) : null;
       setSnapshot(paperData?.ok ? paperData : null);
       setAnalysisRows(Array.isArray(analysisData?.analysis) ? analysisData.analysis : []);
       setAlerts(Array.isArray(alertsData?.alerts) ? alertsData.alerts.slice(0, 5) : []);
+      setMarketWatch(Array.isArray(watchData?.marketWatch) ? watchData.marketWatch : []);
+      setJournal(Array.isArray(watchData?.journal) ? watchData.journal : []);
       if (scannerData?.ok && scannerData.scanSummary) {
         setScanSummary(scannerData.scanSummary);
         setTopFive(Array.isArray(scannerData.topFive) ? scannerData.topFive : []);
@@ -120,8 +141,35 @@ export default function FreedomTraderDashboard({ passwordHash }) {
     setUnlocked(true);
   }
 
+  async function submitFill(item) {
+    const response = await fetch("/api/freedom-trader/watchlist", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: item.id, actualFillPrice: Number(fillForm.actualFillPrice), quantity: Number(fillForm.quantity), filledAt: fillForm.filledAt || new Date().toISOString() }),
+    });
+    const data = await response.json().catch(() => null);
+    setWatchMessage(response.ok && data?.ok ? "Actual fill recorded." : data?.error || "Unable to record fill.");
+    if (data?.marketWatchItem) setMarketWatch((current) => current.map((row) => row.id === data.marketWatchItem.id ? data.marketWatchItem : row));
+  }
+
+  async function submitSale(item) {
+    const response = await fetch("/api/freedom-trader/watchlist", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "record_sale", id: item.id, quantitySold: Number(saleForm.quantitySold), salePrice: Number(saleForm.salePrice), soldAt: saleForm.soldAt || new Date().toISOString(), reason: saleForm.reason }),
+    });
+    const data = await response.json().catch(() => null);
+    setWatchMessage(response.ok && data?.ok ? data.message : data?.error || "Unable to record sale.");
+    if (data?.marketWatchItem) {
+      setMarketWatch((current) => current.map((row) => row.id === data.marketWatchItem.id ? data.marketWatchItem : row));
+      const refreshed = await fetch("/api/freedom-trader/watchlist").then((res) => res.json()).catch(() => null);
+      setJournal(Array.isArray(refreshed?.journal) ? refreshed.journal : []);
+    }
+  }
+
   const account = snapshot?.account;
   const positions = useMemo(() => snapshot?.positions || [], [snapshot]);
+  const primary = dashboardAction(marketWatch, journal, topOpportunity, bestTradePlan);
 
   if (checking) return <div className="boot">Opening Freedom Trader...</div>;
   if (!unlocked) return <Gate password={password} setPassword={setPassword} error={passwordError} onSubmit={unlock} />;
@@ -152,6 +200,15 @@ export default function FreedomTraderDashboard({ passwordHash }) {
           <Card label="Invested Value" value={formatCurrency(account?.currentInvestedValue, account?.currency || "AUD")} />
           <Card label="Total Value" value={formatCurrency(account?.totalAccountValue, account?.currency || "AUD")} />
           <Card label="Open Profit/Loss" value={formatCurrency(account?.openProfitLoss, account?.currency || "AUD")} tone={Number(account?.openProfitLoss) >= 0 ? "profit" : "loss"} />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader"><h2>WHAT SHOULD I DO?</h2></div>
+        <div className="bestLine">
+          <span>{primary.label}</span>
+          <strong>{primary.text}</strong>
+          {primary.item ? <p>{primary.item.plan?.companyName} ({primary.item.plan?.symbol}) is {String(primary.item.state).replace(/_/g, " ")}.</p> : null}
         </div>
       </section>
 
@@ -248,6 +305,54 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       </section>
 
       <section className="panel">
+        <div className="panelHeader"><h2>MARKET WATCH</h2></div>
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>Company</th><th>Symbol</th><th>State</th><th>Entry</th><th>Safety Exit</th><th>Targets</th><th>Record</th></tr></thead>
+            <tbody>
+              {marketWatch.length ? marketWatch.slice(0, 8).map((item) => (
+                <tr key={item.id}>
+                  <td>{item.plan?.companyName}</td>
+                  <td>{item.plan?.symbol}</td>
+                  <td>{String(item.state || "").replace(/_/g, " ")}</td>
+                  <td>{formatCurrency(item.actualFillPrice || item.plan?.buyTrigger, item.plan?.currency)}</td>
+                  <td>{formatCurrency(item.plan?.safetyExit, item.plan?.currency)}</td>
+                  <td>{formatCurrency(item.plan?.takeSomeProfit, item.plan?.currency)} / {formatCurrency(item.plan?.finalExit, item.plan?.currency)}</td>
+                  <td>
+                    {item.state === "WAITING_FOR_ENTRY" ? <div className="inlineForm"><input placeholder="Fill price" value={fillForm.actualFillPrice} onChange={(event) => setFillForm((current) => ({ ...current, actualFillPrice: event.target.value }))} /><input placeholder="Quantity" value={fillForm.quantity} onChange={(event) => setFillForm((current) => ({ ...current, quantity: event.target.value }))} /><input placeholder="Date/time" value={fillForm.filledAt} onChange={(event) => setFillForm((current) => ({ ...current, filledAt: event.target.value }))} /><button type="button" onClick={() => submitFill(item)}>ORDER FILLED</button></div> : null}
+                    {item.state === "POSITION_ACTIVE" ? <div className="inlineForm"><input placeholder="Qty sold" value={saleForm.quantitySold} onChange={(event) => setSaleForm((current) => ({ ...current, quantitySold: event.target.value }))} /><input placeholder="Sale price" value={saleForm.salePrice} onChange={(event) => setSaleForm((current) => ({ ...current, salePrice: event.target.value }))} /><input placeholder="Date/time" value={saleForm.soldAt} onChange={(event) => setSaleForm((current) => ({ ...current, soldAt: event.target.value }))} /><input placeholder="Reason" value={saleForm.reason} onChange={(event) => setSaleForm((current) => ({ ...current, reason: event.target.value }))} /><button type="button" onClick={() => submitSale(item)}>RECORD SALE</button></div> : null}
+                  </td>
+                </tr>
+              )) : <tr><td colSpan="7">No Market Watch plans.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        {watchMessage ? <div className="bestLine"><p>{watchMessage}</p></div> : null}
+      </section>
+
+      <section className="panel">
+        <div className="panelHeader"><h2>TRADE JOURNAL</h2></div>
+        <div className="tableWrap">
+          <table>
+            <thead><tr><th>Company</th><th>Symbol</th><th>Entry</th><th>Exit</th><th>Quantity</th><th>Net P/L</th><th>Reason</th></tr></thead>
+            <tbody>
+              {journal.length ? journal.slice(0, 8).map((row) => (
+                <tr key={row.id}>
+                  <td>{row.companyName}</td>
+                  <td>{row.symbol}</td>
+                  <td>{formatCurrency(row.entryPrice, row.currency || "USD")}</td>
+                  <td>{formatCurrency(row.exitPrice, row.currency || "USD")}</td>
+                  <td>{row.quantity}</td>
+                  <td className={Number(row.netProfit) >= 0 ? "profit" : "loss"}>{formatCurrency(row.netProfit, row.currency || "USD")}</td>
+                  <td>{row.exitReason}</td>
+                </tr>
+              )) : <tr><td colSpan="7">No completed trades in the journal.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="panel">
         <div className="panelHeader"><h2>RECENT ALERTS</h2><Link href="/freedom-trader/alerts">View Alerts</Link></div>
         <div className="alertList">
           {alerts.length ? alerts.map((alert) => (
@@ -297,7 +402,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
-    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span,.bestLine span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article,.bestLine{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.bestLine{margin:0 16px 16px}.bestLine strong{display:block;font-size:24px;margin-top:6px}.bestLine em{color:#b8f4e6;display:block;font-style:normal;font-weight:950;margin-top:6px}.bestLine p{margin-top:6px}.planMini{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}.planMini b{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:10px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid,.planMini{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid,.planMini{grid-template-columns:1fr}}
+    .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{color:#fff;font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{color:#fff;font-weight:900}.hero,.panel,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero,.panel{margin:0 auto 18px;max-width:1840px}.hero{align-items:center;display:flex;gap:24px;justify-content:space-between;padding:28px}.hero span,.panelHeader span,.summaryGrid span,.bestLine span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,p{margin:0}h1{font-size:48px}p{color:#aebdc4}.hero a,.panelHeader a,td a,.quickActions a{color:#d7efff;font-weight:950;text-decoration:none}.panel{overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(179,199,207,.1);display:flex;justify-content:space-between;padding:16px 18px}.summaryGrid{display:grid;gap:14px;grid-template-columns:repeat(4,minmax(0,1fr));padding:16px}.summaryGrid article,.bestLine{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.summaryGrid strong{display:block;font-size:26px;margin-top:8px}.bestLine{margin:0 16px 16px}.bestLine strong{display:block;font-size:24px;margin-top:6px}.bestLine em{color:#b8f4e6;display:block;font-style:normal;font-weight:950;margin-top:6px}.bestLine p{margin-top:6px}.planMini{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}.planMini b{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:10px}.profit{color:#8ff0c3!important}.loss{color:#ff9a9a!important}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:760px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:12px;text-align:left;vertical-align:top}th{color:#aebdc4;font-size:12px;text-transform:uppercase}.inlineForm{display:grid;gap:8px;grid-template-columns:repeat(4,minmax(90px,1fr));min-width:520px}.inlineForm input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:36px;padding:0 10px}.inlineForm button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:36px;padding:0 10px}.alertList{display:grid;gap:10px;padding:16px}.alertList article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;justify-content:space-between;padding:12px}.alertList span{color:#aebdc4}.quickActions{display:flex;flex-wrap:wrap;gap:10px;padding:16px}.quickActions a,.hero a,.panelHeader a{background:rgba(29,155,255,.12);border:1px solid rgba(29,155,255,.3);border-radius:7px;display:inline-flex;min-height:38px;align-items:center;padding:0 12px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;height:48px;margin-top:16px;width:100%}@media(max-width:900px){.summaryGrid,.planMini{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}.page{padding:88px 16px 16px}}@media(max-width:640px){.summaryGrid,.planMini{grid-template-columns:1fr}.inlineForm{grid-template-columns:1fr;min-width:260px}}
   `}</style>;
 }
 
