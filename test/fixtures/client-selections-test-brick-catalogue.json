@@ -1,0 +1,26 @@
+{
+  "schema": "gr8-master-product-catalogue/v1",
+  "products": [
+    {
+      "productCode": "TEST-BRICK-JSON-001",
+      "familyKey": "bricks",
+      "requirementKeys": ["bricks"],
+      "categoryKey": "Bricks",
+      "topLevelArea": "exterior",
+      "manufacturer": "TEST BRICK CO",
+      "brand": "TEST BRICK CO",
+      "supplier": "TEST BRICK CO",
+      "range": "TEST JSON RANGE",
+      "productName": "TEST JSON Brick",
+      "model": "TB-JSON-001",
+      "sku": "TEST-BRICK-JSON-001",
+      "description": "TEST fixture only - not a real commercial product",
+      "attributes": { "colour": "Red", "finish": "Matte", "dimensions": "230x110x76", "texture": "Light texture", "material": "Clay" },
+      "media": { "primaryImageUrl": "/test-assets/test-brick-001.svg", "thumbnailUrl": "/test-assets/test-brick-001.svg", "imageSourceUrl": "/test-assets/test-brick-001.svg", "imageSourceType": "test_fixture", "imageVerifiedAt": "2026-08-13T00:00:00.000Z", "imageStatus": "verified_exact" },
+      "links": { "officialProductUrl": "https://example.com/test-brick-json-001", "specificationUrl": "https://example.com/test-brick-json-001-spec.pdf", "supplierUrl": "https://example.com/test-brick-co" },
+      "pricing": { "priceStatus": "price_pending", "currency": "AUD", "gstIncluded": true },
+      "availability": { "country": "AU", "regions": ["QLD"], "active": true, "discontinued": false },
+      "source": { "sourceType": "test_fixture", "sourceName": "TEST BRICK CO", "sourceUrl": "https://example.com/test-brick-json-001", "sourceRetrievedAt": "2026-08-13T00:00:00.000Z", "sourceVerifiedAt": "2026-08-13T00:00:00.000Z" }
+    }
+  ]
+}

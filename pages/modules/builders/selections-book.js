@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ArrowLeft, ClipboardList, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
   ALL_GUIDED_REQUIREMENTS,
@@ -25,7 +25,18 @@ import {
 } from "../../../lib/builders/clientSelectionWorkflow";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
-import { APPROVED_SELECTIONS_CSV_PATH, GENERIC_IMAGE_URLS } from "../../../lib/product-library/catalogueModel";
+import {
+  APPROVED_SELECTIONS_CSV_PATH,
+  BUILDER_ENABLEMENT_STORAGE_KEY,
+  GENERIC_IMAGE_URLS,
+  MASTER_CATALOGUE_STORAGE_KEY,
+  commitMasterProductImport,
+  createBuilderProductReference,
+  masterProductToClientSelectionProduct,
+  parseMasterProductCatalogueImport,
+  previewMasterProductImport,
+  queryClientSelectableProducts,
+} from "../../../lib/product-library/catalogueModel";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 
@@ -746,6 +757,12 @@ export default function BuilderSelectionsBookPage({
   const [products, setProducts] = useState([]);
   const [approvedCatalogueProducts, setApprovedCatalogueProducts] = useState([]);
   const [approvedCatalogueAudit, setApprovedCatalogueAudit] = useState(null);
+  const [masterCatalogueProducts, setMasterCatalogueProducts] = useState([]);
+  const [builderEnablements, setBuilderEnablements] = useState([]);
+  const [brickImportModalOpen, setBrickImportModalOpen] = useState(false);
+  const [brickImportPreview, setBrickImportPreview] = useState(null);
+  const [brickImportResult, setBrickImportResult] = useState(null);
+  const [brickEnablementSelection, setBrickEnablementSelection] = useState([]);
   const [categories, setCategories] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -811,10 +828,24 @@ export default function BuilderSelectionsBookPage({
   const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
   const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey), [guidedRequirement.areaKey]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
-  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, approvedCatalogueProducts, {
+  const projectRegion = useMemo(() => deriveAustralianRegion(selectedProject), [selectedProject]);
+  const masterSelectionProducts = useMemo(() => queryClientSelectableProducts({
+    organisationId: workspaceId || "",
+    projectId: selectedProjectId || "",
+    familyKey: guidedRequirement.familyKey,
+    region: projectRegion,
+    requirementKey: guidedRequirement.requirementKey,
+    masterProducts: masterCatalogueProducts,
+    builderProducts: builderEnablements,
+    organisationProducts: [],
+  }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: guidedRequirement })), [builderEnablements, guidedRequirement, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const clientSelectionCatalogueProducts = useMemo(() => [...approvedCatalogueProducts, ...masterSelectionProducts], [approvedCatalogueProducts, masterSelectionProducts]);
+  const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
+  const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
+  const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
     brickSupplier: guidedBrickSupplier,
     brickRange: guidedBrickRange,
-  }), [guidedRequirement, approvedCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
+  }), [guidedRequirement, clientSelectionCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -879,6 +910,7 @@ export default function BuilderSelectionsBookPage({
     if (!workspaceId) return;
     loadInitialData();
     loadApprovedClientSelectionCatalogue();
+    loadMasterCatalogueState();
   }, [workspaceId]);
 
   useEffect(() => {
@@ -910,6 +942,26 @@ export default function BuilderSelectionsBookPage({
       console.error("[Client Selections] approved catalogue load error", loadError);
       setApprovedCatalogueProducts([]);
       setApprovedCatalogueAudit(null);
+    }
+  }
+
+  function loadMasterCatalogueState() {
+    if (typeof window === "undefined") return;
+    try {
+      setMasterCatalogueProducts(JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]"));
+      setBuilderEnablements(JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]"));
+    } catch {
+      setMasterCatalogueProducts([]);
+      setBuilderEnablements([]);
+    }
+  }
+
+  function persistMasterCatalogueState(nextProducts, nextEnablements = builderEnablements) {
+    setMasterCatalogueProducts(nextProducts);
+    setBuilderEnablements(nextEnablements);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
+      window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
     }
   }
 
@@ -1283,6 +1335,69 @@ export default function BuilderSelectionsBookPage({
     setGuidedBrickRange("");
   }
 
+  function openBrickImportModal() {
+    setBrickImportModalOpen(true);
+    setBrickImportPreview(null);
+    setBrickImportResult(null);
+    setBrickEnablementSelection([]);
+  }
+
+  function handleBrickImportFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const format = file.name.toLowerCase().endsWith(".json") ? "json" : "csv";
+        const records = parseMasterProductCatalogueImport(reader.result || "", { format }).map((record) => ({
+          ...record,
+          family_key: record.family_key || record.familyKey || "bricks",
+          top_level_area: record.top_level_area || record.topLevelArea || "exterior",
+        }));
+        const preview = previewMasterProductImport(records, masterCatalogueProducts);
+        setBrickImportPreview({ fileName: file.name, format, preview });
+        setBrickImportResult(null);
+        setBrickEnablementSelection([]);
+      } catch (importError) {
+        setError(importError?.message || "Invalid file format.");
+      }
+    };
+    reader.onerror = () => setError("Could not read that catalogue file.");
+    reader.readAsText(file);
+  }
+
+  function commitBrickImportPreview() {
+    if (!brickImportPreview) return;
+    const result = commitMasterProductImport(brickImportPreview.preview, masterCatalogueProducts);
+    persistMasterCatalogueState(result.products);
+    const importedCodes = [...result.created, ...result.updated, ...result.skipped].map((product) => product.productCode).filter(Boolean);
+    setBrickEnablementSelection(importedCodes);
+    setBrickImportResult(result);
+    setSuccess(`Import complete: ${result.created.length} created, ${result.updated.length} updated, ${result.skipped.length} unchanged.`);
+  }
+
+  function enableSelectedBrickProducts() {
+    if (!workspaceId || !brickEnablementSelection.length) return;
+    const existingKeys = new Set(builderEnablements.map((item) => `${item.organisationId}:${item.masterProductCode}`));
+    const nextEnablements = [...builderEnablements];
+    brickEnablementSelection.forEach((productCode) => {
+      const product = masterCatalogueProducts.find((item) => item.productCode === productCode);
+      if (!product) return;
+      const key = `${workspaceId}:${product.productCode}`;
+      if (existingKeys.has(key)) {
+        const index = nextEnablements.findIndex((item) => item.organisationId === workspaceId && item.masterProductCode === product.productCode);
+        nextEnablements[index] = { ...nextEnablements[index], enabled: true, active: true };
+      } else {
+        nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: true, active: true, selectionMode: "available_upgrade" }));
+      }
+    });
+    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
+    setBrickImportModalOpen(false);
+    setGuidedBrickStep("suppliers");
+    setGuidedBrickSupplier("");
+    setGuidedBrickRange("");
+    setSuccess(`${brickEnablementSelection.length} brick product${brickEnablementSelection.length === 1 ? "" : "s"} enabled for this builder.`);
+  }
+
   function selectGuidedProduct(requirement, option) {
     const guidedRoom = ensureGuidedRoom(book, requirement);
     const row = rowForRequirement(guidedRoom, requirement);
@@ -1310,15 +1425,23 @@ export default function BuilderSelectionsBookPage({
       status: selectedCost > 0 ? "selected" : "pending",
       guidedSelection: {
         source: "guided_client_selections",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        organisationId: workspaceId || "",
         area: requirement.areaKey,
         room: requirement.areaLabel,
         requirementKey: requirement.requirementKey,
         requirementLabel: requirement.label,
+        familyKey: requirement.familyKey,
+        linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
         productCode: entity.productCode || option.id,
-        quoteItemCode: requirement.familyKey,
+        manufacturer: entity.manufacturer || "",
+        brand: option.brand,
+        range: option.range || "",
+        productName: option.productName,
         selectedProduct: option.productName,
         variant: {
           model: option.model,
+          colour: option.colour || "",
           finish: option.finish,
           size: option.size || "",
         },
@@ -1327,9 +1450,9 @@ export default function BuilderSelectionsBookPage({
         selectedPrice: selectedCost,
         variation: upgradeCost,
         supplier: option.supplier,
-        image: option.imageUrl || requirementImage(requirement),
+        imageReference: option.imageUrl || requirementImage(requirement),
         priceState: priceStateForGuidedOption(option),
-        selectedAt: new Date().toISOString(),
+        selectionTimestamp: new Date().toISOString(),
       },
     };
     setBook((current) => {
@@ -1817,6 +1940,8 @@ export default function BuilderSelectionsBookPage({
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
               products={guidedProducts}
+              masterProductCount={masterProductsForGuidedFamily.length}
+              enabledProductCount={builderEnabledForGuidedFamily.length}
               brickStep={guidedBrickStep}
               brickSupplier={guidedBrickSupplier}
               brickRange={guidedBrickRange}
@@ -1829,6 +1954,7 @@ export default function BuilderSelectionsBookPage({
               onBrickRangeChange={setGuidedBrickRange}
               onSelectProduct={selectGuidedProduct}
               onViewDetails={(product) => setGuidedProductDetails(product)}
+              onOpenImport={openBrickImportModal}
             />
           )}
         </section>
@@ -1869,6 +1995,19 @@ export default function BuilderSelectionsBookPage({
             }}
           />
         )}
+        {brickImportModalOpen && (
+          <BrickCatalogueImportModal
+            requirement={guidedRequirementByKey("bricks")}
+            preview={brickImportPreview}
+            result={brickImportResult}
+            enablementSelection={brickEnablementSelection}
+            onEnablementSelectionChange={setBrickEnablementSelection}
+            onFile={handleBrickImportFile}
+            onCommit={commitBrickImportPreview}
+            onEnableSelected={enableSelectedBrickProducts}
+            onClose={() => setBrickImportModalOpen(false)}
+          />
+        )}
       </main>
 
       <style jsx>{styles}</style>
@@ -1885,6 +2024,8 @@ function GuidedSelectionsWorkflow({
   areaTotals,
   runningTotals,
   products,
+  masterProductCount,
+  enabledProductCount,
   brickStep,
   brickSupplier,
   brickRange,
@@ -1897,6 +2038,7 @@ function GuidedSelectionsWorkflow({
   onBrickRangeChange,
   onSelectProduct,
   onViewDetails,
+  onOpenImport,
 }) {
   if (screen === "areas") {
     return (
@@ -1950,6 +2092,8 @@ function GuidedSelectionsWorkflow({
         <GuidedBrickWorkflow
           requirement={requirement}
           products={products}
+          masterProductCount={masterProductCount}
+          enabledProductCount={enabledProductCount}
           runningTotals={runningTotals}
           brickStep={brickStep}
           brickSupplier={brickSupplier}
@@ -1959,6 +2103,7 @@ function GuidedSelectionsWorkflow({
           onBrickRangeChange={onBrickRangeChange}
           onSelectProduct={onSelectProduct}
           onViewDetails={onViewDetails}
+          onOpenImport={onOpenImport}
         />
       );
     }
@@ -2052,6 +2197,8 @@ function GuidedCardGrid({ title, cards, onOpen }) {
 function GuidedBrickWorkflow({
   requirement,
   products,
+  masterProductCount = 0,
+  enabledProductCount = 0,
   runningTotals,
   brickStep,
   brickSupplier,
@@ -2061,6 +2208,7 @@ function GuidedBrickWorkflow({
   onBrickRangeChange,
   onSelectProduct,
   onViewDetails,
+  onOpenImport,
 }) {
   const suppliers = brickSupplierOptions(products);
   const ranges = brickRangeOptions(products, brickSupplier);
@@ -2097,7 +2245,11 @@ function GuidedBrickWorkflow({
             <strong>{brickHeaderForStep(brickStep)}</strong>
           </div>
           {!products.length ? (
-            <GuidedBrickEmptyCatalogue />
+            <GuidedBrickEmptyCatalogue
+              message={masterProductCount && !enabledProductCount ? "No brick products are enabled for this builder." : "Brick catalogue awaiting product data"}
+              masterProductCount={masterProductCount}
+              onOpenImport={onOpenImport}
+            />
           ) : brickStep === "suppliers" ? (
             <div className="guidedSupplierGrid" data-testid="guided-brick-supplier-grid">
               {suppliers.map((supplier) => (
@@ -2124,7 +2276,7 @@ function GuidedBrickWorkflow({
                   <strong>{range.count} actual brick{range.count === 1 ? "" : "s"}</strong>
                 </button>
               )) : (
-                <GuidedBrickEmptyCatalogue message={`No ranges have been imported for ${supplierLabel}.`} />
+                <GuidedBrickEmptyCatalogue message={`No ranges have been imported for ${supplierLabel}.`} onOpenImport={onOpenImport} />
               )}
             </div>
           ) : selectedProducts.length ? (
@@ -2143,7 +2295,7 @@ function GuidedBrickWorkflow({
               </div>
             </>
           ) : (
-            <GuidedBrickEmptyCatalogue message="No products have been added to this catalogue yet." />
+            <GuidedBrickEmptyCatalogue message="No products have been added to this catalogue yet." onOpenImport={onOpenImport} />
           )}
         </main>
       </div>
@@ -2151,14 +2303,15 @@ function GuidedBrickWorkflow({
   );
 }
 
-function GuidedBrickEmptyCatalogue({ message = "Brick catalogue awaiting product data" }) {
+function GuidedBrickEmptyCatalogue({ message = "Brick catalogue awaiting product data", masterProductCount = 0, onOpenImport = null }) {
   return (
     <div className="guidedEmptyCatalogue" data-testid="guided-brick-empty-catalogue">
       <strong>{message}</strong>
-      <span>No products have been added to this catalogue yet.</span>
+      <span>{masterProductCount ? "Master Catalogue has brick products, but this builder has not enabled them yet." : "No products have been added to this catalogue yet."}</span>
       <div>
         <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?import=1"; }}>Import Products</button>
+        <button type="button" onClick={() => onOpenImport ? onOpenImport() : null}>Import Products</button>
+        {masterProductCount ? <button type="button" onClick={() => onOpenImport ? onOpenImport() : null}>Manage Builder Catalogue</button> : null}
       </div>
     </div>
   );
@@ -2171,7 +2324,7 @@ function GuidedEmptyCatalogue({ requirement }) {
       <span>{requirement.label} will appear here once genuine catalogue records are imported.</span>
       <div>
         <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?import=1"; }}>Import Products</button>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Import Products</button>
       </div>
     </div>
   );
@@ -2264,6 +2417,124 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
           <button type="button" disabled={!product.specificationUrl} onClick={() => product.specificationUrl && window.open(product.specificationUrl, "_blank", "noopener,noreferrer")}>Specification link</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BrickCatalogueImportModal({
+  requirement,
+  preview,
+  result,
+  enablementSelection,
+  onEnablementSelectionChange,
+  onFile,
+  onCommit,
+  onEnableSelected,
+  onClose,
+}) {
+  const rows = preview?.preview?.rows || [];
+  const errors = rows.reduce((total, row) => total + row.issues.filter((issue) => issue.severity === "error").length, 0);
+  const warnings = rows.reduce((total, row) => total + row.issues.filter((issue) => issue.severity !== "error").length, 0);
+  const regions = Array.from(new Set(rows.flatMap((row) => row.record.regions || []))).sort();
+  const enableRows = result ? rows.filter((row) => row.valid).map((row) => row.record) : [];
+  const suppliers = Array.from(new Set(enableRows.map((product) => product.supplier || product.manufacturer).filter(Boolean))).sort();
+  const ranges = Array.from(new Set(enableRows.map((product) => product.range).filter(Boolean))).sort();
+  const selectedSet = new Set(enablementSelection);
+  const setCodes = (codes) => onEnablementSelectionChange(Array.from(new Set(codes)));
+  return (
+    <div className="modalBackdrop" data-testid="brick-import-modal" onClick={onClose}>
+      <section className="brickImportModal" onClick={(event) => event.stopPropagation()}>
+        <header>
+          <div>
+            <span>IMPORT PRODUCTS</span>
+            <h2>{result ? "IMPORT COMPLETE" : preview ? "IMPORT PREVIEW" : "IMPORT PRODUCTS"}</h2>
+          </div>
+          <button type="button" onClick={onClose}>Close</button>
+        </header>
+
+        <div className="brickImportContext">
+          <strong>Catalogue Type: Master Catalogue</strong>
+          <span>Product Family: {requirement?.label || "Bricks"}</span>
+          <span>Area: Exterior</span>
+        </div>
+
+        {!preview ? (
+          <label className="brickFileDrop">
+            <Upload size={22} />
+            <strong>Step 1: Choose File</strong>
+            <span>Accepted: .csv or .json</span>
+            <input type="file" accept=".csv,text/csv,.json,application/json" onChange={(event) => {
+              onFile(event.target.files?.[0]);
+              event.target.value = "";
+            }} />
+          </label>
+        ) : (
+          <>
+            <div className="brickPreviewStats">
+              <span>File: {preview.fileName}</span>
+              <span>Product Family: Bricks</span>
+              <span>Total Products: {preview.preview.totalProducts}</span>
+              <span>New: {preview.preview.newProducts}</span>
+              <span>Updates: {preview.preview.changedProducts}</span>
+              <span>Unchanged: {preview.preview.unchangedProducts}</span>
+              <span>Warnings: {warnings}</span>
+              <span>Errors: {errors}</span>
+              <span>Missing Images: {preview.preview.missingImage}</span>
+              <span>Missing Prices: {preview.preview.missingPrice}</span>
+              <span>Missing Official URLs: {preview.preview.missingOfficialUrl}</span>
+              <span>Regions: {regions.join(";") || "Not supplied"}</span>
+            </div>
+            <div className="brickPreviewTable">
+              <div className="brickPreviewHead">
+                <span>Product Code</span><span>Manufacturer</span><span>Brand</span><span>Range</span><span>Product</span><span>Colour</span><span>Image</span><span>Price</span><span>Region</span><span>Status</span>
+              </div>
+              {rows.map((row) => (
+                <div key={`${row.rowNumber}-${row.productCode}`} className={row.valid ? "brickPreviewRow" : "brickPreviewRow invalid"}>
+                  <span>{row.record.productCode}</span>
+                  <span>{row.record.manufacturer}</span>
+                  <span>{row.record.brand || "Not set"}</span>
+                  <span>{row.record.range || "Not set"}</span>
+                  <span>{row.record.productName}</span>
+                  <span>{row.record.colour || "Not set"}</span>
+                  <span>{row.record.imageStatus}</span>
+                  <span>{priceStatusLabel(row.record.priceStatus)}</span>
+                  <span>{(row.record.regions || []).join(";")}</span>
+                  <span>{row.issues.length ? row.issues.map((issue) => `${issue.severity}: ${issue.field}`).join(", ") : row.action}</span>
+                </div>
+              ))}
+            </div>
+            {!result ? (
+              <button type="button" className="primary" disabled={errors > 0} onClick={onCommit}>IMPORT PRODUCTS</button>
+            ) : (
+              <div className="brickEnablementPanel" data-testid="brick-builder-enablement">
+                <h3>ADD PRODUCTS TO BUILDER CATALOGUE</h3>
+                <p>Created: {result.created.length} Updated: {result.updated.length} Unchanged: {result.skipped.length} Warnings: {warnings}</p>
+                <div className="brickEnablementActions">
+                  <button type="button" onClick={() => setCodes(enableRows.map((product) => product.productCode))}>Select All</button>
+                  <button type="button" onClick={() => setCodes([])}>Clear All</button>
+                  {suppliers.map((supplier) => <button key={supplier} type="button" onClick={() => setCodes(enableRows.filter((product) => (product.supplier || product.manufacturer) === supplier).map((product) => product.productCode))}>Enable entire supplier: {supplier}</button>)}
+                  {ranges.map((range) => <button key={range} type="button" onClick={() => setCodes(enableRows.filter((product) => product.range === range).map((product) => product.productCode))}>Enable range: {range}</button>)}
+                </div>
+                <div className="brickEnablementList">
+                  {enableRows.map((product) => (
+                    <label key={product.productCode}>
+                      <input type="checkbox" checked={selectedSet.has(product.productCode)} onChange={(event) => {
+                        setCodes(event.target.checked
+                          ? [...enablementSelection, product.productCode]
+                          : enablementSelection.filter((code) => code !== product.productCode));
+                      }} />
+                      <span>{product.productCode}</span>
+                      <strong>{product.productName}</strong>
+                      <em>{product.supplier || product.manufacturer} / {product.range || "No range"}</em>
+                    </label>
+                  ))}
+                </div>
+                <button type="button" className="primary" disabled={!enablementSelection.length} onClick={onEnableSelected}>Enable Selected Products</button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -3266,6 +3537,28 @@ function normaliseGalleryImages(value) {
   return String(value).split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
 }
 
+function priceStatusLabel(status) {
+  if (status === "price_pending") return "Price Pending";
+  if (status === "quote_required") return "Quote Required";
+  if (status === "allowance_only") return "Allowance Only";
+  if (status === "not_applicable") return "Not Applicable";
+  if (status === "expired") return "Expired";
+  return status || "Price Pending";
+}
+
+function deriveAustralianRegion(project = {}) {
+  const textValue = [
+    project?.site_state,
+    project?.state,
+    project?.site_address,
+    project?.address,
+    project?.suburb_postcode,
+    project?.postcode,
+  ].filter(Boolean).join(" ").toUpperCase();
+  const match = textValue.match(/\b(QLD|NSW|VIC|SA|WA|TAS|NT|ACT)\b/);
+  return match?.[1] || "";
+}
+
 function priceStateForGuidedOption(option) {
   if (option?.priceState) return option.priceState;
   if (numberValue(option?.selectedCost) > 0) return PRICE_STATES.current;
@@ -3683,6 +3976,26 @@ const styles = `
   .contractFooter span:nth-child(2) { color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pageFooter { position: absolute; left: 34px; right: 34px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #071827; padding-top: 8px; color: #334155; font-size: 12px; }
   .modalBackdrop { position: fixed; inset: 0; z-index: 1000; background: rgba(2, 6, 23, .72); display: grid; place-items: center; padding: 24px; }
+  .brickImportModal { width: min(1120px, 96vw); max-height: 92vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 14px; color: #071827; }
+  .brickImportModal header { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .brickImportModal header span { color: #64748b; font-size: 12px; font-weight: 950; letter-spacing: .08em; }
+  .brickImportModal h2, .brickImportModal h3 { margin: 0; letter-spacing: 0; }
+  .brickImportModal header button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; border-radius: 8px; }
+  .brickImportContext, .brickPreviewStats, .brickEnablementActions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .brickImportContext span, .brickImportContext strong, .brickPreviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px 10px; color: #475569; font-size: 12px; font-weight: 900; }
+  .brickFileDrop { position: relative; display: grid; place-items: center; gap: 8px; min-height: 220px; border: 1px dashed #94a3b8; border-radius: 8px; background: #f8fafc; cursor: pointer; }
+  .brickFileDrop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .brickPreviewTable { display: grid; gap: 6px; overflow-x: auto; }
+  .brickPreviewHead, .brickPreviewRow { display: grid; grid-template-columns: 130px 140px 120px 120px minmax(180px, 1fr) 100px 100px 110px 90px 150px; gap: 8px; min-width: 1260px; align-items: center; }
+  .brickPreviewHead { color: #475569; font-size: 12px; font-weight: 950; text-transform: uppercase; }
+  .brickPreviewRow { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 8px; font-size: 12px; }
+  .brickPreviewRow.invalid { border-color: #fecaca; background: #fff1f2; }
+  .brickEnablementPanel { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
+  .brickEnablementActions button, .brickImportModal .primary { border: 1px solid #0f766e; background: #0f766e; color: #ffffff; border-radius: 8px; }
+  .brickEnablementList { display: grid; gap: 8px; }
+  .brickEnablementList label { display: grid; grid-template-columns: auto 120px minmax(180px, 1fr) minmax(180px, 1fr); gap: 8px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 9px; }
+  .brickEnablementList input { width: auto; }
+  .brickEnablementList em { color: #64748b; font-style: normal; font-size: 12px; }
   .productModal { width: min(1100px, 94vw); max-height: 90vh; overflow: auto; background: white; border-radius: 10px; padding: 18px; color: #071827; }
   .productModal header { display: flex; justify-content: space-between; gap: 18px; align-items: start; margin-bottom: 14px; }
   .productModal h2 { margin: 0; }

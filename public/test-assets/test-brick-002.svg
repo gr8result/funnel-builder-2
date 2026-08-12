@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+  <rect width="900" height="560" fill="#eee8df"/>
+  <g transform="translate(54 64)">
+    <rect width="792" height="432" rx="18" fill="#faf6ef" stroke="#c9b9a8" stroke-width="4"/>
+    <g fill="#8d8072" stroke="#62584f" stroke-width="3">
+      <rect x="70" y="70" width="150" height="64" rx="5"/>
+      <rect x="238" y="70" width="150" height="64" rx="5"/>
+      <rect x="406" y="70" width="150" height="64" rx="5"/>
+      <rect x="574" y="70" width="150" height="64" rx="5"/>
+      <rect x="154" y="150" width="150" height="64" rx="5"/>
+      <rect x="322" y="150" width="150" height="64" rx="5"/>
+      <rect x="490" y="150" width="150" height="64" rx="5"/>
+      <rect x="70" y="230" width="150" height="64" rx="5"/>
+      <rect x="238" y="230" width="150" height="64" rx="5"/>
+      <rect x="406" y="230" width="150" height="64" rx="5"/>
+      <rect x="574" y="230" width="150" height="64" rx="5"/>
+    </g>
+    <text x="396" y="360" text-anchor="middle" font-family="Arial" font-size="32" font-weight="800" fill="#3f3730">TEST BRICK 002</text>
+  </g>
+</svg>

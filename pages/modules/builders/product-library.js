@@ -4,7 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Archive, ArrowLeft, Boxes, Check, Copy, Edit3, FileDown, FileUp, FolderOpen, ImagePlus, Package, Pencil, Plus, RefreshCw, Upload, X } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
+  AUSTRALIAN_REGIONS,
+  BUILDER_PRODUCT_MODES,
+  BUILDER_PRODUCT_TIERS,
+  BUILDER_ENABLEMENT_STORAGE_KEY,
   GARAGE_DOOR_SELECTION_KEY,
+  MASTER_IMAGE_STATUSES,
+  MASTER_PRICE_STATUSES,
+  MASTER_CATALOGUE_STORAGE_KEY,
+  MASTER_PRODUCT_CATALOGUE_IMPORT_TEMPLATE,
   PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
   PRODUCT_LIBRARY_IMPORT_COLUMNS,
@@ -12,10 +20,17 @@ import {
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   createProductEntity,
+  createBuilderProductReference,
   createSelectionFromProduct,
+  exportMasterCatalogueCsv,
+  exportMasterCatalogueJson,
   familiesForArea,
   familyByKey,
   isProductLibraryEligibleProduct,
+  parseMasterProductCatalogueImport,
+  previewMasterProductImport,
+  commitMasterProductImport,
+  queryClientSelectableProducts,
   productLibrarySelectionsFromJobFile,
   productsForFamily,
   productsForGarageDoors,
@@ -79,12 +94,47 @@ function downloadJson(fileName, payload) {
   URL.revokeObjectURL(url);
 }
 
+function downloadText(fileName, text, type = "text/plain;charset=utf-8") {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function money(value) {
   return Number(value || 0).toLocaleString("en-AU", {
     style: "currency",
     currency: "AUD",
     maximumFractionDigits: 0,
   });
+}
+
+function uniqueValues(values) {
+  return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right));
+}
+
+function masterProductMatchesFilters(product, filters) {
+  const search = String(filters.search || "").trim().toLowerCase();
+  const haystack = [product.productName, product.model, product.sku, product.productCode].filter(Boolean).join(" ").toLowerCase();
+  if (search && !haystack.includes(search)) return false;
+  if (filters.area && product.topLevelArea !== filters.area) return false;
+  if (filters.category && product.categoryKey !== filters.category && product.category !== filters.category) return false;
+  if (filters.family && product.familyKey !== filters.family) return false;
+  if (filters.manufacturer && product.manufacturer !== filters.manufacturer) return false;
+  if (filters.brand && product.brand !== filters.brand) return false;
+  if (filters.supplier && product.supplier !== filters.supplier) return false;
+  if (filters.range && product.range !== filters.range) return false;
+  if (filters.region && !(product.regions || []).includes("AU") && !(product.regions || []).includes(filters.region)) return false;
+  if (filters.imageStatus && product.imageStatus !== filters.imageStatus) return false;
+  if (filters.priceStatus && product.priceStatus !== filters.priceStatus) return false;
+  if (filters.status === "active" && product.active === false) return false;
+  if (filters.status === "discontinued" && !product.discontinued) return false;
+  return true;
 }
 
 function parseCsv(text) {
@@ -219,6 +269,11 @@ export default function BuilderProductLibraryPage() {
   const [jobFileName, setJobFileName] = useState(DEFAULT_JOB_FILE_NAME);
   const [adminOpen, setAdminOpen] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
+  const [masterCatalogueOpen, setMasterCatalogueOpen] = useState(true);
+  const [masterProducts, setMasterProducts] = useState([]);
+  const [builderEnablements, setBuilderEnablements] = useState([]);
+  const [masterImportPreview, setMasterImportPreview] = useState(null);
+  const [masterFilters, setMasterFilters] = useState({ search: "", area: "", category: "", family: "", manufacturer: "", brand: "", supplier: "", range: "", region: "", imageStatus: "", priceStatus: "", status: "" });
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
   const [editingProductId, setEditingProductId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -258,6 +313,19 @@ export default function BuilderProductLibraryPage() {
     return productsForFamily(orgProducts, selectedFamily);
   }, [orgProducts, selectedAreaKey, selectedCategoryKey, selectedFamily, workspaceId]);
   const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
+  const masterManufacturers = useMemo(() => uniqueValues(masterProducts.map((product) => product.manufacturer)), [masterProducts]);
+  const masterBrands = useMemo(() => uniqueValues(masterProducts.map((product) => product.brand)), [masterProducts]);
+  const masterSuppliers = useMemo(() => uniqueValues(masterProducts.map((product) => product.supplier)), [masterProducts]);
+  const masterRanges = useMemo(() => uniqueValues(masterProducts.map((product) => product.range)), [masterProducts]);
+  const filteredMasterProducts = useMemo(() => masterProducts.filter((product) => masterProductMatchesFilters(product, masterFilters)), [masterFilters, masterProducts]);
+  const selectableProof = useMemo(() => queryClientSelectableProducts({
+    organisationId: workspaceId || "",
+    familyKey: selectedFamily?.familyKey || "ovens",
+    region: masterFilters.region || "AU",
+    masterProducts,
+    builderProducts: builderEnablements,
+    organisationProducts: [],
+  }), [builderEnablements, masterFilters.region, masterProducts, selectedFamily, workspaceId]);
   const selectedVariant = selectedProduct?.variants?.[selectedVariantIndex] || selectedProduct?.variants?.[0] || null;
   const selections = productLibrarySelectionsFromJobFile(jobFile);
   const garageDoorSelection = selections[GARAGE_DOOR_SELECTION_KEY] || null;
@@ -297,6 +365,17 @@ export default function BuilderProductLibraryPage() {
       setJobFileName(saved.fileName || DEFAULT_JOB_FILE_NAME);
     } catch {
       setJobFile({ [PRODUCT_LIBRARY_SELECTIONS_KEY]: {}, workbook: { [PRODUCT_LIBRARY_SELECTIONS_KEY]: {} } });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      setMasterProducts(JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]"));
+      setBuilderEnablements(JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]"));
+    } catch {
+      setMasterProducts([]);
+      setBuilderEnablements([]);
     }
   }, []);
 
@@ -397,19 +476,63 @@ export default function BuilderProductLibraryPage() {
   }
 
   function exportTemplateCsv() {
-    const example = {
-      product_code: "ORG-STONE-WHITE-001",
-      linked_quote_item_code: "approved-family:stone-benchtops",
-      product_family: "stone-benchtops",
-      currency: "AUD",
-      gst_treatment: "GST inclusive",
-      active: "true",
-      discontinued: "false",
+    downloadCsv("MASTER-PRODUCT-CATALOGUE-IMPORT-TEMPLATE.csv", [PRODUCT_LIBRARY_IMPORT_COLUMNS]);
+  }
+
+  function persistMasterCatalogue(nextProducts, nextEnablements = builderEnablements) {
+    setMasterProducts(nextProducts);
+    setBuilderEnablements(nextEnablements);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
+      window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
+    }
+  }
+
+  function handleMasterImportPreview(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const format = file.name.toLowerCase().endsWith(".json") ? "json" : "csv";
+        const records = parseMasterProductCatalogueImport(reader.result || "", { format });
+        const preview = previewMasterProductImport(records, masterProducts);
+        setMasterImportPreview({ fileName: file.name, format, records, preview });
+        setMasterCatalogueOpen(true);
+        setSuccess(`Previewed ${preview.totalProducts} master product${preview.totalProducts === 1 ? "" : "s"} from ${file.name}.`);
+      } catch (previewError) {
+        setError(previewError.message || "Could not parse that catalogue import.");
+      }
     };
-    downloadCsv("product-library-supplier-import-template.csv", [
-      PRODUCT_LIBRARY_IMPORT_COLUMNS,
-      PRODUCT_LIBRARY_IMPORT_COLUMNS.map((column) => example[column] || ""),
-    ]);
+    reader.onerror = () => setError("Could not read that catalogue import file.");
+    reader.readAsText(file);
+    event.target.value = "";
+  }
+
+  function commitMasterPreview() {
+    if (!masterImportPreview) return;
+    const result = commitMasterProductImport(masterImportPreview.preview, masterProducts);
+    persistMasterCatalogue(result.products);
+    setMasterImportPreview(null);
+    setSuccess(`Master import committed: ${result.created.length} created, ${result.updated.length} updated, ${result.skipped.length} unchanged, ${result.invalid.length} invalid skipped.`);
+  }
+
+  function exportMasterCsv() {
+    downloadText("master-product-catalogue-export.csv", exportMasterCatalogueCsv(masterProducts), "text/csv;charset=utf-8");
+  }
+
+  function exportMasterJson() {
+    downloadText("master-product-catalogue-export.json", exportMasterCatalogueJson(masterProducts), "application/json;charset=utf-8");
+  }
+
+  function toggleBuilderProduct(masterProduct) {
+    if (!workspaceId || !masterProduct) return;
+    const existing = builderEnablements.find((item) => item.organisationId === workspaceId && item.masterProductCode === masterProduct.productCode);
+    const nextEnablements = existing
+      ? builderEnablements.map((item) => item === existing ? { ...item, enabled: !item.enabled, active: !item.enabled } : item)
+      : [...builderEnablements, createBuilderProductReference(masterProduct, { organisationId: workspaceId, enabled: true, active: true, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] })];
+    persistMasterCatalogue(masterProducts, nextEnablements);
+    setSuccess(`${masterProduct.productName} ${existing?.enabled ? "disabled" : "enabled"} for this builder.`);
   }
 
   function handleProductCsvPreview(event) {
@@ -788,6 +911,148 @@ export default function BuilderProductLibraryPage() {
 
         {error ? <div className="alert error">{error}</div> : null}
         {success ? <div className="alert success">{success}</div> : null}
+
+        <section className="master-catalogue" data-admin-surface="master-catalogue">
+          <div className="section-heading">
+            <span>Product Library Management</span>
+            <strong>Master Catalogue</strong>
+          </div>
+          <div className="master-toolbar">
+            <button type="button" onClick={() => setMasterCatalogueOpen((current) => !current)}><Boxes size={16} /> Master Catalogue</button>
+            <label className="file-button">
+              <Upload size={16} />
+              Import Products
+              <input type="file" accept=".csv,text/csv,.json,application/json" onChange={handleMasterImportPreview} />
+            </label>
+            <button type="button" onClick={exportTemplateCsv}><FileUp size={16} /> Import Template</button>
+            <button type="button" onClick={exportMasterCsv}><FileDown size={16} /> Export Catalogue CSV</button>
+            <button type="button" onClick={exportMasterJson}><FileDown size={16} /> Export Catalogue JSON</button>
+            <button type="button" onClick={() => setSuccess(`Add Product uses the canonical schema from ${MASTER_PRODUCT_CATALOGUE_IMPORT_TEMPLATE}.`)}><Plus size={16} /> Add Product</button>
+          </div>
+          {masterCatalogueOpen ? (
+            <div className="master-body">
+              <div className="master-filters">
+                <input value={masterFilters.search} onChange={(event) => setMasterFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search product name, model, SKU, product code" />
+                <select value={masterFilters.area} onChange={(event) => setMasterFilters((current) => ({ ...current, area: event.target.value }))}>
+                  <option value="">Area</option>
+                  {TOP_LEVEL_AREAS.map((area) => <option key={area.key} value={area.key}>{area.displayName}</option>)}
+                </select>
+                <select value={masterFilters.category} onChange={(event) => setMasterFilters((current) => ({ ...current, category: event.target.value }))}>
+                  <option value="">Category</option>
+                  {TAXONOMY_CATEGORY_DEFINITIONS.map((categoryItem) => <option key={categoryItem.key} value={categoryItem.key}>{categoryItem.category}</option>)}
+                </select>
+                <select value={masterFilters.family} onChange={(event) => setMasterFilters((current) => ({ ...current, family: event.target.value }))}>
+                  <option value="">Product Family</option>
+                  {PRODUCT_FAMILIES.map((familyItem) => <option key={familyItem.familyKey} value={familyItem.familyKey}>{familyItem.displayName}</option>)}
+                </select>
+                <select value={masterFilters.manufacturer} onChange={(event) => setMasterFilters((current) => ({ ...current, manufacturer: event.target.value }))}>
+                  <option value="">Manufacturer</option>
+                  {masterManufacturers.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <select value={masterFilters.brand} onChange={(event) => setMasterFilters((current) => ({ ...current, brand: event.target.value }))}>
+                  <option value="">Brand</option>
+                  {masterBrands.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <select value={masterFilters.supplier} onChange={(event) => setMasterFilters((current) => ({ ...current, supplier: event.target.value }))}>
+                  <option value="">Supplier</option>
+                  {masterSuppliers.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <select value={masterFilters.range} onChange={(event) => setMasterFilters((current) => ({ ...current, range: event.target.value }))}>
+                  <option value="">Range</option>
+                  {masterRanges.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+                <select value={masterFilters.region} onChange={(event) => setMasterFilters((current) => ({ ...current, region: event.target.value }))}>
+                  <option value="">Region</option>
+                  {AUSTRALIAN_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
+                </select>
+                <select value={masterFilters.imageStatus} onChange={(event) => setMasterFilters((current) => ({ ...current, imageStatus: event.target.value }))}>
+                  <option value="">Image Status</option>
+                  {MASTER_IMAGE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                </select>
+                <select value={masterFilters.priceStatus} onChange={(event) => setMasterFilters((current) => ({ ...current, priceStatus: event.target.value }))}>
+                  <option value="">Price Status</option>
+                  {MASTER_PRICE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                </select>
+                <select value={masterFilters.status} onChange={(event) => setMasterFilters((current) => ({ ...current, status: event.target.value }))}>
+                  <option value="">Active/Discontinued</option>
+                  <option value="active">Active</option>
+                  <option value="discontinued">Discontinued</option>
+                </select>
+              </div>
+
+              <div className="master-summary">
+                <span>Total: {masterProducts.length}</span>
+                <span>Filtered: {filteredMasterProducts.length}</span>
+                <span>Builder enabled: {builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled).length}</span>
+                <span data-client-selections-query-proof="enabled-compatible-products">Client Selections query proof: {selectableProof.length} enabled compatible product{selectableProof.length === 1 ? "" : "s"}</span>
+              </div>
+
+              {masterImportPreview ? (
+                <div className="import-preview" data-import-preview="master-catalogue">
+                  <div className="panel-title">
+                    <FileUp size={18} />
+                    <strong>Import Preview: {masterImportPreview.fileName}</strong>
+                  </div>
+                  <p>
+                    Total rows/products: {masterImportPreview.preview.totalProducts}.{" "}
+                    New products: {masterImportPreview.preview.newProducts}.{" "}
+                    Existing products: {masterImportPreview.preview.existingProducts}.{" "}
+                    Changed products: {masterImportPreview.preview.changedProducts}.{" "}
+                    Unchanged products: {masterImportPreview.preview.unchangedProducts}.{" "}
+                    Invalid products: {masterImportPreview.preview.invalidProducts}.
+                  </p>
+                  <p>
+                    Missing family mapping: {masterImportPreview.preview.missingFamilyMapping}.{" "}
+                    Missing image: {masterImportPreview.preview.missingImage}.{" "}
+                    Unverified image: {masterImportPreview.preview.unverifiedImage}.{" "}
+                    Missing official URL: {masterImportPreview.preview.missingOfficialUrl}.{" "}
+                    Missing price: {masterImportPreview.preview.missingPrice}.{" "}
+                    Expired price: {masterImportPreview.preview.expiredPrice}.{" "}
+                    Duplicate product codes: {masterImportPreview.preview.duplicateProductCodes}.{" "}
+                    Duplicate manufacturer/model combinations: {masterImportPreview.preview.duplicateManufacturerModelCombinations}.{" "}
+                    Unknown regions: {masterImportPreview.preview.unknownRegions}.{" "}
+                    Potential discontinued products: {masterImportPreview.preview.potentialDiscontinuedProducts}.
+                  </p>
+                  <div className="preview-list">
+                    {masterImportPreview.preview.rows.slice(0, 16).map((row) => (
+                      <div key={`${row.rowNumber}-${row.productCode}`} className={row.valid ? "preview-row" : "preview-row error"}>
+                        {row.record.primaryImageUrl ? <img src={row.record.primaryImageUrl} alt={`${row.productName || "Product"} preview`} /> : <span className="preview-image-empty">No image</span>}
+                        <strong>Row/Product {row.rowNumber}</strong>
+                        <span>
+                          {row.productName || row.productCode || "Unnamed product"}
+                          <small>{row.familyMapping?.displayName || "Missing family mapping"} / {row.imageStatus} / {row.priceStatus}</small>
+                        </span>
+                        <small>{row.issues.length ? row.issues.map((issue) => `${issue.field}: ${issue.problem}`).join("; ") : row.action}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={commitMasterPreview} disabled={saving}><Upload size={16} /> Commit Valid Rows</button>
+                </div>
+              ) : null}
+
+              <div className="master-table" data-builder-catalogue="reference-layer">
+                {filteredMasterProducts.length ? filteredMasterProducts.slice(0, 24).map((product) => {
+                  const enabled = builderEnablements.some((item) => item.organisationId === workspaceId && item.masterProductCode === product.productCode && item.enabled);
+                  return (
+                    <div key={product.productCode} className="master-row">
+                      <strong>{product.productName}</strong>
+                      <span>{product.productCode}</span>
+                      <span>{[product.manufacturer, product.brand, product.range, product.model].filter(Boolean).join(" / ") || "No manufacturer detail"}</span>
+                      <span>{product.familyKey} / {(product.regions || []).join(";")}</span>
+                      <span>{product.imageStatus} / {product.priceStatus === "price_pending" ? "Price Pending" : product.priceStatus === "quote_required" ? "Quote Required" : product.priceStatus === "allowance_only" ? "Allowance Only" : product.priceStatus}</span>
+                      <button type="button" onClick={() => toggleBuilderProduct(product)}><Check size={16} /> {enabled ? "Disable" : "Enable"}</button>
+                    </div>
+                  );
+                }) : (
+                  <div className="empty-state compact">
+                    <strong>Master Catalogue is ready for real researched supplier data.</strong>
+                    <span>No commercial supplier products have been seeded.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         {!selectedArea ? (
           <section className="purpose">
@@ -1485,6 +1750,71 @@ export default function BuilderProductLibraryPage() {
           gap: 14px;
           margin-top: 10px;
         }
+        .master-catalogue {
+          margin-top: 16px;
+          border: 1px solid #d7deea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .master-toolbar,
+        .master-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .master-body {
+          display: grid;
+          gap: 14px;
+          margin-top: 14px;
+        }
+        .master-filters {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 8px;
+        }
+        .master-filters input,
+        .master-filters select {
+          min-height: 38px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #172033;
+          padding: 8px 10px;
+          font-weight: 700;
+        }
+        .master-filters input {
+          grid-column: span 2;
+        }
+        .master-summary span {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 8px 10px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .master-table {
+          display: grid;
+          gap: 8px;
+        }
+        .master-row {
+          display: grid;
+          grid-template-columns: minmax(180px, 1.2fr) 140px minmax(180px, 1.1fr) 150px 170px auto;
+          gap: 10px;
+          align-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 10px;
+        }
+        .master-row span {
+          color: #64748b;
+          font-size: 12px;
+          overflow-wrap: anywhere;
+        }
         .admin-actions {
           display: flex;
           flex-wrap: wrap;
@@ -1581,7 +1911,8 @@ export default function BuilderProductLibraryPage() {
           .standard-banner,
           .family-layout,
           .family-hero,
-          .product-flow {
+          .product-flow,
+          .master-row {
             grid-template-columns: 1fr;
           }
           .banner-meta {
@@ -1605,6 +1936,9 @@ export default function BuilderProductLibraryPage() {
           .product-grid,
           .form-grid {
             grid-template-columns: 1fr;
+          }
+          .master-filters input {
+            grid-column: span 1;
           }
           .preview-row {
             grid-template-columns: 1fr;
