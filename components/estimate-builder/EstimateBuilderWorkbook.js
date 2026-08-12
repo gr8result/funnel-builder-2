@@ -41,6 +41,12 @@ import AIPlanTakeoffPage from "./ai-takeoff/AIPlanTakeoffPage";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import {
+  PRODUCT_FAMILIES,
+  TAXONOMY_CATEGORY_DEFINITIONS,
+  TOP_LEVEL_AREAS,
+  imageForFamilyKey,
+} from "../../lib/product-library/catalogueModel";
+import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
   PROJECT_ESTIMATE_PAGE_KEYS as REGISTRY_PROJECT_ESTIMATE_PAGE_KEYS,
@@ -202,12 +208,21 @@ const WORKSPACE_VISUALS = {
   },
   productLibrary: {
     title: "Product Library",
-    subtitle: "Manage reusable product records imported from the Quote Sheet CSV.",
+    subtitle: "Manage client and builder selectable products, finishes, fixtures and selection families.",
     color: "#0f766e",
     soft: "#ecfdf5",
     border: "#99f6e4",
     gradient: "linear-gradient(135deg, #0f766e 0%, #14b8a6 100%)",
     Icon: Package,
+  },
+  estimatingCatalogue: {
+    title: "Estimating Catalogue",
+    subtitle: "Manage QS, rate, labour, preliminary and construction resource rows used by estimating.",
+    color: "#475569",
+    soft: "#f8fafc",
+    border: "#cbd5e1",
+    gradient: "linear-gradient(135deg, #334155 0%, #64748b 100%)",
+    Icon: ClipboardList,
   },
   projectEstimate: {
     title: "Project Estimate",
@@ -801,6 +816,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
           {sheet.workbook.page === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
           {sheet.workbook.page === "productLibrary" && <ProductLibrarySheet sheet={sheet} />}
+          {sheet.workbook.page === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
           {sheet.workbook.page === "estimateInclusions" && <EstimateInclusionsSheet sheet={sheet} />}
           {sheet.workbook.page === "summary" && <SummarySheet sheet={sheet} />}
           {sheet.workbook.page === "projectEstimate" && <ProjectEstimateSheet sheet={sheet} />}
@@ -1102,10 +1118,17 @@ const DASHBOARD_WORKSPACE_CARDS = [
   },
   {
     title: "Product Library",
-    subtitle: "Download, edit, re-upload and manage reusable products converted from the Quote Sheet.",
+    subtitle: "Manage the client-selectable product hierarchy from the approved Product Library CSV.",
     page: "productLibrary",
     visualKey: "productLibrary",
-    badge: "CSV",
+    badge: "Products",
+  },
+  {
+    title: "Estimating Catalogue",
+    subtitle: "Open the QS, rates, labour, preliminaries and quote-sheet catalogue used by estimating.",
+    page: "estimatingCatalogue",
+    visualKey: "estimatingCatalogue",
+    badge: "QS",
   },
   {
     title: "Project Estimate",
@@ -6765,7 +6788,175 @@ function ProjectEstimateSheet({ sheet }) {
   );
 }
 
+const PRODUCT_LIBRARY_TOP_LEVEL_KEYS = ["exterior", "interior"];
+const PRODUCT_LIBRARY_INTERIOR_AREA_KEYS = ["kitchen", "bathroom-ensuite", "laundry", "bedrooms", "living-areas", "garage", "interior"];
+const PRODUCT_LIBRARY_BLOCKED_SEARCH_TERMS = ["site supervision", "engineering", "soil test", "frame labour", "certification", "project management"];
+
 function ProductLibrarySheet({ sheet }) {
+  const [selectedAreaKey, setSelectedAreaKey] = useState("");
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
+  const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
+  const [search, setSearch] = useState("");
+  const selectedArea = PRODUCT_LIBRARY_TOP_LEVEL_KEYS.map((key) => TOP_LEVEL_AREAS.find((area) => area.key === key)).find((area) => area?.key === selectedAreaKey) || null;
+  const visibleAreas = PRODUCT_LIBRARY_TOP_LEVEL_KEYS.map((key) => TOP_LEVEL_AREAS.find((area) => area.key === key)).filter(Boolean);
+  const visibleCategories = useMemo(() => embeddedProductLibraryCategories(selectedAreaKey), [selectedAreaKey]);
+  const selectedCategory = visibleCategories.find((category) => category.key === selectedCategoryKey) || null;
+  const visibleFamilies = useMemo(() => embeddedProductLibraryFamilies(selectedAreaKey, selectedCategory), [selectedAreaKey, selectedCategory]);
+  const selectedFamily = PRODUCT_FAMILIES.find((family) => family.familyKey === selectedFamilyKey) || null;
+  const q = search.trim().toLowerCase();
+  const searchedFamilies = useMemo(() => {
+    if (!q) return [];
+    if (PRODUCT_LIBRARY_BLOCKED_SEARCH_TERMS.some((term) => term.includes(q) || q.includes(term))) return [];
+    return PRODUCT_FAMILIES.filter((family) => {
+      const haystack = [family.displayName, family.category, family.subcategory, family.familyKey].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [q]);
+
+  function openArea(areaKey) {
+    setSelectedAreaKey(areaKey);
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+  }
+
+  function openCategory(categoryKey) {
+    setSelectedCategoryKey(categoryKey);
+    setSelectedFamilyKey("");
+  }
+
+  function openFamily(familyKey) {
+    setSelectedFamilyKey(familyKey);
+  }
+
+  function backOneLevel() {
+    if (selectedFamilyKey) setSelectedFamilyKey("");
+    else if (selectedCategoryKey) setSelectedCategoryKey("");
+    else setSelectedAreaKey("");
+  }
+
+  return (
+    <div style={styles.productLibraryHierarchyShell} data-catalogue-kind="product-library">
+      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.productLibrary.gradient }}>
+        <div style={styles.dashboardHeroCopy}>
+          <span style={styles.dashboardHeroIcon}><Package size={38} strokeWidth={2.4} /></span>
+          <div>
+            <div style={styles.dashboardEyebrow}>Client Product Catalogue</div>
+            <h2 style={styles.dashboardTitle}>Product Library</h2>
+            <p style={styles.dashboardSubtitle}>Browse selection requirements, product families and actual builder-enabled catalogue products. QS labour, preliminaries and site resources live in Estimating Catalogue.</p>
+          </div>
+        </div>
+        <div style={styles.dashboardTotalCard}>
+          <span>Selection families</span>
+          <strong>{PRODUCT_FAMILIES.length}</strong>
+        </div>
+      </section>
+
+      <section style={styles.productLibraryHierarchyToolbar}>
+        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search selectable product families" />
+        {selectedAreaKey ? <button type="button" style={styles.secondaryButton} onClick={backOneLevel}>Back</button> : null}
+      </section>
+
+      {q ? (
+        <section style={styles.productLibraryVisualGrid} data-search-results="product-library">
+          {searchedFamilies.map((family) => (
+            <button key={family.familyKey} type="button" style={styles.productLibraryVisualCard} onClick={() => {
+              const nextAreaKey = family.topLevelArea === "exterior" ? "exterior" : "interior";
+              const nextCategory = embeddedCategoryForFamily(nextAreaKey, family);
+              setSelectedAreaKey(nextAreaKey);
+              setSelectedCategoryKey(nextCategory?.key || "");
+              setSelectedFamilyKey(family.familyKey);
+            }}>
+              <span style={{ ...styles.productLibraryVisualImage, backgroundImage: `url(${family.image || imageForFamilyKey(family.familyKey, family.topLevelArea)})` }} />
+              <strong>{family.displayName}</strong>
+              <small>{family.category} / {family.subcategory}</small>
+              <em>Actual products are added by supplier, brand, range and model.</em>
+            </button>
+          ))}
+          {!searchedFamilies.length ? (
+            <div style={styles.productLibraryEmptyState}>
+              <strong>No Product Library matches.</strong>
+              <span>Estimating-only resources such as soil tests, engineering, supervision and frame labour are excluded from this catalogue.</span>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {!q && !selectedArea ? (
+        <section style={styles.productLibraryVisualGrid} data-level="areas">
+          {visibleAreas.map((area) => {
+            const count = embeddedFamilyCountForArea(area.key);
+            return (
+              <button key={area.key} type="button" style={styles.productLibraryVisualCard} onClick={() => openArea(area.key)} data-area-key={area.key}>
+                <span style={{ ...styles.productLibraryVisualImage, backgroundImage: `url(${area.image})` }} />
+                <strong>{area.displayName}</strong>
+                <small>{area.description}</small>
+                <em>{count} selectable {count === 1 ? "family" : "families"}</em>
+              </button>
+            );
+          })}
+        </section>
+      ) : null}
+
+      {!q && selectedArea && !selectedCategory ? (
+        <section style={styles.productLibraryVisualGrid} data-level="categories" data-area-key={selectedArea.key}>
+          {visibleCategories.map((category) => (
+            <button key={category.key} type="button" style={styles.productLibraryVisualCard} onClick={() => openCategory(category.key)} data-category-key={category.key}>
+              <span style={{ ...styles.productLibraryVisualImage, backgroundImage: `url(${category.image})` }} />
+              <strong>{category.displayName}</strong>
+              <small>{category.description || category.subcategory || category.category}</small>
+              <em>{embeddedFamilyCountForCategory(selectedArea.key, category)} product {embeddedFamilyCountForCategory(selectedArea.key, category) === 1 ? "family" : "families"}</em>
+            </button>
+          ))}
+        </section>
+      ) : null}
+
+      {!q && selectedArea && selectedCategory && !selectedFamily ? (
+        <section style={styles.productLibraryVisualGrid} data-level="families" data-category-key={selectedCategory.key}>
+          {visibleFamilies.map((family) => (
+            <button key={family.familyKey} type="button" style={styles.productLibraryVisualCard} onClick={() => openFamily(family.familyKey)} data-family-key={family.familyKey}>
+              <span style={{ ...styles.productLibraryVisualImage, backgroundImage: `url(${family.image || imageForFamilyKey(family.familyKey, family.topLevelArea)})` }} />
+              <strong>{family.displayName}</strong>
+              <small>{family.category} / {family.subcategory}</small>
+              <em>Linked quote code: {family.linkedQuoteItemCode || family.approvedSourceKey}</em>
+            </button>
+          ))}
+          {!visibleFamilies.length ? (
+            <div style={styles.productLibraryEmptyState}>
+              <strong>No selectable product families are mapped here yet.</strong>
+              <span>Use the approved Product Library CSV to add requirements before importing actual commercial products.</span>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {!q && selectedFamily ? (
+        <section style={styles.productLibraryFamilyPanel} data-family-key={selectedFamily.familyKey}>
+          <span
+            role="img"
+            aria-label={`${selectedFamily.displayName} catalogue`}
+            style={{ ...styles.productLibraryFamilyImage, backgroundImage: `url(${selectedFamily.image || imageForFamilyKey(selectedFamily.familyKey, selectedFamily.topLevelArea)})` }}
+          />
+          <div style={styles.productLibraryFamilyBody}>
+            <span>{selectedCategory?.displayName || selectedFamily.category}</span>
+            <h3>{selectedFamily.displayName}</h3>
+            <p>{selectedFamily.quantityRule || "Actual products are managed by supplier, brand, range, model and variants."}</p>
+            <div style={styles.productLibraryFamilyMeta}>
+              <span>{selectedFamily.familyKey}</span>
+              <span>{selectedFamily.linkedQuoteItemCode || selectedFamily.approvedSourceKey}</span>
+              <span>{selectedFamily.pricingMode}</span>
+            </div>
+            <div style={styles.productLibraryEmptyState}>
+              <strong>No products have been added to this catalogue yet.</strong>
+              <span>Import real manufacturer or supplier products to populate this family. Generic allowance rows are not fabricated as products.</span>
+            </div>
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function EstimatingCatalogueSheet({ sheet }) {
   const readonly = sheet.previewMode;
   const fileRef = useRef(null);
   const [search, setSearch] = useState("");
@@ -6777,7 +6968,7 @@ function ProductLibrarySheet({ sheet }) {
   const [bulkSupplier, setBulkSupplier] = useState("");
   const [bulkCategory, setBulkCategory] = useState("");
   const [bulkActive, setBulkActive] = useState("");
-  const products = useMemo(() => productLibraryProducts(sheet), [sheet.workbook.productLibrary, sheet.preview, sheet.quoteSections]);
+  const products = productLibraryProducts(sheet);
   const savedCount = sheet.workbook.productLibrary?.products?.length || 0;
   const categories = useMemo(() => uniqueProductValues(products, "category"), [products]);
   const suppliers = useMemo(() => uniqueProductValues(products, "supplier"), [products]);
@@ -6799,13 +6990,13 @@ function ProductLibrarySheet({ sheet }) {
 
   function addProduct() {
     saveProducts([blankProductLibraryRecord(products.length + 1), ...products]);
-    setMessage("Added a blank product row.");
+    setMessage("Added a blank estimating row.");
   }
 
   function seedFromQuoteSheet() {
     const nextProducts = deriveProductLibraryFromQuoteSheet(sheet);
     saveProducts(nextProducts, { importedAt: new Date().toISOString() });
-    setMessage(`Seeded Product Library from ${nextProducts.length} Quote Sheet rows.`);
+    setMessage(`Seeded Estimating Catalogue from ${nextProducts.length} Quote Sheet rows.`);
   }
 
   function handleImportFile(event) {
@@ -6821,7 +7012,7 @@ function ProductLibrarySheet({ sheet }) {
         setMessage(`Import preview ready: ${nextPreview.newProducts.length} new, ${nextPreview.updatedProducts.length} updated, ${nextPreview.removedProducts.length} removed/deactivated, ${nextPreview.unchangedProducts.length} unchanged, ${nextPreview.invalidRows.length} invalid.`);
       } catch (error) {
         setPreview(null);
-        setMessage(error?.message || "Product Library CSV could not be imported.");
+        setMessage(error?.message || "Estimating Catalogue CSV could not be imported.");
       }
     };
     reader.readAsText(file);
@@ -6830,7 +7021,7 @@ function ProductLibrarySheet({ sheet }) {
   function confirmImport() {
     if (!preview) return;
     saveProducts(applyProductLibraryImport(products, preview), { importedAt: new Date().toISOString() });
-    setMessage(`Product Library updated: ${preview.newProducts.length} new, ${preview.updatedProducts.length} updated, ${preview.removedProducts.length} deactivated.`);
+    setMessage(`Estimating Catalogue updated: ${preview.newProducts.length} new, ${preview.updatedProducts.length} updated, ${preview.removedProducts.length} deactivated.`);
     setPreview(null);
   }
 
@@ -6851,23 +7042,23 @@ function ProductLibrarySheet({ sheet }) {
 
   return (
     <div style={styles.productLibraryShell}>
-      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.productLibrary.gradient }}>
+      <section style={{ ...styles.dashboardHero, background: WORKSPACE_VISUALS.estimatingCatalogue.gradient }}>
         <div style={styles.dashboardHeroCopy}>
           <span style={styles.dashboardHeroIcon}><Package size={38} strokeWidth={2.4} /></span>
           <div>
-            <div style={styles.dashboardEyebrow}>Builder Catalogue</div>
-            <h2 style={styles.dashboardTitle}>Product Library</h2>
-            <p style={styles.dashboardSubtitle}>Start from the current Quote Sheet, then export, edit, re-upload, add, update or deactivate product records.</p>
+            <div style={styles.dashboardEyebrow}>Estimating Catalogue</div>
+            <h2 style={styles.dashboardTitle}>Estimating Catalogue</h2>
+            <p style={styles.dashboardSubtitle}>Preserved QS, rate, labour, preliminary and construction-resource rows used by estimating and quotations.</p>
           </div>
         </div>
         <div style={styles.dashboardTotalCard}>
-          <span>{savedCount ? "Saved products" : "Quote Sheet starter rows"}</span>
+          <span>{savedCount ? "Saved estimating rows" : "Quote Sheet starter rows"}</span>
           <strong>{products.length}</strong>
         </div>
       </section>
 
       <section style={styles.productLibraryToolbar}>
-        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, supplier, brand, notes" />
+        <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search QS rows, supplier, brand, notes" />
         <select style={styles.productLibrarySelect} value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
           <option value="all">All categories</option>
           {categories.map((category) => <option key={category} value={category}>{category}</option>)}
@@ -6881,7 +7072,7 @@ function ProductLibrarySheet({ sheet }) {
           <option value="inactive">Inactive</option>
           <option value="all">Active & inactive</option>
         </select>
-        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={addProduct}>Add product</button>
+        <button type="button" disabled={readonly} style={styles.primaryButton} onClick={addProduct}>Add estimating row</button>
         <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={seedFromQuoteSheet}>Seed from Quote Sheet</button>
       </section>
 
@@ -6940,6 +7131,53 @@ function ProductLibrarySheet({ sheet }) {
       </section>
     </div>
   );
+}
+
+function embeddedProductLibraryCategories(areaKey) {
+  if (areaKey === "exterior") {
+    return TAXONOMY_CATEGORY_DEFINITIONS
+      .filter((category) => category.topLevelArea === "exterior")
+      .filter((category) => embeddedFamilyCountForCategory("exterior", category) > 0);
+  }
+  if (areaKey !== "interior") return [];
+  return PRODUCT_LIBRARY_INTERIOR_AREA_KEYS
+    .map((key) => TOP_LEVEL_AREAS.find((area) => area.key === key))
+    .filter(Boolean)
+    .map((area) => ({
+      key: area.key,
+      displayName: area.displayName,
+      category: area.displayName,
+      description: area.description,
+      image: area.image,
+      topLevelArea: area.key,
+    }))
+    .filter((category) => embeddedFamilyCountForCategory("interior", category) > 0);
+}
+
+function embeddedProductLibraryFamilies(areaKey, category) {
+  if (!areaKey || !category) return [];
+  if (areaKey === "exterior") {
+    return PRODUCT_FAMILIES.filter((family) => family.topLevelArea === "exterior" && family.category === category.category);
+  }
+  if (areaKey === "interior") {
+    return PRODUCT_FAMILIES.filter((family) => family.topLevelArea === category.key);
+  }
+  return [];
+}
+
+function embeddedCategoryForFamily(areaKey, family) {
+  return embeddedProductLibraryCategories(areaKey).find((category) => {
+    if (areaKey === "exterior") return category.category === family.category;
+    return category.key === family.topLevelArea;
+  }) || null;
+}
+
+function embeddedFamilyCountForArea(areaKey) {
+  return embeddedProductLibraryCategories(areaKey).reduce((total, category) => total + embeddedFamilyCountForCategory(areaKey, category), 0);
+}
+
+function embeddedFamilyCountForCategory(areaKey, category) {
+  return embeddedProductLibraryFamilies(areaKey, category).length;
 }
 
 function ProductLibraryCell({ value: currentValue, onCommit, disabled = false }) {
@@ -15561,6 +15799,16 @@ const styles = {
   productLibraryPreviewGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
   productLibraryPreviewCard: { border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 10, padding: 10, display: "grid", gap: 8, color: "#0f172a", fontSize: 13 },
   productLibraryPreviewList: { display: "grid", gap: 4, color: "#475569", fontSize: 12, lineHeight: 1.35 },
+  productLibraryHierarchyShell: { display: "grid", gap: 16 },
+  productLibraryHierarchyToolbar: { border: "1px solid #ccfbf1", background: "#f0fdfa", borderRadius: 8, padding: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" },
+  productLibraryVisualGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, alignItems: "stretch" },
+  productLibraryVisualCard: { border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 8, padding: 10, overflow: "hidden", display: "grid", gridTemplateRows: "138px auto auto auto", gap: 8, textAlign: "left", color: "#0f172a", boxShadow: "0 12px 28px rgba(15,23,42,0.08)", cursor: "pointer", fontFamily: "inherit" },
+  productLibraryVisualImage: { display: "block", width: "100%", minHeight: 138, backgroundSize: "cover", backgroundPosition: "center" },
+  productLibraryEmptyState: { border: "1px dashed #94a3b8", background: "#f8fafc", borderRadius: 8, padding: 16, display: "grid", gap: 6, color: "#334155", gridColumn: "1 / -1" },
+  productLibraryFamilyPanel: { border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 8, overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(240px, 36%) minmax(320px, 1fr)", gap: 0, boxShadow: "0 12px 28px rgba(15,23,42,0.08)" },
+  productLibraryFamilyImage: { width: "100%", height: "100%", minHeight: 300, display: "block", backgroundSize: "cover", backgroundPosition: "center" },
+  productLibraryFamilyBody: { padding: 18, display: "grid", alignContent: "start", gap: 8, color: "#0f172a" },
+  productLibraryFamilyMeta: { display: "flex", flexWrap: "wrap", gap: 8, margin: "10px 0" },
   errorText: { margin: 0, color: "#b91c1c", fontWeight: 900 },
   workspacePlaceholder: { border: "1px dashed #cbd5e1", background: "#f8fafc", color: "#475569", borderRadius: 8, padding: 18, fontWeight: 800, lineHeight: 1.5 },
   floatingSaveJob: { position: "sticky", top: 0, zIndex: 4, marginTop: 14, background: "#ffffff", padding: "8px 0", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" },

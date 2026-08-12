@@ -89,8 +89,7 @@ assert.ok(requirementImage(EXTERIOR_REQUIREMENTS.find((item) => item.requirement
 assert.ok(!requirementImage(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks")).includes("images.unsplash.com"), "brick image fallback must not use global lifestyle photos");
 assert.ok(garageProducts.length > 0, "Garage Door requirement must query garage-door products");
 assert.ok(garageProducts.every((product) => product.familyKey === "garage-doors"), "Garage Door query must not fall back to bricks");
-assert.ok(internalDoorProducts.length > 0, "Internal Doors requirement must query internal-door products");
-assert.ok(internalDoorProducts.every((product) => product.familyKey === "internal-doors"), "Internal Door query must not include exterior doors");
+assert.equal(internalDoorProducts.length, 0, "Internal Doors allowance/specification rows must not be fabricated as actual products");
 
 const pendingSpecific = catalogue.products.find((product) => product.priceReviewRequired && product.productSpecific);
 assert.ok(pendingSpecific, "at least one identifiable product should be pending enrichment");

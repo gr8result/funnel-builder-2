@@ -15,6 +15,7 @@ import {
   createSelectionFromProduct,
   familiesForArea,
   familyByKey,
+  isProductLibraryEligibleProduct,
   productLibrarySelectionsFromJobFile,
   productsForFamily,
   productsForGarageDoors,
@@ -233,7 +234,9 @@ export default function BuilderProductLibraryPage() {
   const manufacturerById = useMemo(() => new Map(manufacturers.map((manufacturer) => [manufacturer.id, manufacturer.manufacturer_name])), [manufacturers]);
 
   const orgProducts = useMemo(
-    () => products.map((product) => mapDbProductToEntity(product, categoryById.get(product.category_id), supplierById.get(product.supplier_id), manufacturerById.get(product.manufacturer_id))),
+    () => products
+      .map((product) => mapDbProductToEntity(product, categoryById.get(product.category_id), supplierById.get(product.supplier_id), manufacturerById.get(product.manufacturer_id)))
+      .filter(isProductLibraryEligibleProduct),
     [categoryById, manufacturerById, products, supplierById]
   );
 
