@@ -2,221 +2,41 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
-import { calculateAdaptiveScores } from "../../lib/freedom-terminal/adaptiveBuyScore";
-import { calculateInvestmentSignal } from "../../lib/freedom/signalEngine";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
 const STORAGE_KEY = "freedom-terminal-unlocked";
-const WATCHLIST_SYMBOLS = ["MSFT", "NVDA", "V", "AMZN", "COST", "GOOGL", "AVGO", "MA", "ASML", "TSM"];
-
-const COMPANY_STYLES = {
-  MSFT: { companyName: "Microsoft", logoText: "MS", primaryColor: "#00A4EF", secondaryColor: "#7FBA00", accentColor: "#FFB900" },
-  NVDA: { companyName: "NVIDIA", logoText: "NV", primaryColor: "#76B900", secondaryColor: "#0B3D02", accentColor: "#B7FF4A" },
-  V: { companyName: "Visa", logoText: "V", primaryColor: "#1A1F71", secondaryColor: "#F7B600", accentColor: "#4D8DFF" },
-  AMZN: { companyName: "Amazon", logoText: "A", primaryColor: "#FF9900", secondaryColor: "#232F3E", accentColor: "#FFD15C" },
-  COST: { companyName: "Costco", logoText: "C", primaryColor: "#E31837", secondaryColor: "#005DAA", accentColor: "#FFFFFF" },
-  GOOGL: { companyName: "Alphabet", logoText: "G", primaryColor: "#4285F4", secondaryColor: "#EA4335", accentColor: "#FBBC05" },
-  AVGO: { companyName: "Broadcom", logoText: "B", primaryColor: "#CC092F", secondaryColor: "#7A0019", accentColor: "#FF6B6B" },
-  MA: { companyName: "Mastercard", logoText: "M", primaryColor: "#EB001B", secondaryColor: "#F79E1B", accentColor: "#FFCA4D" },
-  ASML: { companyName: "ASML", logoText: "AS", primaryColor: "#0073CF", secondaryColor: "#00A3E0", accentColor: "#9BE7FF" },
-  TSM: { companyName: "Taiwan Semiconductor", logoText: "TS", primaryColor: "#D71920", secondaryColor: "#1B2A57", accentColor: "#64B5F6" },
-};
-
-const FALLBACK_STYLE = {
-  companyName: "Company",
-  logoText: "--",
-  primaryColor: "#79D9C5",
-  secondaryColor: "#334155",
-  accentColor: "#E4B85D",
-};
-
-const STARTING_ROWS = [
-  { companyName: "Microsoft", symbol: "MSFT", sector: "Software", qualityScore: 96, healthScore: 96 },
-  { companyName: "NVIDIA", symbol: "NVDA", sector: "Semiconductors", qualityScore: 94 },
-  { companyName: "Visa", symbol: "V", sector: "Payments", qualityScore: 95 },
-  { companyName: "Amazon", symbol: "AMZN", sector: "Cloud & E-commerce", qualityScore: 93 },
-  { companyName: "Costco", symbol: "COST", sector: "Consumer Defensive", qualityScore: 92 },
-  { companyName: "Alphabet", symbol: "GOOGL", sector: "Digital Advertising & AI", qualityScore: 93 },
-  { companyName: "Broadcom", symbol: "AVGO", sector: "Semiconductors", qualityScore: 92 },
-  { companyName: "Mastercard", symbol: "MA", sector: "Payments", qualityScore: 94 },
-  { companyName: "ASML", symbol: "ASML", sector: "Semiconductor Equipment", qualityScore: 91 },
-  { companyName: "Taiwan Semiconductor", symbol: "TSM", sector: "Semiconductors", qualityScore: 92 },
-];
-
-const HEALTH_SCORES = {
-  MSFT: 96,
-};
-
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
-
-function getCompanyStyle(symbol) {
-  return COMPANY_STYLES[symbol] || { ...FALLBACK_STYLE, logoText: String(symbol || "--").slice(0, 2) };
-}
-
-function styleVars(style) {
-  return {
-    "--company-primary": style.primaryColor,
-    "--company-secondary": style.secondaryColor,
-    "--company-accent": style.accentColor,
-  };
-}
-
-function formatCurrency(value) {
-  return Number.isFinite(value) ? money.format(value) : "--";
-}
-
-function formatPercent(value, signed = false) {
-  if (!Number.isFinite(value)) return "--";
-  return `${signed && value > 0 ? "+" : ""}${value.toFixed(2)}%`;
-}
-
-function getRating(qualityScore, percentOffHigh) {
-  if (qualityScore >= 95 && percentOffHigh <= -15) return "STRONG BUY";
-  if (qualityScore >= 90 && percentOffHigh <= -10) return "BUY";
-  if (qualityScore >= 90) return "WATCH";
-  if (qualityScore >= 80) return "HOLD OFF";
-  return "AVOID";
-}
-
-function investmentStatus(rating) {
-  const normalized = String(rating || "").trim().toUpperCase();
-  if (normalized.includes("STRONG BUY")) return "strongBuy";
-  if (normalized === "BUY" || normalized === "BUY WATCH") return "buy";
-  if (normalized === "WATCH" || normalized === "FAIR VALUE") return "watch";
-  if (normalized === "HOLD" || normalized === "HOLD OFF" || normalized === "WAIT" || normalized === "EXPENSIVE") return "holdOff";
-  if (normalized === "SELL") return "sell";
-  if (normalized === "AVOID") return "avoid";
-  return "info";
-}
-
-function ratingLabel(rating) {
-  return {
-    strongBuy: "STRONG BUY",
-    buy: "BUY",
-    watch: "WATCH",
-    holdOff: "HOLD OFF",
-    avoid: "AVOID",
-    sell: "SELL",
-    info: "INFO",
-  }[investmentStatus(rating)];
-}
-
-function ratingClass(rating) {
-  return investmentStatus(rating);
-}
-
-function buyScoreClass(score) {
-  if (score >= 95) return "strongBuy";
-  if (score >= 85) return "buy";
-  if (score >= 70) return "watch";
-  if (score >= 60) return "holdOff";
-  return "avoid";
-}
-
-function getHealthScore(row) {
-  const directScore = row.healthScore?.overallScore ?? row.healthScore;
-  if (Number.isFinite(directScore)) return directScore;
-  if (Number.isFinite(HEALTH_SCORES[row.symbol])) return HEALTH_SCORES[row.symbol];
-  return null;
-}
-
-function dashboardRowError(message) {
-  const text = String(message || "").trim();
-  if (!text) return "";
-  if (/historical candle data is unavailable on the current finnhub plan/i.test(text)) return "";
-  return text;
-}
 
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function withAdaptiveScore(row) {
-  const adaptive = calculateAdaptiveScores({ symbol: row.symbol, quote: row });
-  const signalResult = calculateInvestmentSignal({
-    ticker: row.symbol,
-    exchange: row.exchange || "NASDAQ",
-    currency: row.currency || "USD",
-    timeframe: "1D",
-    decision: adaptive.decision,
-    confidence: adaptive.confidence,
-    buyScore: adaptive.buyScore,
-    quote: row,
-  });
-  return {
-    ...row,
-    adaptiveScore: adaptive,
-    buyScore: adaptive.buyScore,
-    convictionScore: adaptive.convictionScore,
-    decision: adaptive.decision,
-    confidence: adaptive.confidence,
-    estimatedUpside: adaptive.estimatedUpside,
-    discountToFairValue: adaptive.discountToFairValue,
-    rating: adaptive.decision,
-    signalResult,
-  };
-}
-
-function formatNullablePercent(value) {
-  return Number.isFinite(value) ? formatPercent(value, true) : "--";
-}
-
-function buildSummary(rows) {
-  const priced = rows.filter((row) => Number.isFinite(row.percentOffHigh));
-  const bestBuy =
-    priced
-      .slice()
-      .sort((a, b) => {
-        const ratingGap = (["STRONG BUY", "BUY"].includes(ratingLabel(b.decision || b.rating)) ? 1 : 0) - (["STRONG BUY", "BUY"].includes(ratingLabel(a.decision || a.rating)) ? 1 : 0);
-        return ratingGap || (b.buyScore || 0) - (a.buyScore || 0) || a.percentOffHigh - b.percentOffHigh;
-      })[0] || null;
-  const biggestDrop = priced.slice().sort((a, b) => a.percentOffHigh - b.percentOffHigh)[0] || null;
-  const averageScore = rows.length
-    ? rows.reduce((total, row) => total + (row.buyScore || 0), 0) / rows.length
-    : 0;
-
-  return {
-    watchlistCount: rows.length,
-    averageScore: Number(averageScore.toFixed(1)),
-    bestBuy,
-    biggestDrop,
-  };
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export async function getServerSideProps() {
-  try {
-    const { createHash } = await import("crypto");
-    const password = process.env.FREEDOM_TERMINAL_PASSWORD || "freedom123";
-    const passwordHash = createHash("sha256").update(`${PASSWORD_SALT}:${password}`).digest("hex");
+  const { createHash } = await import("crypto");
+  const password = process.env.FREEDOM_TERMINAL_PASSWORD || "freedom123";
+  return { props: { passwordHash: createHash("sha256").update(`${PASSWORD_SALT}:${password}`).digest("hex") } };
+}
 
-    return {
-      props: {
-        passwordHash,
-      },
-    };
-  } catch (error) {
-    console.error("Freedom dashboard load failed:", error);
-    return {
-      props: {
-        passwordHash: "",
-      },
-    };
-  }
+function money(value, currency = "USD") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "--";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(number);
+}
+
+function statusClass(status) {
+  return String(status || "DATA INSUFFICIENT").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function PasswordGate({ passwordHash, onUnlock }) {
   const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [error, setError] = useState("");
 
   async function unlock(event) {
     event.preventDefault();
     const candidateHash = await browserHashPassword(password);
     if (candidateHash !== passwordHash) {
-      setPasswordError("Incorrect password.");
+      setError("Incorrect password.");
       return;
     }
     window.localStorage.setItem(STORAGE_KEY, "true");
@@ -225,1048 +45,217 @@ function PasswordGate({ passwordHash, onUnlock }) {
 
   return (
     <div className="gateScreen">
-      <Head>
-        <title>Freedom Investment</title>
-      </Head>
+      <Head><title>Freedom Investment</title></Head>
       <form className="gate" onSubmit={unlock}>
         <span>Private Research</span>
         <h1>Freedom Investment</h1>
-        <p>Enter the temporary password to open the standalone investment terminal.</p>
-        <input onChange={(event) => setPassword(event.target.value)} placeholder="Password" type="password" value={password} />
-        {passwordError ? <small>{passwordError}</small> : null}
+        <p>Enter the private Freedom password.</p>
+        <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Password" />
+        {error ? <small>{error}</small> : null}
         <button type="submit">Unlock Investment</button>
       </form>
-      <style jsx>{`
-        .gateScreen {
-          align-items: center;
-          background: #06110d;
-          color: #f6f8f9;
-          display: flex;
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          justify-content: center;
-          min-height: 100vh;
-          padding: 24px;
-        }
-        .gate {
-          background: rgba(8, 14, 17, 0.94);
-          border: 1px solid rgba(178, 198, 207, 0.16);
-          border-radius: 8px;
-          box-shadow: 0 30px 100px rgba(0, 0, 0, 0.45);
-          max-width: 460px;
-          padding: 34px;
-          width: 100%;
-        }
-        span {
-          color: #79d9c5;
-          display: block;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 10px;
-          text-transform: uppercase;
-        }
-        h1,
-        p {
-          margin: 0;
-        }
-        h1 {
-          font-size: 42px;
-          letter-spacing: 0;
-        }
-        p {
-          color: #aab8be;
-          line-height: 1.55;
-          margin-top: 10px;
-        }
-        input {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          border-radius: 7px;
-          color: #fff;
-          font-size: 16px;
-          height: 48px;
-          margin-top: 24px;
-          padding: 0 14px;
-          width: 100%;
-        }
-        small {
-          color: #ffb1a5;
-          display: block;
-          font-weight: 750;
-          margin-top: 10px;
-        }
-        button {
-          background: #d4af37;
-          border: 0;
-          border-radius: 7px;
-          color: #061014;
-          cursor: pointer;
-          font-size: 15px;
-          font-weight: 950;
-          height: 48px;
-          margin-top: 18px;
-          width: 100%;
-        }
-      `}</style>
+      <style jsx>{styles}</style>
     </div>
   );
 }
 
-function FreedomTerminal({ passwordHash }) {
+export default function FreedomInvestmentDashboard({ passwordHash }) {
   const [unlocked, setUnlocked] = useState(false);
-  const [checkingStorage, setCheckingStorage] = useState(true);
-  const [rows, setRows] = useState(
-    STARTING_ROWS.map((row) => withAdaptiveScore({ ...row, rating: getRating(row.qualityScore, null) }))
-  );
+  const [checking, setChecking] = useState(true);
+  const [scan, setScan] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
+  const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [analysisModal, setAnalysisModal] = useState({
-    open: false,
-    running: false,
-    currentSymbol: "",
-    currentStage: "",
-    completed: [],
-    failed: [],
-  });
-  const [error, setError] = useState("");
-  const [analysisWarning, setAnalysisWarning] = useState("");
-  const [updatedAt, setUpdatedAt] = useState("");
-  const [legendOpen, setLegendOpen] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
-    setCheckingStorage(false);
+    setChecking(false);
   }, []);
 
-  async function loadQuotes({ silent = false } = {}) {
+  async function loadAll({ force = false } = {}) {
+    setLoading(true);
+    setMessage("");
     try {
-      setError("");
-      if (silent) setRefreshing(true);
-      else setLoading(true);
-
-      const response = await fetch(`/api/freedom/quotes?symbols=${WATCHLIST_SYMBOLS.join(",")}`);
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error || "Unable to load market data.");
-
-      setRows(
-        (data.quotes || []).map((row) => ({
-          ...withAdaptiveScore(row),
-          error: dashboardRowError(row.error),
-          healthScore: getHealthScore(row),
-        }))
-      );
-      setUpdatedAt(data.updatedAt || "");
-    } catch (err) {
-      console.error("Freedom Terminal load error:", err);
-      setError(err.message || "Unable to load market data.");
+      const [scanResponse, watchlistResponse, portfolioResponse] = await Promise.all([
+        fetch("/api/freedom-investment/scanner", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 10, force }),
+        }),
+        fetch("/api/freedom-investment/watchlist"),
+        fetch("/api/freedom-investment/portfolio"),
+      ]);
+      const [scanData, watchlistData, portfolioData] = await Promise.all([
+        scanResponse.json().catch(() => null),
+        watchlistResponse.json().catch(() => null),
+        portfolioResponse.json().catch(() => null),
+      ]);
+      setScan(scanData);
+      setWatchlist(watchlistData?.watchlist || []);
+      setPortfolio(portfolioData?.ok ? portfolioData : null);
+      if (!scanData?.ok) setMessage(scanData?.error || "Investment scan could not complete.");
+    } catch (error) {
+      setMessage(error?.message || "Investment scan could not complete.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
   useEffect(() => {
-    if (unlocked) loadQuotes();
+    if (unlocked) loadAll();
   }, [unlocked]);
 
-  async function analyseSymbols(symbols = WATCHLIST_SYMBOLS) {
-    const targetSymbols = (Array.isArray(symbols) ? symbols : WATCHLIST_SYMBOLS).filter(Boolean);
-    if (!targetSymbols.length || analysisModal.running) return;
-
-    const completed = [];
-    const failed = [];
-    setAnalysisWarning("");
-    setAnalysisModal({
-      open: true,
-      running: true,
-      currentSymbol: targetSymbols[0],
-      currentStage: "queued",
-      completed,
-      failed,
+  async function addToWatchlist(row) {
+    const response = await fetch("/api/freedom-investment/watchlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(row),
     });
-
-    for (const symbol of targetSymbols) {
-      setAnalysisModal((current) => ({
-        ...current,
-        currentSymbol: symbol,
-        currentStage: "requesting",
-      }));
-
-      try {
-        const response = await fetch("/api/freedom/analyse-company", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbol }),
-        });
-        const data = await response.json().catch(() => null);
-
-        if (!response.ok || data?.ok === false) {
-          throw new Error(data?.error || "Analysis request failed.");
-        }
-
-        completed.push(symbol);
-        setAnalysisWarning("");
-        setAnalysisModal((current) => ({
-          ...current,
-          currentStage: "completed",
-          completed: [...completed],
-          failed: [...failed],
-        }));
-      } catch (err) {
-        failed.push({ symbol, error: err.message || "Analysis request failed." });
-        setAnalysisWarning("Company analysis is temporarily unavailable. Live quotes remain active.");
-        setAnalysisModal((current) => ({
-          ...current,
-          currentStage: "failed",
-          completed: [...completed],
-          failed: [...failed],
-        }));
-      }
-    }
-
-    setAnalysisModal((current) => ({
-      ...current,
-      running: false,
-      currentSymbol: "",
-      currentStage: failed.length ? "completed with issues" : "completed",
-      completed: [...completed],
-      failed: [...failed],
-    }));
-
-    if (!failed.length) {
-      setAnalysisWarning("");
-      loadQuotes({ silent: true });
-    }
+    const data = await response.json().catch(() => null);
+    setMessage(data?.ok ? `${row.symbol} added to Investment Watchlist.` : data?.error || "Unable to update watchlist.");
+    await loadAll({ force: false });
   }
 
-  function retryFailedAnalysis() {
-    const failedSymbols = analysisModal.failed.map((item) => item.symbol).filter(Boolean);
-    analyseSymbols(failedSymbols);
-  }
+  const attractive = useMemo(() => scan?.attractive || [], [scan]);
+  const watchCandidates = useMemo(() => scan?.watchlistCandidates || [], [scan]);
+  const topFive = useMemo(() => attractive.slice(0, 5), [attractive]);
 
-  const summary = useMemo(() => buildSummary(rows), [rows]);
-
-  if (checkingStorage) {
-    return (
-      <div className="center">
-        Opening Freedom Investment...
-        <style jsx>{`
-          .center {
-            align-items: center;
-            background: #05080b;
-            color: #aab8be;
-            display: flex;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-weight: 800;
-            justify-content: center;
-            min-height: 100vh;
-          }
-        `}</style>
-      </div>
-    );
-  }
-
+  if (checking) return <div className="boot">Opening Freedom Investment...</div>;
   if (!unlocked) return <PasswordGate passwordHash={passwordHash} onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div className="page">
-      <Head>
-        <title>Freedom Investment</title>
-      </Head>
-
-      <section className="platformBanner" aria-label="Current Freedom workspace">
-        <strong><span className="platformIcon" aria-hidden="true">{"\u{1F4C8}"}</span>Freedom Investment</strong>
-        <span>Long-Term Investing & Wealth Building</span>
-      </section>
+      <Head><title>Freedom Investment</title></Head>
+      <section className="platformBanner"><strong>Freedom Investment</strong><span>Long-Term Opportunity Scanner</span></section>
       <FreedomModuleNav module="investment" />
 
       <header className="hero">
         <div>
-          <span className="eyebrow">Private Terminal</span>
-          <h1>Freedom Investment</h1>
-          <p>Long-Term Wealth & Portfolio Management</p>
+          <span>Long-Term Ownership</span>
+          <h1>Best Long-Term Opportunities</h1>
+          <p>Quality businesses, valuation discipline, and 5-10 year ownership logic. No trader signals.</p>
         </div>
-        <div className="heroActions">
-          <span>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleString()}` : "Waiting for live market data"}</span>
-          <button className="legendButton" type="button" onClick={() => setLegendOpen((open) => !open)}>
-            Investment Colours
-          </button>
-          {legendOpen ? (
-            <div className="legendPanel">
-              <span className="statusPill buy">BUY</span>
-              <span className="statusPill watch">WATCH</span>
-              <span className="statusPill holdOff">HOLD OFF</span>
-              <span className="statusPill avoid">AVOID</span>
-              <span className="statusPill info">INFO</span>
-            </div>
-          ) : null}
-          <button type="button" onClick={() => analyseSymbols(WATCHLIST_SYMBOLS)} disabled={analysisModal.running}>
-            {analysisModal.running ? "Analysing..." : "Analyse All Companies"}
-          </button>
-          <button type="button" onClick={() => loadQuotes({ silent: true })} disabled={loading || refreshing}>
-            {refreshing ? "Refreshing..." : "Refresh Quotes"}
-          </button>
-        </div>
+        <button type="button" onClick={() => loadAll({ force: true })} disabled={loading}>{loading ? "Scanning..." : "Run Investment Scan"}</button>
       </header>
 
-      {analysisWarning ? (
-        <section className="analysisWarning" role="status">
-          {analysisWarning}
-        </section>
-      ) : null}
+      {message ? <section className="notice">{message}</section> : null}
 
-      {error ? (
-        <section className="alert" role="alert">
-          <strong>Market data issue</strong>
-          <span>{error}</span>
-        </section>
-      ) : null}
-
-      <section className="summary" id="portfolio">
-        <article className="summaryCard blue">
-          <span>Watchlist Count</span>
-          <strong>{summary.watchlistCount}</strong>
-          <small>Core quality watchlist</small>
-        </article>
-        <article className="summaryCard green">
-          <span>Average Buy Score</span>
-          <strong>{summary.averageScore}</strong>
-          <small>Evidence-based scoring model</small>
-        </article>
-        <article className="summaryCard gold">
-          <span>Best Buy Opportunity</span>
-          <strong>{summary.bestBuy?.symbol || "--"}</strong>
-          <small>{summary.bestBuy ? `${ratingLabel(summary.bestBuy.decision || summary.bestBuy.rating)} at ${summary.bestBuy.buyScore}/100` : "No quote data yet"}</small>
-        </article>
-        <article className="summaryCard red">
-          <span>Biggest Drop From High</span>
-          <strong>{summary.biggestDrop?.symbol || "--"}</strong>
-          <small>{summary.biggestDrop ? formatPercent(summary.biggestDrop.percentOffHigh) : "No quote data yet"}</small>
-        </article>
+      <section className="summary">
+        <article><span>Supported universe</span><strong>{scan?.scanSummary?.supportedUniverse ?? "--"}</strong></article>
+        <article><span>Successfully analysed</span><strong>{scan?.scanSummary?.successfullyAnalysed ?? "--"}</strong></article>
+        <article><span>Data unavailable</span><strong>{scan?.scanSummary?.dataUnavailable ?? "--"}</strong></article>
+        <article><span>Attractive</span><strong>{scan?.scanSummary?.attractive ?? "--"}</strong></article>
+        <article><span>Fair Value</span><strong>{scan?.scanSummary?.fairValue ?? "--"}</strong></article>
+        <article><span>Watch</span><strong>{scan?.scanSummary?.watch ?? "--"}</strong></article>
+        <article><span>Expensive</span><strong>{scan?.scanSummary?.expensive ?? "--"}</strong></article>
+        <article><span>Avoid</span><strong>{scan?.scanSummary?.avoid ?? "--"}</strong></article>
       </section>
 
-      <main className="panel" id="watchlist">
-        <div className="panelHeader">
-          <div>
-            <h2>Long-Term Watchlist</h2>
-            <p>Live quotes, adaptive buy scoring, conviction, fair-value gap, and research readiness.</p>
+      <section className="panel">
+        <div className="panelHeader"><h2>What Should I Consider Buying?</h2></div>
+        {topFive.length ? (
+          <div className="cards">
+            {topFive.map((row, index) => (
+              <article key={row.symbol} className="opportunity">
+                <span>#{index + 1} {row.symbol}</span>
+                <h3>{row.companyName}</h3>
+                <strong>Investment Score: {row.investmentScore}/100</strong>
+                <p>{row.reason}</p>
+                <div><b>Quality {row.businessQuality?.score ?? "--"}</b><b>{row.growth?.classification}</b><b>{row.valuation?.classification}</b></div>
+                <Link href={`/freedom/company/${row.symbol}`}>Open Company</Link>
+              </article>
+            ))}
           </div>
-          <span className="pill">{loading ? "Loading quotes..." : `${rows.length} Symbols`}</span>
-        </div>
+        ) : (
+          <div className="empty">No attractive long-term purchases currently identified.</div>
+        )}
+      </section>
 
-        <div className="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Ticker</th>
-                <th>Sector</th>
-                <th>Current Price</th>
-                <th>Daily Change %</th>
-                <th>52W High</th>
-                <th>52W Low</th>
-                <th>% Off High</th>
-                <th>Buy Score</th>
-                <th>Conviction</th>
-                <th>Decision</th>
-                <th>Estimated Upside</th>
-                <th>Discount To Fair Value</th>
-                <th>Confidence</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const companyStyle = getCompanyStyle(row.symbol);
-                const decision = row.decision || row.rating;
+      <section className="panel">
+        <div className="panelHeader"><h2>Top 10 Long-Term Opportunities</h2></div>
+        <InvestmentTable rows={scan?.topTen || []} onWatch={addToWatchlist} />
+      </section>
 
-                return (
-                  <tr key={row.symbol} style={styleVars(companyStyle)}>
-                    <td>
-                      <Link className="companyLink" href={`/freedom/company/${row.symbol}`}>
-                        <span className="logoBadge">{companyStyle.logoText}</span>
-                        <span className="companyText">
-                          <strong>{row.companyName || companyStyle.companyName}</strong>
-                          {row.error ? <small>{row.error}</small> : null}
-                        </span>
-                      </Link>
-                    </td>
-                    <td>
-                      <Link className="ticker" href={`/freedom/company/${row.symbol}`}>
-                        {row.symbol}
-                      </Link>
-                    </td>
-                    <td>{row.sector}</td>
-                    <td>{loading ? <span className="skeleton" /> : formatCurrency(row.currentPrice)}</td>
-                    <td className={Number.isFinite(row.changePercent) && row.changePercent >= 0 ? "up" : "down"}>
-                      {loading ? <span className="skeleton" /> : formatPercent(row.changePercent, true)}
-                    </td>
-                    <td>{loading ? <span className="skeleton" /> : formatCurrency(row.yearHigh)}</td>
-                    <td>{loading ? <span className="skeleton" /> : formatCurrency(row.yearLow)}</td>
-                    <td className={Number.isFinite(row.percentOffHigh) && row.percentOffHigh <= -15 ? "drop" : ""}>
-                      {loading ? <span className="skeleton" /> : formatPercent(row.percentOffHigh)}
-                    </td>
-                    <td>
-                      <div className="meterCell">
-                        <span>{row.buyScore ?? "--"}</span>
-                        <div className={`miniBar buy ${buyScoreClass(row.buyScore || 0)}`}>
-                          <i style={{ width: `${Math.max(0, Math.min(row.buyScore || 0, 100))}%` }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="meterCell">
-                        <span>{row.convictionScore ?? "--"}</span>
-                        <div className="miniBar health">
-                          <i style={{ width: `${Math.max(0, Math.min(row.convictionScore || 0, 100))}%` }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`rating statusPill ${ratingClass(decision)}`}>
-                        {row.signalResult?.overallSignal || ratingLabel(decision)} ({row.signalResult?.timeframe || "1D"})
-                      </span>
-                    </td>
-                    <td>
-                      <span className={Number.isFinite(row.estimatedUpside) && row.estimatedUpside >= 0 ? "up" : "down"}>
-                        {formatNullablePercent(row.estimatedUpside)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={Number.isFinite(row.discountToFairValue) && row.discountToFairValue >= 0 ? "up" : "down"}>
-                        {formatNullablePercent(row.discountToFairValue)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="meterCell">
-                        <span>{row.confidence ?? "--"}</span>
-                        <div className="miniBar">
-                          <i style={{ width: `${Math.max(0, Math.min(row.confidence || 0, 100))}%` }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <Link className="action" href={`/freedom/company/${row.symbol}`}>
-                        Open
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </main>
+      <section className="panel" id="watchlist">
+        <div className="panelHeader"><h2>Quality Companies Worth Watching</h2></div>
+        <InvestmentTable rows={watchCandidates.length ? watchCandidates : watchlist} onWatch={addToWatchlist} compact />
+      </section>
 
-      {analysisModal.open ? (
-        <div className="modalBackdrop" role="presentation">
-          <section className="progressModal" role="dialog" aria-modal="true" aria-label="Company analysis progress">
-            <div className="modalHeader">
-              <div>
-                <span>Analyse All Companies</span>
-                <h2>{analysisModal.running ? "Analysis running" : "Analysis complete"}</h2>
-              </div>
-              <button type="button" onClick={() => setAnalysisModal((current) => ({ ...current, open: false }))} disabled={analysisModal.running}>
-                Close
-              </button>
-            </div>
-            <div className="progressGrid">
-              <article>
-                <span>Current ticker</span>
-                <strong>{analysisModal.currentSymbol || "--"}</strong>
-              </article>
-              <article>
-                <span>Current stage</span>
-                <strong>{analysisModal.currentStage || "--"}</strong>
-              </article>
-              <article>
-                <span>Completed</span>
-                <strong>{analysisModal.completed.length}</strong>
-              </article>
-              <article>
-                <span>Failed</span>
-                <strong>{analysisModal.failed.length}</strong>
-              </article>
-            </div>
-            <div className="progressList">
-              {WATCHLIST_SYMBOLS.map((symbol) => {
-                const failed = analysisModal.failed.find((item) => item.symbol === symbol);
-                const done = analysisModal.completed.includes(symbol);
-                const active = analysisModal.currentSymbol === symbol;
-                return (
-                  <div className={active ? "active" : done ? "done" : failed ? "failed" : ""} key={symbol}>
-                    <strong>{symbol}</strong>
-                    <span>{done ? "completed" : failed ? failed.error : active ? analysisModal.currentStage : "queued"}</span>
-                  </div>
-                );
-              })}
-            </div>
-            {analysisModal.failed.length ? (
-              <button type="button" onClick={retryFailedAnalysis} disabled={analysisModal.running}>
-                Retry Failed Companies
-              </button>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
+      <section className="panel" id="portfolio">
+        <div className="panelHeader"><h2>Portfolio View</h2></div>
+        {portfolio?.holdings?.length ? (
+          <>
+            <InvestmentPortfolio rows={portfolio.holdings} />
+            {portfolio.concentrationWarnings?.length ? <div className="notice">{portfolio.concentrationWarnings.join(" ")}</div> : null}
+          </>
+        ) : <div className="empty">No Freedom Investment holdings recorded yet.</div>}
+      </section>
 
-      <footer>Private research tool. Not financial advice.</footer>
-
-      <style jsx>{`
-        .page {
-          background: #06110d;
-          color: #f5f7f8;
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          min-height: 100vh;
-          padding: 96px 28px 28px;
-        }
-        .hero,
-        .alert,
-        .summary,
-        .panel,
-        footer {
-          margin-left: auto;
-          margin-right: auto;
-          max-width: 1760px;
-        }
-        .platformBanner {
-          align-items: center;
-          background: #0b8f55;
-          box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
-          display: flex;
-          gap: 14px;
-          justify-content: space-between;
-          left: 0;
-          padding: 14px 28px;
-          position: fixed;
-          right: 0;
-          top: 0;
-          z-index: 100;
-        }
-        .platformBanner strong {
-          align-items: center;
-          color: #fff;
-          display: inline-flex;
-          gap: 10px;
-          font-size: clamp(24px, 2.6vw, 34px);
-          font-weight: 950;
-        }
-        .platformBanner span {
-          color: #fff;
-          font-size: clamp(14px, 1.4vw, 18px);
-          font-weight: 900;
-        }
-        .platformBanner .platformIcon {
-          color: #d4af37;
-          font-size: 0.9em;
-          line-height: 1;
-        }
-        .hero {
-          align-items: flex-end;
-          background: #082118;
-          border: 1px solid rgba(16, 185, 129, 0.34);
-          border-radius: 8px;
-          box-shadow: 0 24px 90px rgba(16, 185, 129, 0.14);
-          display: flex;
-          justify-content: space-between;
-          min-height: 210px;
-          padding: 34px;
-        }
-        .platformSwitch {
-          display: inline-flex;
-          gap: 8px;
-          margin-bottom: 20px;
-        }
-        .platformSwitch a {
-          background: #0057d9;
-          border: 1px solid #0057d9;
-          border-radius: 999px;
-          color: #fff;
-          font-size: 14px;
-          font-weight: 950;
-          padding: 10px 14px;
-          text-decoration: none;
-        }
-        .platformSwitch a.active {
-          background: #0b8f55;
-          border-color: #0b8f55;
-          color: #fff;
-        }
-        .eyebrow {
-          color: #f4d675;
-          display: block;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-        }
-        h1,
-        h2,
-        p {
-          margin: 0;
-        }
-        h1 {
-          color: #fff;
-          font-size: clamp(44px, 5vw, 78px);
-          letter-spacing: 0;
-          line-height: 0.95;
-          text-shadow: 0 0 28px rgba(16, 185, 129, 0.22);
-        }
-        .hero p {
-          color: #d8e5ea;
-          font-size: 18px;
-          margin-top: 16px;
-        }
-        .heroActions {
-          align-items: flex-end;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          position: relative;
-        }
-        .heroActions span,
-        footer {
-          color: #aebdc4;
-          font-size: 13px;
-        }
-        button {
-          background: #d4af37;
-          border: 0;
-          border-radius: 7px;
-          color: #051014;
-          cursor: pointer;
-          font-weight: 950;
-          min-height: 42px;
-          padding: 0 18px;
-        }
-        button:disabled {
-          cursor: not-allowed;
-          opacity: 0.55;
-        }
-        .legendButton {
-          background: #047857;
-          color: #fff;
-        }
-        .legendPanel {
-          background: rgba(5, 8, 11, 0.96);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          border-radius: 8px;
-          box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          justify-content: flex-end;
-          max-width: 320px;
-          padding: 10px;
-          position: absolute;
-          right: 0;
-          top: 58px;
-          z-index: 2;
-        }
-        .alert {
-          background: rgba(178, 73, 73, 0.16);
-          border: 1px solid rgba(255, 137, 124, 0.28);
-          border-radius: 8px;
-          color: #ffd8d3;
-          display: flex;
-          gap: 12px;
-          margin-top: 18px;
-          padding: 14px 16px;
-        }
-        .analysisWarning {
-          background: rgba(228, 184, 93, 0.13);
-          border: 1px solid rgba(228, 184, 93, 0.28);
-          border-radius: 8px;
-          color: #ffe6a3;
-          font-size: 13px;
-          font-weight: 850;
-          margin-top: 18px;
-          padding: 12px 16px;
-        }
-        .modalBackdrop {
-          align-items: center;
-          background: rgba(0, 0, 0, 0.72);
-          display: flex;
-          inset: 0;
-          justify-content: center;
-          padding: 24px;
-          position: fixed;
-          z-index: 50;
-        }
-        .progressModal {
-          background: #081013;
-          border: 1px solid rgba(121, 217, 197, 0.24);
-          border-radius: 8px;
-          box-shadow: 0 30px 120px rgba(0, 0, 0, 0.62);
-          max-height: calc(100vh - 48px);
-          max-width: 760px;
-          overflow: auto;
-          padding: 20px;
-          width: 100%;
-        }
-        .modalHeader {
-          align-items: center;
-          display: flex;
-          gap: 16px;
-          justify-content: space-between;
-        }
-        .modalHeader span,
-        .progressGrid span {
-          color: #aebdc4;
-          display: block;
-          font-size: 12px;
-          font-weight: 900;
-          margin-bottom: 8px;
-          text-transform: uppercase;
-        }
-        .progressGrid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          margin-top: 18px;
-        }
-        .progressGrid article,
-        .progressList div {
-          background: rgba(255, 255, 255, 0.045);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 8px;
-          padding: 14px;
-        }
-        .progressGrid strong {
-          color: #fff;
-          font-size: 24px;
-        }
-        .progressList {
-          display: grid;
-          gap: 8px;
-          margin: 18px 0;
-        }
-        .progressList div {
-          align-items: center;
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-        }
-        .progressList strong {
-          color: #fff;
-        }
-        .progressList span {
-          color: #aebdc4;
-          font-size: 13px;
-          text-align: right;
-        }
-        .progressList .active {
-          border-color: rgba(228, 184, 93, 0.5);
-        }
-        .progressList .done {
-          border-color: rgba(121, 217, 197, 0.42);
-        }
-        .progressList .failed {
-          border-color: rgba(255, 137, 124, 0.45);
-        }
-        .summary {
-          display: grid;
-          gap: 14px;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          margin-top: 18px;
-        }
-        .summaryCard,
-        .panel {
-          background: rgba(6, 17, 13, 0.92);
-          border: 1px solid rgba(16, 185, 129, 0.16);
-          border-radius: 8px;
-        }
-        .summaryCard {
-          min-height: 120px;
-          overflow: hidden;
-          padding: 18px;
-          position: relative;
-        }
-        .summaryCard:before {
-          content: "";
-          inset: 0;
-          opacity: 0.16;
-          position: absolute;
-        }
-        .summaryCard.blue:before {
-          background: linear-gradient(135deg, #10b981, transparent 70%);
-        }
-        .summaryCard.green:before {
-          background: linear-gradient(135deg, #047857, transparent 70%);
-        }
-        .summaryCard.gold:before {
-          background: linear-gradient(135deg, #d4af37, transparent 70%);
-        }
-        .summaryCard.red:before {
-          background: linear-gradient(135deg, #e31837, transparent 70%);
-        }
-        .summary span,
-        .summary small,
-        .summary strong {
-          position: relative;
-        }
-        .summary span,
-        .summary small {
-          color: #aebdc4;
-          display: block;
-          font-size: 13px;
-        }
-        .summary strong {
-          color: #fff;
-          display: block;
-          font-size: clamp(28px, 3vw, 40px);
-          font-weight: 950;
-          margin: 14px 0 10px;
-        }
-        .panel {
-          margin-top: 18px;
-          overflow: hidden;
-        }
-        .panelHeader {
-          align-items: center;
-          border-bottom: 1px solid rgba(179, 199, 207, 0.1);
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-          padding: 20px 22px;
-        }
-        .panelHeader p {
-          color: #aebdc4;
-          margin-top: 5px;
-        }
-        .pill {
-          background: rgba(16, 185, 129, 0.12);
-          border: 1px solid rgba(16, 185, 129, 0.26);
-          border-radius: 999px;
-          color: #b8f4e6;
-          font-size: 13px;
-          font-weight: 850;
-          padding: 8px 12px;
-          white-space: nowrap;
-        }
-        .tableWrap {
-          overflow-x: auto;
-        }
-        table {
-          border-collapse: collapse;
-          min-width: 1740px;
-          table-layout: fixed;
-          width: 100%;
-        }
-        th,
-        td {
-          border-bottom: 1px solid rgba(179, 199, 207, 0.09);
-          padding: 15px 16px;
-          text-align: left;
-          vertical-align: middle;
-        }
-        th {
-          background: rgba(255, 255, 255, 0.04);
-          color: #aebdc4;
-          font-size: 12px;
-          font-weight: 900;
-          text-transform: uppercase;
-          white-space: nowrap;
-        }
-        td {
-          color: #e7eef2;
-          font-size: 14px;
-        }
-        tr {
-          transition: background 160ms ease, box-shadow 160ms ease;
-        }
-        tr:hover td {
-          background: color-mix(in srgb, var(--company-primary) 12%, transparent);
-          box-shadow: inset 3px 0 0 var(--company-primary);
-        }
-        .companyLink {
-          align-items: center;
-          color: #fff;
-          display: grid;
-          gap: 12px;
-          grid-template-columns: 44px minmax(0, 1fr);
-          text-decoration: none;
-        }
-        .logoBadge {
-          align-items: center;
-          background:
-            linear-gradient(135deg, color-mix(in srgb, var(--company-primary) 78%, #fff 8%), var(--company-secondary));
-          border: 1px solid color-mix(in srgb, var(--company-accent) 72%, #fff 8%);
-          border-radius: 999px;
-          box-shadow: 0 0 24px color-mix(in srgb, var(--company-primary) 36%, transparent);
-          color: #fff;
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 950;
-          height: 44px;
-          justify-content: center;
-          letter-spacing: 0;
-          width: 44px;
-        }
-        .companyText {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          min-width: 0;
-        }
-        .companyText small {
-          color: #ffb1a5;
-          font-size: 12px;
-        }
-        .ticker,
-        .action {
-          color: #fff;
-          text-decoration: none;
-        }
-        .ticker {
-          background: color-mix(in srgb, var(--company-primary) 16%, transparent);
-          border: 1px solid var(--company-primary);
-          border-radius: 6px;
-          box-shadow: 0 0 18px color-mix(in srgb, var(--company-primary) 22%, transparent);
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 950;
-          justify-content: center;
-          min-width: 58px;
-          padding: 7px 9px;
-        }
-        .action {
-          color: var(--company-accent);
-          font-weight: 950;
-        }
-        .up {
-          color: #7dffca;
-          font-weight: 850;
-        }
-        .down,
-        .drop {
-          color: #ffb15d;
-          font-weight: 850;
-        }
-        .meterCell {
-          display: grid;
-          gap: 8px;
-          min-width: 108px;
-        }
-        .meterCell span {
-          color: #fff;
-          font-weight: 900;
-        }
-        .miniBar {
-          background: rgba(255, 255, 255, 0.08);
-          border-radius: 999px;
-          height: 8px;
-          overflow: hidden;
-          width: 100%;
-        }
-        .miniBar i {
-          background: linear-gradient(90deg, #047857, #d4af37);
-          border-radius: inherit;
-          display: block;
-          height: 100%;
-        }
-        .miniBar.health i {
-          background: linear-gradient(90deg, #065f46, #10b981);
-        }
-        .miniBar.buy.strongBuy i {
-          background: #0f8f4e;
-        }
-        .miniBar.buy.buy i {
-          background: #1e8449;
-        }
-        .miniBar.buy.watch i {
-          background: #d4ac0d;
-        }
-        .miniBar.buy.holdOff i {
-          background: #e67e22;
-        }
-        .miniBar.buy.avoid i {
-          background: #c0392b;
-        }
-        .rating,
-        .statusPill {
-          border-radius: 999px;
-          color: #fff;
-          display: inline-flex;
-          font-size: 12px;
-          font-weight: 950;
-          justify-content: center;
-          min-width: 108px;
-          padding: 9px 12px;
-          text-transform: uppercase;
-        }
-        .strongBuy {
-          background: #0f8f4e;
-          box-shadow: inset 0 0 0 1px #2ecc71;
-        }
-        .buy {
-          background: #1e8449;
-        }
-        .watch {
-          background: #d4ac0d;
-          color: #111;
-        }
-        .holdOff {
-          background: #e67e22;
-          color: #111;
-        }
-        .avoid {
-          background: #c0392b;
-        }
-        .sell {
-          background: #922b21;
-        }
-        .info {
-          background: #2471a3;
-        }
-        .skeleton {
-          animation: pulse 1.15s ease-in-out infinite;
-          background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
-          border-radius: 5px;
-          display: block;
-          height: 16px;
-          width: 84%;
-        }
-        footer {
-          margin-top: 18px;
-        }
-        @keyframes pulse {
-          50% {
-            opacity: 0.55;
-          }
-        }
-        @media (max-width: 1100px) {
-          .summary {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .hero {
-            align-items: flex-start;
-            flex-direction: column;
-          }
-          .heroActions {
-            align-items: flex-start;
-          }
-        }
-        @media (max-width: 720px) {
-          .page {
-            padding: 88px 16px 16px;
-          }
-          .summary {
-            grid-template-columns: 1fr;
-          }
-          .progressGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .hero,
-          .panelHeader {
-            align-items: flex-start;
-            flex-direction: column;
-          }
-        }
-      `}</style>
+      <footer>Freedom Investment uses real provider data only. Missing fundamentals become DATA INSUFFICIENT, not invented recommendations.</footer>
+      <style jsx>{styles}</style>
     </div>
   );
 }
 
-FreedomTerminal.disableLayout = true;
+function InvestmentTable({ rows = [], onWatch, compact = false }) {
+  return (
+    <div className="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th><th>Ticker</th><th>Current Price</th><th>Investment Score</th><th>Business Quality</th><th>Growth</th><th>Financial Strength</th><th>Valuation</th><th>Status</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length ? rows.map((row) => (
+            <tr key={row.symbol}>
+              <td><Link href={`/freedom/company/${row.symbol}`}>{row.companyName || row.symbol}</Link><small>{row.reason}</small></td>
+              <td>{row.symbol}</td>
+              <td>{money(row.currentPrice, row.currency || "USD")}</td>
+              <td>{row.investmentScore ?? "--"}</td>
+              <td>{row.businessQuality?.score ?? row.investmentScore ?? "--"}</td>
+              <td>{row.growth?.classification || "--"}</td>
+              <td>{row.financialStrength?.classification || "--"}</td>
+              <td>{row.valuation?.classification || "--"}</td>
+              <td><span className={`status ${statusClass(row.status)}`}>{row.status || "--"}</span></td>
+              <td>{compact ? "--" : <button type="button" onClick={() => onWatch(row)}>Watch</button>}</td>
+            </tr>
+          )) : <tr><td colSpan="10">No rows available.</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-export default FreedomTerminal;
+function InvestmentPortfolio({ rows = [] }) {
+  return (
+    <div className="tableWrap">
+      <table>
+        <thead>
+          <tr><th>Company</th><th>Shares</th><th>Average Cost</th><th>Current Value</th><th>Gain/Loss</th><th>Portfolio Weight</th><th>Investment Score</th><th>Current Status</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.symbol}>
+              <td>{row.companyName || row.symbol}<small>{row.symbol}</small></td>
+              <td>{row.shares}</td>
+              <td>{money(row.averageCost, row.currency || "USD")}</td>
+              <td>{money(row.currentValue, row.currency || "USD")}</td>
+              <td>{money(row.gainLoss, row.currency || "USD")}</td>
+              <td>{Number.isFinite(Number(row.portfolioWeight)) ? `${row.portfolioWeight}%` : "--"}</td>
+              <td>{row.investmentScore ?? "--"}</td>
+              <td><span className={`status ${statusClass(row.currentStatus)}`}>{row.currentStatus}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const styles = `
+  .boot,.page,.gateScreen{background:#08100d;color:#f4f7f5;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0f6b4f;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{font-weight:900}.hero,.panel,.notice,.summary article,.gate{background:rgba(8,16,13,.94);border:1px solid rgba(145,196,174,.2);border-radius:8px}.hero,.panel,.summary,.notice,footer{margin:0 auto 18px;max-width:1760px}.hero{align-items:center;display:flex;gap:20px;justify-content:space-between;padding:28px}.hero span,.summary span,.panelHeader span,label{color:#a9bdb4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,h3,p{margin:0}h1{font-size:48px}p,footer,small{color:#a9bdb4}.hero button,td button,.gate button{background:#d4af37;border:0;border-radius:7px;color:#07100d;cursor:pointer;font-weight:950;min-height:40px;padding:0 14px}.summary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}.summary article{padding:16px}.summary strong{display:block;font-size:30px;margin-top:8px}.panel{overflow:hidden}.panelHeader{border-bottom:1px solid rgba(255,255,255,.08);padding:18px 20px}.cards{display:grid;gap:14px;grid-template-columns:repeat(5,minmax(0,1fr));padding:16px}.opportunity{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.opportunity h3{font-size:20px;margin:8px 0}.opportunity strong{color:#d7f4e6;display:block}.opportunity div{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.opportunity b{background:rgba(255,255,255,.08);border-radius:999px;font-size:12px;padding:6px 8px}.opportunity a,td a{color:#d7f4e6;font-weight:950;text-decoration:none}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1260px;width:100%}th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 14px;text-align:left;vertical-align:top}th{color:#a9bdb4;font-size:12px;text-transform:uppercase}td small{display:block;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px}.status.attractive{background:rgba(57,217,138,.16);border:1px solid rgba(57,217,138,.42);color:#bff6d9}.status.fairvalue,.status.watch{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.expensive{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.avoid,.status.datainsufficient{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}.empty{color:#a9bdb4;font-weight:850;padding:18px 20px}.notice{color:#d7f4e6;font-weight:850;padding:14px 16px}.gate{max-width:460px;padding:34px;width:100%}.gate h1{margin-top:8px}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:16px;width:100%}@media(max-width:1100px){.summary,.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}}@media(max-width:720px){.page{padding:88px 16px 16px}.summary,.cards{grid-template-columns:1fr}h1{font-size:38px}}
+`;
+
+FreedomInvestmentDashboard.disableLayout = true;

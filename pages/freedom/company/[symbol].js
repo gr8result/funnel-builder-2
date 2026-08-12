@@ -50,7 +50,7 @@ const API_INTERVAL_BY_LABEL = {
   "1D": "1d",
   "1W": "1w",
 };
-const COMPANY_TABS = ["Overview", "Business Quality", "Valuation", "Analyst Review", "Price Trend", "Trade Setup", "Charts"];
+const COMPANY_TABS = ["Overview", "Business Quality", "Valuation", "Analyst Review", "Price Trend", "Charts"];
 
 const COMPANY_STYLES = {
   MSFT: { companyName: "Microsoft", logoText: "MS", primaryColor: "#00A4EF", secondaryColor: "#7FBA00", accentColor: "#FFB900" },
@@ -334,6 +334,10 @@ function ratingLabel(rating) {
 
 function ratingClass(rating) {
   return investmentStatus(rating);
+}
+
+function investmentStatusClass(status) {
+  return String(status || "DATA INSUFFICIENT").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function buyScoreClass(score) {
@@ -2864,6 +2868,7 @@ function FreedomCompany({ passwordHash, symbol }) {
   const [researchStatus, setResearchStatus] = useState("");
   const [valuationError, setValuationError] = useState("");
   const [committeeError, setCommitteeError] = useState("");
+  const [investmentCase, setInvestmentCase] = useState(null);
   const storedScoreKeyRef = useRef("");
 
   useEffect(() => {
@@ -2879,9 +2884,22 @@ function FreedomCompany({ passwordHash, symbol }) {
   }, [symbol]);
 
   function selectTab(tab) {
-    setActiveTab(tab);
-    writeCompanyTab(symbol, tab);
+    const nextTab = COMPANY_TABS.includes(tab) ? tab : "Overview";
+    setActiveTab(nextTab);
+    writeCompanyTab(symbol, nextTab);
   }
+
+  useEffect(() => {
+    if (!unlocked) return;
+    fetch("/api/freedom-investment/scanner", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbols: [symbol], limit: 1 }),
+    })
+      .then((response) => response.json())
+      .then((data) => setInvestmentCase(data?.topTen?.[0] || null))
+      .catch(() => setInvestmentCase(null));
+  }, [symbol, unlocked]);
 
   useEffect(() => {
     if (checkingStorage) return;
@@ -3231,15 +3249,9 @@ function FreedomCompany({ passwordHash, symbol }) {
             </p>
           </div>
           <div className="bannerActions">
-            <span className={`rating statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
-              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            <span className={`rating statusPill large ${investmentStatusClass(investmentCase?.status)}`}>
+              {investmentCase?.status || "DATA INSUFFICIENT"}
             </span>
-            <button className="headerTradeButton" type="button" onClick={() => setExperienceMode("trade")}>
-              Create Trade Setup
-            </button>
-            <Link className="headerTraderLink" href={`/freedom-trader/company/${encodeURIComponent(symbol)}`}>
-              Open in Freedom Trader
-            </Link>
           </div>
         </div>
       </header>
@@ -3287,27 +3299,45 @@ function FreedomCompany({ passwordHash, symbol }) {
       {activeTab === "Overview" ? (
         <section className="overviewTab">
           <article className="overviewHero">
-            <span>Main Recommendation</span>
-            <strong className={`statusPill large ${ratingClass(investmentSignal.overallSignal)}`}>
-              {investmentSignal.overallSignal} ({investmentSignal.timeframe})
+            <span>Should I Own This Company?</span>
+            <strong className={`statusPill large ${investmentStatusClass(investmentCase?.status)}`}>
+              {investmentCase?.status || "DATA INSUFFICIENT"}
             </strong>
-            <p>{adaptiveScore.reason}</p>
-            <button type="button" onClick={() => setExperienceMode("trade")}>Create Trade Setup</button>
+            <p>{investmentCase?.reason || "Freedom does not yet have enough reliable long-term data for this company."}</p>
+            <div className="investmentActions">
+              {investmentCase?.status === "ATTRACTIVE" ? <button type="button">Prepare Investment</button> : null}
+              <button
+                type="button"
+                onClick={() => {
+                  fetch("/api/freedom-investment/watchlist", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(investmentCase || { symbol, companyName, status: "WATCH" }),
+                  }).catch(() => {});
+                }}
+              >
+                Add To Investment Watchlist
+              </button>
+            </div>
           </article>
           <div className="overviewMetrics">
-            <article><span>Overall Score</span><strong>{adaptiveScore.buyScore ?? "--"}/100</strong></article>
-            <article><span>Confidence</span><strong>{adaptiveScore.confidence ?? "--"}%</strong></article>
+            <article><span>Investment Score</span><strong>{investmentCase?.investmentScore ?? "--"}/100</strong></article>
+            <article><span>Business Quality</span><strong>{investmentCase?.businessQuality?.score ?? "--"}/100</strong></article>
             <article><span>Current Price</span><strong>{formatCurrency(quote.currentPrice)}</strong></article>
-            <article><span>Fair Value</span><strong>{formatCurrency(valuation?.fairValue)}</strong></article>
+            <article><span>Attractive Buy Zone</span><strong>{investmentCase?.valuation?.attractiveZone ? `${formatCurrency(investmentCase.valuation.attractiveZone.low)}-${formatCurrency(investmentCase.valuation.attractiveZone.high)}` : "No reliable range"}</strong></article>
           </div>
           <div className="overviewLists">
             <article>
-              <h2>Top Reasons</h2>
-              {(adaptiveScore.topPositives || []).map((item) => <p key={item}>{item}</p>)}
+              <h2>Why Freedom Likes It</h2>
+              <p>{investmentCase?.whyFreedomLikesIt || "More reliable business quality data is needed."}</p>
+              <p>Growth: {investmentCase?.growth?.classification || "INSUFFICIENT DATA"}</p>
+              <p>Financial Strength: {investmentCase?.financialStrength?.classification || "DATA INSUFFICIENT"}</p>
+              <p>Valuation: {investmentCase?.valuation?.classification || "DATA INSUFFICIENT"}</p>
+              <p>Dividend: {investmentCase?.dividend?.classification || "No reliable dividend data"}</p>
             </article>
             <article>
               <h2>Key Risks</h2>
-              {(adaptiveScore.topNegatives || []).map((item) => <p key={item}>{item}</p>)}
+              {(investmentCase?.keyRisks?.length ? investmentCase.keyRisks : [investmentCase?.whyFreedomMightWait || "No supported company-specific risk has been identified yet."]).map((item) => <p key={item}>{item}</p>)}
             </article>
           </div>
         </section>
@@ -3624,53 +3654,6 @@ function FreedomCompany({ passwordHash, symbol }) {
         <div className="chartStack">
           <PriceTrendAnalysis analysis={trendAnalysis} />
         </div>
-      </section>
-      ) : null}
-
-      {activeTab === "Trade Setup" ? (
-      <section className="mainGrid singlePanel">
-        <form className="researchEditor" onSubmit={saveResearch}>
-          <div className="sectionHeader">
-            <div>
-              <span>Persistent Research</span>
-              <h2>Research Notes</h2>
-            </div>
-            <button type="submit" disabled={savingResearch}>
-              {savingResearch ? "Saving..." : "Save Research"}
-            </button>
-          </div>
-          {researchStatus ? (
-            <div className={researchStatus === "Research saved." ? "saveStatus success" : "saveStatus error"}>
-              {researchStatus}
-            </div>
-          ) : null}
-          <div className="numberGrid">
-            <label>
-              Fair Value
-              <input inputMode="decimal" onChange={(event) => updateResearch("fairValue", event.target.value)} placeholder="Run analysis" value={research.fairValue} />
-            </label>
-            <label>
-              Buy Below Price
-              <input inputMode="decimal" onChange={(event) => updateResearch("buyBelow", event.target.value)} placeholder="Run analysis" value={research.buyBelow} />
-            </label>
-            <label>
-              Decision
-              <input onChange={(event) => updateResearch("decision", event.target.value)} placeholder="WATCH" value={research.decision} />
-            </label>
-          </div>
-          <label>
-            Investment Thesis
-            <textarea onChange={(event) => updateResearch("thesis", event.target.value)} rows={5} value={research.thesis} />
-          </label>
-          <label>
-            Why We Like It
-            <textarea onChange={(event) => updateResearch("whyWeLikeIt", event.target.value)} rows={4} value={research.whyWeLikeIt} />
-          </label>
-          <label>
-            Key Risks
-            <textarea onChange={(event) => updateResearch("keyRisks", event.target.value)} rows={4} value={research.keyRisks} />
-          </label>
-        </form>
       </section>
       ) : null}
 
@@ -4447,6 +4430,12 @@ function FreedomCompany({ passwordHash, symbol }) {
         .numberGrid {
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
+        .investmentActions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 16px;
+        }
         .placeholderPanel {
           margin-top: 18px;
         }
@@ -4538,6 +4527,23 @@ function FreedomCompany({ passwordHash, symbol }) {
         .strongBuy {
           background: #0f8f4e;
           box-shadow: inset 0 0 0 1px #2ecc71;
+          color: #fff;
+        }
+        .attractive {
+          background: #0f8f4e;
+          box-shadow: inset 0 0 0 1px #2ecc71;
+          color: #fff;
+        }
+        .fairvalue {
+          background: #1e8449;
+          color: #fff;
+        }
+        .expensive {
+          background: #e67e22;
+          color: #111;
+        }
+        .datainsufficient {
+          background: #64748b;
           color: #fff;
         }
         .buy {
