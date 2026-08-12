@@ -6283,6 +6283,7 @@ function ProjectEstimateDocumentSlotPanel({
   onViewDocument,
   onUploadStandardInclusions,
   onUploadModifiedInclusions,
+  onUseCurrentStandard,
   onUploadPlans,
   onRemoveInclusions,
   onRemovePlans,
@@ -6295,11 +6296,13 @@ function ProjectEstimateDocumentSlotPanel({
   return (
     <div style={styles.proposalPropertiesStack}>
       {tabs}
-      <h3>{isPlans ? "Plans Used to Prepare This Estimate" : "Standard Inclusions Schedule"}</h3>
+      <h3>{isPlans ? "Plans Used to Prepare This Estimate" : "PROJECT INCLUSIONS"}</h3>
       <section style={styles.standardScheduleContextPanel}>
         <div style={styles.standardSchedulePanel}>
-          <strong>Current file</strong>
+          <strong>{isPlans ? "Current file" : referencedPdfUrl(document) ? (document.projectSpecific ? "PROJECT-SPECIFIC INCLUSIONS" : "Using: Premier Inclusions Schedule") : "No Project Inclusions Assigned"}</strong>
           <span>{referencedPdfUrl(document) ? (document.fileName || document.title || "Attached PDF") : "No PDF attached"}</span>
+          {!isPlans && referencedPdfUrl(document) ? <span>Version {document.version || document.sourceMasterVersion || "-"}</span> : null}
+          {!isPlans && referencedPdfUrl(document) ? <span>Assigned: {formatProposalDate(document.assignedAt || document.uploadedAt || document.importedAt)}</span> : null}
           <span>Page count: {pageCount || "-"}</span>
         </div>
         <div style={styles.importButtonRow}>
@@ -6315,8 +6318,8 @@ function ProjectEstimateDocumentSlotPanel({
         ) : (
           <>
             <div style={styles.importButtonRow}>
-              <button type="button" style={styles.primaryButton} disabled={readonly} onClick={onUploadStandardInclusions}>Upload Standard Inclusions</button>
-              <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUploadModifiedInclusions}>Upload Modified Inclusions</button>
+              <button type="button" style={styles.primaryButton} disabled={readonly} onClick={onUseCurrentStandard}>Use Current Standard</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUploadModifiedInclusions}>Upload Project-Specific PDF</button>
             </div>
             <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onOpenDocumentLibrary?.("standard_inclusions")}>Choose from Document Library</button>
           </>
@@ -7032,6 +7035,172 @@ export function StandardInclusionsSheet({ sheet }) {
     : null;
   const activeOnlyOfficeDocumentId = !standard.scheduleDeleted ? standard.onlyOfficeDocumentId || "" : "";
   const activeSummary = standardScheduleSummary(activeDocument, standard);
+  const [pdfSchedules, setPdfSchedules] = useState([]);
+  const [pdfLibraryLoading, setPdfLibraryLoading] = useState(false);
+  const [pdfDashboardStatus, setPdfDashboardStatus] = useState("");
+  const [pendingPdfMaster, setPendingPdfMaster] = useState(null);
+  const [previewPdfVersion, setPreviewPdfVersion] = useState(null);
+  const [historyScheduleId, setHistoryScheduleId] = useState("");
+  const uploadIntentRef = useRef({ action: "create", scheduleId: "" });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadLibrary() {
+      if (!workspaceId) return;
+      setPdfLibraryLoading(true);
+      try {
+        const schedules = await fetchStandardInclusionsPdfLibrary(workspaceId);
+        if (!cancelled) setPdfSchedules(schedules);
+      } catch (error) {
+        if (!cancelled) setPdfDashboardStatus(error?.message || "Could not load Standard Inclusions schedules.");
+      } finally {
+        if (!cancelled) setPdfLibraryLoading(false);
+      }
+    }
+    loadLibrary();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
+
+  async function prepareMasterPdfUpload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name || "")) {
+      setPdfDashboardStatus("Choose a PDF file.");
+      return;
+    }
+    setPdfDashboardStatus("Validating PDF...");
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const metadata = await readStandardPdfMetadata(dataUrl);
+      const intent = uploadIntentRef.current || { action: "create", scheduleId: "" };
+      const replaceSchedule = pdfSchedules.find((schedule) => schedule.id === intent.scheduleId);
+      const nextVersion = intent.action === "replace"
+        ? Math.max(0, ...(replaceSchedule?.versions || []).map((version) => Number(version.versionNumber || 0))) + 1
+        : 1;
+      setPendingPdfMaster({
+        id: `standard-inclusions-pdf-v${nextVersion}-${Date.now()}`,
+        version: nextVersion,
+        name: replaceSchedule?.name || file.name.replace(/\.pdf$/i, "") || "Standard Inclusions Schedule",
+        tierKey: replaceSchedule?.tierKey || "",
+        description: replaceSchedule?.description || "",
+        action: intent.action,
+        scheduleId: intent.scheduleId,
+        fileName: file.name || `standard-inclusions-v${nextVersion}.pdf`,
+        source: "uploaded-pdf",
+        status: "preview",
+        file,
+        dataUrl,
+        pageCount: metadata.pageCount,
+        pageSizes: metadata.pageSizes,
+        fileSizeBytes: file.size,
+        uploadedAt: new Date().toISOString(),
+      });
+      setPreviewPdfVersion({ dataUrl, originalFilename: file.name, pageCount: metadata.pageCount });
+      setPdfDashboardStatus(`${file.name} validated. ${metadata.pageCount} page${metadata.pageCount === 1 ? "" : "s"} ready to preview.`);
+    } catch (error) {
+      console.error("Standard Inclusions PDF validation failed", error);
+      setPendingPdfMaster(null);
+      setPdfDashboardStatus(error?.message || "PDF could not be validated.");
+    }
+  }
+
+  async function savePendingPdfAsMaster() {
+    if (!pendingPdfMaster?.file || readonly) return;
+    if (!workspaceId) {
+      setPdfDashboardStatus("Choose an active workspace before saving Standard Inclusions.");
+      return;
+    }
+    try {
+      const schedule = await saveStandardInclusionsPdfLibraryUpload({
+        workspaceId,
+        pendingPdf: pendingPdfMaster,
+      });
+      const schedules = await fetchStandardInclusionsPdfLibrary(workspaceId);
+      setPdfSchedules(schedules);
+      setPendingPdfMaster(null);
+      setPreviewPdfVersion(schedule.currentVersion || null);
+      setHistoryScheduleId(schedule.id);
+      setPdfDashboardStatus(`${schedule.name} saved successfully.`);
+    } catch (error) {
+      console.error("Standard Inclusions PDF save failed", error);
+      setPdfDashboardStatus(error?.message || "Standard Inclusions schedule could not be saved.");
+    }
+  }
+
+  async function restorePdfVersion(version) {
+    if (!version?.id || readonly) return;
+    try {
+      const schedule = await patchStandardInclusionsPdfLibrary(workspaceId, {
+        action: "restore",
+        scheduleId: version.scheduleId,
+        versionId: version.id,
+      });
+      const schedules = await fetchStandardInclusionsPdfLibrary(workspaceId);
+      setPdfSchedules(schedules);
+      setPreviewPdfVersion(schedule.currentVersion || null);
+      setHistoryScheduleId(schedule.id);
+      setPdfDashboardStatus(`Version ${version.versionNumber} restored as new current version ${schedule.currentVersion?.versionNumber || ""}.`);
+    } catch (error) {
+      setPdfDashboardStatus(error?.message || "Version could not be restored.");
+    }
+  }
+
+  async function archivePdfSchedule(schedule) {
+    if (!schedule?.id || readonly) return;
+    if (typeof window !== "undefined" && !window.confirm(`Archive ${schedule.name}? Existing historical records will be retained.`)) return;
+    try {
+      const schedules = await patchStandardInclusionsPdfLibrary(workspaceId, {
+        action: "archive",
+        scheduleId: schedule.id,
+      }, { returnsList: true });
+      setPdfSchedules(schedules);
+      if (historyScheduleId === schedule.id) setHistoryScheduleId("");
+      if (previewPdfVersion?.scheduleId === schedule.id) setPreviewPdfVersion(null);
+      setPdfDashboardStatus(`${schedule.name} archived.`);
+    } catch (error) {
+      setPdfDashboardStatus(error?.message || "Schedule could not be archived.");
+    }
+  }
+
+  function openAddScheduleUpload() {
+    uploadIntentRef.current = { action: "create", scheduleId: "" };
+    pdfUploadRef.current?.click();
+  }
+
+  function openReplaceScheduleUpload(schedule) {
+    uploadIntentRef.current = { action: "replace", scheduleId: schedule.id };
+    pdfUploadRef.current?.click();
+  }
+
+  return (
+    <StandardPdfMasterDashboard
+      readonly={readonly}
+      status={pdfDashboardStatus}
+      schedules={pdfSchedules}
+      loading={pdfLibraryLoading}
+      pendingPdf={pendingPdfMaster}
+      previewVersion={previewPdfVersion}
+      historyScheduleId={historyScheduleId}
+      uploadRef={pdfUploadRef}
+      onUpload={prepareMasterPdfUpload}
+      onOpenUpload={openAddScheduleUpload}
+      onOpenReplace={openReplaceScheduleUpload}
+      onSavePending={savePendingPdfAsMaster}
+      onPendingChange={setPendingPdfMaster}
+      onCancelPending={() => {
+        setPendingPdfMaster(null);
+        setPdfDashboardStatus("");
+      }}
+      onPreview={setPreviewPdfVersion}
+      onHistory={(schedule) => setHistoryScheduleId((value) => value === schedule.id ? "" : schedule.id)}
+      onRestore={restorePdfVersion}
+      onArchive={archivePdfSchedule}
+      onDownload={downloadStandardPdfRecord}
+    />
+  );
 
   async function saveStandard(next, options = {}) {
     const nextStandard = normaliseStandardInclusions({
@@ -8011,6 +8180,267 @@ function StandardScheduleLoadedEditor({
   );
 }
 
+function StandardPdfMasterDashboard({
+  readonly,
+  status,
+  schedules = [],
+  loading,
+  pendingPdf,
+  previewVersion,
+  historyScheduleId,
+  uploadRef,
+  onUpload,
+  onOpenUpload,
+  onOpenReplace,
+  onSavePending,
+  onPendingChange,
+  onCancelPending,
+  onPreview,
+  onHistory,
+  onRestore,
+  onArchive,
+  onDownload,
+}) {
+  const historySchedule = schedules.find((schedule) => schedule.id === historyScheduleId) || null;
+  const previewPdf = previewVersion || pendingPdf || null;
+  return (
+    <div style={styles.standardPdfMasterShell} data-testid="standard-inclusions-dashboard">
+      <input ref={uploadRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={onUpload} />
+      <section style={styles.standardPdfMasterHeader}>
+        <div>
+          <div style={styles.eyebrow}>STANDARD INCLUSIONS</div>
+          <h2 style={styles.cashflowTitle}>Standard Inclusions</h2>
+          <p style={styles.dashboardPanelSubtitle}>Your Inclusions Schedules</p>
+        </div>
+        <div style={styles.standardPdfMasterActions}>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onOpenUpload}>+ Add Inclusions Schedule</button>
+        </div>
+      </section>
+
+      {status ? <div style={styles.proposalBuilderStatus}>{status}</div> : null}
+
+      {pendingPdf ? (
+        <section style={styles.standardPdfPendingPanel}>
+          <div style={styles.standardPdfPendingForm}>
+            <label style={styles.fieldWrap}>Schedule Name
+              <input
+                style={styles.input}
+                value={pendingPdf.name || ""}
+                disabled={pendingPdf.action === "replace"}
+                onChange={(event) => onPendingChange?.({ ...pendingPdf, name: event.target.value })}
+              />
+            </label>
+            <label style={styles.fieldWrap}>Optional Tier
+              <input
+                style={styles.input}
+                value={pendingPdf.tierKey || ""}
+                disabled={pendingPdf.action === "replace"}
+                onChange={(event) => onPendingChange?.({ ...pendingPdf, tierKey: event.target.value })}
+              />
+            </label>
+            <div style={styles.standardPdfPendingMeta}>
+              <strong>{pendingPdf.action === "replace" ? `Replacing ${pendingPdf.name}` : pendingPdf.fileName}</strong>
+              <span>Version {pendingPdf.version}</span>
+              <span>{pendingPdf.pageCount} Page{pendingPdf.pageCount === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+          <div style={styles.proposalMiniActions}>
+            <button type="button" style={styles.secondaryButton} onClick={() => onPreview(pendingPdf)}>Preview</button>
+            <button type="button" disabled={readonly || !String(pendingPdf.name || "").trim()} style={styles.primaryButton} onClick={onSavePending}>{pendingPdf.action === "replace" ? "Save Replacement" : "Save Schedule"}</button>
+            <button type="button" style={styles.secondaryButton} onClick={onCancelPending}>Cancel</button>
+          </div>
+        </section>
+      ) : null}
+
+      {!loading && !schedules.length && !pendingPdf ? (
+        <section style={styles.standardPdfEmptyUpload}>
+          <h3>No Standard Inclusions schedules have been uploaded.</h3>
+          <button type="button" disabled={readonly} style={styles.primaryButton} onClick={onOpenUpload}>+ Upload First Schedule</button>
+        </section>
+      ) : null}
+
+      {loading ? <div style={styles.proposalBuilderStatus}>Loading Standard Inclusions schedules...</div> : null}
+
+      {schedules.length ? (
+        <section style={styles.standardPdfScheduleList}>
+          {schedules.map((schedule) => (
+            <article key={schedule.id} style={styles.standardPdfScheduleCard}>
+              <div>
+                <strong>{schedule.name}</strong>
+                <span>{schedule.currentVersion?.pageCount || 0} Pages</span>
+                <span>Current Version: {schedule.currentVersion?.versionNumber || "-"}</span>
+                <span>Updated: {formatShortDateTime(schedule.updatedAt || schedule.currentVersion?.createdAt)}</span>
+              </div>
+              <div style={styles.standardPdfMasterActions}>
+                <button type="button" style={styles.secondaryButton} onClick={() => onPreview(schedule.currentVersion)}>Preview</button>
+                <button type="button" style={styles.secondaryButton} onClick={() => onDownload(schedule.currentVersion)}>Download</button>
+                <button type="button" disabled={readonly} style={styles.secondaryButton} onClick={() => onOpenReplace(schedule)}>Replace PDF</button>
+                <button type="button" style={styles.secondaryButton} onClick={() => onHistory(schedule)}>Version History</button>
+                <button type="button" disabled={readonly} style={styles.dangerButton} onClick={() => onArchive(schedule)}>Archive Schedule</button>
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
+      {historySchedule ? (
+        <StandardPdfVersionHistory
+          schedule={historySchedule}
+          history={historySchedule.versions || []}
+          activePdf={historySchedule.currentVersion}
+          readonly={readonly}
+          onPreview={onPreview}
+          onRestore={onRestore}
+          onDownload={onDownload}
+        />
+      ) : null}
+
+      {previewPdf ? <StandardPdfExactPreview pdf={previewPdf} /> : null}
+    </div>
+  );
+}
+
+function StandardPdfExactPreview({ pdf }) {
+  const [pdfDocument, setPdfDocument] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const [fitMode, setFitMode] = useState("fit-page");
+  const [previewError, setPreviewError] = useState("");
+  const canvasRef = useRef(null);
+  const thumbRefs = useRef({});
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreviewError("");
+    setPdfDocument(null);
+    setPageNumber(1);
+    async function loadDocument() {
+      try {
+        const pdfjs = await loadPdfJs();
+        const bytes = await standardPdfRecordToBytes(pdf);
+        const task = pdfjs.getDocument({ data: bytes });
+        const document = await task.promise;
+        if (!cancelled) setPdfDocument(document);
+      } catch (error) {
+        if (!cancelled) setPreviewError(error?.message || "PDF preview could not be loaded.");
+      }
+    }
+    loadDocument();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdf?.dataUrl, pdf?.publicUrl, pdf?.storagePath, pdf?.id]);
+
+  useEffect(() => {
+    if (!pdfDocument || !canvasRef.current) return;
+    let cancelled = false;
+    async function renderPage() {
+      const page = await pdfDocument.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const frameWidth = frameRef.current?.clientWidth || 900;
+      const frameHeight = Math.max(520, Math.min(980, window.innerHeight - 280));
+      const fitScale = fitMode === "fit-width"
+        ? Math.max(0.2, (frameWidth - 34) / baseViewport.width)
+        : Math.max(0.2, Math.min((frameWidth - 34) / baseViewport.width, frameHeight / baseViewport.height));
+      const scale = fitMode === "manual" ? zoom : fitScale * zoom;
+      const viewport = page.getViewport({ scale });
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { alpha: false });
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      await page.render({ canvasContext: context, viewport }).promise;
+      if (cancelled) return;
+    }
+    renderPage().catch((error) => setPreviewError(error?.message || "PDF page could not be rendered."));
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfDocument, pageNumber, zoom, fitMode]);
+
+  useEffect(() => {
+    if (!pdfDocument) return;
+    let cancelled = false;
+    async function renderThumbs() {
+      const total = pdfDocument.numPages || pdf.pageCount || 0;
+      for (let index = 1; index <= total; index += 1) {
+        const canvas = thumbRefs.current[index];
+        if (!canvas) continue;
+        const page = await pdfDocument.getPage(index);
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: 96 / Math.max(base.width, base.height) });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const context = canvas.getContext("2d", { alpha: false });
+        await page.render({ canvasContext: context, viewport }).promise;
+        if (cancelled) break;
+      }
+    }
+    renderThumbs().catch(() => null);
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfDocument, pdf.pageCount]);
+
+  const pageCount = pdfDocument?.numPages || pdf.pageCount || 0;
+  return (
+    <section style={styles.standardPdfPreviewShell} data-testid="standard-inclusions-pdf-preview">
+      <aside style={styles.standardPdfThumbs}>
+        {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+          <button key={page} type="button" style={{ ...styles.standardPdfThumbButton, ...(page === pageNumber ? styles.standardPdfThumbButtonActive : {}) }} onClick={() => setPageNumber(page)}>
+            <canvas ref={(node) => { if (node) thumbRefs.current[page] = node; }} />
+            <span>Page {page}</span>
+          </button>
+        ))}
+      </aside>
+      <main style={styles.standardPdfPreviewMain}>
+        <div style={styles.standardPdfPreviewToolbar}>
+          <button type="button" style={styles.secondaryButton} disabled={pageNumber <= 1} onClick={() => setPageNumber((value) => Math.max(1, value - 1))}>Previous</button>
+          <strong>Page {pageNumber} / {pageCount || "-"}</strong>
+          <button type="button" style={styles.secondaryButton} disabled={pageNumber >= pageCount} onClick={() => setPageNumber((value) => Math.min(pageCount, value + 1))}>Next</button>
+          <button type="button" style={styles.secondaryButton} onClick={() => { setFitMode("fit-page"); setZoom(1); }}>Fit Page</button>
+          <button type="button" style={styles.secondaryButton} onClick={() => { setFitMode("fit-width"); setZoom(1); }}>Fit Width</button>
+          <button type="button" style={styles.secondaryButton} onClick={() => { setFitMode("manual"); setZoom(2); }}>200%</button>
+          <label style={styles.standardPdfZoomControl}>Zoom <input type="range" min="0.5" max="3" step="0.1" value={zoom} onChange={(event) => { setFitMode("manual"); setZoom(Number(event.target.value)); }} /> <span>{Math.round(zoom * 100)}%</span></label>
+        </div>
+        {previewError ? <div style={styles.errorText}>{previewError}</div> : null}
+        <div ref={frameRef} style={styles.standardPdfCanvasFrame}>
+          <canvas ref={canvasRef} style={styles.standardPdfCanvas} />
+        </div>
+      </main>
+    </section>
+  );
+}
+
+function StandardPdfVersionHistory({ schedule, history = [], activePdf, readonly, onPreview, onRestore, onDownload }) {
+  const rows = [...history].sort((a, b) => Number(b.versionNumber || 0) - Number(a.versionNumber || 0));
+  return (
+    <section style={styles.standardPdfHistoryPanel} data-testid="standard-inclusions-version-history">
+      <div style={styles.proposalMiniActions}><strong>{schedule?.name || "Standard Inclusions"} Version History</strong></div>
+      {!rows.length ? <p style={styles.dashboardPanelSubtitle}>No versions saved yet.</p> : null}
+      {rows.map((version) => {
+        const current = version.id === activePdf?.id || version.current;
+        return (
+          <article key={version.id || version.versionNumber} style={styles.standardPdfHistoryRow}>
+            <div>
+              <strong>Version {version.versionNumber}{current ? " - Current" : ""}</strong>
+              <span>{formatShortDateTime(version.createdAt)}</span>
+              <small>{version.pageCount || 0} Pages - {version.source || "pdf-upload"}</small>
+            </div>
+            <div style={styles.proposalMiniActions}>
+              <button type="button" style={styles.secondaryButton} onClick={() => onPreview(version)}>Preview</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => onDownload(version)}>Download</button>
+              <button type="button" disabled={readonly || current} style={styles.secondaryButton} onClick={() => onRestore(version)}>Restore</button>
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
 function StandardScheduleActiveSummary({ summary }) {
   return (
     <div style={styles.standardScheduleSummaryCard}>
@@ -8201,6 +8631,138 @@ function standardScheduleSummary(document, standard = {}) {
     pageCount: Array.isArray(document?.pages) ? document.pages.length : 0,
     lastSavedAt: document?.metadata?.lastSavedAt || standard.activeDocumentLastSavedAt || document?.metadata?.importedAt || "",
   };
+}
+
+function nextStandardPdfVersion(standard = {}) {
+  const versions = [
+    ...(Array.isArray(standard.pdfMasterHistory) ? standard.pdfMasterHistory : []),
+    standard.pdfMaster,
+  ].map((item) => Number(item?.version || 0)).filter(Number.isFinite);
+  return Math.max(0, ...versions) + 1;
+}
+
+function standardPdfHistoryWithActive(standard = {}, activeRecord = {}) {
+  const byId = new Map();
+  const add = (record) => {
+    if (!record?.id) return;
+    byId.set(record.id, record);
+  };
+  (standard.pdfMasterHistory || []).forEach(add);
+  add(standard.pdfMaster);
+  add(activeRecord);
+  return Array.from(byId.values())
+    .map((record) => ({
+      ...record,
+      status: record.id === activeRecord.id ? "current" : "archived",
+      active: record.id === activeRecord.id,
+    }))
+    .sort((a, b) => Number(a.version || 0) - Number(b.version || 0));
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("File could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function standardPdfDataUrlToBytes(dataUrl = "") {
+  const base64 = String(dataUrl || "").split(",")[1] || "";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+async function standardPdfRecordToBytes(record = {}) {
+  if (record.dataUrl) return standardPdfDataUrlToBytes(record.dataUrl);
+  const url = record.publicUrl || record.public_url || "";
+  if (!url) throw new Error("Stored PDF URL is missing.");
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Stored PDF could not be loaded (${response.status}).`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function readStandardPdfMetadata(dataUrl = "") {
+  if (!String(dataUrl || "").startsWith("data:application/pdf")) throw new Error("The selected file is not a PDF.");
+  const bytes = standardPdfDataUrlToBytes(dataUrl);
+  if (bytes.length < 5 || String.fromCharCode(...bytes.slice(0, 5)) !== "%PDF-") throw new Error("The selected file is not a valid PDF.");
+  const pdfjs = await loadPdfJs();
+  const task = pdfjs.getDocument({ data: bytes });
+  const document = await task.promise;
+  const pageSizes = [];
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    pageSizes.push({ width: viewport.width, height: viewport.height, orientation: viewport.width >= viewport.height ? "landscape" : "portrait" });
+  }
+  return { pageCount: document.numPages, pageSizes };
+}
+
+function downloadStandardPdfRecord(record) {
+  if (!record?.dataUrl && !record?.publicUrl) return;
+  const anchor = window.document.createElement("a");
+  anchor.href = record.dataUrl || record.publicUrl;
+  anchor.download = record.fileName || record.originalFilename || `${record.name || "standard-inclusions"}.pdf`;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+async function standardInclusionsAuthHeaders() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token || "";
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function fetchStandardInclusionsPdfLibrary(workspaceId) {
+  const headers = await standardInclusionsAuthHeaders();
+  const params = new URLSearchParams({ workspace_id: workspaceId });
+  const response = await fetch(`/api/standard-inclusions/pdf-library?${params.toString()}`, { headers });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not load Standard Inclusions schedules.");
+  return Array.isArray(payload.schedules) ? payload.schedules : [];
+}
+
+async function saveStandardInclusionsPdfLibraryUpload({ workspaceId, pendingPdf }) {
+  const headers = await standardInclusionsAuthHeaders();
+  const form = new FormData();
+  form.append("file", pendingPdf.file, pendingPdf.fileName || "standard-inclusions.pdf");
+  form.append("workspace_id", workspaceId);
+  form.append("action", pendingPdf.action === "replace" ? "replace" : "create");
+  form.append("scheduleId", pendingPdf.scheduleId || "");
+  form.append("name", pendingPdf.name || "");
+  form.append("description", pendingPdf.description || "");
+  form.append("tierKey", pendingPdf.tierKey || "");
+  const response = await fetch("/api/standard-inclusions/pdf-library", {
+    method: "POST",
+    headers: {
+      ...headers,
+      "x-workspace-id": workspaceId,
+    },
+    body: form,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Standard Inclusions schedule could not be saved.");
+  return payload.schedule;
+}
+
+async function patchStandardInclusionsPdfLibrary(workspaceId, body, options = {}) {
+  const headers = await standardInclusionsAuthHeaders();
+  const response = await fetch("/api/standard-inclusions/pdf-library", {
+    method: "PATCH",
+    headers: {
+      ...headers,
+      "Content-Type": "application/json",
+      "x-workspace-id": workspaceId,
+    },
+    body: JSON.stringify({ ...body, workspace_id: workspaceId }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Standard Inclusions library update failed.");
+  return options.returnsList ? payload.schedules || [] : payload.schedule;
 }
 
 function cloneJson(value) {
@@ -10882,7 +11444,7 @@ function normaliseImportedProposalDocument(document = {}) {
     storagePath: document.storagePath || document.storage_path || "",
     sourceType: document.sourceType || document.source_type || "",
     status: document.status || (document.active === false ? "inactive" : "active"),
-    active: document.active !== false && document.status !== "inactive" && document.status !== "removed",
+    active: document.active !== false && !["inactive", "removed", "archived", "deleted"].includes(String(document.status || "")),
     fileHash: document.fileHash || document.file_hash || document.hash || "",
     version: document.version || document.fileVersion || document.file_version || "",
     projectId: document.projectId || document.project_id || "",
@@ -11159,15 +11721,6 @@ function proposalInclusionRows(sheet, client) {
 
 function resolveProposalText(value, linkedFields) {
   return String(value || "").replace(/\{\{(\w+)\}\}/g, (_, key) => linkedFields[key]?.value ?? "");
-}
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Image could not be read."));
-    reader.readAsDataURL(file);
-  });
 }
 
 function loadImageElement(src) {
@@ -15230,6 +15783,27 @@ const styles = {
   projectEstimateTabActive: { background: "#92400e", borderColor: "#92400e", color: "#ffffff", boxShadow: "0 8px 18px rgba(146,64,14,0.18)" },
   projectEstimateBaselineBar: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 12, alignItems: "center", border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: 12, fontWeight: 950 },
   standardPricedUsing: { border: "2px solid #15803d", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: "10px 12px", fontSize: 16, fontWeight: 950 },
+  standardPdfMasterShell: { display: "grid", gap: 14 },
+  standardPdfMasterHeader: { display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 16 },
+  standardPdfMasterActions: { display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" },
+  standardPdfPendingPanel: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", border: "1px solid #fde68a", background: "#fffbeb", color: "#92400e", borderRadius: 12, padding: 14 },
+  standardPdfPendingForm: { display: "grid", gridTemplateColumns: "minmax(220px, 1fr) minmax(160px, 0.5fr) minmax(180px, 0.7fr)", gap: 10, alignItems: "end", flex: 1 },
+  standardPdfPendingMeta: { display: "grid", gap: 4, fontWeight: 850 },
+  standardPdfScheduleList: { display: "grid", gap: 10 },
+  standardPdfScheduleCard: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 14, alignItems: "center", border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 10, padding: 14 },
+  standardPdfCurrentCard: { border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#14532d", borderRadius: 12, padding: 16 },
+  standardPdfEmptyUpload: { minHeight: 260, display: "grid", placeItems: "center", gap: 12, border: "1px dashed #94a3b8", background: "#f8fafc", color: "#475569", borderRadius: 12, padding: 22, textAlign: "center" },
+  standardPdfPreviewShell: { display: "grid", gridTemplateColumns: "150px minmax(0, 1fr)", gap: 12, alignItems: "start" },
+  standardPdfThumbs: { position: "sticky", top: 86, maxHeight: "calc(100vh - 120px)", overflowY: "auto", display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10 },
+  standardPdfThumbButton: { display: "grid", gap: 5, justifyItems: "center", border: "1px solid #e2e8f0", borderRadius: 8, background: "#f8fafc", color: "#334155", padding: 8, fontWeight: 900, cursor: "pointer" },
+  standardPdfThumbButtonActive: { borderColor: "#2563eb", background: "#eff6ff", color: "#1d4ed8" },
+  standardPdfPreviewMain: { minWidth: 0, display: "grid", gap: 10 },
+  standardPdfPreviewToolbar: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 10 },
+  standardPdfZoomControl: { display: "inline-flex", alignItems: "center", gap: 7, color: "#334155", fontWeight: 900 },
+  standardPdfCanvasFrame: { minHeight: 620, maxHeight: "calc(100vh - 210px)", overflow: "auto", display: "grid", justifyContent: "center", alignItems: "start", border: "1px solid #cbd5e1", background: "#737b86", borderRadius: 12, padding: 16 },
+  standardPdfCanvas: { display: "block", background: "#ffffff", boxShadow: "0 10px 32px rgba(15,23,42,0.24)" },
+  standardPdfHistoryPanel: { display: "grid", gap: 8, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: 14 },
+  standardPdfHistoryRow: { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 10, padding: 12 },
   standardInclusionsShell: { display: "grid", gap: 16 },
   standardInclusionsHero: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) 410px", gap: 18, alignItems: "stretch", border: "1px solid #bbf7d0", background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)", borderRadius: 18, padding: 22, boxShadow: "0 18px 44px rgba(22,101,52,0.10)" },
   standardPackagePanel: { display: "grid", gap: 10, border: "1px solid #bbf7d0", background: "#ffffff", borderRadius: 14, padding: 14 },

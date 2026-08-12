@@ -42,7 +42,8 @@ const activeReturn = sheetBody.slice(firstReturn);
 
 assert(source.includes("createPremierInclusionsWorkingCopy"), "Standard Inclusions must keep the Premier Template available for deliberate use");
 assert(premierTemplateBody.includes("createPremierInclusionsWorkingCopy"), "Premier Template must load only from the explicit template action");
-assert(!activeBody.includes("useEffect("), "Opening Standard Inclusions must not autosave or auto-create a fallback document");
+assert(!activeBody.includes("createPremierInclusionsWorkingCopy()"), "Opening Standard Inclusions must not auto-create a fallback document");
+assert(activeBody.includes("fetchStandardInclusionsPdfLibrary"), "Opening Standard Inclusions should read the persistent PDF library");
 assert(!activeBody.includes("isPremierInclusionsWorkingCopyCurrent"), "Opening Standard Inclusions must not force the native master working copy");
 assert(!source.includes("function StandardScheduleManagementPanel"), "The duplicated Schedule Management component must be removed");
 assert(!activeReturn.includes("<StandardScheduleManagementPanel"), "StandardInclusionsSheet must not render the old management toolbar");
