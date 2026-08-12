@@ -90,6 +90,7 @@ export default function BuilderClientSelectionsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [finalScheduleDocument, setFinalScheduleDocument] = useState(null);
+  const [finalScheduleGenerating, setFinalScheduleGenerating] = useState(false);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === selectedProjectId) || null, [projects, selectedProjectId]);
   const selectedSnapshot = useMemo(() => snapshots.find((snapshot) => snapshot.id === selectedSnapshotId) || null, [snapshots, selectedSnapshotId]);
@@ -365,15 +366,48 @@ export default function BuilderClientSelectionsPage() {
     setSessions((current) => current.map((session) => session.id === sessionId ? data : session));
   }
 
-  function generateFinalSchedule() {
+  async function generateFinalSchedule() {
+    if (!workspaceId || !selectedProjectId) {
+      setError("Select a project before generating the Final Inclusions Schedule PDF.");
+      return;
+    }
+    setFinalScheduleGenerating(true);
+    setError("");
+    setSuccess("");
     const generatedAt = new Date().toISOString();
-    const document = createFinalInclusionsDocumentVersion({
-      snapshot: finalScheduleSnapshot,
-      previousDocuments: finalScheduleDocument ? [finalScheduleDocument] : [],
-      generatedAt,
-    });
-    setFinalScheduleDocument(document);
-    setSuccess(`${document.title} v${document.version} generated for Project Estimate inclusions.`);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      if (!token) throw new Error("Sign in before generating the Final Inclusions Schedule.");
+      const response = await fetch("/api/builders/final-inclusions-schedule/generate", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "x-workspace-id": workspaceId,
+        },
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          projectId: selectedProjectId,
+          sessionId: selectedSessionId,
+          snapshotId: selectedSnapshotId,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Final selections schedule could not be generated.");
+      setFinalScheduleDocument(payload.document);
+      setSuccess(`${payload.document?.title || "Final Inclusions Schedule"} v${payload.document?.version || ""} generated and stored.`);
+    } catch (generateError) {
+      const fallbackDocument = createFinalInclusionsDocumentVersion({
+        snapshot: finalScheduleSnapshot,
+        previousDocuments: finalScheduleDocument ? [finalScheduleDocument] : [],
+        generatedAt,
+      });
+      setFinalScheduleDocument({ ...fallbackDocument, status: "failed", metadata: { ...fallbackDocument.metadata, status: "failed", failure: generateError.message } });
+      setError(generateError.message || "Final selections schedule could not be generated.");
+    } finally {
+      setFinalScheduleGenerating(false);
+    }
   }
 
   function downloadFinalScheduleHtml() {
@@ -428,6 +462,7 @@ export default function BuilderClientSelectionsPage() {
           snapshot={finalScheduleSnapshot}
           document={finalScheduleDocument}
           outOfDate={finalScheduleOutOfDate}
+          generating={finalScheduleGenerating}
           currency={selectedProject?.currency}
           onGenerate={generateFinalSchedule}
           onDownload={downloadFinalScheduleHtml}
@@ -626,15 +661,18 @@ function RunningSummary({ project, currency }) {
   return <section className="runningBar" data-testid="showroom-running-variation"><div><span>SELECTIONS SUMMARY</span><strong>{project.completed} / {project.total}</strong></div><MiniTotal label="Allowance" value={money(project.allowance, currency)} /><MiniTotal label="Selected" value={money(project.selected, currency)} /><MiniTotal label="Variation" value={signedMoney(project.variation, currency)} tone={project.variation > 0 ? "bad" : project.variation < 0 ? "good" : ""} /></section>;
 }
 
-function FinalInclusionsSchedulePanel({ snapshot, document, outOfDate, currency, onGenerate, onDownload }) {
+function FinalInclusionsSchedulePanel({ snapshot, document, outOfDate, generating, currency, onGenerate, onDownload }) {
   const variation = snapshot?.summary?.currentNetSelectionVariation || 0;
   const generatedLabel = document?.uploadedAt ? new Date(document.uploadedAt).toLocaleString("en-AU", { dateStyle: "medium", timeStyle: "short" }) : "";
+  const pdfUrl = document?.publicUrl || document?.public_url || "";
+  const generated = document && document.status !== "failed";
+  const failed = document?.status === "failed";
   return (
     <section className="finalSchedulePanel" data-testid="final-inclusions-schedule-panel">
       <div className="finalScheduleTitle">
         <span><FileText size={17} />PROJECT INCLUSIONS</span>
         <h2>Final Inclusions Schedule</h2>
-        <p>{document ? `Generated v${document.version}${generatedLabel ? ` - ${generatedLabel}` : ""}` : "Generate the client-facing inclusions schedule from the current approved selections."}</p>
+        <p>{generating ? "Generating PDF..." : failed ? "Final selections schedule could not be generated." : generated ? `Generated v${document.version}${generatedLabel ? ` - ${generatedLabel}` : ""}` : "Generate the client-facing inclusions schedule from the current approved selections."}</p>
       </div>
       <div className="summaryTiles">
         <MiniTotal label="Selections" value={String(snapshot?.summary?.productCount || 0)} />
@@ -643,14 +681,16 @@ function FinalInclusionsSchedulePanel({ snapshot, document, outOfDate, currency,
         <MiniTotal label="Variation" value={signedMoney(variation, currency)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : ""} />
       </div>
       {document ? (
-        <div className={outOfDate ? "scheduleStatus warn" : "scheduleStatus"}>
-          <strong>{outOfDate ? "Out of date" : "Current"}</strong>
+        <div className={failed || outOfDate ? "scheduleStatus warn" : "scheduleStatus"}>
+          <strong>{failed ? "Failed" : outOfDate ? "Out of date" : "Current"}</strong>
           <span>{document.storagePath}</span>
         </div>
       ) : null}
       <div className="finalScheduleActions">
-        <button type="button" className="primary" onClick={onGenerate}>{document ? <RefreshCw size={16} /> : <FileText size={16} />}{document ? "Regenerate PDF" : "Generate PDF"}</button>
-        <button type="button" onClick={onDownload}><Download size={16} />Download Preview</button>
+        <button type="button" className="primary" disabled={generating} onClick={onGenerate}>{generating ? <RefreshCw size={16} /> : document ? <RefreshCw size={16} /> : <FileText size={16} />}{generating ? "Generating PDF..." : outOfDate ? "Generate Updated Schedule" : document ? "Regenerate PDF" : "Generate Final Schedule"}</button>
+        {pdfUrl && !failed ? <a href={pdfUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} />Open Final Schedule</a> : null}
+        {pdfUrl && !failed ? <a href={pdfUrl} download={document.fileName || "final-inclusions-schedule.pdf"}><Download size={16} />Download PDF</a> : null}
+        <button type="button" onClick={onDownload}><Download size={16} />HTML Preview</button>
       </div>
     </section>
   );
@@ -828,7 +868,7 @@ const showroomCss = `
   .scheduleStatus.warn { border-color: #fde68a; background: #fffbeb; color: #b45309; }
   .scheduleStatus span { overflow-wrap: anywhere; color: inherit; font-size: 12px; font-weight: 800; }
   .finalScheduleActions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-  .finalScheduleActions button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 9px 11px; }
+  .finalScheduleActions button, .finalScheduleActions a { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd5e1; background: #fff; color: #102033; padding: 9px 11px; }
   .finalScheduleActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
   .showroomSection { margin-top: 16px; display: grid; gap: 14px; }
   .sectionHeader { display: grid; gap: 3px; }
