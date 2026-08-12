@@ -375,6 +375,12 @@ function compareProjectPersistenceForSave(expectedProject, storedProject, pageNa
   };
 }
 
+function buildExpectedProjectForSaveVerification(expectedProject, pageName = "", baseProject = null, options = {}) {
+  return options?.siteOnly
+    ? buildExpectedSiteOnlyWebsitePersistenceProject(baseProject, expectedProject)
+    : buildExpectedWebsitePersistenceProject(baseProject, expectedProject, pageName);
+}
+
 function mapProjectRow(row) {
   if (!row) return null;
 
@@ -711,7 +717,8 @@ async function handler(req, res) {
 
     if (splitProject?.id) {
       const savedProject = splitProject;
-      const expectedVerification = summarizeProjectSaveVerification(nextProject);
+      const expectedProjectForVerification = buildExpectedProjectForSaveVerification(nextProject, requestedPage, currentSplitProject, { siteOnly });
+      const expectedVerification = summarizeProjectSaveVerification(expectedProjectForVerification);
       const splitVerification = summarizeProjectSaveVerification(savedProject);
       const savedBlocks = requestedPage ? getProjectPageBlocks(savedProject, requestedPage) : [];
       const payloadBlockIds = new Set((Array.isArray(incomingBlocks) ? incomingBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
@@ -956,7 +963,8 @@ async function handler(req, res) {
 
     const savedProject = splitProject || mapProjectRow(readBack.data || result.data);
     const readBackProject = mapProjectRow(readBack.data || result.data);
-    const expectedVerification = summarizeProjectSaveVerification(nextProject);
+    const expectedProjectForVerification = buildExpectedProjectForSaveVerification(nextProject, requestedPage, currentSplitProject, { siteOnly });
+    const expectedVerification = summarizeProjectSaveVerification(expectedProjectForVerification);
     const splitVerification = summarizeProjectSaveVerification(savedProject);
     const missingVideos = expectedVerification.videos
       .filter((entry) => entry.videoUrl)

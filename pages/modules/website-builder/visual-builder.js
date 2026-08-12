@@ -657,10 +657,11 @@ function shouldUseEmergencyDraft(project, pageName, draft) {
   const draftHasMoreBlocks = draftScore.blockCount > currentScore.blockCount;
   const draftHasMoreText = draftScore.textChars > currentScore.textChars;
   const currentIsEmpty = currentScore.blockCount === 0;
+  const isAutosaveDraft = source.includes("autosave");
   const shouldRecover = currentIsEmpty
-    || (draftHasMoreBlocks && draftScore.textChars >= currentScore.textChars)
-    || (draftIsNewer && draftHasMoreText)
-    || (draftIsNewer && !source.includes("autosave") && draftScore.blockCount >= currentScore.blockCount && draftScore.typeSignature !== currentScore.typeSignature);
+    || (!isAutosaveDraft && draftHasMoreBlocks && draftScore.textChars >= currentScore.textChars)
+    || (draftIsNewer && draftHasMoreText && (!isAutosaveDraft || draftScore.blockCount <= currentScore.blockCount))
+    || (draftIsNewer && !isAutosaveDraft && draftScore.blockCount >= currentScore.blockCount && draftScore.typeSignature !== currentScore.typeSignature);
 
   logWebsiteBuilderSaveDebug("emergency draft recovery decision", {
     pageName,
@@ -1069,6 +1070,7 @@ export default function VisualBuilderPage() {
             chaiData: shouldRecoverRequestedPage && remoteProject?.chaiData?.[remotePageName]
               ? { ...(localProject?.chaiData || {}), [localPageName]: remoteProject.chaiData[remotePageName] }
               : localProject?.chaiData,
+            __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
           });
           // Only update React state with the new pages — no existing blocks change,
           // so this won't disrupt any active editing.
@@ -1333,6 +1335,7 @@ export default function VisualBuilderPage() {
       globalNavBlock: "globalNavBlock" in remoteProject ? remoteProject.globalNavBlock : localProject.globalNavBlock,
       globalFooterBlock: "globalFooterBlock" in remoteProject ? remoteProject.globalFooterBlock : localProject.globalFooterBlock,
       updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
+      __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
       deletedBlockIds,
     };
   }
@@ -1606,6 +1609,7 @@ export default function VisualBuilderPage() {
         custom_domain: normalizeDomain(mergeBase?.customDomain || mergeBase?.custom_domain || syncedProject?.customDomain || syncedProject?.custom_domain || syncedProject?.publication?.customDomain || syncedProject?.publication?.custom_domain || ""),
         primaryDomain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
         primary_domain: normalizeDomain(mergeBase?.primaryDomain || mergeBase?.primary_domain || syncedProject?.primaryDomain || syncedProject?.primary_domain || syncedProject?.publication?.primaryDomain || syncedProject?.publication?.primary_domain || ""),
+        __saveBaseUpdatedAt: syncedProject?.__saveBaseUpdatedAt || syncedProject?.updatedAt || mergeBase?.__saveBaseUpdatedAt || mergeBase?.updatedAt || "",
         publication: {
           ...(syncedProject?.publication || {}),
           ...(mergeBase?.publication || {}),
@@ -2351,10 +2355,20 @@ export default function VisualBuilderPage() {
         status: "saved",
       };
 
+      let saveBaseUpdatedAt = currentProject?.__saveBaseUpdatedAt || currentProject?.baseUpdatedAt || "";
+      if (!isPreviewSave && session?.access_token) {
+        try {
+          const latestServerProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
+          saveBaseUpdatedAt = latestServerProject?.__saveBaseUpdatedAt || latestServerProject?.updatedAt || saveBaseUpdatedAt;
+        } catch (baseError) {
+          console.warn("[forceSaveBlockPage] could not refresh save base before manual save", baseError);
+        }
+      }
+
       const projectWithPatch = normalizeFooterNavigationForProject({
         ...currentProject,
         ...patch,
-        __saveBaseUpdatedAt: currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
+        __saveBaseUpdatedAt: saveBaseUpdatedAt || currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
         __saveRequestId: createWebsiteSaveRequestId(saveSource),
         updatedAt: new Date().toISOString(),
       });
@@ -2566,12 +2580,10 @@ export default function VisualBuilderPage() {
       }
 
       const verifiedPagePatch = verifiedProject && typeof verifiedProject === "object" ? {
-        ...(Array.isArray(verifiedProject?.pageBlocks?.[pageName]) ? {
-          pageBlocks: {
-            ...(projectWithPatch.pageBlocks || {}),
-            [pageName]: verifiedProject.pageBlocks[pageName],
-          },
-        } : {}),
+        pageBlocks: {
+          ...(projectWithPatch.pageBlocks || {}),
+          [pageName]: Array.isArray(verifiedVideoBlocks) ? verifiedVideoBlocks : normalizedBlocks,
+        },
         ...(Object.prototype.hasOwnProperty.call(verifiedProject?.pagesContent || {}, pageName) ? {
           pagesContent: {
             ...(projectWithPatch.pagesContent || {}),
@@ -2581,7 +2593,10 @@ export default function VisualBuilderPage() {
         ...(Object.prototype.hasOwnProperty.call(verifiedProject?.chaiData || {}, pageName) ? {
           chaiData: {
             ...(projectWithPatch.chaiData || {}),
-            [pageName]: verifiedProject.chaiData[pageName],
+            [pageName]: {
+              ...(verifiedProject.chaiData[pageName] || {}),
+              blocks: Array.isArray(verifiedVideoBlocks) ? verifiedVideoBlocks : normalizedBlocks,
+            },
           },
         } : {}),
         updatedAt: verifiedProject.updatedAt || projectWithPatch.updatedAt,
@@ -3041,13 +3056,16 @@ export default function VisualBuilderPage() {
 
   const studioProject = project;
   const activeProjectPageName = resolveProjectPageName(activePage, studioProject);
-  const activePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName]) && studioProject.pageBlocks[activeProjectPageName].length > 0
+  const rawActivePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName]) && studioProject.pageBlocks[activeProjectPageName].length > 0
     ? studioProject.pageBlocks[activeProjectPageName]
     : Array.isArray(studioProject?.chaiData?.[activeProjectPageName]?.blocks)
       ? studioProject.chaiData[activeProjectPageName].blocks
       : Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
         ? studioProject.pageBlocks[activeProjectPageName]
         : [];
+  const activePageBlocks = (studioProject?.globalNavBlock || studioProject?.globalHeader?.enabled || studioProject?.globalHeader?.id)
+    ? rawActivePageBlocks.filter((block) => String(block?.type || "") !== BlockTypes.NAV_BAR)
+    : rawActivePageBlocks;
   // Keying on project+page only (not block content/count) is intentional: PageBuilderCanvas
   // already syncs pageBlocks prop changes internally via its own effect, which preserves
   // scroll position and the selected block. Including block ids/count here forced a full
