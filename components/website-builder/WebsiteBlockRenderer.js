@@ -2362,6 +2362,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
     case "cta-button": {
       const ctaVariant = ctaButtonVariantStyles(props, compact);
       const ctaWidthProps = { ...props, fullWidthBackground: props.fullWidthBackground === true };
+      const ctaText = String(props.text || props.buttonLabel || props.buttonText || props.ctaText || "").trim();
       const ctaHref = resolveRenderedCtaHref({
         linkType: inferCtaLinkType(props.link || props.href || "", props.linkType || ""),
         href: props.link || props.href || "",
@@ -2430,6 +2431,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               />
             ) : null}
           </div>
+          {(editor || ctaText) ? (
           <div style={ctaVariant.actionWrap}>
             <a
               href={editor ? "#" : ctaHref}
@@ -2454,9 +2456,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                   borderRadius: 6,
                   padding: editor ? "2px 4px" : 0,
                 }}
-                dangerouslySetInnerHTML={{ __html: asRichHtml(props.text || (editor ? "Get Started" : "")) }}
+                dangerouslySetInnerHTML={{ __html: asRichHtml(ctaText || (editor ? "Get Started" : "")) }}
               />
             </a>
+          </div>
+          ) : null}
             {(props.note || editor) ? (
               <p
                 data-website-inline-editor="true"
@@ -2476,7 +2480,6 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 dangerouslySetInnerHTML={{ __html: asRichHtml(props.note || (editor ? "Optional reassurance line" : "")) }}
               />
             ) : null}
-          </div>
           </div>
         </ScrollReveal>
       );

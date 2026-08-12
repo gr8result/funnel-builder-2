@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { generateWebsitePageHtml } from "../lib/website-builder/projectStore.js";
+import { createPublicationPayload } from "../lib/website-builder/publishConfig.js";
 import {
   SHARED_FREE_TRIAL_CTA_ID,
   SHARED_FREE_TRIAL_CTA_NAME,
   buildSharedBlockTemplate,
   detachSharedBlockInstance,
   getSharedBlockTemplateUsage,
+  normalizeSharedBlockTemplateProject,
   resolveSharedBlockInstance,
   resolveSharedBlockInstances,
   updateSharedBlockTemplateFromBlock,
@@ -124,6 +127,48 @@ assert.deepEqual(resolvedRestored.map((block) => block.props.openInNewTab), [tru
 const publishedHtml = generateWebsitePageHtml(project, project.pages[0], project.pageBlocks.Home);
 assert.match(publishedHtml, /href="https:\/\/app\.gr8result\.digital\/login"/, "published HTML should render canonical href");
 assert.match(publishedHtml, /target="_blank" rel="noopener noreferrer"/, "published HTML should render target/rel");
+
+const legacyAliasProject = normalizeSharedBlockTemplateProject({
+  ...project,
+  sharedBlockTemplates: {
+    [SHARED_FREE_TRIAL_CTA_ID]: buildSharedBlockTemplate({
+      id: SHARED_FREE_TRIAL_CTA_ID,
+      name: SHARED_FREE_TRIAL_CTA_NAME,
+      blockType: "cta-button",
+      blockData: {
+        id: "legacy-alias-cta",
+        type: "cta-button",
+        props: {
+          buttonLabel: canonicalBlock.props.text,
+          href: canonicalBlock.props.link,
+          targetBlank: true,
+        },
+      },
+    }),
+  },
+});
+const resolvedLegacyAlias = resolveSharedBlockInstance(legacyAliasProject.pageBlocks.Home[0], legacyAliasProject);
+assert.equal(resolvedLegacyAlias.props.text, canonicalBlock.props.text, "legacy buttonLabel should hydrate to canonical text");
+assert.equal(resolvedLegacyAlias.props.link, canonicalBlock.props.link, "legacy href should hydrate to canonical link");
+assert.equal(resolvedLegacyAlias.props.openInNewTab, true, "legacy targetBlank should hydrate to canonical openInNewTab");
+
+const missingTemplateHtml = generateWebsitePageHtml(
+  { ...project, sharedBlockTemplates: {} },
+  project.pages[0],
+  [linkedBlock("missing-template-cta")]
+);
+assert.doesNotMatch(missingTemplateHtml, /href="#"/, "missing shared template must not render a same-page CTA link");
+assert.doesNotMatch(missingTemplateHtml, />Get Started<\/a>/, "missing shared template must not render a fake fallback CTA");
+
+const publication = createPublicationPayload(project);
+assert.ok(publication.site_data.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID], "publication payload must retain shared CTA templates");
+
+const liveRouteSource = fs.readFileSync("pages/sites/[...slug].js", "utf8");
+assert.match(
+  liveRouteSource,
+  /renderWebsiteBlock\(block,\s*\{[^}]*project[^}]*\}/s,
+  "live route must pass the published project into page block rendering"
+);
 
 const detached = detachSharedBlockInstance(project.pageBlocks.Home[0], project);
 assert.equal(detached.sharedTemplateId, undefined);

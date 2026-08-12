@@ -630,7 +630,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
       <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
-            {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}
           </div>
         ) : null}
 
@@ -640,7 +640,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
               const blockBg = resolvePublishedStackBackground(blocksToRender, index, "");
               return (
                 <div key={block.id || `${block.type}-${index}`} data-published-block="true" data-published-block-id={block.id || ""} data-published-block-type={block.type || ""} style={publishedPageBlockFrame(blockBg, pageFullWidth, layoutWidth)}>
-                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, layoutWidth: pageFullWidth && !compact ? null : layoutWidth, siteId: publication?.id || "" })}
+                  {renderWebsiteBlock(block, { compact, device, assets: publishedAssets, editor: false, navigationContext, layoutWidth: pageFullWidth && !compact ? null : layoutWidth, siteId: publication?.id || "", project })}
                 </div>
               );
             })}
@@ -658,7 +658,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
 
         {injectFooter ? (
           <div key="global-footer" data-published-block="true" data-published-block-id={globalFooterBlock?.id || ""} data-published-block-type={globalFooterBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalFooterBlock))}>
-            {renderWebsiteBlock(globalFooterBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
+            {renderWebsiteBlock(globalFooterBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}
           </div>
         ) : null}
 
