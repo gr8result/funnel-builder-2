@@ -253,9 +253,59 @@ function normalizeDeletedBlockTombstones(projectLike) {
 }
 
 function getSavedPageBlocks(projectLike, pageName) {
-  if (Array.isArray(projectLike?.pageBlocks?.[pageName])) return projectLike.pageBlocks[pageName];
-  if (Array.isArray(projectLike?.chaiData?.[pageName]?.blocks)) return projectLike.chaiData[pageName].blocks;
+  const mapKey = resolveProjectPageMapKey(projectLike, pageName);
+  if (mapKey && Array.isArray(projectLike?.pageBlocks?.[mapKey])) return projectLike.pageBlocks[mapKey];
+  if (mapKey && Array.isArray(projectLike?.chaiData?.[mapKey]?.blocks)) return projectLike.chaiData[mapKey].blocks;
   return null;
+}
+
+function buildCanonicalSubmittedPageBlocksForSave(projectLike, pageName, blocks) {
+  const mapKey = resolveProjectPageMapKey(projectLike, pageName) || pageNameFromValue(pageName);
+  if (!mapKey) return Array.isArray(blocks) ? blocks : [];
+  const safeBlocks = Array.isArray(blocks) ? blocks : [];
+  const existingChai = projectLike?.chaiData?.[mapKey] && typeof projectLike.chaiData[mapKey] === "object"
+    ? projectLike.chaiData[mapKey]
+    : {};
+  const canonicalProject = normalizeSharedPrimaryNavigation({
+    ...(projectLike || {}),
+    pageBlocks: {
+      ...(projectLike?.pageBlocks || {}),
+      [mapKey]: safeBlocks,
+    },
+    chaiData: {
+      ...(projectLike?.chaiData || {}),
+      [mapKey]: {
+        ...existingChai,
+        blocks: safeBlocks,
+      },
+    },
+  });
+  return getSavedPageBlocks(canonicalProject, mapKey) || [];
+}
+
+function resolveProjectPageMapKey(projectLike, pageName) {
+  const requested = pageNameFromValue(pageName);
+  if (!requested || !projectLike || typeof projectLike !== "object") return "";
+  const requestedSlug = slugify(requested);
+  const pages = Array.isArray(projectLike?.pages) ? projectLike.pages : [];
+  const page = pages.find((entry) => String(entry?.name || "") === requested)
+    || pages.find((entry) => String(entry?.slug || "") === requested)
+    || pages.find((entry) => slugify(entry?.name || "") === requestedSlug)
+    || pages.find((entry) => slugify(entry?.slug || "") === requestedSlug)
+    || pages.find((entry) => slugify(entry?.id || "") === requestedSlug)
+    || null;
+  const candidates = [
+    requested,
+    page?.name,
+    page?.slug,
+    page?.id,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  const maps = [projectLike?.pageBlocks, projectLike?.chaiData].filter((map) => map && typeof map === "object");
+  for (const candidate of candidates) {
+    if (maps.some((map) => Object.prototype.hasOwnProperty.call(map, candidate))) return candidate;
+  }
+  const keys = maps.flatMap((map) => Object.keys(map || {}));
+  return keys.find((key) => slugify(key) === requestedSlug) || requested;
 }
 
 function buildDeletedBlockTombstones(projectLike, pageName, nextBlocks) {
@@ -2316,6 +2366,7 @@ export default function VisualBuilderPage() {
       const normalizedBlocks = Array.isArray(projectToSync?.pageBlocks?.[pageName])
         ? projectToSync.pageBlocks[pageName]
         : safeBlocks;
+      const submittedPersistentBlocks = buildCanonicalSubmittedPageBlocksForSave(projectToSync, pageName, normalizedBlocks);
       if (!isPreviewSave) setProject(projectToSync);
 
       logWebsiteBuilderSaveDebug("force save payload prepared", {
@@ -2400,13 +2451,13 @@ export default function VisualBuilderPage() {
           pageName,
           updatedAt: verifiedProject?.updatedAt || "",
           stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
-          matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+          matchesPayload: blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks),
           extraStoredBlockIds: (Array.isArray(verifiedBlocks) ? verifiedBlocks : [])
             .map((block) => String(block?.id || ""))
-            .filter((id) => id && !(new Set(normalizedBlocks.map((block) => String(block?.id || "")).filter(Boolean))).has(id)),
+            .filter((id) => id && !(new Set(submittedPersistentBlocks.map((block) => String(block?.id || "")).filter(Boolean))).has(id)),
           deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
         });
-        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks) && session?.access_token) {
+        if (!blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks) && session?.access_token) {
           await waitForSaveVerification();
           verifiedProject = await fetchWebsiteProjectFromServer(session, currentProject.id, { pageName });
           verifiedBlocks = getSavedPageBlocks(verifiedProject, pageName);
@@ -2415,13 +2466,13 @@ export default function VisualBuilderPage() {
             pageName,
             updatedAt: verifiedProject?.updatedAt || "",
             stored: summarizeBuilderBlocksForSave(verifiedBlocks || []),
-            matchesPayload: blocksMatchForSave(normalizedBlocks, verifiedBlocks),
+            matchesPayload: blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks),
             deletedBlockIds: normalizeDeletedBlockTombstones(verifiedProject),
           });
         }
-        if (!blocksMatchForSave(normalizedBlocks, verifiedBlocks)) {
+        if (!blocksMatchForSave(submittedPersistentBlocks, verifiedBlocks)) {
           const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
-          if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+          if (blocksMatchForSave(submittedPersistentBlocks, syncedBlocks)) {
             verifiedProject = serverSynced;
             verifiedBlocks = syncedBlocks;
             verifiedSaveMatches = true;
@@ -2430,9 +2481,11 @@ export default function VisualBuilderPage() {
             console.error("[forceSaveBlockPage] save verification mismatch after cloud sync; blocking saved status.", {
               pageName,
               editorBlockCount: normalizedBlocks.length,
+              submittedPersistentBlockCount: submittedPersistentBlocks.length,
               verifiedBlockCount: Array.isArray(verifiedBlocks) ? verifiedBlocks.length : null,
               syncedBlockCount: Array.isArray(syncedBlocks) ? syncedBlocks.length : null,
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
               verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
             });
@@ -2443,6 +2496,7 @@ export default function VisualBuilderPage() {
               _saveErrorMessage: message,
               _saveDebug: {
                 payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+                submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
                 verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
                 synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
               },
@@ -2454,7 +2508,7 @@ export default function VisualBuilderPage() {
       } catch (verifyErr) {
         console.error("[forceSaveBlockPage] save verification check failed after cloud save.", verifyErr);
         const syncedBlocks = getSavedPageBlocks(serverSynced, pageName);
-        if (blocksMatchForSave(normalizedBlocks, syncedBlocks)) {
+        if (blocksMatchForSave(submittedPersistentBlocks, syncedBlocks)) {
           verifiedProject = serverSynced;
           verifiedSaveMatches = true;
         } else {
@@ -2466,6 +2520,7 @@ export default function VisualBuilderPage() {
             _saveErrorMessage: message,
             _saveDebug: {
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
+              submittedPersistent: summarizeBuilderBlocksForSave(submittedPersistentBlocks),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
               error: verifyErr?.message || "Save verification failed",
             },

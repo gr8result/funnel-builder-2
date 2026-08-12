@@ -21,6 +21,7 @@ import {
 } from "../../../lib/website-builder/documentVersion";
 import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordionPanels";
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
+import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
 import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
 
@@ -285,7 +286,7 @@ function normalizeProjectBlocksForSave(project) {
         ])
       )
     : project.chaiData;
-  return {
+  return normalizeSharedPrimaryNavigation({
     ...project,
     pageBlocks,
     chaiData,
@@ -293,7 +294,7 @@ function normalizeProjectBlocksForSave(project) {
     globalFooterBlock: normalizedGlobalFooterBlock,
     globalFooter: footerBlockToGlobalFooter(normalizedGlobalFooterBlock, footerContext) || project.globalFooter || null,
     globalNavBlock: normalizeVideoHeroBlock(project.globalNavBlock),
-  };
+  });
 }
 
 function countFooterNavLinks(project) {
