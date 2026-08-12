@@ -289,7 +289,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets,
                   setFirstBlockRuntimeError((current) => current || details);
                 }}
               >
-                {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "" })}
+                {renderWebsiteBlock(globalNavBlock, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: previewShellWidth, siteId: project?.id || "", project })}
               </PreviewBlockErrorBoundary>
             </div>
           ) : null}
@@ -304,7 +304,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets,
                     setFirstBlockRuntimeError((current) => current || details);
                   }}
                 >
-                  {renderWebsiteBlock(block, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: pageFullWidth && previewViewport === "desktop" ? null : previewShellWidth, siteId: project?.id || "" })}
+                  {renderWebsiteBlock(block, { compact: compactPreview, device: previewViewport, assets, editor: false, frameConstrained: previewViewport !== "desktop", navigationContext, layoutWidth: pageFullWidth && previewViewport === "desktop" ? null : previewShellWidth, siteId: project?.id || "", project })}
                 </PreviewBlockErrorBoundary>
               </div>
             ))

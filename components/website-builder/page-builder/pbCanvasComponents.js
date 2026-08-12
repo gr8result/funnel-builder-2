@@ -4,7 +4,16 @@ import { createPortal, flushSync } from "react-dom";
 import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSelectedAsset, resolveAssetField } from "../../../lib/website-builder/mediaAssets";
 import { saveWebsiteBuilderAssets } from "../../../lib/website-builder/projectStore";
 import { mergeVideoHeroProps, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
+import {
+  buildCtaPageRefs,
+  inferCtaLinkType,
+  normalizeHrefByType,
+  resolveCtaPageRef,
+  normalizePageHref,
+  resolvePreferredCtaHref,
+} from "../../../lib/website-builder/buttonLinks";
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
+import { getSharedBlockTemplate, getSharedBlockTemplateUsage, getSharedTemplateId } from "../../../lib/website-builder/sharedBlockTemplates";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
 import { isBlockVisibleOnDevice } from "../../../lib/website-builder/responsiveValue";
@@ -57,74 +66,28 @@ import {
   BlockLibraryPanel, PageSectionsPanel,
 } from "./pbPropertiesPanels";
 
-function slugifyBuilderPageLink(value = "") {
-  return String(value || "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
 function buildBuilderPageRefs(pages = []) {
-  return (Array.isArray(pages) ? pages : [])
-    .map((page, index) => {
-      const label = String(page?.name || page?.title || page?.pageName || "").trim();
-      const slug = slugifyBuilderPageLink(page?.slug || page?.path || label);
-      if (!label || !slug) return null;
-      return {
-        id: String(page?.id || page?.pageId || slug),
-        label,
-        slug,
-        href: slug === "home" ? "/" : `/${slug}`,
-        order: Number.isFinite(Number(page?.order)) ? Number(page.order) : index,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.order - b.order);
+  return buildCtaPageRefs(pages);
 }
 
 function resolveBuilderPageRefForCta(cta, pages = []) {
-  const pageRefs = buildBuilderPageRefs(pages);
-  const keys = [
-    cta?.pageId,
-    cta?.href,
-    cta?.slug,
-    cta?.pageSlug,
-  ].map((value) => slugifyBuilderPageLink(String(value || "").replace(/^\/+/, "")));
-  return pageRefs.find((page) => keys.includes(page.id) || keys.includes(page.slug)) || pageRefs[0] || null;
+  return resolveCtaPageRef(cta, pages);
 }
 
 function normalizeBuilderCta(props = {}, pages = []) {
   const legacyHref = props.ctaLink || props.buttonLink || props.link || props.href || "";
   const source = props.cta && typeof props.cta === "object" ? props.cta : {};
-  const href = String(source.href || legacyHref || "").trim();
+  const href = resolvePreferredCtaHref(source.href || "", legacyHref || "", source.linkType || "");
   const pageRef = resolveBuilderPageRefForCta({ ...source, href }, pages);
-  const explicitType = String(source.linkType || "").trim();
-  const linkType = ["page", "external", "anchor", "email", "tel", "none"].includes(explicitType)
-    ? explicitType
-    : pageRef && href && !/^(https?:|mailto:|tel:|#)/i.test(href)
-      ? "page"
-      : href.startsWith("#")
-        ? "anchor"
-        : /^mailto:/i.test(href)
-          ? "email"
-          : /^tel:/i.test(href)
-            ? "tel"
-            : /^(https?:)/i.test(href)
-              ? "external"
-          : href
-            ? "page"
-            : "none";
+  const linkType = inferCtaLinkType(href, String(source.linkType || "").trim());
   const selectedPage = linkType === "page" ? pageRef : null;
   const resolvedHref = linkType === "page"
-    ? selectedPage?.href || ""
-    : linkType === "none"
-      ? ""
-      : href;
+    ? normalizePageHref(href || selectedPage?.href || "")
+    : normalizeHrefByType(linkType, href);
   return {
     text: String(source.text || props.buttonText || props.ctaText || "").trim(),
     linkType,
-    pageId: selectedPage?.id || null,
+    pageId: selectedPage?.id || (String(source.pageId || "").trim() || null),
     href: resolvedHref,
     newTab: !!source.newTab || !!source.openInNewTab,
   };
@@ -141,7 +104,15 @@ function normalizeBuilderButtonLink(props = {}, pages = [], prefix = "primary") 
   const legacyHref = isSecondary
     ? props.secondaryCtaLink || props.secondaryButtonLink || ""
     : props.ctaLink || props.buttonLink || props.link || props.href || "";
-  return { ...normalizeBuilderCta({ ...props, cta: { ...source, href: source.href || legacyHref, text } }, pages), text };
+  const href = resolvePreferredCtaHref(source.href || "", legacyHref || "", source.linkType || "");
+  const isolatedLegacyProps = {
+    ctaLink: legacyHref,
+    buttonLink: legacyHref,
+  };
+  return {
+    ...normalizeBuilderCta({ ...isolatedLegacyProps, cta: { ...source, href, text } }, pages),
+    text,
+  };
 }
 
 class BlockPreviewBoundary extends React.Component {
@@ -3430,7 +3401,7 @@ function ContactFormPropertiesPanel({ block, index, onChange, brandAssets, onUpl
   );
 }
 
-const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, onRefreshAssetLibrary, project, activePage, currentObjective, device = "desktop" }) => {
+const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, onSelectAsset, onOpenImageEditor, onOpenSimpleImageEditor, onRefreshAssetLibrary, project, activePage, currentObjective, onDetachSharedTemplate, device = "desktop" }) => {
   const [regenBusy, setRegenBusy] = useState(false);
   const [regenError, setRegenError] = useState("");
   const [regenTone, setRegenTone] = useState("balanced");
@@ -3487,6 +3458,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
     "sectionAnimationDelay",
     "sectionAnimationSpeed",
   ]);
+  const sharedTemplateId = getSharedTemplateId(block);
+  const sharedTemplate = sharedTemplateId ? getSharedBlockTemplate(project, sharedTemplateId) : null;
+  const sharedTemplateUsage = sharedTemplateId ? getSharedBlockTemplateUsage(project, sharedTemplateId) : [];
 
   function shouldShowHeroPanelSection(sectionId) {
     if (isHero && !heroSections.some((section) => section.id === sectionId)) return false;
@@ -3779,17 +3753,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   function updateCanonicalCta(patch) {
     const nextCta = { ...canonicalCta, ...patch };
     if (nextCta.linkType === "page") {
-      const page = pageRefsForLinks.find((entry) => entry.id === nextCta.pageId) || pageRefsForLinks[0] || null;
-      nextCta.pageId = page?.id || null;
-      nextCta.href = page?.href || "";
-    } else if (nextCta.linkType === "anchor") {
-      nextCta.pageId = null;
-      nextCta.href = String(nextCta.href || "#contact").startsWith("#") ? nextCta.href : `#${slugifyBuilderPageLink(nextCta.href || "contact")}`;
+      const page = pageRefsForLinks.find((entry) => entry.id === nextCta.pageId) || null;
+      nextCta.pageId = page?.id || (String(nextCta.pageId || "").trim() || null);
+      nextCta.href = normalizeHrefByType("page", nextCta.href || page?.href || "");
     } else if (nextCta.linkType === "none") {
       nextCta.pageId = null;
       nextCta.href = "";
     } else {
       nextCta.pageId = null;
+      nextCta.href = normalizeHrefByType(nextCta.linkType, nextCta.href || "");
     }
     onChange(index, {
       ...block.props,
@@ -3804,25 +3776,15 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
   function normalizeCtaPatch(nextCta) {
     const normalized = { ...nextCta };
     if (normalized.linkType === "page") {
-      const page = pageRefsForLinks.find((entry) => entry.id === normalized.pageId) || pageRefsForLinks[0] || null;
-      normalized.pageId = page?.id || null;
-      normalized.href = page?.href || "";
-    } else if (normalized.linkType === "anchor") {
-      normalized.pageId = null;
-      normalized.href = String(normalized.href || "#contact").startsWith("#") ? normalized.href : `#${slugifyBuilderPageLink(normalized.href || "contact")}`;
-    } else if (normalized.linkType === "email") {
-      normalized.pageId = null;
-      const value = String(normalized.href || "").replace(/^mailto:/i, "").trim();
-      normalized.href = value ? `mailto:${value}` : "";
-    } else if (normalized.linkType === "tel") {
-      normalized.pageId = null;
-      const value = String(normalized.href || "").replace(/^tel:/i, "").trim();
-      normalized.href = value ? `tel:${value}` : "";
+      const page = pageRefsForLinks.find((entry) => entry.id === normalized.pageId) || null;
+      normalized.pageId = page?.id || (String(normalized.pageId || "").trim() || null);
+      normalized.href = normalizeHrefByType("page", normalized.href || page?.href || "");
     } else if (normalized.linkType === "none") {
       normalized.pageId = null;
       normalized.href = "";
     } else {
       normalized.pageId = null;
+      normalized.href = normalizeHrefByType(normalized.linkType, normalized.href || "");
     }
     return normalized;
   }
@@ -3874,7 +3836,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           onChange={(e) => updateHeroButtonCta(slot, { linkType: e.target.value })}
           style={styles.propertyInput}
         >
-          <option value="page">Website Page</option>
+          <option value="page">Page / URL</option>
           <option value="external">External URL</option>
           <option value="anchor">Anchor / Section</option>
           <option value="email">Email</option>
@@ -3882,15 +3844,41 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
           <option value="none">No Link</option>
         </select>
         {ctaValue.linkType === "page" ? (
-          <select
-            value={ctaValue.pageId || ""}
-            onChange={(e) => updateHeroButtonCta(slot, { linkType: "page", pageId: e.target.value })}
-            style={{ ...styles.propertyInput, marginTop: 8 }}
-          >
-            {pageRefsForLinks.map((page) => (
-              <option key={`${slot}-hero-page-${page.id}`} value={page.id}>{page.label}</option>
-            ))}
-          </select>
+          <>
+            <input
+              type="text"
+              value={ctaValue.href}
+              onChange={(e) => {
+                const rawHref = e.target.value;
+                const normalizedHref = normalizeHrefByType("page", rawHref);
+                const matchedPage = pageRefsForLinks.find((page) => page.href === normalizedHref) || null;
+                updateHeroButtonCta(slot, {
+                  linkType: "page",
+                  href: rawHref,
+                  pageId: matchedPage?.id || null,
+                });
+              }}
+              style={{ ...styles.propertyInput, marginTop: 8 }}
+              placeholder="/contact"
+            />
+            <select
+              value={ctaValue.pageId || ""}
+              onChange={(e) => {
+                const selected = pageRefsForLinks.find((page) => page.id === e.target.value) || null;
+                updateHeroButtonCta(slot, {
+                  linkType: "page",
+                  pageId: selected?.id || null,
+                  href: selected?.href || ctaValue.href,
+                });
+              }}
+              style={{ ...styles.propertyInput, marginTop: 8 }}
+            >
+              <option value="">Custom URL</option>
+              {pageRefsForLinks.map((page) => (
+                <option key={`${slot}-hero-page-${page.id}`} value={page.id}>{`${page.label} (${page.href})`}</option>
+              ))}
+            </select>
+          </>
         ) : ctaValue.linkType !== "none" ? (
           <input
             type={ctaValue.linkType === "email" ? "email" : ctaValue.linkType === "external" ? "url" : "text"}
@@ -4912,6 +4900,19 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
       <div style={{ margin: "0 0 10px", display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 10px", borderRadius: 999, background: "#e0f2fe", color: "#075985", border: "1px solid #7dd3fc", fontSize: 12, fontWeight: 800 }}>
         Editing: {deviceLabel}
       </div>
+      {sharedTemplateId ? (
+        <div style={{ ...styles.sectionCard, borderColor: "#7c3aed", background: "#f5f3ff" }}>
+          <label style={{ ...styles.propertyLabel, color: "#4c1d95" }}>Shared Template: {sharedTemplate?.templateName || block?.props?.sharedTemplateName || sharedTemplateId}</label>
+          <p style={{ margin: "6px 0 10px", color: "#5b21b6", fontSize: 13, lineHeight: 1.45, fontWeight: 700 }}>
+            This CTA is shared across {sharedTemplateUsage.length || 1} page{(sharedTemplateUsage.length || 1) === 1 ? "" : "s"}. Changes will update all linked instances.
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" style={styles.secondaryBtn} onClick={() => onDetachSharedTemplate?.(index)}>
+              Detach from shared template
+            </button>
+          </div>
+        </div>
+      ) : null}
       {isHero ? (
         <div style={{ marginBottom: 10 }}>
           <div style={heroTabRowBase}>
@@ -5046,24 +5047,47 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
               onChange={(e) => updateCanonicalCta({ linkType: e.target.value })}
               style={styles.propertyInput}
             >
-              <option value="page">Website Page</option>
+              <option value="page">Page / URL</option>
               <option value="external">External URL</option>
               <option value="anchor">Anchor / Section</option>
               <option value="none">No Link</option>
             </select>
             {canonicalCta.linkType === "page" ? (
               <>
-                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Website Page</label>
+                <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Page / URL</label>
+                <input
+                  type="text"
+                  value={canonicalCta.href}
+                  onChange={(e) => {
+                    const rawHref = e.target.value;
+                    const normalizedHref = normalizeHrefByType("page", rawHref);
+                    const matchedPage = pageRefsForLinks.find((page) => page.href === normalizedHref) || null;
+                    updateCanonicalCta({
+                      linkType: "page",
+                      href: rawHref,
+                      pageId: matchedPage?.id || null,
+                    });
+                  }}
+                  style={styles.propertyInput}
+                  placeholder="/contact"
+                />
                 <select
                   value={canonicalCta.pageId || ""}
-                  onChange={(e) => updateCanonicalCta({ linkType: "page", pageId: e.target.value })}
+                  onChange={(e) => {
+                    const selected = pageRefsForLinks.find((page) => page.id === e.target.value) || null;
+                    updateCanonicalCta({
+                      linkType: "page",
+                      pageId: selected?.id || null,
+                      href: selected?.href || canonicalCta.href,
+                    });
+                  }}
                   style={styles.propertyInput}
                 >
+                  <option value="">Custom URL</option>
                   {pageRefsForLinks.map((page) => (
-                    <option key={page.id} value={page.id}>{page.label}</option>
+                    <option key={page.id} value={page.id}>{`${page.label} (${page.href})`}</option>
                   ))}
                 </select>
-                <input type="text" value={canonicalCta.href} readOnly style={{ ...styles.propertyInput, marginTop: 6 }} />
               </>
             ) : canonicalCta.linkType === "external" ? (
               <>
@@ -5419,7 +5443,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
-          if (["id", "type", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (["id", "type", "sharedTemplateId", "sharedTemplateName", "sharedTemplateType", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
           if (block.type === BlockTypes.PARALLAX && ["cta", "ctaText", "ctaLink", "buttonText", "buttonLink", "link", "href"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections

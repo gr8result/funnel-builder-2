@@ -30,6 +30,12 @@ import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, apply
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
+import {
+  detachSharedBlockInstance,
+  getSharedBlockTemplates,
+  getSharedTemplateId,
+  updateSharedBlockTemplateFromBlock,
+} from "../../../lib/website-builder/sharedBlockTemplates";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
 const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
@@ -2759,6 +2765,36 @@ export default function VisualBuilderPage() {
     saveProjectPatch({ [field]: block ?? null, ...footerPatch }, `Updated global ${role === "nav" ? "navigation" : "footer"}`, { siteOnly: true, saveSource: "manual-save" });
   }
 
+  function updateSharedTemplateBlock(sharedTemplateId, block) {
+    if (!project?.id || !sharedTemplateId || !block) return;
+    const currentProject = getWebsiteProject(project.id) || project;
+    const nextProject = updateSharedBlockTemplateFromBlock(currentProject, sharedTemplateId, block);
+    saveProjectPatch(
+      { sharedBlockTemplates: getSharedBlockTemplates(nextProject) },
+      "Updated shared template",
+      { siteOnly: true, saveSource: "manual-save" }
+    );
+  }
+
+  function detachSharedTemplateBlock(blockIndex, detachedBlock) {
+    if (!project?.id || typeof blockIndex !== "number" || !detachedBlock) return;
+    const currentProject = getWebsiteProject(project.id) || project;
+    const pageName = resolveProjectPageName(activeProjectPageName || activePage, currentProject);
+    const currentBlocks = Array.isArray(currentProject?.pageBlocks?.[pageName]) ? currentProject.pageBlocks[pageName] : [];
+    const currentBlock = currentBlocks[blockIndex];
+    if (!getSharedTemplateId(currentBlock)) return;
+    const safeDetachedBlock = detachedBlock || detachSharedBlockInstance(currentBlock, currentProject);
+    const nextBlocks = currentBlocks.map((block, index) => index === blockIndex ? safeDetachedBlock : block);
+    const nextChaiPage = {
+      ...(currentProject?.chaiData?.[pageName] || {}),
+      blocks: nextBlocks,
+    };
+    saveProjectPatch({
+      pageBlocks: { ...(currentProject?.pageBlocks || {}), [pageName]: nextBlocks },
+      chaiData: { ...(currentProject?.chaiData || {}), [pageName]: nextChaiPage },
+    }, "Detached shared template", { pageName, saveSource: "manual-save" });
+  }
+
   function applyDesignPreset(presetName) {
     const currentData = project?.chaiData?.[activePage] || buildStarterChaiData(project, activePage);
     const nextData = applyChaiThemePreset(currentData, presetName);
@@ -3463,6 +3499,8 @@ export default function VisualBuilderPage() {
                     onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
                     canSaveTemplates={canSaveTemplates}
                     onUpdateGlobalBlock={updateGlobalBlock}
+                    onUpdateSharedTemplate={updateSharedTemplateBlock}
+                    onDetachSharedTemplate={detachSharedTemplateBlock}
                     onUpdatePageSettings={(patch, options = {}) => updateActivePageSettings(patch, { ...options, pageName: activeProjectPageName })}
                     onOpenMediaLibrary={openMediaLibrary}
                     onRefreshAssetLibrary={refreshSharedLibrary}

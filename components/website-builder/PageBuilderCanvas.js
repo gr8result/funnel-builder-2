@@ -5,6 +5,11 @@ import { applyAssetToProps, createStoredAsset, getAssetFromLibrary, normalizeSel
 import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { primaryNavigationSharedComponentId } from "../../lib/website-builder/sharedNavigation";
+import {
+  detachSharedBlockInstance,
+  getSharedTemplateId,
+  resolveSharedBlockInstance,
+} from "../../lib/website-builder/sharedBlockTemplates";
 import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
 import { normalizePageWidthMode, PAGE_WIDTH_CONTAINED } from "../../lib/website-builder/pageLayout";
 import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
@@ -368,7 +373,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -1393,6 +1398,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     const updated = [...latestBlocksRef.current];
     const previousBlock = updated[index];
     if (!previousBlock) return;
+    const sharedTemplateId = getSharedTemplateId(previousBlock);
+    if (sharedTemplateId && typeof onUpdateSharedTemplate === "function") {
+      const resolvedBlock = resolveSharedBlockInstance(previousBlock, project);
+      onUpdateSharedTemplate(sharedTemplateId, {
+        ...resolvedBlock,
+        props: newProps,
+      });
+      return;
+    }
     if (previousBlock.type === BlockTypes.NAV_BAR) {
       const sharedComponentId = project?.globalNavBlock?.sharedComponentId || project?.globalNavBlock?.props?.sharedComponentId || primaryNavigationSharedComponentId(project);
       const nextGlobalBlock = normalizeCanvasBlockUpdate(project?.globalNavBlock || previousBlock, {
@@ -1415,6 +1429,21 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     updated[index] = normalizeCanvasBlockUpdate(previousBlock, { ...previousBlock, props: newProps });
+    commitBlocks(updated, { history: false });
+  };
+
+  const handleDetachSharedTemplate = (index) => {
+    const currentBlock = latestBlocksRef.current[index];
+    const sharedTemplateId = getSharedTemplateId(currentBlock);
+    if (!currentBlock || !sharedTemplateId) return;
+    const detachedBlock = normalizeCanvasBlockUpdate(currentBlock, detachSharedBlockInstance(currentBlock, project));
+    if (typeof onDetachSharedTemplate === "function") {
+      onDetachSharedTemplate(index, detachedBlock);
+      return;
+    }
+    const updated = [...latestBlocksRef.current];
+    updated[index] = detachedBlock;
+    pushHistory(latestBlocksRef.current.slice());
     commitBlocks(updated, { history: false });
   };
 
@@ -3358,6 +3387,60 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     saveNoticeTimerRef.current = setTimeout(() => setSaveNotice(null), 2400);
   };
 
+  const handleOpenAiAssistant = async (assistantName = "Codex") => {
+    if (typeof window === "undefined") return;
+
+    const userPrompt = window.prompt(
+      `What should ${assistantName} help with on this page?`,
+      "Rewrite this hero section for more leads and stronger conversion copy."
+    );
+
+    if (!userPrompt || !String(userPrompt).trim()) return;
+
+    showSavePopup(`${assistantName} is drafting…`, "info");
+
+    try {
+      const res = await fetch("/api/website/assistant-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", content: String(userPrompt).trim() },
+          ],
+          context: {
+            projectName: project?.name || project?.title || "Website project",
+            activePage: activePage || "Home",
+            currentObjective: currentObjective || "",
+            brief: {
+              businessName: project?.brandName || project?.businessName || "",
+              offer: project?.offer || "",
+              targetAudience: project?.targetAudience || "",
+              goal: project?.goal || "",
+              notes: project?.notes || "",
+            },
+          },
+          assistant: assistantName,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `${assistantName} request failed`);
+
+      const reply = String(json?.reply || "").trim();
+      if (!reply) throw new Error(`${assistantName} returned no response`);
+
+      showSavePopup(`${assistantName} suggestion ready`, "success");
+      window.alert(reply);
+    } catch (error) {
+      console.error(`[handleOpenAiAssistant:${assistantName}]`, error);
+      showSavePopup(error?.message || `${assistantName} failed to respond`, "error");
+    }
+  };
+
+  const handleOpenCodex = () => handleOpenAiAssistant("Codex");
+  const handleOpenChat = () => handleOpenAiAssistant("Chat");
+  const handleOpenClaude = () => handleOpenAiAssistant("Claude");
+
   const preserveCurrentSelection = () => {
     if (typeof window === "undefined") return;
     const selection = window.getSelection?.();
@@ -3555,6 +3638,27 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               onClick={() => setShowCanvasGrid((value) => !value)}
             >
               {showCanvasGrid ? "Grid On" : "Grid Off"}
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#22c55e", color: "#dcfce7" }}
+              onClick={handleOpenCodex}
+            >
+              Codex
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#60a5fa", color: "#dbeafe" }}
+              onClick={handleOpenChat}
+            >
+              Chat
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#f59e0b", color: "#fef3c7" }}
+              onClick={handleOpenClaude}
+            >
+              Claude
             </button>
             <button
               type="button"
@@ -3793,7 +3897,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 </div>
               ) : (
                 <>
-                  {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => (
+                  {canvasBlockEntries.map(({ block, index: blockIndex }, idx) => {
+                    const displayBlock = resolveSharedBlockInstance(block, project);
+                    return (
                     <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
                       <DropInsertZone
                         active={dropIndex === blockIndex}
@@ -3809,7 +3915,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         }}
                       />
                       <CanvasBlock
-                        block={block}
+                        block={displayBlock}
                         index={blockIndex}
                         pageCanvasWidth={responsiveCanvasLayoutWidth}
                         pageFullWidth={pageIsFullWidth}
@@ -3845,7 +3951,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         onSaveBlockDefault={canSaveTemplates ? onSaveBlockDefault : null}
                       />
                     </React.Fragment>
-                  ))}
+                    );
+                  })}
                   <DropInsertZone
                     active={dropIndex === blocks.length}
                     onDragOver={(e) => {
@@ -3891,7 +3998,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
             ) : (
               <PropertiesPanel
-                block={selectedGlobalBlock || blocks[selectedIndex] || null}
+                block={selectedGlobalBlock || (blocks[selectedIndex] ? resolveSharedBlockInstance(blocks[selectedIndex], project) : null)}
                 index={selectedGlobalBlock ? -1 : selectedIndex}
                 device={previewMode}
                 onChange={selectedGlobalBlock
@@ -3916,6 +4023,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                 project={project}
                 activePage={activePage}
                 currentObjective={currentObjective}
+                onDetachSharedTemplate={selectedGlobalBlock ? null : handleDetachSharedTemplate}
               />
             )}
           </div>

@@ -38,6 +38,7 @@ import { listItemAltText, resolveListItemImage } from "../../lib/website-builder
 import { resolveGridSectionItemImageUrl } from "../../lib/website-builder/gridSectionImages";
 import { resolveBlockImageUrl } from "../../lib/website-builder/blockImageResolver";
 import { inferCtaLinkType, resolvePreferredCtaHref, resolveRenderedCtaHref } from "../../lib/website-builder/buttonLinks";
+import { resolveSharedBlockInstance } from "../../lib/website-builder/sharedBlockTemplates";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -1197,7 +1198,7 @@ function resolveFeatureCardHeightStyle(props) {
   return {};
 }
 
-export function renderWebsiteBlock(block, { compact = false, device, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "" } = {}) {
+export function renderWebsiteBlock(block, { compact = false, device, assets, editor = false, animationPreview = false, isSelected = false, onChangeBlock, onUploadImage, onUploadLayerImage, onSelectAsset, navigationContext = null, layoutWidth = null, siteId = "", project = null } = {}) {
   // `device` is the 3-way desktop/tablet/mobile value (see lib/website-builder/responsiveValue.js)
   // used to resolve per-device prop overrides (logo size, section height, visibility, ...).
   // Callers that only know the older binary `compact` flag still work: tablet and mobile both
@@ -1205,6 +1206,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
   // it only means per-device *overrides* can't distinguish tablet from mobile for that caller,
   // not that anything breaks.
   if (!isResponsiveDevice(device)) device = compact ? "mobile" : "desktop";
+  block = project ? resolveSharedBlockInstance(block, project) : block;
   const rawProps = block?.props || {};
   // When a global canvas width (layoutWidth) is provided, enforce it as the content container's
   // max-width so all blocks stay within the canvas bounds. Full-bleed backgrounds use
@@ -2360,6 +2362,12 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
     case "cta-button": {
       const ctaVariant = ctaButtonVariantStyles(props, compact);
       const ctaWidthProps = { ...props, fullWidthBackground: props.fullWidthBackground === true };
+      const ctaHref = resolveRenderedCtaHref({
+        linkType: inferCtaLinkType(props.link || props.href || "", props.linkType || ""),
+        href: props.link || props.href || "",
+        pageId: props.pageId || "",
+      }, navigationContext) || "#";
+      const ctaOpenInNewTab = !!props.openInNewTab || !!props.newTab || !!props.targetBlank;
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>
@@ -2423,7 +2431,13 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
             ) : null}
           </div>
           <div style={ctaVariant.actionWrap}>
-            <a href={editor ? "#" : (props.link || "#")} onClick={(event) => { if (editor) event.preventDefault(); }} style={{ ...ctaVariant.action, ...bodyTypography(props) }}>
+            <a
+              href={editor ? "#" : ctaHref}
+              target={!editor && ctaOpenInNewTab ? "_blank" : undefined}
+              rel={!editor && ctaOpenInNewTab ? "noopener noreferrer" : undefined}
+              onClick={(event) => { if (editor) event.preventDefault(); }}
+              style={{ ...ctaVariant.action, ...bodyTypography(props) }}
+            >
               <span
                 data-website-inline-editor="true"
                 data-text-prop="text"
