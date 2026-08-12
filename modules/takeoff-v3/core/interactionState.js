@@ -2,6 +2,7 @@ export const TOOLS = {
   SELECT: "select",
   PAN: "pan",
   SET_SCALE: "set-scale",
+  DETECT_EXTERIOR: "detect-exterior",
   DRAW_EXTERIOR: "draw-exterior",
   DRAW_INTERIOR: "draw-interior",
   EDIT: "edit",

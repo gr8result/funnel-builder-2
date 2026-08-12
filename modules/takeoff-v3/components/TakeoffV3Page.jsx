@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Edit3, Hand, MousePointer2, PenLine, Redo2, RotateCcw, RotateCw, Ruler, Trash2, Undo2, X } from "lucide-react";
+import { Edit3, Hand, MousePointer2, PenLine, Radar, Redo2, RotateCcw, RotateCw, Ruler, Trash2, Undo2, X } from "lucide-react";
 import { createPageRenderer, computeFitScale, getPageDimensions, loadPdfDocument, clampSharpRenderScale } from "../../takeoff-v2/viewer/PdfViewport.js";
 import { usePdfDocument, forgetCachedDocument } from "../../takeoff-v2/viewer/usePdfDocument.js";
 import { savePdfFile, deletePdfFile } from "../../takeoff-v2/persistence/pdfFileStore.js";
@@ -31,6 +31,7 @@ const TOOL_META = [
   { id: TOOLS.SELECT, label: "Select", icon: MousePointer2 },
   { id: TOOLS.PAN, label: "Pan", icon: Hand },
   { id: TOOLS.SET_SCALE, label: "Set Scale", icon: Ruler },
+  { id: TOOLS.DETECT_EXTERIOR, label: "Detect Exterior", icon: Radar },
   { id: TOOLS.DRAW_EXTERIOR, label: "Draw Exterior", icon: PenLine },
   { id: TOOLS.DRAW_INTERIOR, label: "Draw Interior", icon: PenLine },
   { id: TOOLS.EDIT, label: "Edit", icon: Edit3 },
@@ -142,7 +143,7 @@ function Thumb({ planDocument, page, selected, onSelect }) {
   );
 }
 
-function Toolbar({ activeTool, setActiveTool, canUndo, canRedo, onUndo, onRedo, onClear }) {
+function Toolbar({ activeTool, setActiveTool, canUndo, canRedo, onUndo, onRedo, onClear, onDetectExterior }) {
   return (
     <div style={S.topToolbar}>
       {TOOL_META.map(({ id, label, icon: Icon }) => (
@@ -152,7 +153,10 @@ function Toolbar({ activeTool, setActiveTool, canUndo, canRedo, onUndo, onRedo, 
           title={label}
           aria-label={label}
           style={{ ...S.toolButton, ...(activeTool === id ? S.toolButtonActive : {}) }}
-          onClick={() => setActiveTool(id)}
+          onClick={() => {
+            if (id === TOOLS.DETECT_EXTERIOR) onDetectExterior();
+            else setActiveTool(id);
+          }}
           data-testid={`takeoff-v3-tool-${id}`}
         >
           <Icon size={16} />
@@ -167,7 +171,7 @@ function Toolbar({ activeTool, setActiveTool, canUndo, canRedo, onUndo, onRedo, 
   );
 }
 
-function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, activeTool }) {
+function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, activeTool, detectMessage }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
@@ -419,6 +423,10 @@ function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, acti
     return () => node.removeEventListener("wheel", wheel);
   }, [wheel]);
 
+  useEffect(() => {
+    if (view.viewport) console.log("[V3 DETECT] overlay rendered");
+  }, [geometry, view.viewport]);
+
   const confirmExterior = useCallback(() => {
     const validation = validateExteriorLoop(geometry);
     if (!validation.valid) {
@@ -449,6 +457,7 @@ function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, acti
         <button type="button" style={S.viewerButton} onClick={() => setView((prev) => ({ ...prev, zoomScale: 2.5 }))} data-testid="takeoff-v3-zoom-250">250%</button>
         <span style={S.rotationLabel}>{page.rotation} deg</span>
       </div>
+      {detectMessage && <div style={S.detectStatus} data-testid="takeoff-v3-detect-status">{detectMessage}</div>}
       {status && <div style={S.status} data-testid="takeoff-v3-status">{status}</div>}
       <div
         ref={containerRef}
@@ -554,6 +563,7 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
   const [selectedPageId, setSelectedPageIdState] = useState(null);
   const [activeTool, setActiveTool] = useState(TOOLS.SELECT);
   const [history, setHistory] = useState(createHistory({ points: [], walls: [], openings: [] }));
+  const [detectMessage, setDetectMessage] = useState("");
 
   const refresh = useCallback(() => {
     const docs = listDocuments(jobId);
@@ -608,8 +618,28 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
     commitPage({ geometry: next.present, exteriorConfirmed: false, exteriorConfirmedAt: null });
   }, [commitPage]);
 
+  const handleDetectExterior = useCallback(() => {
+    console.log("[V3 DETECT] clicked");
+    const availableLines = selectedPage?.geometry?.walls?.length || 0;
+    console.log(`[V3 DETECT] geometry available: ${availableLines} lines`);
+    setDetectMessage("Detecting exterior...");
+    console.log("[V3 DETECT] detector started");
+
+    window.setTimeout(() => {
+      const result = {
+        ok: false,
+        reason: "No V3 exterior detector is connected yet.",
+        candidate: null,
+      };
+      console.log("[V3 DETECT] detector result:", result);
+      console.log("[V3 DETECT] geometry committed", { committed: false, reason: result.reason });
+      setDetectMessage("Exterior detection failed. Use Draw Exterior.");
+    }, 250);
+  }, [selectedPage?.geometry?.walls?.length]);
+
   return (
     <div style={S.page} data-testid="takeoff-v3-page">
+      <div style={S.v3Badge} data-testid="takeoff-v3-badge">TAKEOFF V3</div>
       <Toolbar
         activeTool={activeTool}
         setActiveTool={setActiveTool}
@@ -618,6 +648,7 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
         onUndo={undo}
         onRedo={redo}
         onClear={clear}
+        onDetectExterior={handleDetectExterior}
       />
       <div style={S.body}>
         <DocumentList
@@ -638,6 +669,7 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
               setHistory={setHistory}
               commitPage={commitPage}
               activeTool={activeTool}
+              detectMessage={detectMessage}
             />
           ) : (
             <div style={S.emptyViewer} data-testid="takeoff-v3-viewer-empty">{error || "Upload or select a plan page."}</div>
@@ -651,6 +683,7 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
 
 const S = {
   page: { height: "100vh", display: "flex", flexDirection: "column", background: "#f4f6f8", color: "#111827", fontFamily: "Inter, system-ui, sans-serif" },
+  v3Badge: { position: "fixed", top: 8, right: 14, zIndex: 20, border: "1px solid #0f766e", borderRadius: 6, background: "#0f766e", color: "#fff", padding: "5px 9px", fontSize: 11, fontWeight: 900, letterSpacing: 0 },
   body: { minHeight: 0, flex: 1, display: "flex" },
   left: { width: 292, borderRight: "1px solid #d7dde5", background: "#fff", padding: 12, overflowY: "auto" },
   center: { minWidth: 0, flex: 1, display: "flex", flexDirection: "column" },
@@ -676,6 +709,7 @@ const S = {
   viewerButton: { border: "1px solid #c9d2df", borderRadius: 6, background: "#fff", color: "#243244", padding: "7px 9px", fontSize: 12, fontWeight: 700, cursor: "pointer" },
   rotationLabel: { marginLeft: "auto", fontSize: 12, fontWeight: 900, color: "#155e75" },
   status: { padding: "5px 8px", color: "#374151", background: "#fff7ed", borderBottom: "1px solid #fed7aa", fontSize: 12 },
+  detectStatus: { padding: "7px 10px", color: "#0f172a", background: "#e0f2fe", borderBottom: "1px solid #7dd3fc", fontSize: 13, fontWeight: 800 },
   viewport: { position: "relative", flex: 1, overflow: "hidden", background: "#dfe5eb" },
   overlay: { position: "absolute", left: 0, top: 0, pointerEvents: "none" },
   confirmButton: { position: "absolute", right: 316, bottom: 16, border: "1px solid #0f766e", borderRadius: 6, background: "#0f766e", color: "#fff", padding: "9px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer" },

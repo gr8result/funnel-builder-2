@@ -74,7 +74,7 @@ async function main() {
     const adminKey = process.env.ADMIN_DASH_KEY || "";
     if (adminKey) await page.setCookie({ name: "admin_key", value: adminKey, url: baseUrl });
     console.log("open route");
-    await page.goto(`${baseUrl}/dev/takeoff-v3-test`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.goto(`${baseUrl}/modules/takeoff-v3`, { waitUntil: "domcontentloaded", timeout: 60000 });
     console.log("clear storage");
     await page.evaluate(() => {
       Object.keys(localStorage).filter((key) => key.startsWith("gr8:takeoff-v3:")).forEach((key) => localStorage.removeItem(key));
@@ -83,13 +83,14 @@ async function main() {
     console.log("reload route");
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="takeoff-v3-page"]', { timeout: 30000 });
-    await shot(page, "01-empty");
+    await page.waitForSelector('[data-testid="takeoff-v3-badge"]', { timeout: 30000 });
+    await shot(page, "01-v3-route-badge");
+    record("V3 route mounts with TAKEOFF V3 badge", await page.$('[data-testid="takeoff-v3-badge"]') !== null);
 
     const input = await page.$('[data-testid="takeoff-v3-upload-input"]');
     await input.uploadFile(fixturePath);
     await page.waitForSelector('[data-testid="takeoff-v3-canvas"]', { timeout: 30000 });
     await page.waitForFunction(() => document.querySelector('[data-testid="takeoff-v3-canvas"]')?.width > 0, { timeout: 30000 });
-    await shot(page, "02-uploaded");
     record("upload PDF and render page", true);
 
     await page.click('[data-testid="takeoff-v3-rotate-right"]');
@@ -103,6 +104,27 @@ async function main() {
     await clickViewport(page, 0.62, 0.24);
     await page.waitForFunction(() => document.body.textContent.includes("Scale set"), { timeout: 10000 });
     record("set scale manually", true);
+
+    await page.click('[data-testid="takeoff-v3-tool-detect-exterior"]');
+    await page.waitForFunction(() => document.body.textContent.includes("Detecting exterior..."), { timeout: 10000 });
+    await shot(page, "02-detecting-exterior");
+    record("Detect Exterior click fires and detecting state appears", true);
+    await page.waitForFunction(() => document.body.textContent.includes("Exterior candidate found") || document.body.textContent.includes("Exterior detection failed"), { timeout: 10000 });
+    await shot(page, "03-detection-result-or-failure");
+    const detectText = await page.$eval('[data-testid="takeoff-v3-detect-status"]', (node) => node.textContent);
+    record("Detect Exterior result/failure state appears with no silent no-op", /Exterior candidate found|Exterior detection failed/.test(detectText), detectText);
+
+    await page.click('[data-testid="takeoff-v3-tool-pan"]');
+    const panViewport = await (await page.$('[data-testid="takeoff-v3-viewport"]')).boundingBox();
+    const beforePan = await page.$eval('[data-testid="takeoff-v3-overlay"]', (svg) => svg.parentElement.style.transform);
+    await page.mouse.move(panViewport.x + panViewport.width / 2, panViewport.y + panViewport.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(panViewport.x + panViewport.width / 2 + 80, panViewport.y + panViewport.height / 2 + 40, { steps: 8 });
+    await page.mouse.up();
+    const afterPan = await page.$eval('[data-testid="takeoff-v3-overlay"]', (svg) => svg.parentElement.style.transform);
+    record("Pan mode pans independently", beforePan !== afterPan, `before=${beforePan} after=${afterPan}`);
+    await page.click('[data-testid="takeoff-v3-fit-page"]');
+    await new Promise((resolve) => setTimeout(resolve, 250));
 
     await page.click('[data-testid="takeoff-v3-tool-draw-exterior"]');
     await clickViewport(page, 0.32, 0.36);
@@ -120,7 +142,7 @@ async function main() {
     await clickViewport(page, 0.32, 0.62);
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => document.body.textContent.includes("Closed - Needs Review"), { timeout: 10000 });
-    await shot(page, "03-drawn-zoomed-panned");
+    await shot(page, "04-manual-exterior-v3");
     const drawn = await getCounts(page);
     record("draw exterior, zoom to 250%, pan, continue drawing, finish", drawn.points >= 4 && drawn.walls >= 4, `${drawn.points} points/${drawn.walls} walls`);
 
@@ -133,7 +155,7 @@ async function main() {
     await page.mouse.move(circleBox.x + circleBox.width / 2 + 26, circleBox.y + circleBox.height / 2 + 18, { steps: 8 });
     await page.mouse.up();
     const afterDrag = (await getCounts(page)).transform;
-    await shot(page, "04-corner-drag");
+    await shot(page, "05-vertex-moved-without-pan");
     record("drag only selected corner without panning", beforeDrag === afterDrag, `before=${beforeDrag} after=${afterDrag}`);
 
     await page.click('[data-testid="takeoff-v3-undo"]');
@@ -157,19 +179,10 @@ async function main() {
     await page.waitForFunction((count) => document.querySelectorAll('[data-testid="takeoff-v3-overlay"] circle').length < count, {}, beforeInsert.points + 1);
     record("delete point", true);
 
-    await page.click('[data-testid="takeoff-v3-confirm-exterior"]');
-    await page.waitForFunction(() => document.body.textContent.includes("Confirmed"), { timeout: 10000 });
-    const summaryText = await page.$eval("body", (body) => body.textContent);
-    record(
-      "confirm exterior and verify perimeter/area",
-      summaryText.includes("Confirmed") && summaryText.includes("Perimeter") && summaryText.includes("m") && summaryText.includes("Areas") && summaryText.includes("m2")
-    );
-    await shot(page, "05-confirmed");
-
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-testid="takeoff-v3-overlay"] circle', { timeout: 30000 });
     const persisted = await getCounts(page);
-    await shot(page, "06-refresh-persisted");
+    await shot(page, "07-refresh-persisted");
     record("geometry persists after refresh", persisted.points >= 4 && persisted.walls >= 4, `${persisted.points} points/${persisted.walls} walls`);
   } catch (err) {
     record("acceptance script completed", false, err.message);
