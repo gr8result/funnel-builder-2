@@ -828,7 +828,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         });
         setWallDetectionStatus("unavailable");
         setWallDetectionMessage(traceableSectionCount > 0
-          ? `Automatic exterior not detected reliably. Detected traceable exterior sections: ${traceableSectionCount}. Use Trace Exterior.`
+          ? `Automatic exterior not detected reliably. Detected traceable geometry sections: ${traceableSectionCount}. Use Trace Exterior.`
           : "Automatic exterior not detected reliably. Use Trace Exterior.");
         setWallDetectionCode("NO_EXTERIOR_BOUNDARY");
         return;

@@ -15,8 +15,11 @@ assert.doesNotMatch(v2Toolbar, /TAKEOFF V3/, "V3 badge is not on V2 toolbar");
 
 assert.match(v3Page, /Detect Exterior/, "Detect Exterior button exists");
 assert.match(v3Page, /\[V3 DETECT\] clicked/, "Detect Exterior click is logged");
-assert.match(v3Page, /Detecting exterior\.\.\./, "Detecting state is visible");
-assert.match(v3Page, /Exterior detection failed\. Use Draw Exterior\./, "Failure state is visible");
+assert.match(v3Page, /Detecting exterior walls\.\.\./, "Detecting state is visible");
+assert.match(v3Page, /Exterior could not be detected reliably\. Use Trace Exterior\./, "Failure state is visible");
+assert.match(v3Page, /detectExteriorFromTraceGraph/, "Detect Exterior is wired to trace graph detector");
+assert.match(v3Page, /createV3TraceDiagnostics/, "Detect Exterior records trace diagnostics");
+assert.doesNotMatch(v3Page, /Detected traceable exterior sections/, "V3 must not call all traceable geometry exterior");
 assert.match(v3Page, /\[V3 DETECT\] detector started/, "Detector start is logged");
 assert.match(v3Page, /\[V3 DETECT\] detector result:/, "Detector result is logged");
 assert.match(v3Page, /\[V3 DETECT\] geometry committed/, "Geometry commit stage is logged");

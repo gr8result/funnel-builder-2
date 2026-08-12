@@ -13,7 +13,7 @@ const detectExteriorBody = tools.match(/const detectExterior = useCallback\([\s\
 assert.match(detectExteriorBody, /commitPage\(\{[\s\S]*exteriorWalls,/, "automatic candidate must enter React page state as page.exteriorWalls");
 assert.match(detectExteriorBody, /reviewStatus:\s*candidateReady \? "candidate-ready" : "candidate-incomplete"/, "candidate state must distinguish ready vs incomplete");
 assert.match(detectExteriorBody, /manualTraceProof[\s\S]*everySegmentTraceable[\s\S]*manualTraceValidation === "PASS"/, "automatic candidate must be hard-rejected unless every segment has manual trace PASS proof");
-assert.match(detectExteriorBody, /Automatic exterior not detected reliably[\s\S]*Detected traceable exterior sections/, "failed trace graph must report traceable section count without rendering a candidate");
+assert.match(detectExteriorBody, /Automatic exterior not detected reliably[\s\S]*Detected traceable geometry sections/, "failed trace graph must report traceable geometry count without rendering a candidate");
 assert.match(detectExteriorBody, /setActiveToolState\("edit-walls"\)/, "Detect Exterior must automatically enter Review Exterior");
 assert.match(detectExteriorBody, /boundary corners,[\s\S]*exterior wall sections[\s\S]*missing sections/, "message must not confuse point count with wall count");
 

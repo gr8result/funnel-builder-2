@@ -106,13 +106,38 @@ async function main() {
     record("set scale manually", true);
 
     await page.click('[data-testid="takeoff-v3-tool-detect-exterior"]');
-    await page.waitForFunction(() => document.body.textContent.includes("Detecting exterior..."), { timeout: 10000 });
+    await page.waitForFunction(() => document.body.textContent.includes("Detecting exterior walls..."), { timeout: 10000 });
     await shot(page, "02-detecting-exterior");
     record("Detect Exterior click fires and detecting state appears", true);
-    await page.waitForFunction(() => document.body.textContent.includes("Exterior candidate found") || document.body.textContent.includes("Exterior detection failed"), { timeout: 10000 });
+    await page.waitForFunction(() => document.body.textContent.includes("Exterior detected") || document.body.textContent.includes("Exterior could not be detected reliably"), { timeout: 10000 });
     await shot(page, "03-detection-result-or-failure");
     const detectText = await page.$eval('[data-testid="takeoff-v3-detect-status"]', (node) => node.textContent);
-    record("Detect Exterior result/failure state appears with no silent no-op", /Exterior candidate found|Exterior detection failed/.test(detectText), detectText);
+    record("Detect Exterior result/failure state appears with no silent no-op", /Exterior detected|Exterior could not be detected reliably/.test(detectText), detectText);
+
+    await page.goto(`${baseUrl}/modules/takeoff-v3?debugTrace=1`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.evaluate(() => {
+      Object.keys(localStorage).filter((key) => key.startsWith("gr8:takeoff-v3:")).forEach((key) => localStorage.removeItem(key));
+      indexedDB.deleteDatabase("gr8-takeoff-v2-files");
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForSelector('[data-testid="takeoff-v3-badge"]', { timeout: 30000 });
+    const debugInput = await page.$('[data-testid="takeoff-v3-upload-input"]');
+    await debugInput.uploadFile(fixturePath);
+    await page.waitForFunction(() => document.querySelector('[data-testid="takeoff-v3-canvas"]')?.width > 0, { timeout: 30000 });
+    await page.click('[data-testid="takeoff-v3-tool-detect-exterior"]');
+    await page.waitForFunction(() => document.body.textContent.includes("Exterior detected") || document.body.textContent.includes("Exterior could not be detected reliably"), { timeout: 10000 });
+    for (const [mode, name] of [
+      ["traceable", "06-debug-all-traceable-segments"],
+      ["components", "07-debug-connected-components"],
+      ["main", "08-debug-selected-main-component"],
+      ["outside", "09-debug-candidate-outside-face-edges"],
+      ["final", "10-debug-final-loop"],
+    ]) {
+      await page.select('[data-testid="takeoff-v3-debug-trace-mode"]', mode);
+      await page.waitForFunction((selectedMode) => document.querySelector(`[data-testid="takeoff-v3-diagnostic-${selectedMode}"]`), {}, mode);
+      await shot(page, name);
+    }
+    record("developer trace diagnostics screenshots captured", true);
 
     await page.click('[data-testid="takeoff-v3-tool-pan"]');
     const panViewport = await (await page.$('[data-testid="takeoff-v3-viewport"]')).boundingBox();

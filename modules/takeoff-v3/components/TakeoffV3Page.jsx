@@ -3,7 +3,9 @@ import { Edit3, Hand, MousePointer2, PenLine, Radar, Redo2, RotateCcw, RotateCw,
 import { createPageRenderer, computeFitScale, getPageDimensions, loadPdfDocument, clampSharpRenderScale } from "../../takeoff-v2/viewer/PdfViewport.js";
 import { usePdfDocument, forgetCachedDocument } from "../../takeoff-v2/viewer/usePdfDocument.js";
 import { savePdfFile, deletePdfFile } from "../../takeoff-v2/persistence/pdfFileStore.js";
-import { createPlanDocument, createPlanPage, generateId, rotateLeft, rotateRight } from "../core/types.js";
+import { usePlanGeometry } from "../../takeoff-v2/hooks/usePlanGeometry.js";
+import { detectExteriorFromTraceGraph } from "../../takeoff-v2/takeoff/traceGraph.js";
+import { createPlanDocument, createPlanPage, createPoint, createWallSegment, generateId, rotateLeft, rotateRight } from "../core/types.js";
 import { documentToScreen, screenToDocument } from "../core/coordinateTransform.js";
 import {
   appendWallPoint,
@@ -22,6 +24,7 @@ import { nearestPoint, nearestWall } from "../core/hitTesting.js";
 import { createPointerSession, TOOLS } from "../core/interactionState.js";
 import { computeCalibration } from "../core/scale.js";
 import { getSnapCandidate } from "../core/snapping.js";
+import { createV3TraceDiagnostics } from "../core/traceDiagnostics.js";
 import { deleteDocument, getSelectedPageId, listDocuments, listPages, saveDocument, savePage, savePages, setSelectedPageId } from "../persistence/planStore.js";
 
 const MIN_ZOOM = 0.2;
@@ -40,6 +43,87 @@ const TOOL_META = [
 
 function fmtM(mm) {
   return `${(mm / 1000).toFixed(2)} m`;
+}
+
+function detectorResultToV3Geometry(result) {
+  const points = (result?.vertices || []).map((vertex) => createPoint({
+    id: vertex.id,
+    x: vertex.x,
+    y: vertex.y,
+  }));
+  const walls = (result?.segments || []).map((segment) => createWallSegment({
+    id: segment.id,
+    startPointId: segment.aId,
+    endPointId: segment.bId,
+    wallType: "exterior",
+    source: "automatic",
+    confirmed: false,
+  }));
+  return { points, walls, openings: [] };
+}
+
+function traceLinePoints(line) {
+  const start = line?.start || line?.a || null;
+  const end = line?.end || line?.b || null;
+  return start && end ? [start, end] : [null, null];
+}
+
+function DiagnosticOverlay({ mode, planGeometryIndex, diagnostics, viewport }) {
+  if (!mode || mode === "off" || !viewport) return null;
+  const lineElements = [];
+  const traceableLines = Array.isArray(planGeometryIndex?.lines) ? planGeometryIndex.lines : [];
+  const selectedComponent = (diagnostics?.components || []).find((component) => component.id === diagnostics?.selectedComponentId);
+  const palette = ["#0284c7", "#16a34a", "#ca8a04", "#dc2626", "#7c3aed", "#0891b2"];
+
+  const pushTraceLine = (line, key, stroke, width = 1.5, dash = "") => {
+    const [start, end] = traceLinePoints(line);
+    if (!start || !end) return;
+    const a = documentToScreen({ viewport }, start);
+    const b = documentToScreen({ viewport }, end);
+    lineElements.push(
+      <line
+        key={key}
+        x1={a.x}
+        y1={a.y}
+        x2={b.x}
+        y2={b.y}
+        stroke={stroke}
+        strokeWidth={width}
+        strokeDasharray={dash}
+        strokeLinecap="round"
+        opacity="0.8"
+        data-testid="takeoff-v3-diagnostic-line"
+      />
+    );
+  };
+
+  if (mode === "traceable") {
+    traceableLines.forEach((line) => pushTraceLine(line, `traceable-${line.id}`, "#0284c7", 1.2));
+  }
+  if (mode === "components") {
+    (diagnostics?.components || []).forEach((component, index) => {
+      component.lines.forEach((line) => pushTraceLine(line, `${component.id}-${line.id}`, palette[index % palette.length], 1.4));
+    });
+  }
+  if (mode === "main") {
+    (selectedComponent?.lines || []).forEach((line) => pushTraceLine(line, `main-${line.id}`, "#16a34a", 2.4));
+  }
+  if (mode === "outside") {
+    (diagnostics?.traceGraphEdges || []).forEach((edge) => {
+      const from = edge.from || edge.start || null;
+      const to = edge.to || edge.end || null;
+      if (from && to) pushTraceLine({ start: from, end: to, id: edge.id }, `edge-${edge.id}`, "#ca8a04", 1.8, "5 4");
+    });
+  }
+  if (mode === "final") {
+    (diagnostics?.finalLoopEdges || []).forEach((edge) => pushTraceLine({ start: edge.from, end: edge.to, id: edge.id }, `final-${edge.id}`, "#dc2626", 3.2));
+  }
+
+  return (
+    <g data-testid={`takeoff-v3-diagnostic-${mode}`}>
+      {lineElements}
+    </g>
+  );
 }
 
 function DocumentList({ jobId, documents, pagesByDocument, selectedPageId, onRefresh, onSelectPage }) {
@@ -171,7 +255,7 @@ function Toolbar({ activeTool, setActiveTool, canUndo, canRedo, onUndo, onRedo, 
   );
 }
 
-function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, activeTool, detectMessage }) {
+function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, activeTool, detectMessage, planGeometryIndex, traceDiagnostics, debugTraceMode, setDebugTraceMode }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
@@ -455,6 +539,21 @@ function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, acti
         <button type="button" style={S.viewerButton} onClick={() => fitTo("fit-page")} data-testid="takeoff-v3-fit-page">Fit Page</button>
         <button type="button" style={S.viewerButton} onClick={() => fitTo("fit-width")} data-testid="takeoff-v3-fit-width">Fit Width</button>
         <button type="button" style={S.viewerButton} onClick={() => setView((prev) => ({ ...prev, zoomScale: 2.5 }))} data-testid="takeoff-v3-zoom-250">250%</button>
+        {setDebugTraceMode && (
+          <select
+            value={debugTraceMode}
+            onChange={(event) => setDebugTraceMode(event.target.value)}
+            style={S.debugSelect}
+            data-testid="takeoff-v3-debug-trace-mode"
+          >
+            <option value="off">Diagnostics off</option>
+            <option value="traceable">Traceable segments</option>
+            <option value="components">Components</option>
+            <option value="main">Main component</option>
+            <option value="outside">Outside-face edges</option>
+            <option value="final">Final loop</option>
+          </select>
+        )}
         <span style={S.rotationLabel}>{page.rotation} deg</span>
       </div>
       {detectMessage && <div style={S.detectStatus} data-testid="takeoff-v3-detect-status">{detectMessage}</div>}
@@ -468,10 +567,24 @@ function PlanViewerV3({ pdfDocument, page, history, setHistory, commitPage, acti
         onPointerCancel={pointerUp}
         data-testid="takeoff-v3-viewport"
       >
-        <div style={{ position: "absolute", left: 0, top: 0, transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoomScale})`, transformOrigin: "0 0" }}>
-          <canvas ref={canvasRef} data-testid="takeoff-v3-canvas" />
+        <div
+          style={{
+            ...S.pageLayer,
+            width: view.viewport?.width || 0,
+            height: view.viewport?.height || 0,
+            transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoomScale})`,
+          }}
+          data-testid="takeoff-v3-page-layer"
+        >
+          <canvas ref={canvasRef} style={S.pdfCanvas} data-testid="takeoff-v3-canvas" />
           {view.viewport && (
             <svg style={S.overlay} width={view.viewport.width} height={view.viewport.height} data-testid="takeoff-v3-overlay">
+              <DiagnosticOverlay
+                mode={debugTraceMode}
+                planGeometryIndex={planGeometryIndex}
+                diagnostics={traceDiagnostics}
+                viewport={view.viewport}
+              />
               {geometry.walls.map((wall) => {
                 const [a, b] = wallPoints(geometry, wall);
                 if (!a || !b) return null;
@@ -564,6 +677,8 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
   const [activeTool, setActiveTool] = useState(TOOLS.SELECT);
   const [history, setHistory] = useState(createHistory({ points: [], walls: [], openings: [] }));
   const [detectMessage, setDetectMessage] = useState("");
+  const [traceDiagnostics, setTraceDiagnostics] = useState(null);
+  const [debugTraceMode, setDebugTraceMode] = useState("off");
 
   const refresh = useCallback(() => {
     const docs = listDocuments(jobId);
@@ -581,9 +696,19 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
   const selectedPage = useMemo(() => Object.values(pagesByDocument).flat().find((page) => page.id === selectedPageId) || null, [pagesByDocument, selectedPageId]);
   const selectedDocument = useMemo(() => documents.find((doc) => doc.id === selectedPage?.documentId) || null, [documents, selectedPage]);
   const { pdfDocument, error } = usePdfDocument(selectedDocument);
+  const { geometry: planGeometryIndex } = usePlanGeometry(pdfDocument, selectedPage?.pageNumber);
 
   useEffect(() => {
-    if (selectedPage) setHistory(createHistory(selectedPage.geometry));
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("debugTrace") === "1") setDebugTraceMode("traceable");
+  }, []);
+
+  useEffect(() => {
+    if (selectedPage) {
+      setHistory(createHistory(selectedPage.geometry));
+      setTraceDiagnostics(selectedPage.exteriorDetectionDiagnostics || null);
+    }
   }, [selectedPage?.id]);
 
   const selectPage = useCallback((documentId, pageId) => {
@@ -615,27 +740,77 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
   const clear = useCallback(() => {
     const next = createHistory({ points: [], walls: [], openings: [] });
     setHistory(next);
-    commitPage({ geometry: next.present, exteriorConfirmed: false, exteriorConfirmedAt: null });
+    setTraceDiagnostics(null);
+    commitPage({ geometry: next.present, exteriorConfirmed: false, exteriorConfirmedAt: null, exteriorDetectionDiagnostics: null });
   }, [commitPage]);
 
   const handleDetectExterior = useCallback(() => {
     console.log("[V3 DETECT] clicked");
-    const availableLines = selectedPage?.geometry?.walls?.length || 0;
+    const availableLines = planGeometryIndex?.lines?.length || 0;
     console.log(`[V3 DETECT] geometry available: ${availableLines} lines`);
-    setDetectMessage("Detecting exterior...");
+    setDetectMessage("Detecting exterior walls...");
     console.log("[V3 DETECT] detector started");
 
     window.setTimeout(() => {
-      const result = {
-        ok: false,
-        reason: "No V3 exterior detector is connected yet.",
-        candidate: null,
-      };
+      const started = performance.now();
+      let result = null;
+      try {
+        if (!planGeometryIndex || availableLines === 0) {
+          result = {
+            useful: false,
+            segments: [],
+            warnings: ["No traceable PDF geometry is available."],
+            message: "No traceable PDF geometry is available.",
+          };
+        } else if ((history.present?.walls || []).some((wall) => wall.source !== "automatic")) {
+          result = {
+            useful: false,
+            segments: [],
+            warnings: ["Existing manual trace was preserved."],
+            message: "Existing manual trace was preserved.",
+          };
+        } else {
+          result = detectExteriorFromTraceGraph({ planGeometryIndex, page: selectedPage });
+        }
+      } catch (error) {
+        result = {
+          useful: false,
+          segments: [],
+          warnings: [error.message],
+          message: error.message,
+        };
+      }
+      const diagnostics = createV3TraceDiagnostics({
+        planGeometryIndex,
+        detectorResult: result,
+        runtimeMs: performance.now() - started,
+      });
+      setTraceDiagnostics(diagnostics);
       console.log("[V3 DETECT] detector result:", result);
-      console.log("[V3 DETECT] geometry committed", { committed: false, reason: result.reason });
-      setDetectMessage("Exterior detection failed. Use Draw Exterior.");
+      console.log("[V3 DETECT] diagnostics:", diagnostics);
+
+      const manualProof = result?.diagnostics?.manualTraceProof || [];
+      const hasUnsupportedEdges = manualProof.some((proof) => proof.manualTraceable !== true);
+      if (result?.useful && result?.isClosed && result?.segments?.length && !hasUnsupportedEdges) {
+        const nextGeometry = detectorResultToV3Geometry(result);
+        const nextHistory = commitHistory(history, nextGeometry);
+        setHistory(nextHistory);
+        commitPage({
+          geometry: nextHistory.present,
+          exteriorConfirmed: false,
+          exteriorConfirmedAt: null,
+          exteriorDetectionDiagnostics: diagnostics,
+        });
+        console.log("[V3 DETECT] geometry committed", { committed: true, walls: nextGeometry.walls.length });
+        setDetectMessage("Exterior detected — review the highlighted perimeter.");
+        return;
+      }
+
+      commitPage({ exteriorDetectionDiagnostics: diagnostics });
+      console.log("[V3 DETECT] geometry committed", { committed: false, reason: result?.message || result?.warnings?.[0] || "no candidate" });
+      setDetectMessage("Exterior could not be detected reliably. Use Trace Exterior.");
     }, 250);
-  }, [selectedPage?.geometry?.walls?.length]);
+  }, [commitPage, history, planGeometryIndex, selectedPage]);
 
   return (
     <div style={S.page} data-testid="takeoff-v3-page">
@@ -670,6 +845,10 @@ export default function TakeoffV3Page({ jobId = "dev-job-1" }) {
               commitPage={commitPage}
               activeTool={activeTool}
               detectMessage={detectMessage}
+              planGeometryIndex={planGeometryIndex}
+              traceDiagnostics={traceDiagnostics}
+              debugTraceMode={debugTraceMode}
+              setDebugTraceMode={debugTraceMode === "off" && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debugTrace") !== "1" ? null : setDebugTraceMode}
             />
           ) : (
             <div style={S.emptyViewer} data-testid="takeoff-v3-viewer-empty">{error || "Upload or select a plan page."}</div>
@@ -707,11 +886,14 @@ const S = {
   viewerWrap: { minHeight: 0, flex: 1, display: "flex", flexDirection: "column" },
   viewerControls: { height: 42, display: "flex", alignItems: "center", gap: 6, padding: "5px 8px", borderBottom: "1px solid #d7dde5", background: "#f8fafc" },
   viewerButton: { border: "1px solid #c9d2df", borderRadius: 6, background: "#fff", color: "#243244", padding: "7px 9px", fontSize: 12, fontWeight: 700, cursor: "pointer" },
+  debugSelect: { border: "1px solid #c9d2df", borderRadius: 6, background: "#fff", color: "#243244", padding: "6px 8px", fontSize: 12, fontWeight: 700 },
   rotationLabel: { marginLeft: "auto", fontSize: 12, fontWeight: 900, color: "#155e75" },
   status: { padding: "5px 8px", color: "#374151", background: "#fff7ed", borderBottom: "1px solid #fed7aa", fontSize: 12 },
   detectStatus: { padding: "7px 10px", color: "#0f172a", background: "#e0f2fe", borderBottom: "1px solid #7dd3fc", fontSize: 13, fontWeight: 800 },
   viewport: { position: "relative", flex: 1, overflow: "hidden", background: "#dfe5eb" },
-  overlay: { position: "absolute", left: 0, top: 0, pointerEvents: "none" },
+  pageLayer: { position: "absolute", left: 0, top: 0, transformOrigin: "0 0", background: "transparent", lineHeight: 0 },
+  pdfCanvas: { display: "block", background: "#fff" },
+  overlay: { position: "absolute", left: 0, top: 0, display: "block", pointerEvents: "none", background: "transparent", overflow: "visible" },
   confirmButton: { position: "absolute", right: 316, bottom: 16, border: "1px solid #0f766e", borderRadius: 6, background: "#0f766e", color: "#fff", padding: "9px 12px", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   mobileSummary: { display: "none" },
   emptyViewer: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: 14 },
