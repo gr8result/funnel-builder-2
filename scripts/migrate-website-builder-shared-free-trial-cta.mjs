@@ -8,12 +8,14 @@ import {
   SHARED_FREE_TRIAL_CTA_NAME,
   buildSharedBlockTemplate,
   getSharedBlockTemplateUsage,
+  resolveCtaOpenInNewTab,
   resolveSharedBlockInstance,
   updateSharedBlockTemplateFromBlock,
 } from "../lib/website-builder/sharedBlockTemplates.js";
 
 const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
 const FREE_TRIAL_URL = "https://app.gr8result.digital/login";
+const CURRENT_SITE_OPEN_IN_NEW_TAB = true;
 const OUT_DIR = path.join(process.cwd(), "tmp", "website-builder-shared-cta-migration");
 
 function htmlToText(value = "") {
@@ -57,13 +59,18 @@ function clone(value) {
 }
 
 function canonicalizeFreeTrialBlock(block = {}) {
+  const sourceProps = block?.props || {};
+  const openInNewTab = ["openInNewTab", "newTab", "targetBlank"].some((key) => Object.prototype.hasOwnProperty.call(sourceProps, key))
+    ? resolveCtaOpenInNewTab(sourceProps)
+    : CURRENT_SITE_OPEN_IN_NEW_TAB;
   const props = {
-    ...(block?.props || {}),
+    ...sourceProps,
     link: FREE_TRIAL_URL,
     href: FREE_TRIAL_URL,
     linkType: "external",
-    openInNewTab: true,
-    newTab: true,
+    openInNewTab,
+    newTab: openInNewTab,
+    targetBlank: openInNewTab,
   };
   return {
     ...block,
@@ -97,7 +104,7 @@ function summarizeBlock(pageName, block, index) {
     description: htmlToText(props.description || props.subheading || props.subheadline || ""),
     text: htmlToText(props.text || props.buttonLabel || props.buttonText || ""),
     link: props.link || props.href || "",
-    openInNewTab: !!props.openInNewTab || !!props.newTab || !!props.targetBlank,
+    openInNewTab: resolveCtaOpenInNewTab(props),
   };
 }
 
@@ -169,7 +176,7 @@ function assertMigration(project, expectedCount) {
   });
   for (const entry of resolved) {
     assertEqual(entry.block.props.link, FREE_TRIAL_URL, `canonical URL on ${entry.pageName}`);
-    assertEqual(entry.block.props.openInNewTab, true, `openInNewTab on ${entry.pageName}`);
+    assertEqual(entry.block.props.openInNewTab, CURRENT_SITE_OPEN_IN_NEW_TAB, `openInNewTab on ${entry.pageName}`);
   }
 
   const first = resolved[0]?.block;

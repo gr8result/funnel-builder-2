@@ -38,7 +38,7 @@ import { listItemAltText, resolveListItemImage } from "../../lib/website-builder
 import { resolveGridSectionItemImageUrl } from "../../lib/website-builder/gridSectionImages";
 import { resolveBlockImageUrl } from "../../lib/website-builder/blockImageResolver";
 import { inferCtaLinkType, resolvePreferredCtaHref, resolveRenderedCtaHref } from "../../lib/website-builder/buttonLinks";
-import { resolveSharedBlockInstance } from "../../lib/website-builder/sharedBlockTemplates";
+import { resolveCtaOpenInNewTab, resolveSharedBlockInstance } from "../../lib/website-builder/sharedBlockTemplates";
 import {
   NavBarBlock,
   clampValue, snapToGrid, shouldSkipToolbarBlur, cleanInlineEditorHtml, htmlToPlainText,
@@ -231,7 +231,10 @@ function resolvePageAwareCta(props = {}, navigationContext = null) {
     cta.linkType || "",
   );
   const linkType = inferCtaLinkType(rawHref, cta.linkType || "");
-  const newTab = !!cta.newTab || !!cta.openInNewTab || !!props.ctaNewTab;
+  const newTab = resolveCtaOpenInNewTab({
+    ...(props.ctaNewTab !== undefined ? { targetBlank: props.ctaNewTab } : {}),
+    ...cta,
+  });
   if (!text) return { text: "", href: "", newTab: false };
   if (linkType === "none") return { text, href: "", newTab: false };
   const href = resolveRenderedCtaHref({
@@ -2368,7 +2371,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         href: props.link || props.href || "",
         pageId: props.pageId || "",
       }, navigationContext) || "#";
-      const ctaOpenInNewTab = !!props.openInNewTab || !!props.newTab || !!props.targetBlank;
+      const ctaOpenInNewTab = resolveCtaOpenInNewTab(props);
       return (
         <ScrollReveal as="section" animationName={props.sectionAnimation || "fade-up"} delay={props.sectionAnimationDelay || 0.06} speed={props.sectionAnimationSpeed} disabled={editor} style={{ ...ctaVariant.section, ...fullWidthStyle(ctaWidthProps, compact, editor), border: "none", borderTop: "none", borderBottom: "none", outline: "none", boxShadow: "none" }}>
           <div style={sectionContentStyle(props, compact)}>

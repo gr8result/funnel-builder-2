@@ -13,7 +13,7 @@ import {
   resolvePreferredCtaHref,
 } from "../../../lib/website-builder/buttonLinks";
 import { BlockTypes, BlockDefinitions } from "../../../lib/website-builder/pageBlockComponents";
-import { getSharedBlockTemplate, getSharedBlockTemplateUsage, getSharedTemplateId } from "../../../lib/website-builder/sharedBlockTemplates";
+import { getSharedBlockTemplate, getSharedBlockTemplateUsage, getSharedTemplateId, resolveCtaOpenInNewTab } from "../../../lib/website-builder/sharedBlockTemplates";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
 import { isBlockVisibleOnDevice } from "../../../lib/website-builder/responsiveValue";
@@ -89,7 +89,7 @@ function normalizeBuilderCta(props = {}, pages = []) {
     linkType,
     pageId: selectedPage?.id || (String(source.pageId || "").trim() || null),
     href: resolvedHref,
-    newTab: !!source.newTab || !!source.openInNewTab,
+    newTab: resolveCtaOpenInNewTab(source),
   };
 }
 
@@ -4907,6 +4907,9 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
             This CTA is shared across {sharedTemplateUsage.length || 1} page{(sharedTemplateUsage.length || 1) === 1 ? "" : "s"}. Changes will update all linked instances.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" style={styles.secondaryBtn} title="The fields below edit this shared CTA template.">
+              Edit Shared CTA
+            </button>
             <button type="button" style={styles.secondaryBtn} onClick={() => onDetachSharedTemplate?.(index)}>
               Detach from shared template
             </button>
@@ -5444,6 +5447,7 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
         {Object.entries(block.props || {}).map(([key, value]) => {
           // Skip internal/layout-only fields and long text fields (shown at top)
           if (["id", "type", "sharedTemplateId", "sharedTemplateName", "sharedTemplateType", "fullWidthBackground", "minHeight", "marginTop", "parallaxStrength", "enableParallax", "contentX", "contentY", "contentWidth", "contentHeight", "verticalAlign", "headlineFontSize", "subheadlineFontSize", "textFontSize", "textSize", "floatingX", "floatingY", "floatingWidth", "floatingHeight", "floatingImage", "floatingAlt", "floatingImageAssetId", "backgroundImage", "backgroundImageAssetId", "backgroundStyle", "backgroundVideoUrl", "videoOverlayColor", "backgroundPosition", "backgroundRepeat", "backgroundSize", "contentBackground", "headlineTextStyle", "headlineOutlineColor", "headlineOutlineWidth", "headlineGradient", "headlineGlowColor", "headlineGlowBlur", "headlineShadowColor", "headlineShadowBlur", "headlineShadowOffsetX", "headlineShadowOffsetY", "sectionAnimation", "sectionAnimationDelay", "sectionAnimationSpeed", "textAnimation", "textAnimationDelay", "textAnimationSpeed", "subheadlineAnimation", "subheadlineAnimationDelay", "subheadlineAnimationSpeed", "contentOverlayAnimation", "contentOverlayAnimationDelay", "contentOverlayAnimationSpeed", "imageOverlayAnimation", "imageOverlayAnimationDelay", "imageOverlayAnimationSpeed", "ctaAnimation", "ctaAnimationDelay", "ctaAnimationSpeed", "extraCounterOverlays", "extraTextOverlays", "floatingImages", "heroStatItems", "heroHtmlEmbed", "heroCounter", "heroInlineCounter", "orbitCards", "baseLayoutWidth", "projectId", "spacingScale", "headlineAlignment", "heroVariant", "headlineFontFamily", "headlineFontWeight", "headlineLineHeight", "fontFamily", "fontWeight", "splitColorPreset", "headlineBlock", "bodyBlock", "faqBlock", "items", "logo", "assetId", "overlayImageAssetId", "overlayImage"].includes(key)) return null;
+          if (block.type === BlockTypes.CTA_BUTTON && ["newTab", "targetBlank"].includes(key)) return null;
           if (block.type === BlockTypes.PARALLAX && ["cta", "ctaText", "ctaLink", "buttonText", "buttonLink", "link", "href"].includes(key)) return null;
           if (isLongTextField(key)) return null;
           // Never render raw arrays or objects — they're managed by their dedicated panel sections

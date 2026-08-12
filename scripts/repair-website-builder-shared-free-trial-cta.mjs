@@ -12,6 +12,7 @@ import {
   buildSharedBlockTemplate,
   getSharedBlockTemplateUsage,
   normalizeSharedBlockTemplateProject,
+  resolveCtaOpenInNewTab,
   resolveSharedBlockInstance,
 } from "../lib/website-builder/sharedBlockTemplates.js";
 
@@ -19,9 +20,101 @@ const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
 const USER_ID = "35ab846e-0764-498b-b1f8-7d2cf27d85a5";
 const EXPECTED_TEXT = "Click Here To Start Your 14 Day Free Trial";
 const EXPECTED_URL = "https://app.gr8result.digital/login";
+const CURRENT_SITE_OPEN_IN_NEW_TAB = true;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function htmlToText(value = "") {
+  return String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function blockIntentText(block = {}) {
+  const props = block?.props || {};
+  return [
+    props.eyebrow,
+    props.title,
+    props.headline,
+    props.description,
+    props.subheading,
+    props.subheadline,
+    props.text,
+    props.buttonLabel,
+    props.buttonText,
+    props.ctaText,
+    props.ctaLabel,
+    props.link,
+    props.href,
+    props.ctaLink,
+    props.ctaHref,
+    props.buttonLink,
+  ].map(htmlToText).join(" ").toLowerCase();
+}
+
+function isFreeTrialCta(block = {}) {
+  if (String(block?.type || "") !== "cta-button") return false;
+  const sharedTemplateId = String(block.sharedTemplateId || block.props?.sharedTemplateId || "").trim();
+  if (sharedTemplateId === SHARED_FREE_TRIAL_CTA_ID) return true;
+  const text = blockIntentText(block);
+  if (!text) return false;
+  const hasExpectedHeading = text.includes("ready to see what your business could become");
+  const hasExpectedLabel = text.includes("click here to start your 14 day free trial")
+    || text.includes("click here to start your 14-day free trial");
+  const hasExpectedUrl = text.includes(EXPECTED_URL.toLowerCase());
+  const hasTrialIntent = text.includes("14 day free trial") || text.includes("14-day free trial");
+  const excludesOtherIntent = !text.includes("book a demo") && !text.includes("contact us") && !text.includes("talk to us");
+  return excludesOtherIntent && (hasExpectedHeading || hasExpectedLabel || hasExpectedUrl || hasTrialIntent);
+}
+
+function linkedInstanceFrom(block = {}) {
+  return {
+    id: block?.id || "shared-free-trial-cta",
+    type: "cta-button",
+    sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
+    props: {
+      sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
+      sharedTemplateName: SHARED_FREE_TRIAL_CTA_NAME,
+      sharedTemplateType: "shared",
+    },
+  };
+}
+
+function summarizeBlock(pageName, block, index) {
+  const props = block?.props || {};
+  return {
+    pageName,
+    index,
+    id: block?.id || "",
+    type: block?.type || "",
+    title: htmlToText(props.title || props.headline || ""),
+    text: htmlToText(props.text || props.buttonLabel || props.buttonText || props.ctaText || props.ctaLabel || ""),
+    link: props.link || props.href || props.ctaLink || props.ctaHref || props.buttonLink || "",
+    sharedTemplateId: String(block?.sharedTemplateId || props.sharedTemplateId || "").trim(),
+    openInNewTab: resolveCtaOpenInNewTab(props),
+  };
+}
+
+function collectMatchingCtas(project = {}) {
+  const matches = [];
+  for (const [pageName, blocks] of Object.entries(project.pageBlocks || {})) {
+    (Array.isArray(blocks) ? blocks : []).forEach((block, index) => {
+      if (isFreeTrialCta(block)) matches.push({ pageName, index, block: clone(block), summary: summarizeBlock(pageName, block, index) });
+    });
+  }
+  return matches;
+}
+
+function resolveCurrentOpenInNewTab(sourceTemplate = null, matches = []) {
+  const templateProps = sourceTemplate?.blockData?.props || {};
+  if (Object.prototype.hasOwnProperty.call(templateProps, "openInNewTab")) return resolveCtaOpenInNewTab(templateProps);
+  if (Object.prototype.hasOwnProperty.call(templateProps, "newTab")) return resolveCtaOpenInNewTab(templateProps);
+  if (Object.prototype.hasOwnProperty.call(templateProps, "targetBlank")) return resolveCtaOpenInNewTab(templateProps);
+  const firstWithExplicitValue = matches.find((entry) => {
+    const props = entry.block?.props || {};
+    return ["openInNewTab", "newTab", "targetBlank"].some((key) => Object.prototype.hasOwnProperty.call(props, key));
+  });
+  return firstWithExplicitValue ? resolveCtaOpenInNewTab(firstWithExplicitValue.block.props) : CURRENT_SITE_OPEN_IN_NEW_TAB;
 }
 
 async function invokeApi(handler, { method, body = {}, headers = {} }) {
@@ -50,7 +143,8 @@ function resolveSlug(project = {}) {
   return slugifyWebsiteValue(project.slug || project.publication?.slug || project.name || PROJECT_ID);
 }
 
-function normalizeFreeTrialTemplate(sourceTemplate = null) {
+function normalizeFreeTrialTemplate(sourceTemplate = null, matches = []) {
+  const openInNewTab = resolveCurrentOpenInNewTab(sourceTemplate, matches);
   const sourceBlockData = sourceTemplate?.blockData && typeof sourceTemplate.blockData === "object"
     ? clone(sourceTemplate.blockData)
     : { id: "canonical-free-trial-cta", type: "cta-button", props: {} };
@@ -64,8 +158,9 @@ function normalizeFreeTrialTemplate(sourceTemplate = null) {
     link: EXPECTED_URL,
     href: EXPECTED_URL,
     linkType: "external",
-    openInNewTab: true,
-    newTab: true,
+    openInNewTab,
+    newTab: openInNewTab,
+    targetBlank: openInNewTab,
   };
 
   return buildSharedBlockTemplate({
@@ -79,28 +174,9 @@ function normalizeFreeTrialTemplate(sourceTemplate = null) {
 
 function hydrateLinkedCtaFallback(block, template) {
   if (!block || typeof block !== "object") return block;
-  const sharedTemplateId = String(block.sharedTemplateId || block.props?.sharedTemplateId || "").trim();
-  if (sharedTemplateId !== SHARED_FREE_TRIAL_CTA_ID) return block;
-  if (String(block.type || "") !== "cta-button") return block;
+  if (!isFreeTrialCta(block)) return block;
 
-  return {
-    ...block,
-    sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
-    props: {
-      ...(template.blockData?.props || {}),
-      ...(block.props || {}),
-      text: EXPECTED_TEXT,
-      buttonLabel: EXPECTED_TEXT,
-      link: EXPECTED_URL,
-      href: EXPECTED_URL,
-      linkType: "external",
-      openInNewTab: true,
-      newTab: true,
-      sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
-      sharedTemplateName: SHARED_FREE_TRIAL_CTA_NAME,
-      sharedTemplateType: "shared",
-    },
-  };
+  return linkedInstanceFrom(block);
 }
 
 function hydrateLinkedCtaFallbacks(project, template) {
@@ -121,16 +197,17 @@ function hydrateLinkedCtaFallbacks(project, template) {
   return { ...project, pageBlocks, chaiData };
 }
 
-function assertSharedCta(project, source) {
+function assertSharedCta(project, source, expectedCount = null) {
   const usage = getSharedBlockTemplateUsage(project, SHARED_FREE_TRIAL_CTA_ID);
   assert.ok(usage.length > 0, `${source}: expected linked shared CTA usage`);
+  if (expectedCount !== null) assert.equal(usage.length, expectedCount, `${source}: linked shared CTA count`);
 
   for (const entry of usage) {
     const rawBlock = project.pageBlocks?.[entry.pageName]?.[entry.index];
     const resolved = resolveSharedBlockInstance(rawBlock, project);
     assert.equal(resolved?.props?.text, EXPECTED_TEXT, `${source} ${entry.pageName}: CTA text`);
     assert.equal(resolved?.props?.link, EXPECTED_URL, `${source} ${entry.pageName}: CTA URL`);
-    assert.equal(resolved?.props?.openInNewTab, true, `${source} ${entry.pageName}: openInNewTab`);
+    assert.equal(resolved?.props?.openInNewTab, CURRENT_SITE_OPEN_IN_NEW_TAB, `${source} ${entry.pageName}: openInNewTab`);
   }
 
   return usage;
@@ -171,8 +248,10 @@ async function main() {
   const slug = resolveSlug(draft);
   const published = await getPublishedWebsiteBySlug(slug);
   const publishedTemplate = published?.site_data?.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || null;
+  const matches = collectMatchingCtas(draft);
   const canonicalTemplate = normalizeFreeTrialTemplate(
-    draft.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || publishedTemplate
+    draft.sharedBlockTemplates?.[SHARED_FREE_TRIAL_CTA_ID] || publishedTemplate,
+    matches
   );
   const repaired = normalizeSharedBlockTemplateProject({
     ...hydrateLinkedCtaFallbacks(draft, canonicalTemplate),
@@ -182,15 +261,15 @@ async function main() {
     },
   });
 
-  const draftUsage = assertSharedCta(repaired, "repaired draft payload");
+  const draftUsage = assertSharedCta(repaired, "repaired draft payload", matches.length || null);
   const saved = await saveSplitWebsiteProject(USER_ID, repaired, {
     backupSource: "shared-cta-regression-repair",
     backupReason: "Restore missing canonical shared free trial CTA template",
   });
-  const savedUsage = assertSharedCta(saved, "saved draft readback");
+  const savedUsage = assertSharedCta(saved, "saved draft readback", matches.length || null);
   const publishPayload = await publishProject(admin, saved, slug);
   const live = await getPublishedWebsiteBySlug(slug);
-  const liveUsage = assertSharedCta(live?.site_data || {}, "published/live readback");
+  const liveUsage = assertSharedCta(live?.site_data || {}, "published/live readback", matches.length || null);
 
   console.log(JSON.stringify({
     ok: true,
@@ -199,6 +278,9 @@ async function main() {
     sharedTemplateId: SHARED_FREE_TRIAL_CTA_ID,
     expectedText: EXPECTED_TEXT,
     expectedUrl: EXPECTED_URL,
+    expectedOpenInNewTab: CURRENT_SITE_OPEN_IN_NEW_TAB,
+    matchedCount: matches.length,
+    matches: matches.map((entry) => entry.summary),
     draftUsageCount: draftUsage.length,
     savedUsageCount: savedUsage.length,
     liveUsageCount: liveUsage.length,

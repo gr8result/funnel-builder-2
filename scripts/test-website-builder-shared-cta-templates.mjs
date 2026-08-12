@@ -9,6 +9,7 @@ import {
   detachSharedBlockInstance,
   getSharedBlockTemplateUsage,
   normalizeSharedBlockTemplateProject,
+  resolveCtaOpenInNewTab,
   resolveSharedBlockInstance,
   resolveSharedBlockInstances,
   updateSharedBlockTemplateFromBlock,
@@ -35,6 +36,9 @@ const canonicalBlock = {
   },
 };
 
+const canonicalUrl = canonicalBlock.props.link;
+const canonicalLabel = canonicalBlock.props.text;
+
 function linkedBlock(id) {
   return {
     id,
@@ -45,6 +49,20 @@ function linkedBlock(id) {
       sharedTemplateName: SHARED_FREE_TRIAL_CTA_NAME,
     },
   };
+}
+
+function renderHomeHtml(sourceProject) {
+  return generateWebsitePageHtml(sourceProject, sourceProject.pages[0], sourceProject.pageBlocks.Home);
+}
+
+function assertTargetState(html, expected, label) {
+  if (expected) {
+    assert.match(html, /target="_blank"/, `${label}: target should be present`);
+    assert.match(html, /rel="noopener noreferrer"/, `${label}: rel should be present`);
+    return;
+  }
+  assert.doesNotMatch(html, /target="_blank"/, `${label}: target should be absent`);
+  assert.doesNotMatch(html, /rel="noopener noreferrer"/, `${label}: rel should be absent`);
 }
 
 let project = {
@@ -90,10 +108,11 @@ assert.deepEqual(resolvedBefore.map((block) => block.props.text), [
   "Click Here To Start Your 14 Day Free Trial",
 ]);
 assert.deepEqual(resolvedBefore.map((block) => block.props.link), [
-  "https://app.gr8result.digital/login",
-  "https://app.gr8result.digital/login",
+  canonicalUrl,
+  canonicalUrl,
 ]);
 assert.deepEqual(resolvedBefore.map((block) => block.props.openInNewTab), [true, true]);
+assert.equal(resolveCtaOpenInNewTab({ openInNewTab: false, newTab: true, targetBlank: true }), false, "openInNewTab false must win over stale true aliases");
 
 project = updateSharedBlockTemplateFromBlock(project, SHARED_FREE_TRIAL_CTA_ID, {
   ...resolveSharedBlockInstance(project.pageBlocks.Home[0], project),
@@ -109,24 +128,27 @@ const resolvedAfterEdit = resolveSharedBlockInstances([project.pageBlocks.Home[0
 assert.deepEqual(resolvedAfterEdit.map((block) => block.props.text), ["TEMP SHARED CTA LABEL", "TEMP SHARED CTA LABEL"], "shared label edit should update all linked pages");
 assert.deepEqual(resolvedAfterEdit.map((block) => block.props.link), ["https://app.gr8result.digital/login?source=test", "https://app.gr8result.digital/login?source=test"], "shared URL edit should update all linked pages");
 assert.deepEqual(resolvedAfterEdit.map((block) => block.props.openInNewTab), [false, false], "open-in-new-tab OFF should update all linked pages");
+assert.deepEqual(resolvedAfterEdit.map((block) => block.props.newTab), [false, false], "newTab alias should not stay locked true");
+assertTargetState(renderHomeHtml(project), false, "open-in-new-tab OFF static HTML");
 
 project = updateSharedBlockTemplateFromBlock(project, SHARED_FREE_TRIAL_CTA_ID, {
   ...resolvedAfterEdit[0],
   props: {
     ...resolvedAfterEdit[0].props,
-    text: canonicalBlock.props.text,
-    link: canonicalBlock.props.link,
+    text: canonicalLabel,
+    link: canonicalUrl,
     openInNewTab: true,
   },
 });
 
 const resolvedRestored = resolveSharedBlockInstances([project.pageBlocks.Home[0], project.pageBlocks.Pricing[0]], project);
-assert.deepEqual(resolvedRestored.map((block) => block.props.text), [canonicalBlock.props.text, canonicalBlock.props.text], "shared label restore should update all linked pages");
+assert.deepEqual(resolvedRestored.map((block) => block.props.text), [canonicalLabel, canonicalLabel], "shared label restore should update all linked pages");
 assert.deepEqual(resolvedRestored.map((block) => block.props.openInNewTab), [true, true], "open-in-new-tab ON should update all linked pages");
+assertTargetState(renderHomeHtml(project), true, "open-in-new-tab ON static HTML");
 
 const publishedHtml = generateWebsitePageHtml(project, project.pages[0], project.pageBlocks.Home);
 assert.match(publishedHtml, /href="https:\/\/app\.gr8result\.digital\/login"/, "published HTML should render canonical href");
-assert.match(publishedHtml, /target="_blank" rel="noopener noreferrer"/, "published HTML should render target/rel");
+assertTargetState(publishedHtml, true, "published HTML");
 
 const legacyAliasProject = normalizeSharedBlockTemplateProject({
   ...project,
@@ -152,6 +174,40 @@ assert.equal(resolvedLegacyAlias.props.text, canonicalBlock.props.text, "legacy 
 assert.equal(resolvedLegacyAlias.props.link, canonicalBlock.props.link, "legacy href should hydrate to canonical link");
 assert.equal(resolvedLegacyAlias.props.openInNewTab, true, "legacy targetBlank should hydrate to canonical openInNewTab");
 
+const futureOffProject = normalizeSharedBlockTemplateProject({
+  ...project,
+  sharedBlockTemplates: {
+    futureOffCta: buildSharedBlockTemplate({
+      id: "futureOffCta",
+      name: "Future OFF CTA",
+      blockType: "cta-button",
+      blockData: {
+        id: "future-off-cta",
+        type: "cta-button",
+        props: {
+          text: "Stay in this tab",
+          link: "/contact-us",
+          openInNewTab: false,
+          newTab: true,
+        },
+      },
+    }),
+  },
+  pageBlocks: { Home: [{ id: "future-off-instance", type: "cta-button", sharedTemplateId: "futureOffCta", props: { sharedTemplateId: "futureOffCta" } }] },
+});
+assert.equal(resolveSharedBlockInstance(futureOffProject.pageBlocks.Home[0], futureOffProject).props.openInNewTab, false, "future template can choose OFF");
+assertTargetState(renderHomeHtml(futureOffProject), false, "future OFF template HTML");
+
+const futureOnProject = updateSharedBlockTemplateFromBlock(futureOffProject, "futureOffCta", {
+  ...resolveSharedBlockInstance(futureOffProject.pageBlocks.Home[0], futureOffProject),
+  props: {
+    ...resolveSharedBlockInstance(futureOffProject.pageBlocks.Home[0], futureOffProject).props,
+    openInNewTab: true,
+  },
+});
+assert.equal(resolveSharedBlockInstance(futureOnProject.pageBlocks.Home[0], futureOnProject).props.openInNewTab, true, "future template can choose ON");
+assertTargetState(renderHomeHtml(futureOnProject), true, "future ON template HTML");
+
 const missingTemplateHtml = generateWebsitePageHtml(
   { ...project, sharedBlockTemplates: {} },
   project.pages[0],
@@ -172,7 +228,8 @@ assert.match(
 
 const detached = detachSharedBlockInstance(project.pageBlocks.Home[0], project);
 assert.equal(detached.sharedTemplateId, undefined);
-assert.equal(detached.props.text, canonicalBlock.props.text);
+assert.equal(detached.props.text, canonicalLabel);
+assert.equal(detached.props.openInNewTab, true);
 
 project = updateSharedBlockTemplateFromBlock(project, SHARED_FREE_TRIAL_CTA_ID, {
   ...resolvedRestored[0],
@@ -184,6 +241,7 @@ project = updateSharedBlockTemplateFromBlock(project, SHARED_FREE_TRIAL_CTA_ID, 
 });
 
 assert.equal(detached.props.text, canonicalBlock.props.text, "detached instance should stop receiving shared updates");
+assert.equal(detached.props.openInNewTab, true, "detached instance should keep copied new-tab state");
 assert.equal(project.pageBlocks["Contact Us"][0].props.text, "Talk to us", "ordinary copied CTA should remain independent");
 
 console.log("website builder shared CTA template regression checks passed");
