@@ -38,14 +38,6 @@ function formatNumber(value) {
   return Number.isFinite(Number(value)) ? number.format(Number(value)) : "--";
 }
 
-function formatAge(value) {
-  const ms = Number(value);
-  if (!Number.isFinite(ms)) return "--";
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60 * 1000) return `${Math.round(ms / 1000)}s`;
-  return `${Math.round(ms / 60000)}m`;
-}
-
 async function browserHashPassword(password) {
   const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
   const digest = await window.crypto.subtle.digest("SHA-256", bytes);
@@ -100,6 +92,13 @@ export default function MarketOpportunities({ passwordHash }) {
   }, [unlocked, settings, offset]);
 
   const strongCount = useMemo(() => results.filter((row) => row.qualified || row.tradingScore >= settings.minimumScore).length, [results, settings.minimumScore]);
+  const scanTitle = scanSummary?.status === "failed"
+    ? "MARKET CHECK FAILED"
+    : scanSummary?.status === "partial"
+      ? "MARKET CHECK PARTIAL"
+      : scanSummary
+        ? "MARKET CHECK COMPLETE"
+        : "MARKET CHECK NOT RUN";
 
   async function unlock(event) {
     event.preventDefault();
@@ -172,9 +171,9 @@ export default function MarketOpportunities({ passwordHash }) {
       notifyNewSetups((data.topFive || []).filter((item) => item.status === "READY"));
       setUpdatedAt(data.updatedAt || new Date().toISOString());
       window.localStorage.setItem(LATEST_SCAN_KEY, JSON.stringify({ scanSummary: data.scanSummary || null, topFive: data.topFive || [], results: data.results || [], topOpportunity: data.topOpportunity || null, bestCurrentTrade: data.bestCurrentTrade || null, bestTradePlan: data.bestTradePlan || null, bestSetupToWatch: data.bestSetupToWatch || null, opportunityRanking: data.opportunityRanking || null, updatedAt: data.updatedAt || new Date().toISOString() }));
-      setScanMessage(data.scanSummary?.status === "complete"
+      setScanMessage(data.scanSummary?.message || (data.scanSummary?.status === "complete"
         ? `Market scan complete. Broad screened: ${data.scanSummary.broadScreenRequested}. Detailed analyses: ${data.scanSummary.requested}. READY trades: ${data.scanSummary.ready}.`
-        : "Freedom could not analyse enough of the configured market reliably.");
+        : "Freedom could not analyse enough of the configured market reliably."));
     } catch (err) {
       setScanMessage(err.message || "Market scanner failed.");
     } finally {
@@ -238,6 +237,20 @@ export default function MarketOpportunities({ passwordHash }) {
 
       {scanMessage ? <section className="notice">{scanMessage}</section> : null}
       {scanSummary ? (
+        <>
+        <section className={`marketCheck ${scanSummary.status || "complete"}`}>
+          <h2>{scanTitle}</h2>
+          <p>{scanSummary.message}</p>
+          <div className="marketCheckGrid">
+            <article><span>Universe</span><strong>{scanSummary.universe ?? "--"}</strong></article>
+            <article><span>Companies checked</span><strong>{scanSummary.companiesChecked ?? scanSummary.requested ?? scanSummary.requestedCount ?? "--"}</strong></article>
+            <article><span>Successfully analysed</span><strong>{scanSummary.successfullyAnalysed ?? scanSummary.analysedCount ?? "--"}</strong></article>
+            <article><span>Data unavailable</span><strong>{scanSummary.unavailable ?? scanSummary.dataUnavailable ?? "--"}</strong></article>
+            <article><span>Qualified now</span><strong>{scanSummary.qualified ?? 0}</strong></article>
+            <article><span>Developing</span><strong>{scanSummary.developing ?? 0}</strong></article>
+            <article><span>No setup</span><strong>{scanSummary.noSetup ?? scanSummary.notQualified ?? 0}</strong></article>
+          </div>
+        </section>
         <section className="scanSummary">
           <article><span>US supported universe</span><strong>{scanSummary.coverage?.US?.totalSupported ?? "--"}</strong></article>
           <article><span>US pre-screen eligible</span><strong>{scanSummary.coverage?.US?.eligibleForScreening ?? "--"}</strong></article>
@@ -245,30 +258,41 @@ export default function MarketOpportunities({ passwordHash }) {
           <article><span>ASX supported universe</span><strong>{scanSummary.coverage?.ASX?.totalSupported ?? "--"}</strong></article>
           <article><span>ASX pre-screen eligible</span><strong>{scanSummary.coverage?.ASX?.eligibleForScreening ?? "--"}</strong></article>
           <article><span>ASX detailed analyses</span><strong>{scanSummary.coverage?.ASX?.detailedAnalyses ?? "--"}</strong></article>
-          <article><span>Total analysed</span><strong>{scanSummary.successfullyAnalysed}</strong></article>
-          <article><span>Unavailable</span><strong>{scanSummary.unavailable ?? scanSummary.dataUnavailable}</strong></article>
-          <article><span>Qualified</span><strong>{scanSummary.qualified ?? 0}</strong></article>
-          <article><span>READY</span><strong>{scanSummary.ready ?? scanSummary.qualified}</strong></article>
-          <article><span>WAIT</span><strong>{scanSummary.wait ?? 0}</strong></article>
-          <article><span>Developing</span><strong>{scanSummary.developing ?? 0}</strong></article>
           <article><span>Elapsed</span><strong>{Number.isFinite(Number(scanSummary.elapsedMs)) ? `${Math.round(Number(scanSummary.elapsedMs) / 1000)}s` : "--"}</strong></article>
           <article><span>Provider calls</span><strong>{scanSummary.providerDiagnostics?.totalProviderCalls ?? scanSummary.providerDiagnostics?.historyProviderCalls ?? "--"}</strong></article>
+          <article><span>Retries</span><strong>{scanSummary.providerDiagnostics?.historyRetries ?? 0}</strong></article>
           <article><span>Cache hits</span><strong>{scanSummary.providerDiagnostics?.totalCacheHits ?? scanSummary.providerDiagnostics?.historyCacheHits ?? "--"}</strong></article>
           <article><span>Data source</span><strong>{scanSummary.dataSource || "--"}</strong></article>
-          <article><span>Oldest market-data age</span><strong>{formatAge(scanSummary.oldestMarketDataAgeMs)}</strong></article>
-          <article><span>Newest market-data age</span><strong>{formatAge(scanSummary.newestMarketDataAgeMs)}</strong></article>
           <article><span>Last provider refresh</span><strong>{scanSummary.lastProviderRefresh ? new Date(scanSummary.lastProviderRefresh).toLocaleTimeString() : "--"}</strong></article>
         </section>
+        </>
       ) : null}
       {scanSummary?.coverage?.ASX?.unavailableReason ? <section className="notice"><strong>ASX SCANNING UNAVAILABLE</strong> {scanSummary.coverage.ASX.unavailableReason}</section> : null}
       {scanSummary?.broadScreenLimitReason ? <section className="notice">{scanSummary.broadScreenLimitReason}</section> : null}
+      {scanSummary?.providerBudgetExhaustedReason ? <section className="notice"><strong>PROVIDER LIMIT REACHED</strong> {scanSummary.providerBudgetExhaustedReason}</section> : null}
 
-      {scanSummary && topOpportunity ? (
+      {scanSummary?.status === "failed" ? (
         <section className="bestOpportunity">
-          <span>{bestTradePlan?.cmcOrder ? "TODAY'S BEST TRADE" : "TODAY'S BEST OPPORTUNITY"}</span>
+          <span>BEST OPPORTUNITIES</span>
+          <h2>No reliable shortlist produced.</h2>
+          <p>Freedom could not obtain enough market data to rank short-term opportunities. This is a data failure, not a zero-opportunity market.</p>
+        </section>
+      ) : scanSummary && topOpportunity ? (
+        <section className="bestOpportunity">
+          <span>BEST OPPORTUNITIES</span>
           <h2>#{1} {topOpportunity.companyName} ({topOpportunity.symbol})</h2>
-          <strong>{bestTradePlan?.cmcOrder ? "PREPARE THIS TRADE" : `${topOpportunity.status}. Do not buy yet.`}</strong>
+          <strong>Status: {topOpportunity.status === "READY" ? "READY" : topOpportunity.status?.includes("WAIT") ? "WAIT" : "DEVELOPING"}</strong>
+          <div className="plainPlan">
+            <article><span>Current price</span><strong>{formatCurrency(topOpportunity.currentPrice)}</strong></article>
+            <article><span>Preferred entry</span><strong>{formatCurrency(topOpportunity.recommendedEntry)}</strong></article>
+            <article><span>Safety exit</span><strong>{formatCurrency(topOpportunity.safetyExit)}</strong></article>
+            <article><span>Take some profit</span><strong>{formatCurrency(topOpportunity.takeSomeProfit)}</strong></article>
+            <article><span>Final exit</span><strong>{formatCurrency(topOpportunity.finalExit)}</strong></article>
+            <article><span>Reward/risk</span><strong>{Number.isFinite(Number(topOpportunity.riskReward)) ? `${formatNumber(topOpportunity.riskReward)}:1` : "--"}</strong></article>
+          </div>
+          <h3>Why</h3>
           <p>{topOpportunity.reason}</p>
+          {(topOpportunity.plainEnglish || []).length ? <ul className="plainWhy">{topOpportunity.plainEnglish.slice(0, 4).map((line) => <li key={line}>{line}</li>)}</ul> : null}
           {bestTradePlan?.cmcOrder ? (
             <div className="tradePlan">
               <article><span>Buy only at</span><strong>{formatCurrency(bestTradePlan.buyTrigger)}</strong></article>
@@ -297,9 +321,9 @@ export default function MarketOpportunities({ passwordHash }) {
         </section>
       ) : scanSummary ? (
         <section className="bestOpportunity">
-          <span>NO TRADE READY</span>
-          <h2>Wait.</h2>
-          <p>Freedom successfully analysed {scanSummary.successfullyAnalysed} companies. None currently meets all of your trading rules.</p>
+          <span>BEST OPPORTUNITIES</span>
+          <h2>No qualified or developing setup in this scan.</h2>
+          <p>Freedom successfully analysed {scanSummary.successfullyAnalysed} companies and found no short-term setup that meets the configured rules.</p>
         </section>
       ) : null}
 
@@ -344,7 +368,7 @@ export default function MarketOpportunities({ passwordHash }) {
                   <td>{row.reason}</td>
                 </tr>
               ))}
-              {!results.length ? <tr><td colSpan="22">NO TRADE READY. Run or restore a completed scan.</td></tr> : null}
+              {!results.length ? <tr><td colSpan="22">{scanSummary?.status === "failed" ? "SCAN FAILED. Market data was unavailable, so Freedom did not rank opportunities." : "Run or restore a completed scan."}</td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -370,6 +394,7 @@ function Gate({ password, setPassword, error, onSubmit }) {
 
 function Styles() {
   return <style jsx global>{`
+    .marketCheck{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px;margin:18px auto 0;max-width:1760px;padding:20px}.marketCheck.partial{border-color:rgba(250,204,21,.34)}.marketCheck.failed{border-color:rgba(255,92,92,.4)}.marketCheck p{margin-top:6px}.marketCheckGrid{display:grid;gap:12px;grid-template-columns:repeat(7,minmax(0,1fr));margin-top:16px}.marketCheck article,.plainPlan article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.marketCheck span,.plainPlan span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.marketCheck strong{display:block;font-size:28px;margin-top:8px}.plainPlan{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.plainPlan strong{color:#f5f7f8!important;font-size:18px}.plainWhy{color:#d8e5ea;margin:10px 0 0;padding-left:20px}.plainWhy li{margin:4px 0}.bestOpportunity h3{font-size:16px;margin-top:14px}@media(max-width:1100px){.marketCheckGrid,.plainPlan{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:720px){.marketCheckGrid,.plainPlan{grid-template-columns:1fr}}
     .boot,.page,.gateScreen{background:#05080b;color:#f5f7f8;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.hero,.settings,.panel,.notice,.scanSummary,.bestOpportunity,footer{margin:0 auto;max-width:1760px}.platformBanner{align-items:center;background:#0057d9;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;gap:14px;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{align-items:center;color:#fff;display:inline-flex;font-size:clamp(24px,2.6vw,34px);font-weight:950;gap:10px}.platformBanner span{color:#fff;font-size:clamp(14px,1.4vw,18px);font-weight:900}.platformBanner .platformIcon{color:#ff9900;font-size:.9em;line-height:1}.hero,.panel,.settings,.notice,.scanSummary,.bestOpportunity,.gate{background:rgba(8,14,17,.92);border:1px solid rgba(29,155,255,.16);border-radius:8px}.hero{display:flex;gap:28px;justify-content:space-between;padding:28px}.platformSwitch{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.platformSwitch a,.hero a{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#d8e5ea;font-weight:950;padding:9px 13px;text-decoration:none}.platformSwitch a.active{background:#0057d9;border-color:#0057d9;color:#fff}h1,h2,h3,p{margin:0}h1{font-size:52px}p,footer{color:#aebdc4}.heroStats{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr));min-width:360px}.heroStats article,.settings label,.scanSummary article,.tradePlan article{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px}.heroStats span,label,.scanSummary span,.bestOpportunity span,.tradePlan span{color:#aebdc4;font-size:12px;font-weight:900;text-transform:uppercase}.heroStats strong,.scanSummary strong{display:block;font-size:28px;margin-top:8px}.bestOpportunity{margin-top:18px;padding:20px}.bestOpportunity h2{font-size:30px;margin-top:8px}.bestOpportunity strong{color:#b8f4e6;display:block;font-size:18px;margin-top:8px}.bestOpportunity p{margin-top:8px}.bestOpportunity div{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.bestOpportunity .tradePlan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}.tradePlan strong{font-size:18px}.cmcBox{background:rgba(255,153,0,.08);border:1px solid rgba(255,153,0,.24);border-radius:8px;display:grid;gap:10px;margin-top:14px;padding:14px}.cmcBox button{justify-self:start}.handoffMessage{color:#b8f4e6!important;font-weight:900}.bestOpportunity small{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:999px;color:#d8e5ea;font-weight:850;padding:7px 10px}.bestOpportunity a{background:#ff9900;border-radius:7px;color:#061014;display:inline-flex;font-weight:950;margin-top:14px;min-height:38px;align-items:center;padding:0 12px;text-decoration:none}.settings,.scanSummary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px;padding:16px}label{display:grid;gap:8px}input,select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;min-height:42px;padding:8px 10px}button{background:#ff9900;border:0;border-radius:7px;color:#061014;cursor:pointer;font-weight:950;min-height:42px;padding:0 14px}.notice{color:#b8f4e6;font-weight:850;margin-top:18px;padding:14px 16px}.panel{margin-top:18px;overflow:hidden}.panelHeader{align-items:center;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;padding:18px 20px}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:2300px;width:100%}th,td{border-bottom:1px solid rgba(179,199,207,.09);padding:13px 14px;text-align:left;vertical-align:top}th{background:rgba(255,255,255,.04);color:#aebdc4;font-size:12px;text-transform:uppercase;white-space:nowrap}td{color:#e7eef2;font-size:13px}td a{color:#d7efff;display:block;font-weight:950;text-decoration:none}td small{color:#aebdc4;display:block;font-size:11px;font-weight:900;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px;white-space:nowrap}.status.ready{background:rgba(35,209,139,.16);border:1px solid rgba(35,209,139,.38);color:#b8f4e6}.status.waitforreversal,.status.reversaldeveloping{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.waitforpullback,.status.overextended{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.skip,.status.dataunavailable{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}footer{font-size:13px;margin-top:20px}.gate{max-width:460px;padding:34px;width:100%}.gate span{color:#5ebdff}.gate input{height:48px;margin-top:24px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:18px;width:100%}@media(max-width:1100px){.hero{flex-direction:column}.settings,.scanSummary,.bestOpportunity .tradePlan{grid-template-columns:repeat(2,minmax(0,1fr))}.heroStats{min-width:0}}@media(max-width:720px){.page{padding:88px 16px 16px}.settings,.heroStats,.scanSummary,.bestOpportunity .tradePlan{grid-template-columns:1fr}h1{font-size:40px}}
   `}</style>;
 }

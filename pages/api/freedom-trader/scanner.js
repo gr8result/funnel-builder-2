@@ -53,6 +53,39 @@ function countStatus(rows, status) {
   return rows.filter((row) => row.status === status).length;
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function msUntilNextMinute() {
+  const now = new Date();
+  return 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 250;
+}
+
+function buildUnavailableReason(row) {
+  return row.reason || row.error || row.dataStatus?.status || row.marketData?.issues?.join(" ") || "Market data unavailable.";
+}
+
+function scanReliabilityStatus(requestedCount, analysedCount, unavailableCount) {
+  if (!requestedCount || analysedCount < Math.max(5, Math.ceil(requestedCount * 0.35))) return "failed";
+  if (unavailableCount > Math.max(10, Math.floor(requestedCount * 0.25))) return "partial";
+  if (unavailableCount > 0) return "partial";
+  return "complete";
+}
+
+function scanReliabilityMessage(status, checkedCount, analysedCount, unavailableCount) {
+  if (status === "failed") return "Freedom could not obtain enough market data to produce reliable recommendations.";
+  if (status === "partial") return `Checked ${checkedCount} companies. ${analysedCount} analysed successfully. ${unavailableCount} unavailable. Results are incomplete.`;
+  return `Checked ${checkedCount} companies. ${analysedCount} analysed successfully. ${unavailableCount} unavailable.`;
+}
+
+function scanMessageFor(discovery, status, checkedCount, analysedCount, unavailableCount) {
+  if (discovery.broadScreen?.budgetExhausted) {
+    return `Freedom paused the market check because the market-data provider limit was reached. Checked ${checkedCount} companies before pausing. Results are incomplete.`;
+  }
+  return scanReliabilityMessage(status, checkedCount, analysedCount, unavailableCount);
+}
+
 async function runCompleteScan(settings, account = null) {
   resetMarketDataMetrics();
   const startedAt = new Date().toISOString();
@@ -75,6 +108,11 @@ async function runCompleteScan(settings, account = null) {
     })
     : discovery.detailedCandidates;
   const requestedSymbols = detailedUniverse.map((item) => item.symbol);
+  let detailedProviderWaitMs = 0;
+  if (requestedSymbols.length && discovery.broadScreen.providerCalls > 0) {
+    detailedProviderWaitMs = msUntilNextMinute();
+    await wait(detailedProviderWaitMs);
+  }
   const snapshots = await getMarketSnapshotBatch(requestedSymbols, { range: "1y", interval: "1day" });
   const analysis = [];
   const previousCapitalFlow = await loadLocalCapitalFlowHistory();
@@ -141,6 +179,8 @@ async function runCompleteScan(settings, account = null) {
   const readyCount = countStatus(rows, "READY");
   const waitCount = rows.filter((row) => ["WAIT FOR REVERSAL", "WAIT FOR PULLBACK"].includes(row.status)).length;
   const developingCount = countStatus(rows, "REVERSAL DEVELOPING");
+  const noSetupCount = Math.max(0, discovery.broadScreen.requested - unavailableRows.length - readyCount - waitCount - developingCount);
+  const reliabilityStatus = scanReliabilityStatus(requestedSymbols.length, analysedRows.length, unavailableRows.length);
   discovery.coverage.US.detailedAnalyses = detailedUniverse.filter((row) => row.market === "US").length;
   discovery.coverage.US.successfullyScreened = analysis.filter((row) => row.country === "United States" && row.dataStatus?.readyForScore).length;
   discovery.coverage.ASX.detailedAnalyses = detailedUniverse.filter((row) => row.market === "ASX").length;
@@ -148,13 +188,16 @@ async function runCompleteScan(settings, account = null) {
 
   const marketDataMetrics = getMarketDataMetrics();
   const scanSummary = {
-    status: unavailableRows.length ? "partial" : "complete",
+    status: reliabilityStatus,
+    message: scanMessageFor(discovery, reliabilityStatus, discovery.broadScreen.requested, analysedRows.length, unavailableRows.length),
     tradableUniverse: discovery.supportedUniverseCount,
     configuredUniverseCount: discovery.supportedUniverseCount,
     universe: discovery.supportedUniverseCount,
+    universeDefinition: "Twelve Data reference symbols filtered to active common stocks on supported exchanges/currencies.",
     candidateUniverse: discovery.candidateUniverseCount,
     requested: requestedSymbols.length,
     requestedCount: requestedSymbols.length,
+    companiesChecked: discovery.broadScreen.requested,
     broadScreenRequested: discovery.broadScreen.requested,
     broadScreenEligible: discovery.broadScreen.eligible,
     successfullyAnalysed: analysedRows.length,
@@ -167,6 +210,7 @@ async function runCompleteScan(settings, account = null) {
     ready: readyCount,
     wait: waitCount,
     developing: developingCount,
+    noSetup: noSetupCount,
     capitalFlow: flowSummary,
     notQualified: Math.max(0, analysedRows.length - readyCount),
     totalsBalanced: requestedSymbols.length === analysedRows.length + unavailableRows.length,
@@ -175,6 +219,11 @@ async function runCompleteScan(settings, account = null) {
       broadQuoteProviderCalls: discovery.broadScreen.providerCalls,
       broadQuoteProviderWaits: discovery.broadScreen.providerWaits,
       broadQuoteProviderWaitMs: discovery.broadScreen.providerWaitMs,
+      referenceProviderWaits: discovery.broadScreen.referenceProviderWaits,
+      referenceProviderWaitMs: discovery.broadScreen.referenceProviderWaitMs,
+      detailedProviderWaits: detailedProviderWaitMs ? 1 : 0,
+      detailedProviderWaitMs,
+      broadQuoteRetries: discovery.broadScreen.retries,
       totalProviderCalls: marketDataMetrics.historyProviderCalls + discovery.broadScreen.providerCalls,
       totalCacheHits: marketDataMetrics.historyCacheHits,
     },
@@ -184,15 +233,18 @@ async function runCompleteScan(settings, account = null) {
     newestMarketDataAgeMs: discovery.newestMarketDataAgeMs,
     lastProviderRefresh: discovery.lastProviderRefresh,
     broadScreenLimitReason: discovery.broadScreen.limitReason,
+    providerBudgetExhausted: discovery.broadScreen.budgetExhausted,
+    providerBudgetExhaustedReason: discovery.broadScreen.budgetExhaustedReason,
+    pausedAtOffset: discovery.broadScreen.pausedAtOffset,
     scanStartedAt: startedAt,
     scanCompletedAt: completedAt,
     elapsedMs: Date.parse(completedAt) - Date.parse(startedAt),
-    unavailableSymbols: unavailableRows.map((row) => ({ symbol: row.symbol, reason: row.reason })),
+    unavailableSymbols: unavailableRows.map((row) => ({ symbol: row.symbol, reason: buildUnavailableReason(row) })),
     marketScopeMessage: `Provider-supported universe: ${discovery.coverage.US.totalSupported} US common stocks and ${discovery.coverage.ASX.totalSupported} Australian common stocks.`,
   };
 
-  const safeBestCurrentTrade = unavailableRows.length ? null : ranking.bestCurrentTrade;
-  const safeBestTradePlan = unavailableRows.length ? null : ranking.bestTradePlan;
+  const safeBestCurrentTrade = reliabilityStatus === "failed" || unavailableRows.length ? null : ranking.bestCurrentTrade;
+  const safeBestTradePlan = reliabilityStatus === "failed" || unavailableRows.length ? null : ranking.bestTradePlan;
   const safeTopOpportunity = safeBestCurrentTrade || ranking.bestSetupToWatch || ranking.topFive[0] || null;
   const payload = {
     ok: true,
@@ -203,12 +255,13 @@ async function runCompleteScan(settings, account = null) {
     supportedSymbols: requestedSymbols,
     scanSummary,
     marketCoverage: discovery.coverage,
-    results: rows.filter((row) => row.status === "READY"),
-    topFive: ranking.topFive,
-    topOpportunity: safeTopOpportunity,
+    reliable: reliabilityStatus !== "failed",
+    results: reliabilityStatus === "failed" ? [] : rows.filter((row) => row.status === "READY"),
+    topFive: reliabilityStatus === "failed" ? [] : ranking.topFive,
+    topOpportunity: reliabilityStatus === "failed" ? null : safeTopOpportunity,
     bestCurrentTrade: safeBestCurrentTrade,
     bestTradePlan: safeBestTradePlan,
-    bestSetupToWatch: ranking.bestSetupToWatch || ranking.topFive[0] || null,
+    bestSetupToWatch: reliabilityStatus === "failed" ? null : ranking.bestSetupToWatch || ranking.topFive[0] || null,
     opportunityRanking: {
       topSymbol: safeTopOpportunity?.symbol || null,
       bestCurrentTradeSymbol: safeBestCurrentTrade?.symbol || null,

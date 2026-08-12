@@ -230,7 +230,8 @@ test("pullback still falling waits for reversal", () => {
 
 test("large rally after reversal becomes overextended", () => {
   const ranking = rankMarketOpportunities([row("LATE", { currentPrice: 111, entry: 100, overextended: true, riseFromPullbackLow: 18 })], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
-  assert.equal(ranking.topFive[0].status, "OVEREXTENDED");
+  assert.equal(ranking.ranked[0].status, "OVEREXTENDED");
+  assert.equal(ranking.topFive.length, 0);
   assert.equal(ranking.bestCurrentTrade, null);
 });
 
@@ -263,5 +264,6 @@ test("ABNB-style rally after pullback is not READY from momentum alone", () => {
   });
   const ranking = rankMarketOpportunities([abnbLike], settings, { now: "2026-08-09T00:00:00Z", includeDevelopingTopFive: true });
   assert.equal(ranking.bestCurrentTrade, null);
-  assert.equal(ranking.topFive[0].status, "OVEREXTENDED");
+  assert.equal(ranking.ranked[0].status, "OVEREXTENDED");
+  assert.equal(ranking.topFive.length, 0);
 });

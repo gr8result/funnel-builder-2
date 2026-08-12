@@ -4,6 +4,7 @@ import test from "node:test";
 process.env.TWELVEDATA_API_KEY = "unit-test-key";
 process.env.FREEDOM_BROAD_SCREEN_LIMIT = "4";
 process.env.FREEDOM_DETAILED_ANALYSIS_LIMIT = "2";
+process.env.FREEDOM_DISABLE_PROVIDER_WAITS = "true";
 
 function response(payload, status = 200) {
   return {
