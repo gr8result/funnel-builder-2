@@ -15,6 +15,7 @@ import {
 import { assembleWebsiteForRendering } from "../../../lib/website-builder/supabaseSiteStorage";
 import { getPublishedWebsiteByDomain } from "../../../lib/website-builder/publicationStore";
 import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
+import { resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   diffWebsitePersistence,
   buildWebsiteProjectVersion,
@@ -310,13 +311,24 @@ async function handler(req, res) {
   const customDomainTarget = getCustomDomainTargetHost();
   const publishedAt = new Date().toISOString();
   const publishedVersionMeta = buildWebsiteProjectVersion(project, publishedAt);
+  const globalPageWidthMode = resolveGlobalPageWidthMode(project);
+  const pages = Array.isArray(project.pages)
+    ? project.pages.map((page) => ({
+        ...page,
+        pageWidthMode: resolvePageWidthMode(project, page?.slug || page?.name || page?.title || page?.id || ""),
+      }))
+    : [];
   const finalSiteData = {
     ...project,
+    pages,
     slug,
     customDomain: requestedCustomDomain || project.customDomain || project.custom_domain || "",
     custom_domain: requestedCustomDomain || project.custom_domain || project.customDomain || "",
     primaryDomain,
     primary_domain: primaryDomain,
+    pageWidthMode: globalPageWidthMode,
+    globalPageWidthMode,
+    containedWidth: project.containedWidth,
     projectVersion: savedVersionMeta.projectVersion,
     savedAt: savedVersionMeta.savedAt,
     contentHash: savedVersionMeta.contentHash,

@@ -53,7 +53,9 @@ const publishedPageBlockFrame = (background, pageFullWidth, layoutWidth) => ({
   ...seamlessPublishedBlockFrame(background),
   width: pageFullWidth ? "100%" : `min(100%, ${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px)`,
   maxWidth: pageFullWidth ? "none" : `${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px`,
-  margin: "0 auto",
+  margin: 0,
+  marginLeft: pageFullWidth ? 0 : "auto",
+  marginRight: pageFullWidth ? 0 : "auto",
 });
 const resolvePublishedBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
 const resolvePublishedStackBackground = (blocks, index, fallback = "") => (

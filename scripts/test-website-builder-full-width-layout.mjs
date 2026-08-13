@@ -9,16 +9,28 @@ import {
 } from "../lib/website-builder/pageLayout.js";
 import { createPublicationPayload } from "../lib/website-builder/publishConfig.js";
 
+const allPublishedRoutes = [
+  ["Home", "home"],
+  ["About Us", "about-us"],
+  ["Modules", "modules"],
+  ["Contact Us", "contact-us"],
+  ["Email", "email"],
+  ["Pricing", "pricing"],
+  ["CRM", "crm"],
+  ["SMS", "sms"],
+  ["Funnels", "funnels"],
+  ["Website Builder", "website-builder"],
+  ["Social Media", "social-media"],
+  ["Project Hub", "project-hub"],
+];
+
 const staleContainedPagesProject = {
   id: "full-width-regression",
   name: "Full Width Regression",
   pageWidthMode: PAGE_WIDTH_FULL,
   globalPageWidthMode: PAGE_WIDTH_FULL,
-  pages: [
-    { id: "home", name: "Home", slug: "home", pageWidthMode: PAGE_WIDTH_CONTAINED },
-    { id: "pricing", name: "Pricing", slug: "pricing", pageWidthMode: PAGE_WIDTH_CONTAINED },
-    { id: "email", name: "Email", slug: "email", pageWidthMode: PAGE_WIDTH_CONTAINED },
-  ],
+  containedWidth: 1500,
+  pages: allPublishedRoutes.map(([name, slug]) => ({ id: slug, name, slug, pageWidthMode: PAGE_WIDTH_CONTAINED })),
   pageBlocks: {
     Home: [],
     Pricing: [{ id: "pricing-table", type: "pricing-table", props: { baseLayoutWidth: 1800 } }],
@@ -27,10 +39,11 @@ const staleContainedPagesProject = {
 };
 
 const normalizedFull = normalizePageLayoutProject(staleContainedPagesProject);
-assert.equal(resolvePageWidthMode(normalizedFull, "Home"), PAGE_WIDTH_FULL, "global full width should apply to Home");
-assert.equal(resolvePageWidthMode(normalizedFull, "Pricing"), PAGE_WIDTH_FULL, "global full width should apply to Pricing despite stale contained page value");
-assert.equal(resolvePageWidthMode(normalizedFull, "Email"), PAGE_WIDTH_FULL, "global full width should apply to Email despite stale contained page value");
-assert.deepEqual(normalizedFull.pages.map((page) => page.pageWidthMode), [undefined, undefined, undefined], "normalization should not persist inherited global width to page records");
+for (const [pageName, slug] of allPublishedRoutes) {
+  assert.equal(resolvePageWidthMode(normalizedFull, pageName), PAGE_WIDTH_FULL, `global full width should apply to ${pageName}`);
+  assert.equal(resolvePageWidthMode(normalizedFull, slug), PAGE_WIDTH_FULL, `global full width should apply to /${slug}`);
+}
+assert.deepEqual(normalizedFull.pages.map((page) => page.pageWidthMode), allPublishedRoutes.map(() => undefined), "normalization should not persist inherited global width to page records");
 
 const containedProject = normalizePageLayoutProject({
   ...staleContainedPagesProject,
@@ -38,11 +51,17 @@ const containedProject = normalizePageLayoutProject({
   globalPageWidthMode: PAGE_WIDTH_CONTAINED,
 });
 assert.equal(resolvePageWidthMode(containedProject, "Pricing"), PAGE_WIDTH_CONTAINED, "contained mode should still resolve as contained");
+assert.equal(containedProject.containedWidth, 1500, "containedWidth should be retained for deliberate contained mode");
 
 const publication = createPublicationPayload(normalizedFull);
 assert.equal(publication.site_data.pageWidthMode, PAGE_WIDTH_FULL, "publish payload must retain canonical global pageWidthMode");
 assert.equal(publication.site_data.globalPageWidthMode, PAGE_WIDTH_FULL, "publish payload must retain canonical globalPageWidthMode");
-assert.equal(publication.site_data.pages.find((page) => page.name === "Email")?.pageWidthMode, undefined, "publish payload must leave inherited page width off page records");
+assert.equal(publication.site_data.containedWidth, 1500, "full mode may retain containedWidth data but must not resolve to contained");
+assert.equal(publication.site_data.pages.find((page) => page.name === "Email")?.pageWidthMode, PAGE_WIDTH_FULL, "publish payload must carry resolved page width for live compatibility");
+for (const [pageName, slug] of allPublishedRoutes) {
+  assert.equal(publication.site_data.pages.find((page) => page.slug === slug)?.pageWidthMode, PAGE_WIDTH_FULL, `published page record should carry full width for ${pageName}`);
+  assert.equal(resolvePageWidthMode(publication.site_data, slug), PAGE_WIDTH_FULL, `published live data should resolve full width for ${pageName}`);
+}
 
 const explicitContainedOverride = normalizePageLayoutProject({
   ...staleContainedPagesProject,
@@ -75,6 +94,19 @@ assert.match(previewSource, /layoutWidth:\s*pageFullWidth && previewViewport ===
 const liveSource = fs.readFileSync("pages/sites/[...slug].js", "utf8");
 assert.match(liveSource, /resolvePageWidthMode\(project,\s*activePage\?\.slug/, "live renderer must resolve page width through project/global helper");
 assert.match(liveSource, /maxWidth:\s*pageFullWidth \? "none"/, "live page frame must remove max-width in full-width mode");
+assert.match(liveSource, /marginLeft:\s*pageFullWidth \? 0 : "auto"/, "live page frame must not center full-width blocks with auto left margin");
+assert.match(liveSource, /marginRight:\s*pageFullWidth \? 0 : "auto"/, "live page frame must not center full-width blocks with auto right margin");
 assert.match(liveSource, /layoutWidth:\s*pageFullWidth && !compact \? null : layoutWidth/, "live renderer must not pass contained layoutWidth on desktop full-width pages");
+
+const publishSource = fs.readFileSync("lib/website-builder/publishConfig.js", "utf8");
+assert.match(publishSource, /const globalPageWidthMode = resolveGlobalPageWidthMode\(project\);/, "publish payload must use the canonical global width resolver");
+assert.match(publishSource, /pageWidthMode:\s*resolvePageWidthMode\(project,/, "published page records must carry the resolved page width mode");
+assert.match(publishSource, /pageWidthMode:\s*globalPageWidthMode,\s*[\r\n]\s*globalPageWidthMode,/, "publish payload must serialize one canonical global width mode");
+
+const publishApiSource = fs.readFileSync("pages/api/websites/publish.js", "utf8");
+assert.match(publishApiSource, /const globalPageWidthMode = resolveGlobalPageWidthMode\(project\);/, "publish API must use the canonical global width resolver");
+assert.match(publishApiSource, /pageWidthMode:\s*resolvePageWidthMode\(project,/, "publish API page records must carry resolved page width for deployed live compatibility");
+assert.match(publishApiSource, /pages,\s*[\r\n]\s*slug,/, "publish API must write resolved page records into final site_data");
+assert.match(publishApiSource, /pageWidthMode:\s*globalPageWidthMode,\s*[\r\n]\s*globalPageWidthMode,/, "publish API must serialize one canonical global width mode");
 
 console.log("website builder full-width layout regression checks passed");
