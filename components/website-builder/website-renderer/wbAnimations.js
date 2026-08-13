@@ -580,9 +580,13 @@ function resolvePublishedNavHref(link, navigationContext) {
     const anchorKey = slugifyText(href.slice(1));
     if (canonicalRoutes[anchorKey]) {
       const pageMapEntry = readPageMap(anchorKey);
+      const canonicalRouteKey = slugifyText(canonicalRoutes[anchorKey].replace(/^\//, "")) || "home";
+      const canonicalPageMapEntry = readPageMap(canonicalRouteKey);
       const hasPageMapEntry = !!pageMapEntry;
-      const pageMapHref = pageMapEntry && typeof pageMapEntry === "object" ? pageMapEntry.href : pageMapEntry;
-      if (navigationContext?.strictPublishedPages && pageMapSize && !hasPageMapEntry) {
+      const hasCanonicalPageMapEntry = !!canonicalPageMapEntry;
+      const resolvedEntry = pageMapEntry || canonicalPageMapEntry;
+      const pageMapHref = resolvedEntry && typeof resolvedEntry === "object" ? resolvedEntry.href : resolvedEntry;
+      if (navigationContext?.strictPublishedPages && pageMapSize && !hasPageMapEntry && !hasCanonicalPageMapEntry) {
         return "#__missing-page";
       }
       return pageMapHref || canonicalRoutes[anchorKey];

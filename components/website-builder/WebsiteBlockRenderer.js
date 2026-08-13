@@ -801,7 +801,7 @@ function TemplateMiniSiteCard({ item, compact = false, phone = false }) {
   );
 }
 
-function TemplateShowcaseBlock({ props, compact = false, editor = false, navigationContext = null }) {
+function TemplateShowcaseBlock({ props, compact = false, device = compact ? "mobile" : "desktop", editor = false, navigationContext = null }) {
   const items = normalizeTemplateShowcaseItems(props.templates);
   const loopItems = [...items, ...items, ...items];
   const bg = props.backgroundColor || "#080b14";
@@ -816,6 +816,8 @@ function TemplateShowcaseBlock({ props, compact = false, editor = false, navigat
     { value: "5 min", label: "AI first draft" },
     { value: "100%", label: "editable sections" },
   ];
+  const primaryCta = resolvePageAwareCta(props, navigationContext);
+  const secondaryCta = resolveSecondaryHeroCta(props, navigationContext);
   const mainItem = items[0] || {};
   const phoneItem = items[2] || mainItem;
 
@@ -5170,7 +5172,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       return <HoverCardsBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} navigationContext={navigationContext} />;
 
     case "template-showcase":
-      return <TemplateShowcaseBlock props={props} compact={compact} editor={editor} navigationContext={navigationContext} />;
+      return <TemplateShowcaseBlock props={props} compact={compact} device={device} editor={editor} navigationContext={navigationContext} />;
 
     case "framer-animated-portfolio":
       return <FramerPortfolioBlock props={props} compact={compact} editor={editor} onUploadImage={onUploadImage} onChangeBlock={onChangeBlock} />;
