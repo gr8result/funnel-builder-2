@@ -170,8 +170,18 @@ function calculateAtr(candles, period = 14) {
   return round(average(trueRanges));
 }
 
-function getMeta(symbol) {
-  return TRADER_WATCHLIST.find((item) => item.symbol === symbol) || { symbol, companyName: symbol, exchange: "NASDAQ", sector: "Trading Watchlist" };
+function getMeta(symbol, metaOverride = null) {
+  if (metaOverride?.symbol || metaOverride?.companyName) {
+    return {
+      symbol: String(metaOverride.symbol || symbol).toUpperCase(),
+      companyName: metaOverride.companyName || metaOverride.name || String(metaOverride.symbol || symbol).toUpperCase(),
+      exchange: metaOverride.exchange || "NASDAQ",
+      sector: metaOverride.sector || metaOverride.assetType || metaOverride.market || "Trading Watchlist",
+      currency: metaOverride.currency || (String(metaOverride.symbol || symbol).endsWith(".AX") ? "AUD" : "USD"),
+    };
+  }
+  const found = TRADER_WATCHLIST.find((item) => item.symbol === symbol);
+  return found ? { ...found, currency: found.currency || "USD" } : { symbol, companyName: symbol, exchange: "NASDAQ", sector: "Trading Watchlist", currency: "USD" };
 }
 
 function snapshotToInputs(symbol, snapshot) {
@@ -242,8 +252,8 @@ function historyDiagnostics(history, cleanCandles, requestedRange = "1y", reques
   };
 }
 
-export function buildAnalysis({ symbol, quote, candles, marketData = null, history = null }) {
-  const meta = getMeta(symbol);
+export function buildAnalysis({ symbol, quote, candles, marketData = null, history = null, metaOverride = null }) {
+  const meta = getMeta(symbol, metaOverride);
   const clean = candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])));
   const dataStatus = historyDiagnostics(history, clean);
   const closes = clean.map((candle) => candle.close);
@@ -361,7 +371,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   const signalResult = calculateTraderSignal({
     ticker: symbol,
     exchange: meta.exchange,
-    currency: "USD",
+    currency: meta.currency || "USD",
     timeframe: "1D",
     currentPrice,
     plannedEntry,
@@ -395,6 +405,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     companyName: meta.companyName,
     exchange: meta.exchange,
     sector: meta.sector,
+    currency: meta.currency || "USD",
     currentPrice,
     previousClose,
     change,
@@ -439,7 +450,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   };
 }
 
-export async function analyseSymbol(symbol, snapshotInput = null) {
+export async function analyseSymbol(symbol, snapshotInput = null, metaOverride = null) {
   const requestedRange = "1y";
   const requestedInterval = "1d";
   const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: requestedRange, interval: "1day" });
@@ -450,12 +461,13 @@ export async function analyseSymbol(symbol, snapshotInput = null) {
   const dataStatus = historyDiagnostics(history, cleanHistoryCandles, requestedRange, requestedInterval);
 
   if (!quoteResult.ok || !quoteResult.data) {
-    const meta = getMeta(symbol);
+    const meta = getMeta(symbol, metaOverride);
     return {
       symbol,
       companyName: meta.companyName,
       exchange: meta.exchange,
       sector: meta.sector,
+      currency: meta.currency || "USD",
       currentPrice: null,
       changePercent: null,
       indicators: {},
@@ -479,12 +491,13 @@ export async function analyseSymbol(symbol, snapshotInput = null) {
   }
 
   if (!history.ok) {
-    const meta = getMeta(symbol);
+    const meta = getMeta(symbol, metaOverride);
     return {
       symbol,
       companyName: meta.companyName,
       exchange: meta.exchange,
       sector: meta.sector,
+      currency: meta.currency || "USD",
       currentPrice: round(quoteResult.data?.c),
       changePercent: round(quoteResult.data?.dp),
       indicators: {},
@@ -509,12 +522,13 @@ export async function analyseSymbol(symbol, snapshotInput = null) {
 
   const marketData = validateMarketData({ quote: quoteResult.data, history });
   if (!marketData.validated) {
-    const meta = getMeta(symbol);
+    const meta = getMeta(symbol, metaOverride);
     return {
       symbol,
       companyName: meta.companyName,
       exchange: meta.exchange,
       sector: meta.sector,
+      currency: meta.currency || "USD",
       currentPrice: round(quoteResult.data?.c),
       previousClose: round(quoteResult.data?.pc),
       change: round(quoteResult.data?.d),
@@ -536,7 +550,7 @@ export async function analyseSymbol(symbol, snapshotInput = null) {
   }
 
   const reconciledCandles = reconcileLatestCandleWithQuote(history.candles, quoteResult.data, marketData);
-  return buildAnalysis({ symbol, quote: quoteResult.data, candles: reconciledCandles, marketData, history });
+  return buildAnalysis({ symbol, quote: quoteResult.data, candles: reconciledCandles, marketData, history, metaOverride });
 }
 
 export default async function handler(req, res) {

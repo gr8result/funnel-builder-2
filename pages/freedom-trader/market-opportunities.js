@@ -2,6 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import AnalyseStockPanel from "../../components/freedom-trader/AnalyseStockPanel";
 import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
@@ -200,6 +201,7 @@ export default function MarketOpportunities({ passwordHash }) {
       <Head><title>Market Opportunities | Freedom Trader</title></Head>
       <section className="platformBanner"><strong><span className="platformIcon" aria-hidden="true">{"\u{1F4CA}"}</span>Freedom Trader</strong><span>Active Trading & Market Opportunities</span></section>
       <FreedomModuleNav module="trader" paper />
+      <AnalyseStockPanel compact />
       <PaperAccountBar />
       <header className="hero">
         <div>

@@ -10,7 +10,7 @@ const WATCHLIST = [
   { symbol: "MSTR", companyName: "MicroStrategy", exchange: "NASDAQ", sector: "Bitcoin Treasury" },
   { symbol: "AVGO", companyName: "Broadcom", exchange: "NASDAQ", sector: "Semiconductors" },
 ];
-import { checkLocalMarketWatch, loadLocalMarketWatch, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
+import { addLocalTraderWatchlistItem, checkLocalMarketWatch, loadLocalMarketWatch, loadLocalTraderWatchlist, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
 
 export const TRADER_WATCHLIST = WATCHLIST;
 
@@ -22,6 +22,10 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "POST") {
+      if (req.body?.action === "add_watchlist") {
+        const watchlistItem = await addLocalTraderWatchlistItem(req.body?.item || req.body || {});
+        return res.status(200).json({ ok: true, watchlistItem, message: `${watchlistItem.symbol} added to Watchlist.`, error: null });
+      }
       const item = await registerLocalMarketWatchPlan(req.body?.plan || req.body || {});
       return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "CMC order marked entered. Market Watch is waiting for entry.", error: null });
     }
@@ -38,12 +42,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "Actual fill recorded. Market Watch is using the actual fill price.", error: null });
     }
     const marketWatch = await loadLocalMarketWatch();
+    const localWatchlist = await loadLocalTraderWatchlist();
+    const bySymbol = new Map();
+    [...localWatchlist, ...WATCHLIST].forEach((item) => item?.symbol && bySymbol.set(item.symbol, item));
+    const watchlist = Array.from(bySymbol.values());
     return res.status(200).json({
       ok: true,
-      watchlist: WATCHLIST,
+      watchlist,
       marketWatch: marketWatch.marketWatch,
       journal: marketWatch.journal,
-      count: WATCHLIST.length,
+      count: watchlist.length,
       updatedAt: new Date().toISOString(),
       error: null,
     });

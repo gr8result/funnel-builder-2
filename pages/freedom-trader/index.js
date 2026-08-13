@@ -2,6 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import AnalyseStockPanel from "../../components/freedom-trader/AnalyseStockPanel";
 import PaperAccountBar from "../../components/freedom-trader/PaperAccountBar";
 
 const PASSWORD_SALT = "freedom-terminal-v1";
@@ -100,8 +101,13 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       const alertsData = alertsResponse.status === "fulfilled" ? await alertsResponse.value.json().catch(() => null) : null;
       const scannerData = scannerResponse.status === "fulfilled" ? await scannerResponse.value.json().catch(() => null) : null;
       const watchData = watchResponse.status === "fulfilled" ? await watchResponse.value.json().catch(() => null) : null;
+      const watchlistSymbols = Array.from(new Set((Array.isArray(watchData?.watchlist) && watchData.watchlist.length ? watchData.watchlist : WATCHLIST.map((symbol) => ({ symbol }))).map((item) => item.symbol).filter(Boolean)));
+      let resolvedAnalysisData = analysisData;
+      if (watchlistSymbols.some((symbol) => !WATCHLIST.includes(symbol))) {
+        resolvedAnalysisData = await fetch(`/api/freedom-trader/analysis?symbols=${watchlistSymbols.slice(0, 20).join(",")}`).then((response) => response.json()).catch(() => analysisData);
+      }
       setSnapshot(paperData?.ok ? paperData : null);
-      setAnalysisRows(Array.isArray(analysisData?.analysis) ? analysisData.analysis : []);
+      setAnalysisRows(Array.isArray(resolvedAnalysisData?.analysis) ? resolvedAnalysisData.analysis : []);
       setAlerts(Array.isArray(alertsData?.alerts) ? alertsData.alerts.slice(0, 5) : []);
       setMarketWatch(Array.isArray(watchData?.marketWatch) ? watchData.marketWatch : []);
       setJournal(Array.isArray(watchData?.journal) ? watchData.journal : []);
@@ -184,6 +190,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
         <span>Active Trading & Market Opportunities</span>
       </section>
       <FreedomModuleNav module="trader" paper />
+      <AnalyseStockPanel />
       <PaperAccountBar />
 
       <header className="hero" id="dashboard">

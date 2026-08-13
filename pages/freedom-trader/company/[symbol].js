@@ -469,6 +469,8 @@ export default function TraderCompany({ passwordHash }) {
   const [checkingStorage, setCheckingStorage] = useState(true);
   const [quote, setQuote] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [stockAnalysis, setStockAnalysis] = useState(null);
+  const [resolvedCompany, setResolvedCompany] = useState(null);
   const [scannerOpportunity, setScannerOpportunity] = useState(null);
   const [candles, setCandles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -553,18 +555,21 @@ export default function TraderCompany({ passwordHash }) {
         setChartError("");
         setChartMeta(null);
         const [analysisResponse, historyResponse] = await Promise.all([
-          fetch(`/api/freedom-trader/analysis?symbol=${symbol}`),
+          fetch(`/api/freedom-trader/stock-analysis?query=${symbol}`),
           tabHidden
             ? Promise.resolve(null)
             : fetch(`/api/freedom-trader/history?symbol=${symbol}&range=${TIMEFRAMES.find((item) => item.label === timeframe)?.range || "1d"}&interval=${chartInterval}`),
         ]);
         const analysisData = await analysisResponse.json().catch(() => null);
         const historyData = historyResponse ? await historyResponse.json().catch(() => null) : null;
-        if (!analysisResponse.ok || !analysisData?.analysis?.[0]) throw new Error(analysisData?.error || "Trading analysis temporarily unavailable.");
-        setAnalysis(analysisData.analysis[0]);
+        if (!analysisResponse.ok || !analysisData?.analysis) throw new Error(analysisData?.error || "Trading analysis temporarily unavailable.");
+        setStockAnalysis(analysisData);
+        setResolvedCompany(analysisData.resolved || null);
+        if (analysisData.opportunity) setScannerOpportunity(analysisData.opportunity);
+        setAnalysis(analysisData.analysis);
         setQuote({
-          currentPrice: analysisData.analysis[0].currentPrice,
-          changePercent: analysisData.analysis[0].changePercent,
+          currentPrice: analysisData.analysis.currentPrice,
+          changePercent: analysisData.analysis.changePercent,
         });
         if (historyResponse?.ok && historyData?.ok) {
           setCandles(historyData.candles || []);
@@ -598,6 +603,13 @@ export default function TraderCompany({ passwordHash }) {
   const fallbackSetup = useMemo(() => analyseSetup(symbol, quote || {}, candles), [symbol, quote, candles]);
   const setup = useMemo(() => mapServerAnalysisToSetup(symbol, analysis, fallbackSetup), [symbol, analysis, fallbackSetup]);
   const recommendation = useMemo(() => plainRecommendationFromSetup(setup, scannerOpportunity), [setup, scannerOpportunity]);
+  const companyName = resolvedCompany?.companyName || analysis?.companyName || company.companyName;
+  const companyExchange = resolvedCompany?.exchange || analysis?.exchange || "NASDAQ";
+  const companyCurrency = resolvedCompany?.currency || analysis?.currency || (String(symbol).endsWith(".AX") ? "AUD" : "USD");
+  const providerCompany = { ...company, companyName, sector: resolvedCompany?.assetType || resolvedCompany?.market || company.sector };
+  const stockDecision = stockAnalysis?.decision || null;
+  const decisionAction = stockDecision?.action || recommendation.status;
+  const decisionInstruction = stockDecision?.instruction || (recommendation.status === "WAIT" ? "WAIT - Do not buy yet." : recommendation.reason);
   const closes = useMemo(() => candles.map((candle) => candle.close), [candles]);
   const visualMetrics = useMemo(() => {
     if (!levelsComplete(visualLevels)) return { riskReward: null, percentageReturn: null, expectedProfit: null, maximumLoss: null, capitalRequired: null, positionSize: 0, riskLimit: null };
@@ -718,7 +730,7 @@ export default function TraderCompany({ passwordHash }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symbol,
-          companyName: company.companyName,
+          companyName,
           quantity,
           entryPrice,
           targetPrice,
@@ -829,7 +841,7 @@ export default function TraderCompany({ passwordHash }) {
     const status = currentTradeStatus(levels);
     return {
       symbol,
-      companyName: company.companyName,
+      companyName,
       currentPrice: roundPrice(setup.currentPrice),
       entryPrice: levels.entry,
       stopPrice: levels.stop,
@@ -877,11 +889,11 @@ export default function TraderCompany({ passwordHash }) {
     setTradeActionSaving("alerts");
     const payload = {
       symbol,
-      companyName: company.companyName,
+      companyName,
       alerts: [
-        { symbol, companyName: company.companyName, alertType: "ENTRY REACHED", triggerPrice: draft.entryPrice, direction: setup.currentPrice > draft.entryPrice ? "below" : "above", priority: "high", message: `${symbol} reached the chart entry ${formatCurrency(draft.entryPrice)}. Review manually; no trade is executed automatically.` },
-        { symbol, companyName: company.companyName, alertType: "STOP REACHED", triggerPrice: draft.stopPrice, direction: "below", priority: "high", message: `${symbol} reached the chart stop ${formatCurrency(draft.stopPrice)}. Review manually; no trade is executed automatically.` },
-        { symbol, companyName: company.companyName, alertType: "TARGET REACHED", triggerPrice: draft.targetPrice, direction: "above", priority: "high", message: `${symbol} reached the chart target ${formatCurrency(draft.targetPrice)}. Review manually; no trade is executed automatically.` },
+        { symbol, companyName, alertType: "ENTRY REACHED", triggerPrice: draft.entryPrice, direction: setup.currentPrice > draft.entryPrice ? "below" : "above", priority: "high", message: `${symbol} reached the chart entry ${formatCurrency(draft.entryPrice)}. Review manually; no trade is executed automatically.` },
+        { symbol, companyName, alertType: "STOP REACHED", triggerPrice: draft.stopPrice, direction: "below", priority: "high", message: `${symbol} reached the chart stop ${formatCurrency(draft.stopPrice)}. Review manually; no trade is executed automatically.` },
+        { symbol, companyName, alertType: "TARGET REACHED", triggerPrice: draft.targetPrice, direction: "above", priority: "high", message: `${symbol} reached the chart target ${formatCurrency(draft.targetPrice)}. Review manually; no trade is executed automatically.` },
       ],
     };
     try {
@@ -916,7 +928,7 @@ export default function TraderCompany({ passwordHash }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symbol,
-          companyName: company.companyName,
+          companyName,
           setupType: "Chart trade setup",
           tradingScore: setup.tradingScore,
           trend: setup.trend,
@@ -940,6 +952,44 @@ export default function TraderCompany({ passwordHash }) {
       console.error("Freedom Trader save setup failed:", error);
       setSaveMessage(error instanceof Error ? error.message : "Unable to save trade setup right now.");
       return false;
+    } finally {
+      setTradeActionSaving("");
+    }
+  }
+
+  async function addToWatchlist() {
+    setTradeActionSaving("watchlist");
+    setSaveMessage("");
+    try {
+      const response = await fetch("/api/freedom-trader/stock-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add_watchlist", symbol }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) throw new Error(data?.error || "Unable to add to Watchlist.");
+      setSaveMessage(data.message || `${symbol} added to Watchlist.`);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Unable to add to Watchlist.");
+    } finally {
+      setTradeActionSaving("");
+    }
+  }
+
+  async function monitorThisStock() {
+    setTradeActionSaving("monitor");
+    setSaveMessage("");
+    try {
+      const response = await fetch("/api/freedom-trader/stock-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "monitor", symbol }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.ok) throw new Error(data?.error || "Unable to add to Market Watch.");
+      setSaveMessage(data.message || `${symbol} added to Market Watch.`);
+    } catch (error) {
+      setSaveMessage(error instanceof Error ? error.message : "Unable to add to Market Watch.");
     } finally {
       setTradeActionSaving("");
     }
@@ -969,7 +1019,7 @@ export default function TraderCompany({ passwordHash }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symbol,
-          companyName: company.companyName,
+          companyName,
           quantity: sharesPurchased,
           entryPrice: actualPurchasePrice,
           targetPrice: draft.targetPrice,
@@ -1579,15 +1629,15 @@ export default function TraderCompany({ passwordHash }) {
         <div className="heroMain">
           <span className="logo">{company.logoText}</span>
           <div>
-            <h1>{company.companyName}</h1>
+            <h1>{companyName}</h1>
             <p>
-              {symbol} / {analysis?.exchange || "NASDAQ"} / USD / {formatCurrency(setup.currentPrice)}
+              {symbol} / {companyExchange} / {companyCurrency} / {formatCurrency(setup.currentPrice)} /{" "}
               <span>{chartMeta?.dataLabel || setup.marketData?.historySource || "Data provider pending"}</span>
             </p>
           </div>
           <div className="analysisSignalBox">
             <span>Freedom Recommendation</span>
-            <SignalBadge signal={`${recommendation.status} (${centralSignal.timeframe || "1D"})`} />
+            <SignalBadge signal={`${decisionAction} (${centralSignal.timeframe || "1D"})`} />
             <small>{Number.isFinite(centralSignal.confidence) ? `${centralSignal.confidence}% confidence` : "Confidence pending"}</small>
           </div>
         </div>
@@ -1614,22 +1664,34 @@ export default function TraderCompany({ passwordHash }) {
       <section className="recommendationPanel">
         <div>
           <span>Freedom recommendation</span>
-          <h2>{recommendation.status}</h2>
-          {recommendation.status === "WAIT" ? <strong>Do not buy yet.</strong> : null}
-          <p>{recommendation.reason}</p>
+          <h2>{decisionAction}</h2>
+          <strong>{decisionInstruction}</strong>
+          <p>{stockDecision?.summary || recommendation.reason}</p>
         </div>
         <div className="recommendationGrid">
           <Metric label="Current price" value={formatCurrency(recommendation.currentPrice)} />
-          <Metric label={recommendation.status === "READY" ? "Buy Price" : "Buy only at"} value={formatCurrency(recommendation.entry)} />
-          <Metric label="Safety Exit" value={formatCurrency(recommendation.stop)} />
-          <Metric label="Final Exit" value={formatCurrency(recommendation.target)} />
+          <Metric label={decisionAction === "BUY NOW" ? "Buy Price" : "Buy only at"} value={formatCurrency(stockDecision?.tradePlan?.buyTrigger ?? recommendation.entry)} />
+          <Metric label="Safety Exit" value={formatCurrency(stockDecision?.tradePlan?.safetyExit ?? recommendation.stop)} />
+          <Metric label="Final Exit" value={formatCurrency(stockDecision?.tradePlan?.finalExit ?? recommendation.target)} />
+          <Metric label="Market Data" value={stockDecision?.marketDataStatus?.label || "Pending"} />
+          <Metric label="Last Updated" value={stockDecision?.marketDataStatus?.lastUpdated ? new Date(stockDecision.marketDataStatus.lastUpdated).toLocaleString() : "--"} />
+          <Metric label="Exchange" value={companyExchange} />
+          <Metric label="Currency" value={companyCurrency} />
         </div>
-        {recommendation.plainEnglish?.length ? (
+        {stockDecision?.tradePlan ? (
           <div className="plainReasons">
-            {recommendation.plainEnglish.slice(0, 4).map((reason) => <p key={reason}>{reason}</p>)}
+            <p><strong>Proposed trade plan:</strong> Buy only at {formatCurrency(stockDecision.tradePlan.buyTrigger)}, Safety Exit {formatCurrency(stockDecision.tradePlan.safetyExit)}, Take Some Profit {formatCurrency(stockDecision.tradePlan.takeSomeProfit)}, Final Exit {formatCurrency(stockDecision.tradePlan.finalExit)}.</p>
+            <p>Quantity {stockDecision.tradePlan.positionSizing?.quantity ?? "--"} shares / Capital {formatCurrency(stockDecision.tradePlan.positionSizing?.capitalRequired)} / Maximum loss {formatCurrency(stockDecision.tradePlan.positionSizing?.maximumPlannedLoss)} / Reward-to-risk {formatNumber(stockDecision.tradePlan.rewardToRisk)}.</p>
+          </div>
+        ) : null}
+        {(stockDecision?.why?.length || recommendation.plainEnglish?.length) ? (
+          <div className="plainReasons">
+            {(stockDecision?.why || recommendation.plainEnglish).slice(0, 4).map((reason) => <p key={reason}>{reason}</p>)}
           </div>
         ) : null}
         <div className="recommendationActions">
+          <button type="button" onClick={addToWatchlist} disabled={tradeActionSaving === "watchlist" || stockDecision?.canAddToWatchlist === false}>{tradeActionSaving === "watchlist" ? "Adding..." : "Add to Watchlist"}</button>
+          {stockDecision?.canMonitor ? <button type="button" onClick={monitorThisStock} disabled={tradeActionSaving === "monitor"}>{tradeActionSaving === "monitor" ? "Monitoring..." : "Monitor This Stock"}</button> : null}
           <a href="#trade-chart">Show Chart</a>
           <a href="#technical-details">Show Technical Details</a>
         </div>
@@ -1661,7 +1723,7 @@ export default function TraderCompany({ passwordHash }) {
         <div className="panelHeader">
           <div>
             <h2>Trade Chart</h2>
-            <p>FREEDOM RECOMMENDATION: {recommendation.status} ({centralSignal.timeframe || "1D"}). PROPOSED TRADE PLAN - NOT YET EXECUTED.</p>
+            <p>FREEDOM RECOMMENDATION: {decisionAction} ({centralSignal.timeframe || "1D"}). PROPOSED TRADE PLAN - NOT YET EXECUTED.</p>
           </div>
           <div className="chartControls">
             <span>Range</span>
@@ -1815,7 +1877,7 @@ export default function TraderCompany({ passwordHash }) {
           ) : null}
         </div>
         <div className="visualPlannerPanel" id="technical-details">
-          <Metric label="Freedom Recommendation" value={`${recommendation.status} (${centralSignal.timeframe || "1D"})`} />
+          <Metric label="Freedom Recommendation" value={`${decisionAction} (${centralSignal.timeframe || "1D"})`} />
           <Metric label="Paper Position" value={openPosition ? tradeStatus : "No open paper position"} />
           <Metric label="BUY" value={formatCurrency(visualLevels.entry)} />
           <Metric label="STOP LOSS" value={formatCurrency(visualLevels.stop)} />
@@ -1845,6 +1907,8 @@ export default function TraderCompany({ passwordHash }) {
           </div>
         ) : null}
       </section>
+
+      <section className="notice bottomInstruction">{decisionInstruction}</section>
 
       <footer>Freedom Trader is separate from Freedom Investment. Trading research only. Not financial advice.</footer>
 
@@ -1905,7 +1969,7 @@ export default function TraderCompany({ passwordHash }) {
       {buyModalOpen ? (
         <PaperOrderTicket
           mode={paperTicketMode}
-          company={{ ...company, symbol, exchange: analysis?.exchange || "NASDAQ" }}
+          company={{ ...providerCompany, symbol, exchange: companyExchange }}
           position={paperTicketMode === "sell" ? paperPosition : null}
           setup={{
             ...setup,
@@ -1914,8 +1978,8 @@ export default function TraderCompany({ passwordHash }) {
             target: visualLevels.target,
             marketData: {
               ...(setup.marketData || {}),
-              exchange: analysis?.exchange || "NASDAQ",
-              currency: String(symbol).endsWith(".AX") ? "AUD" : "USD",
+              exchange: companyExchange,
+              currency: companyCurrency,
               provider: setup.marketData?.quoteSource || setup.marketData?.provider || "Finnhub",
             },
           }}
@@ -1964,7 +2028,8 @@ export default function TraderCompany({ passwordHash }) {
         .plainReasons { display: grid; gap: 8px; }
         .plainReasons p { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); border-radius: 7px; padding: 10px 12px; }
         .recommendationActions { display: flex; flex-wrap: wrap; gap: 10px; }
-        .recommendationActions a { background: rgba(29,155,255,.12); border: 1px solid rgba(29,155,255,.3); border-radius: 7px; color: #d7efff; display: inline-flex; font-weight: 950; min-height: 38px; align-items: center; padding: 0 12px; text-decoration: none; }
+        .recommendationActions a, .recommendationActions button { background: rgba(29,155,255,.12); border: 1px solid rgba(29,155,255,.3); border-radius: 7px; color: #d7efff; display: inline-flex; font-weight: 950; min-height: 38px; align-items: center; padding: 0 12px; text-decoration: none; }
+        .recommendationActions button:hover, .recommendationActions button:focus-visible, .recommendationActions a:hover, .recommendationActions a:focus-visible { background: rgba(29,155,255,.24); border-color: rgba(118,188,255,.7); outline: none; }
         :global(.metric) { padding: 16px; }
         :global(.metric span) { color: #aebdc4; display: block; font-size: 12px; font-weight: 900; text-transform: uppercase; }
         :global(.metric strong) { color: #fff; display: block; font-size: 22px; margin-top: 8px; }
