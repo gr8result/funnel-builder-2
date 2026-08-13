@@ -691,10 +691,12 @@ function optionsForItem(itemName, quality = "mid_range") {
   const key = Object.keys(PRODUCT_OPTION_LIBRARY)
     .sort((a, b) => b.length - a.length)
     .find((entry) => lower.includes(entry));
-  const options = key ? PRODUCT_OPTION_LIBRARY[key] : [
+  const fallbackOptions = [
     productOption("Builder Standard", `${itemName} Included Selection`, "Standard", "Builder selected", "Builder supplier", `${itemName} included builder standard selection.`, 0, 0, "mid_range", "#d8dee8"),
     productOption("Builder Standard", `${itemName} Upgraded Selection`, "Upgrade", "Client selected", "Builder supplier", `${itemName} upgraded client selection.`, 0, 450, "higher_end", "#c99735"),
   ];
+  const libraryOptions = key ? PRODUCT_OPTION_LIBRARY[key] : null;
+  const options = Array.isArray(libraryOptions) && libraryOptions.length ? libraryOptions : fallbackOptions;
   const targetBand = String(quality || "").includes("higher") ? "higher_end" : "mid_range";
   const preferred = options.find((option) => option.priceBand === targetBand) || options[0];
   return { options, preferred };
