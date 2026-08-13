@@ -18,6 +18,7 @@ import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavig
 import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
+import { stickyNavigationFrameStyle } from "../../lib/website-builder/stickyNavigationFrame";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -629,7 +630,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
       </Head>
       <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
-          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
+          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={{ ...seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock)), ...stickyNavigationFrameStyle(globalNavBlock) }}>
             {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}
           </div>
         ) : null}

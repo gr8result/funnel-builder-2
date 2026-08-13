@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { normalizeSharedPrimaryNavigation } from "../lib/website-builder/sharedNavigation.js";
 import { stableWebsiteJson } from "../lib/website-builder/documentVersion.js";
+import { isStickyNavigationBlock, stickyNavigationFrameStyle } from "../lib/website-builder/stickyNavigationFrame.js";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -171,5 +173,33 @@ assert.notEqual(
   stableWebsiteJson(aboutReadbackWithLostBlock.pageBlocks["About Us"]),
   "Normal page save verification must still fail when a submitted persistent block is missing",
 );
+
+const stickySolidNav = { type: "nav-bar", props: { stickyMode: "sticky-solid" } };
+const stickyTransparentNav = { type: "nav-bar", props: { stickyMode: "sticky-transparent" } };
+const normalNav = { type: "nav-bar", props: { stickyMode: "normal" } };
+assert.equal(isStickyNavigationBlock(stickySolidNav), true, "Sticky-solid global nav must be detected as sticky");
+assert.equal(isStickyNavigationBlock(stickyTransparentNav), true, "Sticky-transparent global nav must be detected as sticky");
+assert.equal(isStickyNavigationBlock(normalNav), false, "Sticky OFF nav must stay in normal flow");
+assert.deepEqual(
+  stickyNavigationFrameStyle(stickySolidNav),
+  { position: "sticky", top: 0, zIndex: 10000, overflow: "visible", overflowX: "visible", alignSelf: "start" },
+  "Live/preview sticky nav frame must supply sticky position, top, z-index, and visible overflow",
+);
+assert.deepEqual(
+  stickyNavigationFrameStyle(stickySolidNav, { editor: true }),
+  { position: "sticky", top: 0, zIndex: 70, overflow: "visible", overflowX: "visible", alignSelf: "start" },
+  "Builder sticky nav frame must supply sticky position, top, z-index, and visible overflow",
+);
+assert.deepEqual(stickyNavigationFrameStyle(normalNav), {}, "Sticky OFF nav frame must not receive sticky wrapper styles");
+
+const builderSource = fs.readFileSync("components/website-builder/page-builder/pbCanvasComponents.js", "utf8");
+const previewSource = fs.readFileSync("components/website-builder/WebsitePreviewSurface.js", "utf8");
+const liveSource = fs.readFileSync("pages/sites/[...slug].js", "utf8");
+const visualBuilderSource = fs.readFileSync("pages/modules/website-builder/visual-builder.js", "utf8");
+assert.match(builderSource, /stickyNavigationFrameStyle\(block,\s*\{\s*editor:\s*true\s*\}\)/, "Builder global nav wrapper must apply sticky frame styles");
+assert.match(previewSource, /stickyNavigationFrameStyle\(globalNavBlock\)/, "Project preview global nav wrapper must apply sticky frame styles");
+assert.match(liveSource, /stickyNavigationFrameStyle\(globalNavBlock\)/, "Published live global nav wrapper must apply sticky frame styles");
+assert.match(visualBuilderSource, /mergeRepairProjectWithCurrentGlobals/, "Builder repair reload must preserve current canonical global nav settings");
+assert.match(visualBuilderSource, /globalNavBlock:\s*currentProject\.globalNavBlock/, "Builder repair reload must not restore stale global nav sticky settings");
 
 console.log("website builder global nav regression checks passed");

@@ -7,6 +7,7 @@ import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavig
 import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isBlockVisibleOnDevice, resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
 import { buildWebsitePreviewUrl, canonicalPreviewPageSlug, resolveCanonicalPreviewPageSlug } from "../../lib/website-builder/previewRoutes";
+import { stickyNavigationFrameStyle } from "../../lib/website-builder/stickyNavigationFrame";
 
 class PreviewBlockErrorBoundary extends React.Component {
   constructor(props) {
@@ -281,7 +282,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets,
 
         <div className="gr8wb-viewport" data-page-width-mode={pageWidthMode} style={styles.previewViewport(previewViewport, previewShellWidth, pageBackground)}>
           {injectNav ? (
-            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalNavBlock?.id || ""} data-website-preview-block-type={globalNavBlock?.type || ""} style={styles.blockFrame(resolveBlockBackground(globalNavBlock, pageBackground))}>
+            <div key={`__global-nav-${globalNavBlock?.id || project?.id || "preview"}`} data-website-preview-block="true" data-website-preview-block-id={globalNavBlock?.id || ""} data-website-preview-block-type={globalNavBlock?.type || ""} style={{ ...styles.blockFrame(resolveBlockBackground(globalNavBlock, pageBackground)), ...stickyNavigationFrameStyle(globalNavBlock) }}>
               <PreviewBlockErrorBoundary
                 blockId={globalNavBlock?.id || ""}
                 blockType={globalNavBlock?.type || ""}

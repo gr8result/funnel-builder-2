@@ -17,6 +17,7 @@ import { getSharedBlockTemplate, getSharedBlockTemplateUsage, getSharedTemplateI
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "../WebsiteBlockRenderer";
 import { isBlockVisibleOnDevice } from "../../../lib/website-builder/responsiveValue";
+import { stickyNavigationFrameStyle } from "../../../lib/website-builder/stickyNavigationFrame";
 import { GRID_ICON_LIBRARY, isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import RichText from "../../RichText";
 import {
@@ -717,6 +718,7 @@ function GlobalBlockPreview({ label, role, block, brandAssets, compact, device, 
       data-global-role={role}
       style={{
         ...styles.globalBlockPreviewWrap,
+        ...(role === "nav" ? stickyNavigationFrameStyle(block, { editor: true }) : {}),
         ...(selected ? styles.globalBlockPreviewWrapSelected : {}),
       }}
       onPointerDownCapture={() => {

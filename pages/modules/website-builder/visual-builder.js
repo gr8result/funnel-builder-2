@@ -763,6 +763,23 @@ function shouldUseLocalRepairProject(project, repairedProject) {
   });
 }
 
+function mergeRepairProjectWithCurrentGlobals(repairedProject, currentProject) {
+  if (!repairedProject || !currentProject) return repairedProject;
+  return {
+    ...repairedProject,
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalNavBlock") ? { globalNavBlock: currentProject.globalNavBlock } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalHeader") ? { globalHeader: currentProject.globalHeader } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooterBlock") ? { globalFooterBlock: currentProject.globalFooterBlock } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooter") ? { globalFooter: currentProject.globalFooter } : {}),
+    ...(Object.prototype.hasOwnProperty.call(currentProject, "sharedBlockTemplates") ? { sharedBlockTemplates: currentProject.sharedBlockTemplates } : {}),
+    updatedAt: currentProject.updatedAt || repairedProject.updatedAt,
+    savedAt: currentProject.savedAt || repairedProject.savedAt,
+    projectVersion: currentProject.projectVersion || repairedProject.projectVersion,
+    contentHash: currentProject.contentHash || repairedProject.contentHash,
+    __saveBaseUpdatedAt: currentProject.__saveBaseUpdatedAt || repairedProject.__saveBaseUpdatedAt,
+  };
+}
+
 function applyEmergencyDraftToProject(project, pageName, draft) {
   if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
   const nextChaiData = draft.chaiData && typeof draft.chaiData === "object"
@@ -1125,12 +1142,13 @@ export default function VisualBuilderPage() {
 
       if (!cancelled && nextProject?.id && !isPersistenceDiagnosticPage(nextProject.id, resolvedDraftPage)) {
         const repairedProject = await fetchLocalProjectRepair(nextProject.id || projectId);
-        if (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject)) {
-          const repairedPageCount = Array.isArray(repairedProject?.pages) ? repairedProject.pages.length : 0;
-          const repairedPageName = resolveProjectPageName(requestedPage, repairedProject) || resolvedDraftPage;
+        if (repairedProject && (shouldRepairCollapsedProject(nextProject) || shouldUseLocalRepairProject(nextProject, repairedProject))) {
+          const repairedWithCurrentGlobals = mergeRepairProjectWithCurrentGlobals(repairedProject, nextProject);
+          const repairedPageCount = Array.isArray(repairedWithCurrentGlobals?.pages) ? repairedWithCurrentGlobals.pages.length : 0;
+          const repairedPageName = resolveProjectPageName(requestedPage, repairedWithCurrentGlobals) || resolvedDraftPage;
           nextProject = emergencyDraft && shouldUseEmergencyDraft(repairedProject, repairedPageName, emergencyDraft)
-            ? applyEmergencyDraftToProject(repairedProject, repairedPageName, emergencyDraft)
-            : repairedProject;
+            ? applyEmergencyDraftToProject(repairedWithCurrentGlobals, repairedPageName, emergencyDraft)
+            : repairedWithCurrentGlobals;
           cacheWebsiteProject(nextProject, { onlyIfNewer: false });
           flashNotice(`Recovered ${repairedPageCount} website pages from disk`, "success", 8000);
         }
