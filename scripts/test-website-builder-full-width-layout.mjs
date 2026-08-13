@@ -30,7 +30,7 @@ const normalizedFull = normalizePageLayoutProject(staleContainedPagesProject);
 assert.equal(resolvePageWidthMode(normalizedFull, "Home"), PAGE_WIDTH_FULL, "global full width should apply to Home");
 assert.equal(resolvePageWidthMode(normalizedFull, "Pricing"), PAGE_WIDTH_FULL, "global full width should apply to Pricing despite stale contained page value");
 assert.equal(resolvePageWidthMode(normalizedFull, "Email"), PAGE_WIDTH_FULL, "global full width should apply to Email despite stale contained page value");
-assert.deepEqual(normalizedFull.pages.map((page) => page.pageWidthMode), ["full", "full", "full"], "normalization should persist global full width to legacy page records");
+assert.deepEqual(normalizedFull.pages.map((page) => page.pageWidthMode), [undefined, undefined, undefined], "normalization should not persist inherited global width to page records");
 
 const containedProject = normalizePageLayoutProject({
   ...staleContainedPagesProject,
@@ -42,11 +42,31 @@ assert.equal(resolvePageWidthMode(containedProject, "Pricing"), PAGE_WIDTH_CONTA
 const publication = createPublicationPayload(normalizedFull);
 assert.equal(publication.site_data.pageWidthMode, PAGE_WIDTH_FULL, "publish payload must retain canonical global pageWidthMode");
 assert.equal(publication.site_data.globalPageWidthMode, PAGE_WIDTH_FULL, "publish payload must retain canonical globalPageWidthMode");
-assert.equal(publication.site_data.pages.find((page) => page.name === "Email")?.pageWidthMode, PAGE_WIDTH_FULL, "publish payload must retain Email full width");
+assert.equal(publication.site_data.pages.find((page) => page.name === "Email")?.pageWidthMode, undefined, "publish payload must leave inherited page width off page records");
+
+const explicitContainedOverride = normalizePageLayoutProject({
+  ...staleContainedPagesProject,
+  pageWidthMode: PAGE_WIDTH_FULL,
+  globalPageWidthMode: PAGE_WIDTH_FULL,
+  pages: [
+    { id: "home", name: "Home", slug: "home" },
+    { id: "pricing", name: "Pricing", slug: "pricing", pageWidthMode: PAGE_WIDTH_CONTAINED, pageWidthOverride: true },
+  ],
+});
+assert.equal(resolvePageWidthMode(explicitContainedOverride, "Home"), PAGE_WIDTH_FULL, "non-overridden pages inherit full width");
+assert.equal(resolvePageWidthMode(explicitContainedOverride, "Pricing"), PAGE_WIDTH_CONTAINED, "explicit contained override should still work");
+assert.equal(explicitContainedOverride.pages.find((page) => page.name === "Pricing")?.pageWidthMode, PAGE_WIDTH_CONTAINED, "explicit page width override should be retained");
 
 const canvasSource = fs.readFileSync("components/website-builder/PageBuilderCanvas.js", "utf8");
 assert.match(canvasSource, /resolvePageWidthMode\(project,\s*activePageEntry\?\.slug/, "builder canvas must resolve page width through project/global helper");
 assert.match(canvasSource, /pageFullWidth=\{pageIsFullWidth\}/, "builder canvas must pass resolved full-width mode to block frames");
+assert.match(canvasSource, /onUpdatePageSettings\?\.\(\{\s*pageWidthMode:\s*normalizePageWidthMode\(patch\.pageWidthMode\)\s*\}\)/, "global style page width control should send a site-level pageWidthMode patch");
+
+const visualBuilderSource = fs.readFileSync("pages/modules/website-builder/visual-builder.js", "utf8");
+assert.match(visualBuilderSource, /const \{\s*pageWidthMode:\s*_pageWidthMode,\s*globalPageWidthMode:\s*_globalPageWidthMode,\s*\.\.\.pagePatch\s*\} = patch \|\| \{\};/, "global width patch should be separated from active page settings");
+assert.match(visualBuilderSource, /\.\.\.\(hasPagePatch \? \{ pages \} : \{\}\)/, "global width-only saves must not rewrite pages");
+assert.match(visualBuilderSource, /hasGlobalPageWidthMode\(localProject\)[\s\S]*globalPageWidthMode:\s*resolveGlobalPageWidthMode\(localProject\)/, "page-switch merge must preserve local canonical global width");
+assert.match(visualBuilderSource, /currentGlobalPageWidthMode[\s\S]*pageWidthMode:\s*currentGlobalPageWidthMode,\s*globalPageWidthMode:\s*currentGlobalPageWidthMode/, "local repair merge must preserve current canonical global width");
 
 const previewSource = fs.readFileSync("components/website-builder/WebsitePreviewSurface.js", "utf8");
 assert.match(previewSource, /resolvePageWidthMode\(project,\s*active\?\.slug/, "preview must resolve page width through project/global helper");

@@ -30,7 +30,7 @@ import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, apply
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
-import { normalizePageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
+import { hasGlobalPageWidthMode, normalizePageWidthMode, resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   detachSharedBlockInstance,
   getSharedBlockTemplates,
@@ -765,12 +765,16 @@ function shouldUseLocalRepairProject(project, repairedProject) {
 
 function mergeRepairProjectWithCurrentGlobals(repairedProject, currentProject) {
   if (!repairedProject || !currentProject) return repairedProject;
+  const currentGlobalPageWidthMode = hasGlobalPageWidthMode(currentProject)
+    ? resolveGlobalPageWidthMode(currentProject)
+    : "";
   return {
     ...repairedProject,
     ...(Object.prototype.hasOwnProperty.call(currentProject, "globalNavBlock") ? { globalNavBlock: currentProject.globalNavBlock } : {}),
     ...(Object.prototype.hasOwnProperty.call(currentProject, "globalHeader") ? { globalHeader: currentProject.globalHeader } : {}),
     ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooterBlock") ? { globalFooterBlock: currentProject.globalFooterBlock } : {}),
     ...(Object.prototype.hasOwnProperty.call(currentProject, "globalFooter") ? { globalFooter: currentProject.globalFooter } : {}),
+    ...(currentGlobalPageWidthMode ? { pageWidthMode: currentGlobalPageWidthMode, globalPageWidthMode: currentGlobalPageWidthMode } : {}),
     ...(Object.prototype.hasOwnProperty.call(currentProject, "sharedBlockTemplates") ? { sharedBlockTemplates: currentProject.sharedBlockTemplates } : {}),
     updatedAt: currentProject.updatedAt || repairedProject.updatedAt,
     savedAt: currentProject.savedAt || repairedProject.savedAt,
@@ -1334,6 +1338,8 @@ export default function VisualBuilderPage() {
       ...remotePages.filter((p) => p?.name && !localNames.has(p.name)),
     ];
 
+    const shouldPreserveLocalGlobalWidth = hasGlobalPageWidthMode(localProject) && localUpdatedAt > remoteUpdatedAt;
+
     return {
       ...localProject,
       ...remoteProject,
@@ -1352,6 +1358,10 @@ export default function VisualBuilderPage() {
       },
       globalNavBlock: "globalNavBlock" in remoteProject ? remoteProject.globalNavBlock : localProject.globalNavBlock,
       globalFooterBlock: "globalFooterBlock" in remoteProject ? remoteProject.globalFooterBlock : localProject.globalFooterBlock,
+      ...(shouldPreserveLocalGlobalWidth ? {
+        pageWidthMode: resolveGlobalPageWidthMode(localProject),
+        globalPageWidthMode: resolveGlobalPageWidthMode(localProject),
+      } : {}),
       updatedAt: remoteProject?.updatedAt || localProject?.updatedAt,
       __saveBaseUpdatedAt: remoteProject?.__saveBaseUpdatedAt || remoteProject?.updatedAt || localProject?.__saveBaseUpdatedAt || localProject?.updatedAt || "",
       deletedBlockIds,
@@ -2310,21 +2320,23 @@ export default function VisualBuilderPage() {
   function updateActivePageSettings(patch = {}, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
-    const nextGlobalPageWidthMode = Object.prototype.hasOwnProperty.call(patch, "pageWidthMode")
+    const hasPageWidthModePatch = Object.prototype.hasOwnProperty.call(patch, "pageWidthMode");
+    const nextGlobalPageWidthMode = hasPageWidthModePatch
       ? normalizePageWidthMode(patch.pageWidthMode)
       : "";
+    const { pageWidthMode: _pageWidthMode, globalPageWidthMode: _globalPageWidthMode, ...pagePatch } = patch || {};
+    const hasPagePatch = Object.keys(pagePatch).length > 0;
     let matched = false;
     const nextPages = (Array.isArray(currentProject?.pages) ? currentProject.pages : []).map((page) => {
       const matches = page?.name === pageName || slugify(page?.name || "") === slugify(pageName) || slugify(page?.slug || "") === slugify(pageName);
       if (matches) matched = true;
-      if (nextGlobalPageWidthMode) return { ...page, pageWidthMode: nextGlobalPageWidthMode };
-      return matches ? { ...page, ...patch } : page;
+      return matches && hasPagePatch ? { ...page, ...pagePatch } : page;
     });
-    const pages = matched
+    const pages = matched || !hasPagePatch
       ? nextPages
-      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...patch, ...(nextGlobalPageWidthMode ? { pageWidthMode: nextGlobalPageWidthMode } : {}) }];
+      : [...nextPages, { name: pageName || "Home", slug: slugify(pageName || "Home") || "home", ...pagePatch }];
     saveProjectPatch({
-      pages,
+      ...(hasPagePatch ? { pages } : {}),
       ...(nextGlobalPageWidthMode ? { pageWidthMode: nextGlobalPageWidthMode, globalPageWidthMode: nextGlobalPageWidthMode } : {}),
     }, "Updated page settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" });
   }
