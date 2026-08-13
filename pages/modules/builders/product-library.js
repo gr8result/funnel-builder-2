@@ -318,6 +318,20 @@ export default function BuilderProductLibraryPage() {
   const masterSuppliers = useMemo(() => uniqueValues(masterProducts.map((product) => product.supplier)), [masterProducts]);
   const masterRanges = useMemo(() => uniqueValues(masterProducts.map((product) => product.range)), [masterProducts]);
   const filteredMasterProducts = useMemo(() => masterProducts.filter((product) => masterProductMatchesFilters(product, masterFilters)), [masterFilters, masterProducts]);
+  const roofingAdminProof = useMemo(() => {
+    const roofingProducts = masterProducts.filter((product) => product.familyKey === "roofing");
+    const colourNames = new Set();
+    roofingProducts.forEach((product) => {
+      const colours = product.attributes?.colours || [];
+      if (Array.isArray(colours)) colours.forEach((colour) => colourNames.add(colour.name || colour.officialName));
+    });
+    return {
+      systems: uniqueValues(roofingProducts.map((product) => [product.manufacturer, product.brand, product.material].filter(Boolean).join(" / "))).length,
+      profiles: uniqueValues(roofingProducts.map((product) => product.profile || product.productName)).length,
+      colours: Array.from(colourNames).filter(Boolean).length,
+      enabled: builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled && roofingProducts.some((product) => product.productCode === item.masterProductCode)).length,
+    };
+  }, [builderEnablements, masterProducts, workspaceId]);
   const selectableProof = useMemo(() => queryClientSelectableProducts({
     organisationId: workspaceId || "",
     familyKey: selectedFamily?.familyKey || "ovens",
@@ -931,6 +945,14 @@ export default function BuilderProductLibraryPage() {
           </div>
           {masterCatalogueOpen ? (
             <div className="master-body">
+              <div className="roofing-admin-sections" data-roofing-admin="systems-profiles-colours-compatibility-builder-availability">
+                <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Roof Systems</button>
+                <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Profiles</button>
+                <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Colours</button>
+                <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Compatibility</button>
+                <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Builder availability</button>
+                <span>{roofingAdminProof.systems} systems / {roofingAdminProof.profiles} profiles / {roofingAdminProof.colours} colours / {roofingAdminProof.enabled} enabled</span>
+              </div>
               <div className="master-filters">
                 <input value={masterFilters.search} onChange={(event) => setMasterFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search product name, model, SKU, product code" />
                 <select value={masterFilters.area} onChange={(event) => setMasterFilters((current) => ({ ...current, area: event.target.value }))}>
@@ -1768,6 +1790,25 @@ export default function BuilderProductLibraryPage() {
           display: grid;
           gap: 14px;
           margin-top: 14px;
+        }
+        .roofing-admin-sections {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 10px;
+        }
+        .roofing-admin-sections button {
+          background: #ffffff;
+          color: #071827;
+          border: 1px solid #cbd5e1;
+        }
+        .roofing-admin-sections span {
+          color: #475569;
+          font-weight: 850;
         }
         .master-filters {
           display: grid;

@@ -19,7 +19,7 @@ Source file: `C:\Users\grant\Downloads\PRODUCTS LIBRARY.csv`
 ## Family Coverage
 
 - stone-benchtops: 35 source row(s)
-- metal-roofing: 1 source row(s)
+- roofing: 1 source row(s)
 - bricks: 2 source row(s)
 - internal-doors: 3 source row(s)
 - garage-doors: 12 source row(s)
@@ -425,4 +425,3 @@ Source file: `C:\Users\grant\Downloads\PRODUCTS LIBRARY.csv`
 - Blank quote codes are not fabricated. Rows without a code receive a separate stable `approvedSourceKey` such as `csv-row-42`.
 - Broad quote rows are treated as product families or family source rows, not as actual supplier products.
 - Supplier, brand, range, image and price data belongs to each organisation's private catalogue.
-

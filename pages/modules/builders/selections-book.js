@@ -91,9 +91,6 @@ const PRODUCT_IMAGE_URLS = {
   "block retaining wall": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=700&q=80",
   "temporary fencing": "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=700&q=80",
   "construction access": "https://images.unsplash.com/photo-1590496793929-36417d3117de?auto=format&fit=crop&w=700&q=80",
-  "colorbond corrugated": "https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=700&q=80",
-  "premium colorbond": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=700&q=80",
-  "monier horizon": "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=700&q=80",
   "westinghouse 600mm oven": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=700&q=80",
   "bosch serie 6 oven": "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=700&q=80",
   "westinghouse 600mm gas cooktop": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=700&q=80",
@@ -128,14 +125,8 @@ const PRODUCT_OPTION_LIBRARY = {
   "construction access": [
     productOption("ABC Earthworks", "Construction Access", "Gravel access point", "Compacted gravel", "ABC Earthworks", "Construction access point and site entry protection.", 900, 900, "mid_range", "#9a9487"),
   ],
-  roofing: [
-    productOption("Colorbond", "Colorbond Corrugated", "Classic corrugated profile", "Monument", "Roofing Supplier", "Colorbond corrugated roof sheeting with standard colour selection.", 0, 0, "mid_range", "#2d3742"),
-    productOption("Colorbond", "Premium Colorbond Profile", "Architectural standing seam", "Monument", "Roofing Supplier", "Premium architectural roof profile with elevated finish.", 0, 4200, "higher_end", "#17202b"),
-    productOption("Monier", "Monier Horizon Roof Tile", "Concrete roof tile", "Monument", "Roofing Supplier", "Monier Horizon concrete roof tile with selected colour finish.", 0, 2800, "mid_range", "#5b5b59"),
-  ],
+  roofing: [],
   gutters: [
-    productOption("Colorbond", "Colorbond Quad Gutter", "Quad profile", "Monument", "Roofing Supplier", "Colorbond quad gutter system.", 0, 0, "mid_range", "#313945"),
-    productOption("Colorbond", "Premium Colorbond Gutter", "Squareline profile", "Monument", "Roofing Supplier", "Premium squareline gutter profile.", 0, 950, "higher_end", "#202935"),
   ],
   oven: [
     productOption("Westinghouse", "Westinghouse 600mm Oven", "WVE6515SD", "Stainless steel", "Harvey Norman Commercial", "Westinghouse 600mm built-in electric oven.", 1200, 1200, "mid_range", "#d9dde1"),
@@ -782,6 +773,14 @@ export default function BuilderSelectionsBookPage({
   const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
   const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
   const [guidedBrickRange, setGuidedBrickRange] = useState("");
+  const [guidedRoofingStep, setGuidedRoofingStep] = useState("roofType");
+  const [roofingConfiguration, setRoofingConfiguration] = useState({
+    roofType: "",
+    productSystem: "",
+    profileProductCode: "",
+    colour: "",
+    finish: "",
+  });
   const [viewMode, setViewMode] = useState("continuous");
   const [zoomMode, setZoomMode] = useState("fit-width");
   const [viewerPageWidth, setViewerPageWidth] = useState(0);
@@ -1304,6 +1303,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
     setGuidedRequirementKey("");
     resetGuidedBrickFlow();
+    resetGuidedRoofingFlow();
   }
 
   function openGuidedKitchen() {
@@ -1311,6 +1311,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedScreen("kitchen");
     setGuidedRequirementKey("");
     resetGuidedBrickFlow();
+    resetGuidedRoofingFlow();
   }
 
   function openGuidedRequirement(requirementKey) {
@@ -1318,6 +1319,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(requirementKey);
     setGuidedScreen("product");
     resetGuidedBrickFlow();
+    resetGuidedRoofingFlow();
   }
 
   function openGuidedRequirementKey(requirementKey) {
@@ -1326,13 +1328,25 @@ export default function BuilderSelectionsBookPage({
     setGuidedArea(next.areaKey === "exterior" ? "exterior" : "interior");
     setGuidedRequirementKey(next.requirementKey);
     setGuidedScreen("product");
-    resetGuidedBrickFlow();
+    if (next.requirementKey !== "bricks") resetGuidedBrickFlow();
+    if (next.requirementKey !== "roofing") resetGuidedRoofingFlow();
   }
 
   function resetGuidedBrickFlow() {
     setGuidedBrickStep("suppliers");
     setGuidedBrickSupplier("");
     setGuidedBrickRange("");
+  }
+
+  function resetGuidedRoofingFlow() {
+    setGuidedRoofingStep("roofType");
+    setRoofingConfiguration({
+      roofType: "",
+      productSystem: "",
+      profileProductCode: "",
+      colour: "",
+      finish: "",
+    });
   }
 
   function openBrickImportModal() {
@@ -1473,6 +1487,107 @@ export default function BuilderSelectionsBookPage({
       };
     });
     setSuccess(`${requirement.label} selected. Save Progress will store it with this selections book.`);
+  }
+
+  function selectGuidedRoofingConfiguration(requirement, configuration) {
+    const profile = roofingProfileByCode(guidedProducts, configuration.profileProductCode);
+    const colour = roofingColourByName(profile, configuration.colour);
+    const finish = roofingFinishForColour(colour, configuration.finish);
+    if (!profile || !colour || !finish) {
+      setError("Choose a compatible roof profile, colour and finish before selecting.");
+      return;
+    }
+    const guidedRoom = ensureGuidedRoom(book, requirement);
+    const row = rowForRequirement(guidedRoom, requirement);
+    if (!row) return;
+    const entity = profile.metadata?.productEntity || profile;
+    const allowance = numberValue(profile.allowance ?? entity.allowance ?? requirement.defaultAllowance);
+    const selectedCost = priceStateForGuidedOption(profile) === PRICE_STATES.current ? numberValue(profile.selectedCost) : 0;
+    const priceState = priceStateForGuidedOption(profile) === PRICE_STATES.current ? PRICE_STATES.current : PRICE_STATES.quoteRequired;
+    const quantity = numberValue(requirement.defaultQuantity) || 1;
+    const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : 0;
+    const selectedProduct = `${profile.profile || profile.productName} / ${colour.name} / ${finish.name}`;
+    const guidedSelection = {
+      source: "guided_client_selections",
+      projectId: selectedProjectId || selectedProject?.id || "",
+      organisationId: workspaceId || "",
+      area: requirement.areaKey,
+      room: requirement.areaLabel,
+      requirementKey: requirement.requirementKey,
+      requirementLabel: requirement.label,
+      familyKey: "roofing",
+      linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
+      productCode: entity.productCode || profile.id,
+      manufacturer: profile.manufacturer || entity.manufacturer || "LYSAGHT",
+      brand: profile.brand || entity.brand || "COLORBOND steel",
+      supplier: profile.supplier || entity.supplier || "LYSAGHT",
+      productName: selectedProduct,
+      selectedProduct,
+      roofType: configuration.roofType,
+      material: profile.material || entity.material || "COLORBOND steel",
+      materialManufacturer: entity.attributes?.materialManufacturer || "BlueScope",
+      productSystem: configuration.productSystem,
+      profile: profile.profile || profile.productName,
+      profileProductCode: configuration.profileProductCode,
+      colour: colour.name,
+      officialColourName: colour.officialName || colour.name,
+      swatchHex: colour.hex,
+      finish: finish.name,
+      roofingConfiguration: {
+        roofType: configuration.roofType,
+        productSystem: configuration.productSystem,
+        profileProductCode: configuration.profileProductCode,
+        colour: colour.name,
+        finish: finish.name,
+      },
+      compatibility: {
+        colourFinishRule: finish.name === "Matt" ? "Matt is only available for the six official COLORBOND Matt colours." : "Classic finish is available for the selected COLORBOND core colour.",
+        materialProfileRule: "LYSAGHT roofing profiles in this catalogue are manufactured from COLORBOND steel.",
+      },
+      quantity,
+      allowance,
+      selectedPrice: selectedCost,
+      variation,
+      priceState,
+      configurationComplete: true,
+      imageReference: profile.imageUrl || requirementImage(requirement),
+      sourceUrls: [entity.officialProductURL || profile.productUrl, "https://colorbond.com/colours"].filter(Boolean),
+      selectionTimestamp: new Date().toISOString(),
+    };
+    const patch = {
+      selectedOptionId: `${profile.id}-${slug(colour.name)}-${slug(finish.name)}`,
+      selectedProduct,
+      productModel: profile.model || profile.profile || "",
+      brand: guidedSelection.brand,
+      description: profile.description || "",
+      supplier: guidedSelection.supplier,
+      finishColour: `${colour.name} / ${finish.name}`,
+      imageUrl: profile.imageUrl || requirementImage(requirement),
+      allowanceAmount: allowance,
+      selectedCost,
+      upgradeCost: variation,
+      included: variation === 0,
+      status: "selected",
+      guidedSelection,
+    };
+    setBook((current) => {
+      const nextRoom = ensureGuidedRoom(current, requirement);
+      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
+      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
+        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
+          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
+          : item
+      ));
+      const updatedRoom = { ...nextRoom, rows: nextRows };
+      return {
+        ...current,
+        rooms: roomExists
+          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
+          : [...current.rooms, updatedRoom],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    setSuccess("Roofing configuration selected. Save Progress will store it with this selections book.");
   }
 
   function applyRowOption(roomId, rowId, optionId) {
@@ -1794,9 +1909,12 @@ export default function BuilderSelectionsBookPage({
               guidedArea,
               guidedRequirement,
               guidedBrickStep,
+              guidedRoofingStep,
               setGuidedBrickStep,
               setGuidedBrickSupplier,
               setGuidedBrickRange,
+              setGuidedRoofingStep,
+              setRoofingConfiguration,
               setGuidedScreen,
               setGuidedArea,
               setGuidedRequirementKey,
@@ -1945,6 +2063,8 @@ export default function BuilderSelectionsBookPage({
               brickStep={guidedBrickStep}
               brickSupplier={guidedBrickSupplier}
               brickRange={guidedBrickRange}
+              roofingStep={guidedRoofingStep}
+              roofingConfiguration={roofingConfiguration}
               onOpenArea={openGuidedArea}
               onOpenKitchen={openGuidedKitchen}
               onOpenRequirementKey={openGuidedRequirementKey}
@@ -1952,6 +2072,9 @@ export default function BuilderSelectionsBookPage({
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
+              onRoofingStepChange={setGuidedRoofingStep}
+              onRoofingConfigurationChange={setRoofingConfiguration}
+              onSelectRoofingConfiguration={selectGuidedRoofingConfiguration}
               onSelectProduct={selectGuidedProduct}
               onViewDetails={(product) => setGuidedProductDetails(product)}
               onOpenImport={openBrickImportModal}
@@ -2029,6 +2152,8 @@ function GuidedSelectionsWorkflow({
   brickStep,
   brickSupplier,
   brickRange,
+  roofingStep,
+  roofingConfiguration,
   onOpenArea,
   onOpenKitchen,
   onOpenRequirementKey,
@@ -2036,6 +2161,9 @@ function GuidedSelectionsWorkflow({
   onBrickStepChange,
   onBrickSupplierChange,
   onBrickRangeChange,
+  onRoofingStepChange,
+  onRoofingConfigurationChange,
+  onSelectRoofingConfiguration,
   onSelectProduct,
   onViewDetails,
   onOpenImport,
@@ -2104,6 +2232,22 @@ function GuidedSelectionsWorkflow({
           onSelectProduct={onSelectProduct}
           onViewDetails={onViewDetails}
           onOpenImport={onOpenImport}
+        />
+      );
+    }
+    if (requirement.requirementKey === "roofing") {
+      return (
+        <GuidedRoofingWorkflow
+          requirement={requirement}
+          products={products}
+          masterProductCount={masterProductCount}
+          enabledProductCount={enabledProductCount}
+          runningTotals={runningTotals}
+          roofingStep={roofingStep}
+          roofingConfiguration={roofingConfiguration}
+          onRoofingStepChange={onRoofingStepChange}
+          onRoofingConfigurationChange={onRoofingConfigurationChange}
+          onSelectRoofingConfiguration={onSelectRoofingConfiguration}
         />
       );
     }
@@ -2317,6 +2461,149 @@ function GuidedBrickEmptyCatalogue({ message = "Brick catalogue awaiting product
   );
 }
 
+function GuidedRoofingWorkflow({
+  requirement,
+  products,
+  masterProductCount = 0,
+  enabledProductCount = 0,
+  runningTotals,
+  roofingStep,
+  roofingConfiguration,
+  onRoofingStepChange,
+  onRoofingConfigurationChange,
+  onSelectRoofingConfiguration,
+}) {
+  const config = roofingConfiguration || {};
+  const systems = roofingProductSystems(products, config.roofType);
+  const profiles = roofingProfiles(products, config);
+  const selectedProfile = roofingProfileByCode(products, config.profileProductCode);
+  const colours = roofingColoursForProfile(selectedProfile);
+  const selectedColour = roofingColourByName(selectedProfile, config.colour);
+  const finishes = roofingFinishesForColour(selectedColour);
+  const selectedFinish = roofingFinishForColour(selectedColour, config.finish);
+  const canSelect = Boolean(config.roofType === "metal_roofing" && config.productSystem && selectedProfile && selectedColour && selectedFinish);
+  const setConfig = (patch) => onRoofingConfigurationChange((current) => ({ ...(current || {}), ...patch }));
+
+  return (
+    <section className="guidedShell" data-testid="guided-roofing-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout roofingLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-roofing-hierarchy">
+          <h2>Roofing</h2>
+          {[
+            ["roofType", "Roof Type", config.roofType],
+            ["productSystem", "Product System", config.productSystem],
+            ["profile", "Profile", config.profileProductCode],
+            ["colour", "Colour", config.colour],
+            ["finish", "Finish", config.finish],
+          ].map(([step, label, value]) => (
+            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && config.roofType !== "metal_roofing"}>
+              <GuidedStatusDot status={value ? "complete" : "not_started"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel roofingShowroom">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Roofing</span>
+            <strong>{roofingHeaderForStep(roofingStep)}</strong>
+            <em>Colour is configured as a variant inside Roofing. Gutters, fascia and downpipes stay separate selections.</em>
+          </div>
+
+          {roofingStep === "roofType" ? (
+            <div className="roofingChoiceGrid" data-testid="roofing-roof-type-step">
+              <button type="button" className={config.roofType === "metal_roofing" ? "selected" : ""} onClick={() => {
+                setConfig({ roofType: "metal_roofing", productSystem: "", profileProductCode: "", colour: "", finish: "" });
+                onRoofingStepChange("productSystem");
+              }}>
+                <strong>Metal Roofing</strong>
+                <span>Configure COLORBOND steel material through compatible LYSAGHT roofing profiles.</span>
+              </button>
+              <button type="button" className={config.roofType === "roof_tiles" ? "selected awaiting" : "awaiting"} onClick={() => {
+                setConfig({ roofType: "roof_tiles", productSystem: "", profileProductCode: "", colour: "", finish: "" });
+              }}>
+                <strong>Roof Tiles</strong>
+                <span>Catalogue awaiting official tile supplier data.</span>
+              </button>
+            </div>
+          ) : config.roofType === "roof_tiles" ? (
+            <GuidedRoofingEmptyCatalogue message="Roof tile catalogue awaiting product data" masterProductCount={masterProductCount} />
+          ) : !products.length ? (
+            <GuidedRoofingEmptyCatalogue message={masterProductCount && !enabledProductCount ? "No roofing products are enabled for this builder." : "Metal roofing catalogue awaiting product data"} masterProductCount={masterProductCount} />
+          ) : roofingStep === "productSystem" ? (
+            <div className="roofingChoiceGrid" data-testid="roofing-system-step">
+              {systems.map((system) => (
+                <button key={system.key} type="button" className={config.productSystem === system.key ? "selected" : ""} onClick={() => {
+                  setConfig({ productSystem: system.key, profileProductCode: "", colour: "", finish: "" });
+                  onRoofingStepChange("profile");
+                }}>
+                  <strong>{system.label}</strong>
+                  <span>{system.materialManufacturer} material / {system.profileCount} compatible profile{system.profileCount === 1 ? "" : "s"}</span>
+                </button>
+              ))}
+            </div>
+          ) : roofingStep === "profile" ? (
+            <div className="roofingProfileGrid" data-testid="roofing-profile-step">
+              {profiles.map((profile) => (
+                <button key={profile.id} type="button" className={config.profileProductCode === profile.productCode ? "selected" : ""} onClick={() => {
+                  setConfig({ profileProductCode: profile.productCode, colour: "", finish: "" });
+                  onRoofingStepChange("colour");
+                }}>
+                  <img src={profile.imageUrl || requirementImage(requirement)} alt={profile.profile || profile.productName} />
+                  <strong>{profile.profile || profile.productName}</strong>
+                  <span>{[profile.coverWidth, profile.ribHeight, profile.minimumRoofSlope].filter(Boolean).join(" / ")}</span>
+                </button>
+              ))}
+            </div>
+          ) : roofingStep === "colour" ? (
+            <div className="roofingSwatchGrid" data-testid="roofing-colour-step">
+              {colours.map((colour) => (
+                <button key={colour.name} type="button" className={config.colour === colour.name ? "selected" : ""} onClick={() => {
+                  const finish = colour.availableFinishes.includes(config.finish) ? config.finish : colour.availableFinishes[0];
+                  setConfig({ colour: colour.name, finish });
+                  onRoofingStepChange("finish");
+                }}>
+                  <span className="roofingSwatch" style={{ backgroundColor: colour.hex }} />
+                  <strong>{colour.name}</strong>
+                  <em>{colour.availableFinishes.join(" / ")}</em>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="roofingFinishPanel" data-testid="roofing-finish-step">
+              <div className="roofingChoiceGrid">
+                {finishes.map((finish) => (
+                  <button key={finish.name} type="button" className={config.finish === finish.name ? "selected" : ""} onClick={() => setConfig({ finish: finish.name })}>
+                    <strong>{finish.name}</strong>
+                    <span>{finish.description}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="roofingSelectionSummary">
+                <strong>{selectedProfile ? selectedProfile.profile || selectedProfile.productName : "Choose profile"} / {selectedColour?.name || "Choose colour"} / {selectedFinish?.name || "Choose finish"}</strong>
+                <span>{priceStateForGuidedOption(selectedProfile) === PRICE_STATES.current ? money(selectedProfile.selectedCost) : PRICE_STATES.quoteRequired}</span>
+                <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function GuidedRoofingEmptyCatalogue({ message = "Metal roofing catalogue awaiting product data", masterProductCount = 0 }) {
+  return (
+    <div className="guidedEmptyCatalogue" data-testid="guided-roofing-empty-catalogue">
+      <strong>{message}</strong>
+      <span>{masterProductCount ? "Master Catalogue has roofing products, but this builder has not enabled them yet." : "Import official roofing catalogue records before client selection."}</span>
+      <div>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?area=exterior&category=exterior-roofing&family=roofing"; }}>Manage Roofing Catalogue</button>
+      </div>
+    </div>
+  );
+}
+
 function GuidedEmptyCatalogue({ requirement }) {
   return (
     <div className="guidedEmptyCatalogue" data-testid={`guided-empty-catalogue-${requirement.requirementKey}`}>
@@ -2334,6 +2621,12 @@ function GuidedRequirementRow({ requirement, selection, onOpen }) {
   const status = statusForRequirement(requirement, selection);
   const financials = guidedRequirementFinancials(requirement, selection);
   const productName = selection?.selected_product_name || "";
+  const priceState = selection?.selected_details?.priceState || "";
+  const selectedLabel = selection
+    ? priceState && priceState !== PRICE_STATES.current
+      ? `Selected ${priceState}`
+      : `Selected ${money(financials.selectedPrice)}`
+    : "Not selected";
   return (
     <article className={`guidedRequirementRow ${statusTone(status)}`} data-testid={`guided-requirement-${requirement.requirementKey}`}>
       <GuidedStatusDot status={status} />
@@ -2341,11 +2634,11 @@ function GuidedRequirementRow({ requirement, selection, onOpen }) {
       <div>
         <strong>{requirement.label}</strong>
         <span>{productName || "Not selected"}</span>
-        {selection?.selected_details?.priceState && selection.selected_details.priceState !== PRICE_STATES.current ? <em>{selection.selected_details.priceState}</em> : null}
+        {priceState && priceState !== PRICE_STATES.current ? <em>{priceState}</em> : null}
       </div>
       <div className="guidedRowMoney">
         <span>Allowance {money(financials.allowance)}</span>
-        <span>{selection ? `Selected ${money(financials.selectedPrice)}` : "Not selected"}</span>
+        <span>{selectedLabel}</span>
         <b>{signedMoney(financials.variation)}</b>
       </div>
       <button type="button" onClick={onOpen}>{selection ? "Change" : "Select"}</button>
@@ -3271,8 +3564,8 @@ function fallbackStandardItems(quality = "mid_range") {
   const higher = String(quality).includes("higher");
   const rows = higher
     ? [
-        ["Roofing", "Premium Colorbond Profile", "Colorbond", "Colorbond", "higher_end"],
-        ["Gutters", "Premium Colorbond", "Colorbond", "Colorbond", "higher_end"],
+        ["Roofing", "Roofing Configuration Required", "", "", "higher_end"],
+        ["Gutters", "Guttering Selection Required", "", "", "higher_end"],
         ["Windows & Sliding Doors", "Bradnam's", "Bradnam's", "Bradnam's", "higher_end"],
         ["Garage Door", "B&D Premium", "B&D", "B&D", "higher_end"],
         ["Appliances", "Bosch", "Bosch", "Appliance supplier", "higher_end"],
@@ -3284,8 +3577,8 @@ function fallbackStandardItems(quality = "mid_range") {
         ["Tiles", "National Tiles Premium Collection", "National Tiles", "National Tiles", "higher_end"],
       ]
     : [
-        ["Roofing", "Colorbond Corrugated", "Colorbond", "Colorbond", "mid_range"],
-        ["Gutters", "Colorbond Quad", "Colorbond", "Colorbond", "mid_range"],
+        ["Roofing", "Roofing Configuration Required", "", "", "mid_range"],
+        ["Gutters", "Guttering Selection Required", "", "", "mid_range"],
         ["Windows & Sliding Doors", "Dowell", "Dowell", "Dowell", "mid_range"],
         ["Garage Door", "B&D", "B&D", "B&D", "mid_range"],
         ["Appliances", "Westinghouse", "Westinghouse", "Appliance supplier", "mid_range"],
@@ -3322,32 +3615,37 @@ function selectionTotals(book) {
 }
 
 function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, templateId, userId, room, row }) {
+  const guided = row.guidedSelection || {};
+  const selectedDetails = {
+    room: room.name,
+    item: row.item,
+    brand: row.brand,
+    model: row.productModel,
+    finishColour: row.finishColour,
+    selectedCost: numberValue(row.selectedCost),
+    upgradeCost: numberValue(row.upgradeCost),
+    imageUrl: row.imageUrl,
+    datasheetUrl: row.datasheetUrl,
+    warrantyUrl: row.warrantyUrl,
+    productUrl: row.productUrl,
+    ...guided,
+  };
   return {
     workspace_id: workspaceId,
     project_id: projectId,
     snapshot_id: snapshotId || null,
-    source_quote_row_id: row.sourceQuoteRowId || null,
-    category: slug(room.name) || "other",
+    source_quote_row_id: guided.linkedQuoteItemCode || row.sourceQuoteRowId || null,
+    category: guided.area || slug(room.name) || "other",
+    subcategory: guided.requirementLabel || row.item || "",
+    room: guided.room || room.name,
     title: `${room.name} - ${row.item}`,
     description: row.description || row.selectedProduct || row.item,
     allowance_amount: numberValue(row.allowanceAmount),
     selected_product_name: row.selectedProduct || "",
     selected_supplier_name: row.supplier || "",
     selected_supplier_id: null,
-    selected_details: {
-      room: room.name,
-      item: row.item,
-      brand: row.brand,
-      model: row.productModel,
-      finishColour: row.finishColour,
-      selectedCost: numberValue(row.selectedCost),
-      upgradeCost: numberValue(row.upgradeCost),
-      imageUrl: row.imageUrl,
-      datasheetUrl: row.datasheetUrl,
-      warrantyUrl: row.warrantyUrl,
-      productUrl: row.productUrl,
-    },
-    status: row.status === "approved" ? "approved" : "pending",
+    selected_details: selectedDetails,
+    status: row.status === "approved" || row.status === "selected" ? "approved" : "pending",
     selected_at: new Date().toISOString(),
     notes: row.notes || "",
     metadata: {
@@ -3356,6 +3654,10 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
       selection_book_row_id: row.id,
       inclusion_template_id: templateId || null,
       uiStatus: row.status,
+      area: guided.area,
+      requirementKey: guided.requirementKey,
+      familyKey: guided.familyKey,
+      priceState: guided.priceState,
     },
     created_by: userId,
     updated_by: userId,
@@ -3373,19 +3675,20 @@ function signedMoney(value) {
 }
 
 function guidedSelectionsFromBook(book) {
-  const kitchen = ensureKitchenRoom(book);
-  return KITCHEN_REQUIREMENTS.map((requirement) => {
-    const row = rowForRequirement(kitchen, requirement);
+  return ALL_GUIDED_REQUIREMENTS.map((requirement) => {
+    const room = ensureGuidedRoom(book, requirement);
+    const row = rowForRequirement(room, requirement);
     if (!row?.selectedProduct && !row?.guidedSelection) return null;
     const guided = row.guidedSelection || {};
     const allowance = numberValue(guided.allowance ?? row.allowanceAmount ?? requirement.defaultAllowance);
     const selectedPrice = numberValue(guided.selectedPrice ?? row.selectedCost);
     const variation = numberValue(guided.variation ?? row.upgradeCost);
     const priceState = guided.priceState || (selectedPrice > 0 ? PRICE_STATES.current : PRICE_STATES.pending);
+    const complete = guided.configurationComplete || priceState === PRICE_STATES.current;
     return {
       id: row.id,
-      category: "interior",
-      room: "Kitchen",
+      category: requirement.areaKey,
+      room: requirement.areaLabel,
       title: requirement.label,
       selected_product_name: row.selectedProduct,
       product_name: row.selectedProduct,
@@ -3397,12 +3700,13 @@ function guidedSelectionsFromBook(book) {
       allowance_amount: allowance,
       client_selection_price: selectedPrice,
       variation_amount: priceState === PRICE_STATES.current ? variation : 0,
-      selection_status: priceState === PRICE_STATES.current ? "selected" : "not_selected",
-      status: priceState === PRICE_STATES.current ? "selected" : "pending",
+      selection_status: complete ? "selected" : "not_selected",
+      status: complete ? "selected" : "pending",
       is_active: true,
       selected_details: {
-        area: "kitchen",
-        room: "Kitchen",
+        ...guided,
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
         requirementKey: requirement.requirementKey,
         requirementLabel: requirement.label,
         familyKey: requirement.familyKey,
@@ -3411,6 +3715,7 @@ function guidedSelectionsFromBook(book) {
         selectedPrice,
         variationAmount: priceState === PRICE_STATES.current ? variation : 0,
         priceState,
+        configurationComplete: Boolean(guided.configurationComplete),
       },
       metadata: {
         source: "guided_client_selections",
@@ -3457,6 +3762,7 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
   const entity = product.metadata?.productEntity || product;
   const priceState = priceStateForProduct(entity);
   const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
+  const attributes = entity.attributes || {};
   return {
     ...product,
     id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
@@ -3465,10 +3771,17 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     supplier: entity.supplier || "",
     model: entity.model || "",
     range: entity.range || "",
+    manufacturer: entity.manufacturer || "",
     colour: entity.colour || "",
     texture: entity.texture || entity.metadata?.texture || "",
     dimensions: entity.dimensions || entity.size || "",
     finish: entity.finish || entity.colour || "",
+    profile: entity.profile || attributes.profile || "",
+    material: entity.material || attributes.material || "",
+    roofType: attributes.roofType || entity.configuration || "",
+    coverWidth: attributes.coverWidth || "",
+    ribHeight: attributes.ribHeight || "",
+    minimumRoofSlope: attributes.minimumRoofSlope || "",
     size: entity.size || sizeFromOption(entity),
     description: entity.description || "",
     allowance: productAllowance(entity, requirement),
@@ -3485,6 +3798,73 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
       productEntity: entity,
     },
   };
+}
+
+function roofingHeaderForStep(step) {
+  if (step === "finish") return "Choose finish";
+  if (step === "colour") return "Choose COLORBOND steel colour";
+  if (step === "profile") return "Choose LYSAGHT profile";
+  if (step === "productSystem") return "Choose manufacturer and product system";
+  return "Choose roof type";
+}
+
+function roofingProductSystems(products = [], roofType = "") {
+  if (roofType && roofType !== "metal_roofing") return [];
+  const systems = new Map();
+  products.filter((product) => (product.roofType || "metal_roofing") === "metal_roofing").forEach((product) => {
+    const entity = product.metadata?.productEntity || product;
+    const material = product.material || entity.material || entity.attributes?.material || "COLORBOND steel";
+    const manufacturer = product.manufacturer || entity.manufacturer || "LYSAGHT";
+    const brand = product.brand || entity.brand || material;
+    const key = slug(`${manufacturer}-${brand}-${material}`);
+    const existing = systems.get(key) || {
+      key,
+      label: `${manufacturer} / ${brand}`,
+      material,
+      materialManufacturer: entity.attributes?.materialManufacturer || "BlueScope",
+      profileCount: 0,
+    };
+    existing.profileCount += 1;
+    systems.set(key, existing);
+  });
+  return Array.from(systems.values()).sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function roofingProfiles(products = [], config = {}) {
+  return products
+    .filter((product) => (product.roofType || "metal_roofing") === (config.roofType || "metal_roofing"))
+    .filter((product) => !config.productSystem || roofingProductSystems([product], config.roofType)[0]?.key === config.productSystem)
+    .sort((left, right) => String(left.profile || left.productName).localeCompare(String(right.profile || right.productName)));
+}
+
+function roofingProfileByCode(products = [], productCode = "") {
+  return products.find((product) => product.productCode === productCode || product.id === productCode) || null;
+}
+
+function roofingColoursForProfile(profile = null) {
+  const colours = profile?.metadata?.productEntity?.attributes?.colours || profile?.attributes?.colours || [];
+  return Array.isArray(colours) ? colours.map((colour) => ({
+    name: colour.name || colour.officialName,
+    officialName: colour.officialName || colour.name,
+    hex: colour.hex || colour.swatchHex || "#d8dee8",
+    availableFinishes: Array.isArray(colour.availableFinishes) && colour.availableFinishes.length ? colour.availableFinishes : ["Classic"],
+  })).filter((colour) => colour.name) : [];
+}
+
+function roofingColourByName(profile = null, colourName = "") {
+  return roofingColoursForProfile(profile).find((colour) => colour.name === colourName) || null;
+}
+
+function roofingFinishesForColour(colour = null) {
+  if (!colour) return [];
+  return colour.availableFinishes.map((finish) => ({
+    name: finish,
+    description: finish === "Matt" ? "Official premium Matt finish for this COLORBOND colour." : "Classic COLORBOND steel finish.",
+  }));
+}
+
+function roofingFinishForColour(colour = null, finishName = "") {
+  return roofingFinishesForColour(colour).find((finish) => finish.name === finishName) || null;
 }
 
 function brickSupplierOptions(products = []) {
@@ -3631,7 +4011,7 @@ function rowMatchesRequirement(row, requirement) {
     lighting: ["lighting"],
     paint: ["paint"],
     bricks: ["bricks", "brickwork"],
-    roof: ["roof", "roofing"],
+    roofing: ["roof", "roofing"],
     "garage-door": ["garage-door", "garage-doors"],
     "entry-door": ["entry-door", "entry-doors"],
     "internal-doors": ["internal-doors", "internal-door", "door"],
@@ -3649,9 +4029,12 @@ function handleGuidedBack({
   guidedArea,
   guidedRequirement,
   guidedBrickStep,
+  guidedRoofingStep,
   setGuidedBrickStep,
   setGuidedBrickSupplier,
   setGuidedBrickRange,
+  setGuidedRoofingStep,
+  setRoofingConfiguration,
   setGuidedScreen,
   setGuidedArea,
   setGuidedRequirementKey,
@@ -3669,6 +4052,28 @@ function handleGuidedBack({
       }
       setGuidedBrickSupplier("");
       setGuidedBrickRange("");
+      setGuidedScreen("exterior");
+      setGuidedRequirementKey("");
+      return;
+    }
+    if (guidedRequirement?.requirementKey === "roofing") {
+      if (guidedRoofingStep === "finish") {
+        setGuidedRoofingStep("colour");
+        return;
+      }
+      if (guidedRoofingStep === "colour") {
+        setGuidedRoofingStep("profile");
+        return;
+      }
+      if (guidedRoofingStep === "profile") {
+        setGuidedRoofingStep("productSystem");
+        return;
+      }
+      if (guidedRoofingStep === "productSystem") {
+        setGuidedRoofingStep("roofType");
+        return;
+      }
+      setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", colour: "", finish: "" });
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
       return;
@@ -3796,6 +4201,29 @@ const styles = `
   .guidedProductActions button { border-radius: 8px; background: #ffffff; color: #071827; border: 1px solid #cbd5e1; }
   .guidedProductActions button.primary { background: #0f766e; color: #ffffff; border-color: #0f766e; }
   .guidedProductActions button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .roofingLayout .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
+  .roofingChoiceGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .roofingChoiceGrid button,
+  .roofingProfileGrid button,
+  .roofingSwatchGrid button { display: grid; gap: 8px; min-height: 118px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 14px; }
+  .roofingChoiceGrid button.selected,
+  .roofingProfileGrid button.selected,
+  .roofingSwatchGrid button.selected { border-color: #0f766e; box-shadow: inset 0 0 0 2px #0f766e; }
+  .roofingChoiceGrid button.awaiting { border-style: dashed; background: #f8fafc; }
+  .roofingChoiceGrid button strong,
+  .roofingProfileGrid button strong,
+  .roofingSwatchGrid button strong { font-size: 17px; font-weight: 950; }
+  .roofingChoiceGrid button span,
+  .roofingProfileGrid button span,
+  .roofingSwatchGrid button em { color: #475569; font-size: 13px; font-style: normal; font-weight: 750; }
+  .roofingProfileGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+  .roofingProfileGrid img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px; background: #f1f5f9; }
+  .roofingSwatchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .roofingSwatch { width: 100%; height: 62px; border: 1px solid rgba(15,23,42,.16); border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .roofingFinishPanel { display: grid; gap: 14px; }
+  .roofingSelectionSummary { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 12px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
+  .roofingSelectionSummary strong { color: #071827; font-size: 17px; font-weight: 950; }
+  .roofingSelectionSummary span { color: #92400e; font-weight: 950; }
   .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
   .guidedDetailsModal > button { justify-self: end; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 8px 12px; font-weight: 850; }
   .guidedDetailsModal img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }

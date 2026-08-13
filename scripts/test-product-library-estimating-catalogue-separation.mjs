@@ -52,7 +52,7 @@ assert.ok(!JSON.stringify(catalogue.hierarchy).match(/Soil Tests|Engineering|Pro
 
 const requiredFamilies = [
   "bricks",
-  "metal-roofing",
+  "roofing",
   "entry-doors",
   "garage-doors",
   "ovens",

@@ -59,9 +59,10 @@ function categoryNames(areaKey) {
   return taxonomy.areas.find((area) => area.key === areaKey)?.categories.map((category) => category.displayName) || [];
 }
 
-["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Roof Colour", "Gutters", "Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking"].forEach((category) => {
+["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Gutters", "Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking"].forEach((category) => {
   assert.ok(categoryNames("exterior").includes(category), `Exterior taxonomy must include ${category}`);
 });
+assert.ok(!categoryNames("exterior").includes("Roof Colour"), "Roof Colour must be a Roofing variant, not a standalone category");
 ["Cabinetry", "Cabinet Finish", "Handles", "Benchtops", "Splashback", "Sink", "Sink Mixer", "Ovens", "Cooktop", "Rangehood", "Dishwasher", "Microwave", "Flooring", "Lighting", "Paint"].forEach((category) => {
   assert.ok(categoryNames("kitchen").includes(category), `Kitchen taxonomy must include ${category}`);
 });
@@ -93,7 +94,7 @@ const platformFamilySchema = PRODUCT_FAMILIES.map((family) => ({
 }));
 assert.doesNotMatch(JSON.stringify(platformFamilySchema), forbiddenSupplierNames, "supplier names must not be hard-coded into mandatory platform structure");
 
-const requiredFamilyKeys = ["stone-20mm-tops", "stone-40mm-tops", "bricks", "metal-roofing", "garage-doors", "internal-doors", "ovens", "tapware", "tiles", "flooring"];
+const requiredFamilyKeys = ["stone-20mm-tops", "stone-40mm-tops", "bricks", "roofing", "garage-doors", "internal-doors", "ovens", "tapware", "tiles", "flooring"];
 requiredFamilyKeys.forEach((familyKey) => {
   const family = derivedFamilies.find((item) => item.familyKey === familyKey);
   assert.ok(family, `missing product family ${familyKey}`);
@@ -115,7 +116,7 @@ function assertFamilyAttributes(familyKey, requiredAttributes, optionalAttribute
 assertFamilyAttributes("stone-20mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
 assertFamilyAttributes("stone-40mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
 assertFamilyAttributes("bricks", ["supplier", "brand", "range", "brickName", "colour"], ["texture", "format", "officialColourName", "colourGroup", "image", "price", "supplierURL"], ["range", "brickName", "colour", "officialColourName", "colourGroup", "texture", "format"]);
-assertFamilyAttributes("metal-roofing", ["supplier", "brand", "profile", "range", "colour"], ["finish", "gauge", "image", "price", "supplierURL"], ["profile", "range", "colour", "finish", "gauge"]);
+assertFamilyAttributes("roofing", ["roofType", "manufacturer", "brand", "material", "profile", "colour", "finish"], ["materialManufacturer", "gauge", "image", "price", "supplierURL"], ["roofType", "material", "profile", "colour", "finish", "gauge"]);
 assertFamilyAttributes("internal-doors", ["supplier", "brand", "range", "design", "construction", "size", "finish"], ["glazing", "image", "price", "supplierURL"], ["range", "design", "construction", "size", "finish", "glazing"]);
 
 const kitchenStoneQuery = selectionQueryForFamily({ areaKey: "kitchen", familyKey: "stone-20mm-tops" });

@@ -43,7 +43,6 @@ Exterior:
 - Cladding
 - Render
 - Roofing
-- Roof Colour
 - Gutters
 - Fascia
 - Windows
@@ -56,6 +55,8 @@ Exterior:
 - External Lighting
 - Driveway Finishes
 - Decking
+
+Roof colour is managed as a Roofing variant, not as a standalone Exterior category.
 
 Interior:
 

@@ -37,9 +37,9 @@ assert.equal(catalogue.products.length, 614, "one catalogue entity must be produ
 assert.ok(catalogue.productFamilies.length >= 16, "approved rows must map to product families");
 assert.equal(classifyApprovedCatalogueRow({ itemDescription: "FACE BRICKS - PREMIER RANGE", familyKey: "bricks" }), "allowance_specification", "brick range rows must not be actual products");
 assert.equal(classifyApprovedCatalogueRow({ itemDescription: "FACE BRICKS - PREMIUM RANGE", familyKey: "bricks" }), "allowance_specification", "premium brick range rows must not be actual products");
-assert.equal(classifyApprovedCatalogueRow({ itemDescription: "METAL ROOFING - COLOUR", familyKey: "metal-roofing" }), "variant", "roof colour rows must be Roofing variants");
+assert.equal(classifyApprovedCatalogueRow({ itemDescription: "METAL ROOFING - COLOUR", familyKey: "roofing" }), "variant", "roof colour rows must be Roofing variants");
 assert.equal(classifyApprovedSelectionRow({ sourceDescription: "FACE BRICKS - PREMIER RANGE", familyKey: "bricks" }), "allowance_specification", "runtime classifier must match catalogue brick row classification");
-assert.equal(classifyApprovedSelectionRow({ sourceDescription: "METAL ROOFING - COLOUR", familyKey: "metal-roofing" }), "variant", "runtime classifier must keep roof colour inside Roofing");
+assert.equal(classifyApprovedSelectionRow({ sourceDescription: "METAL ROOFING - COLOUR", familyKey: "roofing" }), "variant", "runtime classifier must keep roof colour inside Roofing");
 assert.deepEqual(PRODUCT_ENRICHMENT_COLUMNS, [
   "product_code",
   "organisation_id",

@@ -5,7 +5,7 @@ Selections must query the Product Library with exact context.
 Examples:
 
 - Kitchen -> Stone Benchtops: `area = kitchen`, `familyKey = stone-benchtops`, `linkedQuoteItemCode = approved-family:stone-benchtops` when the source quote code is blank.
-- Exterior -> Metal Roof: `area = exterior`, `familyKey = metal-roofing`.
+- Exterior -> Roofing: `area = exterior`, `familyKey = roofing`.
 - Exterior -> Bricks: `area = exterior`, `familyKey = bricks`.
 - Interior -> Internal Doors: `area = interior`, `familyKey = internal-doors`.
 
