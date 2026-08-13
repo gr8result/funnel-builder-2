@@ -114,7 +114,7 @@ function assertFamilyAttributes(familyKey, requiredAttributes, optionalAttribute
 
 assertFamilyAttributes("stone-20mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
 assertFamilyAttributes("stone-40mm-tops", ["supplier", "brand", "range", "colour", "finish", "thickness"], ["edgeProfile", "image", "price", "supplierURL"], ["range", "colour", "finish", "thickness", "edgeProfile"]);
-assertFamilyAttributes("bricks", ["supplier", "brand", "range", "brickName", "colour"], ["texture", "format", "image", "price", "supplierURL"], ["range", "brickName", "colour", "texture", "format"]);
+assertFamilyAttributes("bricks", ["supplier", "brand", "range", "brickName", "colour"], ["texture", "format", "officialColourName", "colourGroup", "image", "price", "supplierURL"], ["range", "brickName", "colour", "officialColourName", "colourGroup", "texture", "format"]);
 assertFamilyAttributes("metal-roofing", ["supplier", "brand", "profile", "range", "colour"], ["finish", "gauge", "image", "price", "supplierURL"], ["profile", "range", "colour", "finish", "gauge"]);
 assertFamilyAttributes("internal-doors", ["supplier", "brand", "range", "design", "construction", "size", "finish"], ["glazing", "image", "price", "supplierURL"], ["range", "design", "construction", "size", "finish", "glazing"]);
 
@@ -137,6 +137,8 @@ assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
   "sku",
   "description",
   "colour",
+  "official_colour_name",
+  "colour_group",
   "finish",
   "size",
   "dimensions",
@@ -159,11 +161,14 @@ assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
   "client_price",
   "currency",
   "gst_included",
+  "price_unit",
+  "normalized_unit_price",
   "price_status",
   "price_source_url",
   "price_verified_at",
   "country",
   "regions",
+  "region_review_required",
   "active",
   "discontinued",
   "archived",
