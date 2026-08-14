@@ -2669,6 +2669,13 @@ function GuidedRoofingWorkflow({
   const finishes = roofingFinishesForColour(selectedColour);
   const selectedFinish = roofingFinishForColour(selectedColour, config.finish);
   const canSelect = Boolean(config.roofType === "metal_roofing" && config.productSystem && selectedProfile && selectedColour && selectedFinish);
+  const roofTypeCards = roofingRoofTypeCards(products, requirement);
+  const selectedSystem = systems.find((system) => system.key === config.productSystem) || null;
+  const selectedProfileImage = roofingProfileImage(selectedProfile, requirement);
+  const selectedPriceState = priceStateForGuidedOption(selectedProfile);
+  const selectedPrice = selectedPriceState === PRICE_STATES.current ? numberValue(selectedProfile?.selectedCost) : 0;
+  const selectedAllowance = numberValue(selectedProfile?.allowance ?? requirement.defaultAllowance);
+  const selectedVariation = selectedPriceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance: selectedAllowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   const setConfig = (patch) => onRoofingConfigurationChange((current) => ({ ...(current || {}), ...patch }));
 
   return (
@@ -2684,8 +2691,9 @@ function GuidedRoofingWorkflow({
             ["colour", "Colour", config.colour],
             ["finish", "Finish", config.finish],
           ].map(([step, label, value]) => (
-            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && config.roofType !== "metal_roofing"}>
+            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && config.roofType !== "metal_roofing"}>
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
+              <RoofingProgressThumb step={step} config={config} profile={selectedProfile} colour={selectedColour} finish={selectedFinish} products={products} requirement={requirement} />
               <span>{label}</span>
             </button>
           ))}
@@ -2698,34 +2706,40 @@ function GuidedRoofingWorkflow({
           </div>
 
           {roofingStep === "roofType" ? (
-            <div className="roofingChoiceGrid" data-testid="roofing-roof-type-step">
-              <button type="button" className={config.roofType === "metal_roofing" ? "selected" : ""} onClick={() => {
-                setConfig({ roofType: "metal_roofing", productSystem: "", profileProductCode: "", colour: "", finish: "" });
-                onRoofingStepChange("productSystem");
-              }}>
-                <strong>Metal Roofing</strong>
-                <span>Configure COLORBOND steel material through compatible LYSAGHT roofing profiles.</span>
-              </button>
-              <button type="button" className={config.roofType === "roof_tiles" ? "selected awaiting" : "awaiting"} onClick={() => {
-                setConfig({ roofType: "roof_tiles", productSystem: "", profileProductCode: "", colour: "", finish: "" });
-              }}>
-                <strong>Roof Tiles</strong>
-                <span>Catalogue awaiting official tile supplier data.</span>
-              </button>
+            <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-roof-type-step">
+              {roofTypeCards.map((card) => (
+                <button key={card.key} type="button" className={`roofingVisualCard ${config.roofType === card.key ? "selected" : ""} ${card.awaiting ? "awaiting" : ""}`} onClick={() => {
+                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", colour: "", finish: "" });
+                  if (card.key === "metal_roofing") onRoofingStepChange("productSystem");
+                }}>
+                  <span className="roofingVisualImage" style={{ backgroundImage: `url(${card.image})` }} />
+                  <span className="roofingCardBody">
+                    <strong>{card.label}</strong>
+                    <span>{card.description}</span>
+                    {card.awaiting ? <em>Catalogue coming soon</em> : null}
+                    <b>{config.roofType === card.key ? "Selected" : "Select"}</b>
+                  </span>
+                </button>
+              ))}
             </div>
           ) : config.roofType === "roof_tiles" ? (
             <GuidedRoofingEmptyCatalogue message="Roof tile catalogue awaiting product data" masterProductCount={masterProductCount} />
           ) : !products.length ? (
             <GuidedRoofingEmptyCatalogue message={masterProductCount && !enabledProductCount ? "No roofing products are enabled for this builder." : "Metal roofing catalogue awaiting product data"} masterProductCount={masterProductCount} />
           ) : roofingStep === "productSystem" ? (
-            <div className="roofingChoiceGrid" data-testid="roofing-system-step">
+            <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-system-step">
               {systems.map((system) => (
-                <button key={system.key} type="button" className={config.productSystem === system.key ? "selected" : ""} onClick={() => {
+                <button key={system.key} type="button" className={`roofingVisualCard ${config.productSystem === system.key ? "selected" : ""}`} onClick={() => {
                   setConfig({ productSystem: system.key, profileProductCode: "", colour: "", finish: "" });
                   onRoofingStepChange("profile");
                 }}>
-                  <strong>{system.label}</strong>
-                  <span>{system.materialManufacturer} material / {system.profileCount} compatible profile{system.profileCount === 1 ? "" : "s"}</span>
+                  <span className="roofingVisualImage" style={{ backgroundImage: `url(${roofingSystemImage(products, system, requirement)})` }} />
+                  <span className="roofingCardBody">
+                    <small>{system.materialManufacturer} material</small>
+                    <strong>{system.label}</strong>
+                    <span>{system.material} with {system.profileCount} compatible LYSAGHT profile{system.profileCount === 1 ? "" : "s"}.</span>
+                    <b>{config.productSystem === system.key ? "Selected" : "Select"}</b>
+                  </span>
                 </button>
               ))}
             </div>
@@ -2736,9 +2750,14 @@ function GuidedRoofingWorkflow({
                   setConfig({ profileProductCode: profile.productCode, colour: "", finish: "" });
                   onRoofingStepChange("colour");
                 }}>
-                  <img src={profile.imageUrl || requirementImage(requirement)} alt={profile.profile || profile.productName} />
-                  <strong>{profile.profile || profile.productName}</strong>
-                  <span>{[profile.coverWidth, profile.ribHeight, profile.minimumRoofSlope].filter(Boolean).join(" / ")}</span>
+                  <img src={roofingProfileImage(profile, requirement)} alt={profile.profile || profile.productName} />
+                  <span className="roofingProfileBody">
+                    <small>{profile.manufacturer || "LYSAGHT"}</small>
+                    <strong>{profile.profile || profile.productName}</strong>
+                    <em>{profile.description || "Residential COLORBOND steel roofing profile."}</em>
+                    <b>{[profile.coverWidth, profile.ribHeight, profile.minimumRoofSlope].filter(Boolean).join(" / ")}</b>
+                    <i>{config.profileProductCode === profile.productCode ? "Selected" : "Select"}</i>
+                  </span>
                 </button>
               ))}
             </div>
@@ -2750,7 +2769,7 @@ function GuidedRoofingWorkflow({
                   setConfig({ colour: colour.name, finish });
                   onRoofingStepChange("finish");
                 }}>
-                  <span className="roofingSwatch" style={{ backgroundColor: colour.hex }} />
+                  <span className="roofingSwatch" style={{ backgroundColor: colour.hex }}>{config.colour === colour.name ? "\u2713" : ""}</span>
                   <strong>{colour.name}</strong>
                   <em>{colour.availableFinishes.join(" / ")}</em>
                 </button>
@@ -2761,14 +2780,27 @@ function GuidedRoofingWorkflow({
               <div className="roofingChoiceGrid">
                 {finishes.map((finish) => (
                   <button key={finish.name} type="button" className={config.finish === finish.name ? "selected" : ""} onClick={() => setConfig({ finish: finish.name })}>
+                    <span className={`roofingFinishSample ${slug(finish.name)}`} style={roofingFinishStyle(selectedColour, finish)} />
                     <strong>{finish.name}</strong>
                     <span>{finish.description}</span>
                   </button>
                 ))}
               </div>
               <div className="roofingSelectionSummary">
-                <strong>{selectedProfile ? selectedProfile.profile || selectedProfile.productName : "Choose profile"} / {selectedColour?.name || "Choose colour"} / {selectedFinish?.name || "Choose finish"}</strong>
-                <span>{priceStateForGuidedOption(selectedProfile) === PRICE_STATES.current ? money(selectedProfile.selectedCost) : PRICE_STATES.quoteRequired}</span>
+                <img src={selectedProfileImage} alt={selectedProfile ? selectedProfile.profile || selectedProfile.productName : "Selected roofing"} />
+                <div className="roofingSummaryDetails">
+                  <strong>Roofing Selection</strong>
+                  <dl>
+                    <div><dt>Roof Type</dt><dd>{config.roofType === "metal_roofing" ? "Metal Roofing" : "Roof Tiles"}</dd></div>
+                    <div><dt>System</dt><dd>{selectedSystem?.label || "Choose system"}</dd></div>
+                    <div><dt>Profile</dt><dd>{selectedProfile ? selectedProfile.profile || selectedProfile.productName : "Choose profile"}</dd></div>
+                    <div><dt>Colour</dt><dd><span className="roofingSummarySwatch" style={{ backgroundColor: selectedColour?.hex || "#d8dee8" }} />{selectedColour?.name || "Choose colour"}</dd></div>
+                    <div><dt>Finish</dt><dd>{selectedFinish?.name || "Choose finish"}</dd></div>
+                    <div><dt>Allowance</dt><dd>{money(selectedAllowance)}</dd></div>
+                    <div><dt>Selected Price</dt><dd>{selectedPriceState === PRICE_STATES.current ? money(selectedProfile?.selectedCost) : PRICE_STATES.quoteRequired}</dd></div>
+                    <div><dt>Variation</dt><dd>{selectedPriceState === PRICE_STATES.current ? signedMoney(selectedVariation) : "Pending"}</dd></div>
+                  </dl>
+                </div>
                 <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
               </div>
             </div>
@@ -2789,6 +2821,26 @@ function GuidedRoofingEmptyCatalogue({ message = "Metal roofing catalogue awaiti
       </div>
     </div>
   );
+}
+
+function RoofingProgressThumb({ step, config, profile, colour, finish, products, requirement }) {
+  if (step === "roofType" && config.roofType) {
+    const image = roofingRoofTypeCards(products, requirement).find((card) => card.key === config.roofType)?.image || requirementImage(requirement);
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${image})` }} />;
+  }
+  if (step === "productSystem" && config.productSystem) {
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${roofingImageForProducts(products, requirement)})` }} />;
+  }
+  if (step === "profile" && profile) {
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${roofingProfileImage(profile, requirement)})` }} />;
+  }
+  if (step === "colour" && colour) {
+    return <span className="roofingProgressThumb swatch" style={{ backgroundColor: colour.hex }} />;
+  }
+  if (step === "finish" && finish) {
+    return <span className={`roofingProgressThumb finish ${slug(finish.name)}`} style={roofingFinishStyle(colour, finish)} />;
+  }
+  return <span className="roofingProgressThumb empty" />;
 }
 
 function GuidedEmptyCatalogue({ requirement }) {
@@ -4058,6 +4110,52 @@ function roofingProductSystems(products = [], roofType = "") {
   return Array.from(systems.values()).sort((left, right) => left.label.localeCompare(right.label));
 }
 
+const ROOF_TILE_VISUAL_URL = "https://celumcsrcomaublobs.blob.core.windows.net/celum/20195_Desktop_Original.jpg";
+
+function roofingRoofTypeCards(products = [], requirement = null) {
+  return [
+    {
+      key: "metal_roofing",
+      label: "Metal Roofing",
+      description: "Configure COLORBOND steel roofing using compatible LYSAGHT profiles and colours.",
+      image: roofingImageForProducts(products, requirement),
+      awaiting: false,
+    },
+    {
+      key: "roof_tiles",
+      label: "Roof Tiles",
+      description: "Tile roofing catalogue.",
+      image: ROOF_TILE_VISUAL_URL,
+      awaiting: true,
+    },
+  ];
+}
+
+function roofingImageForProducts(products = [], requirement = null) {
+  return roofingProfileImage(products.find((product) => product.imageUrl || product.galleryImages?.length), requirement) || requirementImage(requirement);
+}
+
+function roofingSystemImage(products = [], system = null, requirement = null) {
+  if (!system) return roofingImageForProducts(products, requirement);
+  const match = products.find((product) => roofingProductSystems([product], product.roofType || "metal_roofing")[0]?.key === system.key && (product.imageUrl || product.galleryImages?.length));
+  return roofingProfileImage(match, requirement);
+}
+
+function roofingProfileImage(profile = null, requirement = null) {
+  return profile?.imageUrl || profile?.galleryImages?.[0] || requirementImage(requirement);
+}
+
+function roofingFinishStyle(colour = null, finish = null) {
+  const hex = colour?.hex || "#d8dee8";
+  if (finish?.name === "Matt") {
+    return {
+      background: `linear-gradient(135deg, ${hex}, rgba(15, 23, 42, .18)), repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 2px, rgba(15,23,42,.08) 2px 4px)`,
+      backgroundBlendMode: "multiply",
+    };
+  }
+  return { background: `linear-gradient(135deg, ${hex}, rgba(255,255,255,.38) 46%, ${hex})` };
+}
+
 function roofingProfiles(products = [], config = {}) {
   return products
     .filter((product) => (product.roofType || "metal_roofing") === (config.roofType || "metal_roofing"))
@@ -4430,28 +4528,58 @@ const styles = `
   .guidedProductActions button.primary { background: #0f766e; color: #ffffff; border-color: #0f766e; }
   .guidedProductActions button:disabled { opacity: 0.55; cursor: not-allowed; }
   .roofingLayout .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
-  .roofingChoiceGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .roofingLayout .guidedProgressItem.complete { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
+  .roofingLayout .guidedProgressItem.active { border-color: #67e8f9; background: #ecfeff; color: #0e7490; }
+  .roofingProgressThumb { flex: 0 0 34px; width: 34px; height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f1f5f9; background-size: cover; background-position: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .roofingProgressThumb.empty { background: linear-gradient(135deg, #f8fafc, #e2e8f0); }
+  .roofingProgressThumb.finish { background-size: cover; }
+  .roofingChoiceGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .roofingVisualGrid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
   .roofingChoiceGrid button,
   .roofingProfileGrid button,
-  .roofingSwatchGrid button { display: grid; gap: 8px; min-height: 118px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 14px; }
+  .roofingSwatchGrid button { display: grid; gap: 10px; min-height: 132px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 14px; cursor: pointer; overflow: hidden; }
   .roofingChoiceGrid button.selected,
   .roofingProfileGrid button.selected,
-  .roofingSwatchGrid button.selected { border-color: #0f766e; box-shadow: inset 0 0 0 2px #0f766e; }
+  .roofingSwatchGrid button.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15, 118, 110, .18), inset 0 0 0 2px #0f766e; }
   .roofingChoiceGrid button.awaiting { border-style: dashed; background: #f8fafc; }
   .roofingChoiceGrid button strong,
   .roofingProfileGrid button strong,
-  .roofingSwatchGrid button strong { font-size: 17px; font-weight: 950; }
+  .roofingSwatchGrid button strong { font-size: 20px; line-height: 1.15; font-weight: 950; }
   .roofingChoiceGrid button span,
-  .roofingProfileGrid button span,
+  .roofingProfileGrid button em,
   .roofingSwatchGrid button em { color: #475569; font-size: 13px; font-style: normal; font-weight: 750; }
-  .roofingProfileGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
-  .roofingProfileGrid img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 8px; background: #f1f5f9; }
-  .roofingSwatchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-  .roofingSwatch { width: 100%; height: 62px; border: 1px solid rgba(15,23,42,.16); border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .roofingVisualCard { padding: 0 !important; gap: 0 !important; min-height: 0 !important; }
+  .roofingVisualImage { display: block; width: 100%; aspect-ratio: 16 / 9; background: #e2e8f0; background-size: cover; background-position: center; }
+  .roofingCardBody { display: grid; gap: 8px; padding: 14px; }
+  .roofingCardBody span,
+  .roofingProfileBody em,
+  .roofingSummaryDetails dd { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .roofingCardBody small { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+  .roofingCardBody em { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 9px; font-style: normal; font-size: 12px; font-weight: 900; }
+  .roofingCardBody b,
+  .roofingProfileBody i { justify-self: start; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 8px 12px; font-style: normal; font-size: 13px; font-weight: 950; }
+  .roofingProfileGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .roofingProfileGrid button { padding: 0; min-height: 0; }
+  .roofingProfileGrid img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #f1f5f9; }
+  .roofingProfileBody { display: grid; gap: 7px; padding: 14px; }
+  .roofingProfileBody small { color: #64748b; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+  .roofingProfileBody b { color: #334155; font-size: 12px; font-weight: 850; }
+  .roofingSwatchGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+  .roofingSwatchGrid button { min-height: 142px; padding: 10px; }
+  .roofingSwatch { display: grid; place-items: center; width: 100%; height: 82px; border: 1px solid rgba(15,23,42,.18); border-radius: 8px; color: #ffffff; font-size: 24px; font-weight: 950; text-shadow: 0 1px 3px rgba(15,23,42,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.38); }
   .roofingFinishPanel { display: grid; gap: 14px; }
-  .roofingSelectionSummary { display: grid; grid-template-columns: minmax(220px, 1fr) auto auto; gap: 12px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
-  .roofingSelectionSummary strong { color: #071827; font-size: 17px; font-weight: 950; }
-  .roofingSelectionSummary span { color: #92400e; font-weight: 950; }
+  .roofingFinishPanel .roofingChoiceGrid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+  .roofingFinishSample { display: block; width: 100%; height: 92px; border: 1px solid rgba(15,23,42,.16); border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .roofingSelectionSummary { display: grid; grid-template-columns: minmax(190px, .75fr) minmax(0, 1fr); gap: 16px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
+  .roofingSelectionSummary > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .roofingSelectionSummary button { grid-column: 1 / -1; justify-self: start; align-self: end; white-space: normal; }
+  .roofingSummaryDetails { display: grid; gap: 10px; min-width: 0; }
+  .roofingSummaryDetails > strong { color: #071827; font-size: 22px; font-weight: 950; }
+  .roofingSummaryDetails dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .roofingSummaryDetails dl div { border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 9px; }
+  .roofingSummaryDetails dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .roofingSummaryDetails dd { display: flex; gap: 8px; align-items: center; min-height: 24px; margin: 4px 0 0; color: #071827; font-weight: 900; }
+  .roofingSummarySwatch { flex: 0 0 36px; width: 36px; height: 24px; border: 1px solid rgba(15,23,42,.18); border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
   .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
   .guidedDetailsModal > button { justify-self: end; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 8px 12px; font-weight: 850; }
   .guidedDetailsModal img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
@@ -4665,6 +4793,22 @@ const styles = `
   .imageModal { background: white; border-radius: 10px; padding: 14px; display: grid; gap: 10px; max-width: 88vw; max-height: 90vh; }
   .imageModal img { max-width: 80vw; max-height: 74vh; object-fit: contain; }
   @page { size: A4 portrait; margin: 0; }
+  @media (max-width: 1180px) {
+    .roofingLayout { grid-template-columns: 1fr; }
+    .roofingLayout .guidedProgressMenu { position: static; }
+    .roofingSwatchGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .roofingSelectionSummary { grid-template-columns: 1fr; }
+    .roofingSelectionSummary button { justify-self: start; }
+  }
+  @media (max-width: 980px) {
+    .roofingVisualGrid,
+    .roofingProfileGrid { grid-template-columns: 1fr; }
+    .roofingSwatchGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .roofingSummaryDetails dl { grid-template-columns: 1fr; }
+    .roofingVisualImage,
+    .roofingProfileGrid img,
+    .roofingSelectionSummary > img { aspect-ratio: 4 / 3; }
+  }
   @media print {
     .screen { display: block; background: white; }
     .sidebar, .standardBanner, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
