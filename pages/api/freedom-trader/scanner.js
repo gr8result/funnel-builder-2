@@ -109,7 +109,7 @@ async function runCompleteScan(settings, account = null) {
     : discovery.detailedCandidates;
   const requestedSymbols = detailedUniverse.map((item) => item.symbol);
   let detailedProviderWaitMs = 0;
-  if (requestedSymbols.length && discovery.broadScreen.providerCalls > 0) {
+  if (requestedSymbols.length && discovery.broadScreen.providerCalls > 0 && discovery.broadScreen.provider !== "Alpaca") {
     detailedProviderWaitMs = msUntilNextMinute();
     await wait(detailedProviderWaitMs);
   }

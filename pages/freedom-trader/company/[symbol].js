@@ -1632,7 +1632,7 @@ export default function TraderCompany({ passwordHash }) {
             <h1>{companyName}</h1>
             <p>
               {symbol} / {companyExchange} / {companyCurrency} / {formatCurrency(setup.currentPrice)} /{" "}
-              <span>{chartMeta?.dataLabel || setup.marketData?.historySource || "Data provider pending"}</span>
+              <span>{chartMeta?.source ? `Market data: ${chartMeta.source} / ${chartMeta.dataLabel || "Status pending"}` : setup.marketData?.historySource ? `Market data: ${setup.marketData.historySource}` : "Data provider pending"}</span>
             </p>
           </div>
           <div className="analysisSignalBox">
