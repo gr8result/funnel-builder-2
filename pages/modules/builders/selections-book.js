@@ -30,8 +30,10 @@ import {
   BUILDER_ENABLEMENT_STORAGE_KEY,
   GENERIC_IMAGE_URLS,
   MASTER_CATALOGUE_STORAGE_KEY,
+  activeQldBrickMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
+  ensureDemoBuilderBrickEnablements,
   masterProductToClientSelectionProduct,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
@@ -991,11 +993,22 @@ export default function BuilderSelectionsBookPage({
       [...qldBrickProducts, ...storedProducts].forEach((product) => {
         if (product?.productCode) byProductCode.set(product.productCode, product);
       });
-      setMasterCatalogueProducts(Array.from(byProductCode.values()));
-      setBuilderEnablements(JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]"));
+      const nextProducts = Array.from(byProductCode.values());
+      const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
+      const nextEnablements = ensureDemoBuilderBrickEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      setMasterCatalogueProducts(nextProducts);
+      setBuilderEnablements(nextEnablements);
+      if (nextEnablements.length !== storedEnablements.length) {
+        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
+      }
     } catch {
-      setMasterCatalogueProducts(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []);
-      setBuilderEnablements([]);
+      const fallbackProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
+      const fallbackEnablements = ensureDemoBuilderBrickEnablements(fallbackProducts, [], workspaceId || "");
+      setMasterCatalogueProducts(fallbackProducts);
+      setBuilderEnablements(fallbackEnablements);
+      if (fallbackEnablements.length) {
+        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
+      }
     }
   }
 
@@ -1507,6 +1520,37 @@ export default function BuilderSelectionsBookPage({
     setGuidedBrickSupplier("");
     setGuidedBrickRange("");
     setSuccess(`${brickEnablementSelection.length} brick product${brickEnablementSelection.length === 1 ? "" : "s"} enabled for this builder.`);
+  }
+
+  function setBrickProductEnabled(productCode, enabled) {
+    if (!workspaceId || !productCode) return;
+    const product = masterCatalogueProducts.find((item) => item.productCode === productCode);
+    if (!product) return;
+    const existing = builderEnablements.find((item) => item.organisationId === workspaceId && item.masterProductCode === productCode);
+    const nextEnablements = existing
+      ? builderEnablements.map((item) => item === existing ? { ...item, enabled: Boolean(enabled), active: Boolean(enabled) } : item)
+      : [...builderEnablements, createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), tier: "", selectionMode: "available_upgrade" })];
+    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
+  }
+
+  function setBrickProductsEnabled(productCodes, enabled) {
+    if (!workspaceId || !Array.isArray(productCodes)) return;
+    const codes = new Set(productCodes);
+    const productByCode = new Map(masterCatalogueProducts.map((product) => [product.productCode, product]));
+    const seen = new Set();
+    const nextEnablements = builderEnablements.map((item) => {
+      if (item.organisationId === workspaceId && codes.has(item.masterProductCode)) {
+        seen.add(item.masterProductCode);
+        return { ...item, enabled: Boolean(enabled), active: Boolean(enabled) };
+      }
+      return item;
+    });
+    codes.forEach((code) => {
+      if (seen.has(code)) return;
+      const product = productByCode.get(code);
+      if (product) nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), tier: "", selectionMode: "available_upgrade" }));
+    });
+    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
   }
 
   function selectGuidedProduct(requirement, option) {
@@ -2232,9 +2276,14 @@ export default function BuilderSelectionsBookPage({
             result={brickImportResult}
             enablementSelection={brickEnablementSelection}
             onEnablementSelectionChange={setBrickEnablementSelection}
+            masterProducts={activeQldBrickMasterProducts(masterCatalogueProducts)}
+            builderEnablements={builderEnablements}
+            organisationId={workspaceId || ""}
             onFile={handleBrickImportFile}
             onCommit={commitBrickImportPreview}
             onEnableSelected={enableSelectedBrickProducts}
+            onSetProductEnabled={setBrickProductEnabled}
+            onSetProductsEnabled={setBrickProductsEnabled}
             onClose={() => setBrickImportModalOpen(false)}
           />
         )}
@@ -2834,10 +2883,15 @@ function BrickCatalogueImportModal({
   preview,
   result,
   enablementSelection,
+  masterProducts = [],
+  builderEnablements = [],
+  organisationId = "",
   onEnablementSelectionChange,
   onFile,
   onCommit,
   onEnableSelected,
+  onSetProductEnabled,
+  onSetProductsEnabled,
   onClose,
 }) {
   const rows = preview?.preview?.rows || [];
@@ -2847,8 +2901,12 @@ function BrickCatalogueImportModal({
   const enableRows = result ? rows.filter((row) => row.valid).map((row) => row.record) : [];
   const suppliers = Array.from(new Set(enableRows.map((product) => product.supplier || product.manufacturer).filter(Boolean))).sort();
   const ranges = Array.from(new Set(enableRows.map((product) => product.range).filter(Boolean))).sort();
+  const existingSuppliers = Array.from(new Set(masterProducts.map((product) => product.supplier || product.manufacturer).filter(Boolean))).sort();
+  const existingRanges = Array.from(new Set(masterProducts.map((product) => product.range).filter(Boolean))).sort();
+  const enabledCodes = new Set(builderEnablements.filter((item) => item.organisationId === organisationId && item.enabled !== false && item.active !== false).map((item) => item.masterProductCode));
   const selectedSet = new Set(enablementSelection);
   const setCodes = (codes) => onEnablementSelectionChange(Array.from(new Set(codes)));
+  const setExistingCodes = (products, enabled) => onSetProductsEnabled?.(products.map((product) => product.productCode), enabled);
   return (
     <div className="modalBackdrop" data-testid="brick-import-modal" onClick={onClose}>
       <section className="brickImportModal" onClick={(event) => event.stopPropagation()}>
@@ -2867,15 +2925,43 @@ function BrickCatalogueImportModal({
         </div>
 
         {!preview ? (
-          <label className="brickFileDrop">
-            <Upload size={22} />
-            <strong>Step 1: Choose File</strong>
-            <span>Accepted: .csv or .json</span>
-            <input type="file" accept=".csv,text/csv,.json,application/json" onChange={(event) => {
-              onFile(event.target.files?.[0]);
-              event.target.value = "";
-            }} />
-          </label>
+          <>
+            <div className="brickEnablementPanel" data-testid="brick-builder-enablement">
+              <h3>MANAGE BUILDER CATALOGUE</h3>
+              <p>{enabledCodes.size} of {masterProducts.length} active QLD brick products are enabled for this builder.</p>
+              <div className="brickEnablementActions">
+                <button type="button" onClick={() => setExistingCodes(masterProducts, true)}>Enable all visible bricks</button>
+                <button type="button" onClick={() => setExistingCodes(masterProducts, false)}>Disable all visible bricks</button>
+                {existingSuppliers.map((supplier) => {
+                  const supplierProducts = masterProducts.filter((product) => (product.supplier || product.manufacturer) === supplier);
+                  return <button key={supplier} type="button" onClick={() => setExistingCodes(supplierProducts, true)}>Enable supplier: {supplier}</button>;
+                })}
+                {existingRanges.map((range) => {
+                  const rangeProducts = masterProducts.filter((product) => product.range === range);
+                  return <button key={range} type="button" onClick={() => setExistingCodes(rangeProducts, true)}>Enable range: {range}</button>;
+                })}
+              </div>
+              <div className="brickEnablementList">
+                {masterProducts.map((product) => (
+                  <label key={product.productCode}>
+                    <input type="checkbox" checked={enabledCodes.has(product.productCode)} onChange={(event) => onSetProductEnabled?.(product.productCode, event.target.checked)} />
+                    <span>{product.productCode}</span>
+                    <strong>{product.productName}</strong>
+                    <em>{product.supplier || product.manufacturer} / {product.range || "No range"}</em>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <label className="brickFileDrop">
+              <Upload size={22} />
+              <strong>Import additional brick products</strong>
+              <span>Accepted: .csv or .json</span>
+              <input type="file" accept=".csv,text/csv,.json,application/json" onChange={(event) => {
+                onFile(event.target.files?.[0]);
+                event.target.value = "";
+              }} />
+            </label>
+          </>
         ) : (
           <>
             <div className="brickPreviewStats">

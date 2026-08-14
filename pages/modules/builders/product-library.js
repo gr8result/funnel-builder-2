@@ -21,6 +21,7 @@ import {
   TOP_LEVEL_AREAS,
   createProductEntity,
   createBuilderProductReference,
+  ensureDemoBuilderBrickEnablements,
   createSelectionFromProduct,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
@@ -40,6 +41,7 @@ import {
   writeProductLibrarySelectionToJobFile,
 } from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
+import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 
 const EMPTY_PRODUCT = {
   product_code: "",
@@ -385,13 +387,28 @@ export default function BuilderProductLibraryPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      setMasterProducts(JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]"));
-      setBuilderEnablements(JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]"));
+      const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
+      const qldBrickProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
+      const byProductCode = new Map();
+      [...qldBrickProducts, ...(Array.isArray(storedProducts) ? storedProducts : [])].forEach((product) => {
+        if (product?.productCode) byProductCode.set(product.productCode, product);
+      });
+      const nextProducts = Array.from(byProductCode.values());
+      const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
+      const nextEnablements = ensureDemoBuilderBrickEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      setMasterProducts(nextProducts);
+      setBuilderEnablements(nextEnablements);
+      if (nextEnablements.length !== storedEnablements.length) {
+        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
+      }
     } catch {
-      setMasterProducts([]);
-      setBuilderEnablements([]);
+      const fallbackProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
+      const fallbackEnablements = ensureDemoBuilderBrickEnablements(fallbackProducts, [], workspaceId || "");
+      setMasterProducts(fallbackProducts);
+      setBuilderEnablements(fallbackEnablements);
+      if (fallbackEnablements.length) window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
     }
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
     if (!routeHydrated || !router.isReady) return;

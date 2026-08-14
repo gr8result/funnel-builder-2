@@ -4,6 +4,9 @@ import path from "node:path";
 import {
   commitMasterProductImport,
   createBuilderProductReference,
+  DEMO_BUILDER_ORGANISATION_ID,
+  activeQldBrickMasterProducts,
+  ensureDemoBuilderBrickEnablements,
   masterProductToClientSelectionProduct,
   parseMasterProductCatalogueCsv,
   parseMasterProductCatalogueJson,
@@ -45,6 +48,7 @@ assert.deepEqual(
 const byManufacturer = Map.groupBy(products, (product) => product.manufacturer);
 assert.equal(byManufacturer.get("PGH Bricks")?.length, 75, "PGH supplier identification must come from imported records");
 assert.equal(byManufacturer.get("Austral Bricks")?.length, 72, "Austral supplier identification must come from imported records");
+assert.equal(activeQldBrickMasterProducts(products).length, 147, "demo enablement candidates must be active QLD PGH/Austral bricks only");
 
 const rangeCounts = Object.fromEntries(Array.from(Map.groupBy(products, (product) => `${product.manufacturer}:${product.range}`), ([range, rows]) => [range, rows.length]));
 assert.equal(rangeCounts["PGH Bricks:Horizon"], 3, "PGH Horizon range grouping must be preserved");
@@ -101,6 +105,36 @@ const qldSelectable = queryClientSelectableProducts({
   builderProducts: enablements,
 });
 assert.equal(qldSelectable.length, demoSubset.length, "QLD client selections must show only builder-enabled subset");
+
+const demoEnablements = ensureDemoBuilderBrickEnablements(products, [], DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(demoEnablements.length, 147, "empty demo builder enablement store must be populated with all active QLD PGH/Austral bricks");
+assert.ok(demoEnablements.every((item) => item.organisationId === DEMO_BUILDER_ORGANISATION_ID), "demo brick enablements must be scoped to the current organisation");
+assert.ok(demoEnablements.every((item) => item.enabled === true && item.active === true), "demo brick enablements must be active builder references");
+assert.ok(demoEnablements.every((item) => item.clientPrice === null && item.allowance === null), "demo enablement must not invent builder-specific prices or allowances");
+assert.ok(demoEnablements.every((item) => item.tier === ""), "demo enablement must not manufacture Premier/Premium classifications");
+
+const demoSelectable = queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  projectId: "qld-demo-project",
+  familyKey: "bricks",
+  region: "QLD",
+  masterProducts: products,
+  builderProducts: demoEnablements,
+});
+assert.equal(demoSelectable.length, 147, "Client Selections query must return all demo-enabled QLD brick products");
+assert.equal(demoSelectable.filter((product) => product.manufacturer === "PGH Bricks").length, 75, "demo query must expose PGH Bricks");
+assert.equal(demoSelectable.filter((product) => product.manufacturer === "Austral Bricks").length, 72, "demo query must expose Austral Bricks");
+
+const disabledDemoEnablements = demoEnablements.map((item) => ({ ...item, enabled: false, active: false }));
+const preservedDisabled = ensureDemoBuilderBrickEnablements(products, disabledDemoEnablements, DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(preservedDisabled.filter((item) => item.enabled).length, 0, "explicit disable-all state must not be auto-reenabled");
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "bricks",
+  region: "QLD",
+  masterProducts: products,
+  builderProducts: preservedDisabled,
+}).length, 0, "disable-all must return the correct no-products state");
 
 const suppliers = Array.from(new Set(qldSelectable.map((product) => product.supplier || product.manufacturer))).sort();
 assert.deepEqual(suppliers, ["Austral Bricks", "PGH Bricks"], "supplier cards must be generated from enabled real products");
