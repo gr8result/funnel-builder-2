@@ -374,9 +374,10 @@ function workspaceVisual(pageKey) {
   return WORKSPACE_VISUALS[pageKey] || WORKSPACE_VISUALS.projectDashboard;
 }
 
-export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "" } = {}) {
+export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "" } = {}) {
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
+  const moduleWorkspaceId = organisationId || workspaceId;
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
@@ -428,16 +429,16 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
-    organisationId: workspaceId,
-    workspaceId,
+    organisationId: moduleWorkspaceId,
+    workspaceId: moduleWorkspaceId,
     workbook: sheet.workbook,
     calculated: sheet.preview,
     projectId: commercialSyncStatus.projectId || "",
     estimateSnapshotId: commercialSyncStatus.snapshotId || "",
     snapshotId: commercialSyncStatus.snapshotId || "",
     projectContext: {
-      organisationId: workspaceId,
-      workspaceId,
+      organisationId: moduleWorkspaceId,
+      workspaceId: moduleWorkspaceId,
       projectId: commercialSyncStatus.projectId || "",
       projectName: openJobDetails.projectName,
       jobNumber: openJobDetails.jobNumber,
@@ -455,7 +456,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       saveStatus: saveStatus.state,
     },
     onSyncSnapshot: handleCommercialSnapshotSync,
-  }), [workspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state]);
+  }), [moduleWorkspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);

@@ -1,146 +1,203 @@
 # Queensland Bricks Master Catalogue Source Audit
 
-Research date: 2026-08-13
+Research date: 2026-08-14
 
-Scope: Bricks only. Queensland/South Queensland selectable dataset for the first Gr8 Result Master Product Catalogue population pass.
+Scope: Bricks only. Queensland/South Queensland selectable dataset for the Gr8 Result Master Product Catalogue.
 
-## Sources Used
+## Official Sources Used
 
 ### PGH Bricks
 
 - PGH Bricks range index: https://www.pghbricks.com.au/products/bricks/browse-bricks/range
-- PGH Horizon range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/horizon
-- PGH Smooth range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/smooth
-
-PGH source notes:
-
-- The Horizon page identifies the Horizon range and describes Rockhampton, Emerald, Mitchell, and St George as range colours. The page gallery also exposes Airlie, Emerald, and Rockhampton product-specific manufacturer imagery.
-- The Smooth page identifies the Smooth range and exposes product-specific manufacturer imagery for Black and Tan, Brown, Cream, Mineral, Oat, Pearl Grey, Red, Sable Grey, and Volcanic.
-- No public exact Queensland retail price was found on the official PGH range pages during this pass. PGH records are therefore `quote_required`.
-- PGH pages provide a `Request Pricing` action and range-level resources. Individual product URLs were not exposed in the static page payload used for this import, so the official range URL is retained as the product URL for PGH rows.
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/coastal-hamptons
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/commons-scratch-coat
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/glazed
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/granite-belt
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/horizon
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/lang-mursten
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/lifestyle
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/lunar
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/manhattan
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/metallic
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/morada
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/naturals
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/shoreline
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/smooth
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/velour
+- PGH range page: https://www.pghbricks.com.au/products/bricks/browse-bricks/range/zen-by-nature
 
 ### Austral Bricks
 
-- Austral Bricks South Queensland home/catalogue context: https://australbricks.com.au/sqld
-- Austral Bricks South Queensland range listing for La Paloma: https://australbricks.com.au/sqld/products/la-paloma-2
-- Austral Bricks South Queensland product page for La Paloma Azul: https://australbricks.com.au/sqld/product/la-paloma?v=3690
-- Austral Bricks South Queensland product page for La Paloma Castellana: https://australbricks.com.au/sqld/product/la-paloma?v=3684
-- Austral Bricks South Queensland product page for La Paloma Miro: https://australbricks.com.au/sqld/product/la-paloma?v=3311
-- Austral Bricks South Queensland product page for La Paloma Romero: https://australbricks.com.au/sqld/product/la-paloma?v=3303
-- Austral Bricks South Queensland range listing for San Selmo Classico: https://australbricks.com.au/sqld/products/san-selmo-classico
-- Austral Bricks South Queensland product page for San Selmo Classico Aged Red: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3493
-- Austral Bricks South Queensland product page for San Selmo Classico Limewash: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3489
-- Austral Bricks South Queensland product page for San Selmo Classico Original: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3496
-- Austral Bricks South Queensland retail price list page checked: https://australbricks.com.au/sqld/retail-price-lists
-- Austral Bricks South Queensland technical information page: https://australbricks.com.au/sqld/technical-information
+- Austral Bricks South Queensland brick listing: https://australbricks.com.au/sqld/products/bricks
 - Austral Bricks South Queensland brochures page: https://australbricks.com.au/sqld/brochures
-
-Austral source notes:
-
-- The South Queensland menu and range pages expose Queensland-specific catalogue navigation under `/sqld`.
-- The South Queensland product pages expose individual product variant URLs, SKU values, swatch image URLs, and product gallery images.
-- The retail price-list page was checked, but no downloadable public PDF price list link was exposed in the static response used for this pass.
-- The South Queensland product responses did not expose a reliable exact current retail price during this pass. Austral records are therefore `quote_required`.
+- Austral product page: https://australbricks.com.au/sqld/product/coastal?v=3165
+- Austral product page: https://australbricks.com.au/sqld/product/coastal?v=3166
+- Austral product page: https://australbricks.com.au/sqld/product/coastal?v=3170
+- Austral product page: https://australbricks.com.au/sqld/product/coastal?v=3173
+- Austral product page: https://australbricks.com.au/sqld/product/commons?v=3174
+- Austral product page: https://australbricks.com.au/sqld/product/commons?v=3176
+- Austral product page: https://australbricks.com.au/sqld/product/commons?v=3186
+- Austral product page: https://australbricks.com.au/sqld/product/everyday-life?v=3219
+- Austral product page: https://australbricks.com.au/sqld/product/everyday-life?v=3220
+- Austral product page: https://australbricks.com.au/sqld/product/everyday-life?v=3227
+- Austral product page: https://australbricks.com.au/sqld/product/hamptons?v=3241
+- Austral product page: https://australbricks.com.au/sqld/product/home-one?v=3262
+- Austral product page: https://australbricks.com.au/sqld/product/home-one?v=3264
+- Austral product page: https://australbricks.com.au/sqld/product/home-one?v=3266
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-50?v=3324
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-50?v=3326
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-50?v=3327
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-50?v=3328
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-grande-50?v=3318
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-grande-50?v=3320
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-grande-50?v=3322
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3302
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3304
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3307
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3309
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3313
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma-special-shapes?v=3315
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma?v=3303
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma?v=3311
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma?v=3684
+- Austral product page: https://australbricks.com.au/sqld/product/la-paloma?v=3690
+- Austral product page: https://australbricks.com.au/sqld/product/metallix?v=3349
+- Austral product page: https://australbricks.com.au/sqld/product/metallix?v=3695
+- Austral product page: https://australbricks.com.au/sqld/product/mineral-contours?v=3382
+- Austral product page: https://australbricks.com.au/sqld/product/mineral-contours?v=3384
+- Austral product page: https://australbricks.com.au/sqld/product/mineral-contours?v=3387
+- Austral product page: https://australbricks.com.au/sqld/product/mineral-contours?v=3389
+- Austral product page: https://australbricks.com.au/sqld/product/palm-springs?v=3423
+- Austral product page: https://australbricks.com.au/sqld/product/palm-springs?v=3427
+- Austral product page: https://australbricks.com.au/sqld/product/panorama-50?v=3430
+- Austral product page: https://australbricks.com.au/sqld/product/panorama-50?v=3433
+- Austral product page: https://australbricks.com.au/sqld/product/panorama-50?v=3444
+- Austral product page: https://australbricks.com.au/sqld/product/panorama-50?v=3446
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3447
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3449
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3450
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3452
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3454
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3457
+- Austral product page: https://australbricks.com.au/sqld/product/pottery-blend?v=3460
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3489
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3493
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-classico?v=3496
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3490
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3494
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3497
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3499
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3500
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3501
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3502
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3503
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3505
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3507
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3725
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-corso?v=3726
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-smoked?v=3509
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-smoked?v=3512
+- Austral product page: https://australbricks.com.au/sqld/product/san-selmo-smoked?v=3516
+- Austral product page: https://australbricks.com.au/sqld/product/urban-one?v=3597
+- Austral product page: https://australbricks.com.au/sqld/product/urban-one?v=3603
+- Austral product page: https://australbricks.com.au/sqld/product/urban-one?v=3749
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3615
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3619
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3624
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3627
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3628
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3629
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3630
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3631
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3633
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3637
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3758
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3759
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3760
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3761
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3763
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3765
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3769
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3772
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3777
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3781
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3788
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3789
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3790
+- Austral product page: https://australbricks.com.au/sqld/product/venetian-glass?v=3791
+- Austral product page: https://australbricks.com.au/sqld/product/wilderness-design?v=3634
+- Austral product page: https://australbricks.com.au/sqld/product/wilderness-design?v=3638
+- Austral product page: https://australbricks.com.au/sqld/product/wilderness-design?v=3640
+- Austral product page: https://australbricks.com.au/sqld/product/wilderness-design?v=3642
+- Austral product page: https://australbricks.com.au/sqld/product/wilderness-design?v=3645
 
 ## Imported Catalogue Counts
 
-- Total manufacturers: 2
-- Total ranges: 4
-- Total products: 14
-- PGH ranges imported: 2
-- PGH products imported: 7
-- Austral ranges imported: 2
-- Austral products imported: 7
+- Total products: 147
+- PGH QLD ranges imported: 15
+- PGH QLD products imported: 75
+- Austral South Queensland ranges imported: 20
+- Austral South Queensland products imported: 72
+- Import preview invalid products: 0
 
 ## PGH Ranges Imported
 
+- Coastal Hamptons: Montauk, Washed White
+- Glazed: Ashen (Grey Gloss), Ficus (Green Gloss), Marigold (Yellow Gloss), Orchid (Blue Gloss), Poppy (Red Gloss), Snowdrop (White Gloss)
+- Granite Belt: Ballandean, Hampton, Inglewood, Leyburn
 - Horizon: Airlie, Emerald, Rockhampton
-- Smooth: Black and Tan, Mineral, Oat, Pearl Grey
+- Lang Mursten: Gehl, Larsen, Lund, Rosenberg, Utzon
+- Lifestyle: Girraween, Perisher
+- Lunar: Breaking Dawn, Crescent, Eclipse, Grey Stone
+- Manhattan: Bronx, Harlem, Tribeca, West Side
+- Metallic: Apollo, Blue Steel Flash, Matterhorn, Mercury, Nickel Flash, Olympus, Pewter
+- Morada: Ares, Ares Linear, Blanco, Blanco Linear, Cacao, Cacao Linear, Ceniza, Ceniza Linear, Nero, Nero Gloss, Nero Linear, Nero Satin, Rojo
+- Naturals: Frost, Moon Dust
+- Shoreline: Elkhorn, Ocean Mist, Ocean Mist Double Height, Sea Fossil, Seafossil
+- Smooth: Black and Tan, Brown, Cream, Mineral, Oat, Pearl Grey, Red, Sable Grey, Volcanic
+- Velour: Brown, Choc Tan, Mineral, Pearl Grey, Red, Volcanic
+- Zen by Nature: Agave, Ginseng, Salt
 
 ## Austral Ranges Imported
 
+- Coastal: Double Height Shoreline, Double Height Surf Wash, Shoreline, Surf Wash
+- Commons: Avanti, GP 76, Unicommons
+- Everyday Life: Escape, Freedom, Stimulate QLD
+- Hamptons: Whitehaven
+- Home One: Redbank, Sandstone Retreat, Willow Sand
+- La Paloma 50: Azul, Castellana, Miro, Romero
+- La Paloma Grande 50: Castellana, Miro, Romero
+- La Paloma Special Shapes: Azul, Miro
 - La Paloma: Azul, Castellana, Miro, Romero
+- Metallix: Bronze, Emery
+- Mineral Contours: Feldspar Taupe, Gypsum Tan, Mica Grey, Mineral Sands
+- Palm Springs: Newport, Oasis
+- Panorama 50: Lunar Crust, Midnight, Night Sky, Snowfield
+- Pottery Blend: Bisque Fire, Burnished Tan, Charred Clay, Clay Blush, Fired Umber, Flamed Earth, Raku Rouge
 - San Selmo Classico: Aged Red, Limewash, Original
+- San Selmo Corso: Arno, Brenta, Livenza, Marana, Piave, Potenza
+- San Selmo Smoked: Cloudy Silver, Grey Cashmere, Opaque Slate
+- Urban One: Chiffon, Sea Salt, Silver
+- Venetian Glass: Aquamarine, Arctic Crystal, Blue Sapphire, Emerald Green, Golden Amber, Smokey Quartz
+- Wilderness Design: Blackbutt, Blue Gum, Flooded Gum, Grey Gum, Silver Birch
 
 ## Image Provenance
 
-- Products with exact/product-specific images: 14
-- Products using range-fallback images: 0
+- Products with exact/product-specific images: 143
+- Products using range-fallback images: 4
 - Products missing images: 0
 - Products flagged image review required: 0
 
 Primary image rules applied:
 
-- Austral primary images use exact manufacturer swatch URLs from the South Queensland product pages.
-- PGH primary images use product-specific manufacturer gallery imagery from the official PGH range pages. These are retained as `verified_exact` because the image captions identify the exact brick colour and range.
-- Gallery images may include facade/application images only after the exact/product-specific primary image.
-- No random Google Images, Pinterest images, builder blog images, bedroom images, bathroom images, or AI-generated images were used.
+- Austral primary images use exact manufacturer swatch URLs from the South Queensland product pages where available; otherwise the official product-listing brick image is retained and marked range verified.
+- PGH primary images use manufacturer gallery imagery from official PGH range pages whose captions identify the brick colour and range.
+- No Google Images, builder blogs, bedroom images, bathroom images, kitchen images, or unrelated stock imagery were used.
 
 ## Pricing Provenance
 
-- Products with current exact public price: 0
-- Products requiring quote: 14
-- Products with price pending: 0
-- Products with `$0` price: 0
+- Quote Required products: 75
+- Products with current official product-page price: 72
+- PGH products remain Quote Required because the official PGH range pages did not expose comparable public price data.
+- Austral prices were imported only where the South Queensland product page specifications exposed a product-specific price value. No product is imported as $0.
 
-Pricing notes:
-
-- PGH range pages expose request-pricing pathways rather than current exact public Queensland prices.
-- Austral South Queensland product and retail-price-list pages were checked, but exact current public retail prices were not reliably available in the static source responses used for this pass.
-- Unknown prices are stored as `priceStatus=quote_required` with blank `rrp`, blank `client_price`, and no `$0`.
-- Austral rows retain `priceUnit=each` where the product catalogue context exposes product unit semantics. PGH rows leave `priceUnit` blank because no safe public unit was verified.
-
-## Regional Availability
-
-- Products explicitly included for Queensland: 14
-- Products with `regions` containing `QLD`: 14
-- Products with `regionReviewRequired=true`: 0
-- Products excluded because they appeared NSW-only or not Queensland-selectable: Whitsunday Brampton and Urban One Pepper from indexed Austral search results were not included.
-
-## Import Results
-
-Preview result from `previewMasterProductImport`:
-
-- Total products: 14
-- New: 14
-- Updates: 0
-- Unchanged: 0
-- Errors: 0
-- Warnings: 0
-- Missing images: 0
-- Missing official URLs: 0
-- Missing/quote-required prices: 14
-
-Commit result from `commitMasterProductImport`:
-
-- Created: 14
-- Updated: 0
-- Skipped unchanged: 0
-- Invalid: 0
-
-## Builder-Enabled Demo Subset
-
-The test/demo organisation enablement subset is intentionally not global. It enables 8 products in `scripts/test-qld-bricks-master-catalogue.mjs`:
-
-- PGH Horizon Airlie
-- PGH Horizon Emerald
-- PGH Smooth Black and Tan
-- PGH Smooth Pearl Grey
-- Austral La Paloma Azul
-- Austral La Paloma Miro
-- Austral San Selmo Classico Aged Red
-- Austral San Selmo Classico Original
-
-This subset demonstrates:
-
-- 2 PGH ranges
-- 2 Austral ranges
-- Multiple actual brick products within each manufacturer
-- Builder tiers separate from manufacturer ranges
-
-## Mapping Warnings
-
-- PGH product rows use the official range URL as `officialProductUrl` because individual product colour URLs were not exposed in the PGH static payload during this pass.
-- PGH dimensional fields are blank because exact dimensions were not published in the inspected PGH source payload.
-- Austral dimensions are stored as `230x110x76mm` for the imported La Paloma and San Selmo Classico variants based on official Austral product-page technical data exposed for those product families.
-- No incomplete or uncertain regional rows were hidden; rows with uncertain Queensland availability were excluded rather than guessed.

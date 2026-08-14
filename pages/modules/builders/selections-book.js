@@ -37,8 +37,10 @@ import {
   previewMasterProductImport,
   queryClientSelectableProducts,
 } from "../../../lib/product-library/catalogueModel";
+import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
+const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
 
 const DEFAULT_ROOMS = [
   "External Walls",
@@ -840,13 +842,47 @@ export default function BuilderSelectionsBookPage({
     builderProducts: builderEnablements,
     organisationProducts: [],
   }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: guidedRequirement })), [builderEnablements, guidedRequirement, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
-  const clientSelectionCatalogueProducts = useMemo(() => [...approvedCatalogueProducts, ...masterSelectionProducts], [approvedCatalogueProducts, masterSelectionProducts]);
+  const brickMasterSelectionProducts = useMemo(() => {
+    const brickRequirement = EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "bricks");
+    if (!brickRequirement) return [];
+    return queryClientSelectableProducts({
+      organisationId: workspaceId || "",
+      projectId: selectedProjectId || "",
+      familyKey: "bricks",
+      region: projectRegion,
+      requirementKey: "bricks",
+      masterProducts: masterCatalogueProducts,
+      builderProducts: builderEnablements,
+      organisationProducts: [],
+    }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: brickRequirement }));
+  }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const clientSelectionCatalogueProducts = useMemo(() => {
+    const byIdentity = new Map();
+    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
+      const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
+      byIdentity.set(key, product);
+    });
+    return Array.from(byIdentity.values());
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
     brickSupplier: guidedBrickSupplier,
     brickRange: guidedBrickRange,
   }), [guidedRequirement, clientSelectionCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
+  const brickGuidedProducts = useMemo(() => {
+    if (guidedRequirement.requirementKey !== "bricks") return guidedProducts;
+    const directMasterProducts = guidedProductsForRequirement(guidedRequirement, brickMasterSelectionProducts, {
+      brickSupplier: guidedBrickSupplier,
+      brickRange: guidedBrickRange,
+    });
+    const byIdentity = new Map();
+    [...guidedProducts, ...directMasterProducts].forEach((product) => {
+      const key = product.productCode || product.sku || product.id || `${product.productName}-${byIdentity.size}`;
+      byIdentity.set(key, product);
+    });
+    return Array.from(byIdentity.values());
+  }, [brickMasterSelectionProducts, guidedBrickRange, guidedBrickSupplier, guidedProducts, guidedRequirement]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -949,10 +985,16 @@ export default function BuilderSelectionsBookPage({
   function loadMasterCatalogueState() {
     if (typeof window === "undefined") return;
     try {
-      setMasterCatalogueProducts(JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]"));
+      const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
+      const qldBrickProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
+      const byProductCode = new Map();
+      [...qldBrickProducts, ...storedProducts].forEach((product) => {
+        if (product?.productCode) byProductCode.set(product.productCode, product);
+      });
+      setMasterCatalogueProducts(Array.from(byProductCode.values()));
       setBuilderEnablements(JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]"));
     } catch {
-      setMasterCatalogueProducts([]);
+      setMasterCatalogueProducts(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []);
       setBuilderEnablements([]);
     }
   }
@@ -964,6 +1006,50 @@ export default function BuilderSelectionsBookPage({
       window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
       window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
     }
+  }
+
+  function embeddedBookStorageKey() {
+    return `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId || "workspace"}:${selectedProjectId || "current-project"}`;
+  }
+
+  function latestEmbeddedBookStorageKey() {
+    return `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId || "workspace"}:latest`;
+  }
+
+  function loadEmbeddedBookDraft() {
+    if (typeof window === "undefined" || !workspaceId) return null;
+    try {
+      const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
+      if (latestPayload?.book) return latestPayload.book;
+      const payload = JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null");
+      if (payload?.book) return payload.book;
+      const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
+      const fallbackKey = Object.keys(window.localStorage)
+        .filter((key) => key.startsWith(prefix))
+        .sort()
+        .pop();
+      if (!fallbackKey) return null;
+      const fallbackPayload = JSON.parse(window.localStorage.getItem(fallbackKey) || "null");
+      return fallbackPayload?.book || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveEmbeddedBookDraft(nextBook) {
+    if (typeof window === "undefined" || !workspaceId || !nextBook) return;
+    window.localStorage.setItem(embeddedBookStorageKey(), JSON.stringify({
+      workspaceId,
+      projectId: selectedProjectId || "",
+      savedAt: new Date().toISOString(),
+      book: nextBook,
+    }));
+    window.localStorage.setItem(latestEmbeddedBookStorageKey(), JSON.stringify({
+      workspaceId,
+      projectId: selectedProjectId || "",
+      savedAt: new Date().toISOString(),
+      book: nextBook,
+    }));
   }
 
   async function loadInitialData() {
@@ -1099,6 +1185,15 @@ export default function BuilderSelectionsBookPage({
     setLoading(true);
     setError("");
     const items = templateItems.length ? templateItems : await loadTemplateItems(selectedTemplateId);
+    const embeddedDraft = loadEmbeddedBookDraft();
+    if (embeddedDraft) {
+      const next = normaliseDocumentBook(embeddedDraft, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+      setBookId(embeddedDraft.id || "");
+      setBook(next);
+      setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
+      setLoading(false);
+      return;
+    }
     const embeddedBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
     if (embeddedBook) {
       const next = normaliseDocumentBook(embeddedBook, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
@@ -1656,16 +1751,19 @@ export default function BuilderSelectionsBookPage({
   }
 
   async function saveBook(status = "in_progress") {
-    if (!workspaceId || !selectedProjectId) {
-      setError("Choose a commercial project before saving.");
-      return null;
-    }
     const bookForSave = {
       ...book,
       cover: { ...book.cover, ...displayCover },
       projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
       updatedAt: new Date().toISOString(),
     };
+    saveEmbeddedBookDraft(bookForSave);
+    if (!workspaceId || !selectedProjectId) {
+      setBook(bookForSave);
+      setCoverDraft(bookForSave.cover);
+      setSuccess("Selections Book saved.");
+      return "embedded-local";
+    }
     setSaving(true);
     setError("");
     setSuccess("");
@@ -1687,6 +1785,13 @@ export default function BuilderSelectionsBookPage({
       : supabase.from("builder_selection_books").insert({ ...payload, created_by: userId });
     const { data, error: saveError } = await query.select("id, book_data").single();
     if (saveError) {
+      if (String(selectedProjectId).startsWith("embedded:")) {
+        setBook(bookForSave);
+        setCoverDraft(bookForSave.cover);
+        setSuccess("Selections Book saved.");
+        setSaving(false);
+        return "embedded-local";
+      }
       setError(saveError.message || "Could not save the Selections Book.");
       setSaving(false);
       return null;
@@ -2059,7 +2164,7 @@ export default function BuilderSelectionsBookPage({
               selections={guidedSelectionMap}
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
-              products={guidedProducts}
+              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedProducts}
               masterProductCount={masterProductsForGuidedFamily.length}
               enabledProductCount={builderEnabledForGuidedFamily.length}
               brickStep={guidedBrickStep}
@@ -2192,11 +2297,18 @@ function GuidedSelectionsWorkflow({
   }
 
   if (screen === "exterior") {
+    const exteriorCards = EXTERIOR_CATEGORY_CARDS.map((card) => {
+      const selection = card.requirementKey ? selections.get(card.requirementKey) : null;
+      return {
+        ...card,
+        selectedLabel: selection?.selected_product_name || selection?.selectedProduct || selection?.selected_product || "",
+      };
+    });
     return (
       <section className="guidedShell" data-testid="guided-exterior-categories">
         <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Exterior" cards={EXTERIOR_CATEGORY_CARDS} onOpen={(key) => {
-          const card = EXTERIOR_CATEGORY_CARDS.find((item) => item.key === key);
+        <GuidedCardGrid title="Exterior" cards={exteriorCards} onOpen={(key) => {
+          const card = exteriorCards.find((item) => item.key === key);
           if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
         }} />
       </section>
@@ -2219,11 +2331,11 @@ function GuidedSelectionsWorkflow({
   if (screen === "product") {
     if (requirement.requirementKey === "bricks") {
       return (
-        <GuidedBrickWorkflow
-          requirement={requirement}
-          products={products}
-          masterProductCount={masterProductCount}
-          enabledProductCount={enabledProductCount}
+          <GuidedBrickWorkflow
+            requirement={requirement}
+            products={products}
+            masterProductCount={masterProductCount}
+            enabledProductCount={enabledProductCount}
           runningTotals={runningTotals}
           brickStep={brickStep}
           brickSupplier={brickSupplier}
@@ -2333,6 +2445,7 @@ function GuidedCardGrid({ title, cards, onOpen }) {
           <button key={card.key} type="button" className="guidedImageCard" onClick={() => onOpen(card.key)}>
             <img src={card.image} alt={card.label} />
             <span>{card.label}</span>
+            {card.selectedLabel ? <small>Selected: {card.selectedLabel}</small> : null}
           </button>
         ))}
       </div>
@@ -3748,7 +3861,7 @@ function guidedProductsForRequirement(requirement, catalogueProducts = [], filte
   const approvedProducts = productsForRequirement(catalogueProducts, requirement)
     .filter((product) => {
       const entity = product.metadata?.productEntity || product;
-      return classifyApprovedSelectionRow(entity) === "actual_product";
+      return (entity.rowClassification || product.rowClassification || product.metadata?.rowClassification || classifyApprovedSelectionRow(entity)) === "actual_product";
     });
   return approvedProducts
     .map((product, index) => guidedProductFromCatalogue(product, requirement, index))

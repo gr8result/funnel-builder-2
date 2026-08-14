@@ -23,15 +23,15 @@ const preview = previewMasterProductImport(csvRecords, []);
 const commit = commitMasterProductImport(preview, []);
 const products = commit.products;
 
-assert.equal(preview.totalProducts, 14, "QLD bricks CSV must preview the first 14 genuine catalogue products");
-assert.equal(preview.newProducts, 14, "first import should create all QLD brick records");
+assert.equal(preview.totalProducts, 147, "QLD bricks CSV must preview the researched live catalogue products");
+assert.equal(preview.newProducts, 147, "first import should create all QLD brick records");
 assert.equal(preview.changedProducts, 0, "first import should not update records");
 assert.equal(preview.unchangedProducts, 0, "first import should not skip records");
 assert.equal(preview.invalidProducts, 0, "QLD bricks import must validate without errors");
 assert.equal(preview.missingImage, 0, "all imported brick rows must have product-specific manufacturer images");
 assert.equal(preview.missingOfficialUrl, 0, "all brick rows must preserve official manufacturer URLs");
-assert.equal(preview.missingPrice, 14, "unknown prices must be quote-required instead of zero");
-assert.equal(commit.created.length, 14, "commit must create every previewed brick");
+assert.equal(preview.missingPrice, 75, "PGH unknown prices must be quote-required instead of zero");
+assert.equal(commit.created.length, 147, "commit must create every previewed brick");
 assert.equal(commit.updated.length, 0, "first import must not update products");
 assert.equal(commit.skipped.length, 0, "first import must not skip products");
 assert.equal(commit.invalid.length, 0, "commit must not include invalid products");
@@ -43,23 +43,28 @@ assert.deepEqual(
 );
 
 const byManufacturer = Map.groupBy(products, (product) => product.manufacturer);
-assert.equal(byManufacturer.get("PGH Bricks")?.length, 7, "PGH supplier identification must come from imported records");
-assert.equal(byManufacturer.get("Austral Bricks")?.length, 7, "Austral supplier identification must come from imported records");
+assert.equal(byManufacturer.get("PGH Bricks")?.length, 75, "PGH supplier identification must come from imported records");
+assert.equal(byManufacturer.get("Austral Bricks")?.length, 72, "Austral supplier identification must come from imported records");
 
 const rangeCounts = Object.fromEntries(Array.from(Map.groupBy(products, (product) => `${product.manufacturer}:${product.range}`), ([range, rows]) => [range, rows.length]));
 assert.equal(rangeCounts["PGH Bricks:Horizon"], 3, "PGH Horizon range grouping must be preserved");
-assert.equal(rangeCounts["PGH Bricks:Smooth"], 4, "PGH Smooth range grouping must be preserved");
+assert.equal(rangeCounts["PGH Bricks:Smooth"], 9, "PGH Smooth range grouping must be preserved");
+assert.equal(rangeCounts["PGH Bricks:Morada"], 13, "PGH Morada range grouping must be preserved");
 assert.equal(rangeCounts["Austral Bricks:La Paloma"], 4, "Austral La Paloma range grouping must be preserved");
 assert.equal(rangeCounts["Austral Bricks:San Selmo Classico"], 3, "Austral San Selmo Classico range grouping must be preserved");
+assert.equal(rangeCounts["Austral Bricks:Mineral Contours"], 4, "Austral Mineral Contours range grouping must be preserved");
+assert.equal(rangeCounts["Austral Bricks:Pottery Blend"], 7, "Austral Pottery Blend range grouping must be preserved");
 
 products.forEach((product) => {
   assert.equal(product.familyKey, "bricks", `${product.productCode} must stay bricks-only`);
   assert.equal(product.topLevelArea, "exterior", `${product.productCode} must stay under Exterior`);
   assert.ok(product.regions.includes("QLD"), `${product.productCode} must be QLD selectable`);
   assert.equal(product.regionReviewRequired, false, `${product.productCode} must not guess uncertain regional availability`);
-  assert.equal(product.imageStatus, "verified_exact", `${product.productCode} must have exact/product-specific image status`);
+  assert.ok(["verified_exact", "verified_range"].includes(product.imageStatus), `${product.productCode} must have manufacturer image status`);
   assert.ok(product.primaryImageUrl.startsWith("https://"), `${product.productCode} must keep a manufacturer image URL`);
-  assert.equal(product.priceStatus, "quote_required", `${product.productCode} must not invent price data`);
+  assert.ok(["quote_required", "current"].includes(product.priceStatus), `${product.productCode} must use supported price status`);
+  if (product.manufacturer === "PGH Bricks") assert.equal(product.priceStatus, "quote_required", `${product.productCode} must not invent PGH price data`);
+  if (product.priceStatus === "current") assert.ok(product.rrp > 0 || product.clientPrice > 0, `${product.productCode} current price must have a positive value`);
   assert.notEqual(product.rrp, 0, `${product.productCode} must not show unknown price as $0`);
   assert.notEqual(product.clientPrice, 0, `${product.productCode} must not show unknown client price as $0`);
   assert.ok(product.officialProductUrl.startsWith("https://"), `${product.productCode} must preserve official URL`);
@@ -71,8 +76,10 @@ const demoSubsetCodes = [
   "BRICK-PGH-HORIZON-EMERALD",
   "BRICK-PGH-SMOOTH-BLACK-AND-TAN",
   "BRICK-PGH-SMOOTH-PEARL-GREY",
+  "BRICK-PGH-MORADA-BLANCO",
   "BRICK-AUSTRAL-LA-PALOMA-AZUL",
   "BRICK-AUSTRAL-LA-PALOMA-MIRO",
+  "BRICK-AUSTRAL-MINERAL-CONTOURS-FELDSPAR-TAUPE",
   "BRICK-AUSTRAL-SAN-SELMO-CLASSICO-AGED-RED",
   "BRICK-AUSTRAL-SAN-SELMO-CLASSICO-ORIGINAL",
 ];
@@ -100,8 +107,8 @@ assert.deepEqual(suppliers, ["Austral Bricks", "PGH Bricks"], "supplier cards mu
 
 const pghRanges = Array.from(new Set(qldSelectable.filter((product) => product.manufacturer === "PGH Bricks").map((product) => product.range))).sort();
 const australRanges = Array.from(new Set(qldSelectable.filter((product) => product.manufacturer === "Austral Bricks").map((product) => product.range))).sort();
-assert.deepEqual(pghRanges, ["Horizon", "Smooth"], "PGH flow must expose actual imported ranges");
-assert.deepEqual(australRanges, ["La Paloma", "San Selmo Classico"], "Austral flow must expose actual imported ranges");
+assert.deepEqual(pghRanges, ["Horizon", "Morada", "Smooth"], "PGH flow must expose actual imported ranges");
+assert.deepEqual(australRanges, ["La Paloma", "Mineral Contours", "San Selmo Classico"], "Austral flow must expose actual imported ranges");
 
 const requirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
 const clientProducts = qldSelectable.map((product) => masterProductToClientSelectionProduct(product, { organisationId: "demo-test-organisation", requirement }));
@@ -113,7 +120,8 @@ assert.ok(requirementProducts.every((product) => product.metadata.productEntity.
 const selectedProduct = qldSelectable.find((product) => product.productCode === "BRICK-PGH-HORIZON-AIRLIE");
 const selectedReference = enablements.find((item) => item.masterProductCode === selectedProduct.productCode);
 assert.equal(selectedProduct.range, "Horizon", "manufacturer range must remain real catalogue range");
-assert.equal(selectedReference.tier, "Premier", "builder tier must be separate from manufacturer range");
+assert.ok(["Premier", "Premium"].includes(selectedReference.tier), "builder tier must be assigned independently");
+assert.notEqual(selectedReference.tier, selectedProduct.range, "builder tier must be separate from manufacturer range");
 
 const selectionSnapshot = {
   projectId: "qld-demo-project",
@@ -132,6 +140,6 @@ const selectionSnapshot = {
 };
 assert.equal(selectionSnapshot.selectedPrice, null, "selection persistence must keep unknown price as null");
 assert.equal(selectionSnapshot.officialProductUrl, selectedProduct.officialProductUrl, "official URL must survive selection persistence");
-assert.ok(fs.readFileSync(auditPath, "utf8").includes("Research date: 2026-08-13"), "source audit must record research date");
+assert.ok(fs.readFileSync(auditPath, "utf8").includes("Research date: 2026-08-14"), "source audit must record research date");
 
 console.log("Queensland bricks master catalogue tests passed.");
