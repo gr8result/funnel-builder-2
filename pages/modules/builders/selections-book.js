@@ -33,13 +33,15 @@ import {
   activeQldBrickMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
-  ensureDemoBuilderBrickEnablements,
+  ensureDemoBuilderCatalogueEnablements,
   masterProductToClientSelectionProduct,
+  normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   queryClientSelectableProducts,
 } from "../../../lib/product-library/catalogueModel";
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
+import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
@@ -858,14 +860,28 @@ export default function BuilderSelectionsBookPage({
       organisationProducts: [],
     }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: brickRequirement }));
   }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const roofingMasterSelectionProducts = useMemo(() => {
+    const roofingRequirement = EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "roofing");
+    if (!roofingRequirement) return [];
+    return queryClientSelectableProducts({
+      organisationId: workspaceId || "",
+      projectId: selectedProjectId || "",
+      familyKey: "roofing",
+      region: projectRegion,
+      requirementKey: "roofing",
+      masterProducts: masterCatalogueProducts,
+      builderProducts: builderEnablements,
+      organisationProducts: [],
+    }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: roofingRequirement }));
+  }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
   const clientSelectionCatalogueProducts = useMemo(() => {
     const byIdentity = new Map();
-    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
+    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
       const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
       byIdentity.set(key, product);
     });
     return Array.from(byIdentity.values());
-  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts]);
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
@@ -885,6 +901,11 @@ export default function BuilderSelectionsBookPage({
     });
     return Array.from(byIdentity.values());
   }, [brickMasterSelectionProducts, guidedBrickRange, guidedBrickSupplier, guidedProducts, guidedRequirement]);
+  const roofingGuidedProducts = useMemo(() => {
+    if (guidedRequirement.requirementKey !== "roofing") return guidedProducts;
+    return guidedProductsForRequirement(guidedRequirement, roofingMasterSelectionProducts)
+      .filter((product) => /^ROOFING-/.test(product.productCode || product.sku || ""));
+  }, [guidedProducts, guidedRequirement, roofingMasterSelectionProducts]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -986,25 +1007,27 @@ export default function BuilderSelectionsBookPage({
 
   function loadMasterCatalogueState() {
     if (typeof window === "undefined") return;
+    const baselineProducts = [
+      ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
+      ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+    ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const qldBrickProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
       const byProductCode = new Map();
-      [...qldBrickProducts, ...storedProducts].forEach((product) => {
+      [...baselineProducts, ...storedProducts].forEach((product) => {
         if (product?.productCode) byProductCode.set(product.productCode, product);
       });
       const nextProducts = Array.from(byProductCode.values());
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureDemoBuilderBrickEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
       setMasterCatalogueProducts(nextProducts);
       setBuilderEnablements(nextEnablements);
       if (nextEnablements.length !== storedEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
-      const fallbackEnablements = ensureDemoBuilderBrickEnablements(fallbackProducts, [], workspaceId || "");
-      setMasterCatalogueProducts(fallbackProducts);
+      const fallbackEnablements = ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || "");
+      setMasterCatalogueProducts(baselineProducts);
       setBuilderEnablements(fallbackEnablements);
       if (fallbackEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
@@ -2208,7 +2231,7 @@ export default function BuilderSelectionsBookPage({
               selections={guidedSelectionMap}
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
-              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedProducts}
+              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedProducts}
               masterProductCount={masterProductsForGuidedFamily.length}
               enabledProductCount={builderEnabledForGuidedFamily.length}
               brickStep={guidedBrickStep}
@@ -3964,6 +3987,10 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
   const priceState = priceStateForProduct(entity);
   const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
   const attributes = entity.attributes || {};
+  const galleryImages = normaliseGalleryImages(entity.galleryImages || entity.gallery_image_urls || product.galleryImages);
+  const imageUrl = requirement?.requirementKey === "roofing"
+    ? galleryImages[0] || resolveSelectionImage({ product, requirement })
+    : resolveSelectionImage({ product, requirement });
   return {
     ...product,
     id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
@@ -3988,10 +4015,10 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     allowance: productAllowance(entity, requirement),
     selectedCost,
     priceState,
-    imageUrl: resolveSelectionImage({ product, requirement }),
+    imageUrl,
     productUrl: entity.officialProductURL || "",
     specificationUrl: entity.specificationURL || "",
-    galleryImages: normaliseGalleryImages(entity.galleryImages || entity.gallery_image_urls || product.galleryImages),
+    galleryImages,
     rowClassification: classifyApprovedSelectionRow(entity),
     imageReviewRequired: Boolean(entity.imageReviewRequired),
     metadata: {

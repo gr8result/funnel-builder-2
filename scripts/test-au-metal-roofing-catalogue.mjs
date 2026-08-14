@@ -3,8 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DEMO_BUILDER_ORGANISATION_ID,
+  activeAuMetalRoofingMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
+  ensureDemoBuilderCatalogueEnablements,
+  ensureDemoBuilderRoofingEnablements,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   queryClientSelectableProducts,
@@ -46,6 +50,7 @@ assert.equal(committed.products.length, 3, "CSV import must create the three met
 assert.ok(committed.products.every((product) => product.familyKey === "roofing"), "imported records must remain in the Roofing family");
 assert.ok(committed.products.every((product) => product.priceStatus === "quote_required"), "roofing profile pricing must be quote required");
 assert.ok(committed.products.every((product) => product.clientPrice === null && product.rrp === null), "unknown roofing prices must be null, not zero");
+assert.equal(activeAuMetalRoofingMasterProducts(committed.products).length, 3, "active AU/QLD metal roofing candidates must be detected");
 
 const products = catalogue.products;
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
@@ -76,6 +81,32 @@ const selectable = queryClientSelectableProducts({
 assert.equal(selectable.length, 1, "Client Selections should only receive builder-enabled compatible roofing profiles");
 assert.match(selectable[0].productCode, /CUSTOM-ORB/, "builder-enabled profile should be the selectable proof product");
 
+const demoRoofingEnablements = ensureDemoBuilderRoofingEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(demoRoofingEnablements.length, 3, "empty demo builder store must enable the three real metal roofing profiles");
+assert.ok(demoRoofingEnablements.every((item) => item.organisationId === DEMO_BUILDER_ORGANISATION_ID), "demo roofing enablements must be scoped to the current organisation");
+assert.ok(demoRoofingEnablements.every((item) => item.clientPrice === null && item.allowance === null), "demo roofing enablements must not invent builder-specific prices");
+assert.ok(demoRoofingEnablements.every((item) => item.tier === ""), "demo roofing enablements must not manufacture Premier/Premium tiers");
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: committed.products,
+  builderProducts: demoRoofingEnablements,
+}).length, 3, "Client Selections query must return all demo-enabled QLD metal roofing profiles");
+
+const disabledRoofingEnablements = demoRoofingEnablements.map((item) => ({ ...item, enabled: false, active: false }));
+const preservedDisabledRoofing = ensureDemoBuilderRoofingEnablements(committed.products, disabledRoofingEnablements, DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: committed.products,
+  builderProducts: preservedDisabledRoofing,
+}).length, 0, "explicit disable-all roofing state must return the no-products state");
+
+const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");
+
 const roofingPayload = {
   selection_status: "selected",
   selected_details: {
@@ -90,6 +121,8 @@ assert.equal(statusForRequirement(roofingRequirement, roofingPayload), "complete
 ["GuidedRoofingWorkflow", "roofingConfiguration", "Select Roofing Configuration", "Roof tile catalogue awaiting product data", "Matt is only available"].forEach((needle) => {
   assert.ok(selectionsSource.includes(needle), `Selections Book must include ${needle}`);
 });
+assert.ok(selectionsSource.includes("roofingGuidedProducts"), "Roofing workflow must use master roofing products instead of approved quote rows");
+assert.ok(selectionsSource.includes('products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedProducts}'), "Roofing workflow must be fed by filtered roofing master products");
 ["Colorbond Corrugated", "Premium Colorbond Profile", "Monier Horizon Roof Tile"].forEach((fakeName) => {
   assert.ok(!selectionsSource.includes(fakeName), `${fakeName} fake roofing option must not be displayed`);
 });

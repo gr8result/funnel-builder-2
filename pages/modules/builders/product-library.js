@@ -21,7 +21,7 @@ import {
   TOP_LEVEL_AREAS,
   createProductEntity,
   createBuilderProductReference,
-  ensureDemoBuilderBrickEnablements,
+  ensureDemoBuilderCatalogueEnablements,
   createSelectionFromProduct,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
@@ -31,6 +31,7 @@ import {
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   commitMasterProductImport,
+  normalizeMasterProductRecord,
   queryClientSelectableProducts,
   productLibrarySelectionsFromJobFile,
   productsForFamily,
@@ -42,6 +43,7 @@ import {
 } from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
+import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 
 const EMPTY_PRODUCT = {
   product_code: "",
@@ -386,25 +388,27 @@ export default function BuilderProductLibraryPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const baselineProducts = [
+      ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
+      ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+    ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const qldBrickProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
       const byProductCode = new Map();
-      [...qldBrickProducts, ...(Array.isArray(storedProducts) ? storedProducts : [])].forEach((product) => {
+      [...baselineProducts, ...(Array.isArray(storedProducts) ? storedProducts : [])].forEach((product) => {
         if (product?.productCode) byProductCode.set(product.productCode, product);
       });
       const nextProducts = Array.from(byProductCode.values());
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureDemoBuilderBrickEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
       setMasterProducts(nextProducts);
       setBuilderEnablements(nextEnablements);
       if (nextEnablements.length !== storedEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackProducts = Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : [];
-      const fallbackEnablements = ensureDemoBuilderBrickEnablements(fallbackProducts, [], workspaceId || "");
-      setMasterProducts(fallbackProducts);
+      const fallbackEnablements = ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || "");
+      setMasterProducts(baselineProducts);
       setBuilderEnablements(fallbackEnablements);
       if (fallbackEnablements.length) window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
     }
