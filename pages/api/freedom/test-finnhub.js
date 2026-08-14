@@ -1,40 +1,31 @@
 export default async function handler(req, res) {
   const apiKey = process.env.FINNHUB_API_KEY?.trim();
-  const requestUrl = `https://finnhub.io/api/v1/quote?symbol=MSFT&token=${apiKey || ""}`;
-
   const payload = {
-    keyExists: Boolean(apiKey),
-    keyLength: apiKey?.length || 0,
-    keyStartsWith: apiKey?.slice(0, 4) || "",
-    keyEndsWith: apiKey?.slice(-4) || "",
-    requestUrlPreview: `https://finnhub.io/api/v1/quote?symbol=MSFT&token=${apiKey ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : ""}`,
+    configured: Boolean(apiKey),
+    envVarName: "FINNHUB_API_KEY",
     finnhubStatus: null,
-    finnhubResponse: null,
+    authenticated: false,
   };
 
   try {
-    const response = await fetch(requestUrl);
-    const text = await response.text();
-    let finnhubResponse = text;
-
-    try {
-      finnhubResponse = JSON.parse(text);
-    } catch {
-      finnhubResponse = text;
-    }
+    if (!apiKey) return res.status(200).json(payload);
+    const url = new URL("https://finnhub.io/api/v1/quote");
+    url.searchParams.set("symbol", "MSFT");
+    url.searchParams.set("token", apiKey);
+    const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "Freedom Finnhub Diagnostic" } });
+    const data = await response.json().catch(() => null);
 
     return res.status(200).json({
       ...payload,
       finnhubStatus: response.status,
-      finnhubResponse,
+      authenticated: response.ok && Number.isFinite(Number(data?.c)),
+      error: response.ok ? null : data?.error || "Finnhub authentication failed.",
     });
   } catch (error) {
     return res.status(200).json({
       ...payload,
       finnhubStatus: "request_failed",
-      finnhubResponse: {
-        error: error.message || "Unable to reach Finnhub.",
-      },
+      error: error.message || "Unable to reach Finnhub.",
     });
   }
 }

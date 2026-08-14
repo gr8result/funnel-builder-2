@@ -80,10 +80,7 @@ function friendlyCandleError(status, data) {
 
 function logFinnhubRequest(symbol, apiKey, response) {
   console.log("Finnhub symbol:", symbol);
-  console.log("Finnhub key exists:", Boolean(apiKey));
-  console.log("Finnhub key length:", apiKey?.length || 0);
-  console.log("Finnhub key starts:", apiKey?.slice(0, 4));
-  console.log("Finnhub key ends:", apiKey?.slice(-4));
+  console.log("Finnhub key configured:", Boolean(apiKey));
   console.log("Finnhub response status:", response.status);
 }
 
