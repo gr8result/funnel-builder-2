@@ -22,10 +22,8 @@ import {
   createProductEntity,
   createBuilderProductReference,
   ensureDemoBuilderCatalogueEnablements,
-  createSelectionFromProduct,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
-  familiesForArea,
   familyByKey,
   isProductLibraryEligibleProduct,
   parseMasterProductCatalogueImport,
@@ -33,13 +31,10 @@ import {
   commitMasterProductImport,
   normalizeMasterProductRecord,
   queryClientSelectableProducts,
+  resolveProductLibraryImage,
   productLibrarySelectionsFromJobFile,
-  productsForFamily,
-  productsForGarageDoors,
-  selectionQueryForFamily,
   selectionKeyForFamily,
   previewProductImportRows,
-  writeProductLibrarySelectionToJobFile,
 } from "../../../lib/product-library/catalogueModel";
 import { supabase } from "../../../utils/supabase-client";
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
@@ -52,9 +47,11 @@ const EMPTY_PRODUCT = {
   brand: "",
   range: "",
   model: "",
+  description: "",
   colour: "",
   finish: "",
   size: "",
+  texture: "",
   primary_image: "",
   official_product_url: "",
   specification_url: "",
@@ -69,8 +66,17 @@ const EMPTY_PRODUCT = {
   client_price: "",
   currency: "AUD",
   gst_treatment: "GST inclusive",
+  price_unit: "",
+  price_status: "price_pending",
+  price_source_url: "",
+  price_verified_at: "",
+  image_source_url: "",
+  image_status: "missing",
+  image_verified_at: "",
+  region: "QLD",
   price_effective_date: "",
   discontinued: false,
+  archived: false,
   active: true,
 };
 
@@ -124,7 +130,7 @@ function uniqueValues(values) {
 
 function masterProductMatchesFilters(product, filters) {
   const search = String(filters.search || "").trim().toLowerCase();
-  const haystack = [product.productName, product.model, product.sku, product.productCode].filter(Boolean).join(" ").toLowerCase();
+  const haystack = [product.productName, product.brand, product.manufacturer, product.supplier, product.range, product.model, product.sku, product.productCode].filter(Boolean).join(" ").toLowerCase();
   if (search && !haystack.includes(search)) return false;
   if (filters.area && product.topLevelArea !== filters.area) return false;
   if (filters.category && product.categoryKey !== filters.category && product.category !== filters.category) return false;
@@ -139,6 +145,80 @@ function masterProductMatchesFilters(product, filters) {
   if (filters.status === "active" && product.active === false) return false;
   if (filters.status === "discontinued" && !product.discontinued) return false;
   return true;
+}
+
+function productPriceLabel(product) {
+  const status = product.priceStatus || "price_pending";
+  if (status === "current") return money(product.clientPrice ?? product.rrp ?? product.normalizedUnitPrice);
+  if (status === "quote_required") return "Quote required";
+  if (status === "allowance_only") return "Allowance only";
+  if (status === "expired") return "Price expired";
+  return "Price pending";
+}
+
+function masterProductsForFamily(products = [], familyItem) {
+  if (!familyItem) return [];
+  return products.filter((product) => product.familyKey === familyItem.familyKey);
+}
+
+function builderEnablementForProduct(product, enablements = [], organisationId = "") {
+  return enablements.find((item) => item.organisationId === organisationId && item.masterProductCode === product?.productCode) || null;
+}
+
+function productDisplayImage(product, familyItem) {
+  return resolveProductLibraryImage({ product, family: familyItem, familyKey: familyItem?.familyKey, areaKey: familyItem?.topLevelArea });
+}
+
+function supplierNameForProduct(product) {
+  return product.supplier || product.manufacturer || product.brand || "Unassigned Supplier";
+}
+
+function rangeNameForProduct(product) {
+  return product.range || product.collection || product.profile || "Unassigned Range";
+}
+
+function groupedSupplierHierarchy(products = [], familyItem = null, enablements = [], organisationId = "") {
+  const suppliers = new Map();
+  products.forEach((product) => {
+    const supplierName = supplierNameForProduct(product);
+    const rangeName = rangeNameForProduct(product);
+    if (!suppliers.has(supplierName)) {
+      suppliers.set(supplierName, { name: supplierName, products: [], ranges: new Map(), enabled: 0 });
+    }
+    const supplier = suppliers.get(supplierName);
+    const enabled = Boolean(builderEnablementForProduct(product, enablements, organisationId)?.enabled);
+    supplier.products.push(product);
+    if (enabled) supplier.enabled += 1;
+    if (!supplier.ranges.has(rangeName)) {
+      supplier.ranges.set(rangeName, { name: rangeName, products: [], enabled: 0, image: productDisplayImage(product, familyItem) });
+    }
+    const range = supplier.ranges.get(rangeName);
+    range.products.push(product);
+    if (enabled) range.enabled += 1;
+    if (!range.image) range.image = productDisplayImage(product, familyItem);
+  });
+  return Array.from(suppliers.values()).map((supplier) => ({
+    ...supplier,
+    image: productDisplayImage(supplier.products[0], familyItem),
+    ranges: Array.from(supplier.ranges.values()).sort((left, right) => left.name.localeCompare(right.name)),
+  })).sort((left, right) => left.name.localeCompare(right.name));
+}
+
+const PRODUCT_LIBRARY_HOME_AREAS = [
+  TOP_LEVEL_AREAS.find((area) => area.key === "exterior"),
+  { ...TOP_LEVEL_AREAS.find((area) => area.key === "interior"), description: "Internal finishes, kitchens, bathrooms, laundry, garage interiors and living area selections." },
+].filter(Boolean);
+
+function categoryBelongsToArea(categoryItem, areaKey) {
+  if (areaKey === "exterior") return categoryItem.topLevelArea === "exterior";
+  if (areaKey === "interior") return categoryItem.topLevelArea !== "exterior";
+  return categoryItem.topLevelArea === areaKey;
+}
+
+function familyBelongsToArea(familyItem, areaKey) {
+  if (areaKey === "exterior") return familyItem.topLevelArea === "exterior";
+  if (areaKey === "interior") return familyItem.topLevelArea !== "exterior";
+  return familyItem.topLevelArea === areaKey;
 }
 
 function parseCsv(text) {
@@ -266,6 +346,8 @@ export default function BuilderProductLibraryPage() {
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
   const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
+  const [selectedSupplierName, setSelectedSupplierName] = useState("");
+  const [selectedRangeName, setSelectedRangeName] = useState("");
   const [selectedProductCode, setSelectedProductCode] = useState("");
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [routeHydrated, setRouteHydrated] = useState(false);
@@ -300,22 +382,25 @@ export default function BuilderProductLibraryPage() {
   );
 
   const visibleCategories = useMemo(
-    () => (selectedArea ? TAXONOMY_CATEGORY_DEFINITIONS.filter((category) => category.topLevelArea === selectedArea.key) : []),
+    () => (selectedArea ? TAXONOMY_CATEGORY_DEFINITIONS.filter((category) => categoryBelongsToArea(category, selectedArea.key)) : []),
     [selectedArea]
   );
   const visibleFamilies = useMemo(() => {
     if (!selectedArea) return [];
-    const areaFamilies = familiesForArea(selectedArea.key);
+    const areaFamilies = PRODUCT_FAMILIES.filter((familyItem) => familyBelongsToArea(familyItem, selectedArea.key));
     if (!selectedCategory) return areaFamilies;
     return areaFamilies.filter((familyItem) => familyItem.category === selectedCategory.category || familyItem.subcategory === selectedCategory.category || familyItem.subcategory === selectedCategory.subcategory);
   }, [selectedArea, selectedCategory]);
+  const familyMasterProducts = useMemo(() => masterProductsForFamily(masterProducts, selectedFamily), [masterProducts, selectedFamily]);
+  const supplierHierarchy = useMemo(() => groupedSupplierHierarchy(familyMasterProducts, selectedFamily, builderEnablements, workspaceId || ""), [builderEnablements, familyMasterProducts, selectedFamily, workspaceId]);
+  const selectedSupplierGroup = supplierHierarchy.find((supplier) => supplier.name === selectedSupplierName) || null;
+  const selectedRangeGroup = selectedSupplierGroup?.ranges.find((range) => range.name === selectedRangeName) || null;
   const visibleProducts = useMemo(() => {
     if (!selectedFamily) return [];
-    if (selectedAreaKey === "exterior" && selectedCategoryKey === "exterior-garage-doors" && selectedFamily.familyKey === "garage-doors") {
-      return productsForGarageDoors(orgProducts, workspaceId || "demo-organisation");
-    }
-    return productsForFamily(orgProducts, selectedFamily);
-  }, [orgProducts, selectedAreaKey, selectedCategoryKey, selectedFamily, workspaceId]);
+    if (selectedRangeGroup) return selectedRangeGroup.products;
+    if (selectedSupplierGroup) return selectedSupplierGroup.products;
+    return familyMasterProducts;
+  }, [familyMasterProducts, selectedFamily, selectedRangeGroup, selectedSupplierGroup]);
   const selectedProduct = visibleProducts.find((product) => product.productCode === selectedProductCode || product.productId === selectedProductCode) || visibleProducts[0] || null;
   const masterManufacturers = useMemo(() => uniqueValues(masterProducts.map((product) => product.manufacturer)), [masterProducts]);
   const masterBrands = useMemo(() => uniqueValues(masterProducts.map((product) => product.brand)), [masterProducts]);
@@ -344,10 +429,8 @@ export default function BuilderProductLibraryPage() {
     builderProducts: builderEnablements,
     organisationProducts: [],
   }), [builderEnablements, masterFilters.region, masterProducts, selectedFamily, workspaceId]);
-  const selectedVariant = selectedProduct?.variants?.[selectedVariantIndex] || selectedProduct?.variants?.[0] || null;
   const selections = productLibrarySelectionsFromJobFile(jobFile);
   const garageDoorSelection = selections[GARAGE_DOOR_SELECTION_KEY] || null;
-  const selectionQuery = selectedFamily ? selectionQueryForFamily({ areaKey: selectedFamily.topLevelArea, familyKey: selectedFamily.familyKey }) : null;
   const bannerTitle = selectedFamily?.displayName || selectedCategory?.category || selectedArea?.displayName || "Product Library";
   const bannerSubtitle = selectedFamily
     ? `${selectedFamily.category} / ${selectedFamily.subcategory}`
@@ -424,6 +507,8 @@ export default function BuilderProductLibraryPage() {
   }, [routeHydrated, router, selectedAreaKey, selectedCategoryKey, selectedFamilyKey]);
 
   useEffect(() => {
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
     setSelectedProductCode("");
     setSelectedVariantIndex(0);
     setProductForm(EMPTY_PRODUCT);
@@ -461,6 +546,8 @@ export default function BuilderProductLibraryPage() {
     setSuccess("");
     if (selectedFamilyKey) {
       setSelectedFamilyKey("");
+      setSelectedSupplierName("");
+      setSelectedRangeName("");
       return;
     }
     if (selectedCategoryKey) {
@@ -476,6 +563,8 @@ export default function BuilderProductLibraryPage() {
 
   function openFamily(familyKey) {
     setSelectedFamilyKey(familyKey);
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
     setAdminOpen(false);
   }
 
@@ -483,26 +572,33 @@ export default function BuilderProductLibraryPage() {
     setSelectedAreaKey(areaKey);
     setSelectedCategoryKey("");
     setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
     setSelectedProductCode("");
   }
 
   function openCategory(categoryKey) {
     setSelectedCategoryKey(categoryKey);
     setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
     setSelectedProductCode("");
     setAdminOpen(false);
   }
 
   function countProductsForFamily(familyItem) {
-    if (familyItem?.topLevelArea === "exterior" && familyItem.familyKey === "garage-doors") {
-      return productsForGarageDoors(orgProducts, workspaceId || "demo-organisation").length;
-    }
-    return productsForFamily(orgProducts, familyItem).length;
+    return masterProductsForFamily(masterProducts, familyItem).filter((product) => product.active !== false && product.archived !== true).length;
   }
 
   function countProductsForCategory(categoryItem) {
     return PRODUCT_FAMILIES
       .filter((familyItem) => familyItem.topLevelArea === categoryItem.topLevelArea && (familyItem.category === categoryItem.category || familyItem.subcategory === categoryItem.category || familyItem.subcategory === categoryItem.subcategory))
+      .reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
+  }
+
+  function countProductsForArea(areaItem) {
+    return PRODUCT_FAMILIES
+      .filter((familyItem) => familyBelongsToArea(familyItem, areaItem.key))
       .reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
   }
 
@@ -568,6 +664,20 @@ export default function BuilderProductLibraryPage() {
       : [...builderEnablements, createBuilderProductReference(masterProduct, { organisationId: workspaceId, enabled: true, active: true, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] })];
     persistMasterCatalogue(masterProducts, nextEnablements);
     setSuccess(`${masterProduct.productName} ${existing?.enabled ? "disabled" : "enabled"} for this builder.`);
+  }
+
+  function setBuilderProductsEnabled(productsToToggle = [], enabled = true) {
+    if (!workspaceId || !productsToToggle.length) return;
+    const byCode = new Map(builderEnablements.map((item) => [`${item.organisationId}:${item.masterProductCode}`, item]));
+    productsToToggle.forEach((product) => {
+      const key = `${workspaceId}:${product.productCode}`;
+      const existing = byCode.get(key);
+      byCode.set(key, existing
+        ? { ...existing, enabled, active: enabled }
+        : createBuilderProductReference(product, { organisationId: workspaceId, enabled, active: enabled, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] }));
+    });
+    persistMasterCatalogue(masterProducts, Array.from(byCode.values()));
+    setSuccess(`${productsToToggle.length} product${productsToToggle.length === 1 ? "" : "s"} ${enabled ? "enabled" : "disabled"} for this builder.`);
   }
 
   function handleProductCsvPreview(event) {
@@ -732,35 +842,63 @@ export default function BuilderProductLibraryPage() {
     setSaving(true);
     setError("");
     try {
-      const entity = createProductEntity({
-        ...productForm,
-        productCode: productForm.product_code,
-        productName: productForm.product_name,
+      const masterRecord = normalizeMasterProductRecord({
+        product_code: productForm.product_code,
+        family_key: selectedFamily.familyKey,
+        requirement_keys: selectedFamily.familyKey,
+        category_key: selectedFamily.category,
+        top_level_area: selectedFamily.topLevelArea,
+        manufacturer: productForm.supplier_name || productForm.brand,
+        brand: productForm.brand,
         supplier: productForm.supplier_name,
-        familyKey: selectedFamily.familyKey,
-        linkedQuoteItemCode: selectedFamily.linkedQuoteItemCode || selectedFamily.approvedSourceKey,
-        width: productForm.width,
-        height: productForm.height,
-        depth: productForm.depth,
-        variantName: productForm.variant_name,
-        primaryImage: productForm.primary_image,
-        galleryImages: productForm.gallery_images,
-        officialProductURL: productForm.official_product_url,
-        specificationURL: productForm.specification_url,
-        supplierURL: productForm.supplier_url,
+        range: productForm.range,
+        product_name: productForm.product_name,
+        model: productForm.model,
+        sku: productForm.model,
+        description: productForm.description,
+        colour: productForm.colour,
+        finish: productForm.finish,
+        size: productForm.size,
+        dimensions: { width: productForm.width, height: productForm.height, depth: productForm.depth },
+        texture: productForm.texture,
+        primary_image_url: productForm.primary_image,
+        thumbnail_url: productForm.primary_image,
+        gallery_image_urls: productForm.gallery_images,
+        image_source_url: productForm.image_source_url || productForm.primary_image,
+        image_status: productForm.primary_image ? (productForm.image_status === "missing" ? "review_required" : productForm.image_status) : "missing",
+        image_verified_at: productForm.image_verified_at,
+        official_product_url: productForm.official_product_url,
+        specification_url: productForm.specification_url,
+        supplier_url: productForm.supplier_url,
         rrp: productForm.rrp,
-        builderCost: productForm.builder_cost,
-        clientPrice: productForm.client_price,
+        client_price: productForm.client_price,
         currency: productForm.currency,
-        gstTreatment: productForm.gst_treatment,
-        priceEffectiveDate: productForm.price_effective_date,
+        price_unit: productForm.price_unit,
+        price_status: productForm.price_status,
+        price_source_url: productForm.price_source_url,
+        price_verified_at: productForm.price_verified_at || productForm.price_effective_date,
+        regions: productForm.region,
         active: productForm.active,
         discontinued: productForm.discontinued,
-      }, workspaceId);
-      await saveEntityProduct(entity, editingProductId ? "update" : "create");
+        archived: productForm.archived,
+        source_type: editingProductId ? "product_library_edit" : "product_library_manual",
+        source_name: "Product Library",
+        source_url: productForm.official_product_url || "product-library",
+        notes: productForm.description,
+      });
+      const nextProducts = [...masterProducts.filter((product) => product.productCode !== masterRecord.productCode), masterRecord];
+      const builderOverridePrice = productForm.builder_cost === "" ? null : Number(productForm.builder_cost);
+      const hasEnablement = builderEnablements.some((item) => item.organisationId === workspaceId && item.masterProductCode === masterRecord.productCode);
+      const nextEnablements = hasEnablement
+        ? builderEnablements.map((item) => item.organisationId === workspaceId && item.masterProductCode === masterRecord.productCode
+          ? { ...item, clientPrice: Number.isFinite(builderOverridePrice) ? builderOverridePrice : item.clientPrice, overrides: { ...(item.overrides || {}), clientPrice: Number.isFinite(builderOverridePrice) ? builderOverridePrice : item.overrides?.clientPrice } }
+          : item)
+        : [...builderEnablements, createBuilderProductReference(masterRecord, { organisationId: workspaceId, enabled: true, active: true, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1], clientPrice: Number.isFinite(builderOverridePrice) ? builderOverridePrice : null })];
+      persistMasterCatalogue(nextProducts, nextEnablements);
       setProductForm(EMPTY_PRODUCT);
       setEditingProductId("");
-      setSuccess(`${entity.productName} saved to ${selectedFamily.displayName}.`);
+      setSelectedProductCode(masterRecord.productCode);
+      setSuccess(`${masterRecord.productName} saved to the shared master catalogue.`);
     } catch (saveError) {
       setError(saveError.message || "Could not save product.");
     }
@@ -778,26 +916,37 @@ export default function BuilderProductLibraryPage() {
       brand: entity.brand || "",
       range: entity.range || "",
       model: entity.model || "",
+      description: entity.description || "",
       colour: entity.colour || "",
       finish: entity.finish || "",
       size: entity.size || "",
+      texture: entity.texture || "",
       width: entity.width || entity.dimensions?.width || "",
       height: entity.height || entity.dimensions?.height || "",
       depth: entity.depth || entity.dimensions?.depth || "",
       variant_name: entity.variants?.[0]?.variantName || "",
-      primary_image: entity.primaryImage || "",
-      gallery_images: (entity.galleryImages || []).join("|"),
-      official_product_url: entity.officialProductURL || "",
-      specification_url: entity.specificationURL || "",
-      supplier_url: entity.supplierURL || "",
-      rrp: entity.RRP || "",
-      builder_cost: entity.builderCost || "",
+      primary_image: entity.primaryImageUrl || entity.primaryImage || "",
+      gallery_images: (entity.galleryImageUrls || entity.galleryImages || []).join("|"),
+      official_product_url: entity.officialProductUrl || entity.officialProductURL || "",
+      specification_url: entity.specificationUrl || entity.specificationURL || "",
+      supplier_url: entity.supplierUrl || entity.supplierURL || "",
+      rrp: entity.rrp ?? entity.RRP ?? "",
+      builder_cost: entity.builder?.clientPrice ?? "",
       client_price: entity.clientPrice || "",
       currency: entity.currency || "AUD",
       gst_treatment: entity.gstTreatment || "GST inclusive",
-      price_effective_date: entity.priceEffectiveDate || "",
+      price_unit: entity.priceUnit || "",
+      price_status: entity.priceStatus || "price_pending",
+      price_source_url: entity.priceSourceUrl || "",
+      price_verified_at: entity.priceVerifiedAt || "",
+      image_source_url: entity.imageSourceUrl || "",
+      image_status: entity.imageStatus || (entity.primaryImageUrl || entity.primaryImage ? "review_required" : "missing"),
+      image_verified_at: entity.imageVerifiedAt || "",
+      region: (entity.regions || [])[0] || "QLD",
+      price_effective_date: entity.priceEffectiveDate || entity.priceVerifiedAt || "",
       active: entity.active !== false,
       discontinued: entity.discontinued || false,
+      archived: entity.archived || false,
     });
     setAdminOpen(true);
   }
@@ -815,28 +964,12 @@ export default function BuilderProductLibraryPage() {
   }
 
   async function archiveProduct(entity) {
-    if (!entity?.raw?.id || entity.organisationId !== workspaceId) return;
+    if (!entity?.productCode) return;
     setSaving(true);
     setError("");
-    const archivedEntity = { ...entity, active: false, archived: true };
-    const { error: archiveError } = await supabase
-      .from("builder_products")
-      .update({
-        active: false,
-        metadata: {
-          ...(entity.raw.metadata || {}),
-          productEntity: archivedEntity,
-          archived: true,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("workspace_id", workspaceId)
-      .eq("id", entity.raw.id);
-    if (archiveError) setError(archiveError.message || "Could not archive product.");
-    else {
-      setSuccess("Product archived.");
-      await loadLibrary();
-    }
+    const archivedRecord = normalizeMasterProductRecord({ ...entity, active: false, archived: true, discontinued: entity.discontinued });
+    persistMasterCatalogue(masterProducts.map((product) => product.productCode === archivedRecord.productCode ? archivedRecord : product));
+    setSuccess("Product archived for new selections. Existing saved selections keep their product reference.");
     setSaving(false);
   }
 
@@ -892,22 +1025,11 @@ export default function BuilderProductLibraryPage() {
     setSelectedAreaKey("");
     setSelectedCategoryKey("");
     setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
     setSelectedProductCode("");
     setSelectedVariantIndex(0);
     router.push("/modules/builders");
-  }
-
-  function addToSelection(entity) {
-    if (!selectedFamily || !entity) return;
-    const selection = createSelectionFromProduct(entity, selectedFamily, selectedVariant);
-    const nextJobFile = writeProductLibrarySelectionToJobFile(jobFile, selection);
-    persistJobFile(nextJobFile);
-    setSelectedAreaKey("exterior");
-    setSelectedCategoryKey("");
-    setSelectedFamilyKey("");
-    setSelectedProductCode("");
-    setSelectedVariantIndex(0);
-    setSuccess(`Added ${entity.productName} to Garage Door selections.`);
   }
 
   return (
@@ -1104,9 +1226,8 @@ export default function BuilderProductLibraryPage() {
               <strong>Choose one area</strong>
             </div>
             <div className="tile-grid area-grid">
-              {TOP_LEVEL_AREAS.map((area) => {
-                const areaFamilies = familiesForArea(area.key);
-                const count = areaFamilies.reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
+              {PRODUCT_LIBRARY_HOME_AREAS.map((area) => {
+                const count = countProductsForArea(area);
                 return (
                   <button key={area.key} type="button" className="visual-tile" onClick={() => openArea(area.key)} data-area-key={area.key}>
                     <span className="tile-image" style={{ backgroundImage: `url(${area.image})` }} />
@@ -1194,42 +1315,94 @@ export default function BuilderProductLibraryPage() {
                 <strong>{selectedFamily.displayName}</strong>
               </div>
               <div className="family-hero">
-                <img src={selectedFamily.image} alt={`${selectedFamily.displayName} generic category`} />
+                <img src={resolveProductLibraryImage({ family: selectedFamily, familyKey: selectedFamily.familyKey, areaKey: selectedFamily.topLevelArea })} alt={`${selectedFamily.displayName} category`} />
                 <div>
                   <h2>{selectedFamily.displayName}</h2>
                   <p>{selectedFamily.category} / {selectedFamily.subcategory}</p>
                   <div className="chips">
-                    <span>{selectionQuery.area}</span>
-                    <span>{selectionQuery.familyKey}</span>
-                    <span>{selectionQuery.linkedQuoteItemCode}</span>
+                    <span>{familyMasterProducts.length} master products</span>
+                    <span>{supplierHierarchy.length} suppliers</span>
+                    <span>{builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled && familyMasterProducts.some((product) => product.productCode === item.masterProductCode)).length} enabled</span>
                   </div>
                 </div>
               </div>
 
-              <div className="product-grid">
-                {visibleProducts.map((product) => (
-                  <button
-                    key={product.productId}
-                    type="button"
-                    className={selectedProduct?.productId === product.productId ? "product-option selected" : "product-option"}
-                    onClick={() => setSelectedProductCode(product.productCode || product.productId)}
-                  >
-                    <img src={product.primaryImage || selectedFamily.image} alt={product.imageAltText || product.productName} />
-                    <strong>{product.productName}</strong>
-                    <small>Supplier: {product.supplier || "Not set"}</small>
-                    <small>Brand: {product.brand || "Not set"}</small>
-                    <small>Range: {product.range || "Not set"}</small>
-                    <small>Model: {product.model || "Not set"}</small>
-                    <small>Size: {product.size || "Not set"}</small>
-                    <small>Finish/colour: {[product.finish, product.colour].filter(Boolean).join(" / ") || "Not set"}</small>
-                    <span>{product.priceReviewRequired ? "Price not set" : product.priceStatus || money(product.clientPrice || product.builderCost)}</span>
-                  </button>
-                ))}
+              <div className="catalogue-breadcrumb">
+                <button type="button" onClick={() => { setSelectedSupplierName(""); setSelectedRangeName(""); }}>Suppliers</button>
+                {selectedSupplierName ? <button type="button" onClick={() => setSelectedRangeName("")}>{selectedSupplierName}</button> : null}
+                {selectedRangeName ? <span>{selectedRangeName}</span> : null}
               </div>
 
-              {!visibleProducts.length ? (
+              {!selectedSupplierName ? (
+                <div className="tile-grid supplier-grid" data-testid="product-library-suppliers">
+                  {supplierHierarchy.map((supplier) => (
+                    <article key={supplier.name} className="visual-tile management-tile">
+                      <span className="tile-image" style={{ backgroundImage: `url(${supplier.image})` }} />
+                      <span className="tile-body">
+                        <strong>{supplier.name}</strong>
+                        <small>{supplier.ranges.length} range{supplier.ranges.length === 1 ? "" : "s"} / {supplier.products.length} product{supplier.products.length === 1 ? "" : "s"}</small>
+                        <em>{supplier.enabled} enabled for this builder</em>
+                        <span className="tile-actions">
+                          <button type="button" onClick={() => { setSelectedSupplierName(supplier.name); setSelectedRangeName(""); setSelectedProductCode(""); }}>View Ranges</button>
+                          <button type="button" onClick={() => setBuilderProductsEnabled(supplier.products, supplier.enabled !== supplier.products.length)}>{supplier.enabled === supplier.products.length ? "Disable Supplier" : "Enable Supplier"}</button>
+                        </span>
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              ) : selectedSupplierName && !selectedRangeName ? (
+                <div className="tile-grid range-grid" data-testid="product-library-ranges">
+                  {(selectedSupplierGroup?.ranges || []).map((range) => (
+                    <article key={range.name} className="visual-tile management-tile">
+                      <span className="tile-image" style={{ backgroundImage: `url(${range.image || selectedFamily.image})` }} />
+                      <span className="tile-body">
+                        <strong>{range.name}</strong>
+                        <small>{range.products.length} product{range.products.length === 1 ? "" : "s"}</small>
+                        <em>{range.enabled} enabled for this builder</em>
+                        <span className="tile-actions">
+                          <button type="button" onClick={() => { setSelectedRangeName(range.name); setSelectedProductCode(""); }}>View Products</button>
+                          <button type="button" onClick={() => setBuilderProductsEnabled(range.products, range.enabled !== range.products.length)}>{range.enabled === range.products.length ? "Disable Range" : "Enable Range"}</button>
+                          <button type="button" onClick={() => { setProductForm((current) => ({ ...current, supplier_name: selectedSupplierName, range: range.name })); setAdminOpen(true); }}>Add Product</button>
+                        </span>
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="product-grid" data-testid="product-library-products">
+                  {visibleProducts.map((product) => {
+                    const enabled = Boolean(builderEnablementForProduct(product, builderEnablements, workspaceId || "")?.enabled);
+                    return (
+                      <article
+                        key={product.productId}
+                        className={selectedProduct?.productId === product.productId ? "product-option selected management-card" : "product-option management-card"}
+                      >
+                        <button type="button" className="product-pick" onClick={() => setSelectedProductCode(product.productCode || product.productId)}>
+                          <img src={productDisplayImage(product, selectedFamily)} alt={product.productName} />
+                          <strong>{product.productName}</strong>
+                        </button>
+                        <small>Manufacturer: {product.manufacturer || "Not set"}</small>
+                        <small>Supplier: {product.supplier || "Not set"}</small>
+                        <small>Range: {product.range || "Not set"}</small>
+                        <small>Colour/variant: {[product.colour, product.finish, product.size].filter(Boolean).join(" / ") || "Not set"}</small>
+                        <span>{productPriceLabel(product)}</span>
+                        <span className={product.active !== false && !product.archived ? "status-pill on" : "status-pill off"}>{product.active !== false && !product.archived ? "Active" : "Archived"}</span>
+                        <span className={enabled ? "status-pill on" : "status-pill off"}>{enabled ? "Enabled for builder" : "Disabled for builder"}</span>
+                        <div className="card-actions">
+                          <button type="button" onClick={() => editProduct(product)}><Pencil size={15} /> Edit</button>
+                          <button type="button" onClick={() => toggleBuilderProduct(product)}><Check size={15} /> {enabled ? "Disable" : "Enable"}</button>
+                          <button type="button" onClick={() => archiveProduct(product)}><Archive size={15} /> Archive</button>
+                          {product.officialProductUrl ? <a href={product.officialProductUrl} target="_blank" rel="noreferrer">Official Page</a> : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!familyMasterProducts.length ? (
                 <div className="empty-state">
-                  <strong>No products have been added for this category yet.</strong>
+                  <strong>No products have been added to this master family yet.</strong>
                   <div>
                     <button type="button" onClick={() => setAdminOpen(true)}><Plus size={16} /> Add Product</button>
                     <label className="file-button">
@@ -1246,9 +1419,9 @@ export default function BuilderProductLibraryPage() {
             <aside className="detail-panel">
               {selectedProduct ? (
                 <div className="selected-product">
-                  <img src={selectedProduct.primaryImage || selectedFamily.image} alt={selectedProduct.imageAltText || selectedProduct.productName} />
+                  <img src={productDisplayImage(selectedProduct, selectedFamily)} alt={selectedProduct.productName} />
                   <div className="gallery" data-gallery-count={(selectedProduct.galleryImages || []).length}>
-                    {(selectedProduct.galleryImages?.length ? selectedProduct.galleryImages : [selectedProduct.primaryImage || selectedFamily.image]).map((image, index) => (
+                    {((selectedProduct.galleryImageUrls || selectedProduct.galleryImages)?.length ? (selectedProduct.galleryImageUrls || selectedProduct.galleryImages) : [productDisplayImage(selectedProduct, selectedFamily)]).map((image, index) => (
                       <img key={`${image}-${index}`} src={image} alt={`${selectedProduct.productName} gallery ${index + 1}`} />
                     ))}
                   </div>
@@ -1279,17 +1452,25 @@ export default function BuilderProductLibraryPage() {
                     <dt>Colours</dt>
                     <dd>{[selectedProduct.colour, selectedProduct.finish].filter(Boolean).join(" / ") || "Not set"}</dd>
                     <dt>Official Product URL</dt>
-                    <dd>{selectedProduct.officialProductURL ? <a href={selectedProduct.officialProductURL} target="_blank" rel="noreferrer">{selectedProduct.officialProductURL}</a> : "Not supplied"}</dd>
+                    <dd>{selectedProduct.officialProductUrl ? <a href={selectedProduct.officialProductUrl} target="_blank" rel="noreferrer">{selectedProduct.officialProductUrl}</a> : "Not supplied"}</dd>
                     <dt>Specification URL</dt>
-                    <dd>{selectedProduct.specificationURL ? <a href={selectedProduct.specificationURL} target="_blank" rel="noreferrer">{selectedProduct.specificationURL}</a> : "Not supplied"}</dd>
+                    <dd>{selectedProduct.specificationUrl ? <a href={selectedProduct.specificationUrl} target="_blank" rel="noreferrer">{selectedProduct.specificationUrl}</a> : "Not supplied"}</dd>
                     <dt>Price</dt>
-                    <dd>{selectedProduct.priceReviewRequired ? selectedProduct.priceStatus || "Price not set" : money(selectedProduct.clientPrice || selectedProduct.builderCost || selectedProduct.RRP)}</dd>
-                    <dt>Allowance</dt>
-                    <dd>{selectedProduct.allowance ? money(selectedProduct.allowance) : "No allowance set"}</dd>
-                    <dt>Variation</dt>
-                    <dd>{selectedProduct.upgradePrice || selectedProduct.clientPrice ? money(selectedProduct.upgradePrice || selectedProduct.clientPrice) : "No variation set"}</dd>
+                    <dd>{productPriceLabel(selectedProduct)}</dd>
+                    <dt>Price Status</dt>
+                    <dd>{selectedProduct.priceStatus || "price_pending"}</dd>
+                    <dt>Image Status</dt>
+                    <dd>{selectedProduct.imageStatus || "missing"}</dd>
+                    <dt>Master Status</dt>
+                    <dd>{selectedProduct.archived ? "Archived" : selectedProduct.discontinued ? "Discontinued" : selectedProduct.active === false ? "Disabled" : "Active"}</dd>
+                    <dt>Builder Enablement</dt>
+                    <dd>{builderEnablementForProduct(selectedProduct, builderEnablements, workspaceId || "")?.enabled ? "Enabled for this builder" : "Disabled for this builder"}</dd>
                   </dl>
-                  <button type="button" onClick={() => addToSelection(selectedProduct)}><Check size={16} /> Add to Selections</button>
+                  <div className="detail-actions">
+                    <button type="button" onClick={() => editProduct(selectedProduct)}><Pencil size={16} /> Edit Product</button>
+                    <button type="button" className="secondary" onClick={() => toggleBuilderProduct(selectedProduct)}><Check size={16} /> {builderEnablementForProduct(selectedProduct, builderEnablements, workspaceId || "")?.enabled ? "Disable" : "Enable"} Builder</button>
+                    <button type="button" className="secondary" onClick={() => archiveProduct(selectedProduct)}><Archive size={16} /> Archive</button>
+                  </div>
                 </div>
               ) : (
                 <div className="empty-state compact">
@@ -1338,23 +1519,37 @@ export default function BuilderProductLibraryPage() {
                     <input value={productForm.brand} onChange={(event) => setProductForm((current) => ({ ...current, brand: event.target.value }))} placeholder="brand" />
                     <input value={productForm.range} onChange={(event) => setProductForm((current) => ({ ...current, range: event.target.value }))} placeholder="range" />
                     <input value={productForm.model} onChange={(event) => setProductForm((current) => ({ ...current, model: event.target.value }))} placeholder="model" />
+                    <input value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} placeholder="description" />
                     <input value={productForm.colour} onChange={(event) => setProductForm((current) => ({ ...current, colour: event.target.value }))} placeholder="colour" />
                     <input value={productForm.finish} onChange={(event) => setProductForm((current) => ({ ...current, finish: event.target.value }))} placeholder="finish" />
                     <input value={productForm.size} onChange={(event) => setProductForm((current) => ({ ...current, size: event.target.value }))} placeholder="size" />
+                    <input value={productForm.texture} onChange={(event) => setProductForm((current) => ({ ...current, texture: event.target.value }))} placeholder="texture" />
                     <input value={productForm.width} onChange={(event) => setProductForm((current) => ({ ...current, width: event.target.value }))} placeholder="width" />
                     <input value={productForm.height} onChange={(event) => setProductForm((current) => ({ ...current, height: event.target.value }))} placeholder="height" />
                     <input value={productForm.depth} onChange={(event) => setProductForm((current) => ({ ...current, depth: event.target.value }))} placeholder="depth" />
                     <input value={productForm.variant_name} onChange={(event) => setProductForm((current) => ({ ...current, variant_name: event.target.value }))} placeholder="variant_name" />
                     <input value={productForm.primary_image} onChange={(event) => setProductForm((current) => ({ ...current, primary_image: event.target.value }))} placeholder="primary_image" />
                     <input value={productForm.gallery_images} onChange={(event) => setProductForm((current) => ({ ...current, gallery_images: event.target.value }))} placeholder="gallery_images" />
+                    <input value={productForm.image_source_url} onChange={(event) => setProductForm((current) => ({ ...current, image_source_url: event.target.value }))} placeholder="image_source_url" />
+                    <select value={productForm.image_status} onChange={(event) => setProductForm((current) => ({ ...current, image_status: event.target.value }))}>
+                      {MASTER_IMAGE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                    </select>
+                    <input value={productForm.image_verified_at} onChange={(event) => setProductForm((current) => ({ ...current, image_verified_at: event.target.value }))} placeholder="image_verified_at" />
                     <input value={productForm.official_product_url} onChange={(event) => setProductForm((current) => ({ ...current, official_product_url: event.target.value }))} placeholder="official_product_url" />
                     <input value={productForm.specification_url} onChange={(event) => setProductForm((current) => ({ ...current, specification_url: event.target.value }))} placeholder="specification_url" />
                     <input value={productForm.supplier_url} onChange={(event) => setProductForm((current) => ({ ...current, supplier_url: event.target.value }))} placeholder="supplier_url" />
                     <input value={productForm.rrp} onChange={(event) => setProductForm((current) => ({ ...current, rrp: event.target.value }))} placeholder="rrp" />
-                    <input value={productForm.builder_cost} onChange={(event) => setProductForm((current) => ({ ...current, builder_cost: event.target.value }))} placeholder="builder_cost" />
+                    <input value={productForm.builder_cost} onChange={(event) => setProductForm((current) => ({ ...current, builder_cost: event.target.value }))} placeholder="builder client price override" />
                     <input value={productForm.client_price} onChange={(event) => setProductForm((current) => ({ ...current, client_price: event.target.value }))} placeholder="client_price" />
                     <input value={productForm.currency} onChange={(event) => setProductForm((current) => ({ ...current, currency: event.target.value }))} placeholder="currency" />
                     <input value={productForm.gst_treatment} onChange={(event) => setProductForm((current) => ({ ...current, gst_treatment: event.target.value }))} placeholder="gst_treatment" />
+                    <input value={productForm.price_unit} onChange={(event) => setProductForm((current) => ({ ...current, price_unit: event.target.value }))} placeholder="price_unit" />
+                    <select value={productForm.price_status} onChange={(event) => setProductForm((current) => ({ ...current, price_status: event.target.value }))}>
+                      {MASTER_PRICE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+                    </select>
+                    <input value={productForm.price_source_url} onChange={(event) => setProductForm((current) => ({ ...current, price_source_url: event.target.value }))} placeholder="price_source_url" />
+                    <input value={productForm.price_verified_at} onChange={(event) => setProductForm((current) => ({ ...current, price_verified_at: event.target.value }))} placeholder="price_verified_at" />
+                    <input value={productForm.region} onChange={(event) => setProductForm((current) => ({ ...current, region: event.target.value }))} placeholder="region" />
                     <input value={productForm.price_effective_date} onChange={(event) => setProductForm((current) => ({ ...current, price_effective_date: event.target.value }))} placeholder="price_effective_date" />
                     <label className="check-field">
                       <input type="checkbox" checked={Boolean(productForm.active)} onChange={(event) => setProductForm((current) => ({ ...current, active: event.target.checked }))} />
@@ -1363,6 +1558,10 @@ export default function BuilderProductLibraryPage() {
                     <label className="check-field">
                       <input type="checkbox" checked={Boolean(productForm.discontinued)} onChange={(event) => setProductForm((current) => ({ ...current, discontinued: event.target.checked }))} />
                       Discontinued
+                    </label>
+                    <label className="check-field">
+                      <input type="checkbox" checked={Boolean(productForm.archived)} onChange={(event) => setProductForm((current) => ({ ...current, archived: event.target.checked }))} />
+                      Archived
                     </label>
                   </div>
                   <button type="submit" disabled={saving || !workspaceId}><ImagePlus size={16} /> Save Product</button>
@@ -1551,6 +1750,9 @@ export default function BuilderProductLibraryPage() {
           background: #ffffff;
           padding: 0;
         }
+        .management-tile {
+          text-align: left;
+        }
         .visual-tile:hover,
         .product-option:hover {
           border-color: #1f6feb;
@@ -1575,6 +1777,26 @@ export default function BuilderProductLibraryPage() {
           color: #64748b;
           font-style: normal;
           line-height: 1.35;
+        }
+        .tile-actions,
+        .card-actions,
+        .detail-actions,
+        .catalogue-breadcrumb {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .catalogue-breadcrumb {
+          margin-bottom: 12px;
+        }
+        .catalogue-breadcrumb span {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #eef4ff;
+          color: #1f3b6d;
+          padding: 9px 12px;
+          font-weight: 900;
         }
         .family-layout {
           display: grid;
@@ -1667,6 +1889,19 @@ export default function BuilderProductLibraryPage() {
           background: #ffffff;
           padding: 10px;
         }
+        .management-card {
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+        }
+        .product-pick {
+          display: grid;
+          gap: 8px;
+          border: 0;
+          padding: 0;
+          background: transparent;
+          color: inherit;
+          justify-content: stretch;
+        }
         .product-option.selected {
           border-color: #1f6feb;
           box-shadow: inset 0 0 0 1px #1f6feb;
@@ -1682,6 +1917,31 @@ export default function BuilderProductLibraryPage() {
           color: #166534;
           font-size: 12px;
           font-weight: 900;
+        }
+        .status-pill {
+          justify-self: start;
+          border-radius: 999px;
+          padding: 4px 8px;
+          background: #f1f5f9;
+        }
+        .status-pill.on {
+          color: #166534;
+          background: #dcfce7;
+        }
+        .status-pill.off {
+          color: #991b1b;
+          background: #fee2e2;
+        }
+        .card-actions a {
+          display: inline-flex;
+          align-items: center;
+          min-height: 34px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          padding: 7px 10px;
+          color: #1f6feb;
+          font-weight: 900;
+          text-decoration: none;
         }
         .detail-panel {
           align-self: start;
@@ -1837,7 +2097,8 @@ export default function BuilderProductLibraryPage() {
           gap: 8px;
         }
         .master-filters input,
-        .master-filters select {
+        .master-filters select,
+        .form-grid select {
           min-height: 38px;
           border: 1px solid #cbd5e1;
           border-radius: 8px;
