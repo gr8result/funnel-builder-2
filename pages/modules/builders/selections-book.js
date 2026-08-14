@@ -11,6 +11,7 @@ import {
   areaTotals as guidedAreaTotals,
   guidedRequirementByKey,
   kitchenRequirementByKey,
+  nextIncompleteRequirement,
   priceStateForProduct,
   productAllowance,
   productClientPrice,
@@ -1465,6 +1466,64 @@ export default function BuilderSelectionsBookPage({
     if (next.requirementKey !== "roofing") resetGuidedRoofingFlow();
   }
 
+  function navigateToGuidedRequirement(requirement) {
+    if (!requirement) {
+      setGuidedScreen("complete");
+      setGuidedRequirementKey("");
+      setGuidedArea("");
+      resetGuidedBrickFlow();
+      resetGuidedRoofingFlow();
+      return;
+    }
+    setGuidedArea(requirement.areaKey === "exterior" ? "exterior" : "interior");
+    setGuidedRequirementKey(requirement.requirementKey);
+    setGuidedScreen("product");
+    if (requirement.requirementKey !== "bricks") resetGuidedBrickFlow();
+    if (requirement.requirementKey !== "roofing") resetGuidedRoofingFlow();
+  }
+
+  function autoAdvanceAfterGuidedCommit(committedRequirement, nextBook) {
+    const nextRequirement = nextIncompleteGuidedRequirement(nextBook, committedRequirement);
+    const completedSection = !nextRequirement || nextRequirement.areaKey !== committedRequirement.areaKey;
+    const sectionLabel = committedRequirement.areaLabel || titleCase(committedRequirement.areaKey || "Section");
+    setSuccess(`${committedRequirement.label} selected.`);
+    window.setTimeout(() => {
+      if (nextRequirement) {
+        setSuccess(completedSection ? `${sectionLabel} complete. Opening ${nextRequirement.label}.` : `Opening ${nextRequirement.label}.`);
+        navigateToGuidedRequirement(nextRequirement);
+      } else {
+        setSuccess("Selections complete.");
+        navigateToGuidedRequirement(null);
+      }
+    }, 450);
+  }
+
+  function commitGuidedRequirementPatch(requirement, patch) {
+    let committedBook = null;
+    setBook((current) => {
+      const nextRoom = ensureGuidedRoom(current, requirement);
+      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
+      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
+        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
+          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
+          : item
+      ));
+      const updatedRoom = { ...nextRoom, rows: nextRows };
+      committedBook = {
+        ...current,
+        rooms: roomExists
+          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
+          : [...current.rooms, updatedRoom],
+        updatedAt: new Date().toISOString(),
+      };
+      saveEmbeddedBookDraft(committedBook);
+      return committedBook;
+    });
+    window.setTimeout(() => {
+      if (committedBook) autoAdvanceAfterGuidedCommit(requirement, committedBook);
+    }, 0);
+  }
+
   function resetGuidedBrickFlow() {
     setGuidedBrickStep("suppliers");
     setGuidedBrickSupplier("");
@@ -1577,16 +1636,16 @@ export default function BuilderSelectionsBookPage({
   }
 
   function selectGuidedProduct(requirement, option) {
-    const guidedRoom = ensureGuidedRoom(book, requirement);
-    const row = rowForRequirement(guidedRoom, requirement);
-    if (!row || !option) return;
+    if (!option) return;
     const entity = option.metadata?.productEntity || option;
     const allowance = numberValue(option.allowance ?? entity.allowance ?? requirement.defaultAllowance);
-    const selectedCost = priceStateForGuidedOption(option) === PRICE_STATES.current ? numberValue(option.selectedCost) : 0;
+    const priceState = priceStateForGuidedOption(option);
+    const selectedCost = priceState === PRICE_STATES.current ? numberValue(option.selectedCost) : null;
     const quantity = numberValue(requirement.defaultQuantity) || 1;
-    const upgradeCost = priceStateForGuidedOption(option) === PRICE_STATES.current
+    const upgradeCost = priceState === PRICE_STATES.current
       ? variationFor({ selectedPrice: selectedCost, allowance, quantity })
-      : 0;
+      : null;
+    const now = new Date().toISOString();
     const patch = {
       selectedOptionId: option.id,
       selectedProduct: option.productName,
@@ -1599,8 +1658,8 @@ export default function BuilderSelectionsBookPage({
       allowanceAmount: allowance,
       selectedCost,
       upgradeCost,
-      included: upgradeCost === 0,
-      status: selectedCost > 0 ? "selected" : "pending",
+      included: priceState === PRICE_STATES.current && upgradeCost === 0,
+      status: "selected",
       guidedSelection: {
         source: "guided_client_selections",
         projectId: selectedProjectId || selectedProject?.id || "",
@@ -1611,46 +1670,37 @@ export default function BuilderSelectionsBookPage({
         requirementLabel: requirement.label,
         familyKey: requirement.familyKey,
         linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
-        productCode: entity.productCode || option.id,
+        productId: option.productId || option.id || "",
+        productCode: entity.productCode || option.productCode || option.sku || option.id,
         manufacturer: entity.manufacturer || "",
         brand: option.brand,
+        supplier: option.supplier,
         range: option.range || "",
         productName: option.productName,
+        model: option.model || "",
         selectedProduct: option.productName,
-        variant: {
-          model: option.model,
-          colour: option.colour || "",
-          finish: option.finish,
-          size: option.size || "",
-        },
+        colour: option.colour || "",
+        finish: option.finish || "",
+        size: option.size || "",
+        profile: option.profile || "",
+        texture: option.texture || "",
+        configuration: option.configuration || option.roofType || "",
+        variant: { model: option.model, colour: option.colour || "", finish: option.finish, size: option.size || "" },
         quantity,
         allowance,
         selectedPrice: selectedCost,
+        priceStatus: priceState,
         variation: upgradeCost,
-        supplier: option.supplier,
+        variationPending: priceState !== PRICE_STATES.current,
         imageReference: option.imageUrl || requirementImage(requirement),
-        priceState: priceStateForGuidedOption(option),
-        selectionTimestamp: new Date().toISOString(),
+        officialProductURL: entity.officialProductURL || option.productUrl || "",
+        priceState,
+        selectedAt: now,
+        updatedAt: now,
+        selectionTimestamp: now,
       },
     };
-    setBook((current) => {
-      const nextRoom = ensureGuidedRoom(current, requirement);
-      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
-      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
-        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
-          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
-          : item
-      ));
-      const updatedRoom = { ...nextRoom, rows: nextRows };
-      return {
-        ...current,
-        rooms: roomExists
-          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
-          : [...current.rooms, updatedRoom],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    setSuccess(`${requirement.label} selected. Save Progress will store it with this selections book.`);
+    commitGuidedRequirementPatch(requirement, patch);
   }
 
   function selectGuidedRoofingConfiguration(requirement, configuration) {
@@ -1661,16 +1711,14 @@ export default function BuilderSelectionsBookPage({
       setError("Choose a compatible roof profile, colour and finish before selecting.");
       return;
     }
-    const guidedRoom = ensureGuidedRoom(book, requirement);
-    const row = rowForRequirement(guidedRoom, requirement);
-    if (!row) return;
     const entity = profile.metadata?.productEntity || profile;
     const allowance = numberValue(profile.allowance ?? entity.allowance ?? requirement.defaultAllowance);
-    const selectedCost = priceStateForGuidedOption(profile) === PRICE_STATES.current ? numberValue(profile.selectedCost) : 0;
+    const selectedCost = priceStateForGuidedOption(profile) === PRICE_STATES.current ? numberValue(profile.selectedCost) : null;
     const priceState = priceStateForGuidedOption(profile) === PRICE_STATES.current ? PRICE_STATES.current : PRICE_STATES.quoteRequired;
     const quantity = numberValue(requirement.defaultQuantity) || 1;
-    const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : 0;
+    const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : null;
     const selectedProduct = `${profile.profile || profile.productName} / ${colour.name} / ${finish.name}`;
+    const now = new Date().toISOString();
     const guidedSelection = {
       source: "guided_client_selections",
       projectId: selectedProjectId || selectedProject?.id || "",
@@ -1681,10 +1729,13 @@ export default function BuilderSelectionsBookPage({
       requirementLabel: requirement.label,
       familyKey: "roofing",
       linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
-      productCode: entity.productCode || profile.id,
+      productId: profile.productId || profile.id || "",
+      productCode: entity.productCode || profile.productCode || profile.id,
       manufacturer: profile.manufacturer || entity.manufacturer || "LYSAGHT",
       brand: profile.brand || entity.brand || "COLORBOND steel",
       supplier: profile.supplier || entity.supplier || "LYSAGHT",
+      range: profile.range || entity.range || "",
+      model: profile.model || "",
       productName: selectedProduct,
       selectedProduct,
       roofType: configuration.roofType,
@@ -1712,11 +1763,16 @@ export default function BuilderSelectionsBookPage({
       allowance,
       selectedPrice: selectedCost,
       variation,
+      variationPending: priceState !== PRICE_STATES.current,
+      priceStatus: priceState,
       priceState,
       configurationComplete: true,
       imageReference: profile.imageUrl || requirementImage(requirement),
+      officialProductURL: entity.officialProductURL || profile.productUrl || "",
       sourceUrls: [entity.officialProductURL || profile.productUrl, "https://colorbond.com/colours"].filter(Boolean),
-      selectionTimestamp: new Date().toISOString(),
+      selectedAt: now,
+      updatedAt: now,
+      selectionTimestamp: now,
     };
     const patch = {
       selectedOptionId: `${profile.id}-${slug(colour.name)}-${slug(finish.name)}`,
@@ -1734,24 +1790,7 @@ export default function BuilderSelectionsBookPage({
       status: "selected",
       guidedSelection,
     };
-    setBook((current) => {
-      const nextRoom = ensureGuidedRoom(current, requirement);
-      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
-      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
-        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
-          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
-          : item
-      ));
-      const updatedRoom = { ...nextRoom, rows: nextRows };
-      return {
-        ...current,
-        rooms: roomExists
-          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
-          : [...current.rooms, updatedRoom],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    setSuccess("Roofing configuration selected. Save Progress will store it with this selections book.");
+    commitGuidedRequirementPatch(requirement, patch);
   }
 
   function applyRowOption(roomId, rowId, optionId) {
@@ -2252,6 +2291,8 @@ export default function BuilderSelectionsBookPage({
               onSelectProduct={selectGuidedProduct}
               onViewDetails={(product) => setGuidedProductDetails(product)}
               onOpenImport={openBrickImportModal}
+              onSaveProgress={() => saveBook()}
+              onReviewSchedule={() => setGuidedScreen("review")}
             />
           )}
         </section>
@@ -2346,7 +2387,34 @@ function GuidedSelectionsWorkflow({
   onSelectProduct,
   onViewDetails,
   onOpenImport,
+  onSaveProgress,
+  onReviewSchedule,
 }) {
+  if (screen === "complete") {
+    const pendingPrices = pendingPriceSelections(selections);
+    return (
+      <section className="guidedShell" data-testid="guided-selections-complete">
+        <GuidedBudgetDock totals={runningTotals} />
+        <div className="guidedCompletionPanel">
+          <span>Selections Complete</span>
+          <strong>All required client selections have been committed.</strong>
+          <div className="guidedTotals">
+            <GuidedMiniTotal label="Completed Items" value={`${runningTotals.completed} / ${runningTotals.total}`} />
+            <GuidedMiniTotal label="Allowance Total" value={money(runningTotals.allowance)} />
+            <GuidedMiniTotal label="Selected Total" value={money(runningTotals.selected)} />
+            <GuidedMiniTotal label={runningTotals.variation < 0 ? "Current Credit" : "Current Variation"} value={signedMoney(runningTotals.variation)} tone={runningTotals.variation > 0 ? "bad" : runningTotals.variation < 0 ? "good" : ""} />
+          </div>
+          <p>{pendingPrices.length ? `${pendingPrices.length} item${pendingPrices.length === 1 ? "" : "s"} selected with price pending.` : "No price-pending selections."}</p>
+          <div className="guidedCompletionActions">
+            <button type="button" onClick={onReviewSchedule}>Review Selections</button>
+            <button type="button" onClick={onSaveProgress}>Save Progress</button>
+            <button type="button" className="primary" onClick={onReviewSchedule}>Generate / Review Schedule</button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   if (screen === "areas") {
     return (
       <section className="guidedShell" data-testid="guided-client-selections-home">
@@ -3892,19 +3960,29 @@ function selectionTotals(book) {
 
 function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, templateId, userId, room, row }) {
   const guided = row.guidedSelection || {};
+  const priceState = guided.priceState || guided.priceStatus || "";
+  const variationPending = Boolean(guided.variationPending || (priceState && priceState !== PRICE_STATES.current));
+  const selectedPrice = variationPending ? null : numberValue(guided.selectedPrice ?? row.selectedCost);
+  const variation = variationPending ? null : numberValue(guided.variation ?? row.upgradeCost);
   const selectedDetails = {
     room: room.name,
     item: row.item,
     brand: row.brand,
     model: row.productModel,
     finishColour: row.finishColour,
-    selectedCost: numberValue(row.selectedCost),
-    upgradeCost: numberValue(row.upgradeCost),
+    selectedCost: selectedPrice,
+    upgradeCost: variation,
     imageUrl: row.imageUrl,
     datasheetUrl: row.datasheetUrl,
     warrantyUrl: row.warrantyUrl,
     productUrl: row.productUrl,
     ...guided,
+    selectedPrice,
+    variation,
+    variationAmount: variation,
+    variationPending,
+    priceState,
+    priceStatus: priceState,
   };
   return {
     workspace_id: workspaceId,
@@ -3922,7 +4000,7 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
     selected_supplier_id: null,
     selected_details: selectedDetails,
     status: row.status === "approved" || row.status === "selected" ? "approved" : "pending",
-    selected_at: new Date().toISOString(),
+    selected_at: guided.selectedAt || guided.selectionTimestamp || new Date().toISOString(),
     notes: row.notes || "",
     metadata: {
       source: "luxury_selections_book",
@@ -3933,10 +4011,26 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
       area: guided.area,
       requirementKey: guided.requirementKey,
       familyKey: guided.familyKey,
-      priceState: guided.priceState,
+      priceState,
+      priceStatus: priceState,
+      variationPending,
     },
     created_by: userId,
     updated_by: userId,
+    brand: guided.brand || row.brand || "",
+    product_name: guided.productName || row.selectedProduct || "",
+    model_number: guided.model || row.productModel || "",
+    image_url: guided.imageReference || row.imageUrl || "",
+    specification_url: guided.specificationUrl || guided.specificationURL || row.datasheetUrl || "",
+    finish: guided.finish || row.finishColour || "",
+    colour: guided.colour || "",
+    included_allowance: numberValue(guided.allowance ?? row.allowanceAmount),
+    client_selection_price: selectedPrice,
+    calculated_client_selection_price: selectedPrice,
+    variation_amount: variation,
+    selection_status: row.status === "selected" || row.status === "approved" ? "selected" : "not_selected",
+    is_included_selection: !variationPending && variation === 0,
+    is_active: true,
   };
 }
 
@@ -3957,10 +4051,11 @@ function guidedSelectionsFromBook(book) {
     if (!row?.selectedProduct && !row?.guidedSelection) return null;
     const guided = row.guidedSelection || {};
     const allowance = numberValue(guided.allowance ?? row.allowanceAmount ?? requirement.defaultAllowance);
-    const selectedPrice = numberValue(guided.selectedPrice ?? row.selectedCost);
-    const variation = numberValue(guided.variation ?? row.upgradeCost);
-    const priceState = guided.priceState || (selectedPrice > 0 ? PRICE_STATES.current : PRICE_STATES.pending);
-    const complete = guided.configurationComplete || priceState === PRICE_STATES.current;
+    const priceState = guided.priceState || guided.priceStatus || (numberValue(guided.selectedPrice ?? row.selectedCost) > 0 ? PRICE_STATES.current : PRICE_STATES.pending);
+    const hasCurrentPrice = priceState === PRICE_STATES.current;
+    const selectedPrice = hasCurrentPrice ? numberValue(guided.selectedPrice ?? row.selectedCost) : null;
+    const variation = hasCurrentPrice ? numberValue(guided.variation ?? row.upgradeCost) : null;
+    const complete = Boolean(row.selectedProduct || guided.productName || guided.selectedProduct || guided.configurationComplete);
     return {
       id: row.id,
       category: requirement.areaKey,
@@ -3975,7 +4070,7 @@ function guidedSelectionsFromBook(book) {
       included_allowance: allowance,
       allowance_amount: allowance,
       client_selection_price: selectedPrice,
-      variation_amount: priceState === PRICE_STATES.current ? variation : 0,
+      variation_amount: hasCurrentPrice ? variation : null,
       selection_status: complete ? "selected" : "not_selected",
       status: complete ? "selected" : "pending",
       is_active: true,
@@ -3989,7 +4084,8 @@ function guidedSelectionsFromBook(book) {
         quantity: numberValue(guided.quantity ?? requirement.defaultQuantity) || 1,
         allowance,
         selectedPrice,
-        variationAmount: priceState === PRICE_STATES.current ? variation : 0,
+        variationAmount: hasCurrentPrice ? variation : null,
+        variationPending: !hasCurrentPrice,
         priceState,
         configurationComplete: Boolean(guided.configurationComplete),
       },
@@ -4006,6 +4102,17 @@ function guidedSelectionsFromBook(book) {
 
 function guidedSelectedByRequirement(selections) {
   return new Map(selections.map((selection) => [selection.selected_details.requirementKey, selection]));
+}
+
+function nextIncompleteGuidedRequirement(book, currentRequirement = null) {
+  const selections = guidedSelectedByRequirement(guidedSelectionsFromBook(book));
+  return nextIncompleteRequirement(ALL_GUIDED_REQUIREMENTS, selections, currentRequirement);
+}
+
+function pendingPriceSelections(selectionMap = new Map()) {
+  return ALL_GUIDED_REQUIREMENTS
+    .map((requirement) => ({ requirement, selection: selectionMap.get(requirement.requirementKey) }))
+    .filter(({ selection }) => selection?.selected_details?.variationPending);
 }
 
 function guidedRequirementFinancials(requirement, selection) {
@@ -4466,6 +4573,13 @@ const styles = `
   .guidedIntro span, .guidedSectionHeader span, .guidedChecklistHeader span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
   .guidedIntro strong, .guidedSectionHeader strong, .guidedChecklistHeader strong { color: #071827; font-size: 26px; line-height: 1.1; font-weight: 950; }
   .guidedIntro em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
+  .guidedCompletionPanel { display: grid; gap: 14px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; padding: 20px; }
+  .guidedCompletionPanel > span { color: #15803d; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .guidedCompletionPanel > strong { color: #071827; font-size: 28px; line-height: 1.1; font-weight: 950; }
+  .guidedCompletionPanel p { margin: 0; color: #475569; font-weight: 800; }
+  .guidedCompletionActions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .guidedCompletionActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; font-weight: 900; }
+  .guidedCompletionActions button.primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
   .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
   .guidedImageCard { min-height: 220px; position: relative; overflow: hidden; display: grid; align-content: end; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #071827; color: #ffffff; text-align: left; box-shadow: 0 12px 28px rgba(15,23,42,.12); }
   .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; }
