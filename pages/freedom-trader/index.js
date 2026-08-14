@@ -23,13 +23,13 @@ function bestAction(topOpportunity, tradePlan) {
 }
 
 function dashboardAction(marketWatch, journal, topOpportunity, tradePlan) {
-  const active = (marketWatch || []).find((item) => ["WAITING_FOR_ENTRY", "POSITION_ACTIVE"].includes(item.state));
+  const active = (marketWatch || []).find((item) => ["WAITING_FOR_ENTRY", "ACTIVE"].includes(item.state));
   const lastEvent = active?.events?.[active.events.length - 1];
   if (["ENTRY_CONDITION_REACHED", "TAKE_SOME_PROFIT", "ONE_SHARE_EXIT_CHOICE_REQUIRED", "FINAL_EXIT", "SAFETY_EXIT", "REVIEW_DATA_UNAVAILABLE"].includes(lastEvent?.type)) {
     return { label: "ACTION REQUIRED", text: lastEvent.reason || String(lastEvent.type).replace(/_/g, " "), item: active };
   }
   if (active?.state === "WAITING_FOR_ENTRY") return { label: "MONITORING", text: "No action required.", item: active };
-  if (active?.state === "POSITION_ACTIVE") return { label: "MONITORING", text: "No action required.", item: active };
+  if (active?.state === "ACTIVE") return { label: "MONITORING", text: "No action required.", item: active };
   if ((journal || []).length) return { label: "TRADE COMPLETE", text: `Result: ${formatCurrency(journal[0].netProfit, journal[0].currency || "USD")}`, item: null };
   return { label: bestAction(topOpportunity, tradePlan), text: tradePlan?.cmcOrder ? "Enter this order in CMC." : topOpportunity ? "Do not buy yet." : "Do nothing.", item: null };
 }
@@ -346,7 +346,7 @@ export default function FreedomTraderDashboard({ passwordHash }) {
                   <td>{formatCurrency(item.plan?.takeSomeProfit, item.plan?.currency)} / {formatCurrency(item.plan?.finalExit, item.plan?.currency)}</td>
                   <td>
                     {item.state === "WAITING_FOR_ENTRY" ? <div className="inlineForm"><input placeholder="Fill price" value={fillForm.actualFillPrice} onChange={(event) => setFillForm((current) => ({ ...current, actualFillPrice: event.target.value }))} /><input placeholder="Quantity" value={fillForm.quantity} onChange={(event) => setFillForm((current) => ({ ...current, quantity: event.target.value }))} /><input placeholder="Date/time" value={fillForm.filledAt} onChange={(event) => setFillForm((current) => ({ ...current, filledAt: event.target.value }))} /><button type="button" onClick={() => submitFill(item)}>ORDER FILLED</button></div> : null}
-                    {item.state === "POSITION_ACTIVE" ? <div className="inlineForm"><input placeholder="Qty sold" value={saleForm.quantitySold} onChange={(event) => setSaleForm((current) => ({ ...current, quantitySold: event.target.value }))} /><input placeholder="Sale price" value={saleForm.salePrice} onChange={(event) => setSaleForm((current) => ({ ...current, salePrice: event.target.value }))} /><input placeholder="Date/time" value={saleForm.soldAt} onChange={(event) => setSaleForm((current) => ({ ...current, soldAt: event.target.value }))} /><input placeholder="Reason" value={saleForm.reason} onChange={(event) => setSaleForm((current) => ({ ...current, reason: event.target.value }))} /><button type="button" onClick={() => submitSale(item)}>RECORD SALE</button></div> : null}
+                    {item.state === "ACTIVE" ? <div className="inlineForm"><input placeholder="Qty sold" value={saleForm.quantitySold} onChange={(event) => setSaleForm((current) => ({ ...current, quantitySold: event.target.value }))} /><input placeholder="Sale price" value={saleForm.salePrice} onChange={(event) => setSaleForm((current) => ({ ...current, salePrice: event.target.value }))} /><input placeholder="Date/time" value={saleForm.soldAt} onChange={(event) => setSaleForm((current) => ({ ...current, soldAt: event.target.value }))} /><input placeholder="Reason" value={saleForm.reason} onChange={(event) => setSaleForm((current) => ({ ...current, reason: event.target.value }))} /><button type="button" onClick={() => submitSale(item)}>RECORD SALE</button></div> : null}
                   </td>
                 </tr>
               )) : <tr><td colSpan="7">No Market Watch plans.</td></tr>}

@@ -9,7 +9,7 @@ import {
   shouldTriggerExit,
   validateBuyOrder,
 } from "../lib/freedom-trader/paperTrading.js";
-import { checkLocalMarketWatch, oneShareExitOptions, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan } from "../lib/freedom-trader/localPaperStore.js";
+import { checkLocalMarketWatch, loadLocalLastGoodScan, oneShareExitOptions, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan, saveLocalLastGoodScan } from "../lib/freedom-trader/localPaperStore.js";
 
 const account = { id: "account-1", available_cash: 100000 };
 const validPrice = {
@@ -116,9 +116,23 @@ test("Market Watch handoff stores CMC entered plan and actual fill price", async
   assert.equal(entered.broker, "CMC");
   assert.equal(entered.state, "WAITING_FOR_ENTRY");
   const filled = await recordLocalMarketWatchFill({ id: entered.id, actualFillPrice: 100.25, quantity: 3, filledAt: "2026-08-09T10:00:00Z" });
-  assert.equal(filled.state, "POSITION_ACTIVE");
+  assert.equal(filled.state, "ACTIVE");
   assert.equal(filled.actualFillPrice, 100.25);
   assert.equal(filled.actualQuantity, 3);
+});
+
+test("last valid scanner result persists and failed scan payloads do not replace it", async () => {
+  const payload = {
+    ok: true,
+    scanSummary: { status: "complete", requested: 5, successfullyAnalysed: 5, unavailable: 0 },
+    topFive: [{ symbol: "UNIT", status: "READY" }],
+    updatedAt: "2026-08-14T00:00:00.000Z",
+  };
+  await saveLocalLastGoodScan(payload);
+  await saveLocalLastGoodScan({ ok: true, scanSummary: { status: "failed" }, topFive: [] });
+  const restored = await loadLocalLastGoodScan();
+  assert.equal(restored.scanSummary.status, "complete");
+  assert.equal(restored.topFive[0].symbol, "UNIT");
 });
 
 async function plan(symbol, overrides = {}) {
@@ -145,7 +159,7 @@ test("winner scenario reaches target, records sale and creates journal profit", 
   const targetReport = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 119, timestamp: "2026-08-13T10:00:00Z" } } });
   assert.equal(targetReport.reports.find((item) => item.id === entered.id).action, "FINAL_EXIT");
   const closed = await recordLocalMarketWatchSale({ id: entered.id, quantitySold: 3, salePrice: 119, soldAt: "2026-08-13T10:05:00Z", reason: "FINAL_EXIT", fees: 9.5 });
-  assert.equal(closed.state, "TRADE_COMPLETED");
+  assert.equal(closed.state, "COMPLETED");
   assert.ok(closed.journalId);
 });
 
@@ -156,7 +170,7 @@ test("loser scenario reaches Safety Exit and journals a loss", async () => {
   const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 93.5, timestamp: "2026-08-12T11:00:00Z" } } });
   assert.equal(report.reports.find((item) => item.id === entered.id).action, "SAFETY_EXIT");
   const closed = await recordLocalMarketWatchSale({ id: entered.id, quantitySold: 2, salePrice: 93.5, soldAt: "2026-08-12T11:05:00Z", reason: "SAFETY_EXIT", fees: 9.5 });
-  assert.equal(closed.state, "TRADE_COMPLETED");
+  assert.equal(closed.state, "COMPLETED");
   const saleEvent = closed.events.find((item) => item.type === "SALE_RECORDED");
   assert.ok(saleEvent.netProfit < 0);
 });
@@ -167,7 +181,7 @@ test("cancel before entry invalidates setup without creating a position", async 
   const report = await checkLocalMarketWatch({ quotes: { [symbol]: { ok: true, price: 89, timestamp: "2026-08-12T10:00:00Z" } } });
   const item = report.marketWatch.find((row) => row.id === entered.id);
   assert.equal(report.reports.find((row) => row.id === entered.id).action, "CANCEL_SETUP");
-  assert.equal(item.state, "SETUP_CANCELLED");
+  assert.equal(item.state, "CANCELLED");
   assert.equal(item.actualFillPrice, null);
 });
 

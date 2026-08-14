@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     const query = req.method === "GET" ? (req.query.query || req.query.symbol) : (req.body?.query || req.body?.symbol);
     const result = await analyseResolvedStock(query);
     if (!result.ok) return res.status(404).json(result);
-    if (req.method === "GET" || result.ambiguous) return res.status(200).json(result);
+    if (req.method === "GET" || result.ambiguous || !req.body?.action) return res.status(200).json(result);
 
     if (req.body?.action === "add_watchlist") {
       const watchlistItem = await addLocalTraderWatchlistItem(result.resolved);

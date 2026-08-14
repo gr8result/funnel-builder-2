@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       }
       if (req.body?.action === "record_sale") {
         const item = await recordLocalMarketWatchSale(req.body || {});
-        return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: item.state === "TRADE_COMPLETED" ? "Trade completed and journal updated." : "Sale recorded. Position remains active.", error: null });
+        return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: item.state === "COMPLETED" ? "Trade completed and journal updated." : "Sale recorded. Position remains active.", error: null });
       }
       const item = await recordLocalMarketWatchFill(req.body || {});
       return res.status(200).json({ ok: true, state: item.state, marketWatchItem: item, message: "Actual fill recorded. Market Watch is using the actual fill price.", error: null });

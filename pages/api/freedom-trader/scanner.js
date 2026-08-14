@@ -4,7 +4,7 @@ import { marketMeta } from "../../../lib/freedom-trader/marketData.js";
 import { buildMarketDiscovery } from "../../../lib/freedom-trader/marketUniverse.js";
 import { rankMarketOpportunities } from "../../../lib/freedom-trader/opportunityRanking.js";
 import { computeCapitalFlow, capitalFlowSummary } from "../../../lib/freedom-trader/capitalFlow.js";
-import { loadLocalCapitalFlowHistory, saveLocalCapitalFlowSnapshot } from "../../../lib/freedom-trader/localPaperStore.js";
+import { loadLocalCapitalFlowHistory, loadLocalLastGoodScan, saveLocalCapitalFlowSnapshot, saveLocalLastGoodScan } from "../../../lib/freedom-trader/localPaperStore.js";
 import { sendFreedomNotification } from "../../../lib/freedom-trader/notifications.js";
 import { loadPaperAccount } from "./paper-account.js";
 
@@ -286,6 +286,7 @@ async function runCompleteScan(settings, account = null) {
   latestScanCache.key = scanCacheKey(settings);
   latestScanCache.cachedAt = Date.now();
   latestScanCache.payload = payload;
+  await saveLocalLastGoodScan(payload);
   return payload;
 }
 
@@ -313,6 +314,20 @@ export default async function handler(req, res) {
     return res.status(200).json(await promise);
   } catch (error) {
     console.error("Freedom Trader scanner failed:", error);
+    const lastGoodScan = await loadLocalLastGoodScan().catch(() => null);
+    if (lastGoodScan?.ok) {
+      return res.status(200).json({
+        ...lastGoodScan,
+        fromLastGoodScan: true,
+        scanSummary: {
+          ...(lastGoodScan.scanSummary || {}),
+          status: "partial",
+          message: `Live market scan failed: ${error?.message || "Market scanner could not complete."} Freedom restored the last valid scan.`,
+          restoredBecause: error?.message || "Market scanner could not complete.",
+        },
+        error: null,
+      });
+    }
     return res.status(500).json({ ok: false, results: [], topFive: [], error: "Market scanner could not complete." });
   }
 }

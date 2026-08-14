@@ -1980,7 +1980,7 @@ export default function TraderCompany({ passwordHash }) {
               ...(setup.marketData || {}),
               exchange: companyExchange,
               currency: companyCurrency,
-              provider: setup.marketData?.quoteSource || setup.marketData?.provider || "Finnhub",
+              provider: setup.marketData?.quoteSource || setup.marketData?.provider || "Twelve Data",
             },
           }}
           onClose={() => setBuyModalOpen(false)}
