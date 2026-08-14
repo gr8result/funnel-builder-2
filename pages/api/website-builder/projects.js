@@ -23,7 +23,7 @@ import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordion
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 import { normalizeSharedBlockTemplateProject } from "../../../lib/website-builder/sharedBlockTemplates";
-import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence } from "../../../lib/website-builder/videoHero";
+import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, syncVideoHeroChaiDataBlocks } from "../../../lib/website-builder/videoHero";
 import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
 
 const TABLE_NAME = "published_websites";
@@ -270,7 +270,7 @@ function normalizeProjectBlocksForSave(project) {
         ])
       )
     : project.pageBlocks;
-  const chaiData = project.chaiData && typeof project.chaiData === "object"
+  const normalizedChaiData = project.chaiData && typeof project.chaiData === "object"
     ? Object.fromEntries(
         Object.entries(project.chaiData).map(([pageName, pageData]) => [
           pageName,
@@ -287,6 +287,19 @@ function normalizeProjectBlocksForSave(project) {
         ])
       )
     : project.chaiData;
+  let chaiData = normalizedChaiData;
+  if (pageBlocks && typeof pageBlocks === "object") {
+    for (const [pageName, blocks] of Object.entries(pageBlocks)) {
+      const currentPageChaiData = chaiData && typeof chaiData === "object" ? chaiData[pageName] || null : null;
+      const synced = syncVideoHeroChaiDataBlocks(currentPageChaiData, blocks);
+      if (synced !== currentPageChaiData) {
+        chaiData = {
+          ...(chaiData && typeof chaiData === "object" ? chaiData : {}),
+          [pageName]: synced,
+        };
+      }
+    }
+  }
   return normalizeSharedBlockTemplateProject(normalizeSharedPrimaryNavigation({
     ...project,
     pageBlocks,
