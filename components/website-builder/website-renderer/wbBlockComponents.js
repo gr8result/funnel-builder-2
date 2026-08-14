@@ -107,6 +107,8 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
   const isAlwaysMode = stickyMode === "always";
   const isStickyMode = stickyMode === "sticky" || stickyMode === "sticky-transparent" || stickyMode === "sticky-solid";
   const isGlobalSiteHeader = blockProps.role === "primary-navigation" || !!blockProps.sharedComponentId || blockProps.useGlobalHeader === true;
+  const shouldUseTrueSticky = isStickyMode || (editor && isAlwaysMode);
+  const shouldUseFixedNav = !editor && (isAlwaysMode || (isGlobalSiteHeader && isStickyMode));
   const navFullWidth = fullWidthStyle(navProps, compact, editor);
   const isFullWidthNav = navProps.fullWidthBackground && !compact;
   const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
@@ -159,7 +161,7 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const measureTarget = wrapperRef.current || shellRef.current;
+    const measureTarget = shouldUseFixedNav ? shellRef.current : (wrapperRef.current || shellRef.current);
     if (!measureTarget) return undefined;
 
     const updateHeight = () => {
@@ -179,7 +181,7 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
       window.removeEventListener("resize", updateHeight);
       resizeObserver?.disconnect?.();
     };
-  }, [compact, blockProps, mobileOpen]);
+  }, [compact, blockProps, mobileOpen, shouldUseFixedNav]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -194,7 +196,18 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
     // fixed we have to re-express those coordinates relative to the containing block ourselves --
     // otherwise "always"/"sticky" nav mode renders offset by however far the shell sits from the
     // real viewport origin (e.g. a centered, narrower tablet/mobile preview shell).
-    const containingBlockNode = wrapperNode?.closest?.(".gr8wb-viewport") || null;
+    const containingBlockCandidate = wrapperNode?.closest?.(".gr8wb-viewport") || null;
+    const containingBlockStyle = containingBlockCandidate ? window.getComputedStyle(containingBlockCandidate) : null;
+    const createsFixedContainingBlock = containingBlockStyle
+      ? (
+          (containingBlockStyle.transform && containingBlockStyle.transform !== "none")
+          || (containingBlockStyle.perspective && containingBlockStyle.perspective !== "none")
+          || (containingBlockStyle.filter && containingBlockStyle.filter !== "none")
+          || (containingBlockStyle.backdropFilter && containingBlockStyle.backdropFilter !== "none")
+          || (containingBlockStyle.contain && /(layout|paint|strict|content)/.test(containingBlockStyle.contain))
+        )
+      : false;
+    const containingBlockNode = createsFixedContainingBlock ? containingBlockCandidate : null;
     const readScrollTop = () => {
       const usesWindowScroll = !scrollTarget || scrollTarget === window;
       const scrollAmount = usesWindowScroll ? (window.scrollY || 0) : (scrollTarget?.scrollTop || 0);
@@ -293,8 +306,6 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
 
   const shouldUseMobileMenu = (compact || isMobile) && mobileMenuStyle === "hamburger";
   const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : asArray(blockProps.links);
-  const shouldUseTrueSticky = isStickyMode || (editor && isAlwaysMode);
-  const shouldUseFixedNav = !editor && isAlwaysMode && !isGlobalSiteHeader;
   const fixedTop = fixedFrame.top || 0;
   const fixedLeft = editor ? fixedFrame.left : (isFullWidthNav ? 0 : fixedFrame.left);
   const fixedWidth = editor ? (fixedFrame.width || undefined) : (isFullWidthNav ? "100vw" : (fixedFrame.width || "100%"));
