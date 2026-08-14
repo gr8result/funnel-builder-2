@@ -211,6 +211,13 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets,
             box-shadow: none !important;
             background-clip: padding-box;
           }
+          [data-website-preview-block-type="nav-bar"],
+          [data-website-preview-block-type="navigation-bar"],
+          [data-website-preview-block-type="scroll-stack"],
+          [data-website-preview-block-type="side-scroll-accordion"] {
+            overflow: visible !important;
+            overflow-x: visible !important;
+          }
           [data-website-preview-block-type="trust-badges"] > section,
           [data-website-preview-block-type="marquee-strip"] > section,
           [data-website-preview-block-type="wave-marquee"] > section,
@@ -433,7 +440,7 @@ const styles = {
     width: viewport === "desktop" ? "100%" : `min(100%, ${previewShellWidth}px)`,
     maxWidth: viewport === "desktop" ? "100%" : `min(100%, ${previewShellWidth}px)`,
     margin: viewport === "desktop" ? 0 : "0 auto",
-    overflowX: "clip",
+    overflowX: "visible",
     background,
   }),
   blockFrame: (background) => ({

@@ -552,13 +552,16 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
           [data-published-website-root="true"] {
             width: 100%;
             max-width: 100%;
+          }
+          html,
+          body,
+          #__next {
             overflow-x: clip;
           }
           @supports not (overflow-x: clip) {
             html,
             body,
-            #__next,
-            [data-published-website-root="true"] {
+            #__next {
               overflow-x: hidden;
             }
           }
@@ -579,8 +582,11 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
             overflow-x: clip;
           }
           [data-published-block-type="nav-bar"],
-          [data-published-block-type="navigation-bar"] {
+          [data-published-block-type="navigation-bar"],
+          [data-published-block-type="scroll-stack"],
+          [data-published-block-type="side-scroll-accordion"] {
             overflow: visible !important;
+            overflow-x: visible !important;
           }
           [data-published-block-type="trust-badges"] > section,
           [data-published-block-type="marquee-strip"] > section,
@@ -630,7 +636,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
           ${websiteBlockKeyframes()}
         `}</style>
       </Head>
-      <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "clip", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
+      <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "visible", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
           <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={{ ...seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock)), ...stickyNavigationFrameStyle(globalNavBlock) }}>
             {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "", project })}

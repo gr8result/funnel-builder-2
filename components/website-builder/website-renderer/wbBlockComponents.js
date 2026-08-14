@@ -6871,6 +6871,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
 
   const stackMode = String(props.stackMode || props.orientation || props.scrollStackMode || "").toLowerCase();
   const useSideStack = stackMode === "side" || stackMode === "horizontal" || stackMode === "right";
+  const desktopRenderMode = String(props.displayMode || props.renderMode || props.mode || "").toLowerCase();
+  const forceDesktopAccordion = desktopRenderMode === "accordion" || desktopRenderMode === "stacked-accordion";
 
   function renderStackedAccordion(forEditor = false, isCompact = false) {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : (isCompact ? 390 : 1440);
@@ -7046,6 +7048,10 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     return renderStackedAccordion(false, true);
   }
 
+  if (forceDesktopAccordion) {
+    return renderStackedAccordion(false, false);
+  }
+
   // -- PREVIEW MODE: Stacked Card Deck ----------------------------------------
   // Visual: past cards compress to a slim coloured header strip at the top.
   //         Future cards peek from the bottom so the whole deck is visible.
@@ -7185,10 +7191,8 @@ function ScrollStackBlock({ props, compact, editor = false, onChangeBlock, onUpl
     );
   }
 
-  return renderStackedAccordion(false, false);
-
   return (
-    <section ref={sectionRef} style={{ height: `${n * 100}vh`, position: "relative" }}>
+    <section ref={sectionRef} style={{ width: "100%", maxWidth: "none", margin: 0, height: `${n * 100}vh`, position: "relative", background: props.backgroundColor || panels[0]?.backgroundColor || "#07111f", overflow: "visible" }}>
       <div ref={stickyRef} style={{ position: "sticky", top: stickyTop, height: `calc(100vh - ${stickyTop}px)`, overflow: "hidden" }}>
         {panels.map((panel, idx) => {
           // dist < 0 ? past (settled at top), dist = 0 ? active, dist > 0 ? future
