@@ -15,12 +15,14 @@ const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bric
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
 const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 const exteriorFinishesCatalogue = require("../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json");
+const kitchenProductCatalogue = require("../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json");
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const roofing = auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const exteriorOpenings = exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product));
-const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes];
+const kitchenProducts = kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product));
+const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes, ...kitchenProducts];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
 const pghBricks = masterProducts.filter((product) => product.familyKey === "bricks" && product.manufacturer === "PGH Bricks");
@@ -30,6 +32,7 @@ const windowsProducts = masterProducts.filter((product) => product.familyKey ===
 const entryDoorProducts = masterProducts.filter((product) => product.familyKey === "entry-doors");
 const garageDoorProducts = masterProducts.filter((product) => product.familyKey === "garage-doors");
 const exteriorFinishFamilies = ["cladding", "gutters-fascia", "balustrades", "external-lighting", "exterior-paint", "driveway", "decking", "pool", "retaining-walls", "landscaping"];
+const kitchenFamilies = ["cabinetry", "cabinet-finish", "handles", "stone-benchtops", "splashback", "kitchen-sinks", "kitchen-sink-mixers", "ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "flooring", "lighting", "paint"];
 
 assert.ok(pghBricks.length > 0, "Product Library master catalogue exposes PGH brick products");
 assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Austral brick products");
@@ -39,6 +42,9 @@ assert.ok(entryDoorProducts.length > 0, "Product Library master catalogue expose
 assert.ok(garageDoorProducts.length > 0, "Product Library master catalogue exposes Garage Door products");
 exteriorFinishFamilies.forEach((familyKey) => {
   assert.ok(masterProducts.some((product) => product.familyKey === familyKey), `Product Library master catalogue exposes ${familyKey} products`);
+});
+kitchenFamilies.forEach((familyKey) => {
+  assert.ok(masterProducts.some((product) => product.familyKey === familyKey), `Product Library master catalogue exposes Kitchen ${familyKey} products`);
 });
 
 const clientSelectableBricks = queryClientSelectableProducts({
@@ -61,6 +67,17 @@ exteriorFinishFamilies.forEach((familyKey) => {
   });
   assert.equal(selectable.length, familyProducts.length, `${familyKey} Client Selections sees the Product Library master records`);
 });
+kitchenFamilies.forEach((familyKey) => {
+  const familyProducts = masterProducts.filter((product) => product.familyKey === familyKey);
+  const selectable = queryClientSelectableProducts({
+    organisationId: DEMO_BUILDER_ORGANISATION_ID,
+    familyKey,
+    region: "QLD",
+    masterProducts,
+    builderProducts: enablements,
+  });
+  assert.equal(selectable.length, familyProducts.length, `Kitchen ${familyKey} Client Selections sees the Product Library master records`);
+});
 
 const bedroomUrl = FAMILY_IMAGE_FALLBACKS.bedrooms;
 assert.notEqual(resolveProductLibraryImage({ familyKey: "bricks" }), bedroomUrl, "Bricks fallback cannot return a bedroom image");
@@ -69,6 +86,8 @@ assert.notEqual(resolveProductLibraryImage({ familyKey: "entry-doors" }), FAMILY
 assert.notEqual(resolveProductLibraryImage({ familyKey: "garage-doors" }), FAMILY_IMAGE_FALLBACKS.cooktop, "Garage Doors fallback cannot return a cooktop image");
 assert.notEqual(resolveProductLibraryImage({ familyKey: "cladding" }), bedroomUrl, "Cladding fallback cannot return a bedroom image");
 assert.notEqual(resolveProductLibraryImage({ familyKey: "pool" }), FAMILY_IMAGE_FALLBACKS.bathroom, "Pool fallback cannot return a bathroom image");
+assert.notEqual(resolveProductLibraryImage({ familyKey: "ovens" }), bedroomUrl, "Ovens fallback cannot return a bedroom image");
+assert.notEqual(resolveProductLibraryImage({ familyKey: "kitchen-sinks" }), FAMILY_IMAGE_FALLBACKS.bathroom, "Kitchen Sinks fallback cannot return a bathroom image");
 assert.equal(resolveProductLibraryImage({ familyKey: "roofing" }), FAMILY_IMAGE_FALLBACKS.roofing, "Roofing fallback uses residential roofing imagery");
 
 const supplierNames = new Set(masterProducts.filter((product) => product.familyKey === "bricks").map((product) => product.supplier || product.manufacturer));
@@ -125,4 +144,4 @@ const archivedSelectable = queryClientSelectableProducts({
 assert.equal(archivedSelectable.some((product) => product.productCode === realBrick.productCode), false, "Archived products disappear from new selection options");
 assert.equal({ productCode: realBrick.productCode, selectedAt: "historical" }.productCode, realBrick.productCode, "Historical saved selection references remain stable after archive");
 
-console.log(`Product Library master catalogue manager tests passed. PGH=${pghBricks.length} Austral=${australBricks.length} Roofing=${roofingProducts.length} Windows=${windowsProducts.length} EntryDoors=${entryDoorProducts.length} GarageDoors=${garageDoorProducts.length} ExteriorFinishes=${exteriorFinishes.length}`);
+console.log(`Product Library master catalogue manager tests passed. PGH=${pghBricks.length} Austral=${australBricks.length} Roofing=${roofingProducts.length} Windows=${windowsProducts.length} EntryDoors=${entryDoorProducts.length} GarageDoors=${garageDoorProducts.length} ExteriorFinishes=${exteriorFinishes.length} Kitchen=${kitchenProducts.length}`);

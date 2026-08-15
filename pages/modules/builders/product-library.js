@@ -41,6 +41,7 @@ import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/br
 import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
 import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
+import kitchenProductCatalogue from "../../../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json";
 
 const EMPTY_PRODUCT = {
   product_code: "",
@@ -229,6 +230,28 @@ function categoryBelongsToArea(categoryItem, areaKey) {
 
 function familyBelongsToArea(familyItem, areaKey) {
   if (areaKey === "exterior") return familyItem.topLevelArea === "exterior";
+  if (areaKey === "kitchen") {
+    const kitchenFamilyKeys = new Set([
+      "cabinetry",
+      "cabinet-finish",
+      "handles",
+      "stone-benchtops",
+      "stone-20mm-tops",
+      "stone-40mm-tops",
+      "splashback",
+      "kitchen-sinks",
+      "kitchen-sink-mixers",
+      "ovens",
+      "cooktops",
+      "rangehoods",
+      "dishwashers",
+      "microwaves",
+      "flooring",
+      "lighting",
+      "paint",
+    ]);
+    return familyItem.topLevelArea === "kitchen" || kitchenFamilyKeys.has(familyItem.familyKey);
+  }
   if (areaKey === "interior") return familyItem.topLevelArea !== "exterior";
   return familyItem.topLevelArea === areaKey;
 }
@@ -488,6 +511,7 @@ export default function BuilderProductLibraryPage() {
       ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
       ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
       ...(Array.isArray(exteriorFinishesCatalogue?.products) ? exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+      ...(Array.isArray(kitchenProductCatalogue?.products) ? kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");

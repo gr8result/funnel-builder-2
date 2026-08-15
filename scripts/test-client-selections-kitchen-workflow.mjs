@@ -132,15 +132,15 @@ const sinkPayload = createSelectionPayloadFromProduct({
 });
 
 assert.equal(priceStateForProduct(sinkPending), PRICE_STATES.pending, "Unknown product price is shown as Price Pending");
-assert.equal(statusForRequirement(sinkRequirement, sinkPayload), "incomplete", "Unresolved price remains amber / incomplete");
-assert.equal(statusTone(statusForRequirement(sinkRequirement, sinkPayload)), "amber", "Unresolved variant or pricing is amber");
+assert.equal(statusForRequirement(sinkRequirement, sinkPayload), "complete", "Unresolved price can save as selected with variation pending");
+assert.equal(statusTone(statusForRequirement(sinkRequirement, sinkPayload)), "green", "Selected quote-required item turns green for auto-advance");
 
 const selectedMap = selectedByRequirement([ovenPayload, cooktopPayload, sinkPayload]);
 assert.equal(selectedMap.get("oven").selected_product_name, "Westinghouse 900mm Oven", "Left progress navigator can show selected Oven");
 assert.equal(selectedMap.get("cooktop").selected_product_name, "Fisher & Paykel 900mm Gas Cooktop", "Left progress navigator updates selected Cooktop");
 
 const kitchenTotals = areaTotals(KITCHEN_REQUIREMENTS, selectedMap);
-assert.equal(kitchenTotals.completed, 2, "Only fully selected requirements count complete");
+assert.equal(kitchenTotals.completed, 3, "Selected requirements count complete even when variation is pending");
 assert.equal(kitchenTotals.variation, 150, "Area variation updates from selected products");
 assert.equal(projectTotals([kitchenTotals]).variation, 150, "Running project variation updates");
 

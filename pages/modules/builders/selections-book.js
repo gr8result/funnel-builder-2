@@ -45,6 +45,7 @@ import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/br
 import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
 import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
+import kitchenProductCatalogue from "../../../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
@@ -1016,6 +1017,7 @@ export default function BuilderSelectionsBookPage({
       ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
       ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
       ...(Array.isArray(exteriorFinishesCatalogue?.products) ? exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+      ...(Array.isArray(kitchenProductCatalogue?.products) ? kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
@@ -1494,6 +1496,15 @@ export default function BuilderSelectionsBookPage({
     setSuccess(`${committedRequirement.label} selected.`);
     window.setTimeout(() => {
       if (nextRequirement) {
+        if (completedSection && committedRequirement.areaKey === "kitchen") {
+          setSuccess("KITCHEN COMPLETE. Opening Interior.");
+          setGuidedScreen("interior");
+          setGuidedArea("interior");
+          setGuidedRequirementKey("");
+          resetGuidedBrickFlow();
+          resetGuidedRoofingFlow();
+          return;
+        }
         if (completedSection && committedRequirement.areaKey === "exterior" && nextRequirement.areaKey === "interior") {
           setSuccess("EXTERIOR COMPLETE. Opening Interior.");
           setGuidedScreen("interior");
