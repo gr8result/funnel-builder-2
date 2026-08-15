@@ -34,7 +34,7 @@ const roofingRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirement
 assert.equal(roofingRequirement.familyKey, "roofing", "Roofing must be one client selection family");
 assert.equal(EXTERIOR_REQUIREMENTS.filter((item) => item.label === "Roofing").length, 1, "Exterior must expose one Roofing card");
 assert.ok(!EXTERIOR_REQUIREMENTS.some((item) => /roof colour|roof finish|metal roofing colour/i.test(item.label)), "roof colour and finish must not be separate Client Selection categories");
-assert.equal(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "gutters-fascia").familyKey, "visual-gutters-fascia", "Gutters/Fascia must remain separate from Roofing");
+assert.equal(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "gutters-fascia").familyKey, "gutters-fascia", "Gutters/Fascia must remain separate from Roofing without using a visual placeholder");
 
 assert.equal(catalogue.familyKey, "roofing", "catalogue must use the canonical roofing family");
 assert.deepEqual(catalogue.roofTypes.map((item) => item.key), ["metal_roofing", "roof_tiles"], "roof type branch must include metal roofing and roof tiles");

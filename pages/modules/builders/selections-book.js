@@ -44,6 +44,7 @@ import {
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
+import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
@@ -830,12 +831,13 @@ export default function BuilderSelectionsBookPage({
   const totals = useMemo(() => selectionTotals(book), [book]);
   const guidedSelections = useMemo(() => guidedSelectionsFromBook(book), [book]);
   const guidedSelectionMap = useMemo(() => guidedSelectedByRequirement(guidedSelections), [guidedSelections]);
+  const applicableExteriorRequirements = useMemo(() => requirementsForGuidedArea("exterior", book), [book]);
   const guidedKitchenTotals = useMemo(() => guidedAreaTotals(KITCHEN_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
-  const guidedExteriorTotals = useMemo(() => guidedAreaTotals(EXTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const guidedExteriorTotals = useMemo(() => guidedAreaTotals(applicableExteriorRequirements, guidedSelectionMap), [applicableExteriorRequirements, guidedSelectionMap]);
   const guidedInteriorTotals = useMemo(() => guidedAreaTotals(INTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
   const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]);
   const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
-  const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey), [guidedRequirement.areaKey]);
+  const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey, book), [book, guidedRequirement.areaKey]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
   const projectRegion = useMemo(() => deriveAustralianRegion(selectedProject), [selectedProject]);
   const masterSelectionProducts = useMemo(() => queryClientSelectableProducts({
@@ -1013,6 +1015,7 @@ export default function BuilderSelectionsBookPage({
       ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
       ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
       ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+      ...(Array.isArray(exteriorFinishesCatalogue?.products) ? exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
@@ -1491,6 +1494,15 @@ export default function BuilderSelectionsBookPage({
     setSuccess(`${committedRequirement.label} selected.`);
     window.setTimeout(() => {
       if (nextRequirement) {
+        if (completedSection && committedRequirement.areaKey === "exterior" && nextRequirement.areaKey === "interior") {
+          setSuccess("EXTERIOR COMPLETE. Opening Interior.");
+          setGuidedScreen("interior");
+          setGuidedArea("interior");
+          setGuidedRequirementKey("");
+          resetGuidedBrickFlow();
+          resetGuidedRoofingFlow();
+          return;
+        }
         setSuccess(completedSection ? `${sectionLabel} complete. Opening ${nextRequirement.label}.` : `Opening ${nextRequirement.label}.`);
         navigateToGuidedRequirement(nextRequirement);
       } else {
@@ -2269,6 +2281,7 @@ export default function BuilderSelectionsBookPage({
               area={guidedArea}
               requirement={guidedRequirement}
               requirements={activeGuidedRequirements}
+              book={book}
               selections={guidedSelectionMap}
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
@@ -2365,6 +2378,7 @@ function GuidedSelectionsWorkflow({
   area,
   requirement,
   requirements,
+  book,
   selections,
   areaTotals,
   runningTotals,
@@ -2439,7 +2453,8 @@ function GuidedSelectionsWorkflow({
   }
 
   if (screen === "exterior") {
-    const exteriorCards = EXTERIOR_CATEGORY_CARDS.map((card) => {
+    const applicableKeys = new Set(requirementsForGuidedArea("exterior", book).map((item) => item.requirementKey));
+    const exteriorCards = EXTERIOR_CATEGORY_CARDS.filter((card) => !card.requirementKey || applicableKeys.has(card.requirementKey)).map((card) => {
       const selection = card.requirementKey ? selections.get(card.requirementKey) : null;
       return {
         ...card,
@@ -4108,7 +4123,7 @@ function guidedSelectedByRequirement(selections) {
 
 function nextIncompleteGuidedRequirement(book, currentRequirement = null) {
   const selections = guidedSelectedByRequirement(guidedSelectionsFromBook(book));
-  return nextIncompleteRequirement(ALL_GUIDED_REQUIREMENTS, selections, currentRequirement);
+  return nextIncompleteRequirement(applicableGuidedRequirementsForBook(book), selections, currentRequirement);
 }
 
 function pendingPriceSelections(selectionMap = new Map()) {
@@ -4391,11 +4406,47 @@ function ensureGuidedRoom(book, requirement) {
   return book?.rooms?.find((room) => slug(room.name) === slug(roomName)) || { id: `guided-${slug(roomName)}`, name: roomName, rows: [] };
 }
 
-function requirementsForGuidedArea(areaKey) {
-  if (areaKey === "exterior") return EXTERIOR_REQUIREMENTS;
+function applicableGuidedRequirementsForBook(book = null) {
+  return [
+    ...requirementsForGuidedArea("kitchen", book),
+    ...requirementsForGuidedArea("exterior", book),
+    ...requirementsForGuidedArea("interior", book),
+  ];
+}
+
+function requirementsForGuidedArea(areaKey, book = null) {
+  if (areaKey === "exterior") return EXTERIOR_REQUIREMENTS.filter((requirement) => requirementAppliesToBook(requirement, book));
   if (areaKey === "interior") return INTERIOR_REQUIREMENTS;
   if (areaKey === "kitchen") return KITCHEN_REQUIREMENTS;
   return ALL_GUIDED_REQUIREMENTS.filter((requirement) => requirement.areaKey === areaKey);
+}
+
+function requirementAppliesToBook(requirement, book = null) {
+  if (!requirement?.optionalWhenProjectMissing) return true;
+  const rooms = Array.isArray(book?.rooms) ? book.rooms : [];
+  if (!rooms.length) return false;
+  const rows = rooms.flatMap((room) => Array.isArray(room.rows) ? room.rows : []);
+  if (rows.some((row) => row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement))) return true;
+  const aliases = [requirement.requirementKey, requirement.label, requirement.familyKey, ...(requirement.projectAliases || [])].map(slug).filter(Boolean);
+  const textFields = [
+    book?.projectInfo?.projectName,
+    book?.projectInfo?.siteAddress,
+    book?.cover?.projectName,
+    book?.cover?.siteAddress,
+    ...rooms.flatMap((room) => [
+      room.name,
+      ...(Array.isArray(room.rows) ? room.rows.flatMap((row) => [
+        row.item,
+        row.description,
+        row.selectedProduct,
+        row.productModel,
+        row.finishColour,
+        row.supplier,
+        row.notes,
+      ]) : []),
+    ]),
+  ].map(slug).filter(Boolean);
+  return textFields.some((value) => aliases.some((alias) => value.includes(alias)));
 }
 
 function rowForRequirement(room, requirement) {
@@ -4429,6 +4480,7 @@ function rowsWithGuidedRequirement(rows, requirement) {
 
 function rowMatchesRequirement(row, requirement) {
   const key = slug(row?.item || "");
+  const dynamicAliases = [requirement.requirementKey, requirement.familyKey, ...(requirement.projectAliases || [])].map(slug).filter(Boolean);
   const aliases = {
     cabinetry: ["cabinetry"],
     "cabinet-finish": ["cabinet-finish", "cabinet-doors"],
@@ -4447,11 +4499,21 @@ function rowMatchesRequirement(row, requirement) {
     paint: ["paint"],
     bricks: ["bricks", "brickwork"],
     roofing: ["roof", "roofing"],
+    cladding: ["cladding", "external-cladding", "feature-cladding"],
+    "gutters-fascia": ["gutters-fascia", "gutters", "gutter", "fascia", "downpipes", "downpipe"],
+    balustrades: ["balustrades", "balustrade", "handrails", "handrail", "balcony-rail"],
+    "external-lighting": ["external-lighting", "external-lights", "exterior-lighting", "exterior-lights", "outdoor-lighting", "outdoor-lights"],
+    "exterior-paint": ["exterior-paint", "external-paint", "facade-paint"],
+    driveway: ["driveway", "driveway-finish", "concrete-driveway", "exposed-aggregate", "pavers"],
+    decking: ["decking", "deck", "timber-deck", "composite-deck"],
+    pool: ["pool", "pool-finish", "pool-tile", "pool-coping", "coping", "waterline"],
+    "retaining-walls": ["retaining-walls", "retaining-wall", "sleeper-wall", "block-wall"],
+    landscaping: ["landscaping", "turf", "mulch", "garden-edging", "feature-gravel"],
     "garage-door": ["garage-door", "garage-doors"],
     "entry-door": ["entry-door", "entry-doors"],
     "internal-doors": ["internal-doors", "internal-door", "door"],
   };
-  return (aliases[requirement.requirementKey] || [requirement.requirementKey]).includes(key);
+  return [...dynamicAliases, ...(aliases[requirement.requirementKey] || [requirement.requirementKey])].includes(key);
 }
 
 function sizeFromOption(option) {

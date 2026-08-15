@@ -59,7 +59,7 @@ function categoryNames(areaKey) {
   return taxonomy.areas.find((area) => area.key === areaKey)?.categories.map((category) => category.displayName) || [];
 }
 
-["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Gutters", "Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking"].forEach((category) => {
+["Bricks", "Feature Bricks", "Cladding", "Render", "Roofing", "Gutters & Fascia", "Windows", "Entry Doors", "External Doors", "Garage Doors", "Balustrades", "Handrails", "Exterior Paint", "External Lighting", "Driveway Finishes", "Decking", "Pool", "Retaining Walls", "Landscaping"].forEach((category) => {
   assert.ok(categoryNames("exterior").includes(category), `Exterior taxonomy must include ${category}`);
 });
 assert.ok(!categoryNames("exterior").includes("Roof Colour"), "Roof Colour must be a Roofing variant, not a standalone category");
