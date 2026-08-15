@@ -2987,6 +2987,8 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
   const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   const isBrick = requirement.requirementKey === "bricks";
+  const finishLabel = displayCatalogueValue(product.finish) || "Finish to be confirmed";
+  const brickFinishLabel = [product.colour, product.texture, product.finish].map(displayCatalogueValue).filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed";
   return (
     <article className={`guidedProductCard ${isBrick ? "brickCard" : ""}`} data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
       <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
@@ -2994,8 +2996,8 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
         <span>{product.brand || product.supplier}</span>
         <strong>{product.productName}</strong>
         <em>{isBrick ? product.range || "Range not recorded" : `Model ${product.model || "not recorded"}`}</em>
-        <p>{isBrick ? [product.colour, product.texture, product.finish].filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed" : product.finish || "Finish to be confirmed"}</p>
-        {isBrick && product.dimensions ? <small>{product.dimensions}</small> : null}
+        <p>{isBrick ? brickFinishLabel : finishLabel}</p>
+        {isBrick && product.dimensions ? <small>{displayCatalogueValue(product.dimensions)}</small> : null}
         {product.imageReviewRequired ? <small>Image review required</small> : null}
       </div>
       <div className="guidedProductMoney">
@@ -3016,6 +3018,9 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
   const priceState = priceStateForGuidedOption(product);
   const isBrick = requirement?.requirementKey === "bricks";
   const gallery = Array.from(new Set([product.imageUrl, ...(product.galleryImages || [])].filter(Boolean)));
+  const dimensionsLabel = displayCatalogueValue(product.dimensions || product.size) || "To be confirmed";
+  const textureLabel = displayCatalogueValue(product.texture) || "To be confirmed";
+  const finishLabel = displayCatalogueValue(product.finish) || "To be confirmed";
   return (
     <div className="modalBackdrop" onClick={onClose}>
       <div className="guidedDetailsModal" onClick={(event) => event.stopPropagation()} data-testid="guided-product-details">
@@ -3032,9 +3037,9 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
         <dl>
           <div><dt>Model</dt><dd>{product.model || "To be confirmed"}</dd></div>
           <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
-          <div><dt>Dimensions</dt><dd>{product.dimensions || product.size || "To be confirmed"}</dd></div>
-          <div><dt>Texture</dt><dd>{product.texture || "To be confirmed"}</dd></div>
-          <div><dt>Colour / Finish</dt><dd>{product.finish || "To be confirmed"}</dd></div>
+          <div><dt>Dimensions</dt><dd>{dimensionsLabel}</dd></div>
+          <div><dt>Texture</dt><dd>{textureLabel}</dd></div>
+          <div><dt>Colour / Finish</dt><dd>{finishLabel}</dd></div>
           <div><dt>Supplier</dt><dd>{product.supplier || "To be confirmed"}</dd></div>
           <div><dt>Price</dt><dd>{priceState === PRICE_STATES.current ? money(product.selectedCost) : priceState}</dd></div>
           <div><dt>Allowance</dt><dd>{money(product.allowance)}</dd></div>
@@ -4187,12 +4192,12 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     model: entity.model || "",
     range: entity.range || "",
     manufacturer: entity.manufacturer || "",
-    colour: entity.colour || "",
-    texture: entity.texture || entity.metadata?.texture || "",
-    dimensions: entity.dimensions || entity.size || "",
-    finish: entity.finish || entity.colour || "",
-    profile: entity.profile || attributes.profile || "",
-    material: entity.material || attributes.material || "",
+    colour: displayCatalogueValue(entity.colour),
+    texture: displayCatalogueValue(entity.texture || entity.metadata?.texture),
+    dimensions: displayCatalogueValue(entity.dimensions || entity.size),
+    finish: displayCatalogueValue(entity.finish || entity.colour),
+    profile: displayCatalogueValue(entity.profile || attributes.profile),
+    material: displayCatalogueValue(entity.material || attributes.material),
     roofType: attributes.roofType || entity.configuration || "",
     coverWidth: attributes.coverWidth || "",
     ribHeight: attributes.ribHeight || "",
@@ -4376,6 +4381,15 @@ function normaliseGalleryImages(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   if (!value) return [];
   return String(value).split(/[|,\n]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function displayCatalogueValue(value) {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return value.map(displayCatalogueValue).filter(Boolean).join(" / ");
+  if (typeof value === "object") {
+    return Object.values(value).map(displayCatalogueValue).filter(Boolean).join(" x ");
+  }
+  return String(value);
 }
 
 function priceStatusLabel(status) {
