@@ -64,8 +64,8 @@ const DEMO_PRODUCTS = {
     demoProduct("pg-h-brick", "PGH", "Morada Brick", "Cuero", "Warm red / Textured", 0, 650, visualPlaceholder("Bricks", "warm face brick")),
   ],
   roofing: [
-    demoProduct("colorbond-corrugated", "Colorbond", "Corrugated Roofing", "Classic", "Monument", 0, 0, visualPlaceholder("Roofing", "corrugated roof profile"), swatches(["Monument", "#252a2e"], ["Surfmist", "#dddcd2"], ["Woodland Grey", "#4d5148"])),
-    demoProduct("colorbond-standing-seam", "Colorbond", "Architectural Standing Seam", "Premium", "Monument", 0, 4200, visualPlaceholder("Roofing", "standing seam roof"), swatches(["Monument", "#252a2e"], ["Basalt", "#6b6e70"], ["Dune", "#b8ad9c"])),
+    demoProduct("colorbond-corrugated", "Colorbond", "Corrugated Roofing", "Classic", "Monument", 0, 0, GENERIC_IMAGE_URLS.roofing, swatches(["Monument", "#252a2e"], ["Surfmist", "#dddcd2"], ["Woodland Grey", "#4d5148"])),
+    demoProduct("colorbond-standing-seam", "Colorbond", "Architectural Standing Seam", "Premium", "Monument", 0, 4200, GENERIC_IMAGE_URLS.roofing, swatches(["Monument", "#252a2e"], ["Basalt", "#6b6e70"], ["Dune", "#b8ad9c"])),
   ],
 };
 
@@ -541,7 +541,7 @@ function AreaCategories({ areaKey, title, selectedMap, kitchenTotals, onOpenCate
 
 function CategoryCard({ requirement, status, selection, totals, currency, onOpen }) {
   const fallback = visualPlaceholder(requirement.label, requirement.imageKey);
-  const image = selection?.image_url || fallback;
+  const image = requirementImage(requirement);
   const label = status === "complete" ? "Selected" : status === "incomplete" ? "In Progress" : "Not Started";
   return (
     <button type="button" className={`categoryCard ${statusTone(status)}`} onClick={onOpen} data-image-key={requirement.imageKey}>

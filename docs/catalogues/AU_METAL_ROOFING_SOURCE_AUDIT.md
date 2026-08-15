@@ -1,6 +1,7 @@
 # AU Metal Roofing Source Audit
 
 Verified: 2026-08-13
+Application image reverified: 2026-08-16
 
 ## Official Sources
 
@@ -9,6 +10,14 @@ Verified: 2026-08-13
 - LYSAGHT CUSTOM ORB: https://lysaght.com/profiles/custom-orb
 - LYSAGHT TRIMDEK: https://lysaght.com/profiles/trimdek
 - LYSAGHT KLIP-LOK: https://lysaght.com/profiles/klip-lok
+
+## Application Image
+
+- Main Roofing / Metal Roofing / COLORBOND family image implementation path: `/images/product-library/colorbond-roofing-freshwater.jpg`
+- Original image URL: `https://colorbond.com/sites/default/files/styles/wide/public/2022-07/Colorbond_Freshwater_HEROimage9927_R3_RT.jpg?itok=3aMbJrBz`
+- Source page: https://colorbond.com/products/roofing
+- Source alt/provenance: Residence, Robert Street, Freshwater, NSW. COLORBOND steel colour Windspray in a Classic finish.
+- Usage: shared family/category presentation image only. It must not replace profile-specific images for CUSTOM ORB, TRIMDEK, KLIP-LOK or other roofing profiles.
 
 ## Catalogue Scope
 
