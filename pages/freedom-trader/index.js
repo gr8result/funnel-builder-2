@@ -239,13 +239,14 @@ export default function FreedomTraderDashboard({ passwordHash }) {
       </section>
 
       <section className="panel" id="market-scan">
-        <div className="panelHeader"><h2>TODAY'S BEST OPPORTUNITIES</h2><Link href="/freedom-trader/market-opportunities">Open Market Opportunities</Link></div>
+        <div className="panelHeader"><h2>US MARKET CHECK {scanSummary ? "COMPLETE" : ""}</h2><Link href="/freedom-trader/market-opportunities">Open Market Opportunities</Link></div>
         <div className="summaryGrid">
-          <Card label="US Supported" value={scanSummary?.coverage?.US?.totalSupported ?? "--"} />
+          <Card label="US Common Stocks Considered" value={scanSummary?.coverage?.US?.totalSupported ?? "--"} />
           <Card label="US Pre-screen Eligible" value={scanSummary?.coverage?.US?.eligibleForScreening ?? "--"} />
+          <Card label="Pre-screen Candidates" value={scanSummary?.coverage?.US?.detailedAnalyses ?? scanSummary?.requested ?? "--"} />
           <Card label="Detailed Analyses" value={scanSummary?.successfullyAnalysed ?? "--"} />
-          <Card label="Unavailable" value={scanSummary?.unavailable ?? "--"} tone={Number(scanSummary?.unavailable) > 0 ? "loss" : "profit"} />
         </div>
+        {scanSummary ? <div className="bestLine"><span>MARKET DATA</span><p>Market: {scanSummary.market || "US"} / Data provider: {scanSummary.dataProvider || "Alpaca"} / Feed: {scanSummary.feed || "IEX"} / Coverage: {scanSummary.coverageDisclosure || "Limited exchange feed"}</p></div> : null}
         {scanSummary?.coverage?.ASX?.unavailableReason ? <div className="bestLine"><span>ASX SCANNING UNAVAILABLE</span><p>{scanSummary.coverage.ASX.unavailableReason}</p></div> : null}
         {topOpportunity ? (
           <div className="bestLine">

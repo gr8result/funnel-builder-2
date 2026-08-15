@@ -20,16 +20,25 @@ function response(payload, status = 200) {
   };
 }
 
+function restoreEnv(name, value) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 function stock(symbol, name, exchange = "NASDAQ", country = "United States", currency = "USD") {
   return { symbol, name, exchange, country, currency, type: "Common Stock", mic_code: exchange === "ASX" ? "XASX" : "XNMS" };
 }
 
 async function importUniverse(tag) {
   delete globalThis.__freedomMarketUniverseReferenceCache;
+  delete globalThis.__freedomAlpacaAssetCache;
+  delete globalThis.__freedomDailyPreScreenCache;
   return import(`../lib/freedom-trader/marketUniverse.js?test=${tag}`);
 }
 
 test("market discovery uses provider reference universe and separates ASX entitlement", async () => {
+  const previousProvider = process.env.FREEDOM_MARKET_DATA_PROVIDER;
+  process.env.FREEDOM_MARKET_DATA_PROVIDER = "twelve-data";
   global.fetch = async (url) => {
     const parsed = new URL(String(url));
     if (parsed.pathname.endsWith("/api_usage")) {
@@ -54,7 +63,7 @@ test("market discovery uses provider reference universe and separates ASX entitl
         volume: String(2_000_000 + index * 1000),
         exchange: "NASDAQ",
         currency: "USD",
-        datetime: "2026-08-07",
+        datetime: "2026-08-14",
       }])));
     }
     throw new Error(`Unexpected URL ${url}`);
@@ -71,6 +80,7 @@ test("market discovery uses provider reference universe and separates ASX entitl
   assert.equal(discovery.broadScreen.requested, 4);
   assert.equal(discovery.broadScreen.eligible, 4);
   assert.equal(discovery.detailedCandidates.length, 2);
+  restoreEnv("FREEDOM_MARKET_DATA_PROVIDER", previousProvider);
 });
 
 function alpacaBars(symbol, volume = 2_000_000, start = 20) {
@@ -106,6 +116,13 @@ test("market discovery combines Finnhub US symbols with Alpaca batched OHLCV pre
     if (parsed.hostname.includes("twelvedata") && parsed.pathname.endsWith("/stocks")) {
       return response({ data: [{ ...stock("ASX1", "ASX One", "ASX", "Australia", "AUD") }] });
     }
+    if (parsed.hostname.includes("alpaca") && parsed.pathname.endsWith("/assets")) {
+      return response([
+        { id: "asset-aaa", class: "us_equity", exchange: "NASDAQ", symbol: "AAA", name: "AAA Corp Common Stock", status: "active", tradable: true },
+        { id: "asset-bbb", class: "us_equity", exchange: "NYSE", symbol: "BBB", name: "BBB Corp Common Stock", status: "active", tradable: true },
+        { id: "asset-pink", class: "us_equity", exchange: "OTC", symbol: "PINK", name: "Pink Sheet Common Stock", status: "active", tradable: true },
+      ]);
+    }
     if (parsed.hostname.includes("alpaca") && parsed.pathname.endsWith("/stocks/bars")) {
       alpacaCalls += 1;
       assert.equal(parsed.searchParams.get("symbols"), "AAA,BBB,PINK");
@@ -131,6 +148,69 @@ test("market discovery combines Finnhub US symbols with Alpaca batched OHLCV pre
   assert.equal(discovery.broadScreen.eligible, 2);
   assert.equal(discovery.detailedCandidates.length, 2);
   assert.equal(alpacaCalls, 1);
+  delete process.env.FINNHUB_API_KEY;
+  delete process.env.ALPACA_API_KEY;
+  delete process.env.ALPACA_API_SECRET;
+});
+
+test("identity gate rejects ambiguous Alpaca assets before analysis", async () => {
+  const { identityGate } = await importUniverse("identity");
+  const rows = [
+    { symbol: "SNDK", companyName: "Sandisk Corporation", exchange: "US", market: "US", currency: "USD", active: true, tradable: true },
+    { symbol: "BAD", companyName: "Wrong Corp", exchange: "US", market: "US", currency: "USD", active: true, tradable: true },
+    { symbol: "INACTIVE", companyName: "Inactive Corp", exchange: "US", market: "US", currency: "USD", active: true, tradable: true },
+  ];
+  const assets = new Map([
+    ["SNDK", { id: "sndk-asset", providerSymbol: "SNDK", symbol: "SNDK", name: "Sandisk Corporation Common Stock", assetClass: "us_equity", exchange: "NASDAQ", active: true, tradable: true }],
+    ["BAD", { id: "bad-asset", providerSymbol: "BAD", symbol: "BAD", name: "Different Company Common Stock", assetClass: "us_equity", exchange: "NASDAQ", active: true, tradable: true }],
+    ["INACTIVE", { id: "inactive-asset", providerSymbol: "INACTIVE", symbol: "INACTIVE", name: "Inactive Corp Common Stock", assetClass: "us_equity", exchange: "NASDAQ", active: false, tradable: false }],
+  ]);
+
+  const result = identityGate(rows, assets);
+
+  assert.equal(result.rows.find((row) => row.symbol === "SNDK").identityValid, true);
+  assert.equal(result.rows.find((row) => row.symbol === "SNDK").alpacaAssetId, "sndk-asset");
+  assert.equal(result.rows.find((row) => row.symbol === "BAD").identityValid, false);
+  assert.match(result.rows.find((row) => row.symbol === "BAD").identityInvalidReason, /company name mismatch/);
+  assert.equal(result.rows.find((row) => row.symbol === "INACTIVE").identityValid, false);
+  assert.equal(result.invalid.length, 2);
+});
+
+test("daily Alpaca pre-screen cache is reused on a second same-day discovery", async () => {
+  process.env.FINNHUB_API_KEY = "unit-finnhub-key";
+  process.env.ALPACA_API_KEY = "unit-alpaca-key";
+  process.env.ALPACA_API_SECRET = "unit-alpaca-secret";
+  let alpacaBarsCalls = 0;
+  global.fetch = async (url) => {
+    const parsed = new URL(String(url));
+    if (parsed.hostname.includes("finnhub") && parsed.pathname.endsWith("/stock/symbol")) {
+      return response([
+        { symbol: "AAA", description: "AAA Corp", type: "Common Stock", currency: "USD" },
+        { symbol: "BBB", description: "BBB Corp", type: "Common Stock", currency: "USD" },
+      ]);
+    }
+    if (parsed.hostname.includes("twelvedata") && parsed.pathname.endsWith("/stocks")) return response({ data: [] });
+    if (parsed.hostname.includes("alpaca") && parsed.pathname.endsWith("/assets")) {
+      return response([
+        { id: "asset-aaa", class: "us_equity", exchange: "NASDAQ", symbol: "AAA", name: "AAA Corp Common Stock", status: "active", tradable: true },
+        { id: "asset-bbb", class: "us_equity", exchange: "NASDAQ", symbol: "BBB", name: "BBB Corp Common Stock", status: "active", tradable: true },
+      ]);
+    }
+    if (parsed.hostname.includes("alpaca") && parsed.pathname.endsWith("/stocks/bars")) {
+      alpacaBarsCalls += 1;
+      return response({ bars: { AAA: alpacaBars("AAA", 2_500_000, 20), BBB: alpacaBars("BBB", 3_000_000, 30) } });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+
+  const { buildMarketDiscovery } = await importUniverse("cache");
+  const first = await buildMarketDiscovery({ markets: ["US"], minimumDailyVolume: 1_000_000, broadScreenLimit: 2 });
+  const second = await buildMarketDiscovery({ markets: ["US"], minimumDailyVolume: 1_000_000, broadScreenLimit: 2 });
+
+  assert.equal(alpacaBarsCalls, 1);
+  assert.equal(first.broadScreen.cacheHits, 0);
+  assert.equal(second.broadScreen.cacheHits, 2);
+  assert.equal(second.broadScreen.freshFetches, 0);
   delete process.env.FINNHUB_API_KEY;
   delete process.env.ALPACA_API_KEY;
   delete process.env.ALPACA_API_SECRET;

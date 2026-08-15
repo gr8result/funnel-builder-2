@@ -156,6 +156,47 @@ test("Alpaca latest trade and one-sided quote normalization do not fabricate mid
   }
 });
 
+test("Alpaca latest trade batch and asset metadata stay credential-safe", async () => {
+  const previousKey = process.env.ALPACA_API_KEY;
+  const previousSecret = process.env.ALPACA_API_SECRET;
+  process.env.ALPACA_API_KEY = "unit-alpaca-key";
+  process.env.ALPACA_API_SECRET = "unit-alpaca-secret";
+  try {
+    const trades = await AlpacaProvider.latestTradeBatch(["SNDK", "TJGC"], {
+      fetchImpl: async (url, options) => {
+        assert.match(String(url), /stocks\/trades\/latest/);
+        assert.equal(options.headers["APCA-API-KEY-ID"], "unit-alpaca-key");
+        return response({ trades: {
+          SNDK: { t: "2026-08-14T19:59:00Z", p: 1641.275, s: 100, x: "V" },
+          TJGC: { t: "2026-08-14T18:16:00Z", p: 3.96, s: 245, x: "V" },
+        } });
+      },
+    });
+    const sndk = trades.get("SNDK");
+    assert.equal(sndk.ok, true);
+    assert.equal(sndk.price, 1641.275);
+    assert.equal(trades.diagnostics.apiCalls, 1);
+    assert.equal(JSON.stringify(trades).includes("unit-alpaca-secret"), false);
+
+    const assets = await AlpacaProvider.assetUniverse({
+      fetchImpl: async (url) => {
+        assert.match(String(url), /paper-api\.alpaca\.markets\/v2\/assets/);
+        return response([
+          { id: "sndk-asset", class: "us_equity", exchange: "NASDAQ", symbol: "SNDK", name: "Sandisk Corporation Common Stock", status: "active", tradable: true },
+          { id: "tjgc-asset", class: "us_equity", exchange: "NASDAQ", symbol: "TJGC", name: "TJGC Group Ltd. Class A Ordinary Shares", status: "active", tradable: true },
+        ]);
+      },
+    });
+    assert.equal(assets.ok, true);
+    assert.equal(assets.assetsBySymbol.get("SNDK").assetClass, "us_equity");
+    assert.equal(assets.assetsBySymbol.get("SNDK").providerSymbol, "SNDK");
+    assert.equal(JSON.stringify(assets).includes("unit-alpaca-key"), false);
+  } finally {
+    restoreEnv("ALPACA_API_KEY", previousKey);
+    restoreEnv("ALPACA_API_SECRET", previousSecret);
+  }
+});
+
 test("Finnhub authentication does not expose the API key", async () => {
   const previous = process.env.FINNHUB_API_KEY;
   process.env.FINNHUB_API_KEY = "secret-unit-key";

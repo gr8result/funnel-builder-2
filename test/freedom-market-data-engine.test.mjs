@@ -123,13 +123,20 @@ test("Alpaca primary history feeds chart and analysis from the same normalized b
   let calls = 0;
   global.fetch = async (url) => {
     calls += 1;
+    if (String(url).includes("/stocks/trades/latest")) {
+      return makeResponse({ trades: {
+        TJGC: { t: "2026-08-13T19:59:00Z", p: 3.95, s: 100, x: "V" },
+        SNDK: { t: "2026-08-13T19:59:00Z", p: 1528.11, s: 100, x: "V" },
+      } });
+    }
     assert.match(String(url), /data\.alpaca\.markets\/v2\/stocks\/bars/);
     return makeResponse({ bars: {
       TJGC: [
+        ...Array.from({ length: 20 }, (_, index) => ({ t: new Date(Date.UTC(2026, 6, 17 + index, 4)).toISOString(), o: 3.72 + index * 0.01, h: 4.05 + index * 0.01, l: 3.5 + index * 0.01, c: 3.8 + index * 0.01, v: 900000 + index * 1000 })),
         { t: "2026-08-10T04:00:00Z", o: 4.8, h: 5, l: 4.65, c: 4.65, v: 49800 },
         { t: "2026-08-11T04:00:00Z", o: 4.1, h: 4.3, l: 3.18, c: 3.6, v: 500000 },
         { t: "2026-08-12T04:00:00Z", o: 3.7, h: 4.1, l: 3.5, c: 3.9, v: 900000 },
-        { t: "2026-08-13T04:00:00Z", o: 3.78, h: 4.02, l: 3.77, c: 3.86, v: 1028123 },
+        { t: "2026-08-13T04:00:00Z", o: 3.78, h: 4.02, l: 3.77, c: 3.95, v: 1028123 },
       ],
       SNDK: [
         { t: "2026-08-12T04:00:00Z", o: 1339.4, h: 1580.88, l: 1331.62, c: 1528.11, v: 21647562 },
@@ -146,14 +153,45 @@ test("Alpaca primary history feeds chart and analysis from the same normalized b
   const summary = summarizeOhlc(tjgc.candles.daily);
   const metrics = service.getMarketDataMetrics();
 
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
   assert.equal(tjgc.source, "Alpaca");
-  assert.equal(tjgc.quote.price, 3.86);
-  assert.deepEqual(chart.candles[3], [3.78, 3.86, 3.77, 4.02]);
-  assert.deepEqual(chart.volume, [49800, 500000, 900000, 1028123]);
-  assert.deepEqual(summary, { count: 4, firstPrice: 4.65, sessionLow: 3.18, sessionHigh: 5, lastPrice: 3.86 });
+  assert.equal(tjgc.quote.price, 3.95);
+  assert.deepEqual(chart.candles.at(-1), [3.78, 3.95, 3.77, 4.02]);
+  assert.equal(chart.volume.at(-1), 1028123);
+  assert.equal(summary.count, 24);
+  assert.equal(summary.sessionLow, 3.18);
+  assert.equal(summary.sessionHigh, 5);
+  assert.equal(summary.lastPrice, 3.95);
   assert.equal(metrics.alpacaProviderCalls, 1);
   assert.equal(metrics.alpacaSymbolsRequested, 2);
+  delete process.env.ALPACA_API_KEY;
+  delete process.env.ALPACA_API_SECRET;
+});
+
+test("Alpaca latest trade discontinuity with daily history withholds invalid prices", async () => {
+  process.env.ALPACA_API_KEY = "unit-alpaca-key";
+  process.env.ALPACA_API_SECRET = "unit-alpaca-secret";
+  global.fetch = async (url) => {
+    if (String(url).includes("/stocks/trades/latest")) {
+      return makeResponse({ trades: { SNDK: { t: "2026-08-13T19:59:00Z", p: 1641.28, s: 100, x: "V" } } });
+    }
+    return makeResponse({ bars: { SNDK: makeCandles(60, 40).map((candle) => ({
+      t: `${candle.datetime}T04:00:00Z`,
+      o: Number(candle.open),
+      h: Number(candle.high),
+      l: Number(candle.low),
+      c: Number(candle.close),
+      v: Number(candle.volume),
+    })) } });
+  };
+
+  const service = await importMarketDataService("invalid-price");
+  const snapshot = await service.getMarketSnapshot("SNDK", { range: "3mo", interval: "1day" });
+
+  assert.equal(snapshot.dataQuality, "unavailable");
+  assert.equal(snapshot.statusCode, "DATA_INVALID");
+  assert.equal(snapshot.quote.price, null);
+  assert.match(snapshot.error, /ANALYSIS WITHHELD/);
   delete process.env.ALPACA_API_KEY;
   delete process.env.ALPACA_API_SECRET;
 });

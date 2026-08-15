@@ -31,6 +31,17 @@ test("ticker lookup resolves SNDK from provider-style rows without hardcoding", 
   assert.equal(result.resolved.exchange, "NASDAQ");
 });
 
+test("exact US ticker wins over same-symbol ASX match for Trader workflow", () => {
+  const result = resolveStockQueryFromRows([
+    { symbol: "CMG", companyName: "CHIPOTLE MEXICAN GRILL INC", exchange: "US", country: "United States", currency: "USD", market: "US", assetType: "Common Stock", active: true, tradable: true },
+    { symbol: "CMG", companyName: "Critical Minerals Group Limited", exchange: "ASX", country: "Australia", currency: "AUD", market: "ASX", assetType: "Common Stock", active: true, tradable: true },
+  ], "CMG");
+  assert.equal(result.ok, true);
+  assert.equal(result.ambiguous, false);
+  assert.equal(result.resolved.symbol, "CMG");
+  assert.equal(result.resolved.market, "US");
+});
+
 test("company lookup resolves by company name", () => {
   const result = resolveStockQueryFromRows(rows, "Apple");
   assert.equal(result.ok, true);

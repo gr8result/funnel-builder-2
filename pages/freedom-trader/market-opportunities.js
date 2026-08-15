@@ -264,6 +264,10 @@ export default function MarketOpportunities({ passwordHash }) {
           <article><span>Provider calls</span><strong>{scanSummary.providerDiagnostics?.totalProviderCalls ?? scanSummary.providerDiagnostics?.historyProviderCalls ?? "--"}</strong></article>
           <article><span>Retries</span><strong>{scanSummary.providerDiagnostics?.historyRetries ?? 0}</strong></article>
           <article><span>Cache hits</span><strong>{scanSummary.providerDiagnostics?.totalCacheHits ?? scanSummary.providerDiagnostics?.historyCacheHits ?? "--"}</strong></article>
+          <article><span>Market</span><strong>{scanSummary.market || "US"}</strong></article>
+          <article><span>Provider</span><strong>{scanSummary.dataProvider || "Alpaca"}</strong></article>
+          <article><span>Feed</span><strong>{scanSummary.feed || "IEX"}</strong></article>
+          <article><span>Coverage</span><strong>{scanSummary.coverageDisclosure || "Limited exchange feed"}</strong></article>
           <article><span>Data source</span><strong>{scanSummary.dataSource || "--"}</strong></article>
           <article><span>Last provider refresh</span><strong>{scanSummary.lastProviderRefresh ? new Date(scanSummary.lastProviderRefresh).toLocaleTimeString() : "--"}</strong></article>
         </section>
