@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import path from "node:path";
 import {
   calculateAverageEntry,
   calculateBuyOrder,
@@ -10,6 +11,8 @@ import {
   validateBuyOrder,
 } from "../lib/freedom-trader/paperTrading.js";
 import { checkLocalMarketWatch, loadLocalLastGoodScan, oneShareExitOptions, recordLocalMarketWatchFill, recordLocalMarketWatchSale, registerLocalMarketWatchPlan, saveLocalLastGoodScan } from "../lib/freedom-trader/localPaperStore.js";
+
+process.env.FREEDOM_PAPER_STORE_PATH = path.join(process.cwd(), "tmp", `freedom-paper-test-${process.pid}.json`);
 
 const account = { id: "account-1", available_cash: 100000 };
 const validPrice = {

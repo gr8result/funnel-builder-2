@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import path from "node:path";
 import { computeCapitalFlow, classifyBuyingPressure } from "../lib/freedom-trader/capitalFlow.js";
 import { rankMarketOpportunities } from "../lib/freedom-trader/opportunityRanking.js";
 import { sendFreedomNotification } from "../lib/freedom-trader/notifications.js";
+
+process.env.FREEDOM_PAPER_STORE_PATH = path.join(process.cwd(), "tmp", `freedom-capital-flow-test-${process.pid}.json`);
 
 const settings = {
   minimumScore: 82,
