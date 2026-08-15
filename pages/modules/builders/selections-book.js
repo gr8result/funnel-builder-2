@@ -43,6 +43,7 @@ import {
 } from "../../../lib/product-library/catalogueModel";
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
+import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
@@ -1011,6 +1012,7 @@ export default function BuilderSelectionsBookPage({
     const baselineProducts = [
       ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
       ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+      ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");

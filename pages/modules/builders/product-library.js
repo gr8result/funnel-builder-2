@@ -39,6 +39,7 @@ import {
 import { supabase } from "../../../utils/supabase-client";
 import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
+import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
 
 const EMPTY_PRODUCT = {
   product_code: "",
@@ -154,6 +155,16 @@ function productPriceLabel(product) {
   if (status === "allowance_only") return "Allowance only";
   if (status === "expired") return "Price expired";
   return "Price pending";
+}
+
+function swatchLabel(swatch) {
+  if (swatch && typeof swatch === "object") return swatch.name || swatch.officialName || swatch.hex || swatch.swatchHex || "Colour";
+  return String(swatch || "");
+}
+
+function swatchStyle(swatch) {
+  const colour = swatch && typeof swatch === "object" ? swatch.hex || swatch.swatchHex : "";
+  return colour ? { "--swatch-colour": colour } : {};
 }
 
 function masterProductsForFamily(products = [], familyItem) {
@@ -474,6 +485,7 @@ export default function BuilderProductLibraryPage() {
     const baselineProducts = [
       ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
       ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
+      ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
@@ -1429,7 +1441,7 @@ export default function BuilderProductLibraryPage() {
                   <p>{selectedProduct.description}</p>
                   <div className="swatches">
                     {(selectedProduct.colourSwatches?.length ? selectedProduct.colourSwatches : [selectedProduct.colour, selectedProduct.finish].filter(Boolean)).map((swatch) => (
-                      <span key={swatch}>{swatch}</span>
+                      <span key={swatchLabel(swatch)} style={swatchStyle(swatch)}>{swatchLabel(swatch)}</span>
                     ))}
                   </div>
                   {selectedProduct.variants?.length ? (
@@ -1852,6 +1864,16 @@ export default function BuilderProductLibraryPage() {
           color: #475569;
           font-size: 12px;
           font-weight: 800;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .swatches span::before {
+          content: "";
+          width: 10px;
+          height: 10px;
+          border: 1px solid #cbd5e1;
+          background: var(--swatch-colour, transparent);
         }
         .product-flow {
           display: grid;

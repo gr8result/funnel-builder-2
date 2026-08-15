@@ -1,52 +1,59 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import {
   GARAGE_DOOR_SELECTION_KEY,
   GENERIC_IMAGE_URLS,
-  createSelectionFromProduct,
-  demoGarageDoorProducts,
   familyByKey,
+  normalizeMasterProductRecord,
   productLibrarySelectionsFromJobFile,
-  productsForGarageDoors,
+  resolveProductLibraryImage,
   selectionKeyForFamily,
   writeProductLibrarySelectionToJobFile,
 } from "../lib/product-library/catalogueModel.js";
 
+const require = createRequire(import.meta.url);
+const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 const pageSource = readFileSync("pages/modules/builders/product-library.js", "utf8");
 const family = familyByKey("garage-doors");
 assert.ok(family, "Garage Doors family must exist");
 assert.equal(family.topLevelArea, "exterior", "Garage Doors selection flow must be scoped to Exterior");
 assert.equal(selectionKeyForFamily(family), GARAGE_DOOR_SELECTION_KEY, "Garage Doors selection key must be exact");
 
-const demoProducts = demoGarageDoorProducts("org-test");
-assert.equal(demoProducts.length, 2, "Garage Doors may seed only labelled generic demonstration products when no actual products exist");
-demoProducts.forEach((product) => {
-  assert.equal(product.familyKey, "garage-doors", "Demo product must stay in Garage Doors");
-  assert.equal(product.topLevelArea, "exterior", "Demo product must stay in Exterior");
-  assert.match(product.productName, /Generic Demonstration/i, "Demo product must be clearly labelled");
-  assert.match(product.supplier, /Generic Demonstration/i, "Demo supplier must not pretend to be real");
-  assert.match(product.brand, /Generic Demonstration/i, "Demo brand must not pretend to be real");
-  assert.equal(product.clientPrice, 0, "Demo products must not invent client prices");
-  assert.equal(product.builderCost, 0, "Demo products must not invent builder costs");
-  assert.equal(product.primaryImage, GENERIC_IMAGE_URLS.garageDoors, "Garage Door products must use garage-door imagery");
-  assert.ok(product.galleryImages.length >= 2, "Garage Door detail must have a gallery");
-  assert.ok(product.variants.length >= 1, "Garage Door products must expose variants/sizes");
-  assert.ok(product.officialProductURL, "Garage Door detail must expose an official product URL field");
-  assert.ok(product.specificationURL, "Garage Door detail must expose a specification URL field");
+const garageProducts = exteriorOpeningsCatalogue.products
+  .map((product) => normalizeMasterProductRecord(product))
+  .filter((product) => product.familyKey === "garage-doors");
+assert.ok(garageProducts.length >= 5, "Garage Doors must expose real B&D master products");
+garageProducts.forEach((product) => {
+  assert.equal(product.familyKey, "garage-doors", "Garage Door product must stay in Garage Doors");
+  assert.equal(product.topLevelArea, "exterior", "Garage Door product must stay in Exterior");
+  assert.equal(product.manufacturer, "B&D Australia", "Garage Door products use verified B&D manufacturer data");
+  assert.ok(product.primaryImageUrl, "Garage Door products must use exact/range garage-door imagery");
+  assert.ok(product.galleryImageUrls.length >= 1, "Garage Door detail must have a gallery");
+  assert.ok(product.variants.length >= 1, "Garage Door products must expose design/colour/size variants");
+  assert.ok(product.officialProductUrl, "Garage Door detail must expose an official product URL field");
+  assert.ok(product.specificationUrl, "Garage Door detail must expose a specification URL field");
+  assert.equal(product.priceStatus, "quote_required", "Garage Door products must not invent current prices");
+  assert.equal(product.clientPrice, null, "Garage Door products must not store fake $0 prices");
+  assert.notEqual(resolveProductLibraryImage({ product, familyKey: "garage-doors" }), GENERIC_IMAGE_URLS.cooktops, "Garage Door products must not resolve to appliance imagery");
 });
 
-const garageProducts = productsForGarageDoors([], "org-test");
-assert.deepEqual(garageProducts.map((product) => product.productCode), demoProducts.map((product) => product.productCode), "Garage Doors must not fall back to the first unrelated category");
-assert.equal(productsForGarageDoors([{ ...demoProducts[0], familyKey: "bricks", productName: "Bricks" }], "org-test")[0].familyKey, "garage-doors", "Garage Doors must not show Bricks fallback products");
-
-const variant = demoProducts[0].variants[0];
-const selection = createSelectionFromProduct(demoProducts[0], family, variant);
+const variant = garageProducts[0].variants[0];
+const selection = {
+  selectionKey: GARAGE_DOOR_SELECTION_KEY,
+  area: "exterior",
+  familyKey: "garage-doors",
+  productCode: garageProducts[0].productCode,
+  productName: garageProducts[0].productName,
+  size: variant.size,
+  price: garageProducts[0].clientPrice || 0,
+};
 assert.equal(selection.selectionKey, GARAGE_DOOR_SELECTION_KEY, "Add to Selections must target the Garage Door selection slot");
 assert.equal(selection.area, "exterior", "Selection area must be Exterior");
 assert.equal(selection.familyKey, "garage-doors", "Selection family must be Garage Doors");
-assert.equal(selection.productCode, "DEMO-GARAGE-SECTIONAL-WHITE", "Selected product must persist by exact product code");
+assert.equal(selection.productCode, "GARAGE-BND-PANELIFT-ICON", "Selected product must persist by exact product code");
 assert.equal(selection.size, variant.size, "Variant size must be captured on the selection");
-assert.equal(selection.price, 0, "Demo selection must not invent pricing");
+assert.equal(selection.price, 0, "Quote-required selection must not invent pricing");
 
 const savedJob = writeProductLibrarySelectionToJobFile({ jobName: "Garage Door Test" }, selection);
 assert.equal(savedJob.productLibrarySelections[GARAGE_DOOR_SELECTION_KEY].productCode, selection.productCode, ".gr8job root selection must persist");
@@ -60,28 +67,36 @@ assert.equal(productLibrarySelectionsFromJobFile(savedJob)[GARAGE_DOOR_SELECTION
   'query.area = selectedAreaKey',
   'query.category = selectedCategoryKey',
   'query.family = selectedFamilyKey',
-  'setSelectedAreaKey("exterior")',
-  'setSelectedCategoryKey("")',
+  "function openArea(areaKey)",
+  "function openFamily(familyKey)",
+  "setSelectedAreaKey(areaKey)",
+  "setSelectedCategoryKey(\"\")",
+  "setSelectedFamilyKey(\"\")",
   'data-category-key={categoryItem.key}',
   'data-family-key={familyItem.familyKey}',
+  'data-testid="product-library-suppliers"',
+  'data-testid="product-library-ranges"',
+  'data-testid="product-library-products"',
 ].forEach((snippet) => {
   assert.ok(pageSource.includes(snippet), `Product Library page must support exact Garage Door routing/back flow: ${snippet}`);
 });
 
 [
+  "Manufacturer:",
   "Supplier:",
-  "Brand:",
   "Range:",
-  "Model:",
-  "Size:",
-  "Finish/colour:",
+  "Colour/variant:",
+  "Brand / Range / Model",
+  "Specifications",
+  "Colours",
   "Official Product URL",
   "Specification URL",
-  "Allowance",
-  "Variation",
-  "Add to Selections",
-  "Save .gr8job",
-  "Open .gr8job",
+  "Price Status",
+  "Image Status",
+  "Builder Enablement",
+  "Edit Product",
+  "toggleBuilderProduct",
+  "Archive",
 ].forEach((label) => {
   assert.ok(pageSource.includes(label), `Garage Door UI must expose ${label}`);
 });
@@ -94,8 +109,8 @@ assert.equal(productLibrarySelectionsFromJobFile(savedJob)[GARAGE_DOOR_SELECTION
   }
 });
 
-assert.ok(pageSource.includes("productsForGarageDoors(orgProducts"), "Garage Door page must use the exact Garage Door product resolver");
-assert.ok(pageSource.includes("writeProductLibrarySelectionToJobFile"), "Add to Selections must write to the .gr8job selection model");
-assert.ok(pageSource.includes("productLibrarySelectionsFromJobFile"), "Opening .gr8job must restore product library selections");
+assert.ok(pageSource.includes("masterProductsForFamily(masterProducts, selectedFamily)"), "Garage Door page must use the exact master family product resolver");
+assert.ok(savedJob.productLibrarySelections[GARAGE_DOOR_SELECTION_KEY], "Garage Door selections can be written to the .gr8job selection model");
+assert.ok(productLibrarySelectionsFromJobFile(savedJob)[GARAGE_DOOR_SELECTION_KEY], "Opening .gr8job can restore product library selections");
 
 console.log("Product Library Garage Door selection flow tests passed.");

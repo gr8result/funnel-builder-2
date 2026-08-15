@@ -13,19 +13,27 @@ import {
 const require = createRequire(import.meta.url);
 const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json");
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
+const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const roofing = auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product));
-const masterProducts = [...bricks, ...roofing];
+const exteriorOpenings = exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product));
+const masterProducts = [...bricks, ...roofing, ...exteriorOpenings];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
 const pghBricks = masterProducts.filter((product) => product.familyKey === "bricks" && product.manufacturer === "PGH Bricks");
 const australBricks = masterProducts.filter((product) => product.familyKey === "bricks" && product.manufacturer === "Austral Bricks");
 const roofingProducts = masterProducts.filter((product) => product.familyKey === "roofing");
+const windowsProducts = masterProducts.filter((product) => product.familyKey === "windows");
+const entryDoorProducts = masterProducts.filter((product) => product.familyKey === "entry-doors");
+const garageDoorProducts = masterProducts.filter((product) => product.familyKey === "garage-doors");
 
 assert.ok(pghBricks.length > 0, "Product Library master catalogue exposes PGH brick products");
 assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Austral brick products");
 assert.ok(roofingProducts.length > 0, "Product Library master catalogue exposes roofing products");
+assert.ok(windowsProducts.length > 0, "Product Library master catalogue exposes Windows products");
+assert.ok(entryDoorProducts.length > 0, "Product Library master catalogue exposes Entry Door products");
+assert.ok(garageDoorProducts.length > 0, "Product Library master catalogue exposes Garage Door products");
 
 const clientSelectableBricks = queryClientSelectableProducts({
   organisationId: DEMO_BUILDER_ORGANISATION_ID,
@@ -97,4 +105,4 @@ const archivedSelectable = queryClientSelectableProducts({
 assert.equal(archivedSelectable.some((product) => product.productCode === realBrick.productCode), false, "Archived products disappear from new selection options");
 assert.equal({ productCode: realBrick.productCode, selectedAt: "historical" }.productCode, realBrick.productCode, "Historical saved selection references remain stable after archive");
 
-console.log(`Product Library master catalogue manager tests passed. PGH=${pghBricks.length} Austral=${australBricks.length} Roofing=${roofingProducts.length}`);
+console.log(`Product Library master catalogue manager tests passed. PGH=${pghBricks.length} Austral=${australBricks.length} Roofing=${roofingProducts.length} Windows=${windowsProducts.length} EntryDoors=${entryDoorProducts.length} GarageDoors=${garageDoorProducts.length}`);
