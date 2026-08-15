@@ -6,6 +6,9 @@ const selectionsBookSource = await readFile(new URL("../pages/modules/builders/s
 
 assert.ok(workbookSource.includes('const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book")'), "Estimate Builder Client Selections card must load the selections-book module");
 assert.ok(workbookSource.includes('page: "clientSelections"'), "Estimate Builder dashboard must keep the Client Selections entry point");
+assert.ok(workbookSource.includes('initialPage = ""'), "Estimate Builder must accept an explicit initial page deep link");
+assert.ok(workbookSource.includes('sheet.setPage(initialPage)'), "Estimate Builder page deep links must open the requested workspace page");
+assert.ok(!workbookSource.includes('page: "standardInclusions",\n    visualKey: "clientSelections"'), "Client Selections must never point at Standard Inclusions");
 assert.ok(selectionsBookSource.includes("GuidedSelectionsWorkflow"), "Selections Book must render the guided workflow component");
 assert.ok(selectionsBookSource.includes('guidedScreen === "review"'), "Schedule table must be gated behind review mode");
 assert.ok(selectionsBookSource.includes("Review Schedule"), "Old schedule remains available as Review Schedule");
@@ -33,5 +36,15 @@ const reviewGateIndex = selectionsBookSource.indexOf('guidedScreen === "review"'
 const tableIndex = selectionsBookSource.indexOf('className="selectionTable"');
 assert.ok(reviewGateIndex > -1 && tableIndex > -1, "Review gate and legacy table must both exist");
 assert.ok(reviewGateIndex < tableIndex, "Legacy schedule table must be downstream of the review gate, not the primary screen");
+
+const estimateRouteSource = await readFile(new URL("../pages/modules/estimate-builder/index.js", import.meta.url), "utf8");
+assert.ok(estimateRouteSource.includes("router.query.page"), "Estimate Builder route must read explicit page query params");
+assert.ok(estimateRouteSource.includes("initialPage={initialPage}"), "Estimate Builder route must pass page=clientSelections through to the workbook");
+
+for (const relativePath of ["../pages/modules/builders/document-vault.js", "../pages/modules/builders/quote-approvals.js", "../pages/modules/builders/rfis.js"]) {
+  const source = await readFile(new URL(relativePath, import.meta.url), "utf8");
+  assert.ok(source.includes('/modules/estimate-builder?page=clientSelections'), `${relativePath} must link Selections to the current Client Selections workspace`);
+  assert.ok(!source.includes('/modules/builders/client-selections'), `${relativePath} must not link to the retired Client Selections route`);
+}
 
 console.log("Estimate Builder guided Client Selections regression tests passed.");

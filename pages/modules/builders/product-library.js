@@ -1001,6 +1001,50 @@ export default function BuilderProductLibraryPage() {
     setSuccess("Duplicating product. Review the new code and save when ready.");
   }
 
+  function startNewProduct(overrides = {}) {
+    if (!selectedFamily) {
+      setError("Choose a product family before adding supplier, range or product records.");
+      return;
+    }
+    setError("");
+    setEditingProductId("");
+    setProductForm({
+      ...EMPTY_PRODUCT,
+      supplier_name: selectedSupplierName || "",
+      range: selectedRangeName || "",
+      ...overrides,
+    });
+    setAdminOpen(true);
+  }
+
+  function addSupplier() {
+    const supplierName = typeof window !== "undefined" ? window.prompt("Supplier name") : "";
+    if (supplierName === null) return;
+    const name = String(supplierName || "").trim();
+    if (!name) {
+      setError("Enter a supplier name before adding supplier-managed products.");
+      return;
+    }
+    setSelectedSupplierName(name);
+    setSelectedRangeName("");
+    startNewProduct({ supplier_name: name, range: "" });
+    setSuccess(`Supplier "${name}" is ready. Add the first product to save it in the master catalogue.`);
+  }
+
+  function addRange() {
+    const rangeName = typeof window !== "undefined" ? window.prompt("Range name") : "";
+    if (rangeName === null) return;
+    const name = String(rangeName || "").trim();
+    if (!name) {
+      setError("Enter a range name before adding range-managed products.");
+      return;
+    }
+    const supplierName = selectedSupplierName || productForm.supplier_name || selectedProduct?.supplier || "";
+    setSelectedRangeName(name);
+    startNewProduct({ supplier_name: supplierName, range: name });
+    setSuccess(`Range "${name}" is ready. Add the first product to save it in the master catalogue.`);
+  }
+
   async function archiveProduct(entity) {
     if (!entity?.productCode) return;
     setSaving(true);
@@ -1528,10 +1572,10 @@ export default function BuilderProductLibraryPage() {
           {adminOpen ? (
             <div className="admin-body">
               <div className="admin-actions">
-                <button type="button" onClick={() => { setProductForm(EMPTY_PRODUCT); setEditingProductId(""); }}><Plus size={16} /> Add Product</button>
-                <button type="button" onClick={() => setSuccess("Add Supplier: enter supplier_name in the import CSV or save a product with a new supplier.")}>Add Supplier</button>
+                <button type="button" onClick={() => startNewProduct()}><Plus size={16} /> Add Product</button>
+                <button type="button" onClick={addSupplier}>Add Supplier</button>
                 <button type="button" onClick={() => setSuccess("Add Brand: enter brand in the import CSV or save a product with a new brand.")}>Add Brand</button>
-                <button type="button" onClick={() => setSuccess("Add Range: enter range on a product or import row.")}>Add Range</button>
+                <button type="button" onClick={addRange}>Add Range</button>
                 <button type="button" onClick={() => setSuccess("Add Variant: enter colour, finish, size or variant_name in the import CSV.")}>Add Variant</button>
                 <button type="button" onClick={() => selectedProduct && editProduct(selectedProduct)} disabled={!selectedProduct}><Pencil size={16} /> Edit</button>
                 <button type="button" onClick={() => selectedProduct && duplicateProduct(selectedProduct)} disabled={!selectedProduct}><Copy size={16} /> Duplicate</button>

@@ -348,7 +348,7 @@ export default function BuilderRfisPage() {
           </div>
           <div style={styles.heroActions}>
             <Link href="/modules/builders/document-vault" style={styles.secondaryLink}>Document Vault</Link>
-            <Link href="/modules/builders/client-selections" style={styles.secondaryLink}>Selections</Link>
+            <Link href="/modules/estimate-builder?page=clientSelections" style={styles.secondaryLink}>Selections</Link>
             <Link href="/modules/builders/budget-vs-actual" style={styles.primaryLink}>Budget vs Actual</Link>
           </div>
         </header>

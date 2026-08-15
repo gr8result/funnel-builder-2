@@ -374,7 +374,7 @@ function workspaceVisual(pageKey) {
   return WORKSPACE_VISUALS[pageKey] || WORKSPACE_VISUALS.projectDashboard;
 }
 
-export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "" } = {}) {
+export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
   const moduleWorkspaceId = organisationId || workspaceId;
@@ -421,6 +421,11 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   useEffect(() => {
     if (jobFileError && isWorkbookLoaded(sheet.workbook)) setJobFileError("");
   }, [jobFileError, sheet.workbook]);
+  useEffect(() => {
+    if (!initialPage || previewMode || mode) return;
+    if (!WORKSPACE_VISUALS[initialPage] || sheet.workbook.page === initialPage) return;
+    sheet.setPage(initialPage);
+  }, [initialPage, mode, previewMode, sheet]);
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";

@@ -8,12 +8,13 @@ export default function EstimateBuilderPage() {
   const mode = typeof router.query.mode === "string" ? router.query.mode : "";
   const recentId = typeof router.query.recentId === "string" ? router.query.recentId : "";
   const organisationId = typeof router.query.organisationId === "string" ? router.query.organisationId : "";
+  const initialPage = typeof router.query.page === "string" ? router.query.page : "";
 
   return (
     <>
       <Head><title>{previewMode ? "Estimate Builder Preview" : "Estimate Builder"}</title></Head>
       <main style={styles.page}>
-        <EstimateBuilderWorkbook previewMode={previewMode} mode={mode} recentId={recentId} organisationId={organisationId} />
+        <EstimateBuilderWorkbook previewMode={previewMode} mode={mode} recentId={recentId} organisationId={organisationId} initialPage={initialPage} />
       </main>
     </>
   );

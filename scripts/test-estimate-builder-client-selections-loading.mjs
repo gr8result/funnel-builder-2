@@ -20,8 +20,8 @@ assert.ok(workbookSource.includes("console.error(\"[Client Selections] component
 assert.ok(workbookSource.includes("console.error(\"[Client Selections] module mount timeout\""), "Mount timeout must be logged");
 
 [
-  "organisationId: workspaceId",
-  "workspaceId",
+  "organisationId: moduleWorkspaceId",
+  "workspaceId: moduleWorkspaceId",
   "workbook: sheet.workbook",
   "projectName: openJobDetails.projectName",
   "jobNumber: openJobDetails.jobNumber",

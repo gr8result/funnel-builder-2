@@ -48,8 +48,29 @@ const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => nor
 const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
-assert.equal(exteriorFinishes.length, 21, "Exterior finishes catalogue must expose every requested finish record");
+assert.equal(exteriorFinishes.length, 26, "Exterior finishes catalogue must expose every requested finish record");
 assert.equal(activeExteriorFinishMasterProducts(masterProducts).length, exteriorFinishes.length, "Exterior finish demo enablement candidates must cover the new catalogue");
+
+const jamesHardieCladdingCodes = [
+  "CLADDING-JAMES-HARDIE-AXON",
+  "CLADDING-JAMES-HARDIE-STRIA-SMOOTH",
+  "CLADDING-JAMES-HARDIE-MATRIX",
+  "CLADDING-JAMES-HARDIE-LINEA",
+  "CLADDING-JAMES-HARDIE-FINE-TEXTURE",
+  "CLADDING-JAMES-HARDIE-OBLIQUE",
+  "CLADDING-JAMES-HARDIE-BRUSHED-CONCRETE",
+];
+const claddingProducts = exteriorFinishes.filter((product) => product.familyKey === "cladding");
+assert.equal(claddingProducts.length, jamesHardieCladdingCodes.length, "Cladding must expose the complete James Hardie system set");
+jamesHardieCladdingCodes.forEach((code) => {
+  const product = claddingProducts.find((item) => item.productCode === code);
+  assert.ok(product, `${code} must exist in the cladding catalogue`);
+  assert.equal(product.supplier, "James Hardie", `${code} must be supplier-managed by James Hardie`);
+  assert.equal(product.imageStatus, "verified_exact", `${code} must use a verified exact image`);
+  assert.match(product.primaryImageUrl, /^https:\/\/images\.ctfassets\.net\//, `${code} must use the official James Hardie image CDN`);
+  assert.match(product.officialProductUrl, /^https:\/\/www\.jameshardie\.com\.au\/products\//, `${code} must keep its official James Hardie URL`);
+  assert.equal(product.priceStatus, "quote_required", `${code} must remain quote-required, not fake-priced`);
+});
 
 finishFamilyKeys.forEach((familyKey) => {
   const products = exteriorFinishes.filter((product) => product.familyKey === familyKey);
@@ -150,6 +171,9 @@ assert.doesNotMatch(selectionsPageSource, /data\/product-library\/catalogues\/cl
 
 const productLibraryPageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
 assert.match(productLibraryPageSource, /AU-EXTERIOR-FINISHES-CATALOGUE\.json/, "Product Library imports the exterior finishes master catalogue");
+assert.match(productLibraryPageSource, /function addSupplier\(\)/, "Product Library must expose real Add Supplier management");
+assert.match(productLibraryPageSource, /function addRange\(\)/, "Product Library must expose real Add Range management");
+assert.match(productLibraryPageSource, /startNewProduct\(\)/, "Product Library Add Product must open the canonical product form");
 
 function selectionFor(requirementKey) {
   const requirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === requirementKey);
