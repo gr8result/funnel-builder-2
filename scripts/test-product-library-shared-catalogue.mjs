@@ -332,10 +332,11 @@ const requiredVisualCategories = [
   ["interior", "Flooring", "floor"],
 ];
 const requiredVisualUrls = new Map();
+const curatedVisualImagePattern = /^(https:\/\/images\.unsplash\.com\/|\/images\/product-library\/.+\.(?:jpg|jpeg|png|webp)$)/i;
 requiredVisualCategories.forEach(([areaKey, categoryName, label]) => {
   const category = TAXONOMY_CATEGORY_DEFINITIONS.find((item) => item.topLevelArea === areaKey && item.category === categoryName);
   assert.ok(category?.image, `${categoryName} must have a visual ${label} image`);
-  assert.match(category.image, /^https:\/\/images\.unsplash\.com\//, `${categoryName} must render a high-quality image URL`);
+  assert.match(category.image, curatedVisualImagePattern, `${categoryName} must render a high-quality image URL or curated local product-library asset`);
   assert.ok(!requiredVisualUrls.has(category.image), `${categoryName} must not reuse the ${requiredVisualUrls.get(category.image)} image`);
   requiredVisualUrls.set(category.image, categoryName);
 });
@@ -343,7 +344,7 @@ requiredVisualCategories.forEach(([areaKey, categoryName, label]) => {
 const areaImageUrls = new Map();
 TOP_LEVEL_AREAS.forEach((area) => {
   assert.ok(area.image, `${area.displayName} must have a visual card image`);
-  assert.match(area.image, /^https:\/\/images\.unsplash\.com\//, `${area.displayName} must render a high-quality image URL`);
+  assert.match(area.image, curatedVisualImagePattern, `${area.displayName} must render a high-quality image URL or curated local product-library asset`);
   assert.ok(!areaImageUrls.has(area.image), `${area.displayName} must not reuse the ${areaImageUrls.get(area.image)} area image`);
   areaImageUrls.set(area.image, area.displayName);
 });

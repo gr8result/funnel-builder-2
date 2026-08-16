@@ -48,29 +48,54 @@ const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => nor
 const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
-assert.equal(exteriorFinishes.length, 26, "Exterior finishes catalogue must expose every requested finish record");
+assert.equal(exteriorFinishes.length, 28, "Exterior finishes catalogue must expose every requested finish record");
 assert.equal(activeExteriorFinishMasterProducts(masterProducts).length, exteriorFinishes.length, "Exterior finish demo enablement candidates must cover the new catalogue");
 
-const jamesHardieCladdingCodes = [
-  "CLADDING-JAMES-HARDIE-AXON",
-  "CLADDING-JAMES-HARDIE-STRIA-SMOOTH",
-  "CLADDING-JAMES-HARDIE-MATRIX",
+const expectedCladdingCodes = [
   "CLADDING-JAMES-HARDIE-LINEA",
+  "CLADDING-JAMES-HARDIE-AXON",
+  "CLADDING-JAMES-HARDIE-MATRIX",
+  "CLADDING-JAMES-HARDIE-STRIA",
   "CLADDING-JAMES-HARDIE-FINE-TEXTURE",
-  "CLADDING-JAMES-HARDIE-OBLIQUE",
-  "CLADDING-JAMES-HARDIE-BRUSHED-CONCRETE",
+  "CLADDING-JAMES-HARDIE-EXOTEC",
+  "CLADDING-JAMES-HARDIE-HARDIE-PLANK",
+  "CLADDING-COLORBOND-LYSAGHT-WALL",
+  "CLADDING-PGH-FEATURE-STONE",
 ];
 const claddingProducts = exteriorFinishes.filter((product) => product.familyKey === "cladding");
-assert.equal(claddingProducts.length, jamesHardieCladdingCodes.length, "Cladding must expose the complete James Hardie system set");
-jamesHardieCladdingCodes.forEach((code) => {
+assert.equal(claddingProducts.length, expectedCladdingCodes.length, "Cladding must expose the corrected nine top-level options");
+assert.deepEqual(claddingProducts.map((product) => product.productCode), expectedCladdingCodes, "Cladding options must stay in the intended client-facing order");
+assert.equal(claddingProducts.filter((product) => /linea/i.test(product.productName)).length, 1, "Linea must be one top-level card, not separate 150mm/180mm cards");
+assert.equal(claddingProducts.some((product) => /150mm LINEA BOARD|180mm LINEA BOARD/i.test(product.productName)), false, "Board widths must not appear as duplicate top-level Linea products");
+
+expectedCladdingCodes.forEach((code) => {
   const product = claddingProducts.find((item) => item.productCode === code);
   assert.ok(product, `${code} must exist in the cladding catalogue`);
-  assert.equal(product.supplier, "James Hardie", `${code} must be supplier-managed by James Hardie`);
-  assert.equal(product.imageStatus, "verified_exact", `${code} must use a verified exact image`);
-  assert.match(product.primaryImageUrl, /^https:\/\/images\.ctfassets\.net\//, `${code} must use the official James Hardie image CDN`);
-  assert.match(product.officialProductUrl, /^https:\/\/www\.jameshardie\.com\.au\/products\//, `${code} must keep its official James Hardie URL`);
   assert.equal(product.priceStatus, "quote_required", `${code} must remain quote-required, not fake-priced`);
+  assert.equal(product.imageStatus, "verified_exact", `${code} must use a verified relevant image`);
 });
+
+const jamesHardieCladding = claddingProducts.filter((product) => product.supplier === "James Hardie");
+assert.equal(jamesHardieCladding.length, 7, "The corrected cladding list keeps seven genuine James Hardie families");
+jamesHardieCladding.forEach((product) => {
+  assert.match(product.officialProductUrl, /^https:\/\/www\.jameshardie\.com\.au\/products\//, `${product.productCode} must keep its official James Hardie URL`);
+  if (product.productCode !== "CLADDING-JAMES-HARDIE-LINEA") {
+    assert.match(product.primaryImageUrl, /^https:\/\/images\.ctfassets\.net\//, `${product.productCode} must use a relevant James Hardie image CDN asset`);
+  }
+});
+
+const linea = claddingProducts.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-LINEA");
+assert.equal(linea.primaryImageUrl, "/images/product-library/cladding-linea-weatherboard-180.jpeg", "Linea Weatherboard must use the supplied 180 Linea wall image");
+assert.deepEqual(linea.variants.map((variant) => variant.width), ["150mm", "180mm"], "Linea widths belong inside variants on one card");
+
+const colorbondWall = claddingProducts.find((product) => product.productCode === "CLADDING-COLORBOND-LYSAGHT-WALL");
+assert.equal(colorbondWall.primaryImageUrl, "/images/product-library/cladding-colorbond-wall.jpg", "COLORBOND wall cladding must use the supplied wall-cladding image");
+assert.equal(colorbondWall.attributes.material, "COLORBOND steel", "COLORBOND cladding must be stored as wall cladding material, not roofing");
+assert.match(colorbondWall.specificationUrl, /walling-cladding-facades/, "COLORBOND cladding must point at LYSAGHT walling/cladding source material");
+
+const featureStone = claddingProducts.find((product) => product.productCode === "CLADDING-PGH-FEATURE-STONE");
+assert.equal(featureStone.productName, "Feature Stone Wall Cladding", "Feature Stone must remain a top-level cladding option");
+assert.match(featureStone.primaryImageUrl, /^https:\/\/www\.csrassetlibrary\.com\/celum\//, "Feature Stone must use relevant stone wall imagery");
 
 finishFamilyKeys.forEach((familyKey) => {
   const products = exteriorFinishes.filter((product) => product.familyKey === familyKey);

@@ -18,8 +18,6 @@
     "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
     "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
     "https://www.jameshardie.com.au/products/hardie-fine-texture-cladding",
-    "https://www.jameshardie.com.au/products/hardie-oblique-cladding",
-    "https://www.jameshardie.com.au/products/hardie-brushed-concrete-cladding",
     "https://lysaght.com/products/roofing-guttering-fascia",
     "https://lysaght.com/profiles/quad",
     "https://protectoraluminium.com.au/products/glass-balustrade/",
@@ -31,86 +29,141 @@
     "https://www.dulux.com.au/colour/",
     "https://www.modwood.com.au/product/colour-range/",
     "https://www.modwood.com.au/product/natural-grain-collection-composite-decking/",
-    "https://www.australmasonry.com.au/nsw/keymass"
+    "https://www.australmasonry.com.au/nsw/keymass",
+    "https://www.jameshardie.com.au/products/exotec-panel-%26-system",
+    "https://www.jameshardie.com.au/products/hardieplank-weatherboard",
+    "https://colorbond.com/products/walling",
+    "https://lysaght.com/products/walling-cladding-facades",
+    "https://www.pghbricks.com.au/products/stone"
   ],
   "products": [
     {
-      "product_code": "CLADDING-JAMES-HARDIE-AXON",
       "family_key": "cladding",
       "requirement_keys": "cladding",
       "category_key": "Cladding",
       "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Fibre cement",
+        "profile": "Horizontal weatherboard",
+        "productWidthOptions": [
+          "150mm",
+          "180mm"
+        ]
+      },
+      "product_code": "CLADDING-JAMES-HARDIE-LINEA",
       "manufacturer": "James Hardie",
       "brand": "James Hardie",
       "supplier": "James Hardie",
-      "range": "Scyon Axon Cladding",
-      "product_name": "James Hardie Scyon Axon cladding",
-      "model": "Axon",
-      "description": "Vertical joint fibre cement cladding system selected by profile, colour and finish.",
-      "colour": "Builder selected exterior paint colour",
+      "range": "Linea Weatherboard",
+      "product_name": "James Hardie Linea Weatherboard",
+      "model": "Linea",
+      "description": "Pre-primed 16mm fibre cement horizontal weatherboard with deep shadow lines; kept as one selection with 150mm and 180mm board variants.",
       "finish": "Painted fibre cement",
-      "profile": "Vertical joint",
+      "profile": "Horizontal weatherboard",
+      "material": "Fibre cement",
+      "primary_image_url": "/images/product-library/cladding-linea-weatherboard-180.jpeg",
+      "thumbnail_url": "/images/product-library/cladding-linea-weatherboard-180.jpeg",
+      "image_source_url": "C:/Users/grant/Downloads/180 linea.jpeg",
+      "image_source_type": "user_supplied_reference",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
+      "specification_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
+      "supplier_url": "https://www.jameshardie.com.au/",
+      "source_type": "official_manufacturer_page_and_user_supplied_image",
+      "source_name": "James Hardie Linea Weatherboard product page; supplied 180 Linea wall image",
+      "source_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
+      "variants": [
+        {
+          "variantName": "150mm Linea board width",
+          "width": "150mm",
+          "finish": "Painted fibre cement",
+          "configuration": "weatherboard_cladding"
+        },
+        {
+          "variantName": "180mm Linea board width",
+          "width": "180mm",
+          "finish": "Painted fibre cement",
+          "configuration": "weatherboard_cladding"
+        }
+      ]
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Fibre cement",
+        "profile": "Vertical grooved panel"
+      },
+      "product_code": "CLADDING-JAMES-HARDIE-AXON",
+      "manufacturer": "James Hardie",
+      "brand": "James Hardie",
+      "supplier": "James Hardie",
+      "range": "Axon Cladding",
+      "product_name": "James Hardie Axon Cladding",
+      "model": "Axon",
+      "description": "Vertically grooved fibre cement panel cladding selected by profile, finish and paint colour.",
+      "finish": "Painted fibre cement",
+      "profile": "Vertical grooved panel",
       "material": "Fibre cement",
       "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2NKL7zlvrC4IWPDcdP8P1e/e6c7e2a9d714fa1d5f180f00b757f27b/axon-cladding-midcenturymodern-jameshardie-4_1_3.jpg?fm=webp&w=1200&h=630&fit=fill",
       "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2NKL7zlvrC4IWPDcdP8P1e/e6c7e2a9d714fa1d5f180f00b757f27b/axon-cladding-midcenturymodern-jameshardie-4_1_3.jpg",
       "image_source_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
       "official_product_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
       "specification_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
       "supplier_url": "https://www.jameshardie.com.au/",
-      "price_status": "quote_required",
-      "price_unit": "m2 quote",
-      "currency": "AUD",
-      "gst_included": "true",
-      "country": "AU",
-      "regions": "AU;QLD",
-      "active": "true",
-      "discontinued": "false",
-      "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Scyon Axon product page",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie Axon Cladding product page",
       "source_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
       "variants": [
-        { "variantName": "Axon vertical joint / painted finish", "finish": "Painted fibre cement", "configuration": "vertical_cladding" }
-      ],
-      "attributes": {
-        "recordType": "cladding_system",
-        "material": "Fibre cement",
-        "profile": "Vertical joint",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
+        {
+          "variantName": "Axon vertical grooved panel / painted finish",
+          "finish": "Painted fibre cement",
+          "configuration": "vertical_cladding"
+        }
+      ]
     },
     {
-      "product_code": "CLADDING-JAMES-HARDIE-STRIA-SMOOTH",
       "family_key": "cladding",
       "requirement_keys": "cladding",
       "category_key": "Cladding",
       "top_level_area": "exterior",
-      "manufacturer": "James Hardie",
-      "brand": "James Hardie",
-      "supplier": "James Hardie",
-      "range": "Stria Cladding Smooth",
-      "product_name": "James Hardie Stria cladding smooth",
-      "model": "Stria Smooth",
-      "description": "Horizontal fibre cement cladding system selected by profile, colour and finish.",
-      "colour": "Builder selected exterior paint colour",
-      "finish": "Painted fibre cement",
-      "profile": "Horizontal shiplap",
-      "material": "Fibre cement",
-      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/21PKOur4OnunyaNLTrlv00/3b2c9ac817ef28e0bc1d381c198da80f/stria-cladding-moderncoastal-jameshardie-3_1__1_.jpg?fm=webp&w=1200&h=630&fit=fill",
-      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/21PKOur4OnunyaNLTrlv00/3b2c9ac817ef28e0bc1d381c198da80f/stria-cladding-moderncoastal-jameshardie-3_1__1_.jpg",
-      "image_source_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
-      "specification_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
-      "supplier_url": "https://www.jameshardie.com.au/",
+      "colour": "Builder selected exterior finish colour",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
       "currency": "AUD",
@@ -120,36 +173,23 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Stria Smooth product page",
-      "source_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "variants": [
-        { "variantName": "Stria smooth / painted finish", "finish": "Painted fibre cement", "configuration": "horizontal_cladding" }
-      ],
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
       "attributes": {
         "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
         "material": "Fibre cement",
-        "profile": "Horizontal shiplap",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
-    },
-    {
+        "profile": "Expressed joint panel"
+      },
       "product_code": "CLADDING-JAMES-HARDIE-MATRIX",
-      "family_key": "cladding",
-      "requirement_keys": "cladding",
-      "category_key": "Cladding",
-      "top_level_area": "exterior",
       "manufacturer": "James Hardie",
       "brand": "James Hardie",
       "supplier": "James Hardie",
       "range": "Matrix Cladding",
-      "product_name": "James Hardie Matrix cladding",
+      "product_name": "James Hardie Matrix Cladding",
       "model": "Matrix",
       "description": "Modern expressed-joint fibre cement cladding panel system selected by profile, colour and finish.",
-      "colour": "Builder selected exterior paint colour",
       "finish": "Painted fibre cement",
       "profile": "Expressed joint panel",
       "material": "Fibre cement",
@@ -157,11 +197,28 @@
       "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/7J7bWMRvBibqr0W13ty9Re/87f8ce8c2e8c7d81c7e7ca82dcb868ba/matrix-cladding-box-modern-withprop-jameshardie-1_1__1_.jpg",
       "image_source_url": "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
       "official_product_url": "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
       "specification_url": "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
       "supplier_url": "https://www.jameshardie.com.au/",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie Matrix Cladding product page",
+      "source_url": "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
+      "variants": [
+        {
+          "variantName": "Matrix expressed joint panel / painted finish",
+          "finish": "Painted fibre cement",
+          "configuration": "expressed_joint_cladding"
+        }
+      ]
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
       "currency": "AUD",
@@ -171,48 +228,52 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Matrix product page",
-      "source_url": "https://www.jameshardie.com.au/products/scyon-matrix-cladding",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "variants": [
-        { "variantName": "Matrix expressed joint / painted finish", "finish": "Painted fibre cement", "configuration": "expressed_joint_cladding" }
-      ],
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
       "attributes": {
         "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
         "material": "Fibre cement",
-        "profile": "Expressed joint panel",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
-    },
-    {
-      "product_code": "CLADDING-JAMES-HARDIE-LINEA",
-      "family_key": "cladding",
-      "requirement_keys": "cladding",
-      "category_key": "Cladding",
-      "top_level_area": "exterior",
+        "profile": "Horizontal shiplap"
+      },
+      "product_code": "CLADDING-JAMES-HARDIE-STRIA",
       "manufacturer": "James Hardie",
       "brand": "James Hardie",
       "supplier": "James Hardie",
-      "range": "Linea Weatherboard",
-      "product_name": "James Hardie Linea weatherboard",
-      "model": "Linea",
-      "description": "Deep shadow-line fibre cement weatherboard cladding system selected by board profile, colour and finish.",
-      "colour": "Builder selected exterior paint colour",
+      "range": "Stria Cladding",
+      "product_name": "James Hardie Stria Cladding",
+      "model": "Stria",
+      "description": "Horizontal fibre cement shiplap cladding system selected by profile, colour and finish.",
       "finish": "Painted fibre cement",
-      "profile": "Weatherboard",
+      "profile": "Horizontal shiplap",
       "material": "Fibre cement",
-      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/1z707XTVTyndCpRm6lxEhU/4c717732f1502d35ed5a0dd6d48b06a1/linea-weatherboard-modernheritage-jameshardie-4_1_1.jpg?fm=webp&w=1200&h=630&fit=fill",
-      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/1z707XTVTyndCpRm6lxEhU/4c717732f1502d35ed5a0dd6d48b06a1/linea-weatherboard-modernheritage-jameshardie-4_1_1.jpg",
-      "image_source_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
+      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/21PKOur4OnunyaNLTrlv00/3b2c9ac817ef28e0bc1d381c198da80f/stria-cladding-moderncoastal-jameshardie-3_1__1_.jpg?fm=webp&w=1200&h=630&fit=fill",
+      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/21PKOur4OnunyaNLTrlv00/3b2c9ac817ef28e0bc1d381c198da80f/stria-cladding-moderncoastal-jameshardie-3_1__1_.jpg",
+      "image_source_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
-      "official_product_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
-      "specification_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
+      "official_product_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
+      "specification_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
       "supplier_url": "https://www.jameshardie.com.au/",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie Stria Cladding Smooth product page",
+      "source_url": "https://www.jameshardie.com.au/products/stria-cladding-smooth",
+      "variants": [
+        {
+          "variantName": "Stria smooth horizontal shiplap / painted finish",
+          "finish": "Painted fibre cement",
+          "configuration": "horizontal_cladding"
+        }
+      ]
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
       "currency": "AUD",
@@ -222,36 +283,23 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Linea Weatherboard product page",
-      "source_url": "https://www.jameshardie.com.au/products/scyon-linea-weatherboard",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "variants": [
-        { "variantName": "Linea weatherboard / painted finish", "finish": "Painted fibre cement", "configuration": "weatherboard_cladding" }
-      ],
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
       "attributes": {
         "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
         "material": "Fibre cement",
-        "profile": "Weatherboard",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
-    },
-    {
+        "profile": "Fine texture panel"
+      },
       "product_code": "CLADDING-JAMES-HARDIE-FINE-TEXTURE",
-      "family_key": "cladding",
-      "requirement_keys": "cladding",
-      "category_key": "Cladding",
-      "top_level_area": "exterior",
       "manufacturer": "James Hardie",
       "brand": "James Hardie",
       "supplier": "James Hardie",
       "range": "Hardie Fine Texture Cladding",
-      "product_name": "James Hardie Fine Texture cladding",
+      "product_name": "James Hardie Fine Texture Cladding",
       "model": "Hardie Fine Texture",
       "description": "Fine-textured fibre cement cladding panel system selected by colour and finish.",
-      "colour": "Builder selected exterior paint colour",
       "finish": "Fine textured painted fibre cement",
       "profile": "Fine texture panel",
       "material": "Fibre cement",
@@ -259,113 +307,151 @@
       "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/NBlmNgtjNyuInLFeskTf7/b5a36c0e446450ac3525b1e50e92fead/hardiefinetexture-cladding-japandi-jameshardie-4_1__1___1_.png",
       "image_source_url": "https://www.jameshardie.com.au/products/hardie-fine-texture-cladding",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
       "official_product_url": "https://www.jameshardie.com.au/products/hardie-fine-texture-cladding",
       "specification_url": "https://www.jameshardie.com.au/products/hardie-fine-texture-cladding",
       "supplier_url": "https://www.jameshardie.com.au/",
-      "price_status": "quote_required",
-      "price_unit": "m2 quote",
-      "currency": "AUD",
-      "gst_included": "true",
-      "country": "AU",
-      "regions": "AU;QLD",
-      "active": "true",
-      "discontinued": "false",
-      "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Fine Texture product page",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie Fine Texture Cladding product page",
       "source_url": "https://www.jameshardie.com.au/products/hardie-fine-texture-cladding",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
       "variants": [
-        { "variantName": "Fine Texture panel / painted finish", "finish": "Fine textured painted fibre cement", "configuration": "fine_texture_cladding" }
-      ],
-      "attributes": {
-        "recordType": "cladding_system",
-        "material": "Fibre cement",
-        "profile": "Fine texture panel",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
+        {
+          "variantName": "Fine Texture panel / painted finish",
+          "finish": "Fine textured painted fibre cement",
+          "configuration": "fine_texture_cladding"
+        }
+      ]
     },
     {
-      "product_code": "CLADDING-JAMES-HARDIE-OBLIQUE",
       "family_key": "cladding",
       "requirement_keys": "cladding",
       "category_key": "Cladding",
       "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Fibre cement",
+        "profile": "Expressed joint facade panel"
+      },
+      "product_code": "CLADDING-JAMES-HARDIE-EXOTEC",
       "manufacturer": "James Hardie",
       "brand": "James Hardie",
       "supplier": "James Hardie",
-      "range": "Hardie Oblique Cladding",
-      "product_name": "James Hardie Oblique cladding",
-      "model": "Hardie Oblique",
-      "description": "Oblique-groove fibre cement cladding system selected by board width, colour and finish.",
-      "colour": "Builder selected exterior paint colour",
+      "range": "ExoTec Facade Panel and System",
+      "product_name": "James Hardie ExoTec Facade Panel",
+      "model": "ExoTec",
+      "description": "Expressed-joint facade panel and fixing system for residential and commercial facade panels.",
+      "finish": "Site finished facade panel",
+      "profile": "Expressed joint facade panel",
+      "material": "Fibre cement",
+      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/25Q3BeFfOVXapKEExytsL3/bb3acfb73203a29cb8b579496fc72685/exotec-southport-park-jameshardie_5.jpg?fm=webp&w=1200&h=630&fit=fill",
+      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/25Q3BeFfOVXapKEExytsL3/bb3acfb73203a29cb8b579496fc72685/exotec-southport-park-jameshardie_5.jpg?fm=webp",
+      "image_source_url": "https://www.jameshardie.com.au/products/exotec-panel-%26-system",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.jameshardie.com.au/products/exotec-panel-%26-system",
+      "specification_url": "https://www.jameshardie.com.au/products/exotec-panel-%26-system",
+      "supplier_url": "https://www.jameshardie.com.au/",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie ExoTec Facade Panel and System product page",
+      "source_url": "https://www.jameshardie.com.au/products/exotec-panel-%26-system",
+      "variants": [
+        {
+          "variantName": "ExoTec expressed joint facade panel / site finish",
+          "finish": "Site finished facade panel",
+          "configuration": "facade_panel_cladding"
+        }
+      ]
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected exterior finish colour",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Fibre cement",
+        "profile": "Weatherboard",
+        "productWidthOptions": [
+          "230mm",
+          "300mm"
+        ]
+      },
+      "product_code": "CLADDING-JAMES-HARDIE-HARDIE-PLANK",
+      "manufacturer": "James Hardie",
+      "brand": "James Hardie",
+      "supplier": "James Hardie",
+      "range": "Hardie Plank Weatherboard",
+      "product_name": "James Hardie Hardie Plank Weatherboard",
+      "model": "Hardie Plank",
+      "description": "7.5mm site-painted fibre cement weatherboard available in smooth and woodgrain profiles.",
       "finish": "Painted fibre cement",
-      "profile": "Oblique groove",
+      "profile": "Weatherboard",
       "material": "Fibre cement",
-      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/6bO7JKpiQpkTxUWGAZCC94/748991f72b67e9cec4d0459c33c38c76/hardie-oblique-cladding-vignette-namadji-jameshardie-1_1_1.png?fm=webp&w=1200&h=630&fit=fill",
-      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/6bO7JKpiQpkTxUWGAZCC94/748991f72b67e9cec4d0459c33c38c76/hardie-oblique-cladding-vignette-namadji-jameshardie-1_1_1.png",
-      "image_source_url": "https://www.jameshardie.com.au/products/hardie-oblique-cladding",
+      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/6bLLbj772teJ6KsYcSY9HL/8834474790de8e40f6094b9fc3a492ef/hardie-plank-moderncoastal-exterior-3birds-house11-jameshardie-8__1___1_.avif?fm=webp&w=1200&h=630&fit=fill",
+      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/6bLLbj772teJ6KsYcSY9HL/8834474790de8e40f6094b9fc3a492ef/hardie-plank-moderncoastal-exterior-3birds-house11-jameshardie-8__1___1_.avif?fm=webp",
+      "image_source_url": "https://www.jameshardie.com.au/products/hardieplank-weatherboard",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
-      "official_product_url": "https://www.jameshardie.com.au/products/hardie-oblique-cladding",
-      "specification_url": "https://www.jameshardie.com.au/products/hardie-oblique-cladding",
+      "official_product_url": "https://www.jameshardie.com.au/products/hardieplank-weatherboard",
+      "specification_url": "https://www.jameshardie.com.au/products/hardieplank-weatherboard",
       "supplier_url": "https://www.jameshardie.com.au/",
-      "price_status": "quote_required",
-      "price_unit": "m2 quote",
-      "currency": "AUD",
-      "gst_included": "true",
-      "country": "AU",
-      "regions": "AU;QLD",
-      "active": "true",
-      "discontinued": "false",
-      "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Oblique product page",
-      "source_url": "https://www.jameshardie.com.au/products/hardie-oblique-cladding",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
+      "source_type": "official_manufacturer_page",
+      "source_name": "James Hardie Hardie Plank Weatherboard product page",
+      "source_url": "https://www.jameshardie.com.au/products/hardieplank-weatherboard",
       "variants": [
-        { "variantName": "Oblique groove / painted finish", "finish": "Painted fibre cement", "configuration": "oblique_cladding" }
-      ],
-      "attributes": {
-        "recordType": "cladding_system",
-        "material": "Fibre cement",
-        "profile": "Oblique groove",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
+        {
+          "variantName": "Hardie Plank Smooth 230mm",
+          "width": "230mm",
+          "texture": "Smooth",
+          "finish": "Painted fibre cement",
+          "configuration": "weatherboard_cladding"
+        },
+        {
+          "variantName": "Hardie Plank Woodgrain 300mm",
+          "width": "300mm",
+          "texture": "Woodgrain",
+          "finish": "Painted fibre cement",
+          "configuration": "weatherboard_cladding"
+        }
+      ]
     },
     {
-      "product_code": "CLADDING-JAMES-HARDIE-BRUSHED-CONCRETE",
       "family_key": "cladding",
       "requirement_keys": "cladding",
       "category_key": "Cladding",
       "top_level_area": "exterior",
-      "manufacturer": "James Hardie",
-      "brand": "James Hardie",
-      "supplier": "James Hardie",
-      "range": "Hardie Brushed Concrete Cladding",
-      "product_name": "James Hardie Brushed Concrete cladding",
-      "model": "Hardie Brushed Concrete",
-      "description": "Concrete-look fibre cement cladding panel system selected by colour and finish.",
-      "colour": "Builder selected exterior paint colour",
-      "finish": "Brushed concrete-look fibre cement",
-      "profile": "Concrete-look panel",
-      "material": "Fibre cement",
-      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2S903olBu9MWmHBdr39PPW/0d8e61ecce0122e04813c235d679f894/brushedconcrete-cladding-moderncoastal-jameshardie-4_1__1_.jpg?fm=webp&w=1200&h=630&fit=fill",
-      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2S903olBu9MWmHBdr39PPW/0d8e61ecce0122e04813c235d679f894/brushedconcrete-cladding-moderncoastal-jameshardie-4_1__1_.jpg",
-      "image_source_url": "https://www.jameshardie.com.au/products/hardie-brushed-concrete-cladding",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.jameshardie.com.au/products/hardie-brushed-concrete-cladding",
-      "specification_url": "https://www.jameshardie.com.au/products/hardie-brushed-concrete-cladding",
-      "supplier_url": "https://www.jameshardie.com.au/",
+      "colour": "COLORBOND steel colour range",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
       "currency": "AUD",
@@ -375,21 +461,118 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
-      "source_type": "official_manufacturer_pages",
-      "source_name": "James Hardie Brushed Concrete product page",
-      "source_url": "https://www.jameshardie.com.au/products/hardie-brushed-concrete-cladding",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "variants": [
-        { "variantName": "Brushed Concrete panel / concrete-look finish", "finish": "Brushed concrete-look fibre cement", "configuration": "brushed_concrete_cladding" }
-      ],
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
       "attributes": {
         "recordType": "cladding_system",
-        "material": "Fibre cement",
-        "profile": "Concrete-look panel",
-        "colourSelectionMode": "paint_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff"
-      }
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "COLORBOND steel",
+        "profile": "Metal wall cladding profile",
+        "materialManufacturer": "BlueScope",
+        "profileSupplier": "LYSAGHT"
+      },
+      "product_code": "CLADDING-COLORBOND-LYSAGHT-WALL",
+      "manufacturer": "BlueScope",
+      "brand": "COLORBOND steel",
+      "supplier": "LYSAGHT",
+      "range": "COLORBOND Metal Wall Cladding",
+      "product_name": "COLORBOND / LYSAGHT Metal Wall Cladding",
+      "model": "Metal wall cladding",
+      "description": "Metal wall cladding option using LYSAGHT profiles manufactured from COLORBOND steel, selected by profile and colour.",
+      "finish": "COLORBOND steel finish",
+      "profile": "Metal wall cladding profile",
+      "material": "COLORBOND steel",
+      "primary_image_url": "/images/product-library/cladding-colorbond-wall.jpg",
+      "thumbnail_url": "/images/product-library/cladding-colorbond-wall.jpg",
+      "image_source_url": "C:/Users/grant/Downloads/Week_5_Facebook_0010_COLORBOND_90_v17-0-01-15-10.jpg",
+      "image_source_type": "user_supplied_reference",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://colorbond.com/products/walling",
+      "specification_url": "https://lysaght.com/products/walling-cladding-facades",
+      "supplier_url": "https://lysaght.com/",
+      "source_type": "official_manufacturer_pages_and_user_supplied_image",
+      "source_name": "COLORBOND walling and LYSAGHT walling/cladding/facades pages; supplied metal wall cladding image",
+      "source_url": "https://colorbond.com/products/walling",
+      "variants": [
+        {
+          "variantName": "COLORBOND steel wall cladding / vertical profile",
+          "material": "COLORBOND steel",
+          "configuration": "metal_wall_cladding"
+        },
+        {
+          "variantName": "COLORBOND steel wall cladding / horizontal profile",
+          "material": "COLORBOND steel",
+          "configuration": "metal_wall_cladding"
+        }
+      ]
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected PGH Stone finish",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Reconstituted sandstone",
+        "profile": "Stone veneer cladding",
+        "supplierRange": "PGH Stone"
+      },
+      "product_code": "CLADDING-PGH-FEATURE-STONE",
+      "manufacturer": "PGH Bricks & Pavers",
+      "brand": "PGH Stone",
+      "supplier": "PGH Bricks & Pavers",
+      "range": "PGH Stone",
+      "product_name": "Feature Stone Wall Cladding",
+      "model": "PGH Stone",
+      "description": "Manufactured stone veneer cladding for interior or exterior feature walls, facades, pillars and fireplaces.",
+      "finish": "Manufactured stone veneer",
+      "profile": "Stone veneer cladding",
+      "material": "Reconstituted sandstone",
+      "primary_image_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
+      "thumbnail_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
+      "image_source_url": "https://www.pghbricks.com.au/products/stone",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.pghbricks.com.au/products/stone",
+      "specification_url": "https://www.pghbricks.com.au/products/stone",
+      "supplier_url": "https://www.pghbricks.com.au/",
+      "source_type": "official_manufacturer_page",
+      "source_name": "PGH Stone manufactured stone cladding page",
+      "source_url": "https://www.pghbricks.com.au/products/stone",
+      "variants": [
+        {
+          "variantName": "PGH Stone Classic Ledgestone",
+          "profile": "Classic Ledgestone",
+          "configuration": "stone_wall_cladding"
+        },
+        {
+          "variantName": "PGH Stone Natural Fieldstone",
+          "profile": "Natural Fieldstone",
+          "configuration": "stone_wall_cladding"
+        },
+        {
+          "variantName": "PGH Stone Rugged Ledgestone",
+          "profile": "Rugged Ledgestone",
+          "configuration": "stone_wall_cladding"
+        }
+      ]
     },
     {
       "product_code": "GUTTER-LYSAGHT-QUAD-COLORBOND",
@@ -435,12 +618,28 @@
       "source_retrieved_at": "2026-08-15",
       "source_verified_at": "2026-08-15",
       "colourSwatches": [
-        { "name": "Match Roof Colour", "hex": "#dcdacc", "source": "shared COLORBOND-compatible roof colour selection" },
-        { "name": "Choose Different Colour", "hex": "#323232", "source": "shared COLORBOND-compatible colour selection" }
+        {
+          "name": "Match Roof Colour",
+          "hex": "#dcdacc",
+          "source": "shared COLORBOND-compatible roof colour selection"
+        },
+        {
+          "name": "Choose Different Colour",
+          "hex": "#323232",
+          "source": "shared COLORBOND-compatible colour selection"
+        }
       ],
       "variants": [
-        { "variantName": "Match roof colour", "colour": "Match roof colour", "finish": "COLORBOND steel" },
-        { "variantName": "Choose different COLORBOND colour", "colour": "Choose different colour", "finish": "COLORBOND steel" }
+        {
+          "variantName": "Match roof colour",
+          "colour": "Match roof colour",
+          "finish": "COLORBOND steel"
+        },
+        {
+          "variantName": "Choose different COLORBOND colour",
+          "colour": "Choose different colour",
+          "finish": "COLORBOND steel"
+        }
       ],
       "attributes": {
         "recordType": "gutter_fascia_system",
@@ -782,18 +981,39 @@
       "source_retrieved_at": "2026-08-15",
       "source_verified_at": "2026-08-15",
       "colourSwatches": [
-        { "name": "Selected light exterior colour", "hex": "#f4f1e8", "source": "Dulux colour selection workflow" },
-        { "name": "Selected mid exterior colour", "hex": "#b7b1a6", "source": "Dulux colour selection workflow" },
-        { "name": "Selected dark exterior colour", "hex": "#343434", "source": "Dulux colour selection workflow" }
+        {
+          "name": "Selected light exterior colour",
+          "hex": "#f4f1e8",
+          "source": "Dulux colour selection workflow"
+        },
+        {
+          "name": "Selected mid exterior colour",
+          "hex": "#b7b1a6",
+          "source": "Dulux colour selection workflow"
+        },
+        {
+          "name": "Selected dark exterior colour",
+          "hex": "#343434",
+          "source": "Dulux colour selection workflow"
+        }
       ],
       "variants": [
-        { "variantName": "Low Sheen / selected colour", "finish": "Low Sheen", "colour": "Builder selected Dulux colour" }
+        {
+          "variantName": "Low Sheen / selected colour",
+          "finish": "Low Sheen",
+          "colour": "Builder selected Dulux colour"
+        }
       ],
       "attributes": {
         "recordType": "paint_system",
         "brandSystem": "Dulux Weathershield",
         "colourSelectionMode": "visual_swatch_inside_exterior_paint",
-        "finishOptions": ["Low Sheen", "Semi Gloss", "Matt", "Gloss"]
+        "finishOptions": [
+          "Low Sheen",
+          "Semi Gloss",
+          "Matt",
+          "Gloss"
+        ]
       }
     },
     {
@@ -838,11 +1058,23 @@
       "source_retrieved_at": "2026-08-15",
       "source_verified_at": "2026-08-15",
       "colourSwatches": [
-        { "name": "Selected trim colour", "hex": "#f5f5f0", "source": "Dulux colour selection workflow" },
-        { "name": "Selected contrast colour", "hex": "#1f2933", "source": "Dulux colour selection workflow" }
+        {
+          "name": "Selected trim colour",
+          "hex": "#f5f5f0",
+          "source": "Dulux colour selection workflow"
+        },
+        {
+          "name": "Selected contrast colour",
+          "hex": "#1f2933",
+          "source": "Dulux colour selection workflow"
+        }
       ],
       "variants": [
-        { "variantName": "Semi Gloss / selected colour", "finish": "Semi Gloss", "colour": "Builder selected Dulux colour" }
+        {
+          "variantName": "Semi Gloss / selected colour",
+          "finish": "Semi Gloss",
+          "colour": "Builder selected Dulux colour"
+        }
       ],
       "attributes": {
         "recordType": "paint_system",
@@ -985,7 +1217,11 @@
       "source_retrieved_at": "2026-08-15",
       "source_verified_at": "2026-08-15",
       "variants": [
-        { "variantName": "Natural Grain / selected colour", "finish": "Natural grain composite", "configuration": "composite_decking" }
+        {
+          "variantName": "Natural Grain / selected colour",
+          "finish": "Natural grain composite",
+          "configuration": "composite_decking"
+        }
       ],
       "attributes": {
         "recordType": "decking_system",
