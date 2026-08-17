@@ -2,13 +2,20 @@
 // Displays usage stats and warnings for Email/SMS limits
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import { supabase } from "../lib/supabaseClient";
 
 export default function UsageWarning() {
+  const router = useRouter();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isWebsiteBuilderRoute = String(router?.pathname || "").startsWith("/modules/website-builder");
 
   useEffect(() => {
+    if (isWebsiteBuilderRoute) {
+      setLoading(false);
+      return undefined;
+    }
     const controller = new AbortController();
     let active = true;
     fetchUsageStats({ signal: controller.signal, isActive: () => active });
@@ -16,7 +23,7 @@ export default function UsageWarning() {
       active = false;
       controller.abort();
     };
-  }, []);
+  }, [isWebsiteBuilderRoute]);
 
   function finishLoading(isActive) {
     if (isActive()) setLoading(false);

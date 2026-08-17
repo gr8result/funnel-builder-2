@@ -2740,10 +2740,11 @@ export default function VisualBuilderPage() {
     let cancelled = false;
 
     const syncServerDefaults = async () => {
+      if (!session?.access_token) return;
       try {
         const response = await fetch("/api/website-builder/defaults", {
           cache: "no-store",
-          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const payload = await readApiJson(response);
         if (!response.ok || !payload?.ok || cancelled) return;

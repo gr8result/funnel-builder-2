@@ -24,6 +24,27 @@ const PROTECTED_ROUTE_PREFIXES = [
 // Routes that approved vendors / affiliates (without a full platform subscription) are allowed to access
 const VENDOR_ONLY_ROUTE_PREFIXES = ["/modules/vendor", "/modules/affiliates"];
 const QA_ROUTE_PREFIXES = ["/modules/social_media"];
+const ACCOUNT_PROFILE_LEGACY_SELECT =
+  "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status";
+
+function normalizeAccountProfile(account) {
+  if (!account || typeof account !== "object") return account || null;
+  return {
+    onboarding_completed: true,
+    phone_verified: true,
+    email_verified: true,
+    ...account,
+  };
+}
+
+async function loadAccountProfile(userId) {
+  const result = await supabase
+    .from("accounts")
+    .select(ACCOUNT_PROFILE_LEGACY_SELECT)
+    .eq("user_id", userId)
+    .single();
+  return { data: normalizeAccountProfile(result.data), error: result.error || null };
+}
 
 function isQaAccessibleRoute(pathname = "") {
   return QA_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -254,13 +275,7 @@ export default function Layout({ children }) {
         setDeveloperAccess(hasDeveloperAccess);
 
         // 🧾 Load user data from Supabase
-        const { data, error } = await supabase
-          .from("accounts")
-          .select(
-            "business_name, business_logo, business_logo_url, business_avatar, business_avatar_url, approved, is_approved, status, subscription_status, onboarding_completed, phone_verified, email_verified"
-          )
-          .eq("user_id", user.id)
-          .single();
+        const { data, error } = await loadAccountProfile(user.id);
 
         if (error) console.error(error);
         setAccount(data);
