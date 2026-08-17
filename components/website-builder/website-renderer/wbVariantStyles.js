@@ -1154,7 +1154,7 @@ function normalizeTestimonialItem(item, index) {
       author: String(item.author || item.name || ""),
       role: String(item.role || item.title || item.company || ""),
       rating: Number.isFinite(Number(item.rating)) ? Math.max(1, Math.min(5, Number(item.rating))) : 5,
-      avatarUrl: String(item.avatarUrl || item.avatar || item.image || ""),
+      avatarUrl: String(item.avatarUrl || item.avatar || item.imageUrl || item.image || item.src || item.url || ""),
       avatarAssetId: String(item.avatarAssetId || ""),
     };
   }
@@ -2470,7 +2470,10 @@ const sharedStyles = {
   avatar: { width: 54, height: 54, borderRadius: 999, objectFit: "cover" },
   authorName: { margin: 0, fontSize: 16, lineHeight: 1.2, fontWeight: 600, color: "#0f172a" },
   authorMeta: { margin: "4px 0 0", color: "#64748b", fontSize: MIN_TEXT_SIZE, lineHeight: 1.4 },
-  priceGrid: (compact, count = 3, cardWidth = 260, cardGap = 24) => ({ display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(${Math.max(1, count)}, minmax(0, ${Math.max(180, Number(cardWidth) || 260)}px))`, gap: compact ? 16 : Math.max(8, Number(cardGap) || 24), marginTop: 20, alignItems: compact ? "stretch" : "center", justifyContent: compact ? "stretch" : "center" }),
+  priceGrid: (compact, count = 3, cardWidth = 260, cardGap = 24) => {
+    const normalizedCardWidth = Math.max(260, Number(cardWidth) || 260);
+    return { display: "grid", gridTemplateColumns: compact ? "1fr" : `repeat(${Math.max(1, count)}, minmax(${Math.min(260, normalizedCardWidth)}px, ${normalizedCardWidth}px))`, gap: compact ? 16 : Math.max(8, Number(cardGap) || 24), marginTop: 20, alignItems: compact ? "stretch" : "center", justifyContent: compact ? "stretch" : "center" };
+  },
   priceCardLayout: (compact, highlighted) => ({ display: "grid", gap: compact ? 14 : 18, minHeight: compact ? "auto" : highlighted ? 620 : 580 }),
   priceHero: { display: "grid", gap: 6, paddingRight: 88 },
   planName: { margin: 0, fontSize: 24, fontWeight: 600, color: "#0f172a", lineHeight: 1.2 },

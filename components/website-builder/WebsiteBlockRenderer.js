@@ -2906,6 +2906,45 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
         : device === "tablet"
           ? Math.min(2, Math.max(1, plans.length))
           : Math.max(1, plans.length);
+      const pricingCardGap = Math.max(8, Number(props.pricingCardGap) || (pricingVariant.fullWidthGrid ? 16 : 24));
+      const pricingCardWidth = Math.max(260, Number(props.pricingCardWidth) || (pricingVariant.fullWidthGrid ? 300 : 260));
+      const pricingGridColumns = pricingVariant.fullWidthGrid
+        ? (
+            device === "desktop"
+              ? `repeat(${pricingColumnCount}, minmax(${Math.max(260, Math.min(320, pricingCardWidth))}px, 1fr))`
+              : pricingColumnCount > 1
+                ? `repeat(${pricingColumnCount}, minmax(260px, 1fr))`
+                : "minmax(0, 1fr)"
+          )
+        : `repeat(${pricingColumnCount}, minmax(${device === "desktop" ? Math.min(260, pricingCardWidth) : 0}px, ${device === "desktop" ? `${pricingCardWidth}px` : "1fr"}))`;
+      const splitFeatureRowStyle = {
+        display: "grid",
+        gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(96px, 0.65fr) minmax(138px, 1.35fr)",
+        gap: compact ? 4 : 8,
+        alignItems: "start",
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+        overflow: "visible",
+      };
+      const splitFeatureTextStyle = {
+        fontSize: 16,
+        lineHeight: 1.5,
+        minWidth: compact ? 0 : 72,
+        maxWidth: "100%",
+        whiteSpace: "normal",
+        overflowWrap: "break-word",
+        wordBreak: "normal",
+      };
+      const splitPricingFeatureText = (value) => {
+        const text = String(value || "");
+        const match = text.match(/^(.*?)\s*(?:—|–|-)\s+(.+)$/);
+        if (!match) return { label: text, value: "" };
+        return {
+          label: match[1].trim() || text,
+          value: match[2].trim(),
+        };
+      };
       const patchPlan = (planIndex, patch) => {
         if (!editor || typeof onChangeBlock !== "function") return;
         const normalizedPatch = { ...patch };
@@ -3030,13 +3069,13 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               ...(pricingVariant.grid?.(compact, plans.length) || {}),
               ...(pricingVariant.fullWidthGrid
                 ? {
-                    gridTemplateColumns: `repeat(${pricingColumnCount}, minmax(0, 1fr))`,
-                    gap: Math.max(8, Number(props.pricingCardGap) || 16),
+                    gridTemplateColumns: pricingGridColumns,
+                    gap: pricingCardGap,
                     justifyContent: device === "desktop" ? "stretch" : "center",
                   }
                 : {
-                      gridTemplateColumns: `repeat(${pricingColumnCount}, minmax(0, ${device === "desktop" ? `${Math.max(180, Number(props.pricingCardWidth) || 260)}px` : "1fr"}))`,
-                      gap: Math.max(8, Number(props.pricingCardGap) || 24),
+                      gridTemplateColumns: pricingGridColumns,
+                      gap: pricingCardGap,
                       justifyContent: device === "desktop" ? "center" : "stretch",
                     }),
             }}
@@ -3111,13 +3150,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                 <div style={sharedStyles.planFeatures}>
                   {asArray(plan.includedFeatures).map((feature, featureIdx) => {
                     if (pricingVariant.featureSplit) {
-                      const parts = String(feature).split(" — ");
-                      const label = parts[0] || feature;
-                      const value = parts.slice(1).join(" — ");
+                      const { label, value } = splitPricingFeatureText(feature);
                       return (
-                        <div key={`${feature}-${featureIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", ...featureRowStyle }}>
-                          <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{label}</span>
-                          {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{value}</span>}
+                        <div key={`${feature}-${featureIdx}`} data-pricing-feature-row="true" style={{ ...splitFeatureRowStyle, ...featureRowStyle }}>
+                          <span style={{ ...splitFeatureTextStyle, color: pricingTone?.text || "#f8fafc" }}>{label}</span>
+                          {value && <span style={{ ...splitFeatureTextStyle, color: pricingVariant.planAccentColor?.(idx) || accentTone, fontWeight: 600, textAlign: compact ? "left" : "right" }}>{value}</span>}
                         </div>
                       );
                     }
@@ -3142,13 +3179,11 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                   <div style={sharedStyles.planExtrasList}>
                     {asArray(plan.extras).length ? asArray(plan.extras).map((extra, extraIdx) => {
                       if (pricingVariant.featureSplit) {
-                        const parts = String(extra).split(" — ");
-                        const label = parts[0] || extra;
-                        const value = parts.slice(1).join(" — ");
+                        const { label, value } = splitPricingFeatureText(extra);
                         return (
-                          <div key={`${extra}-${extraIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                            <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{label}</span>
-                            {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{value}</span>}
+                          <div key={`${extra}-${extraIdx}`} data-pricing-feature-row="true" style={{ ...splitFeatureRowStyle, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                            <span style={{ ...splitFeatureTextStyle, color: pricingTone?.text || "#f8fafc" }}>{label}</span>
+                            {value && <span style={{ ...splitFeatureTextStyle, color: pricingVariant.planAccentColor?.(idx) || accentTone, fontWeight: 600, textAlign: compact ? "left" : "right" }}>{value}</span>}
                           </div>
                         );
                       }
@@ -3190,7 +3225,21 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               </ScrollReveal>
             ))}
           </div>
+          {props.pricingNote ? (
+            <p
+              style={{
+                margin: compact ? "18px auto 0" : "24px auto 0",
+                maxWidth: 760,
+                color: props.pricingNoteColor || "rgba(248,250,252,0.66)",
+                fontSize: compact ? 13 : 14,
+                lineHeight: 1.5,
+                textAlign: "center",
+              }}
+              dangerouslySetInnerHTML={{ __html: asRichHtml(props.pricingNote) }}
+            />
+          ) : null}
           {(() => {
+            if (props.showSavingsDisclosure !== true) return null;
             if (!pricingVariant.planAccentColor) return null;
             const parsePx = (str) => parseFloat(String(str || "").replace(/[^0-9.]/g, "")) || 0;
             const fmtUSD = (v) => {

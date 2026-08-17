@@ -19,6 +19,7 @@ import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder
 import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 import { stickyNavigationFrameStyle } from "../../lib/website-builder/stickyNavigationFrame";
+import { repairProjectTestimonialAvatarUrls } from "../../lib/website-builder/testimonialImages";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -413,7 +414,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   const device = useResponsiveDevice(initialCompact ? "mobile" : "desktop");
   const compact = device !== "desktop";
 
-  const project = publication?.site_data || {};
+  const project = repairProjectTestimonialAvatarUrls(publication?.site_data || {});
   const publishedAssets = normalizeWebsiteBuilderAssets(project?.brandAssets);
   const pages = Array.isArray(project.pages) ? project.pages : [];
   const footerContext = { pages, logInvalid: true };
