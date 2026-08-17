@@ -44,8 +44,11 @@ import {
   PRODUCT_FAMILIES,
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
+  MASTER_CATALOGUE_STORAGE_KEY,
   imageForFamilyKey,
   isRemovedDuplicateCladdingProduct,
+  mergeMasterCatalogueProducts,
+  normalizeMasterProductRecord,
 } from "../../lib/product-library/catalogueModel";
 import exteriorFinishesCatalogue from "../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 import {
@@ -6805,6 +6808,7 @@ function ProductLibrarySheet({ sheet }) {
   const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
   const [search, setSearch] = useState("");
+  const [productLibraryMasterProducts, setProductLibraryMasterProducts] = useState([]);
   const selectedArea = PRODUCT_LIBRARY_TOP_LEVEL_KEYS.map((key) => TOP_LEVEL_AREAS.find((area) => area.key === key)).find((area) => area?.key === selectedAreaKey) || null;
   const visibleAreas = PRODUCT_LIBRARY_TOP_LEVEL_KEYS.map((key) => TOP_LEVEL_AREAS.find((area) => area.key === key)).filter(Boolean);
   const visibleCategories = useMemo(() => embeddedProductLibraryCategories(selectedAreaKey), [selectedAreaKey]);
@@ -6813,9 +6817,9 @@ function ProductLibrarySheet({ sheet }) {
   const selectedFamily = PRODUCT_FAMILIES.find((family) => family.familyKey === selectedFamilyKey) || null;
   const selectedFamilyCatalogueProducts = useMemo(() => {
     if (selectedFamily?.familyKey !== "cladding") return [];
-    return (exteriorFinishesCatalogue.products || [])
-      .filter((product) => (product.family_key === "cladding" || product.familyKey === "cladding") && !isRemovedDuplicateCladdingProduct(product));
-  }, [selectedFamily?.familyKey]);
+    return productLibraryMasterProducts
+      .filter((product) => product.familyKey === "cladding" && !isRemovedDuplicateCladdingProduct(product));
+  }, [productLibraryMasterProducts, selectedFamily?.familyKey]);
   const q = search.trim().toLowerCase();
   const searchedFamilies = useMemo(() => {
     if (!q) return [];
@@ -6846,6 +6850,19 @@ function ProductLibrarySheet({ sheet }) {
     else if (selectedCategoryKey) setSelectedCategoryKey("");
     else setSelectedAreaKey("");
   }
+
+  useEffect(() => {
+    const baselineProducts = (exteriorFinishesCatalogue.products || []).map((product) => normalizeMasterProductRecord(product));
+    let storedProducts = [];
+    if (typeof window !== "undefined") {
+      try {
+        storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
+      } catch {
+        storedProducts = [];
+      }
+    }
+    setProductLibraryMasterProducts(mergeMasterCatalogueProducts(baselineProducts, storedProducts));
+  }, []);
 
   return (
     <div style={styles.productLibraryHierarchyShell} data-catalogue-kind="product-library">

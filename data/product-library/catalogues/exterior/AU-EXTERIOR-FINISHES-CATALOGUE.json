@@ -94,7 +94,9 @@
           "finish": "Painted fibre cement",
           "configuration": "weatherboard_cladding"
         }
-      ]
+      ],
+      "display_order": 1,
+      "sort_order": 1
     },
     {
       "family_key": "cladding",
@@ -153,14 +155,16 @@
           "finish": "Painted fibre cement",
           "configuration": "weatherboard_cladding"
         }
-      ]
+      ],
+      "display_order": 2,
+      "sort_order": 2
     },
     {
       "family_key": "cladding",
       "requirement_keys": "cladding",
       "category_key": "Cladding",
       "top_level_area": "exterior",
-      "colour": "COLORBOND steel colour range",
+      "colour": "Builder selected exterior finish colour",
       "price_status": "quote_required",
       "price_unit": "m2 quote",
       "currency": "AUD",
@@ -176,112 +180,41 @@
         "recordType": "cladding_system",
         "colourSelectionMode": "finish_colour_inside_cladding",
         "priceBasis": "Quote required from facade takeoff",
-        "material": "COLORBOND steel",
-        "profile": "Metal wall cladding profile",
-        "materialManufacturer": "BlueScope",
-        "profileSupplier": "LYSAGHT"
+        "material": "Fibre cement",
+        "profile": "Vertical grooved panel"
       },
-      "product_code": "CLADDING-COLORBOND-LYSAGHT-WALL",
-      "manufacturer": "BlueScope",
-      "brand": "COLORBOND steel",
-      "supplier": "LYSAGHT",
-      "range": "COLORBOND Metal Wall Cladding",
-      "product_name": "COLORBOND / LYSAGHT Metal Wall Cladding",
-      "model": "Metal wall cladding",
-      "description": "Metal wall cladding option using LYSAGHT profiles manufactured from COLORBOND steel, selected by profile and colour.",
-      "finish": "COLORBOND steel finish",
-      "profile": "Metal wall cladding profile",
-      "material": "COLORBOND steel",
-      "primary_image_url": "/images/product-library/cladding-colorbond-wall.jpg",
-      "thumbnail_url": "/images/product-library/cladding-colorbond-wall.jpg",
-      "image_source_url": "C:/Users/grant/Downloads/Week_5_Facebook_0010_COLORBOND_90_v17-0-01-15-10.jpg",
-      "image_source_type": "user_supplied_reference",
-      "image_verified_at": "2026-08-17",
-      "image_status": "verified_exact",
-      "official_product_url": "https://colorbond.com/products/walling",
-      "specification_url": "https://lysaght.com/products/walling-cladding-facades",
-      "supplier_url": "https://lysaght.com/",
-      "source_type": "official_manufacturer_pages_and_user_supplied_image",
-      "source_name": "COLORBOND walling and LYSAGHT walling/cladding/facades pages; supplied metal wall cladding image",
-      "source_url": "https://colorbond.com/products/walling",
-      "variants": [
-        {
-          "variantName": "COLORBOND steel wall cladding / vertical profile",
-          "material": "COLORBOND steel",
-          "configuration": "metal_wall_cladding"
-        },
-        {
-          "variantName": "COLORBOND steel wall cladding / horizontal profile",
-          "material": "COLORBOND steel",
-          "configuration": "metal_wall_cladding"
-        }
-      ]
-    },
-    {
-      "family_key": "cladding",
-      "requirement_keys": "cladding",
-      "category_key": "Cladding",
-      "top_level_area": "exterior",
-      "colour": "Builder selected PGH Stone finish",
-      "price_status": "quote_required",
-      "price_unit": "m2 quote",
-      "currency": "AUD",
-      "gst_included": "true",
-      "country": "AU",
-      "regions": "AU;QLD",
-      "active": "true",
-      "discontinued": "false",
-      "archived": "false",
-      "source_retrieved_at": "2026-08-17",
-      "source_verified_at": "2026-08-17",
-      "attributes": {
-        "recordType": "cladding_system",
-        "colourSelectionMode": "finish_colour_inside_cladding",
-        "priceBasis": "Quote required from facade takeoff",
-        "material": "Reconstituted sandstone",
-        "profile": "Stone veneer cladding",
-        "supplierRange": "PGH Stone"
-      },
-      "product_code": "CLADDING-PGH-FEATURE-STONE",
-      "manufacturer": "PGH Bricks & Pavers",
-      "brand": "PGH Stone",
-      "supplier": "PGH Bricks & Pavers",
-      "range": "PGH Stone",
-      "product_name": "Feature Stone Wall Cladding",
-      "model": "PGH Stone",
-      "description": "Manufactured stone veneer cladding for interior or exterior feature walls, facades, pillars and fireplaces.",
-      "finish": "Manufactured stone veneer",
-      "profile": "Stone veneer cladding",
-      "material": "Reconstituted sandstone",
-      "primary_image_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
-      "thumbnail_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
-      "image_source_url": "https://www.pghbricks.com.au/products/stone",
+      "product_code": "CLADDING-JAMES-HARDIE-AXON",
+      "manufacturer": "James Hardie",
+      "brand": "James Hardie",
+      "supplier": "James Hardie",
+      "range": "Axon Cladding",
+      "product_name": "James Hardie Axon Cladding",
+      "model": "Axon",
+      "description": "Vertically grooved fibre cement panel cladding selected by profile, finish and paint colour.",
+      "finish": "Painted fibre cement",
+      "profile": "Vertical grooved panel",
+      "material": "Fibre cement",
+      "primary_image_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2NKL7zlvrC4IWPDcdP8P1e/e6c7e2a9d714fa1d5f180f00b757f27b/axon-cladding-midcenturymodern-jameshardie-4_1_3.jpg?fm=webp&w=1200&h=630&fit=fill",
+      "thumbnail_url": "https://images.ctfassets.net/rg5y8r6t6cjr/2NKL7zlvrC4IWPDcdP8P1e/e6c7e2a9d714fa1d5f180f00b757f27b/axon-cladding-midcenturymodern-jameshardie-4_1_3.jpg",
+      "image_source_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
       "image_source_type": "official_manufacturer_page",
       "image_verified_at": "2026-08-17",
       "image_status": "verified_exact",
-      "official_product_url": "https://www.pghbricks.com.au/products/stone",
-      "specification_url": "https://www.pghbricks.com.au/products/stone",
-      "supplier_url": "https://www.pghbricks.com.au/",
+      "official_product_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
+      "specification_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
+      "supplier_url": "https://www.jameshardie.com.au/",
       "source_type": "official_manufacturer_page",
-      "source_name": "PGH Stone manufactured stone cladding page",
-      "source_url": "https://www.pghbricks.com.au/products/stone",
+      "source_name": "James Hardie Axon Cladding product page",
+      "source_url": "https://www.jameshardie.com.au/products/scyon-axon-cladding",
       "variants": [
         {
-          "variantName": "PGH Stone Classic Ledgestone",
-          "profile": "Classic Ledgestone",
-          "configuration": "stone_wall_cladding"
-        },
-        {
-          "variantName": "PGH Stone Natural Fieldstone",
-          "profile": "Natural Fieldstone",
-          "configuration": "stone_wall_cladding"
-        },
-        {
-          "variantName": "PGH Stone Rugged Ledgestone",
-          "profile": "Rugged Ledgestone",
-          "configuration": "stone_wall_cladding"
+          "variantName": "Axon vertical grooved panel / painted finish",
+          "finish": "Painted fibre cement",
+          "configuration": "vertical_cladding"
         }
-      ]
+      ],
+      "display_order": 3,
+      "sort_order": 3
     },
     {
       "family_key": "cladding",
@@ -336,7 +269,9 @@
           "finish": "Painted fibre cement",
           "configuration": "expressed_joint_cladding"
         }
-      ]
+      ],
+      "display_order": 4,
+      "sort_order": 4
     },
     {
       "family_key": "cladding",
@@ -391,7 +326,9 @@
           "finish": "Painted fibre cement",
           "configuration": "horizontal_cladding"
         }
-      ]
+      ],
+      "display_order": 5,
+      "sort_order": 5
     },
     {
       "family_key": "cladding",
@@ -446,7 +383,9 @@
           "finish": "Fine textured painted fibre cement",
           "configuration": "fine_texture_cladding"
         }
-      ]
+      ],
+      "display_order": 6,
+      "sort_order": 6
     },
     {
       "family_key": "cladding",
@@ -501,7 +440,9 @@
           "finish": "Site finished facade panel",
           "configuration": "facade_panel_cladding"
         }
-      ]
+      ],
+      "display_order": 7,
+      "sort_order": 7
     },
     {
       "family_key": "cladding",
@@ -569,7 +510,141 @@
           "finish": "Painted fibre cement",
           "configuration": "weatherboard_cladding"
         }
-      ]
+      ],
+      "display_order": 8,
+      "sort_order": 8
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "COLORBOND steel colour range",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "COLORBOND steel",
+        "profile": "Metal wall cladding profile",
+        "materialManufacturer": "BlueScope",
+        "profileSupplier": "LYSAGHT"
+      },
+      "product_code": "CLADDING-COLORBOND-LYSAGHT-WALL",
+      "manufacturer": "BlueScope",
+      "brand": "COLORBOND steel",
+      "supplier": "LYSAGHT",
+      "range": "COLORBOND Metal Wall Cladding",
+      "product_name": "COLORBOND / LYSAGHT Metal Wall Cladding",
+      "model": "Metal wall cladding",
+      "description": "Metal wall cladding option using LYSAGHT profiles manufactured from COLORBOND steel, selected by profile and colour.",
+      "finish": "COLORBOND steel finish",
+      "profile": "Metal wall cladding profile",
+      "material": "COLORBOND steel",
+      "primary_image_url": "/images/product-library/cladding-colorbond-wall.jpg",
+      "thumbnail_url": "/images/product-library/cladding-colorbond-wall.jpg",
+      "image_source_url": "C:/Users/grant/Downloads/Week_5_Facebook_0010_COLORBOND_90_v17-0-01-15-10.jpg",
+      "image_source_type": "user_supplied_reference",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://colorbond.com/products/walling",
+      "specification_url": "https://lysaght.com/products/walling-cladding-facades",
+      "supplier_url": "https://lysaght.com/",
+      "source_type": "official_manufacturer_pages_and_user_supplied_image",
+      "source_name": "COLORBOND walling and LYSAGHT walling/cladding/facades pages; supplied metal wall cladding image",
+      "source_url": "https://colorbond.com/products/walling",
+      "variants": [
+        {
+          "variantName": "COLORBOND steel wall cladding / vertical profile",
+          "material": "COLORBOND steel",
+          "configuration": "metal_wall_cladding"
+        },
+        {
+          "variantName": "COLORBOND steel wall cladding / horizontal profile",
+          "material": "COLORBOND steel",
+          "configuration": "metal_wall_cladding"
+        }
+      ],
+      "display_order": 9,
+      "sort_order": 9
+    },
+    {
+      "family_key": "cladding",
+      "requirement_keys": "cladding",
+      "category_key": "Cladding",
+      "top_level_area": "exterior",
+      "colour": "Builder selected PGH Stone finish",
+      "price_status": "quote_required",
+      "price_unit": "m2 quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_retrieved_at": "2026-08-17",
+      "source_verified_at": "2026-08-17",
+      "attributes": {
+        "recordType": "cladding_system",
+        "colourSelectionMode": "finish_colour_inside_cladding",
+        "priceBasis": "Quote required from facade takeoff",
+        "material": "Reconstituted sandstone",
+        "profile": "Stone veneer cladding",
+        "supplierRange": "PGH Stone"
+      },
+      "product_code": "CLADDING-PGH-FEATURE-STONE",
+      "manufacturer": "PGH Bricks & Pavers",
+      "brand": "PGH Stone",
+      "supplier": "PGH Bricks & Pavers",
+      "range": "PGH Stone",
+      "product_name": "Feature Stone Wall Cladding",
+      "model": "PGH Stone",
+      "description": "Manufactured stone veneer cladding for interior or exterior feature walls, facades, pillars and fireplaces.",
+      "finish": "Manufactured stone veneer",
+      "profile": "Stone veneer cladding",
+      "material": "Reconstituted sandstone",
+      "primary_image_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
+      "thumbnail_url": "https://www.csrassetlibrary.com/celum/52501_Desktop_Original.jpg",
+      "image_source_url": "https://www.pghbricks.com.au/products/stone",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-17",
+      "image_status": "verified_exact",
+      "official_product_url": "https://www.pghbricks.com.au/products/stone",
+      "specification_url": "https://www.pghbricks.com.au/products/stone",
+      "supplier_url": "https://www.pghbricks.com.au/",
+      "source_type": "official_manufacturer_page",
+      "source_name": "PGH Stone manufactured stone cladding page",
+      "source_url": "https://www.pghbricks.com.au/products/stone",
+      "variants": [
+        {
+          "variantName": "PGH Stone Classic Ledgestone",
+          "profile": "Classic Ledgestone",
+          "configuration": "stone_wall_cladding"
+        },
+        {
+          "variantName": "PGH Stone Natural Fieldstone",
+          "profile": "Natural Fieldstone",
+          "configuration": "stone_wall_cladding"
+        },
+        {
+          "variantName": "PGH Stone Rugged Ledgestone",
+          "profile": "Rugged Ledgestone",
+          "configuration": "stone_wall_cladding"
+        }
+      ],
+      "display_order": 10,
+      "sort_order": 10
     },
     {
       "product_code": "GUTTER-LYSAGHT-QUAD-COLORBOND",

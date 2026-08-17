@@ -21,12 +21,13 @@ import {
   TOP_LEVEL_AREAS,
   createProductEntity,
   createBuilderProductReference,
+  ensureBuilderCladdingEnablements,
   ensureDemoBuilderCatalogueEnablements,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
   familyByKey,
   isProductLibraryEligibleProduct,
-  isRemovedDuplicateCladdingProduct,
+  mergeMasterCatalogueProducts,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   commitMasterProductImport,
@@ -516,20 +517,24 @@ export default function BuilderProductLibraryPage() {
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const byProductCode = new Map();
-      [...baselineProducts, ...(Array.isArray(storedProducts) ? storedProducts : [])].forEach((product) => {
-        if (product?.productCode) byProductCode.set(product.productCode, product);
-      });
-      const nextProducts = Array.from(byProductCode.values()).filter((product) => !isRemovedDuplicateCladdingProduct(product));
+      const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      const nextEnablements = ensureBuilderCladdingEnablements(
+        nextProducts,
+        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
+        workspaceId || "",
+      );
       setMasterProducts(nextProducts);
       setBuilderEnablements(nextEnablements);
       if (nextEnablements.length !== storedEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackEnablements = ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || "");
+      const fallbackEnablements = ensureBuilderCladdingEnablements(
+        baselineProducts,
+        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
+        workspaceId || "",
+      );
       setMasterProducts(baselineProducts);
       setBuilderEnablements(fallbackEnablements);
       if (fallbackEnablements.length) window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));

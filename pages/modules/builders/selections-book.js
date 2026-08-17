@@ -34,9 +34,11 @@ import {
   activeQldBrickMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
+  ensureBuilderCladdingEnablements,
   ensureDemoBuilderCatalogueEnablements,
   masterProductToClientSelectionProduct,
   isRemovedDuplicateCladdingProduct,
+  mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
@@ -880,20 +882,14 @@ export default function BuilderSelectionsBookPage({
       organisationProducts: [],
     }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: roofingRequirement }));
   }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
-  const sharedCladdingSelectionProducts = useMemo(() => {
-    if (guidedRequirement.familyKey !== "cladding") return [];
-    return (exteriorFinishesCatalogue.products || [])
-      .filter((product) => product.family_key === "cladding" || product.familyKey === "cladding")
-      .map((product) => masterProductToClientSelectionProduct(normalizeMasterProductRecord(product), { organisationId: workspaceId || "", requirement: guidedRequirement }));
-  }, [guidedRequirement, workspaceId]);
   const clientSelectionCatalogueProducts = useMemo(() => {
     const byIdentity = new Map();
-    [...sharedCladdingSelectionProducts, ...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
+    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
       const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
       byIdentity.set(key, product);
     });
     return Array.from(byIdentity.values());
-  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, sharedCladdingSelectionProducts]);
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
@@ -1028,20 +1024,24 @@ export default function BuilderSelectionsBookPage({
     ];
     try {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const byProductCode = new Map();
-      [...baselineProducts, ...storedProducts].forEach((product) => {
-        if (product?.productCode) byProductCode.set(product.productCode, product);
-      });
-      const nextProducts = Array.from(byProductCode.values()).filter((product) => !isRemovedDuplicateCladdingProduct(product));
+      const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
+      const nextEnablements = ensureBuilderCladdingEnablements(
+        nextProducts,
+        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
+        workspaceId || "",
+      );
       setMasterCatalogueProducts(nextProducts);
       setBuilderEnablements(nextEnablements);
       if (nextEnablements.length !== storedEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackEnablements = ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || "");
+      const fallbackEnablements = ensureBuilderCladdingEnablements(
+        baselineProducts,
+        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
+        workspaceId || "",
+      );
       setMasterCatalogueProducts(baselineProducts);
       setBuilderEnablements(fallbackEnablements);
       if (fallbackEnablements.length) {
