@@ -36,6 +36,7 @@ import {
   createBuilderProductReference,
   ensureDemoBuilderCatalogueEnablements,
   masterProductToClientSelectionProduct,
+  isRemovedDuplicateCladdingProduct,
   normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
@@ -1025,7 +1026,7 @@ export default function BuilderSelectionsBookPage({
       [...baselineProducts, ...storedProducts].forEach((product) => {
         if (product?.productCode) byProductCode.set(product.productCode, product);
       });
-      const nextProducts = Array.from(byProductCode.values());
+      const nextProducts = Array.from(byProductCode.values()).filter((product) => !isRemovedDuplicateCladdingProduct(product));
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
       const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
       setMasterCatalogueProducts(nextProducts);

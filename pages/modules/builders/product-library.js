@@ -26,6 +26,7 @@ import {
   exportMasterCatalogueJson,
   familyByKey,
   isProductLibraryEligibleProduct,
+  isRemovedDuplicateCladdingProduct,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   commitMasterProductImport,
@@ -519,7 +520,7 @@ export default function BuilderProductLibraryPage() {
       [...baselineProducts, ...(Array.isArray(storedProducts) ? storedProducts : [])].forEach((product) => {
         if (product?.productCode) byProductCode.set(product.productCode, product);
       });
-      const nextProducts = Array.from(byProductCode.values());
+      const nextProducts = Array.from(byProductCode.values()).filter((product) => !isRemovedDuplicateCladdingProduct(product));
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
       const nextEnablements = ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || "");
       setMasterProducts(nextProducts);
