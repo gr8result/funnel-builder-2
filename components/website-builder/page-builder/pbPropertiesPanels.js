@@ -1152,6 +1152,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, b
                       avatarUrl: asset.src,
                       avatar: asset.src,
                       avatarAssetId: asset.id || "",
+                      avatarRemoved: false,
                     });
                   }
                 }}
@@ -1160,7 +1161,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, b
             <button
               type="button"
               style={styles.secondaryBtn}
-              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatar: asset.src || "", avatarAssetId: asset.id || "" }))}
+              onClick={() => openSharedLibraryAssetPicker((asset) => updateItem(index, { avatarUrl: asset.src || "", avatar: asset.src || "", avatarAssetId: asset.id || "", avatarRemoved: false }))}
             >
               Choose From Library
             </button>
@@ -1169,7 +1170,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, b
                 key={`tav-${index}-${image.id || image.src}`}
                 type="button"
                 style={styles.assetThumbBtn}
-                onClick={() => updateItem(index, { avatarUrl: image.src, avatar: image.src, avatarAssetId: image.id || "" })}
+                onClick={() => updateItem(index, { avatarUrl: image.src, avatar: image.src, avatarAssetId: image.id || "", avatarRemoved: false })}
                 title={image.name}
               >
                 <img src={image.src} alt={image.name} style={styles.assetThumbPreview} />
@@ -1177,7 +1178,7 @@ function TestimonialItemsEditor({ items, onChange, brandAssets, onUploadImage, b
             ))}
           </div>
           {item.avatarUrl ? (
-            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatar: "", avatarAssetId: "" })}>Remove Avatar</button>
+            <button type="button" style={{ ...styles.secondaryBtn, marginTop: 6 }} onClick={() => updateItem(index, { avatarUrl: "", avatar: "", avatarAssetId: "", avatarRemoved: true, __removedMediaFields: ["avatarUrl", "avatar"] })}>Remove Avatar</button>
           ) : null}
         </div>
       ))}

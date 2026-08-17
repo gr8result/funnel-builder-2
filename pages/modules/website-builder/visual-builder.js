@@ -656,16 +656,10 @@ function shouldUseEmergencyDraft(project, pageName, draft) {
   };
   const currentScore = scoreBlocks(currentBlocks);
   const draftScore = scoreBlocks(draft.blocks);
-  const source = String(draft.source || "").toLowerCase();
   const draftIsNewer = draftSavedAt > projectUpdatedAt;
-  const draftHasMoreBlocks = draftScore.blockCount > currentScore.blockCount;
-  const draftHasMoreText = draftScore.textChars > currentScore.textChars;
   const currentIsEmpty = currentScore.blockCount === 0;
-  const isAutosaveDraft = source.includes("autosave");
-  const shouldRecover = currentIsEmpty
-    || (!isAutosaveDraft && draftHasMoreBlocks && draftScore.textChars >= currentScore.textChars)
-    || (draftIsNewer && draftHasMoreText && (!isAutosaveDraft || draftScore.blockCount <= currentScore.blockCount))
-    || (draftIsNewer && !isAutosaveDraft && draftScore.blockCount >= currentScore.blockCount && draftScore.typeSignature !== currentScore.typeSignature);
+  const hasCanonicalPageState = !currentIsEmpty;
+  const shouldRecover = !hasCanonicalPageState && draftIsNewer;
 
   logWebsiteBuilderSaveDebug("emergency draft recovery decision", {
     pageName,
@@ -1310,9 +1304,6 @@ export default function VisualBuilderPage() {
     const remoteChai = remoteProject?.chaiData?.[remotePageName];
     const localUpdatedAt = Date.parse(localProject?.updatedAt || localProject?.createdAt || 0) || 0;
     const remoteUpdatedAt = Date.parse(remoteProject?.updatedAt || remoteProject?.createdAt || 0) || 0;
-    const remoteCleansInlineImages = containsInlineDataImage(localBlocks) && !containsInlineDataImage(remoteBlocks);
-    const remoteHasMoreMedia = countBuilderMediaReferences(remoteBlocks) > countBuilderMediaReferences(localBlocks);
-    const remoteHasMoreFullWidthSettings = countBuilderFullWidthSettings(remoteBlocks) > countBuilderFullWidthSettings(localBlocks);
     const localDurableVideoCount = (Array.isArray(localBlocks) ? localBlocks : [])
       .filter((block) => String(block?.type || "") === "video-hero")
       .filter((block) => {
@@ -1326,16 +1317,15 @@ export default function VisualBuilderPage() {
         return videoUrl && !isUnsafeVideoHeroUrl(videoUrl);
       }).length;
     const remoteWouldDropDurableVideo = localDurableVideoCount > 0 && remoteDurableVideoCount < localDurableVideoCount;
-    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks) && !remoteWouldDropDurableVideo && (
-      (
-        remoteUpdatedAt > localUpdatedAt
-        || (remoteUpdatedAt >= localUpdatedAt && !blocksMatchForSave(localBlocks, remoteBlocks))
-      )
-      || localBlocks.length === 0
-      || remoteCleansInlineImages
-      || remoteHasMoreMedia
-      || remoteHasMoreFullWidthSettings
-    );
+    const shouldUseRemoteBlocks = Array.isArray(remoteBlocks);
+    if (Array.isArray(remoteBlocks) && remoteWouldDropDurableVideo) {
+      console.warn("[website-builder state] canonical remote page has fewer durable videos than local cache; using remote page anyway", {
+        projectId: remoteProject?.id || "",
+        pageName: remotePageName,
+        localDurableVideoCount,
+        remoteDurableVideoCount,
+      });
+    }
 
     const localNames = new Set(localPages.map((p) => p.name));
     const mergedPages = [
@@ -2197,12 +2187,28 @@ export default function VisualBuilderPage() {
   function preserveDurableMediaValues(nextValue, previousValue) {
     if (Array.isArray(nextValue)) {
       const previousItems = Array.isArray(previousValue) ? previousValue : [];
-      return nextValue.map((item, index) => preserveDurableMediaValues(item, previousItems[index]));
+      const previousById = new Map(
+        previousItems
+          .filter((item) => item && typeof item === "object" && !Array.isArray(item) && item.id !== undefined && item.id !== null)
+          .map((item) => [String(item.id), item])
+      );
+      return nextValue.map((item, index) => {
+        const previousItem = item && typeof item === "object" && !Array.isArray(item) && item.id !== undefined && item.id !== null
+          ? previousById.get(String(item.id))
+          : undefined;
+        return preserveDurableMediaValues(item, previousItem || previousItems[index]);
+      });
     }
     if (!nextValue || typeof nextValue !== "object") return nextValue;
     const previousObject = previousValue && typeof previousValue === "object" ? previousValue : {};
     const nextObject = { ...nextValue };
+    const removedMediaFields = new Set(Array.isArray(nextObject.__removedMediaFields) ? nextObject.__removedMediaFields.map((field) => String(field)) : []);
+    if (nextObject.avatarRemoved === true) removedMediaFields.add("avatarUrl");
+    if (nextObject.imageRemoved === true) {
+      ["imageUrl", "image", "imageSrc", "src", "mediaUrl"].forEach((field) => removedMediaFields.add(field));
+    }
     new Set([...Object.keys(previousObject), ...Object.keys(nextObject)]).forEach((key) => {
+      if (removedMediaFields.has(key)) return;
       if (durableMediaFieldNames.has(key) && typeof previousObject[key] === "string" && !isTemporaryMediaValue(previousObject[key]) && isTemporaryMediaValue(nextObject[key])) {
         nextObject[key] = previousObject[key];
         return;

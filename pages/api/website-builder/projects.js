@@ -296,12 +296,14 @@ function normalizeProjectBlocksForSave(project) {
     for (const [pageName, blocks] of Object.entries(pageBlocks)) {
       const currentPageChaiData = chaiData && typeof chaiData === "object" ? chaiData[pageName] || null : null;
       const synced = syncVideoHeroChaiDataBlocks(currentPageChaiData, blocks);
-      if (synced !== currentPageChaiData) {
-        chaiData = {
-          ...(chaiData && typeof chaiData === "object" ? chaiData : {}),
-          [pageName]: synced,
-        };
-      }
+      const mirroredPageData = synced && typeof synced === "object" && !Array.isArray(synced) ? synced : {};
+      chaiData = {
+        ...(chaiData && typeof chaiData === "object" ? chaiData : {}),
+        [pageName]: {
+          ...mirroredPageData,
+          blocks,
+        },
+      };
     }
   }
   return normalizeSharedBlockTemplateProject(normalizeSharedPrimaryNavigation({
