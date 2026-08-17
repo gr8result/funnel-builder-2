@@ -880,14 +880,20 @@ export default function BuilderSelectionsBookPage({
       organisationProducts: [],
     }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: roofingRequirement }));
   }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const sharedCladdingSelectionProducts = useMemo(() => {
+    if (guidedRequirement.familyKey !== "cladding") return [];
+    return (exteriorFinishesCatalogue.products || [])
+      .filter((product) => product.family_key === "cladding" || product.familyKey === "cladding")
+      .map((product) => masterProductToClientSelectionProduct(normalizeMasterProductRecord(product), { organisationId: workspaceId || "", requirement: guidedRequirement }));
+  }, [guidedRequirement, workspaceId]);
   const clientSelectionCatalogueProducts = useMemo(() => {
     const byIdentity = new Map();
-    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
+    [...sharedCladdingSelectionProducts, ...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
       const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
       byIdentity.set(key, product);
     });
     return Array.from(byIdentity.values());
-  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts]);
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, sharedCladdingSelectionProducts]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {

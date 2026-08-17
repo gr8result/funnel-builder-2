@@ -45,7 +45,9 @@ import {
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   imageForFamilyKey,
+  isRemovedDuplicateCladdingProduct,
 } from "../../lib/product-library/catalogueModel";
+import exteriorFinishesCatalogue from "../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
@@ -6809,6 +6811,11 @@ function ProductLibrarySheet({ sheet }) {
   const selectedCategory = visibleCategories.find((category) => category.key === selectedCategoryKey) || null;
   const visibleFamilies = useMemo(() => embeddedProductLibraryFamilies(selectedAreaKey, selectedCategory), [selectedAreaKey, selectedCategory]);
   const selectedFamily = PRODUCT_FAMILIES.find((family) => family.familyKey === selectedFamilyKey) || null;
+  const selectedFamilyCatalogueProducts = useMemo(() => {
+    if (selectedFamily?.familyKey !== "cladding") return [];
+    return (exteriorFinishesCatalogue.products || [])
+      .filter((product) => (product.family_key === "cladding" || product.familyKey === "cladding") && !isRemovedDuplicateCladdingProduct(product));
+  }, [selectedFamily?.familyKey]);
   const q = search.trim().toLowerCase();
   const searchedFamilies = useMemo(() => {
     if (!q) return [];
@@ -6951,10 +6958,25 @@ function ProductLibrarySheet({ sheet }) {
               <span>{selectedFamily.linkedQuoteItemCode || selectedFamily.approvedSourceKey}</span>
               <span>{selectedFamily.pricingMode}</span>
             </div>
-            <div style={styles.productLibraryEmptyState}>
-              <strong>No products have been added to this catalogue yet.</strong>
-              <span>Import real manufacturer or supplier products to populate this family. Generic allowance rows are not fabricated as products.</span>
-            </div>
+            {selectedFamilyCatalogueProducts.length ? (
+              <div style={styles.productLibraryRecordList}>
+                {selectedFamilyCatalogueProducts.map((product) => (
+                  <article key={product.product_code || product.productCode} style={styles.productLibraryRecordCard}>
+                    <img src={product.primary_image_url || product.primaryImageUrl || product.thumbnail_url || product.thumbnailUrl} alt={product.product_name || product.productName} style={styles.productLibraryRecordImage} />
+                    <div style={styles.productLibraryRecordBody}>
+                      <strong>{product.product_name || product.productName}</strong>
+                      <span>{product.product_code || product.productCode}</span>
+                      <em>{product.supplier || product.manufacturer || "Supplier not recorded"} / {product.price_status || product.priceStatus || "price_status not recorded"} / active {String(product.active ?? true)}</em>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div style={styles.productLibraryEmptyState}>
+                <strong>No products have been added to this catalogue yet.</strong>
+                <span>Import real manufacturer or supplier products to populate this family. Generic allowance rows are not fabricated as products.</span>
+              </div>
+            )}
           </div>
         </section>
       ) : null}
@@ -15815,6 +15837,10 @@ const styles = {
   productLibraryFamilyImage: { width: "100%", height: "100%", minHeight: 300, display: "block", backgroundSize: "cover", backgroundPosition: "center" },
   productLibraryFamilyBody: { padding: 18, display: "grid", alignContent: "start", gap: 8, color: "#0f172a" },
   productLibraryFamilyMeta: { display: "flex", flexWrap: "wrap", gap: 8, margin: "10px 0" },
+  productLibraryRecordList: { display: "grid", gap: 10, marginTop: 8 },
+  productLibraryRecordCard: { border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden", background: "#ffffff", display: "grid", gridTemplateColumns: "120px minmax(0, 1fr)", alignItems: "stretch" },
+  productLibraryRecordImage: { width: 120, height: "100%", minHeight: 96, objectFit: "cover", background: "#e2e8f0" },
+  productLibraryRecordBody: { padding: 10, display: "grid", gap: 4, minWidth: 0 },
   errorText: { margin: 0, color: "#b91c1c", fontWeight: 900 },
   workspacePlaceholder: { border: "1px dashed #cbd5e1", background: "#f8fafc", color: "#475569", borderRadius: 8, padding: 18, fontWeight: 800, lineHeight: 1.5 },
   floatingSaveJob: { position: "sticky", top: 0, zIndex: 4, marginTop: 14, background: "#ffffff", padding: "8px 0", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" },
