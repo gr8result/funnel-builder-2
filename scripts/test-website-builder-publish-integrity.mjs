@@ -6,11 +6,6 @@ import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import puppeteer from "puppeteer";
 
-import { assembleWebsiteForRendering } from "../lib/website-builder/supabaseSiteStorage.js";
-import { normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../lib/website-builder/publishConfig.js";
-import { normalizeWebsiteBuilderAssets } from "../lib/website-builder/mediaAssets.js";
-import { repairProjectTestimonialAvatarUrls } from "../lib/website-builder/testimonialImages.js";
-
 dotenv.config({ path: ".env.local", quiet: true });
 
 const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
@@ -24,6 +19,8 @@ const PROPERTY_MARKER = `${PROBE_ID}-property-marker`;
 const PROPERTY_VALUE_A = `${PROBE_ID}-property-A`;
 const IMAGE_A = "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80";
 const IMAGE_B = "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=80";
+const AVATAR_A = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80";
+const AVATAR_B = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=256&q=80";
 const PAGE_NAMES = ["Home", "About Us", "Modules", "Contact Us", "Email", "Pricing", "CRM", "SMS", "Funnels", "Website Builder", "Social Media", "Project Hub"];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -70,16 +67,7 @@ function materialPageState(project, pageName) {
 }
 
 function liveInputFromPublished(siteData) {
-  const project = repairProjectTestimonialAvatarUrls(siteData || {});
-  const assets = normalizeWebsiteBuilderAssets(project.brandAssets);
-  return {
-    ...project,
-    pageBlocks: normalizePublishedWebsiteBlocks(
-      normalizeVideoHeroBlocks(project.pageBlocks || {}, assets),
-      { pages: project.pages || [], logInvalid: true },
-      assets
-    ),
-  };
+  return siteData || {};
 }
 
 function pageHash(project, pageName) {
@@ -163,6 +151,17 @@ async function savePricing(token, project, blocks) {
   return body.project;
 }
 
+async function saveProject(token, project, { pageName = PAGE_NAME, siteOnly = false, saveSource = "manual-save" } = {}) {
+  const response = await fetch(`${BASE_URL}/api/website-builder/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ project, projectId: PROJECT_ID, pageName, siteOnly, saveSource }),
+  });
+  const body = await response.json();
+  assert.equal(response.status, 200, `save project failed: ${body?.error || response.status}`);
+  return body.project;
+}
+
 async function publish(token) {
   const response = await fetch(`${BASE_URL}/api/websites/publish`, {
     method: "POST",
@@ -188,14 +187,12 @@ async function latestPublished(admin) {
   return data[0];
 }
 
-async function canonical(admin) {
-  const { data, error } = await admin.from("website_builder_sites").select("user_id").eq("site_id", PROJECT_ID).limit(1);
-  if (error) throw error;
-  return assembleWebsiteForRendering(data?.[0]?.user_id, PROJECT_ID);
+async function canonical(token) {
+  return fetchDraftApi(token);
 }
 
-async function assertPipeline(admin, label) {
-  const draft = await canonical(admin);
+async function assertPipeline(admin, token, label) {
+  const draft = await canonical(token);
   const publishedRow = await latestPublished(admin);
   const published = publishedRow.site_data;
   const liveInput = liveInputFromPublished(published);
@@ -265,6 +262,59 @@ function removeProbeBlock(project) {
   return clone(project.pageBlocks?.[PAGE_NAME] || []).filter((block) => block.id !== PROBE_ID);
 }
 
+function findProbeBlock(project) {
+  return (project.pageBlocks?.[PAGE_NAME] || []).find((block) => block.id === PROBE_ID) || null;
+}
+
+function findPricingHero(project) {
+  return (project.pageBlocks?.[PAGE_NAME] || []).find((block) => block.id === "hero-4xaodxr")
+    || (project.pageBlocks?.[PAGE_NAME] || []).find((block) => block.type === "hero")
+    || null;
+}
+
+function findPricingTestimonial(project) {
+  return (project.pageBlocks?.[PAGE_NAME] || []).find((block) => block.type === "testimonial") || null;
+}
+
+function updateBlock(project, pageName, blockId, updater) {
+  const blocks = clone(project.pageBlocks?.[pageName] || []).map((block) => (
+    block.id === blockId ? updater(block) : block
+  ));
+  return {
+    ...project,
+    pageBlocks: {
+      ...(project.pageBlocks || {}),
+      [pageName]: blocks,
+    },
+    chaiData: {
+      ...(project.chaiData || {}),
+      [pageName]: {
+        ...(project.chaiData?.[pageName] || {}),
+        blocks: clone(blocks),
+      },
+    },
+  };
+}
+
+function setGlobalNavSticky(project, sticky) {
+  const block = project.globalNavBlock || null;
+  assert.ok(block?.props, "Expected global navigation block");
+  return {
+    ...project,
+    globalNavBlock: {
+      ...block,
+      props: {
+        ...(block.props || {}),
+        style: "solid",
+        variant: "solid",
+        sticky,
+        positionSticky: sticky,
+        stickyMode: sticky ? "sticky-solid" : "normal",
+      },
+    },
+  };
+}
+
 async function browserAcceptance(session, expectedHash) {
   const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
   const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
@@ -303,6 +353,29 @@ async function browserAcceptance(session, expectedHash) {
   }
 }
 
+async function browserBuilderPageSwitchAcceptance(session) {
+  const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
+  const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    await page.evaluateOnNewDocument(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: storageKey, value: session });
+    const pages = ["Pricing", "About Us", "Pricing", "SMS", "Modules", "Pricing"];
+    const results = [];
+    for (const pageName of pages) {
+      const response = await page.goto(`${BASE_URL}/modules/website-builder/visual-builder?projectId=${PROJECT_ID}&page=${encodeURIComponent(pageName)}`, { waitUntil: "domcontentloaded", timeout: 90000 });
+      await page.waitForSelector("body", { timeout: 30000 });
+      const text = await page.evaluate(() => document.body.innerText);
+      results.push({ pageName, status: response?.status() || 0, hasRuntimeError: /Internal Server Error|Unhandled Runtime Error|Application error/i.test(text) });
+    }
+    assert.deepEqual(results.map((entry) => entry.status), [200, 200, 200, 200, 200, 200], "Builder page switching did not return HTTP 200");
+    assert.equal(results.some((entry) => entry.hasRuntimeError), false, "Builder page switching hit a runtime error");
+    return results;
+  } finally {
+    await browser.close();
+  }
+}
+
 async function main() {
   const session = await mintSession();
   const token = session.access_token;
@@ -313,44 +386,44 @@ async function main() {
   try {
     originalProject = await fetchDraftApi(token);
     await publish(token);
-    summary.stages.push(await assertPipeline(admin, "initial"));
+    summary.stages.push(await assertPipeline(admin, token, "initial"));
 
     let working = await fetchDraftApi(token);
     working = await savePricing(token, working, addProbeBlock(working));
     await publish(token);
-    let probeStage = await assertPipeline(admin, "probe added");
+    let probeStage = await assertPipeline(admin, token, "probe added");
     assert.deepEqual(Object.values(probeStage.probes.deleteMarker), [true, true, true], "probe added stage should contain marker");
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, removeProbeBlock(working));
     await publish(token);
-    probeStage = await assertPipeline(admin, "probe deleted");
+    probeStage = await assertPipeline(admin, token, "probe deleted");
     assert.deepEqual(Object.values(probeStage.probes.deleteMarker), [false, false, false], "deleted probe marker returned");
     summary.generic.deletion = { marker: DELETE_MARKER, result: "absent after save/publish/live-input" };
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, addProbeBlock(working, { text: PROPERTY_MARKER, title: PROPERTY_MARKER, probeProperty: PROPERTY_VALUE_A }));
     await publish(token);
-    probeStage = await assertPipeline(admin, "property A added");
+    probeStage = await assertPipeline(admin, token, "property A added");
     assert.deepEqual(Object.values(probeStage.probes.propertyA), [true, true, true], "property A should publish");
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, updateProbeBlock(working, { probeProperty: undefined, replacementProperty: `${PROBE_ID}-property-B` }));
     await publish(token);
-    probeStage = await assertPipeline(admin, "property A removed");
+    probeStage = await assertPipeline(admin, token, "property A removed");
     assert.deepEqual(Object.values(probeStage.probes.propertyA), [false, false, false], "removed property A returned");
     summary.generic.propertyRemoval = { removed: PROPERTY_VALUE_A, result: "absent after save/publish/live-input" };
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, updateProbeBlock(working, { backgroundImage: IMAGE_A, imageUrl: IMAGE_A }));
     await publish(token);
-    probeStage = await assertPipeline(admin, "image A added");
+    probeStage = await assertPipeline(admin, token, "image A added");
     assert.deepEqual(Object.values(probeStage.probes.imageA), [true, true, true], "image A should publish");
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, updateProbeBlock(working, { backgroundImage: IMAGE_B, imageUrl: IMAGE_B }));
     await publish(token);
-    probeStage = await assertPipeline(admin, "image B replaced A");
+    probeStage = await assertPipeline(admin, token, "image B replaced A");
     assert.deepEqual(Object.values(probeStage.probes.imageA), [false, false, false], "image A returned after replacement");
     assert.deepEqual(Object.values(probeStage.probes.imageB), [true, true, true], "image B should publish");
     summary.generic.imageReplacement = { from: IMAGE_A, to: IMAGE_B, result: "B present, A absent after save/publish/live-input" };
@@ -358,10 +431,96 @@ async function main() {
     working = await fetchDraftApi(token);
     await savePricing(token, working, removeProbeBlock(working));
     await savePricing(token, await fetchDraftApi(token), clone(originalProject.pageBlocks[PAGE_NAME] || []));
-    await publish(token);
-    summary.stages.push(await assertPipeline(admin, "restored"));
 
-    const draft = await canonical(admin);
+    working = await fetchDraftApi(token);
+    const hero = findPricingHero(working);
+    assert.ok(hero?.id, "Expected Pricing hero block");
+    working = updateBlock(working, PAGE_NAME, hero.id, (block) => ({ ...block, props: { ...(block.props || {}), marginTop: 37 } }));
+    working = await saveProject(token, working);
+    working = updateBlock(working, PAGE_NAME, hero.id, (block) => ({ ...block, props: { ...(block.props || {}), marginTop: 0 } }));
+    working = await saveProject(token, working);
+    let reloaded = await fetchDraftApi(token);
+    assert.equal(findPricingHero(reloaded)?.props?.marginTop, 0, "numeric zero margin did not survive reload");
+    summary.generic.numericZero = { property: "Pricing hero props.marginTop", value: findPricingHero(reloaded)?.props?.marginTop };
+
+    working = await fetchDraftApi(token);
+    working = await saveProject(token, setGlobalNavSticky(working, false), { siteOnly: true });
+    reloaded = await fetchDraftApi(token);
+    assert.equal(reloaded.globalNavBlock?.props?.sticky, false, "sticky false did not persist");
+    working = await saveProject(token, setGlobalNavSticky(reloaded, true), { siteOnly: true });
+    reloaded = await fetchDraftApi(token);
+    assert.equal(reloaded.globalNavBlock?.props?.sticky, true, "sticky true did not persist");
+    assert.equal(reloaded.globalNavBlock?.props?.stickyMode, "sticky-solid", "sticky solid mode did not persist");
+    summary.generic.booleanSticky = { falsePersisted: true, truePersisted: true, stickyMode: reloaded.globalNavBlock?.props?.stickyMode };
+
+    working = await fetchDraftApi(token);
+    working = await saveProject(token, { ...working, pageWidthMode: "full", globalPageWidthMode: "full" }, { siteOnly: true });
+    reloaded = await fetchDraftApi(token);
+    assert.equal(reloaded.pageWidthMode, "full", "pageWidthMode full did not persist");
+    assert.equal(reloaded.globalPageWidthMode, "full", "globalPageWidthMode full did not persist");
+    summary.generic.fullWidth = { pageWidthMode: reloaded.pageWidthMode, globalPageWidthMode: reloaded.globalPageWidthMode };
+
+    working = await fetchDraftApi(token);
+    working = await savePricing(token, working, addProbeBlock(working, { items: [{ id: `${PROBE_ID}-nested-a`, label: "keep" }, { id: `${PROBE_ID}-nested-b`, label: "delete" }] }));
+    working = await fetchDraftApi(token);
+    working = await savePricing(token, working, updateProbeBlock(working, { items: [{ id: `${PROBE_ID}-nested-a`, label: "keep" }] }));
+    reloaded = await fetchDraftApi(token);
+    assert.equal(contains(findProbeBlock(reloaded), `${PROBE_ID}-nested-b`), false, "deleted nested array item returned after reload");
+    summary.generic.nestedDeletion = { removed: `${PROBE_ID}-nested-b`, result: "absent after save/reload" };
+
+    working = await fetchDraftApi(token);
+    const testimonial = findPricingTestimonial(working);
+    assert.ok(testimonial?.id, "Expected Pricing testimonial block");
+    const originalItems = clone(testimonial.props?.items || []);
+    assert.ok(originalItems[0]?.id, "Expected testimonial item");
+    const editedItemsA = originalItems.map((item, index) => index === 0 ? { ...item, avatarUrl: AVATAR_A } : item);
+    working = updateBlock(working, PAGE_NAME, testimonial.id, (block) => ({ ...block, props: { ...(block.props || {}), items: editedItemsA } }));
+    working = await saveProject(token, working);
+    const editedItemsB = editedItemsA.map((item, index) => index === 0 ? { ...item, avatarUrl: AVATAR_B } : item);
+    working = updateBlock(working, PAGE_NAME, testimonial.id, (block) => ({ ...block, props: { ...(block.props || {}), items: editedItemsB } }));
+    working = await saveProject(token, working);
+    reloaded = await fetchDraftApi(token);
+    assert.equal(findPricingTestimonial(reloaded)?.props?.items?.[0]?.avatarUrl, AVATAR_B, "avatar B did not replace avatar A");
+    working = updateBlock(reloaded, PAGE_NAME, testimonial.id, (block) => ({
+      ...block,
+      props: {
+        ...(block.props || {}),
+        items: (block.props?.items || []).map((item, index) => index === 0 ? { ...item, quote: `${item.quote || item.text || ""} ` } : item),
+      },
+    }));
+    working = await saveProject(token, working);
+    reloaded = await fetchDraftApi(token);
+    assert.equal(findPricingTestimonial(reloaded)?.props?.items?.[0]?.avatarUrl, AVATAR_B, "unchanged avatar was lost during testimonial text edit");
+    summary.generic.avatarReplacement = { from: AVATAR_A, to: AVATAR_B, result: "B persisted and survived text edit" };
+
+    working = await fetchDraftApi(token);
+    working = await savePricing(token, working, removeProbeBlock(working));
+    await savePricing(token, await fetchDraftApi(token), clone(originalProject.pageBlocks[PAGE_NAME] || []));
+    working = await fetchDraftApi(token);
+    const staleChaiBlock = { id: `${PROBE_ID}-stale-chai`, type: "text", props: { text: `${PROBE_ID}-stale-chai-value` } };
+    const canonicalBlock = { id: `${PROBE_ID}-canonical-pageblocks`, type: "text", props: { text: `${PROBE_ID}-canonical-pageblocks-value` } };
+    const staleProject = {
+      ...working,
+      pageBlocks: { ...(working.pageBlocks || {}), [PAGE_NAME]: [...clone(working.pageBlocks?.[PAGE_NAME] || []), canonicalBlock] },
+      chaiData: { ...(working.chaiData || {}), [PAGE_NAME]: { ...(working.chaiData?.[PAGE_NAME] || {}), blocks: [...clone(working.pageBlocks?.[PAGE_NAME] || []), staleChaiBlock] } },
+    };
+    await saveProject(token, staleProject);
+    reloaded = await fetchDraftApi(token);
+    assert.equal(contains(materialPageState(reloaded, PAGE_NAME), canonicalBlock.props.text), true, "canonical pageBlocks value missing after stale chaiData save");
+    assert.equal(contains(materialPageState(reloaded, PAGE_NAME), staleChaiBlock.props.text), false, "stale chaiData overrode canonical pageBlocks");
+    summary.generic.staleChaiData = { canonicalWon: true, staleValueAbsent: true };
+
+    await savePricing(token, await fetchDraftApi(token), clone(originalProject.pageBlocks[PAGE_NAME] || []));
+    await saveProject(token, {
+      ...(await fetchDraftApi(token)),
+      pageWidthMode: originalProject.pageWidthMode,
+      globalPageWidthMode: originalProject.globalPageWidthMode,
+      globalNavBlock: originalProject.globalNavBlock,
+    }, { siteOnly: true });
+    await publish(token);
+    summary.stages.push(await assertPipeline(admin, token, "restored"));
+
+    const draft = await canonical(token);
     const published = (await latestPublished(admin)).site_data;
     const draftRenderInput = liveInputFromPublished(draft);
     const publishedRenderInput = liveInputFromPublished(published);
@@ -398,6 +557,7 @@ async function main() {
       },
     };
     summary.browser = await browserAcceptance(session, hash(published));
+    summary.browserBuilderPageSwitch = await browserBuilderPageSwitchAcceptance(session);
 
     await fs.promises.writeFile(path.join(OUT_DIR, "summary.json"), JSON.stringify(summary, null, 2));
     console.log(JSON.stringify(summary, null, 2));
