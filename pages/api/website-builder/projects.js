@@ -288,12 +288,14 @@ function normalizeProjectBlocksForSave(project) {
     for (const [pageName, blocks] of Object.entries(pageBlocks)) {
       const currentPageChaiData = chaiData && typeof chaiData === "object" ? chaiData[pageName] || null : null;
       const synced = syncVideoHeroChaiDataBlocks(currentPageChaiData, blocks);
-      if (synced !== currentPageChaiData) {
-        chaiData = {
-          ...(chaiData && typeof chaiData === "object" ? chaiData : {}),
-          [pageName]: synced,
-        };
-      }
+      const mirroredPageData = synced && typeof synced === "object" && !Array.isArray(synced) ? synced : {};
+      chaiData = {
+        ...(chaiData && typeof chaiData === "object" ? chaiData : {}),
+        [pageName]: {
+          ...mirroredPageData,
+          blocks,
+        },
+      };
     }
   }
   return {
@@ -378,6 +380,56 @@ function compareProjectPersistenceForSave(expectedProject, storedProject, pageNa
     expected: summarizeWebsitePersistence(expectedProject, pageName),
     stored: summarizeWebsitePersistence(storedProject, pageName),
   };
+}
+
+function objectMap(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function hasOwnMapEntry(map, key) {
+  return Object.prototype.hasOwnProperty.call(objectMap(map), key);
+}
+
+function resolveProjectPageName(project, value = "") {
+  const requested = pageNameFromValue(value);
+  if (!requested) return "";
+  const requestedKey = pageNameFromValue(requested);
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const page = pages.find((entry) => pageNameFromValue(entry?.name) === requestedKey || pageNameFromValue(entry?.slug) === requestedKey);
+  return page?.name || requested;
+}
+
+function buildExpectedSplitReadbackProject(nextProject, currentProject, { requestedPage = "", siteOnly = false } = {}) {
+  if (!currentProject || (!requestedPage && !siteOnly)) return nextProject;
+
+  const expected = { ...nextProject };
+  const currentPageBlocks = objectMap(currentProject.pageBlocks);
+  const currentPagesContent = objectMap(currentProject.pagesContent);
+  const currentChaiData = objectMap(currentProject.chaiData);
+  const nextPageBlocks = objectMap(nextProject.pageBlocks);
+  const nextPagesContent = objectMap(nextProject.pagesContent);
+  const nextChaiData = objectMap(nextProject.chaiData);
+
+  expected.pageBlocks = { ...currentPageBlocks };
+  expected.pagesContent = { ...currentPagesContent };
+  expected.chaiData = { ...currentChaiData };
+
+  if (siteOnly) return expected;
+
+  const pageName = resolveProjectPageName(nextProject, requestedPage);
+  if (!pageName) return nextProject;
+
+  if (hasOwnMapEntry(nextPageBlocks, pageName)) {
+    expected.pageBlocks[pageName] = nextPageBlocks[pageName];
+  }
+  if (hasOwnMapEntry(nextPagesContent, pageName)) {
+    expected.pagesContent[pageName] = nextPagesContent[pageName];
+  }
+  if (hasOwnMapEntry(nextChaiData, pageName)) {
+    expected.chaiData[pageName] = nextChaiData[pageName];
+  }
+
+  return expected;
 }
 
 function mapProjectRow(row) {
@@ -716,7 +768,8 @@ async function handler(req, res) {
 
     if (splitProject?.id) {
       const savedProject = splitProject;
-      const expectedVerification = summarizeProjectSaveVerification(nextProject);
+      const expectedProject = buildExpectedSplitReadbackProject(nextProject, currentSplitProject, { requestedPage, siteOnly });
+      const expectedVerification = summarizeProjectSaveVerification(expectedProject);
       const splitVerification = summarizeProjectSaveVerification(savedProject);
       const savedBlocks = requestedPage ? getProjectPageBlocks(savedProject, requestedPage) : [];
       const payloadBlockIds = new Set((Array.isArray(incomingBlocks) ? incomingBlocks : []).map((block) => String(block?.id || "")).filter(Boolean));
@@ -748,7 +801,7 @@ async function handler(req, res) {
       if (missingVideos.length) {
         verificationIssues.push({ type: "video-asset-not-retained", missingVideos });
       }
-      const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+      const persistenceVerification = compareProjectPersistenceForSave(expectedProject, savedProject, requestedPage);
       if (!persistenceVerification.ok) {
         verificationIssues.push({
           type: "structural-hash-mismatch",

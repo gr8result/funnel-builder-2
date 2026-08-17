@@ -54,6 +54,15 @@ const publishedPageBlockFrame = (background, pageFullWidth, layoutWidth) => ({
   maxWidth: pageFullWidth ? "none" : `${Math.max(320, Number(layoutWidth) || CONTENT_WIDTH)}px`,
   margin: "0 auto",
 });
+function publishedGlobalNavFrame(block) {
+  const frame = seamlessPublishedBlockFrame(resolvePublishedBlockBackground(block));
+  const props = block?.props || {};
+  const stickyMode = String(props.stickyMode || props.position || (props.sticky || props.positionSticky ? "sticky" : "normal")).toLowerCase();
+  const sticky = props.sticky !== false && props.positionSticky !== false && stickyMode !== "normal";
+  return sticky
+    ? { ...frame, position: "sticky", top: 0, zIndex: 1000, width: "100%" }
+    : frame;
+}
 const resolvePublishedBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
 const resolvePublishedStackBackground = (blocks, index, fallback = "") => (
   resolvePublishedBlockBackground(blocks?.[index])
@@ -635,7 +644,7 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
       </Head>
       <main data-published-website-root="true" data-page-width-mode={pageWidthMode} className="gr8wb-viewport" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "visible", minHeight: "100vh", background: "#ffffff", color: "#0f172a", fontFamily: "'Manrope','Segoe UI',system-ui,-apple-system,sans-serif", margin: 0, padding: 0 }}>
         {injectNav ? (
-          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={seamlessPublishedBlockFrame(resolvePublishedBlockBackground(globalNavBlock))}>
+          <div key="global-nav" data-published-block="true" data-published-block-id={globalNavBlock?.id || ""} data-published-block-type={globalNavBlock?.type || ""} style={publishedGlobalNavFrame(globalNavBlock)}>
             {renderWebsiteBlock(globalNavBlock, { compact, device, assets: publishedAssets, editor: false, navigationContext, siteId: publication?.id || "" })}
           </div>
         ) : null}
