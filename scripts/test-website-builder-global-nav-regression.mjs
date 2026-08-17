@@ -182,13 +182,13 @@ assert.equal(isStickyNavigationBlock(stickyTransparentNav), true, "Sticky-transp
 assert.equal(isStickyNavigationBlock(normalNav), false, "Sticky OFF nav must stay in normal flow");
 assert.deepEqual(
   stickyNavigationFrameStyle(stickySolidNav),
-  { position: "sticky", top: 0, zIndex: 10000, overflow: "visible", overflowX: "visible", alignSelf: "start" },
-  "Live/preview sticky nav frame must supply sticky position, top, z-index, and visible overflow",
+  { position: "relative", top: 0, zIndex: 10000, overflow: "visible", overflowX: "visible", overflowY: "visible", alignSelf: "start" },
+  "Live/preview sticky nav frame must reserve flow while allowing the fixed nav shell to pin",
 );
 assert.deepEqual(
   stickyNavigationFrameStyle(stickySolidNav, { editor: true }),
-  { position: "sticky", top: 0, zIndex: 70, overflow: "visible", overflowX: "visible", alignSelf: "start" },
-  "Builder sticky nav frame must supply sticky position, top, z-index, and visible overflow",
+  { position: "relative", top: 0, zIndex: 70, overflow: "visible", overflowX: "visible", overflowY: "visible", alignSelf: "start" },
+  "Builder sticky nav frame must reserve flow while allowing the fixed nav shell to pin",
 );
 assert.deepEqual(stickyNavigationFrameStyle(normalNav), {}, "Sticky OFF nav frame must not receive sticky wrapper styles");
 

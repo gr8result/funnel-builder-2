@@ -6,6 +6,7 @@ import { resolveLayerImageUrl } from "../../../lib/website-builder/blockImageRes
 import { isUnsafeAccordionPanelImageUrl, resolveAccordionPanelImageUrl } from "../../../lib/website-builder/accordionPanels";
 import { normalizeAccordionHeading } from "../../../lib/website-builder/accordionHeadingText";
 import { resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
+import { inferCtaLinkType, resolvePreferredCtaHref, resolveRenderedCtaHref } from "../../../lib/website-builder/buttonLinks";
 import { isUnsafePublishedIconUrl, renderGridLibraryIcon, renderSocialPlatformIcon } from "../gridIconLibrary";
 import { openSharedMediaPicker } from "../../../lib/openSharedMediaPicker";
 import { cleanInlineEditorHtml } from "../../../modules/website-builder/utils/inlineHtml";
@@ -39,18 +40,20 @@ const shouldLogHeroVideoDebug = () => typeof window !== "undefined" && process.e
 function resolvePageAwareCta(props = {}, navigationContext = null) {
   const cta = props.cta && typeof props.cta === "object" ? props.cta : {};
   const text = String(cta.text || props.ctaText || props.buttonText || "").trim();
-  const linkType = String(cta.linkType || "").trim();
-  const rawHref = String(cta.href || props.ctaLink || props.buttonLink || props.link || props.href || "").trim();
+  const rawHref = resolvePreferredCtaHref(
+    cta.href || "",
+    props.ctaLink || props.buttonLink || props.link || props.href || "",
+    cta.linkType || "",
+  );
+  const linkType = inferCtaLinkType(rawHref, cta.linkType || "");
   if (!text) return { text: "", href: "" };
   if (linkType === "none") return { text, href: "" };
-  if (linkType === "page" || cta.pageId) {
-    const pageMap = navigationContext?.pageMap;
-    const key = String(cta.pageId || "").trim();
-    const match = pageMap instanceof Map ? pageMap.get(key) : pageMap?.[key];
-    const href = match && typeof match === "object" ? match.href : match;
-    return { text, href: href || rawHref || "#" };
-  }
-  return { text, href: rawHref || "#" };
+  const href = resolveRenderedCtaHref({
+    linkType,
+    href: rawHref,
+    pageId: cta.pageId || "",
+  }, navigationContext);
+  return { text, href: href || "#" };
 }
 
 function getVideoDebugState(video) {
@@ -107,8 +110,6 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
   const isAlwaysMode = stickyMode === "always";
   const isStickyMode = stickyMode === "sticky" || stickyMode === "sticky-transparent" || stickyMode === "sticky-solid";
   const isGlobalSiteHeader = blockProps.role === "primary-navigation" || !!blockProps.sharedComponentId || blockProps.useGlobalHeader === true;
-  const shouldUseTrueSticky = isStickyMode || (editor && isAlwaysMode);
-  const shouldUseFixedNav = !editor && (isAlwaysMode || (isGlobalSiteHeader && isStickyMode));
   const navFullWidth = fullWidthStyle(navProps, compact, editor);
   const isFullWidthNav = navProps.fullWidthBackground && !compact;
   const mobileMenuStyle = blockProps.mobileMenuStyle || "hamburger";
@@ -120,6 +121,9 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
   const [navHeight, setNavHeight] = React.useState(0);
   const [stickyPinned, setStickyPinned] = React.useState(false);
   const [fixedFrame, setFixedFrame] = React.useState({ top: 0, left: 0, width: 0 });
+  const shouldUseEditorFixedNav = editor && isGlobalSiteHeader && isStickyMode && stickyPinned;
+  const shouldUseFixedNav = shouldUseEditorFixedNav || (!editor && (isAlwaysMode || (isGlobalSiteHeader && isStickyMode)));
+  const shouldUseTrueSticky = !shouldUseFixedNav && isStickyMode;
 
   const cancelDropdownClose = React.useCallback(() => {
     if (dropdownCloseTimerRef.current) {
@@ -196,18 +200,22 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
     // fixed we have to re-express those coordinates relative to the containing block ourselves --
     // otherwise "always"/"sticky" nav mode renders offset by however far the shell sits from the
     // real viewport origin (e.g. a centered, narrower tablet/mobile preview shell).
-    const containingBlockCandidate = wrapperNode?.closest?.(".gr8wb-viewport") || null;
-    const containingBlockStyle = containingBlockCandidate ? window.getComputedStyle(containingBlockCandidate) : null;
-    const createsFixedContainingBlock = containingBlockStyle
-      ? (
-          (containingBlockStyle.transform && containingBlockStyle.transform !== "none")
-          || (containingBlockStyle.perspective && containingBlockStyle.perspective !== "none")
-          || (containingBlockStyle.filter && containingBlockStyle.filter !== "none")
-          || (containingBlockStyle.backdropFilter && containingBlockStyle.backdropFilter !== "none")
-          || (containingBlockStyle.contain && /(layout|paint|strict|content)/.test(containingBlockStyle.contain))
-        )
-      : false;
-    const containingBlockNode = createsFixedContainingBlock ? containingBlockCandidate : null;
+    const createsFixedContainingBlock = (node) => {
+      if (!node) return false;
+      const style = window.getComputedStyle(node);
+      return (
+        (style.transform && style.transform !== "none")
+        || (style.perspective && style.perspective !== "none")
+        || (style.filter && style.filter !== "none")
+        || (style.backdropFilter && style.backdropFilter !== "none")
+        || (style.contain && /(layout|paint|strict|content)/.test(style.contain))
+      );
+    };
+    let containingBlockNode = wrapperNode?.parentElement || null;
+    while (containingBlockNode && containingBlockNode !== document.documentElement && !createsFixedContainingBlock(containingBlockNode)) {
+      containingBlockNode = containingBlockNode.parentElement;
+    }
+    if (containingBlockNode === document.documentElement) containingBlockNode = null;
     const readScrollTop = () => {
       const usesWindowScroll = !scrollTarget || scrollTarget === window;
       const scrollAmount = usesWindowScroll ? (window.scrollY || 0) : (scrollTarget?.scrollTop || 0);
@@ -226,7 +234,7 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
       if ((isAlwaysMode || isStickyMode) && wrapperRect) {
         setFixedFrame((current) => {
           const next = {
-            top: (usesWindowScroll ? 0 : containerTop) - cbTop,
+            top: -cbTop,
             left: wrapperRect.left - cbLeft,
             width: wrapperRect.width,
           };
@@ -305,7 +313,12 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
   const currentPageKey = slugifyText(navigationContext?.currentPageKey || browserPageKey || "");
 
   const shouldUseMobileMenu = (compact || isMobile) && mobileMenuStyle === "hamburger";
-  const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : asArray(blockProps.links);
+  const resolvedLinks = asArray(blockProps.links).length
+    ? asArray(blockProps.links)
+    : asArray(blockProps.navigationLinks).length
+      ? asArray(blockProps.navigationLinks)
+      : asArray(blockProps.navLinks);
+  const visibleLinks = shouldUseMobileMenu && !mobileOpen ? [] : resolvedLinks;
   const fixedTop = fixedFrame.top || 0;
   const fixedLeft = editor ? fixedFrame.left : (isFullWidthNav ? 0 : fixedFrame.left);
   const fixedWidth = editor ? (fixedFrame.width || undefined) : (isFullWidthNav ? "100vw" : (fixedFrame.width || "100%"));
@@ -587,7 +600,6 @@ function NavBarBlock({ blockProps, compact, device, logoSrc, editor = false, nav
             position: "relative",
             width: "100%",
             minHeight: shouldUseFixedNav ? (navHeight || undefined) : undefined,
-            paddingTop: shouldUseFixedNav ? (navHeight || 0) : 0,
           }}
         >
         {renderNavSection()}

@@ -8,8 +8,8 @@ const blockRenderer = fs.readFileSync(path.join(repoRoot, "components/website-bu
 
 assert.match(
   blockRenderer,
-  /const shouldUseFixedNav = !editor && \(isAlwaysMode \|\| \(isGlobalSiteHeader && isStickyMode\)\);/,
-  "global sticky navigation must use the fixed-header path, not sticky inside the short nav wrapper"
+  /const shouldUseFixedNav = shouldUseEditorFixedNav \|\| \(!editor && \(isAlwaysMode \|\| \(isGlobalSiteHeader && isStickyMode\)\)\);/,
+  "published/preview global sticky navigation must use the fixed-header path, while editor canvas starts visible and pins after the sticky threshold"
 );
 
 const { default: puppeteer } = await import("puppeteer");

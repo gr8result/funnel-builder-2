@@ -2674,6 +2674,69 @@ export default function VisualBuilderPage() {
   }
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "production" || typeof window === "undefined") return undefined;
+    window.__websiteBuilderRegressionApi = {
+      getSnapshot() {
+        const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+        const pageName = resolveProjectPageName(activePage, currentProject);
+        const blocks = Array.isArray(currentProject?.pageBlocks?.[pageName]) ? currentProject.pageBlocks[pageName] : [];
+        return {
+          project: currentProject,
+          activePage,
+          resolvedPageName: pageName,
+          hasSession: !!session?.access_token,
+          blocks,
+          videoHeroes: blocks
+            .filter((block) => String(block?.type || "") === BlockTypes.VIDEO_HERO)
+            .map((block) => ({
+              id: block?.id || "",
+              videoUrl: block?.props?.videoUrl || "",
+              resolvedVideoUrl: resolveVideoHeroUrl(block?.props || {}),
+              props: block?.props || {},
+            })),
+        };
+      },
+      setActivePage(pageName) {
+        const resolved = resolveProjectPageName(pageName, project) || String(pageName || "");
+        setActivePage(resolved);
+        return resolved;
+      },
+      stagePageBlocks(pageName, blocks) {
+        const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+        const resolved = resolveProjectPageName(pageName, currentProject) || String(pageName || activePage || "Home");
+        const nextProject = normalizeFooterNavigationForProject({
+          ...(currentProject || {}),
+          pageBlocks: {
+            ...(currentProject?.pageBlocks || {}),
+            [resolved]: Array.isArray(blocks) ? blocks : [],
+          },
+          chaiData: {
+            ...(currentProject?.chaiData || {}),
+            [resolved]: {
+              ...(currentProject?.chaiData?.[resolved] || {}),
+              blocks: Array.isArray(blocks) ? blocks : [],
+            },
+          },
+          updatedAt: new Date().toISOString(),
+        });
+        updateWebsiteProject(nextProject.id, nextProject);
+        setProject(nextProject);
+        return resolved;
+      },
+      async forceSavePageBlocks(pageName, blocks) {
+        const resolved = resolveProjectPageName(pageName, project) || String(pageName || activePage || "Home");
+        return forceSaveBlockPage(Array.isArray(blocks) ? blocks : [], {
+          pageName: resolved,
+          saveSource: "manual-save",
+        });
+      },
+    };
+    return () => {
+      if (window.__websiteBuilderRegressionApi) delete window.__websiteBuilderRegressionApi;
+    };
+  }, [activePage, project, session?.access_token]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const syncServerDefaults = async () => {
@@ -3086,13 +3149,9 @@ export default function VisualBuilderPage() {
 
   const studioProject = project;
   const activeProjectPageName = resolveProjectPageName(activePage, studioProject);
-  const rawActivePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName]) && studioProject.pageBlocks[activeProjectPageName].length > 0
+  const rawActivePageBlocks = Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
     ? studioProject.pageBlocks[activeProjectPageName]
-    : Array.isArray(studioProject?.chaiData?.[activeProjectPageName]?.blocks)
-      ? studioProject.chaiData[activeProjectPageName].blocks
-      : Array.isArray(studioProject?.pageBlocks?.[activeProjectPageName])
-        ? studioProject.pageBlocks[activeProjectPageName]
-        : [];
+    : [];
   const activePageBlocks = (studioProject?.globalNavBlock || studioProject?.globalHeader?.enabled || studioProject?.globalHeader?.id)
     ? rawActivePageBlocks.filter((block) => String(block?.type || "") !== BlockTypes.NAV_BAR)
     : rawActivePageBlocks;
