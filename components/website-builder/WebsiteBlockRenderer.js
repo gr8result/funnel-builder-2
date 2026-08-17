@@ -2725,7 +2725,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
 
       const renderTestimonialCard = (item, idx) => {
         const cardSty = typeof variantSty.card === "function" ? variantSty.card(idx) : variantSty.card;
-        const avatarSrcItem = getAssetFromLibrary(assets, item.avatarAssetId)?.src || item.avatarUrl || avatarSrc || defaultAvatarSrc || "";
+        const avatarSrcItem = item.avatarUrl || getAssetFromLibrary(assets, item.avatarAssetId)?.src || avatarSrc || defaultAvatarSrc || "";
         const testimonialAvatarSize = resolveResponsiveMediaSize({
           desktopWidth: sharedStyles.avatar?.width || 44,
           desktopHeight: sharedStyles.avatar?.height || 44,

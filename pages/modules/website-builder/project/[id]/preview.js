@@ -7,6 +7,7 @@ function SiteLoader() {
   const r = 38;
   const circ = 2 * Math.PI * r;
   const arcLen = circ * 0.72;
+
   return (
     <>
       <style>{`
@@ -60,6 +61,10 @@ import {
 } from "../../../../../lib/website-builder/previewRoutes";
 import { syncWebsiteBuilderSharedAssetCache } from "../../../../../lib/website-builder/mediaAssets";
 import { fetchWebsiteProjectFromServer } from "../../../../../lib/website-builder/remoteProjects";
+import {
+  preserveExistingTestimonialAvatarUrls,
+  preserveExistingTestimonialChaiAvatarUrls,
+} from "../../../../../lib/website-builder/testimonialImages";
 import { supabase } from "../../../../../lib/supabaseClient";
 
 const PREVIEW_SNAPSHOT_STORAGE_PREFIX = "gr8:website-preview-snapshot:";
@@ -203,13 +208,17 @@ async function fetchEmergencyPageDraft(projectId, pageName) {
 
 function applyEmergencyDraftToProject(project, pageName, draft) {
   if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
+  const blocks = preserveExistingTestimonialAvatarUrls(draft.blocks, project?.pageBlocks?.[pageName] || []);
+  const chaiData = draft.chaiData && typeof draft.chaiData === "object"
+    ? preserveExistingTestimonialChaiAvatarUrls(draft.chaiData, blocks, project?.chaiData?.[pageName] || null)
+    : { ...(project?.chaiData?.[pageName] || {}), blocks };
   return {
     ...project,
     pages: Array.isArray(project.pages) && project.pages.length ? project.pages : [{ name: pageName }],
     updatedAt: draft.savedAt || project.updatedAt || new Date().toISOString(),
     pageBlocks: {
       ...(project.pageBlocks || {}),
-      [pageName]: draft.blocks,
+      [pageName]: blocks,
     },
     pagesContent: {
       ...(project.pagesContent || {}),
@@ -217,9 +226,7 @@ function applyEmergencyDraftToProject(project, pageName, draft) {
     },
     chaiData: {
       ...(project.chaiData || {}),
-      [pageName]: draft.chaiData && typeof draft.chaiData === "object"
-        ? draft.chaiData
-        : { ...(project?.chaiData?.[pageName] || {}), blocks: draft.blocks },
+      [pageName]: chaiData,
     },
   };
 }

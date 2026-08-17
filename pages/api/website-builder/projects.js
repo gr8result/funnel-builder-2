@@ -23,6 +23,10 @@ import { normalizeAccordionBlocks } from "../../../lib/website-builder/accordion
 import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, applyGr8AustralianFooterPanel, buildFooterNavigationContext, footerBlockToGlobalFooter, globalFooterToFooterBlock, normalizeFooterNavigationBlock, normalizeFooterNavigationBlocks } from "../../../lib/website-builder/footerNavigation";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 import { normalizeSharedBlockTemplateProject } from "../../../lib/website-builder/sharedBlockTemplates";
+import {
+  preserveExistingTestimonialAvatarUrls,
+  preserveExistingTestimonialChaiAvatarUrls,
+} from "../../../lib/website-builder/testimonialImages";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, syncVideoHeroChaiDataBlocks } from "../../../lib/website-builder/videoHero";
 import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
 
@@ -661,7 +665,7 @@ async function handler(req, res) {
     const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
     const versionMeta = buildWebsiteProjectVersion(normalizedProject, now);
-    const nextProject = {
+    let nextProject = {
       ...normalizedProject,
       id: projectId,
       createdAt: normalizedProject?.createdAt || now,
@@ -670,7 +674,42 @@ async function handler(req, res) {
       projectVersion: versionMeta.projectVersion,
       contentHash: versionMeta.contentHash,
     };
-    const incomingBlocks = requestedPage ? getProjectPageBlocks(nextProject, requestedPage) : [];
+    let incomingBlocks = requestedPage ? getProjectPageBlocks(nextProject, requestedPage) : [];
+
+    let currentSplitProject = null;
+    try {
+      currentSplitProject = await loadFullSplitWebsiteProject(userId, projectId);
+    } catch {
+      currentSplitProject = null;
+    }
+    if (requestedPage && currentSplitProject) {
+      const existingBlocks = getProjectPageBlocks(currentSplitProject, requestedPage);
+      const preservedBlocks = preserveExistingTestimonialAvatarUrls(incomingBlocks, existingBlocks);
+      const incomingChaiData = nextProject?.chaiData?.[requestedPage] || null;
+      const existingChaiData = currentSplitProject?.chaiData?.[requestedPage] || null;
+      const preservedChaiData = preserveExistingTestimonialChaiAvatarUrls(incomingChaiData, preservedBlocks, existingChaiData);
+      nextProject = {
+        ...nextProject,
+        pageBlocks: {
+          ...(nextProject?.pageBlocks || {}),
+          [requestedPage]: preservedBlocks,
+        },
+        chaiData: preservedChaiData
+          ? {
+              ...(nextProject?.chaiData || {}),
+              [requestedPage]: preservedChaiData,
+            }
+          : nextProject?.chaiData,
+      };
+      incomingBlocks = getProjectPageBlocks(nextProject, requestedPage);
+    }
+    const preservedVersionMeta = buildWebsiteProjectVersion(nextProject, now);
+    nextProject = {
+      ...nextProject,
+      savedAt: preservedVersionMeta.savedAt,
+      projectVersion: preservedVersionMeta.projectVersion,
+      contentHash: preservedVersionMeta.contentHash,
+    };
     console.info("[website-builder save] incoming payload", {
       projectId,
       draftProjectId,
@@ -684,13 +723,6 @@ async function handler(req, res) {
       deletedBlockIds: normalizeDeletedBlockTombstones(nextProject),
       page: summarizeBlockList(incomingBlocks),
     });
-
-    let currentSplitProject = null;
-    try {
-      currentSplitProject = await loadFullSplitWebsiteProject(userId, projectId);
-    } catch {
-      currentSplitProject = null;
-    }
     const currentSplitUpdatedAt = currentSplitProject?.updatedAt || currentSplitProject?.savedAt || "";
     const incomingBaseMs = Date.parse(baseUpdatedAt || 0) || 0;
     const currentSplitMs = Date.parse(currentSplitUpdatedAt || 0) || 0;

@@ -32,6 +32,10 @@ import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../..
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
 import { hasGlobalPageWidthMode, normalizePageWidthMode, resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
+  preserveExistingTestimonialAvatarUrls,
+  preserveExistingTestimonialChaiAvatarUrls,
+} from "../../../lib/website-builder/testimonialImages";
+import {
   detachSharedBlockInstance,
   getSharedBlockTemplates,
   getSharedTemplateId,
@@ -786,18 +790,19 @@ function mergeRepairProjectWithCurrentGlobals(repairedProject, currentProject) {
 
 function applyEmergencyDraftToProject(project, pageName, draft) {
   if (!project?.id || !pageName || !Array.isArray(draft?.blocks)) return project;
+  const blocks = preserveExistingTestimonialAvatarUrls(draft.blocks, project?.pageBlocks?.[pageName] || []);
   const nextChaiData = draft.chaiData && typeof draft.chaiData === "object"
-    ? draft.chaiData
+    ? preserveExistingTestimonialChaiAvatarUrls(draft.chaiData, blocks, project?.chaiData?.[pageName] || null)
     : {
         ...(project?.chaiData?.[pageName] || {}),
-        blocks: draft.blocks,
+        blocks,
       };
   return {
     ...project,
     updatedAt: draft.savedAt || project.updatedAt || new Date().toISOString(),
     pageBlocks: {
       ...(project.pageBlocks || {}),
-      [pageName]: draft.blocks,
+      [pageName]: blocks,
     },
     pagesContent: {
       ...(project.pagesContent || {}),
