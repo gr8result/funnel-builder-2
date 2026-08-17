@@ -50,6 +50,7 @@ import {
   mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
 } from "../../lib/product-library/catalogueModel";
+import auMetalRoofingCatalogue from "../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 import exteriorFinishesCatalogue from "../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
@@ -6816,9 +6817,9 @@ function ProductLibrarySheet({ sheet }) {
   const visibleFamilies = useMemo(() => embeddedProductLibraryFamilies(selectedAreaKey, selectedCategory), [selectedAreaKey, selectedCategory]);
   const selectedFamily = PRODUCT_FAMILIES.find((family) => family.familyKey === selectedFamilyKey) || null;
   const selectedFamilyCatalogueProducts = useMemo(() => {
-    if (selectedFamily?.familyKey !== "cladding") return [];
+    if (!["cladding", "roofing"].includes(selectedFamily?.familyKey)) return [];
     return productLibraryMasterProducts
-      .filter((product) => product.familyKey === "cladding" && !isRemovedDuplicateCladdingProduct(product));
+      .filter((product) => product.familyKey === selectedFamily.familyKey && !isRemovedDuplicateCladdingProduct(product));
   }, [productLibraryMasterProducts, selectedFamily?.familyKey]);
   const q = search.trim().toLowerCase();
   const searchedFamilies = useMemo(() => {
@@ -6852,7 +6853,10 @@ function ProductLibrarySheet({ sheet }) {
   }
 
   useEffect(() => {
-    const baselineProducts = (exteriorFinishesCatalogue.products || []).map((product) => normalizeMasterProductRecord(product));
+    const baselineProducts = [
+      ...(auMetalRoofingCatalogue.products || []),
+      ...(exteriorFinishesCatalogue.products || []),
+    ].map((product) => normalizeMasterProductRecord(product));
     let storedProducts = [];
     if (typeof window !== "undefined") {
       try {

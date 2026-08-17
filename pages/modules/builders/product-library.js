@@ -22,6 +22,7 @@ import {
   createProductEntity,
   createBuilderProductReference,
   ensureBuilderCladdingEnablements,
+  ensureBuilderRoofingEnablements,
   ensureDemoBuilderCatalogueEnablements,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
@@ -521,18 +522,29 @@ export default function BuilderProductLibraryPage() {
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
       const nextEnablements = ensureBuilderCladdingEnablements(
         nextProducts,
-        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
+        ensureBuilderRoofingEnablements(
+          nextProducts,
+          ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
+          workspaceId || "",
+        ),
         workspaceId || "",
       );
       setMasterProducts(nextProducts);
       setBuilderEnablements(nextEnablements);
+      if (Array.isArray(storedProducts) && nextProducts.length !== storedProducts.length) {
+        window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
+      }
       if (nextEnablements.length !== storedEnablements.length) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
       const fallbackEnablements = ensureBuilderCladdingEnablements(
         baselineProducts,
-        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
+        ensureBuilderRoofingEnablements(
+          baselineProducts,
+          ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
+          workspaceId || "",
+        ),
         workspaceId || "",
       );
       setMasterProducts(baselineProducts);
@@ -655,10 +667,11 @@ export default function BuilderProductLibraryPage() {
   }
 
   function persistMasterCatalogue(nextProducts, nextEnablements = builderEnablements) {
-    setMasterProducts(nextProducts);
+    const preservedProducts = mergeMasterCatalogueProducts(masterProducts, nextProducts);
+    setMasterProducts(preservedProducts);
     setBuilderEnablements(nextEnablements);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
+      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(preservedProducts));
       window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
     }
   }

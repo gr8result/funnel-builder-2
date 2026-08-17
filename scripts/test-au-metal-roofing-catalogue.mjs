@@ -7,8 +7,11 @@ import {
   activeAuMetalRoofingMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
+  ensureBuilderRoofingEnablements,
   ensureDemoBuilderCatalogueEnablements,
   ensureDemoBuilderRoofingEnablements,
+  mergeMasterCatalogueProducts,
+  normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   queryClientSelectableProducts,
@@ -22,10 +25,18 @@ import {
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const jsonPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.json");
 const csvPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.csv");
+const bricksPath = path.join(repoRoot, "data", "product-library", "catalogues", "bricks", "QLD-BRICKS-MASTER-CATALOGUE.json");
+const exteriorOpeningsPath = path.join(repoRoot, "data", "product-library", "catalogues", "exterior", "AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
+const exteriorFinishesPath = path.join(repoRoot, "data", "product-library", "catalogues", "exterior", "AU-EXTERIOR-FINISHES-CATALOGUE.json");
+const kitchenPath = path.join(repoRoot, "data", "product-library", "catalogues", "kitchen", "AU-KITCHEN-PRODUCT-CATALOGUE.json");
 const selectionsPath = path.join(repoRoot, "pages", "modules", "builders", "selections-book.js");
 const productLibraryPath = path.join(repoRoot, "pages", "modules", "builders", "product-library.js");
 
 const catalogue = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+const brickCatalogue = JSON.parse(fs.readFileSync(bricksPath, "utf8"));
+const exteriorOpeningsCatalogue = JSON.parse(fs.readFileSync(exteriorOpeningsPath, "utf8"));
+const exteriorFinishesCatalogue = JSON.parse(fs.readFileSync(exteriorFinishesPath, "utf8"));
+const kitchenCatalogue = JSON.parse(fs.readFileSync(kitchenPath, "utf8"));
 const csv = fs.readFileSync(csvPath, "utf8");
 const selectionsSource = fs.readFileSync(selectionsPath, "utf8");
 const productLibrarySource = fs.readFileSync(productLibraryPath, "utf8");
@@ -94,6 +105,25 @@ assert.equal(queryClientSelectableProducts({
   builderProducts: demoRoofingEnablements,
 }).length, 3, "Client Selections query must return all demo-enabled QLD metal roofing profiles");
 
+const partialDemoRoofingEnablements = ensureDemoBuilderRoofingEnablements(committed.products, [demoRoofingEnablements[0]], DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: committed.products,
+  builderProducts: partialDemoRoofingEnablements,
+}).length, 3, "partial demo roofing enablements must be repaired without waiting for a full reseed");
+
+const currentWorkspaceId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+const currentWorkspaceRoofingEnablements = ensureBuilderRoofingEnablements(committed.products, [], currentWorkspaceId);
+assert.equal(queryClientSelectableProducts({
+  organisationId: currentWorkspaceId,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: committed.products,
+  builderProducts: currentWorkspaceRoofingEnablements,
+}).length, 3, "active workspace roofing enablements must be added without relying on demo-only bootstrap");
+
 const disabledRoofingEnablements = demoRoofingEnablements.map((item) => ({ ...item, enabled: false, active: false }));
 const preservedDisabledRoofing = ensureDemoBuilderRoofingEnablements(committed.products, disabledRoofingEnablements, DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(queryClientSelectableProducts({
@@ -106,6 +136,35 @@ assert.equal(queryClientSelectableProducts({
 
 const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");
+
+const allMasterProducts = [
+  ...(brickCatalogue.products || []),
+  ...(catalogue.products || []),
+  ...(exteriorOpeningsCatalogue.products || []),
+  ...(exteriorFinishesCatalogue.products || []),
+  ...(kitchenCatalogue.products || []),
+].map((product) => normalizeMasterProductRecord(product));
+const familyCount = (productsForCount, familyKey) => productsForCount.filter((product) => product.familyKey === familyKey).length;
+const beforeFamilyCounts = {
+  bricks: familyCount(allMasterProducts, "bricks"),
+  roofing: familyCount(allMasterProducts, "roofing"),
+  windows: familyCount(allMasterProducts, "windows"),
+  "entry-doors": familyCount(allMasterProducts, "entry-doors"),
+  "garage-doors": familyCount(allMasterProducts, "garage-doors"),
+  cabinetry: familyCount(allMasterProducts, "cabinetry"),
+};
+const claddingRecord = allMasterProducts.find((product) => product.familyKey === "cladding");
+assert.ok(claddingRecord, "family isolation test requires a cladding product");
+const claddingOnlyUpdate = [{ ...claddingRecord, description: `${claddingRecord.description} Family isolation proof.` }];
+const mergedAfterCladdingUpdate = mergeMasterCatalogueProducts(allMasterProducts, claddingOnlyUpdate);
+Object.entries(beforeFamilyCounts).forEach(([familyKey, expectedCount]) => {
+  assert.equal(familyCount(mergedAfterCladdingUpdate, familyKey), expectedCount, `cladding update must preserve ${familyKey} product count`);
+});
+assert.equal(
+  mergedAfterCladdingUpdate.find((product) => product.productCode === claddingRecord.productCode).description,
+  claddingOnlyUpdate[0].description,
+  "family-scoped merge must still apply the intended cladding update",
+);
 
 const roofingPayload = {
   selection_status: "selected",
