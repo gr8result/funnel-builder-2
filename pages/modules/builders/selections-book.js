@@ -4272,13 +4272,11 @@ function roofingRoofTypeCards(products = [], requirement = null) {
 }
 
 function roofingImageForProducts(products = [], requirement = null) {
-  return roofingProfileImage(products.find((product) => product.imageUrl || product.galleryImages?.length), requirement) || requirementImage(requirement);
+  return requirementImage(requirement);
 }
 
 function roofingSystemImage(products = [], system = null, requirement = null) {
-  if (!system) return roofingImageForProducts(products, requirement);
-  const match = products.find((product) => roofingProductSystems([product], product.roofType || "metal_roofing")[0]?.key === system.key && (product.imageUrl || product.galleryImages?.length));
-  return roofingProfileImage(match, requirement);
+  return requirementImage(requirement);
 }
 
 function roofingProfileImage(profile = null, requirement = null) {
