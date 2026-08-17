@@ -32,7 +32,8 @@ import {
   numberValue,
   roundMoney,
 } from "../../../lib/builders/selectionBudget";
-import { GENERIC_IMAGE_URLS, familyByKey } from "../../../lib/product-library/catalogueModel";
+import { GENERIC_IMAGE_URLS, familyByKey, normalizeMasterProductRecord } from "../../../lib/product-library/catalogueModel";
+import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 import {
   createFinalInclusionsDocumentVersion,
   createProjectInclusionsSnapshot,
@@ -68,6 +69,10 @@ const DEMO_PRODUCTS = {
     demoProduct("colorbond-standing-seam", "Colorbond", "Architectural Standing Seam", "Premium", "Monument", 0, 4200, GENERIC_IMAGE_URLS.roofing, swatches(["Monument", "#252a2e"], ["Basalt", "#6b6e70"], ["Dune", "#b8ad9c"])),
   ],
 };
+
+const SHARED_CLADDING_CATALOGUE_PRODUCTS = (exteriorFinishesCatalogue.products || [])
+  .filter((product) => product.family_key === "cladding" || product.familyKey === "cladding")
+  .map((product) => normalizeMasterProductRecord(product));
 
 export default function BuilderClientSelectionsPage() {
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
@@ -163,7 +168,7 @@ export default function BuilderClientSelectionsPage() {
         setSnapshots(snapshotRows);
         setSessions(sessionRows);
         setSelections(selectionResult.data || []);
-        setProducts((productResult.data || []).map(mapDbProductToEntity));
+        setProducts(mergeSharedCladdingProducts((productResult.data || []).map(mapDbProductToEntity)));
         setSelectedSnapshotId((current) => snapshotRows.find((snapshot) => snapshot.id === current)?.id || sessionRows[0]?.snapshot_id || snapshotRows[0]?.id || "");
         setSelectedSessionId((current) => sessionRows.find((session) => session.id === current)?.id || sessionRows[0]?.id || "");
       }
@@ -211,7 +216,11 @@ export default function BuilderClientSelectionsPage() {
 
   const selectedRequirement = useMemo(() => guidedRequirementByKey(selectedRequirementKey) || KITCHEN_REQUIREMENTS[7], [selectedRequirementKey]);
   const activeRequirementList = selectedRequirement?.areaKey === "exterior" ? EXTERIOR_REQUIREMENTS : KITCHEN_REQUIREMENTS;
-  const requirementProducts = useMemo(() => productsForRequirement(products, selectedRequirement), [products, selectedRequirement]);
+  const requirementProducts = useMemo(() => {
+    const matchedProducts = productsForRequirement(products, selectedRequirement);
+    if (matchedProducts.length || selectedRequirement?.familyKey !== "cladding") return matchedProducts;
+    return SHARED_CLADDING_CATALOGUE_PRODUCTS;
+  }, [products, selectedRequirement]);
   const availableFilters = useMemo(() => filtersForRequirement(selectedRequirement, requirementProducts), [selectedRequirement, requirementProducts]);
   const visibleProducts = useMemo(() => {
     const filtered = requirementProducts.filter((product) => availableFilters.every((filter) => {
@@ -771,6 +780,17 @@ function placeholderPalette(value) {
   if (key.includes("door") || key.includes("garage")) return { bg: "#e8e3dc", surface: "#fffaf2", accent: "#8b6f4e", stroke: "#d2c0aa", text: "#2f241b", muted: "#665444" };
   if (key.includes("paint") || key.includes("colour")) return { bg: "#ebe9ef", surface: "#ffffff", accent: "#6d5f9a", stroke: "#cbc6da", text: "#1f2937", muted: "#625b73" };
   return { bg: "#e8edf0", surface: "#ffffff", accent: "#d6a23a", stroke: "#cbd5e1", text: "#102033", muted: "#516173" };
+}
+
+function mergeSharedCladdingProducts(products = []) {
+  const seenCodes = new Set(products.map((product) => String(product.productCode || product.sku || product.id || "").toLowerCase()).filter(Boolean));
+  const sharedRows = SHARED_CLADDING_CATALOGUE_PRODUCTS.filter((product) => {
+    const code = String(product.productCode || product.productId || "").toLowerCase();
+    if (!code || seenCodes.has(code)) return false;
+    seenCodes.add(code);
+    return true;
+  });
+  return [...products, ...sharedRows];
 }
 
 function mapDbProductToEntity(product) {
