@@ -1014,7 +1014,8 @@ async function handler(req, res) {
 
     const savedProject = splitProject || mapProjectRow(readBack.data || result.data);
     const readBackProject = mapProjectRow(readBack.data || result.data);
-    const expectedVerification = summarizeProjectSaveVerification(nextProject);
+    const expectedProject = buildExpectedSplitReadbackProject(nextProject, currentSplitProject, { requestedPage, siteOnly });
+    const expectedVerification = summarizeProjectSaveVerification(expectedProject);
     const splitVerification = summarizeProjectSaveVerification(savedProject);
     const missingVideos = expectedVerification.videos
       .filter((entry) => entry.videoUrl)
@@ -1068,7 +1069,7 @@ async function handler(req, res) {
         missingVideos,
       });
     }
-    const persistenceVerification = compareProjectPersistenceForSave(nextProject, savedProject, requestedPage);
+    const persistenceVerification = compareProjectPersistenceForSave(expectedProject, savedProject, requestedPage);
     if (!persistenceVerification.ok) {
       verificationIssues.push({
         type: "structural-hash-mismatch",

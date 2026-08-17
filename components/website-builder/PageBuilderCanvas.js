@@ -6,7 +6,7 @@ import { saveWebsiteBuilderAssets } from "../../lib/website-builder/projectStore
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { primaryNavigationSharedComponentId } from "../../lib/website-builder/sharedNavigation";
 import { resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
-import { normalizePageWidthMode, PAGE_WIDTH_CONTAINED } from "../../lib/website-builder/pageLayout";
+import { normalizePageWidthMode, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isVideoHeroMediaFieldKey, mergeVideoHeroProps, resolveVideoHeroUrl } from "../../lib/website-builder/videoHero";
 import { buildWebsitePreviewUrl } from "../../lib/website-builder/previewRoutes";
 import { BlockTypes, BlockDefinitions, COMPETITOR_COMPARISON_TEMPLATE_PROPS } from "../../lib/website-builder/pageBlockComponents";
@@ -363,7 +363,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -1691,7 +1691,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const responsiveCanvasLayoutWidth = resolveResponsiveLayoutWidth(pageCanvasWidth, previewMode);
   const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const activePageEntry = resolvePreviewPageEntry(project, activePage);
-  const pageWidthMode = normalizePageWidthMode(activePageEntry?.pageWidthMode || PAGE_WIDTH_CONTAINED);
+  const pageWidthMode = resolvePageWidthMode(project, activePageEntry?.slug || activePageEntry?.name || activePage);
   const pageIsFullWidth = pageWidthMode === "full";
   const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
   const resolveCanvasFrameBackground = (entries, entryIndex) => (
@@ -1753,7 +1753,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
 
   const applyGlobalStyles = (patch = {}) => {
     if (Object.prototype.hasOwnProperty.call(patch, "pageWidthMode")) {
-      onUpdatePageSettings?.({ pageWidthMode: normalizePageWidthMode(patch.pageWidthMode) });
+      const pageWidthMode = normalizePageWidthMode(patch.pageWidthMode);
+      onUpdateSiteSettings?.({ pageWidthMode, globalPageWidthMode: pageWidthMode });
     }
 
     setBlocks((prev) => prev.map((block) => {

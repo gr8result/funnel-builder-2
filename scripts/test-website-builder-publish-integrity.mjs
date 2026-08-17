@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import crypto from "node:crypto";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import puppeteer from "puppeteer";
+import { resolvePageWidthMode } from "../lib/website-builder/pageLayout.js";
 
 dotenv.config({ path: ".env.local", quiet: true });
 
@@ -80,6 +82,17 @@ function liveInputFromPublished(siteData) {
 
 function pageHash(project, pageName) {
   return hash(materialPageState(project, pageName));
+}
+
+function assertAllPagesResolveFullWidth(project, label) {
+  const pages = Array.isArray(project?.pages) ? project.pages : [];
+  const result = Object.fromEntries(pages.map((page) => [
+    page.name || page.slug || "",
+    resolvePageWidthMode(project, page.name || page.slug || ""),
+  ]));
+  const nonFull = Object.entries(result).filter(([, mode]) => mode !== "full");
+  assert.deepEqual(nonFull, [], `${label}: all pages should resolve site-wide Full Width`);
+  return result;
 }
 
 function contains(value, needle) {
@@ -180,6 +193,42 @@ async function publish(token) {
   assert.equal(response.status, 200, `publish failed: ${body?.error || response.status}`);
   assert.equal(body?.verified?.savedHash, body?.verified?.publishedHash, "publish API saved/published hash mismatch");
   return body;
+}
+
+async function assertCustomDomainFullWidthRoute() {
+  const url = `${BASE_URL}/pricing`;
+  const { hostname, port, protocol } = new URL(BASE_URL);
+  const localUrl = `${protocol}//${hostname === "localhost" ? "127.0.0.1" : hostname}${port ? `:${port}` : ""}/pricing`;
+  let last = { status: 0, widthMode: "", snippet: "" };
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const response = await new Promise((resolve, reject) => {
+      const request = http.request({
+        hostname: hostname === "localhost" ? "127.0.0.1" : hostname,
+        port: port ? Number(port) : (protocol === "https:" ? 443 : 80),
+        path: "/pricing",
+        headers: { Host: "gr8result.solutions", "Cache-Control": "no-cache" },
+      }, (res) => {
+        let html = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => { html += chunk; });
+        res.on("end", () => resolve({ status: res.statusCode || 0, html }));
+      });
+      request.on("error", reject);
+      request.end();
+    });
+    const html = response.html || "";
+    const widthModeMatch = html.match(/data-page-width-mode=(["'])(.*?)\1/i);
+    last = {
+      status: response.status,
+      widthMode: widthModeMatch?.[2] || "",
+      snippet: html.match(/data-page-width-mode.{0,80}/i)?.[0] || html.slice(0, 120),
+    };
+    if (last.status === 200 && last.widthMode) break;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  assert.equal(last.status, 200, `${url} custom-domain host route should return 200`);
+  assert.equal(last.widthMode, "full", `Custom-domain route should render site-wide Full Width; snippet=${last.snippet}`);
+  return { url: localUrl, host: "gr8result.solutions", status: last.status, widthMode: last.widthMode };
 }
 
 async function latestPublished(admin) {
@@ -340,6 +389,7 @@ async function browserAcceptance(session, expectedHash) {
     await live.screenshot({ path: path.join(OUT_DIR, "pricing-live.png"), fullPage: true });
     const liveText = await live.evaluate(() => document.body.innerText);
     const liveHash = liveResponse.headers()["x-gr8-site-data-hash"] || "";
+    const liveWidthMode = await live.evaluate(() => document.querySelector(".gr8wb-viewport")?.getAttribute("data-page-width-mode") || "");
     const sticky = await live.evaluate(async () => {
       const nav = document.querySelector("[data-published-block-type='nav-bar'], [data-published-block-type='navigation-bar']");
       const read = () => Math.round((nav?.getBoundingClientRect?.().top || 0) * 100) / 100;
@@ -354,8 +404,9 @@ async function browserAcceptance(session, expectedHash) {
     assert.equal(previewText.includes("Savings Disclosure"), false, "Preview DOM contains Savings Disclosure");
     assert.equal(liveText.includes("Savings Disclosure"), false, "Live DOM contains Savings Disclosure");
     assert.ok(liveHash, "Live route should expose X-GR8-Site-Data-Hash");
+    assert.equal(liveWidthMode, "full", "Live Pricing route should render with site-wide Full Width");
     assert.deepEqual(sticky.map((entry) => entry.top), [0, 0, 0], "Sticky nav top measurements must be 0 -> 0 -> 0");
-    return { liveHash, expectedHash, sticky, screenshots: ["pricing-preview.png", "pricing-live.png"] };
+    return { liveHash, expectedHash, widthMode: liveWidthMode, sticky, screenshots: ["pricing-preview.png", "pricing-live.png"] };
   } finally {
     await browser.close();
   }
@@ -466,7 +517,11 @@ async function main() {
     reloaded = await fetchDraftApi(token);
     assert.equal(reloaded.pageWidthMode, "full", "pageWidthMode full did not persist");
     assert.equal(reloaded.globalPageWidthMode, "full", "globalPageWidthMode full did not persist");
-    summary.generic.fullWidth = { pageWidthMode: reloaded.pageWidthMode, globalPageWidthMode: reloaded.globalPageWidthMode };
+    summary.generic.fullWidth = {
+      pageWidthMode: reloaded.pageWidthMode,
+      globalPageWidthMode: reloaded.globalPageWidthMode,
+      resolvedPages: assertAllPagesResolveFullWidth(reloaded, "draft after global full-width save"),
+    };
 
     working = await fetchDraftApi(token);
     working = await savePricing(token, working, addProbeBlock(working, { items: [{ id: `${PROBE_ID}-nested-a`, label: "keep" }, { id: `${PROBE_ID}-nested-b`, label: "delete" }] }));
@@ -530,6 +585,10 @@ async function main() {
 
     const draft = await canonical(token);
     const published = (await latestPublished(admin)).site_data;
+    summary.globalFullWidth = {
+      draft: assertAllPagesResolveFullWidth(draft, "draft after publish"),
+      published: assertAllPagesResolveFullWidth(published, "published after publish"),
+    };
     const draftRenderInput = liveInputFromPublished(draft);
     const publishedRenderInput = liveInputFromPublished(published);
     const liveInput = liveInputFromPublished(published);
@@ -565,6 +624,7 @@ async function main() {
       },
     };
     summary.browser = await browserAcceptance(session, hash(published));
+    summary.customDomainRoute = await assertCustomDomainFullWidthRoute();
     summary.browserBuilderPageSwitch = await browserBuilderPageSwitchAcceptance(session);
 
     await fs.promises.writeFile(path.join(OUT_DIR, "summary.json"), JSON.stringify(summary, null, 2));

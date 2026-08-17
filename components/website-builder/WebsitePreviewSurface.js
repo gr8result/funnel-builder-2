@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import BackToTopButton from "./website-renderer/BackToTopButton";
 import { renderWebsiteBlock, websiteBlockKeyframes } from "./WebsiteBlockRenderer";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
-import { isFullWidthPage, normalizePageWidthMode } from "../../lib/website-builder/pageLayout";
+import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
 import { isBlockVisibleOnDevice, resolveResponsiveLayoutWidth } from "../../lib/website-builder/responsiveValue";
 import { buildWebsitePreviewUrl, canonicalPreviewPageSlug, resolveCanonicalPreviewPageSlug } from "../../lib/website-builder/previewRoutes";
 
@@ -126,7 +126,7 @@ export default function WebsitePreviewSurface({ project, page, viewport, assets,
   ).filter((block) => isBlockVisibleOnDevice(block?.props, previewViewport));
   const shellBlocks = [globalNavBlock, ...blocksWithoutShellDuplicates, globalFooterBlock].filter(Boolean);
   const layoutWidth = pickLayoutWidth(shellBlocks, 1500);
-  const pageWidthMode = normalizePageWidthMode(active?.pageWidthMode);
+  const pageWidthMode = resolvePageWidthMode(project, active?.slug || active?.name || page || "");
   const pageFullWidth = isFullWidthPage(pageWidthMode);
   const pageBackground = pickPageBackground(shellBlocks, "#ffffff");
   // Tablet must use the same mobile-safe compact layout as phone preview -- otherwise the

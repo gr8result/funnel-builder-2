@@ -3409,6 +3409,7 @@ export default function VisualBuilderPage() {
                     canSaveTemplates={canSaveTemplates}
                     onUpdateGlobalBlock={updateGlobalBlock}
                     onUpdatePageSettings={(patch, options = {}) => updateActivePageSettings(patch, { ...options, pageName: activeProjectPageName })}
+                    onUpdateSiteSettings={(patch, options = {}) => saveProjectPatch(patch, "Updated site settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" })}
                     onOpenMediaLibrary={openMediaLibrary}
                     onRefreshAssetLibrary={refreshSharedLibrary}
                     onRegisterPreviewActions={(actions) => {
