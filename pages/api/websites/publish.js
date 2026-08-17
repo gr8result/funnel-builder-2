@@ -15,7 +15,7 @@ import {
 import { assembleWebsiteForRendering } from "../../../lib/website-builder/supabaseSiteStorage";
 import { getPublishedWebsiteByDomain } from "../../../lib/website-builder/publicationStore";
 import { createWebsiteBuilderBackup } from "../../../lib/website-builder/backupStorage";
-import { resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
+import { resolveGlobalPageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   diffWebsitePersistence,
   buildWebsiteProjectVersion,
@@ -131,20 +131,30 @@ async function loadIntendedPublishedRows({ userId, projectId, slug, customDomain
 }
 
 async function writePublishedWebsiteRow(existingId, nextRecord) {
-  if (existingId) {
+  const write = async (record) => {
+    if (existingId) {
+      const result = await supabaseAdmin
+        .from("published_websites")
+        .update(record)
+        .eq("id", existingId)
+        .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
+      return { ...result, data: Array.isArray(result.data) ? result.data : [] };
+    }
+
     const result = await supabaseAdmin
       .from("published_websites")
-      .update(nextRecord)
-      .eq("id", existingId)
+      .insert(record)
       .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
     return { ...result, data: Array.isArray(result.data) ? result.data : [] };
-  }
+  };
 
-  const result = await supabaseAdmin
-    .from("published_websites")
-    .insert(nextRecord)
-    .select("id, project_id, slug, primary_domain, custom_domain, domain_status, site_data, published_at, updated_at");
-  return { ...result, data: Array.isArray(result.data) ? result.data : [] };
+  const result = await write(nextRecord);
+  const message = String(result.error?.message || "").toLowerCase();
+  if (result.error && Object.prototype.hasOwnProperty.call(nextRecord || {}, "workspace_id") && message.includes("workspace_id")) {
+    const { workspace_id: _workspaceId, ...compatibleRecord } = nextRecord;
+    return write(compatibleRecord);
+  }
+  return result;
 }
 
 function extractPublicationDebugMeta(html = "") {
@@ -222,7 +232,11 @@ async function handler(req, res) {
         name: incomingProject?.name || "",
       })
     : null;
-  const mergedBrandAssets = mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, assembledSnapshot?.brandAssets);
+  const hasIncomingBrandAssets = !!incomingProject?.brandAssets;
+  const hasAssembledBrandAssets = !!assembledSnapshot?.brandAssets;
+  const mergedBrandAssets = hasIncomingBrandAssets || hasAssembledBrandAssets
+    ? mergeWebsiteBuilderAssetSources(incomingProject?.brandAssets, assembledSnapshot?.brandAssets)
+    : assembledSnapshot?.brandAssets ?? incomingProject?.brandAssets ?? null;
   const project = withProjectPublicationIdentity({
     ...(assembledSnapshot || incomingProject || {}),
     customDomain: requestedDomainForProject || assembledSnapshot?.customDomain || incomingProject?.customDomain || incomingProject?.custom_domain || "",
@@ -312,12 +326,7 @@ async function handler(req, res) {
   const publishedAt = new Date().toISOString();
   const publishedVersionMeta = buildWebsiteProjectVersion(project, publishedAt);
   const globalPageWidthMode = resolveGlobalPageWidthMode(project);
-  const pages = Array.isArray(project.pages)
-    ? project.pages.map((page) => ({
-        ...page,
-        pageWidthMode: resolvePageWidthMode(project, page?.slug || page?.name || page?.title || page?.id || ""),
-      }))
-    : [];
+  const pages = Array.isArray(project.pages) ? project.pages : [];
   const finalSiteData = {
     ...project,
     pages,
