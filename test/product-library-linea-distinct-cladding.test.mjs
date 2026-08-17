@@ -14,8 +14,19 @@ import {
 } from "../lib/product-library/catalogueModel.js";
 
 const catalogue = JSON.parse(fs.readFileSync("data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json", "utf8"));
+const bricksCatalogue = JSON.parse(fs.readFileSync("data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json", "utf8"));
+const roofingCatalogue = JSON.parse(fs.readFileSync("data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json", "utf8"));
+const openingsCatalogue = JSON.parse(fs.readFileSync("data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json", "utf8"));
+const kitchenCatalogue = JSON.parse(fs.readFileSync("data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json", "utf8"));
 const normalizedProducts = catalogue.products.map((product) => normalizeMasterProductRecord(product));
 const claddingProducts = normalizedProducts.filter((product) => product.familyKey === "cladding");
+const combinedMasterProducts = [
+  ...(bricksCatalogue.products || []),
+  ...(roofingCatalogue.products || []),
+  ...(openingsCatalogue.products || []),
+  ...(catalogue.products || []),
+  ...(kitchenCatalogue.products || []),
+].map((product) => normalizeMasterProductRecord(product));
 
 test("150mm and 180mm Linea remain separate selectable cladding products", () => {
   const [first, second] = catalogue.products.filter((product) => product.family_key === "cladding");
@@ -85,6 +96,23 @@ test("current organisation cladding enablement does not depend on demo-only seed
   assert.deepEqual(selectable.map((product) => product.productCode), claddingProducts.map((product) => product.productCode));
 });
 
+test("disabled current organisation cladding refs are restored on load", () => {
+  const organisationId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+  const disabledEnablements = ensureBuilderCladdingEnablements(normalizedProducts, [], organisationId)
+    .map((item) => ({ ...item, enabled: false, active: false }));
+  const repairedEnablements = ensureBuilderCladdingEnablements(normalizedProducts, disabledEnablements, organisationId);
+  const selectable = queryClientSelectableProducts({
+    organisationId,
+    familyKey: "cladding",
+    region: "QLD",
+    masterProducts: normalizedProducts,
+    builderProducts: repairedEnablements,
+  });
+  assert.equal(repairedEnablements.length, claddingProducts.length);
+  assert.ok(repairedEnablements.every((item) => item.enabled === true && item.active === true));
+  assert.deepEqual(selectable.map((product) => product.productCode), claddingProducts.map((product) => product.productCode));
+});
+
 test("stored stale cladding rows cannot override the authoritative catalogue", () => {
   const staleStoredProducts = [
     {
@@ -104,6 +132,28 @@ test("stored stale cladding rows cannot override the authoritative catalogue", (
   assert.equal(mergedCladding.some((product) => product.productCode === "CLADDING-JAMES-HARDIE-LINEA"), false);
   assert.equal(mergedCladding.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-LINEA-150").description, "Edited in Product Library");
   assert.equal(mergedCladding.length, claddingProducts.length);
+});
+
+test("editing one cladding product does not replace cladding or unrelated families", () => {
+  const countFamily = (products, familyKey) => products.filter((product) => product.familyKey === familyKey).length;
+  const beforeCounts = {
+    cladding: countFamily(combinedMasterProducts, "cladding"),
+    roofing: countFamily(combinedMasterProducts, "roofing"),
+    bricks: countFamily(combinedMasterProducts, "bricks"),
+    windows: countFamily(combinedMasterProducts, "windows"),
+    "entry-doors": countFamily(combinedMasterProducts, "entry-doors"),
+    "garage-doors": countFamily(combinedMasterProducts, "garage-doors"),
+    cabinetry: countFamily(combinedMasterProducts, "cabinetry"),
+  };
+  const edited = {
+    ...claddingProducts.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-MATRIX"),
+    description: "Edited cladding description for regression proof",
+  };
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, [edited]);
+  Object.entries(beforeCounts).forEach(([familyKey, expectedCount]) => {
+    assert.equal(countFamily(merged, familyKey), expectedCount, `${familyKey} count must survive a cladding-only edit`);
+  });
+  assert.equal(merged.find((product) => product.productCode === edited.productCode).description, edited.description);
 });
 
 test("explicit Linea product image beats family fallback", () => {

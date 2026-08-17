@@ -1041,7 +1041,7 @@ export default function BuilderSelectionsBookPage({
       if (Array.isArray(storedProducts) && nextProducts.length !== storedProducts.length) {
         window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
       }
-      if (nextEnablements.length !== storedEnablements.length) {
+      if (JSON.stringify(nextEnablements) !== JSON.stringify(storedEnablements)) {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
