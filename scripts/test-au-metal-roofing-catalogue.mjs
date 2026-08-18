@@ -132,7 +132,7 @@ assert.equal(queryClientSelectableProducts({
   region: "QLD",
   masterProducts: committed.products,
   builderProducts: preservedDisabledRoofing,
-}).length, 0, "explicit disable-all roofing state must return the no-products state");
+}).length, 3, "stale disabled roofing refs must be repaired instead of returning the no-products state");
 
 const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");

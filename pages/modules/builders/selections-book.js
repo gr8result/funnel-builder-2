@@ -34,8 +34,7 @@ import {
   activeQldBrickMasterProducts,
   commitMasterProductImport,
   createBuilderProductReference,
-  ensureBuilderCladdingEnablements,
-  ensureBuilderRoofingEnablements,
+  ensureBuilderCompletedFamilyEnablements,
   ensureDemoBuilderCatalogueEnablements,
   masterProductToClientSelectionProduct,
   isRemovedDuplicateCladdingProduct,
@@ -1027,13 +1026,9 @@ export default function BuilderSelectionsBookPage({
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
       const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureBuilderCladdingEnablements(
+      const nextEnablements = ensureBuilderCompletedFamilyEnablements(
         nextProducts,
-        ensureBuilderRoofingEnablements(
-          nextProducts,
-          ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
-          workspaceId || "",
-        ),
+        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
         workspaceId || "",
       );
       setMasterCatalogueProducts(nextProducts);
@@ -1045,13 +1040,9 @@ export default function BuilderSelectionsBookPage({
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackEnablements = ensureBuilderCladdingEnablements(
+      const fallbackEnablements = ensureBuilderCompletedFamilyEnablements(
         baselineProducts,
-        ensureBuilderRoofingEnablements(
-          baselineProducts,
-          ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
-          workspaceId || "",
-        ),
+        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
         workspaceId || "",
       );
       setMasterCatalogueProducts(baselineProducts);

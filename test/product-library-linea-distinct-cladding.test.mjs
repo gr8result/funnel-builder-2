@@ -4,11 +4,17 @@ import test from "node:test";
 import {
   DEMO_BUILDER_ORGANISATION_ID,
   FAMILY_IMAGE_FALLBACKS,
+  LOCKED_PRODUCT_FAMILIES,
+  commitMasterProductImport,
+  ensureBuilderBrickEnablements,
   ensureBuilderCladdingEnablements,
+  ensureBuilderCompletedFamilyEnablements,
   ensureDemoBuilderCatalogueEnablements,
+  familyCatalogueStatus,
   isRemovedDuplicateCladdingProduct,
   mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
+  previewMasterProductImport,
   queryClientSelectableProducts,
   resolveProductLibraryImage,
 } from "../lib/product-library/catalogueModel.js";
@@ -27,6 +33,11 @@ const combinedMasterProducts = [
   ...(catalogue.products || []),
   ...(kitchenCatalogue.products || []),
 ].map((product) => normalizeMasterProductRecord(product));
+const countFamily = (products, familyKey) => products.filter((product) => product.familyKey === familyKey).length;
+const enabledForFamily = (products, enablements, organisationId, familyKey) => {
+  const familyCodes = new Set(products.filter((product) => product.familyKey === familyKey).map((product) => product.productCode));
+  return enablements.filter((item) => item.organisationId === organisationId && item.enabled !== false && item.active !== false && familyCodes.has(item.masterProductCode)).length;
+};
 
 test("150mm and 180mm Linea remain separate selectable cladding products", () => {
   const [first, second] = catalogue.products.filter((product) => product.family_key === "cladding");
@@ -135,7 +146,6 @@ test("stored stale cladding rows cannot override the authoritative catalogue", (
 });
 
 test("editing one cladding product does not replace cladding or unrelated families", () => {
-  const countFamily = (products, familyKey) => products.filter((product) => product.familyKey === familyKey).length;
   const beforeCounts = {
     cladding: countFamily(combinedMasterProducts, "cladding"),
     roofing: countFamily(combinedMasterProducts, "roofing"),
@@ -154,6 +164,87 @@ test("editing one cladding product does not replace cladding or unrelated famili
     assert.equal(countFamily(merged, familyKey), expectedCount, `${familyKey} count must survive a cladding-only edit`);
   });
   assert.equal(merged.find((product) => product.productCode === edited.productCode).description, edited.description);
+});
+
+test("editing cladding cannot remove bricks or roofing", () => {
+  const edited = {
+    ...claddingProducts.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-MATRIX"),
+    description: "Scoped cladding edit",
+  };
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, [edited]);
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "roofing"), 3);
+  assert.equal(countFamily(merged, "cladding"), 10);
+});
+
+test("editing roofing cannot remove bricks or cladding", () => {
+  const roofing = combinedMasterProducts.find((product) => product.familyKey === "roofing");
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, [{ ...roofing, description: "Scoped roofing edit" }]);
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "cladding"), 10);
+  assert.equal(countFamily(merged, "roofing"), 3);
+});
+
+test("editing kitchen cannot remove exterior families", () => {
+  const kitchen = combinedMasterProducts.find((product) => product.familyKey === "cabinetry");
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, [{ ...kitchen, description: "Scoped kitchen edit" }]);
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "cladding"), 10);
+  assert.equal(countFamily(merged, "roofing"), 3);
+  assert.equal(countFamily(merged, "windows"), 6);
+  assert.equal(countFamily(merged, "entry-doors"), 4);
+  assert.equal(countFamily(merged, "garage-doors"), 5);
+});
+
+test("builder enablement repair for cladding preserves bricks", () => {
+  const organisationId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+  const brickRefs = ensureBuilderBrickEnablements(combinedMasterProducts, [], organisationId);
+  const claddingRefsDisabled = ensureBuilderCladdingEnablements(combinedMasterProducts, [], organisationId)
+    .map((item) => ({ ...item, enabled: false, active: false }));
+  const repaired = ensureBuilderCompletedFamilyEnablements(combinedMasterProducts, [...brickRefs, ...claddingRefsDisabled], organisationId);
+  assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "bricks"), 147);
+  assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "cladding"), 10);
+});
+
+test("filtered Product Library save cannot replace the full catalogue", () => {
+  const filteredCladdingView = claddingProducts.map((product) => (
+    product.productCode === "CLADDING-JAMES-HARDIE-AXON"
+      ? { ...product, description: "Filtered view edit" }
+      : product
+  ));
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, filteredCladdingView, { explicitFamilyKey: "cladding" });
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "roofing"), 3);
+  assert.equal(countFamily(merged, "cladding"), 10);
+  assert.equal(merged.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-AXON").description, "Filtered view edit");
+});
+
+test("bootstrap merge preserves populated completed families", () => {
+  const emptyStoredCatalogue = [];
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, emptyStoredCatalogue);
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "cladding"), 10);
+  assert.equal(countFamily(merged, "roofing"), 3);
+});
+
+test("locked family status protects completed catalogues", () => {
+  assert.equal(familyCatalogueStatus("bricks"), "locked");
+  assert.equal(familyCatalogueStatus("cladding"), "locked");
+  assert.equal(familyCatalogueStatus("roofing"), "locked");
+  assert.equal(LOCKED_PRODUCT_FAMILIES.bricks.expectedMinimumRecords, 147);
+});
+
+test("master product import commit preserves unrelated families when merged", () => {
+  const edited = {
+    ...claddingProducts.find((product) => product.productCode === "CLADDING-JAMES-HARDIE-STRIA"),
+    description: "Imported cladding edit",
+  };
+  const preview = previewMasterProductImport([edited], combinedMasterProducts);
+  const committed = commitMasterProductImport(preview, claddingProducts);
+  const merged = mergeMasterCatalogueProducts(combinedMasterProducts, committed.products, { explicitFamilyKey: "cladding" });
+  assert.equal(countFamily(merged, "bricks"), 147);
+  assert.equal(countFamily(merged, "roofing"), 3);
+  assert.equal(countFamily(merged, "cladding"), 10);
 });
 
 test("explicit Linea product image beats family fallback", () => {

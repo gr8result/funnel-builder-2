@@ -127,14 +127,14 @@ assert.equal(demoSelectable.filter((product) => product.manufacturer === "Austra
 
 const disabledDemoEnablements = demoEnablements.map((item) => ({ ...item, enabled: false, active: false }));
 const preservedDisabled = ensureDemoBuilderBrickEnablements(products, disabledDemoEnablements, DEMO_BUILDER_ORGANISATION_ID);
-assert.equal(preservedDisabled.filter((item) => item.enabled).length, 0, "explicit disable-all state must not be auto-reenabled");
+assert.equal(preservedDisabled.filter((item) => item.enabled && item.active).length, 147, "completed brick catalogue refs must be repaired when stale disabled state would hide all products");
 assert.equal(queryClientSelectableProducts({
   organisationId: DEMO_BUILDER_ORGANISATION_ID,
   familyKey: "bricks",
   region: "QLD",
   masterProducts: products,
   builderProducts: preservedDisabled,
-}).length, 0, "disable-all must return the correct no-products state");
+}).length, 147, "stale disabled brick refs must not render the awaiting-product-data state");
 
 const suppliers = Array.from(new Set(qldSelectable.map((product) => product.supplier || product.manufacturer))).sort();
 assert.deepEqual(suppliers, ["Austral Bricks", "PGH Bricks"], "supplier cards must be generated from enabled real products");

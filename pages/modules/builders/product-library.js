@@ -21,12 +21,13 @@ import {
   TOP_LEVEL_AREAS,
   createProductEntity,
   createBuilderProductReference,
-  ensureBuilderCladdingEnablements,
-  ensureBuilderRoofingEnablements,
+  ensureBuilderCompletedFamilyEnablements,
   ensureDemoBuilderCatalogueEnablements,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
   familyByKey,
+  familyCatalogueStatus,
+  familyIsLocked,
   isProductLibraryEligibleProduct,
   mergeMasterCatalogueProducts,
   parseMasterProductCatalogueImport,
@@ -520,13 +521,9 @@ export default function BuilderProductLibraryPage() {
       const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
       const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
       const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureBuilderCladdingEnablements(
+      const nextEnablements = ensureBuilderCompletedFamilyEnablements(
         nextProducts,
-        ensureBuilderRoofingEnablements(
-          nextProducts,
-          ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
-          workspaceId || "",
-        ),
+        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
         workspaceId || "",
       );
       setMasterProducts(nextProducts);
@@ -538,13 +535,9 @@ export default function BuilderProductLibraryPage() {
         window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
       }
     } catch {
-      const fallbackEnablements = ensureBuilderCladdingEnablements(
+      const fallbackEnablements = ensureBuilderCompletedFamilyEnablements(
         baselineProducts,
-        ensureBuilderRoofingEnablements(
-          baselineProducts,
-          ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
-          workspaceId || "",
-        ),
+        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
         workspaceId || "",
       );
       setMasterProducts(baselineProducts);
@@ -667,7 +660,10 @@ export default function BuilderProductLibraryPage() {
   }
 
   function persistMasterCatalogue(nextProducts, nextEnablements = builderEnablements) {
-    const preservedProducts = mergeMasterCatalogueProducts(masterProducts, nextProducts);
+    const targetFamily = nextProducts.map((product) => product.familyKey).filter(Boolean).every((familyKey, _index, families) => familyKey === families[0])
+      ? nextProducts.find((product) => product.familyKey)?.familyKey || ""
+      : "";
+    const preservedProducts = mergeMasterCatalogueProducts(masterProducts, nextProducts, { explicitFamilyKey: targetFamily });
     setMasterProducts(preservedProducts);
     setBuilderEnablements(nextEnablements);
     if (typeof window !== "undefined") {
@@ -1424,7 +1420,11 @@ export default function BuilderProductLibraryPage() {
                     <span>{familyMasterProducts.length} master products</span>
                     <span>{supplierHierarchy.length} suppliers</span>
                     <span>{builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled && familyMasterProducts.some((product) => product.productCode === item.masterProductCode)).length} enabled</span>
+                    <span className={familyIsLocked(selectedFamily.familyKey) ? "status-pill on" : "status-pill off"}>{familyCatalogueStatus(selectedFamily.familyKey).toUpperCase()}</span>
                   </div>
+                  {familyIsLocked(selectedFamily.familyKey) ? (
+                    <small className="lock-note">Locked - protected from bulk catalogue changes</small>
+                  ) : null}
                 </div>
               </div>
 
