@@ -3022,6 +3022,35 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     ...(pricingVariant.extrasCard?.(!!plan.highlighted, idx) || {}),
                     ...(props.extrasBackgroundColor ? { background: props.extrasBackgroundColor } : {}),
                   };
+                  const splitFeatureRowBaseStyle = {
+                    display: "grid",
+                    gridTemplateColumns: compact ? "1fr" : "minmax(96px, 0.82fr) minmax(112px, 1.18fr)",
+                    gap: compact ? 4 : 10,
+                    alignItems: "start",
+                    minWidth: 0,
+                    maxWidth: "100%",
+                    overflow: "visible",
+                  };
+                  const splitFeatureLabelStyle = {
+                    color: pricingTone?.text || "#f8fafc",
+                    fontSize: 16,
+                    lineHeight: 1.5,
+                    minWidth: compact ? 0 : 96,
+                    whiteSpace: "normal",
+                    overflowWrap: "break-word",
+                    wordBreak: "normal",
+                  };
+                  const splitFeatureValueStyle = {
+                    color: pricingVariant.planAccentColor?.(idx) || accentTone,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    lineHeight: 1.5,
+                    textAlign: compact ? "left" : "right",
+                    minWidth: compact ? 0 : 112,
+                    whiteSpace: "normal",
+                    overflowWrap: "break-word",
+                    wordBreak: "normal",
+                  };
                   const ctaStyle = {
                     ...(pricingVariant.cta?.(!!plan.highlighted, idx) || {}),
                     ...(props.ctaBackgroundColor ? { background: props.ctaBackgroundColor } : {}),
@@ -3073,9 +3102,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                       const label = parts[0] || feature;
                       const value = parts.slice(1).join(" — ");
                       return (
-                        <div key={`${feature}-${featureIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", ...featureRowStyle }}>
-                          <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, lineHeight: 1.5, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{label}</span>
-                          {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "normal" }}>{value}</span>}
+                        <div key={`${feature}-${featureIdx}`} data-pricing-feature-row="true" style={{ ...splitFeatureRowBaseStyle, ...featureRowStyle }}>
+                          <span style={splitFeatureLabelStyle}>{label}</span>
+                          {value && <span style={splitFeatureValueStyle}>{value}</span>}
                         </div>
                       );
                     }
@@ -3104,9 +3133,9 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                         const label = parts[0] || extra;
                         const value = parts.slice(1).join(" — ");
                         return (
-                          <div key={`${extra}-${extraIdx}`} data-pricing-feature-row="true" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "minmax(0,1fr) minmax(72px,auto)", gap: compact ? 4 : 10, alignItems: "start", minWidth: 0, overflow: "hidden", padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                            <span style={{ color: pricingTone?.text || "#f8fafc", fontSize: 16, minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{label}</span>
-                            {value && <span style={{ color: pricingVariant.planAccentColor?.(idx) || accentTone, fontSize: 16, fontWeight: 600, textAlign: compact ? "left" : "right", minWidth: 0, whiteSpace: "normal", overflowWrap: "anywhere" }}>{value}</span>}
+                          <div key={`${extra}-${extraIdx}`} data-pricing-feature-row="true" style={{ ...splitFeatureRowBaseStyle, padding: "6px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                            <span style={splitFeatureLabelStyle}>{label}</span>
+                            {value && <span style={splitFeatureValueStyle}>{value}</span>}
                           </div>
                         );
                       }
@@ -3157,7 +3186,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               const [whole, dec] = fixed.split(".");
               return `A$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
             };
-            const hasDisclosure = plans.some((p) => parsePx(p.individualPrice) > 0);
+            const showSavingsDisclosure = props.showSavingsDisclosure !== false;
+            const hasDisclosure = showSavingsDisclosure && plans.some((p) => parsePx(p.individualPrice) > 0);
             if (!hasDisclosure) return null;
             const BILLING_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#7c3aed"];
             const planCol = (i) => BILLING_COLORS[i % BILLING_COLORS.length];

@@ -1809,7 +1809,7 @@ export default function VisualBuilderPage() {
       const projectToSync = normalizeFooterNavigationForProject({ ...currentProject, ...patch, status: "saved", _localSaveFailed: undefined });
       flashNotice("⚠️ Storage full — saving to cloud only. Do not close this tab.", "error", 10000);
       void syncProjectToServer(projectToSync, { silent: false, force: true, pageName: activePage, saveSource: "manual-save", ...syncOptions }).then((synced) => {
-        if (synced) flashNotice("✓ Auto-saved to cloud (local storage full)", "success", 6000);
+        if (synced && !synced?._saveError) flashNotice("✓ Saved and verified in cloud (local storage full)", "success", 6000);
       }).catch(() => {});
       return projectToSync;
     }
@@ -1823,10 +1823,13 @@ export default function VisualBuilderPage() {
 
     if (savedProject && latest) {
       setProject(latest);
-      if (successMessage) flashNotice(successMessage);
+      if (successMessage) flashNotice("Saving…", "info", 5000);
       else clearNotice();
-      void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).catch((error) => {
+      void syncProjectToServer(latest, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
+        if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
+      }).catch((error) => {
         console.warn("[saveProjectPatch] background cloud sync failed after local save", error);
+        if (successMessage) flashNotice(error?.message || "Save failed verification.", "error", 10000);
       });
       return latest;
     }
@@ -1835,10 +1838,13 @@ export default function VisualBuilderPage() {
       flashNotice("⚠️ Could not save — storage full. Please click Save to force cloud sync.", "error", 8000);
     } else {
       setProject(savedProject);
-      if (successMessage) flashNotice(successMessage);
+      if (successMessage) flashNotice("Saving…", "info", 5000);
       else clearNotice();
-      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).catch((error) => {
+      void syncProjectToServer(savedProject, { silent: true, pageName: activePage, saveSource: "autosave", ...syncOptions }).then((synced) => {
+        if (successMessage && synced && !synced?._saveError) flashNotice(successMessage, "success");
+      }).catch((error) => {
         console.warn("[saveProjectPatch] background cloud sync failed after local save", error);
+        if (successMessage) flashNotice(error?.message || "Save failed verification.", "error", 10000);
       });
       return savedProject;
     }
@@ -2246,7 +2252,7 @@ export default function VisualBuilderPage() {
   // Awaits the cloud sync and surfaces errors so the user knows if data didn't reach the server.
   async function forceSaveBlockPage(blocks, options = {}) {
     try {
-      const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+      let currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
       const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
       const saveSource = options?.saveSource || "manual-save";
       const isPreviewSave = options?.saveSource === "preview-autosave";
@@ -2254,6 +2260,12 @@ export default function VisualBuilderPage() {
         console.error("[forceSaveBlockPage] project has no id — project state:", project);
         flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
         return null;
+      }
+
+      if (!isPreviewSave && syncInFlightRef.current) {
+        flashNotice("Saving…", "info", 5000);
+        await waitForActiveSaveToFinish();
+        currentProject = getWebsiteProject(currentProject.id) || currentProject;
       }
 
       const imageIssues = validateImageReferences(Array.isArray(blocks) ? blocks : []);
@@ -2290,6 +2302,8 @@ export default function VisualBuilderPage() {
         ...currentProject,
         ...patch,
         __saveBaseUpdatedAt: currentProject?.updatedAt || currentProject?.savedAt || currentProject?.createdAt || "",
+        __saveBaseRevision: currentProject?.revision ?? currentProject?.saveRevision ?? "",
+        __saveBasePageRevision: currentProject?.pageRevisions?.[pageName] ?? "",
         __saveRequestId: createWebsiteSaveRequestId(saveSource),
         updatedAt: new Date().toISOString(),
       });
@@ -2549,7 +2563,7 @@ export default function VisualBuilderPage() {
 
       if (latest) setProject(latest);
       clearNotice();
-      flashNotice(`Saved ✓ ${pageName}`, "success");
+      flashNotice(`Saved and verified ✓ ${pageName}`, "success");
       return latest || savedProject;
     } catch (unexpectedErr) {
       console.error("[forceSaveBlockPage] unexpected error:", unexpectedErr);

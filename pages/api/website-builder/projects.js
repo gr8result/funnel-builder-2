@@ -456,6 +456,8 @@ function compactProjectForDb(project) {
     chaiData: _chaiData,
     brandAssets: _brandAssets,
     __saveBaseUpdatedAt: _saveBaseUpdatedAt,
+    __saveBaseRevision: _saveBaseRevision,
+    __saveBasePageRevision: _saveBasePageRevision,
     __saveRequestId: _saveRequestId,
     ...site
   } = project;
@@ -695,6 +697,8 @@ async function handler(req, res) {
     const requestId = String(req.body?.requestId || project?.__saveRequestId || "").trim();
     const pageVersion = String(req.body?.pageVersion || project?.projectVersion || "").trim();
     const baseUpdatedAt = String(req.body?.baseUpdatedAt || project?.__saveBaseUpdatedAt || "").trim();
+    const baseRevision = req.body?.baseRevision ?? project?.__saveBaseRevision ?? project?.baseRevision ?? "";
+    const basePageRevision = req.body?.basePageRevision ?? project?.__saveBasePageRevision ?? project?.basePageRevision ?? "";
 
     const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
@@ -717,6 +721,8 @@ async function handler(req, res) {
       siteOnly,
       pageVersion: pageVersion || nextProject.projectVersion,
       baseUpdatedAt,
+      baseRevision,
+      basePageRevision,
       requestId,
       savedAt: nextProject.savedAt,
       deletedBlockIds: normalizeDeletedBlockTombstones(nextProject),
@@ -761,8 +767,20 @@ async function handler(req, res) {
 
     let splitProject = null;
     try {
-      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource });
+      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource, baseRevision, basePageRevision });
     } catch (storageError) {
+      if (storageError?.code === "STALE_WEBSITE_REVISION") {
+        return res.status(409).json({
+          ok: false,
+          error: storageError.message || "Rejected stale website save because storage has a newer revision.",
+          code: "STALE_WEBSITE_REVISION",
+          projectId,
+          pageName: requestedPage || "",
+          requestId,
+          expectedRevision: storageError.expectedRevision ?? baseRevision,
+          storedRevision: storageError.storedRevision ?? null,
+        });
+      }
       return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
     }
 

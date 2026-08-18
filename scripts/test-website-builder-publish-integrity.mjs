@@ -199,36 +199,43 @@ async function assertCustomDomainFullWidthRoute() {
   const url = `${BASE_URL}/pricing`;
   const { hostname, port, protocol } = new URL(BASE_URL);
   const localUrl = `${protocol}//${hostname === "localhost" ? "127.0.0.1" : hostname}${port ? `:${port}` : ""}/pricing`;
-  let last = { status: 0, widthMode: "", snippet: "" };
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const response = await new Promise((resolve, reject) => {
-      const request = http.request({
-        hostname: hostname === "localhost" ? "127.0.0.1" : hostname,
-        port: port ? Number(port) : (protocol === "https:" ? 443 : 80),
-        path: "/pricing",
-        headers: { Host: "gr8result.solutions", "Cache-Control": "no-cache" },
-      }, (res) => {
-        let html = "";
-        res.setEncoding("utf8");
-        res.on("data", (chunk) => { html += chunk; });
-        res.on("end", () => resolve({ status: res.statusCode || 0, html }));
+  const hosts = ["gr8result.solutions", "www.gr8result.solutions"];
+  const results = [];
+  for (const host of hosts) {
+    let last = { status: 0, widthMode: "", hasSavingsDisclosure: false, snippet: "" };
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await new Promise((resolve, reject) => {
+        const request = http.request({
+          hostname: hostname === "localhost" ? "127.0.0.1" : hostname,
+          port: port ? Number(port) : (protocol === "https:" ? 443 : 80),
+          path: "/pricing",
+          headers: { Host: host, "Cache-Control": "no-cache" },
+        }, (res) => {
+          let html = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => { html += chunk; });
+          res.on("end", () => resolve({ status: res.statusCode || 0, html }));
+        });
+        request.on("error", reject);
+        request.end();
       });
-      request.on("error", reject);
-      request.end();
-    });
-    const html = response.html || "";
-    const widthModeMatch = html.match(/data-page-width-mode=(["'])(.*?)\1/i);
-    last = {
-      status: response.status,
-      widthMode: widthModeMatch?.[2] || "",
-      snippet: html.match(/data-page-width-mode.{0,80}/i)?.[0] || html.slice(0, 120),
-    };
-    if (last.status === 200 && last.widthMode) break;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      const html = response.html || "";
+      const widthModeMatch = html.match(/data-page-width-mode=(["'])(.*?)\1/i);
+      last = {
+        status: response.status,
+        widthMode: widthModeMatch?.[2] || "",
+        hasSavingsDisclosure: /Savings Disclosure|SAVINGS DISCLOSURE/.test(html),
+        snippet: html.match(/data-page-width-mode.{0,80}/i)?.[0] || html.slice(0, 120),
+      };
+      if (last.status === 200 && last.widthMode) break;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    assert.equal(last.status, 200, `${url} custom-domain host ${host} route should return 200`);
+    assert.equal(last.widthMode, "full", `Custom-domain host ${host} should render site-wide Full Width; snippet=${last.snippet}`);
+    assert.equal(last.hasSavingsDisclosure, false, `Custom-domain host ${host} should not render the deleted Savings Disclosure table`);
+    results.push({ url: localUrl, host, status: last.status, widthMode: last.widthMode, hasSavingsDisclosure: last.hasSavingsDisclosure });
   }
-  assert.equal(last.status, 200, `${url} custom-domain host route should return 200`);
-  assert.equal(last.widthMode, "full", `Custom-domain route should render site-wide Full Width; snippet=${last.snippet}`);
-  return { url: localUrl, host: "gr8result.solutions", status: last.status, widthMode: last.widthMode };
+  return results;
 }
 
 async function latestPublished(admin) {
