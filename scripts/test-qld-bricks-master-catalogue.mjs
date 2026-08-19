@@ -6,7 +6,9 @@ import {
   createBuilderProductReference,
   DEMO_BUILDER_ORGANISATION_ID,
   activeQldBrickMasterProducts,
+  builderEnablementState,
   ensureDemoBuilderBrickEnablements,
+  isExplicitlyDisabledBuilderReference,
   masterProductToClientSelectionProduct,
   parseMasterProductCatalogueCsv,
   parseMasterProductCatalogueJson,
@@ -135,6 +137,11 @@ assert.equal(queryClientSelectableProducts({
   masterProducts: products,
   builderProducts: preservedDisabled,
 }).length, 147, "stale disabled brick refs must not render the awaiting-product-data state");
+
+const explicitlyDisabledDemoEnablements = demoEnablements.map((item) => builderEnablementState(item, false));
+const preservedExplicitDisable = ensureDemoBuilderBrickEnablements(products, explicitlyDisabledDemoEnablements, DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(preservedExplicitDisable.filter((item) => item.enabled && item.active).length, 0, "explicitly disabled brick refs must not be auto-re-enabled");
+assert.ok(preservedExplicitDisable.every((item) => isExplicitlyDisabledBuilderReference(item)), "explicit brick disable marker must survive repair");
 
 const suppliers = Array.from(new Set(qldSelectable.map((product) => product.supplier || product.manufacturer))).sort();
 assert.deepEqual(suppliers, ["Austral Bricks", "PGH Bricks"], "supplier cards must be generated from enabled real products");

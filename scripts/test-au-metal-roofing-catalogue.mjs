@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 import {
   DEMO_BUILDER_ORGANISATION_ID,
   activeAuMetalRoofingMasterProducts,
+  builderEnablementState,
   commitMasterProductImport,
   createBuilderProductReference,
   ensureBuilderRoofingEnablements,
   ensureDemoBuilderCatalogueEnablements,
   ensureDemoBuilderRoofingEnablements,
+  isExplicitlyDisabledBuilderReference,
   mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
@@ -133,6 +135,17 @@ assert.equal(queryClientSelectableProducts({
   masterProducts: committed.products,
   builderProducts: preservedDisabledRoofing,
 }).length, 3, "stale disabled roofing refs must be repaired instead of returning the no-products state");
+
+const explicitlyDisabledRoofing = demoRoofingEnablements.map((item) => builderEnablementState(item, false));
+const preservedExplicitRoofingDisable = ensureDemoBuilderRoofingEnablements(committed.products, explicitlyDisabledRoofing, DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: committed.products,
+  builderProducts: preservedExplicitRoofingDisable,
+}).length, 0, "explicitly disabled roofing refs must not be auto-re-enabled");
+assert.ok(preservedExplicitRoofingDisable.every((item) => isExplicitlyDisabledBuilderReference(item)), "explicit roofing disable marker must survive repair");
 
 const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");

@@ -8,6 +8,7 @@ import {
   BUILDER_PRODUCT_MODES,
   BUILDER_PRODUCT_TIERS,
   BUILDER_ENABLEMENT_STORAGE_KEY,
+  EXPLICIT_BUILDER_DISABLE_REASON,
   GARAGE_DOOR_SELECTION_KEY,
   MASTER_IMAGE_STATUSES,
   MASTER_PRICE_STATUSES,
@@ -19,6 +20,7 @@ import {
   PRODUCT_LIBRARY_SELECTIONS_KEY,
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
+  builderEnablementState,
   createProductEntity,
   createBuilderProductReference,
   ensureBuilderCompletedFamilyEnablements,
@@ -713,7 +715,7 @@ export default function BuilderProductLibraryPage() {
     if (!workspaceId || !masterProduct) return;
     const existing = builderEnablements.find((item) => item.organisationId === workspaceId && item.masterProductCode === masterProduct.productCode);
     const nextEnablements = existing
-      ? builderEnablements.map((item) => item === existing ? { ...item, enabled: !item.enabled, active: !item.enabled } : item)
+      ? builderEnablements.map((item) => item === existing ? builderEnablementState(item, !item.enabled) : item)
       : [...builderEnablements, createBuilderProductReference(masterProduct, { organisationId: workspaceId, enabled: true, active: true, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] })];
     persistMasterCatalogue(masterProducts, nextEnablements);
     setSuccess(`${masterProduct.productName} ${existing?.enabled ? "disabled" : "enabled"} for this builder.`);
@@ -726,8 +728,8 @@ export default function BuilderProductLibraryPage() {
       const key = `${workspaceId}:${product.productCode}`;
       const existing = byCode.get(key);
       byCode.set(key, existing
-        ? { ...existing, enabled, active: enabled }
-        : createBuilderProductReference(product, { organisationId: workspaceId, enabled, active: enabled, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] }));
+        ? builderEnablementState(existing, enabled)
+        : createBuilderProductReference(product, { organisationId: workspaceId, enabled, active: enabled, disableReason: enabled ? "" : EXPLICIT_BUILDER_DISABLE_REASON, tier: BUILDER_PRODUCT_TIERS[0], selectionMode: BUILDER_PRODUCT_MODES[1] }));
     });
     persistMasterCatalogue(masterProducts, Array.from(byCode.values()));
     setSuccess(`${productsToToggle.length} product${productsToToggle.length === 1 ? "" : "s"} ${enabled ? "enabled" : "disabled"} for this builder.`);

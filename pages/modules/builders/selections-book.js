@@ -29,9 +29,11 @@ import { supabase } from "../../../utils/supabase-client";
 import {
   APPROVED_SELECTIONS_CSV_PATH,
   BUILDER_ENABLEMENT_STORAGE_KEY,
+  EXPLICIT_BUILDER_DISABLE_REASON,
   GENERIC_IMAGE_URLS,
   MASTER_CATALOGUE_STORAGE_KEY,
   activeQldBrickMasterProducts,
+  builderEnablementState,
   commitMasterProductImport,
   createBuilderProductReference,
   ensureBuilderCompletedFamilyEnablements,
@@ -1646,8 +1648,8 @@ export default function BuilderSelectionsBookPage({
     if (!product) return;
     const existing = builderEnablements.find((item) => item.organisationId === workspaceId && item.masterProductCode === productCode);
     const nextEnablements = existing
-      ? builderEnablements.map((item) => item === existing ? { ...item, enabled: Boolean(enabled), active: Boolean(enabled) } : item)
-      : [...builderEnablements, createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), tier: "", selectionMode: "available_upgrade" })];
+      ? builderEnablements.map((item) => item === existing ? builderEnablementState(item, enabled) : item)
+      : [...builderEnablements, createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), disableReason: enabled ? "" : EXPLICIT_BUILDER_DISABLE_REASON, tier: "", selectionMode: "available_upgrade" })];
     persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
   }
 
@@ -1659,14 +1661,14 @@ export default function BuilderSelectionsBookPage({
     const nextEnablements = builderEnablements.map((item) => {
       if (item.organisationId === workspaceId && codes.has(item.masterProductCode)) {
         seen.add(item.masterProductCode);
-        return { ...item, enabled: Boolean(enabled), active: Boolean(enabled) };
+        return builderEnablementState(item, enabled);
       }
       return item;
     });
     codes.forEach((code) => {
       if (seen.has(code)) return;
       const product = productByCode.get(code);
-      if (product) nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), tier: "", selectionMode: "available_upgrade" }));
+      if (product) nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), disableReason: enabled ? "" : EXPLICIT_BUILDER_DISABLE_REASON, tier: "", selectionMode: "available_upgrade" }));
     });
     persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
   }

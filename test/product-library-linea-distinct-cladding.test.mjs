@@ -5,12 +5,14 @@ import {
   DEMO_BUILDER_ORGANISATION_ID,
   FAMILY_IMAGE_FALLBACKS,
   LOCKED_PRODUCT_FAMILIES,
+  builderEnablementState,
   commitMasterProductImport,
   ensureBuilderBrickEnablements,
   ensureBuilderCladdingEnablements,
   ensureBuilderCompletedFamilyEnablements,
   ensureDemoBuilderCatalogueEnablements,
   familyCatalogueStatus,
+  isExplicitlyDisabledBuilderReference,
   isRemovedDuplicateCladdingProduct,
   mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
@@ -124,6 +126,32 @@ test("disabled current organisation cladding refs are restored on load", () => {
   assert.deepEqual(selectable.map((product) => product.productCode), claddingProducts.map((product) => product.productCode));
 });
 
+test("explicit cladding disables are preserved and not treated as stale state", () => {
+  const organisationId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+  const enabledEnablements = ensureBuilderCladdingEnablements(normalizedProducts, [], organisationId);
+  const explicitlyDisabled = enabledEnablements.map((item) => builderEnablementState(item, false));
+  assert.ok(explicitlyDisabled.every((item) => isExplicitlyDisabledBuilderReference(item)));
+
+  const repaired = ensureBuilderCladdingEnablements(normalizedProducts, explicitlyDisabled, organisationId);
+  assert.equal(enabledForFamily(normalizedProducts, repaired, organisationId, "cladding"), 0);
+  assert.ok(repaired.every((item) => item.enabled === false && item.active === false));
+  assert.ok(repaired.every((item) => isExplicitlyDisabledBuilderReference(item)));
+});
+
+test("mixed explicit and stale cladding disables repair stale rows only", () => {
+  const organisationId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+  const enabledEnablements = ensureBuilderCladdingEnablements(normalizedProducts, [], organisationId);
+  const [explicitlyDisabled, ...staleDisabled] = enabledEnablements.map((item, index) => (
+    index === 0
+      ? builderEnablementState(item, false)
+      : { ...item, enabled: false, active: false, disableReason: "" }
+  ));
+
+  const repaired = ensureBuilderCladdingEnablements(normalizedProducts, [explicitlyDisabled, ...staleDisabled], organisationId);
+  assert.equal(enabledForFamily(normalizedProducts, repaired, organisationId, "cladding"), claddingProducts.length - 1);
+  assert.ok(isExplicitlyDisabledBuilderReference(repaired.find((item) => item.masterProductCode === explicitlyDisabled.masterProductCode)));
+});
+
 test("stored stale cladding rows cannot override the authoritative catalogue", () => {
   const staleStoredProducts = [
     {
@@ -204,6 +232,22 @@ test("builder enablement repair for cladding preserves bricks", () => {
   const repaired = ensureBuilderCompletedFamilyEnablements(combinedMasterProducts, [...brickRefs, ...claddingRefsDisabled], organisationId);
   assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "bricks"), 147);
   assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "cladding"), 10);
+});
+
+test("family-scoped stale repair preserves unrelated explicit disables", () => {
+  const organisationId = "846885cd-25b9-4eca-b9f9-3fd02f5882d8";
+  const brickRefs = ensureBuilderBrickEnablements(combinedMasterProducts, [], organisationId);
+  const roofingRefs = ensureBuilderCompletedFamilyEnablements(combinedMasterProducts, [], organisationId)
+    .filter((item) => combinedMasterProducts.some((product) => product.familyKey === "roofing" && product.productCode === item.masterProductCode))
+    .map((item) => builderEnablementState(item, false));
+  const claddingRefsDisabledStale = ensureBuilderCladdingEnablements(combinedMasterProducts, [], organisationId)
+    .map((item) => ({ ...item, enabled: false, active: false, disableReason: "" }));
+
+  const repaired = ensureBuilderCladdingEnablements(combinedMasterProducts, [...brickRefs, ...roofingRefs, ...claddingRefsDisabledStale], organisationId);
+  assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "bricks"), 147);
+  assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "cladding"), 10);
+  assert.equal(enabledForFamily(combinedMasterProducts, repaired, organisationId, "roofing"), 0);
+  assert.ok(repaired.filter((item) => roofingRefs.some((ref) => ref.masterProductCode === item.masterProductCode)).every((item) => isExplicitlyDisabledBuilderReference(item)));
 });
 
 test("filtered Product Library save cannot replace the full catalogue", () => {
