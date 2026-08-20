@@ -699,6 +699,7 @@ async function handler(req, res) {
     const baseUpdatedAt = String(req.body?.baseUpdatedAt || project?.__saveBaseUpdatedAt || "").trim();
     const baseRevision = req.body?.baseRevision ?? project?.__saveBaseRevision ?? project?.baseRevision ?? "";
     const basePageRevision = req.body?.basePageRevision ?? project?.__saveBasePageRevision ?? project?.basePageRevision ?? "";
+    const conflictResolution = String(req.body?.conflictResolution || "").trim().toLowerCase();
 
     const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
@@ -739,18 +740,10 @@ async function handler(req, res) {
     const incomingBaseMs = Date.parse(baseUpdatedAt || 0) || 0;
     const currentSplitMs = Date.parse(currentSplitUpdatedAt || 0) || 0;
     if (baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs) {
-      console.warn("[website-builder save] rejected stale split-storage write before page upsert", {
+      console.warn("[website-builder save] ignored stale client timestamp; canonical revision controls save ownership", {
         projectId,
         pageName: requestedPage || "",
         saveSource,
-        requestId,
-        baseUpdatedAt,
-        currentUpdatedAt: currentSplitUpdatedAt,
-      });
-      return res.status(409).json({
-        ok: false,
-        error: "Rejected stale website page save because split storage has a newer version.",
-        code: "STALE_WEBSITE_PAGE_SAVE",
         requestId,
         baseUpdatedAt,
         currentUpdatedAt: currentSplitUpdatedAt,
@@ -767,9 +760,16 @@ async function handler(req, res) {
 
     let splitProject = null;
     try {
-      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource, baseRevision, basePageRevision });
+      splitProject = await saveSplitWebsiteProject(userId, nextProject, {
+        pageName: requestedPage,
+        siteOnly,
+        backupSource: saveSource,
+        baseRevision: conflictResolution === "keep-my-version" ? "" : baseRevision,
+        basePageRevision: conflictResolution === "keep-my-version" ? "" : basePageRevision,
+      });
     } catch (storageError) {
       if (storageError?.code === "STALE_WEBSITE_REVISION") {
+        const serverProject = await loadFullSplitWebsiteProject(userId, projectId).catch(() => null);
         return res.status(409).json({
           ok: false,
           error: storageError.message || "Rejected stale website save because storage has a newer revision.",
@@ -779,6 +779,11 @@ async function handler(req, res) {
           requestId,
           expectedRevision: storageError.expectedRevision ?? baseRevision,
           storedRevision: storageError.storedRevision ?? null,
+          conflict: {
+            incomingRevision: baseRevision || null,
+            serverRevision: serverProject?.revision ?? serverProject?.saveRevision ?? storageError.storedRevision ?? null,
+            serverProject: serverProject || null,
+          },
         });
       }
       return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
@@ -895,18 +900,10 @@ async function handler(req, res) {
     const currentUpdatedAt = existing.data?.updated_at || existing.data?.site_data?.updatedAt || "";
     const currentMs = Date.parse(currentUpdatedAt || 0) || 0;
     if (baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs) {
-      console.warn("[website-builder save] rejected stale write", {
+      console.warn("[website-builder save] ignored stale client timestamp in legacy draft sync; canonical revision controls save ownership", {
         projectId,
         pageName: requestedPage || "",
         saveSource,
-        requestId,
-        baseUpdatedAt,
-        currentUpdatedAt,
-      });
-      return res.status(409).json({
-        ok: false,
-        error: "Rejected stale website page save because the database has a newer version.",
-        code: "STALE_WEBSITE_PAGE_SAVE",
         requestId,
         baseUpdatedAt,
         currentUpdatedAt,

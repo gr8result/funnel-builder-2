@@ -20,6 +20,23 @@ function assertPricingFeatureRowsKeepReadableTracks() {
   assert.doesNotMatch(source, /data-pricing-feature-row="true"[\s\S]{0,360}wordBreak:\s*"break-all"/);
 }
 
+function assertPreviewUsesLocalDraftSnapshot() {
+  const source = fs.readFileSync("components/website-builder/PageBuilderCanvas.js", "utf8");
+  assert.doesNotMatch(source, /saveSource:\s*"preview-autosave"/);
+  assert.match(source, /writePreviewSnapshot\(committedBlocks,\s*previewSourceProject\)/);
+  assert.match(source, /writePreviewSnapshot\(committedBlocks,\s*project\)/);
+}
+
+function assertPricingDisclosureControl() {
+  const panelSource = fs.readFileSync("components/website-builder/page-builder/pbPropertiesPanels.js", "utf8");
+  const definitionSource = fs.readFileSync("lib/website-builder/page-blocks/blockDefinitions.js", "utf8");
+  const rendererSource = fs.readFileSync("components/website-builder/WebsiteBlockRenderer.js", "utf8");
+  assert.match(panelSource, /Show Savings Disclosure/);
+  assert.match(panelSource, /showSavingsDisclosure:\s*e\.target\.checked/);
+  assert.match(definitionSource, /showSavingsDisclosure:\s*false/);
+  assert.match(rendererSource, /props\.showSavingsDisclosure\s*===\s*true/);
+}
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -91,7 +108,7 @@ async function api(token, method = "GET", body = null) {
   return { status: response.status, payload };
 }
 
-async function save(token, project, saveSource) {
+async function save(token, project, saveSource, options = {}) {
   return api(token, "POST", {
     project,
     pageName: PAGE_NAME,
@@ -102,11 +119,14 @@ async function save(token, project, saveSource) {
     baseRevision: project.__saveBaseRevision ?? "",
     basePageRevision: project.__saveBasePageRevision ?? "",
     requestId: project.__saveRequestId || "",
+    conflictResolution: options.conflictResolution || "",
   });
 }
 
 const session = await mintSession();
 assertPricingFeatureRowsKeepReadableTracks();
+assertPreviewUsesLocalDraftSnapshot();
+assertPricingDisclosureControl();
 const token = session.access_token;
 const initial = await api(token);
 assert.equal(initial.status, 200, initial.payload?.error || "Initial draft load failed");
@@ -134,13 +154,38 @@ try {
   assert.ok(storedProbe === `${PROBE}-A` || storedProbe === `${PROBE}-B`, "Committed probe was not retained");
   assert.notEqual(hash(pageState(after.payload.project)), beforeHash, "Probe save did not change stored page hash");
 
-  const restore = clone(after.payload.project);
+  const staleAutosave = injectProbe(original, `${PROBE}-AUTOSAVE-STALE`);
+  const staleAutosaveResult = await save(token, staleAutosave, "autosave");
+  assert.equal(staleAutosaveResult.status, 409, "Stale autosave must be rejected");
+  assert.ok(
+    staleAutosaveResult.payload?.code === "STALE_WEBSITE_PAGE_SAVE" || staleAutosaveResult.payload?.code === "STALE_WEBSITE_REVISION",
+    `Unexpected stale autosave code: ${staleAutosaveResult.payload?.code || ""}`
+  );
+
+  const staleManual = injectProbe(original, `${PROBE}-MANUAL-KEEP`);
+  const staleManualResult = await save(token, staleManual, "manual-save");
+  assert.equal(staleManualResult.status, 409, "Stale manual save must return an explicit conflict before overwriting");
+  assert.equal(staleManualResult.payload?.code, "STALE_WEBSITE_REVISION");
+  assert.ok(staleManualResult.payload?.conflict?.serverProject, "Stale manual save should return the server revision for conflict UI");
+
+  const staleManualKeepResult = await save(token, staleManual, "manual-save", { conflictResolution: "keep-my-version" });
+  assert.equal(staleManualKeepResult.status, 200, staleManualKeepResult.payload?.error || "Keep-my-version conflict retry should save current editor page");
+
+  const afterManual = await api(token);
+  assert.equal(afterManual.status, 200, "Post-manual draft read failed");
+  assert.equal(
+    afterManual.payload.project?.pageBlocks?.[PAGE_NAME]?.[0]?.props?.__savePersistenceProbe || "",
+    `${PROBE}-MANUAL-KEEP`,
+    "Stale manual save did not retain current editor page changes"
+  );
+
+  const restore = clone(afterManual.payload.project);
   restore.pageBlocks = { ...(restore.pageBlocks || {}), [PAGE_NAME]: originalBlocks };
   restore.chaiData = { ...(restore.chaiData || {}), [PAGE_NAME]: { ...(restore.chaiData?.[PAGE_NAME] || {}), blocks: originalBlocks } };
   restore.pagesContent = { ...(restore.pagesContent || {}), [PAGE_NAME]: "" };
-  restore.__saveBaseUpdatedAt = after.payload.project?.updatedAt || "";
-  restore.__saveBaseRevision = after.payload.project?.revision ?? after.payload.project?.saveRevision ?? "";
-  restore.__saveBasePageRevision = after.payload.project?.pageRevisions?.[PAGE_NAME] ?? "";
+  restore.__saveBaseUpdatedAt = afterManual.payload.project?.updatedAt || "";
+  restore.__saveBaseRevision = afterManual.payload.project?.revision ?? afterManual.payload.project?.saveRevision ?? "";
+  restore.__saveBasePageRevision = afterManual.payload.project?.pageRevisions?.[PAGE_NAME] ?? "";
   restore.__saveRequestId = `revision-race-restore-${PROBE}`;
   restore.updatedAt = new Date().toISOString();
   restoreResult = await save(token, restore, "revision-race-restore");
@@ -158,6 +203,9 @@ try {
     pageName: PAGE_NAME,
     probe: PROBE,
     statuses: [firstResult.status, secondResult.status],
+    staleAutosaveStatus: staleAutosaveResult.status,
+    staleManualStatus: staleManualResult.status,
+    staleManualKeepStatus: staleManualKeepResult.status,
     committedRevision: [firstResult, secondResult].find((entry) => entry.status === 200)?.payload?.project?.revision ?? null,
     restoredRevision: restoreResult.payload?.project?.revision ?? null,
     finalHash: beforeHash,
@@ -172,7 +220,7 @@ try {
       restore.__saveBaseRevision = current.payload.project?.revision ?? current.payload.project?.saveRevision ?? "";
       restore.__saveBasePageRevision = current.payload.project?.pageRevisions?.[PAGE_NAME] ?? "";
       restore.__saveRequestId = `revision-race-cleanup-${PROBE}`;
-      await save(token, restore, "revision-race-cleanup").catch(() => null);
+      await save(token, restore, "manual-save").catch(() => null);
     }
   }
   throw error;

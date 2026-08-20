@@ -1552,6 +1552,27 @@ export default function VisualBuilderPage() {
           } catch {
             throw firstError;
           }
+        } else if (options?.force && firstError?.code === "STALE_WEBSITE_REVISION") {
+          const keepMine = typeof window !== "undefined"
+            ? window.confirm("This website has a newer saved revision on the server. Choose OK to keep your current editor version, or Cancel to load the server version.")
+            : false;
+          if (keepMine) {
+            syncedProject = await saveWebsiteProjectToServer(session, nextProject, {
+              pageName: options?.siteOnly ? "" : syncPageName,
+              siteOnly: options?.siteOnly === true,
+              saveSource,
+              conflictResolution: "keep-my-version",
+            });
+          } else if (firstError?.conflict?.serverProject) {
+            const serverProject = cacheWebsiteProject(firstError.conflict.serverProject, { onlyIfNewer: false });
+            if (serverProject?.id === project?.id) {
+              setProject(serverProject);
+            }
+            flashNotice("Loaded the newer server revision.", "success", 8000);
+            return serverProject || nextProject;
+          } else {
+            throw firstError;
+          }
         } else {
           throw firstError;
         }

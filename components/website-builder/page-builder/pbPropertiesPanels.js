@@ -661,7 +661,7 @@ function normalizeTestimonialItemForEditor(item, index) {
       author: String(item.author || ""),
       role: String(item.role || ""),
       rating: Number.isFinite(Number(item.rating)) ? Math.max(1, Math.min(5, Number(item.rating))) : 5,
-      avatarUrl: String(item.avatarUrl || item.avatar || item.image || ""),
+      avatarUrl: String(item.avatarUrl || item.avatar || item.imageUrl || item.image || item.photo || item.src || item.profile?.imageUrl || item.profile?.avatarUrl || item.author?.imageUrl || item.author?.avatarUrl || ""),
       avatarAssetId: String(item.avatarAssetId || ""),
     };
   }
@@ -3074,6 +3074,15 @@ function PricingTablePropertiesPanel({ block, index, onChange, onUploadImage }) 
                   <input type="text" value={String(props.defaultPeriod || "month")} onChange={(e) => update({ defaultPeriod: e.target.value })} style={styles.propertyInput} placeholder="month / night / year…" />
                 </div>
               </div>
+              <label style={{ ...styles.inlineToggle, marginTop: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={props.showSavingsDisclosure === true}
+                  onChange={(e) => update({ showSavingsDisclosure: e.target.checked })}
+                  style={styles.checkboxInput}
+                />
+                Show Savings Disclosure
+              </label>
             </div>
             <div style={{ ...styles.sectionCard, ...pricingSectionShells[3] }}>
               <label style={styles.propertyLabel}>Plans</label>

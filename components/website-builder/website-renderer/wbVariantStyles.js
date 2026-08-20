@@ -1154,7 +1154,7 @@ function normalizeTestimonialItem(item, index) {
       author: String(item.author || item.name || ""),
       role: String(item.role || item.title || item.company || ""),
       rating: Number.isFinite(Number(item.rating)) ? Math.max(1, Math.min(5, Number(item.rating))) : 5,
-      avatarUrl: String(item.avatarUrl || item.avatar || item.image || ""),
+      avatarUrl: String(item.avatarUrl || item.avatar || item.imageUrl || item.image || item.photo || item.src || item.profile?.imageUrl || item.profile?.avatarUrl || item.author?.imageUrl || item.author?.avatarUrl || ""),
       avatarAssetId: String(item.avatarAssetId || ""),
     };
   }

@@ -2144,31 +2144,18 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
-    // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
-    try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
-    } catch (error) {
-      console.error("Could not save before preview", error);
-      saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
-    }
-    const saveFailed = !saved || saved?._saveError;
-    const previewSourceProject = saveFailed ? project : saved;
+    const previewSourceProject = project;
     const previewToken = writePreviewSnapshot(committedBlocks, previewSourceProject);
-    const { page: previewPage, slug: pageSlug, error: pageSlugError } = resolvePreviewPageSlug(previewSourceProject, activePage);
+    const { slug: pageSlug, error: pageSlugError } = resolvePreviewPageSlug(previewSourceProject, activePage);
     if (pageSlugError) {
       previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${pageSlugError}</p>`;
       showSavePopup(pageSlugError, "error");
       return;
     }
-    if (saveFailed) {
-      const message = saved?._saveErrorMessage || "Cloud save failed before preview.";
-      if (!previewToken) {
-        previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message} A local preview snapshot could not be created.</p>`;
-        showSavePopup(message, "error");
-        return;
-      }
-      showSavePopup(`${message} Opening a local draft preview.`, "error");
+    if (!previewToken) {
+      previewWindow.document.body.innerHTML = "<h1 style=\"color:#991b1b\">Preview blocked</h1><p>A local preview snapshot could not be created.</p>";
+      showSavePopup("A local preview snapshot could not be created.", "error");
+      return;
     }
     const previewHref = buildWebsitePreviewUrl({
       projectId: project.id,
@@ -2193,16 +2180,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
     const committedBlocks = await commitPendingInlineEdits();
-    // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
-    try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
-    } catch (error) {
-      console.error("Could not save before preview", error);
-      saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
-    }
-    const saveFailed = !saved || saved?._saveError;
-    const previewToken = writePreviewSnapshot(committedBlocks, saveFailed ? project : saved);
+    const previewToken = writePreviewSnapshot(committedBlocks, project);
     const previewHref = buildWebsitePreviewUrl({
       projectId: project.id,
       viewport: previewMode,
@@ -2213,14 +2191,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       showSavePopup("Preview URL could not be created.", "error");
       return;
     }
-    if (saveFailed) {
-      const message = saved?._saveErrorMessage || "Cloud save failed before preview.";
-      if (!previewToken) {
-        previewWindow.document.body.innerHTML = `<h1 style="color:#991b1b">Preview blocked</h1><p>${message} A local preview snapshot could not be created.</p>`;
-        showSavePopup(message, "error");
-        return;
-      }
-      showSavePopup(`${message} Opening a local draft preview.`, "error");
+    if (!previewToken) {
+      previewWindow.document.body.innerHTML = "<h1 style=\"color:#991b1b\">Preview blocked</h1><p>A local preview snapshot could not be created.</p>";
+      showSavePopup("A local preview snapshot could not be created.", "error");
+      return;
     }
     previewWindow.location.replace(new URL(previewHref, window.location.origin).toString());
   };
