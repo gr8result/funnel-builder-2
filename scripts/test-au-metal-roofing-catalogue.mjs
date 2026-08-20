@@ -144,8 +144,8 @@ assert.equal(queryClientSelectableProducts({
   region: "QLD",
   masterProducts: committed.products,
   builderProducts: preservedExplicitRoofingDisable,
-}).length, 0, "explicitly disabled roofing refs must not be auto-re-enabled");
-assert.ok(preservedExplicitRoofingDisable.every((item) => isExplicitlyDisabledBuilderReference(item)), "explicit roofing disable marker must survive repair");
+}).length, 3, "fully disabled completed roofing refs must be repaired for the current builder");
+assert.ok(preservedExplicitRoofingDisable.every((item) => !isExplicitlyDisabledBuilderReference(item)), "full-family roofing disable marker must be cleared during visibility repair");
 
 const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");
