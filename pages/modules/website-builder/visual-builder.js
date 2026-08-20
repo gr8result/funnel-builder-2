@@ -1340,11 +1340,66 @@ export default function VisualBuilderPage() {
     if (value && typeof value === "object") {
       const next = {};
       for (const [key, child] of Object.entries(value)) {
+        if ([
+          "__saveBaseUpdatedAt",
+          "__saveBaseRevision",
+          "__saveBasePageRevision",
+          "__saveRequestId",
+          "_localSaveFailed",
+          "_saveDebug",
+          "_saveError",
+          "_saveErrorMessage",
+          "baseRevision",
+          "basePageRevision",
+          "contentHash",
+          "projectVersion",
+          "revision",
+          "saveRevision",
+          "savedAt",
+          "siteRevision",
+          "updatedAt",
+        ].includes(key)) {
+          continue;
+        }
         next[key] = normalizeForSaveCompare(child, key);
       }
       return next;
     }
     return value;
+  }
+
+  function diffBlocksForSave(left, right, limit = 20) {
+    const diffs = [];
+    const visit = (a, b, path) => {
+      if (diffs.length >= limit || Object.is(a, b)) return;
+      if (Array.isArray(a) || Array.isArray(b)) {
+        if (!Array.isArray(a) || !Array.isArray(b)) {
+          diffs.push({ path, expected: a, actual: b });
+          return;
+        }
+        const max = Math.max(a.length, b.length);
+        for (let index = 0; index < max; index += 1) {
+          visit(a[index], b[index], `${path}[${index}]`);
+          if (diffs.length >= limit) return;
+        }
+        return;
+      }
+      if ((a && typeof a === "object") || (b && typeof b === "object")) {
+        if (!a || !b || typeof a !== "object" || typeof b !== "object") {
+          diffs.push({ path, expected: a, actual: b });
+          return;
+        }
+        const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).sort();
+        for (const childKey of keys) {
+          visit(a[childKey], b[childKey], path ? `${path}.${childKey}` : childKey);
+          if (diffs.length >= limit) return;
+        }
+        return;
+      }
+      diffs.push({ path, expected: a, actual: b });
+    };
+    visit(jsonRoundTrip(normalizeForSaveCompare(left)), jsonRoundTrip(normalizeForSaveCompare(right)), "blocks");
+    return diffs;
   }
 
   function blocksMatchForSave(left, right) {
@@ -2449,6 +2504,7 @@ export default function VisualBuilderPage() {
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
               verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+              diff: diffBlocksForSave(normalizedBlocks, verifiedBlocks || syncedBlocks || []),
             });
             flashNotice(message, "error", 15000);
             return {
@@ -2459,6 +2515,7 @@ export default function VisualBuilderPage() {
                 payload: summarizeBuilderBlocksForSave(normalizedBlocks),
                 verified: summarizeBuilderBlocksForSave(verifiedBlocks || []),
                 synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+                diff: diffBlocksForSave(normalizedBlocks, verifiedBlocks || syncedBlocks || []),
               },
             };
           }
@@ -2481,6 +2538,7 @@ export default function VisualBuilderPage() {
             _saveDebug: {
               payload: summarizeBuilderBlocksForSave(normalizedBlocks),
               synced: summarizeBuilderBlocksForSave(syncedBlocks || []),
+              diff: diffBlocksForSave(normalizedBlocks, syncedBlocks || []),
               error: verifyErr?.message || "Save verification failed",
             },
           };

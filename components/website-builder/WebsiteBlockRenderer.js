@@ -3186,7 +3186,7 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               const [whole, dec] = fixed.split(".");
               return `A$${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` + (dec ? `.${dec}` : "");
             };
-            const showSavingsDisclosure = props.showSavingsDisclosure !== false;
+            const showSavingsDisclosure = props.showSavingsDisclosure === true;
             const hasDisclosure = showSavingsDisclosure && plans.some((p) => parsePx(p.individualPrice) > 0);
             if (!hasDisclosure) return null;
             const BILLING_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#7c3aed"];
