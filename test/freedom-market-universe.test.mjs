@@ -84,7 +84,7 @@ test("market discovery uses provider reference universe and separates ASX entitl
 });
 
 function alpacaBars(symbol, volume = 2_000_000, start = 20) {
-  const first = Date.UTC(2026, 5, 16, 4);
+  const first = Date.now() - 59 * 86400000;
   return Array.from({ length: 60 }, (_, index) => {
     const close = start + index * 0.08;
     return {

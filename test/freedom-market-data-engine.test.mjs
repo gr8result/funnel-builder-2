@@ -195,3 +195,30 @@ test("Alpaca latest trade discontinuity with daily history withholds invalid pri
   delete process.env.ALPACA_API_KEY;
   delete process.env.ALPACA_API_SECRET;
 });
+
+test("market snapshot rejects malformed OHLCV rows instead of analysing corrupted history", async () => {
+  const service = await importMarketDataService("malformed-ohlcv");
+  const snapshot = service.snapshotFromHistory("BAD", {
+    ok: true,
+    symbol: "BAD",
+    provider: "Unit Provider",
+    candles: [
+      ...Array.from({ length: 20 }, (_, index) => ({
+        timestamp: Date.UTC(2026, 6, 10 + index, 4) / 1000,
+        date: new Date(Date.UTC(2026, 6, 10 + index, 4)).toISOString().slice(0, 10),
+        open: 3.8 + index * 0.01,
+        high: 4.1 + index * 0.01,
+        low: 3.7 + index * 0.01,
+        close: 3.9 + index * 0.01,
+        volume: 900000 + index * 1000,
+      })),
+      { timestamp: 1786593600, date: "2026-08-13", open: 4.1, high: 4.15, low: 4.05, close: 4.22, volume: 1200000 },
+    ],
+  }, { ok: true, price: 4.2, timestamp: "2026-08-13T19:59:00Z" });
+
+  assert.equal(snapshot.dataQuality, "unavailable");
+  assert.equal(snapshot.statusCode, "DATA_INVALID");
+  assert.equal(snapshot.quote.price, null);
+  assert.equal(snapshot.candles.daily.length, 0);
+  assert.match(snapshot.error, /malformed OHLCV/i);
+});

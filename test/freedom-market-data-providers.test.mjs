@@ -133,6 +133,32 @@ test("Alpaca multi-symbol bars normalize chronological OHLCV without synthetic p
   }
 });
 
+test("Alpaca history normalization rejects malformed OHLCV bars", async () => {
+  const previousKey = process.env.ALPACA_API_KEY;
+  const previousSecret = process.env.ALPACA_API_SECRET;
+  process.env.ALPACA_API_KEY = "unit-alpaca-key";
+  process.env.ALPACA_API_SECRET = "unit-alpaca-secret";
+  try {
+    const batch = await AlpacaProvider.historyBatch(["BAD"], { range: "5d", interval: "1day" }, {
+      fetchImpl: async () => response({ bars: {
+        BAD: [
+          { t: "2026-08-12T04:00:00Z", o: 3.7, h: 4, l: 3.5, c: 3.9, v: 900000 },
+          { t: "2026-08-13T04:00:00Z", o: 4.1, h: 4.15, l: 4.05, c: 4.22, v: 1200000 },
+          { t: "2026-08-14T04:00:00Z", o: 4.2, h: 4.3, l: 4.1, c: 4.24, v: -1 },
+        ],
+      } }),
+    });
+    const bad = batch.get("BAD");
+    assert.equal(bad.ok, true);
+    assert.equal(bad.candleCount, 1);
+    assert.deepEqual(bad.candles.map((candle) => candle.date), ["2026-08-12"]);
+    assert.equal(batch.diagnostics.barsReturned, 1);
+  } finally {
+    restoreEnv("ALPACA_API_KEY", previousKey);
+    restoreEnv("ALPACA_API_SECRET", previousSecret);
+  }
+});
+
 test("Alpaca latest trade and one-sided quote normalization do not fabricate midpoint prices", async () => {
   const previousKey = process.env.ALPACA_API_KEY;
   const previousSecret = process.env.ALPACA_API_SECRET;

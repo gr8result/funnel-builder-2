@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auditChronology, buildFreedomChartInput, summarizeOhlc } from "../lib/freedom-trader/chartSeriesIntegrity.js";
+import {
+  auditChronology,
+  buildFreedomChartInput,
+  filterValidOhlcvCandles,
+  summarizeOhlc,
+  validateOhlcvCandle,
+} from "../lib/freedom-trader/chartSeriesIntegrity.js";
 
 test("raw normalized candles preserve order, close values, range, count and volume in chart input", () => {
   const normalized = [
@@ -42,4 +48,24 @@ test("chart input preserves sub-cent market precision from normalized OHLC bars"
   const chart = buildFreedomChartInput(normalized, { chartType: "line" });
   assert.equal(chart.chartPrice[0], 3.795);
   assert.deepEqual(chart.candles[0], [3.795, 3.795, 3.785, 3.805]);
+});
+
+test("OHLCV validation rejects malformed market candles before charting or analysis", () => {
+  const valid = { date: "2026-08-13", open: 4, high: 4.25, low: 3.9, close: 4.1, volume: 1200000 };
+  assert.equal(validateOhlcvCandle(valid).ok, true);
+
+  const { valid: accepted, rejected } = filterValidOhlcvCandles([
+    valid,
+    { date: "2026-08-14", open: 4.1, high: 4.05, low: 3.95, close: 4.2, volume: 1100000 },
+    { date: "2026-08-15", open: 4.2, high: 4.3, low: 4.25, close: 4.26, volume: 900000 },
+    { date: "2026-08-16", open: 4.2, high: 4.3, low: 4.1, close: 4.22, volume: -1 },
+    { open: 4.2, high: 4.3, low: 4.1, close: 4.22, volume: 1000 },
+  ]);
+
+  assert.deepEqual(accepted, [valid]);
+  assert.equal(rejected.length, 4);
+  assert.match(rejected[0].issues.join(" "), /High is below open or close/);
+  assert.match(rejected[1].issues.join(" "), /Low is above open or close/);
+  assert.match(rejected[2].issues.join(" "), /Volume/);
+  assert.match(rejected[3].issues.join(" "), /Timestamp/);
 });

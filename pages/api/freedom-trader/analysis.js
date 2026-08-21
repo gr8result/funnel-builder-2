@@ -2,6 +2,7 @@ import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService
 import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 import { classifyPullbackReversal } from "../../../lib/freedom-trader/pullbackReversal.js";
+import { filterValidOhlcvCandles } from "../../../lib/freedom-trader/chartSeriesIntegrity.js";
 
 function round(value, decimals = 2) {
   const number = Number(value);
@@ -254,7 +255,7 @@ function historyDiagnostics(history, cleanCandles, requestedRange = "1y", reques
 
 export function buildAnalysis({ symbol, quote, candles, marketData = null, history = null, metaOverride = null }) {
   const meta = getMeta(symbol, metaOverride);
-  const clean = candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])));
+  const clean = filterValidOhlcvCandles(candles).valid;
   const dataStatus = historyDiagnostics(history, clean);
   const closes = clean.map((candle) => candle.close);
   const volumes = clean.map((candle) => candle.volume);
@@ -455,9 +456,7 @@ export async function analyseSymbol(symbol, snapshotInput = null, metaOverride =
   const requestedInterval = "1d";
   const snapshot = snapshotInput || await getMarketSnapshot(symbol, { range: requestedRange, interval: "1day" });
   const { quoteResult, history } = snapshotToInputs(symbol, snapshot);
-  const cleanHistoryCandles = Array.isArray(history?.candles)
-    ? history.candles.filter((candle) => ["open", "high", "low", "close", "volume"].every((key) => Number.isFinite(candle[key])))
-    : [];
+  const cleanHistoryCandles = filterValidOhlcvCandles(history?.candles || []).valid;
   const dataStatus = historyDiagnostics(history, cleanHistoryCandles, requestedRange, requestedInterval);
 
   if (!quoteResult.ok || !quoteResult.data) {
