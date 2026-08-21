@@ -28,29 +28,22 @@ import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTem
 import { supabase } from "../../../utils/supabase-client";
 import {
   APPROVED_SELECTIONS_CSV_PATH,
-  BUILDER_ENABLEMENT_STORAGE_KEY,
-  EXPLICIT_BUILDER_DISABLE_REASON,
   GENERIC_IMAGE_URLS,
-  MASTER_CATALOGUE_STORAGE_KEY,
   activeQldBrickMasterProducts,
-  builderEnablementState,
   commitMasterProductImport,
-  createBuilderProductReference,
-  ensureBuilderCompletedFamilyEnablements,
-  ensureDemoBuilderCatalogueEnablements,
   masterProductToClientSelectionProduct,
-  isRemovedDuplicateCladdingProduct,
-  mergeMasterCatalogueProducts,
-  normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   queryClientSelectableProducts,
 } from "../../../lib/product-library/catalogueModel";
-import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
-import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
-import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
-import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
-import kitchenProductCatalogue from "../../../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json";
+import {
+  addBuilderProduct,
+  disableProduct,
+  enableProduct,
+  getBuilderEnablementRefs,
+  getMasterProducts,
+  updateBuilderProductOverride,
+} from "../../../lib/product-library/catalogueService";
 
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
@@ -1015,54 +1008,18 @@ export default function BuilderSelectionsBookPage({
     }
   }
 
+  // Master products come straight from the committed catalogue JSON on every
+  // load. Browser state contributes builder overrides only, so no stored value
+  // (stale, filtered, poisoned or absent) can reduce a family's master count.
   function loadMasterCatalogueState() {
-    if (typeof window === "undefined") return;
-    const baselineProducts = [
-      ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
-      ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(exteriorFinishesCatalogue?.products) ? exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(kitchenProductCatalogue?.products) ? kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-    ];
-    try {
-      const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
-      const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureBuilderCompletedFamilyEnablements(
-        nextProducts,
-        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
-        workspaceId || "",
-      );
-      setMasterCatalogueProducts(nextProducts);
-      setBuilderEnablements(nextEnablements);
-      if (Array.isArray(storedProducts) && nextProducts.length !== storedProducts.length) {
-        window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
-      }
-      if (JSON.stringify(nextEnablements) !== JSON.stringify(storedEnablements)) {
-        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
-      }
-    } catch {
-      const fallbackEnablements = ensureBuilderCompletedFamilyEnablements(
-        baselineProducts,
-        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
-        workspaceId || "",
-      );
-      setMasterCatalogueProducts(baselineProducts);
-      setBuilderEnablements(fallbackEnablements);
-      if (fallbackEnablements.length) {
-        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
-      }
-    }
+    setMasterCatalogueProducts(getMasterProducts());
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId || ""));
   }
 
-  function persistMasterCatalogueState(nextProducts, nextEnablements = builderEnablements) {
-    const preservedProducts = mergeMasterCatalogueProducts(masterCatalogueProducts, nextProducts);
-    setMasterCatalogueProducts(preservedProducts);
-    setBuilderEnablements(nextEnablements);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(preservedProducts));
-      window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
-    }
+  // Re-reads the builder layer after an override mutation. The master catalogue
+  // is never written back - there is no persisted master copy any more.
+  function refreshBuilderState() {
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId || ""));
   }
 
   function embeddedBookStorageKey() {
@@ -1610,9 +1567,20 @@ export default function BuilderSelectionsBookPage({
   }
 
   function commitBrickImportPreview() {
-    if (!brickImportPreview) return;
+    if (!brickImportPreview || !workspaceId) return;
     const result = commitMasterProductImport(brickImportPreview.preview, masterCatalogueProducts);
-    persistMasterCatalogueState(result.products);
+    // Imports append organisation-specific products. Static master records are
+    // never rewritten, so an import can no longer replace a completed family.
+    const masterCodes = new Set(masterCatalogueProducts.map((product) => product.productCode));
+    [...result.created, ...result.updated].forEach((product) => {
+      if (!product?.productCode || masterCodes.has(product.productCode)) return;
+      try {
+        addBuilderProduct(workspaceId, product);
+      } catch (addError) {
+        console.error("[Client Selections] import product rejected", addError);
+      }
+    });
+    refreshBuilderState();
     const importedCodes = [...result.created, ...result.updated, ...result.skipped].map((product) => product.productCode).filter(Boolean);
     setBrickEnablementSelection(importedCodes);
     setBrickImportResult(result);
@@ -1621,20 +1589,10 @@ export default function BuilderSelectionsBookPage({
 
   function enableSelectedBrickProducts() {
     if (!workspaceId || !brickEnablementSelection.length) return;
-    const existingKeys = new Set(builderEnablements.map((item) => `${item.organisationId}:${item.masterProductCode}`));
-    const nextEnablements = [...builderEnablements];
     brickEnablementSelection.forEach((productCode) => {
-      const product = masterCatalogueProducts.find((item) => item.productCode === productCode);
-      if (!product) return;
-      const key = `${workspaceId}:${product.productCode}`;
-      if (existingKeys.has(key)) {
-        const index = nextEnablements.findIndex((item) => item.organisationId === workspaceId && item.masterProductCode === product.productCode);
-        nextEnablements[index] = { ...nextEnablements[index], enabled: true, active: true };
-      } else {
-        nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: true, active: true, selectionMode: "available_upgrade" }));
-      }
+      enableProduct(workspaceId, productCode);
     });
-    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
+    refreshBuilderState();
     setBrickImportModalOpen(false);
     setGuidedBrickStep("suppliers");
     setGuidedBrickSupplier("");
@@ -1644,33 +1602,19 @@ export default function BuilderSelectionsBookPage({
 
   function setBrickProductEnabled(productCode, enabled) {
     if (!workspaceId || !productCode) return;
-    const product = masterCatalogueProducts.find((item) => item.productCode === productCode);
-    if (!product) return;
-    const existing = builderEnablements.find((item) => item.organisationId === workspaceId && item.masterProductCode === productCode);
-    const nextEnablements = existing
-      ? builderEnablements.map((item) => item === existing ? builderEnablementState(item, enabled) : item)
-      : [...builderEnablements, createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), disableReason: enabled ? "" : EXPLICIT_BUILDER_DISABLE_REASON, tier: "", selectionMode: "available_upgrade" })];
-    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
+    if (enabled) enableProduct(workspaceId, productCode);
+    else disableProduct(workspaceId, productCode);
+    refreshBuilderState();
   }
 
   function setBrickProductsEnabled(productCodes, enabled) {
     if (!workspaceId || !Array.isArray(productCodes)) return;
-    const codes = new Set(productCodes);
-    const productByCode = new Map(masterCatalogueProducts.map((product) => [product.productCode, product]));
-    const seen = new Set();
-    const nextEnablements = builderEnablements.map((item) => {
-      if (item.organisationId === workspaceId && codes.has(item.masterProductCode)) {
-        seen.add(item.masterProductCode);
-        return builderEnablementState(item, enabled);
-      }
-      return item;
+    productCodes.forEach((productCode) => {
+      if (!productCode) return;
+      if (enabled) enableProduct(workspaceId, productCode);
+      else disableProduct(workspaceId, productCode);
     });
-    codes.forEach((code) => {
-      if (seen.has(code)) return;
-      const product = productByCode.get(code);
-      if (product) nextEnablements.push(createBuilderProductReference(product, { organisationId: workspaceId, enabled: Boolean(enabled), active: Boolean(enabled), disableReason: enabled ? "" : EXPLICIT_BUILDER_DISABLE_REASON, tier: "", selectionMode: "available_upgrade" }));
-    });
-    persistMasterCatalogueState(masterCatalogueProducts, nextEnablements);
+    refreshBuilderState();
   }
 
   function selectGuidedProduct(requirement, option) {

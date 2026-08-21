@@ -1,6 +1,7 @@
 import { Component, memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   BarChart3,
   Briefcase,
@@ -44,15 +45,10 @@ import {
   PRODUCT_FAMILIES,
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
-  MASTER_CATALOGUE_STORAGE_KEY,
   imageForFamilyKey,
   isRemovedDuplicateCladdingProduct,
-  mergeMasterCatalogueProducts,
-  normalizeMasterProductRecord,
 } from "../../lib/product-library/catalogueModel";
-import qldBrickMasterCatalogue from "../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
-import auMetalRoofingCatalogue from "../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
-import exteriorFinishesCatalogue from "../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
+import { getBuilderProducts } from "../../lib/product-library/catalogueService";
 import {
   APPROVED_PROJECT_ESTIMATE_TEMPLATE_STATUS,
   PROJECT_ESTIMATE_EXPORT_ORDER,
@@ -678,7 +674,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       <main style={styles.main}>
         <div style={styles.compactControlRow}>
           <div style={styles.topControls}>
-            <a href="/modules/construction" style={styles.bannerBackButton}>Back to Projects Hub</a>
+            <a href="/dashboard" style={styles.bannerBackButton}>Back to Dashboard</a>
             {previewMode ? (
               <span style={styles.lockedBadge}>Locked Preview</span>
             ) : (
@@ -793,6 +789,9 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           <div style={styles.openFileBanner}>
             <span style={styles.openFileLabel}>Current saved file</span>
             <span style={styles.openFileName}>{openJobDetails.fileName}</span>
+            <Link href="/modules/estimate-builder/register-job" style={styles.newJobButton}>
+              + New Job
+            </Link>
           </div>
           <div style={styles.openJobBanner}>
             <OpenJobHeaderField label="Open Job" value={openJobDetails.projectName} />
@@ -1086,6 +1085,36 @@ const DASHBOARD_GENERAL_FIELDS = [
   { label: "Status", key: "projectStatus" },
 ];
 
+// Moved here from the Projects Hub dashboard (/modules/construction), which is
+// now redirected. These navigate to standalone module routes rather than
+// workbook pages, so they render as links instead of setPage() buttons.
+const PROJECT_HUB_CARDS = [
+  {
+    title: "Job Board",
+    subtitle: "Track every job or project across its full lifecycle, from quote and kick-off through to completion and handover.",
+    href: "/modules/jobboard",
+    accent: "#f97316",
+    Icon: FolderKanban,
+    badge: "Jobs",
+  },
+  {
+    title: "Gantt Charts",
+    subtitle: "Visual project schedules with phases, milestones and progress tracking for construction or any multi-stage workflow.",
+    href: "/modules/gantt",
+    accent: "#3b82f6",
+    Icon: BarChart3,
+    badge: "Schedule",
+  },
+  {
+    title: "Production Flow",
+    subtitle: "Track each job through procurement steps: quote, sample, order, delivery, install and sign-off.",
+    href: "/modules/production",
+    accent: "#22c55e",
+    Icon: Truck,
+    badge: "Flow",
+  },
+];
+
 const DASHBOARD_WORKSPACE_CARDS = [
   {
     title: "Job Details",
@@ -1257,6 +1286,26 @@ function ProjectDashboardSheet({ sheet }) {
       </section>
 
       <section style={styles.dashboardCardGrid}>
+        {PROJECT_HUB_CARDS.map((card) => {
+          const CardIcon = card.Icon;
+          return (
+            <Link
+              key={`hub-${card.title}`}
+              href={card.href}
+              className="project-workspace-card"
+              style={{ ...styles.dashboardWorkspaceCard, background: `${card.accent}14`, borderColor: `${card.accent}30`, textDecoration: "none" }}
+            >
+              <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: card.accent, borderColor: card.accent }}>
+                <CardIcon size={30} strokeWidth={2.3} />
+              </span>
+              <span style={styles.dashboardCardCopy}>
+                <span style={styles.dashboardCardTitle}>{card.title}</span>
+                <span style={styles.dashboardCardSubtitle}>{card.subtitle}</span>
+              </span>
+              <span style={{ ...styles.dashboardCardBadge, background: "#ffffff", borderColor: `${card.accent}30`, color: card.accent }}>{card.badge}</span>
+            </Link>
+          );
+        })}
         {DASHBOARD_WORKSPACE_CARDS.map((card) => {
           const visual = workspaceVisual(card.visualKey || card.page);
           const CardIcon = visual.Icon;
@@ -6853,22 +6902,11 @@ function ProductLibrarySheet({ sheet, organisationId = "" }) {
     else setSelectedAreaKey("");
   }
 
+  // Same source as Client Selections: static master catalogue + this
+  // organisation's custom products and overrides. No persisted master copy.
   useEffect(() => {
-    const baselineProducts = [
-      ...(qldBrickMasterCatalogue.products || []),
-      ...(auMetalRoofingCatalogue.products || []),
-      ...(exteriorFinishesCatalogue.products || []),
-    ].map((product) => normalizeMasterProductRecord(product));
-    let storedProducts = [];
-    if (typeof window !== "undefined") {
-      try {
-        storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      } catch {
-        storedProducts = [];
-      }
-    }
-    setProductLibraryMasterProducts(mergeMasterCatalogueProducts(baselineProducts, storedProducts));
-  }, []);
+    setProductLibraryMasterProducts(getBuilderProducts(organisationId || ""));
+  }, [organisationId]);
 
   return (
     <div style={styles.productLibraryHierarchyShell} data-catalogue-kind="product-library">
@@ -15878,6 +15916,7 @@ const styles = {
   openFileBanner: { justifySelf: "stretch", minWidth: 0, textAlign: "left", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.18)", borderRadius: 18, padding: "13px 14px", backdropFilter: "blur(14px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)" },
   openFileLabel: { display: "block", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" },
   openFileName: { display: "block", color: "#ffffff", fontSize: 18, fontWeight: 850, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  newJobButton: { display: "inline-block", marginTop: 10, padding: "8px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.42)", background: "rgba(255,255,255,0.94)", color: "#0f172a", fontSize: 13, fontWeight: 900, letterSpacing: "0.02em", textDecoration: "none", boxShadow: "0 6px 18px rgba(15, 23, 42, 0.18)" },
   openJobBanner: { minWidth: 0, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 },
   openJobField: { minWidth: 0, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.16)", borderRadius: 14, padding: "10px 12px", display: "grid", gap: 3, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)" },
   openJobFieldWide: { gridColumn: "1 / -1" },

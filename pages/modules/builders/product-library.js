@@ -7,12 +7,10 @@ import {
   AUSTRALIAN_REGIONS,
   BUILDER_PRODUCT_MODES,
   BUILDER_PRODUCT_TIERS,
-  BUILDER_ENABLEMENT_STORAGE_KEY,
   EXPLICIT_BUILDER_DISABLE_REASON,
   GARAGE_DOOR_SELECTION_KEY,
   MASTER_IMAGE_STATUSES,
   MASTER_PRICE_STATUSES,
-  MASTER_CATALOGUE_STORAGE_KEY,
   MASTER_PRODUCT_CATALOGUE_IMPORT_TEMPLATE,
   PRODUCT_ENTITY_FIELDS,
   PRODUCT_FAMILIES,
@@ -21,17 +19,13 @@ import {
   TAXONOMY_CATEGORY_DEFINITIONS,
   TOP_LEVEL_AREAS,
   builderEnablementState,
-  createProductEntity,
   createBuilderProductReference,
-  ensureBuilderCompletedFamilyEnablements,
-  ensureDemoBuilderCatalogueEnablements,
   exportMasterCatalogueCsv,
   exportMasterCatalogueJson,
   familyByKey,
   familyCatalogueStatus,
   familyIsLocked,
   isProductLibraryEligibleProduct,
-  mergeMasterCatalogueProducts,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   commitMasterProductImport,
@@ -42,12 +36,14 @@ import {
   selectionKeyForFamily,
   previewProductImportRows,
 } from "../../../lib/product-library/catalogueModel";
+import {
+  addBuilderProduct,
+  disableProduct,
+  getBuilderEnablementRefs,
+  getMasterProducts,
+  updateBuilderProductOverride,
+} from "../../../lib/product-library/catalogueService";
 import { supabase } from "../../../utils/supabase-client";
-import qldBrickMasterCatalogue from "../../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
-import auMetalRoofingCatalogue from "../../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
-import exteriorOpeningsCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
-import exteriorFinishesCatalogue from "../../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
-import kitchenProductCatalogue from "../../../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json";
 
 const EMPTY_PRODUCT = {
   product_code: "",
@@ -510,42 +506,11 @@ export default function BuilderProductLibraryPage() {
     }
   }, []);
 
+  // Master products always come from the committed catalogue JSON; browser
+  // state contributes builder overrides only. Same source as Client Selections.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const baselineProducts = [
-      ...(Array.isArray(qldBrickMasterCatalogue?.products) ? qldBrickMasterCatalogue.products : []),
-      ...(Array.isArray(auMetalRoofingCatalogue?.products) ? auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(exteriorOpeningsCatalogue?.products) ? exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(exteriorFinishesCatalogue?.products) ? exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-      ...(Array.isArray(kitchenProductCatalogue?.products) ? kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product)) : []),
-    ];
-    try {
-      const storedProducts = JSON.parse(window.localStorage.getItem(MASTER_CATALOGUE_STORAGE_KEY) || "[]");
-      const nextProducts = mergeMasterCatalogueProducts(baselineProducts, storedProducts);
-      const storedEnablements = JSON.parse(window.localStorage.getItem(BUILDER_ENABLEMENT_STORAGE_KEY) || "[]");
-      const nextEnablements = ensureBuilderCompletedFamilyEnablements(
-        nextProducts,
-        ensureDemoBuilderCatalogueEnablements(nextProducts, Array.isArray(storedEnablements) ? storedEnablements : [], workspaceId || ""),
-        workspaceId || "",
-      );
-      setMasterProducts(nextProducts);
-      setBuilderEnablements(nextEnablements);
-      if (Array.isArray(storedProducts) && nextProducts.length !== storedProducts.length) {
-        window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(nextProducts));
-      }
-      if (JSON.stringify(nextEnablements) !== JSON.stringify(storedEnablements)) {
-        window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
-      }
-    } catch {
-      const fallbackEnablements = ensureBuilderCompletedFamilyEnablements(
-        baselineProducts,
-        ensureDemoBuilderCatalogueEnablements(baselineProducts, [], workspaceId || ""),
-        workspaceId || "",
-      );
-      setMasterProducts(baselineProducts);
-      setBuilderEnablements(fallbackEnablements);
-      if (fallbackEnablements.length) window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(fallbackEnablements));
-    }
+    setMasterProducts(getMasterProducts());
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId || ""));
   }, [workspaceId]);
 
   useEffect(() => {
@@ -661,17 +626,29 @@ export default function BuilderProductLibraryPage() {
     downloadCsv("MASTER-PRODUCT-CATALOGUE-IMPORT-TEMPLATE.csv", [PRODUCT_LIBRARY_IMPORT_COLUMNS]);
   }
 
+  // Builder edits persist as organisation-specific products and per-product
+  // overrides. The static master catalogue is never rewritten, so no Product
+  // Library action can replace or empty a committed family.
   function persistMasterCatalogue(nextProducts, nextEnablements = builderEnablements) {
-    const targetFamily = nextProducts.map((product) => product.familyKey).filter(Boolean).every((familyKey, _index, families) => familyKey === families[0])
-      ? nextProducts.find((product) => product.familyKey)?.familyKey || ""
-      : "";
-    const preservedProducts = mergeMasterCatalogueProducts(masterProducts, nextProducts, { explicitFamilyKey: targetFamily });
-    setMasterProducts(preservedProducts);
-    setBuilderEnablements(nextEnablements);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(MASTER_CATALOGUE_STORAGE_KEY, JSON.stringify(preservedProducts));
-      window.localStorage.setItem(BUILDER_ENABLEMENT_STORAGE_KEY, JSON.stringify(nextEnablements));
-    }
+    if (!workspaceId) return;
+    const staticCodes = new Set(getMasterProducts().map((product) => product.productCode));
+    (Array.isArray(nextProducts) ? nextProducts : []).forEach((product) => {
+      if (!product?.productCode || staticCodes.has(product.productCode)) return;
+      try {
+        addBuilderProduct(workspaceId, product);
+      } catch (addError) {
+        console.error("[Product Library] custom product rejected", addError);
+      }
+    });
+    (Array.isArray(nextEnablements) ? nextEnablements : []).forEach((ref) => {
+      if (!ref?.masterProductCode || ref.organisationId !== workspaceId) return;
+      const patch = { enabled: ref.enabled !== false };
+      const price = ref.clientPrice ?? ref.overrides?.clientPrice;
+      if (price != null && Number.isFinite(Number(price))) patch.builderPrice = Number(price);
+      updateBuilderProductOverride(workspaceId, ref.masterProductCode, patch);
+    });
+    setMasterProducts(getMasterProducts());
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId));
   }
 
   function handleMasterImportPreview(event) {
@@ -1066,8 +1043,10 @@ export default function BuilderProductLibraryPage() {
     if (!entity?.productCode) return;
     setSaving(true);
     setError("");
-    const archivedRecord = normalizeMasterProductRecord({ ...entity, active: false, archived: true, discontinued: entity.discontinued });
-    persistMasterCatalogue(masterProducts.map((product) => product.productCode === archivedRecord.productCode ? archivedRecord : product));
+    // Archiving hides the product from new selections via a builder override.
+    // The master record itself is retained - see catalogueService B4/B8.
+    disableProduct(workspaceId, entity.productCode);
+    setBuilderEnablements(getBuilderEnablementRefs(workspaceId || ""));
     setSuccess("Product archived for new selections. Existing saved selections keep their product reference.");
     setSaving(false);
   }
