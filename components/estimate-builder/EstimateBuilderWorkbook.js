@@ -50,6 +50,7 @@ import {
   mergeMasterCatalogueProducts,
   normalizeMasterProductRecord,
 } from "../../lib/product-library/catalogueModel";
+import qldBrickMasterCatalogue from "../../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json";
 import auMetalRoofingCatalogue from "../../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json";
 import exteriorFinishesCatalogue from "../../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json";
 import {
@@ -827,7 +828,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           )}
           {sheet.workbook.page === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
           {sheet.workbook.page === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
-          {sheet.workbook.page === "productLibrary" && <ProductLibrarySheet sheet={sheet} />}
+          {sheet.workbook.page === "productLibrary" && <ProductLibrarySheet sheet={sheet} organisationId={moduleWorkspaceId} />}
           {sheet.workbook.page === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
           {sheet.workbook.page === "estimateInclusions" && <EstimateInclusionsSheet sheet={sheet} />}
           {sheet.workbook.page === "summary" && <SummarySheet sheet={sheet} />}
@@ -6804,7 +6805,7 @@ const PRODUCT_LIBRARY_TOP_LEVEL_KEYS = ["exterior", "interior"];
 const PRODUCT_LIBRARY_INTERIOR_AREA_KEYS = ["kitchen", "bathroom-ensuite", "laundry", "bedrooms", "living-areas", "garage", "interior"];
 const PRODUCT_LIBRARY_BLOCKED_SEARCH_TERMS = ["site supervision", "engineering", "soil test", "frame labour", "certification", "project management"];
 
-function ProductLibrarySheet({ sheet }) {
+function ProductLibrarySheet({ sheet, organisationId = "" }) {
   const [selectedAreaKey, setSelectedAreaKey] = useState("");
   const [selectedCategoryKey, setSelectedCategoryKey] = useState("");
   const [selectedFamilyKey, setSelectedFamilyKey] = useState("");
@@ -6854,6 +6855,7 @@ function ProductLibrarySheet({ sheet }) {
 
   useEffect(() => {
     const baselineProducts = [
+      ...(qldBrickMasterCatalogue.products || []),
       ...(auMetalRoofingCatalogue.products || []),
       ...(exteriorFinishesCatalogue.products || []),
     ].map((product) => normalizeMasterProductRecord(product));
