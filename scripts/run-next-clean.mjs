@@ -59,6 +59,34 @@ if (existingLock?.pid && processExists(existingLock.pid)) {
   process.exit(1);
 }
 
+// The lock file is not enough: it can be deleted, or written by a wrapper that
+// died while its server kept the port. Two dev servers share one dist dir, so a
+// second start would delete the first one's chunks and make it return 500s.
+// Probe the port as an independent check before going any further.
+async function devPortInUse() {
+  if (mode !== "dev") return false;
+  const port = Number(process.env.PORT) || 3000;
+  const net = await import("net");
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "127.0.0.1" });
+    const done = (result) => { socket.destroy(); resolve(result); };
+    socket.setTimeout(600);
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
+  });
+}
+
+if (await devPortInUse()) {
+  const port = Number(process.env.PORT) || 3000;
+  console.error(
+    `A dev server is already serving port ${port} for this workspace and shares ${distDir}.\n` +
+    `Starting another one would delete its build output and make it return HTTP 500.\n` +
+    `Use the running server, or stop it first (then 'npm run dev:fresh' if you need a clean build).`
+  );
+  process.exit(1);
+}
+
 if (existingLock) removeLock();
 
 if (cleanDist) {
