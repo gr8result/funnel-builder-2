@@ -26,6 +26,8 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const jsonPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.json");
+const monierRoofTilesPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-MONIER-ROOF-TILES-CATALOGUE.json");
+const bristileRoofTilesPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-BRISTILE-ROOF-TILES-CATALOGUE.json");
 const csvPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.csv");
 const bricksPath = path.join(repoRoot, "data", "product-library", "catalogues", "bricks", "QLD-BRICKS-MASTER-CATALOGUE.json");
 const exteriorOpeningsPath = path.join(repoRoot, "data", "product-library", "catalogues", "exterior", "AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
@@ -35,6 +37,8 @@ const selectionsPath = path.join(repoRoot, "pages", "modules", "builders", "sele
 const productLibraryPath = path.join(repoRoot, "pages", "modules", "builders", "product-library.js");
 
 const catalogue = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+const monierRoofTilesCatalogue = JSON.parse(fs.readFileSync(monierRoofTilesPath, "utf8"));
+const bristileRoofTilesCatalogue = JSON.parse(fs.readFileSync(bristileRoofTilesPath, "utf8"));
 const brickCatalogue = JSON.parse(fs.readFileSync(bricksPath, "utf8"));
 const exteriorOpeningsCatalogue = JSON.parse(fs.readFileSync(exteriorOpeningsPath, "utf8"));
 const exteriorFinishesCatalogue = JSON.parse(fs.readFileSync(exteriorFinishesPath, "utf8"));
@@ -51,9 +55,26 @@ assert.equal(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "gutte
 
 assert.equal(catalogue.familyKey, "roofing", "catalogue must use the canonical roofing family");
 assert.deepEqual(catalogue.roofTypes.map((item) => item.key), ["metal_roofing", "roof_tiles"], "roof type branch must include metal roofing and roof tiles");
-assert.equal(catalogue.roofTypes.find((item) => item.key === "roof_tiles").products.length, 0, "roof tiles must not seed fake product records");
 assert.equal(catalogue.products.length, 3, "first roofing release should seed the official metal profiles only");
 assert.ok(catalogue.officialSources.every((url) => ["colorbond.com", "lysaght.com"].includes(new URL(url).hostname)), "all source URLs must be official COLORBOND or LYSAGHT pages");
+assert.equal(monierRoofTilesCatalogue.familyKey, "roofing", "Monier tiles must stay in the Roofing family");
+assert.equal(bristileRoofTilesCatalogue.familyKey, "roofing", "Bristile tiles must stay in the Roofing family");
+assert.ok(monierRoofTilesCatalogue.products.length >= 60, "Monier roof tiles must import real colour variants");
+assert.ok(bristileRoofTilesCatalogue.products.length >= 100, "Bristile roof tiles must import real QLD catalogue variants");
+assert.ok(monierRoofTilesCatalogue.products.every((product) => product.configuration === "roof_tiles" && product.attributes.roofType === "roof_tiles"), "Monier records must be roof tile records");
+assert.ok(bristileRoofTilesCatalogue.products.every((product) => product.configuration === "roof_tiles" && product.attributes.roofType === "roof_tiles"), "Bristile records must be roof tile records");
+assert.ok(monierRoofTilesCatalogue.products.every((product) => product.source_url.includes("monier.com.au")), "Monier product records must store official Monier URLs");
+assert.ok(bristileRoofTilesCatalogue.products.every((product) => product.source_url.includes("bristileroofing.com.au")), "Bristile product records must store official Bristile URLs");
+assert.ok(monierRoofTilesCatalogue.products.every((product) => product.primary_image_url && !/bedroom|bathroom/i.test(product.primary_image_url)), "Monier tile cards need relevant manufacturer imagery or swatches");
+assert.ok(bristileRoofTilesCatalogue.products.every((product) => product.primary_image_url && !/bedroom|bathroom/i.test(product.primary_image_url)), "Bristile tile cards need relevant manufacturer imagery or swatches");
+assert.ok(monierRoofTilesCatalogue.products.some((product) => product.range === "Madison" && !product.regions.includes("QLD")), "Monier master catalogue retains non-QLD Madison records without exposing them to QLD");
+assert.ok(monierRoofTilesCatalogue.products.some((product) => product.range === "Urban Shingle" && !product.regions.includes("QLD")), "Monier master catalogue retains non-QLD Urban Shingle records without exposing them to QLD");
+["Atura", "Cambridge", "Horizon", "Tudor", "Elabana", "Nouveau", "Marseille"].forEach((range) => {
+  assert.ok(monierRoofTilesCatalogue.products.some((product) => product.range === range && product.regions.includes("QLD")), `Monier ${range} must expose QLD-compatible variants`);
+});
+["Designer", "Artisan", "Classic", "Prestige", "Eton", "Premiere", "Innova", "Marseille", "Curvado", "Curvado Glazed", "Alicantina", "5XL"].forEach((range) => {
+  assert.ok(bristileRoofTilesCatalogue.products.some((product) => product.range === range && product.regions.includes("QLD")), `Bristile ${range} must expose QLD-compatible variants`);
+});
 
 const records = parseMasterProductCatalogueImport(csv, { format: "csv" });
 const preview = previewMasterProductImport(records, []);
@@ -66,6 +87,12 @@ assert.ok(committed.products.every((product) => product.clientPrice === null && 
 assert.equal(activeAuMetalRoofingMasterProducts(committed.products).length, 3, "active AU/QLD metal roofing candidates must be detected");
 
 const products = catalogue.products;
+const allRoofingProducts = [
+  ...catalogue.products,
+  ...monierRoofTilesCatalogue.products,
+  ...bristileRoofTilesCatalogue.products,
+].map((product) => normalizeMasterProductRecord(product));
+const qldRoofingCount = allRoofingProducts.filter((product) => product.regions.includes("AU") || product.regions.includes("QLD")).length;
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
 assert.equal(colourNames.length, 22, "COLORBOND core colours must include 22 official colours");
 ["CUSTOM ORB", "TRIMDEK", "KLIP-LOK 700 CLASSIC"].forEach((profile) => {
@@ -150,9 +177,21 @@ assert.ok(preservedExplicitRoofingDisable.every((item) => !isExplicitlyDisabledB
 const combinedEnablements = ensureDemoBuilderCatalogueEnablements(committed.products, [], DEMO_BUILDER_ORGANISATION_ID);
 assert.equal(combinedEnablements.length, 3, "combined demo helper must include roofing when no brick products are present");
 
+const demoAllRoofingEnablements = ensureDemoBuilderRoofingEnablements(allRoofingProducts, [], DEMO_BUILDER_ORGANISATION_ID);
+assert.equal(demoAllRoofingEnablements.length, qldRoofingCount, "empty demo builder store must enable every QLD-compatible roofing product, including tiles");
+assert.equal(queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts: allRoofingProducts,
+  builderProducts: demoAllRoofingEnablements,
+}).length, qldRoofingCount, "Client Selections query must return QLD metal and roof tile records together");
+
 const allMasterProducts = [
   ...(brickCatalogue.products || []),
   ...(catalogue.products || []),
+  ...(monierRoofTilesCatalogue.products || []),
+  ...(bristileRoofTilesCatalogue.products || []),
   ...(exteriorOpeningsCatalogue.products || []),
   ...(exteriorFinishesCatalogue.products || []),
   ...(kitchenCatalogue.products || []),
@@ -190,7 +229,7 @@ const roofingPayload = {
 };
 assert.equal(statusForRequirement(roofingRequirement, roofingPayload), "complete", "completed roofing configuration should be green even when final price is quote required");
 
-["GuidedRoofingWorkflow", "roofingConfiguration", "Select Roofing Configuration", "Roof tile catalogue awaiting product data", "Matt is only available"].forEach((needle) => {
+["GuidedRoofingWorkflow", "roofingConfiguration", "Select Roofing Configuration", "tileManufacturer", "roofing-tile-product-step", "Matt is only available"].forEach((needle) => {
   assert.ok(selectionsSource.includes(needle), `Selections Book must include ${needle}`);
 });
 assert.ok(selectionsSource.includes("roofingGuidedProducts"), "Roofing workflow must use master roofing products instead of approved quote rows");

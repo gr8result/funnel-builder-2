@@ -13,12 +13,18 @@ import {
 const require = createRequire(import.meta.url);
 const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json");
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
+const auMonierRoofTilesCatalogue = require("../data/product-library/catalogues/roofing/AU-MONIER-ROOF-TILES-CATALOGUE.json");
+const auBristileRoofTilesCatalogue = require("../data/product-library/catalogues/roofing/AU-BRISTILE-ROOF-TILES-CATALOGUE.json");
 const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 const exteriorFinishesCatalogue = require("../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json");
 const kitchenProductCatalogue = require("../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json");
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
-const roofing = auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product));
+const roofing = [
+  ...auMetalRoofingCatalogue.products,
+  ...auMonierRoofTilesCatalogue.products,
+  ...auBristileRoofTilesCatalogue.products,
+].map((product) => normalizeMasterProductRecord(product));
 const exteriorOpenings = exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const kitchenProducts = kitchenProductCatalogue.products.map((product) => normalizeMasterProductRecord(product));
@@ -28,6 +34,8 @@ const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DE
 const pghBricks = masterProducts.filter((product) => product.familyKey === "bricks" && product.manufacturer === "PGH Bricks");
 const australBricks = masterProducts.filter((product) => product.familyKey === "bricks" && product.manufacturer === "Austral Bricks");
 const roofingProducts = masterProducts.filter((product) => product.familyKey === "roofing");
+const monierRoofTiles = roofingProducts.filter((product) => product.manufacturer === "Monier" && product.configuration === "roof_tiles");
+const bristileRoofTiles = roofingProducts.filter((product) => product.manufacturer === "Bristile" && product.configuration === "roof_tiles");
 const windowsProducts = masterProducts.filter((product) => product.familyKey === "windows");
 const entryDoorProducts = masterProducts.filter((product) => product.familyKey === "entry-doors");
 const garageDoorProducts = masterProducts.filter((product) => product.familyKey === "garage-doors");
@@ -37,6 +45,8 @@ const kitchenFamilies = ["cabinetry", "cabinet-finish", "handles", "stone-bencht
 assert.ok(pghBricks.length > 0, "Product Library master catalogue exposes PGH brick products");
 assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Austral brick products");
 assert.ok(roofingProducts.length > 0, "Product Library master catalogue exposes roofing products");
+assert.ok(monierRoofTiles.length >= 60, "Product Library master catalogue exposes Monier roof tile variants");
+assert.ok(bristileRoofTiles.length >= 100, "Product Library master catalogue exposes Bristile roof tile variants");
 assert.ok(windowsProducts.length > 0, "Product Library master catalogue exposes Windows products");
 assert.ok(entryDoorProducts.length > 0, "Product Library master catalogue exposes Entry Door products");
 assert.ok(garageDoorProducts.length > 0, "Product Library master catalogue exposes Garage Door products");
@@ -55,6 +65,18 @@ const clientSelectableBricks = queryClientSelectableProducts({
   builderProducts: enablements,
 });
 assert.equal(clientSelectableBricks.length, pghBricks.length + australBricks.length, "Client Selections and Product Library read equivalent brick master catalogue records");
+
+const clientSelectableRoofing = queryClientSelectableProducts({
+  organisationId: DEMO_BUILDER_ORGANISATION_ID,
+  familyKey: "roofing",
+  region: "QLD",
+  masterProducts,
+  builderProducts: enablements,
+});
+assert.equal(clientSelectableRoofing.length, roofingProducts.filter((product) => product.regions.includes("AU") || product.regions.includes("QLD")).length, "Client Selections and Product Library read equivalent QLD roofing master records");
+assert.ok(clientSelectableRoofing.some((product) => product.manufacturer === "Monier" && product.configuration === "roof_tiles"), "Client Selections sees Monier roof tile records");
+assert.ok(clientSelectableRoofing.some((product) => product.manufacturer === "Bristile" && product.configuration === "roof_tiles"), "Client Selections sees Bristile roof tile records");
+assert.ok(!clientSelectableRoofing.some((product) => product.manufacturer === "Monier" && product.range === "Madison"), "QLD Client Selections does not expose Monier Madison when master availability excludes QLD");
 
 exteriorFinishFamilies.forEach((familyKey) => {
   const familyProducts = masterProducts.filter((product) => product.familyKey === familyKey);

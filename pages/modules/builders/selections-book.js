@@ -788,6 +788,9 @@ export default function BuilderSelectionsBookPage({
     roofType: "",
     productSystem: "",
     profileProductCode: "",
+    tileManufacturer: "",
+    tileRange: "",
+    tileProductCode: "",
     colour: "",
     finish: "",
   });
@@ -1531,6 +1534,9 @@ export default function BuilderSelectionsBookPage({
       roofType: "",
       productSystem: "",
       profileProductCode: "",
+      tileManufacturer: "",
+      tileRange: "",
+      tileProductCode: "",
       colour: "",
       finish: "",
     });
@@ -1686,6 +1692,91 @@ export default function BuilderSelectionsBookPage({
   }
 
   function selectGuidedRoofingConfiguration(requirement, configuration) {
+    if (configuration?.roofType === "roof_tiles") {
+      const tile = roofingProfileByCode(guidedProducts, configuration.tileProductCode);
+      if (!tile) {
+        setError("Choose a roof tile product before selecting.");
+        return;
+      }
+      const entity = tile.metadata?.productEntity || tile;
+      const allowance = numberValue(tile.allowance ?? entity.allowance ?? requirement.defaultAllowance);
+      const selectedCost = priceStateForGuidedOption(tile) === PRICE_STATES.current ? numberValue(tile.selectedCost) : null;
+      const priceState = priceStateForGuidedOption(tile) === PRICE_STATES.current ? PRICE_STATES.current : PRICE_STATES.quoteRequired;
+      const quantity = numberValue(requirement.defaultQuantity) || 1;
+      const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice: selectedCost, allowance, quantity }) : null;
+      const selectedProduct = tile.productName || `${tile.manufacturer} ${tile.range} ${tile.colour}`.trim();
+      const now = new Date().toISOString();
+      const guidedSelection = {
+        source: "guided_client_selections",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        organisationId: workspaceId || "",
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
+        requirementKey: requirement.requirementKey,
+        requirementLabel: requirement.label,
+        familyKey: "roofing",
+        linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
+        productId: tile.productId || tile.id || "",
+        productCode: entity.productCode || tile.productCode || tile.id,
+        manufacturer: tile.manufacturer || entity.manufacturer || "",
+        brand: tile.brand || entity.brand || tile.manufacturer || "",
+        supplier: tile.supplier || entity.supplier || tile.manufacturer || "",
+        range: tile.range || entity.range || "",
+        model: tile.model || "",
+        productName: selectedProduct,
+        selectedProduct,
+        roofType: "roof_tiles",
+        material: tile.material || entity.material || "",
+        collection: tile.collection || entity.collection || "",
+        profile: tile.profile || entity.profile || "",
+        colour: tile.colour || entity.colour || "",
+        finish: tile.finish || entity.finish || "Manufacturer finish",
+        roofingConfiguration: {
+          roofType: "roof_tiles",
+          tileManufacturer: tile.manufacturer || entity.manufacturer || "",
+          tileRange: tile.range || entity.range || "",
+          tileProductCode: entity.productCode || tile.productCode || tile.id,
+          colour: tile.colour || entity.colour || "",
+          finish: tile.finish || entity.finish || "Manufacturer finish",
+        },
+        compatibility: {
+          stateAvailability: entity.attributes?.stateAvailability || entity.regions || tile.regions || [],
+          materialProfileRule: "Roof tile products are separate from metal roofing profiles.",
+        },
+        quantity,
+        allowance,
+        selectedPrice: selectedCost,
+        variation,
+        variationPending: priceState !== PRICE_STATES.current,
+        priceStatus: priceState,
+        priceState,
+        configurationComplete: true,
+        imageReference: tile.imageUrl || requirementImage(requirement),
+        officialProductURL: entity.officialProductUrl || entity.officialProductURL || tile.productUrl || "",
+        sourceUrls: [entity.officialProductUrl || entity.officialProductURL || tile.productUrl].filter(Boolean),
+        selectedAt: now,
+        updatedAt: now,
+        selectionTimestamp: now,
+      };
+      const patch = {
+        selectedOptionId: tile.id,
+        selectedProduct,
+        productModel: tile.model || "",
+        brand: guidedSelection.brand,
+        description: tile.description || "",
+        supplier: guidedSelection.supplier,
+        finishColour: [tile.colour, tile.finish].filter(Boolean).join(" / "),
+        imageUrl: tile.imageUrl || requirementImage(requirement),
+        allowanceAmount: allowance,
+        selectedCost,
+        upgradeCost: variation,
+        included: variation === 0,
+        status: "selected",
+        guidedSelection,
+      };
+      commitGuidedRequirementPatch(requirement, patch);
+      return;
+    }
     const profile = roofingProfileByCode(guidedProducts, configuration.profileProductCode);
     const colour = roofingColourByName(profile, configuration.colour);
     const finish = roofingFinishForColour(colour, configuration.finish);
@@ -2717,11 +2808,18 @@ function GuidedRoofingWorkflow({
   const systems = roofingProductSystems(products, config.roofType);
   const profiles = roofingProfiles(products, config);
   const selectedProfile = roofingProfileByCode(products, config.profileProductCode);
+  const tileManufacturers = roofingTileManufacturers(products);
+  const tileRanges = roofingTileRanges(products, config.tileManufacturer);
+  const tileProducts = roofingTileProducts(products, config);
+  const selectedTile = roofingProfileByCode(products, config.tileProductCode);
   const colours = roofingColoursForProfile(selectedProfile);
   const selectedColour = roofingColourByName(selectedProfile, config.colour);
   const finishes = roofingFinishesForColour(selectedColour);
   const selectedFinish = roofingFinishForColour(selectedColour, config.finish);
-  const canSelect = Boolean(config.roofType === "metal_roofing" && config.productSystem && selectedProfile && selectedColour && selectedFinish);
+  const canSelect = Boolean(
+    (config.roofType === "metal_roofing" && config.productSystem && selectedProfile && selectedColour && selectedFinish)
+    || (config.roofType === "roof_tiles" && selectedTile),
+  );
   const roofTypeCards = roofingRoofTypeCards(products, requirement);
   const selectedSystem = systems.find((system) => system.key === config.productSystem) || null;
   const selectedProfileImage = roofingProfileImage(selectedProfile, requirement);
@@ -2739,12 +2837,20 @@ function GuidedRoofingWorkflow({
           <h2>Roofing</h2>
           {[
             ["roofType", "Roof Type", config.roofType],
-            ["productSystem", "Product System", config.productSystem],
-            ["profile", "Profile", config.profileProductCode],
-            ["colour", "Colour", config.colour],
-            ["finish", "Finish", config.finish],
+            ...(config.roofType === "roof_tiles"
+              ? [
+                ["tileManufacturer", "Manufacturer", config.tileManufacturer],
+                ["tileRange", "Range", config.tileRange],
+                ["tileProduct", "Colour / Product", config.tileProductCode],
+              ]
+              : [
+                ["productSystem", "Product System", config.productSystem],
+                ["profile", "Profile", config.profileProductCode],
+                ["colour", "Colour", config.colour],
+                ["finish", "Finish", config.finish],
+              ]),
           ].map(([step, label, value]) => (
-            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && config.roofType !== "metal_roofing"}>
+            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && !config.roofType}>
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
               <RoofingProgressThumb step={step} config={config} profile={selectedProfile} colour={selectedColour} finish={selectedFinish} products={products} requirement={requirement} />
               <span>{label}</span>
@@ -2762,8 +2868,9 @@ function GuidedRoofingWorkflow({
             <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-roof-type-step">
               {roofTypeCards.map((card) => (
                 <button key={card.key} type="button" className={`roofingVisualCard ${config.roofType === card.key ? "selected" : ""} ${card.awaiting ? "awaiting" : ""}`} onClick={() => {
-                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", colour: "", finish: "" });
+                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", colour: "", finish: "" });
                   if (card.key === "metal_roofing") onRoofingStepChange("productSystem");
+                  if (card.key === "roof_tiles") onRoofingStepChange("tileManufacturer");
                 }}>
                   <span className="roofingVisualImage" style={{ backgroundImage: `url(${card.image})` }} />
                   <span className="roofingCardBody">
@@ -2776,7 +2883,68 @@ function GuidedRoofingWorkflow({
               ))}
             </div>
           ) : config.roofType === "roof_tiles" ? (
-            <GuidedRoofingEmptyCatalogue message="Roof tile catalogue awaiting product data" masterProductCount={masterProductCount} />
+            !tileManufacturers.length ? (
+              <GuidedRoofingEmptyCatalogue message="Roof tile catalogue awaiting product data" masterProductCount={masterProductCount} />
+            ) : roofingStep === "tileManufacturer" ? (
+              <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-tile-manufacturer-step">
+                {tileManufacturers.map((manufacturer) => (
+                  <button key={manufacturer.key} type="button" className={`roofingVisualCard ${config.tileManufacturer === manufacturer.label ? "selected" : ""}`} onClick={() => {
+                    setConfig({ tileManufacturer: manufacturer.label, tileRange: "", tileProductCode: "", colour: "", finish: "" });
+                    onRoofingStepChange("tileRange");
+                  }}>
+                    <span className="roofingVisualImage" style={{ backgroundImage: `url(${manufacturer.image})` }} />
+                    <span className="roofingCardBody">
+                      <small>Roof Tiles</small>
+                      <strong>{manufacturer.label}</strong>
+                      <span>{manufacturer.count} QLD-compatible tile colour/product option{manufacturer.count === 1 ? "" : "s"}.</span>
+                      <b>{config.tileManufacturer === manufacturer.label ? "Selected" : "Select"}</b>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : roofingStep === "tileRange" ? (
+              <div className="roofingProfileGrid" data-testid="roofing-tile-range-step">
+                {tileRanges.map((range) => (
+                  <button key={range.key} type="button" className={config.tileRange === range.label ? "selected" : ""} onClick={() => {
+                    setConfig({ tileRange: range.label, tileProductCode: "", colour: "", finish: "" });
+                    onRoofingStepChange("tileProduct");
+                  }}>
+                    <img src={range.image} alt={range.label} />
+                    <span className="roofingProfileBody">
+                      <small>{range.manufacturer}</small>
+                      <strong>{range.label}</strong>
+                      <em>{range.material} / {range.collection}</em>
+                      <b>{range.count} colour/product option{range.count === 1 ? "" : "s"}</b>
+                      <i>{config.tileRange === range.label ? "Selected" : "Select"}</i>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="roofingProfileGrid" data-testid="roofing-tile-product-step">
+                {tileProducts.map((tile) => {
+                  const priceState = priceStateForGuidedOption(tile);
+                  const allowance = numberValue(tile.allowance ?? requirement.defaultAllowance);
+                  const selectedPrice = priceState === PRICE_STATES.current ? numberValue(tile.selectedCost) : 0;
+                  const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
+                  return (
+                    <button key={tile.id} type="button" className={config.tileProductCode === tile.productCode ? "selected" : ""} onClick={() => {
+                      setConfig({ tileProductCode: tile.productCode, colour: tile.colour || "", finish: tile.finish || "Manufacturer finish" });
+                      onSelectRoofingConfiguration(requirement, { ...config, tileProductCode: tile.productCode, colour: tile.colour || "", finish: tile.finish || "Manufacturer finish" });
+                    }}>
+                      <img src={roofingProfileImage(tile, requirement)} alt={tile.productName} />
+                      <span className="roofingProfileBody">
+                        <small>{tile.manufacturer} / {tile.range}</small>
+                        <strong>{tile.colour || tile.productName}</strong>
+                        <em>{tile.material} / {tile.profile || "Roof tile"}</em>
+                        <b>{priceState === PRICE_STATES.current ? `${money(selectedPrice)} selected / ${signedMoney(variation)}` : "Price Pending / Builder Price Required"}</b>
+                        <i>{config.tileProductCode === tile.productCode ? "Selected" : "Select"}</i>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )
           ) : !products.length ? (
             <GuidedRoofingEmptyCatalogue message={masterProductCount && !enabledProductCount ? "No roofing products are enabled for this builder." : "Metal roofing catalogue awaiting product data"} masterProductCount={masterProductCount} />
           ) : roofingStep === "productSystem" ? (
@@ -2880,6 +3048,18 @@ function RoofingProgressThumb({ step, config, profile, colour, finish, products,
   if (step === "roofType" && config.roofType) {
     const image = roofingRoofTypeCards(products, requirement).find((card) => card.key === config.roofType)?.image || requirementImage(requirement);
     return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${image})` }} />;
+  }
+  if (step === "tileManufacturer" && config.tileManufacturer) {
+    const image = roofingTileManufacturers(products).find((item) => item.label === config.tileManufacturer)?.image || requirementImage(requirement);
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${image})` }} />;
+  }
+  if (step === "tileRange" && config.tileRange) {
+    const image = roofingTileRanges(products, config.tileManufacturer).find((item) => item.label === config.tileRange)?.image || requirementImage(requirement);
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${image})` }} />;
+  }
+  if (step === "tileProduct" && config.tileProductCode) {
+    const tile = roofingProfileByCode(products, config.tileProductCode);
+    return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${roofingProfileImage(tile, requirement)})` }} />;
   }
   if (step === "productSystem" && config.productSystem) {
     return <span className="roofingProgressThumb image" style={{ backgroundImage: `url(${roofingImageForProducts(products, requirement)})` }} />;
@@ -4165,8 +4345,8 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     selectedCost,
     priceState,
     imageUrl,
-    productUrl: entity.officialProductURL || "",
-    specificationUrl: entity.specificationURL || "",
+    productUrl: entity.officialProductURL || entity.officialProductUrl || "",
+    specificationUrl: entity.specificationURL || entity.specificationUrl || "",
     galleryImages,
     rowClassification: classifyApprovedSelectionRow(entity),
     imageReviewRequired: Boolean(entity.imageReviewRequired),
@@ -4178,6 +4358,9 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
 }
 
 function roofingHeaderForStep(step) {
+  if (step === "tileProduct") return "Choose roof tile colour / product";
+  if (step === "tileRange") return "Choose roof tile range";
+  if (step === "tileManufacturer") return "Choose roof tile manufacturer";
   if (step === "finish") return "Choose finish";
   if (step === "colour") return "Choose COLORBOND steel colour";
   if (step === "profile") return "Choose LYSAGHT profile";
@@ -4210,6 +4393,7 @@ function roofingProductSystems(products = [], roofType = "") {
 const ROOF_TILE_VISUAL_URL = "https://celumcsrcomaublobs.blob.core.windows.net/celum/20195_Desktop_Original.jpg";
 
 function roofingRoofTypeCards(products = [], requirement = null) {
+  const tileProducts = products.filter((product) => (product.roofType || product.configuration) === "roof_tiles");
   return [
     {
       key: "metal_roofing",
@@ -4221,9 +4405,9 @@ function roofingRoofTypeCards(products = [], requirement = null) {
     {
       key: "roof_tiles",
       label: "Roof Tiles",
-      description: "Tile roofing catalogue.",
+      description: "Configure concrete and terracotta roof tiles from official manufacturer catalogues.",
       image: ROOF_TILE_VISUAL_URL,
-      awaiting: true,
+      awaiting: !tileProducts.length,
     },
   ];
 }
@@ -4256,6 +4440,58 @@ function roofingProfiles(products = [], config = {}) {
     .filter((product) => (product.roofType || "metal_roofing") === (config.roofType || "metal_roofing"))
     .filter((product) => !config.productSystem || roofingProductSystems([product], config.roofType)[0]?.key === config.productSystem)
     .sort((left, right) => String(left.profile || left.productName).localeCompare(String(right.profile || right.productName)));
+}
+
+function qldCompatible(product = {}) {
+  const entity = product.metadata?.productEntity || product;
+  const regions = entity.regions || product.regions || [];
+  return !Array.isArray(regions) || !regions.length || regions.includes("AU") || regions.includes("QLD");
+}
+
+function roofingTileProducts(products = [], config = {}) {
+  return products
+    .filter((product) => (product.roofType || product.configuration) === "roof_tiles")
+    .filter(qldCompatible)
+    .filter((product) => !config.tileManufacturer || product.manufacturer === config.tileManufacturer)
+    .filter((product) => !config.tileRange || product.range === config.tileRange)
+    .sort((left, right) => String(left.range || "").localeCompare(String(right.range || "")) || String(left.colour || left.productName).localeCompare(String(right.colour || right.productName)));
+}
+
+function roofingTileManufacturers(products = []) {
+  const cards = new Map();
+  roofingTileProducts(products).forEach((product) => {
+    const label = product.manufacturer || product.supplier || "Roof Tile Supplier";
+    const existing = cards.get(label) || {
+      key: slug(label),
+      label,
+      count: 0,
+      image: roofingProfileImage(product, guidedRequirementByKey("roofing")),
+    };
+    existing.count += 1;
+    if (!existing.image || existing.image === requirementImage(guidedRequirementByKey("roofing"))) existing.image = roofingProfileImage(product, guidedRequirementByKey("roofing"));
+    cards.set(label, existing);
+  });
+  return Array.from(cards.values()).sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function roofingTileRanges(products = [], manufacturer = "") {
+  const cards = new Map();
+  roofingTileProducts(products, { tileManufacturer: manufacturer }).forEach((product) => {
+    const label = product.range || "Roof Tile Range";
+    const existing = cards.get(label) || {
+      key: slug(`${product.manufacturer}-${label}`),
+      label,
+      manufacturer: product.manufacturer || "",
+      material: product.material || "",
+      collection: product.collection || "",
+      count: 0,
+      image: roofingProfileImage(product, guidedRequirementByKey("roofing")),
+    };
+    existing.count += 1;
+    if (!existing.image || existing.image === requirementImage(guidedRequirementByKey("roofing"))) existing.image = roofingProfileImage(product, guidedRequirementByKey("roofing"));
+    cards.set(label, existing);
+  });
+  return Array.from(cards.values()).sort((left, right) => left.label.localeCompare(right.label));
 }
 
 function roofingProfileByCode(products = [], productCode = "") {
@@ -4534,6 +4770,18 @@ function handleGuidedBack({
       return;
     }
     if (guidedRequirement?.requirementKey === "roofing") {
+      if (guidedRoofingStep === "tileProduct") {
+        setGuidedRoofingStep("tileRange");
+        return;
+      }
+      if (guidedRoofingStep === "tileRange") {
+        setGuidedRoofingStep("tileManufacturer");
+        return;
+      }
+      if (guidedRoofingStep === "tileManufacturer") {
+        setGuidedRoofingStep("roofType");
+        return;
+      }
       if (guidedRoofingStep === "finish") {
         setGuidedRoofingStep("colour");
         return;
@@ -4550,7 +4798,7 @@ function handleGuidedBack({
         setGuidedRoofingStep("roofType");
         return;
       }
-      setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", colour: "", finish: "" });
+      setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", colour: "", finish: "" });
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
       return;

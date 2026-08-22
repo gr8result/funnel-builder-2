@@ -38,12 +38,13 @@ function freshStorage(seed = {}) {
 
 const sel = (fam) => svc.getClientSelectableProducts(ORG, fam).length;
 const mas = (fam) => svc.getProductsForFamily(fam).length;
+const ROOFING_MASTER_COUNT = 184;
 
 console.log("\n=== B4: master counts are immutable base data ===");
 freshStorage();
 check("bricks master", mas("bricks"), 147);
 check("cladding master", mas("cladding"), 10);
-check("roofing master", mas("roofing"), 3);
+check("roofing master", mas("roofing"), ROOFING_MASTER_COUNT);
 
 console.log("\n=== B1: bricks supplier split ===");
 const bricks = svc.getProductsForFamily("bricks");
@@ -55,7 +56,7 @@ console.log("\n=== B8: absence of builder state means enabled (no seeding requir
 freshStorage();
 check("bricks selectable", sel("bricks"), 147);
 check("cladding selectable", sel("cladding"), 10);
-check("roofing selectable", sel("roofing"), 3);
+check("roofing selectable", sel("roofing"), ROOFING_MASTER_COUNT);
 
 console.log("\n=== B6: localStorage can NEVER replace the master catalogue ===");
 // Legacy key stuffed with every product flagged inactive/archived - the exact
@@ -66,10 +67,10 @@ const poisoned = JSON.stringify(
 freshStorage({ "gr8:master-product-catalogue": poisoned });
 check("bricks master survives poison", mas("bricks"), 147);
 check("cladding master survives poison", mas("cladding"), 10);
-check("roofing master survives poison", mas("roofing"), 3);
+check("roofing master survives poison", mas("roofing"), ROOFING_MASTER_COUNT);
 check("bricks selectable survives poison", sel("bricks"), 147);
 check("cladding selectable survives poison", sel("cladding"), 10);
-check("roofing selectable survives poison", sel("roofing"), 3);
+check("roofing selectable survives poison", sel("roofing"), ROOFING_MASTER_COUNT);
 
 freshStorage({ "gr8:master-product-catalogue": JSON.stringify([]) });
 check("empty legacy master key harmless", sel("bricks"), 147);
@@ -95,7 +96,7 @@ console.log("\n=== B18: family isolation ===");
 freshStorage();
 svc.disableProduct(ORG, svc.getProductsForFamily("cladding")[0].productCode);
 check("edit cladding -> bricks still 147", sel("bricks"), 147);
-check("edit cladding -> roofing still 3", sel("roofing"), 3);
+check("edit cladding -> roofing still full catalogue", sel("roofing"), ROOFING_MASTER_COUNT);
 check("edit cladding -> cladding now 9", sel("cladding"), 9);
 
 freshStorage();
@@ -107,7 +108,7 @@ freshStorage();
 for (const p of svc.getProductsForFamily("ovens")) svc.disableProduct(ORG, p.productCode);
 check("edit kitchen -> bricks still 147", sel("bricks"), 147);
 check("edit kitchen -> cladding still 10", sel("cladding"), 10);
-check("edit kitchen -> roofing still 3", sel("roofing"), 3);
+check("edit kitchen -> roofing still full catalogue", sel("roofing"), ROOFING_MASTER_COUNT);
 
 console.log("\n=== B7: custom builder products append, never overwrite ===");
 freshStorage();
@@ -121,7 +122,7 @@ svc.addBuilderProduct(ORG, {
 check("cladding selectable = 10 master + 1 custom", sel("cladding"), 11);
 check("cladding MASTER unchanged", mas("cladding"), 10);
 check("add cladding -> bricks unchanged", sel("bricks"), 147);
-check("add cladding -> roofing unchanged", sel("roofing"), 3);
+check("add cladding -> roofing unchanged", sel("roofing"), ROOFING_MASTER_COUNT);
 checkThrows("cannot redefine a master product as custom", () =>
   svc.addBuilderProduct(ORG, { ...svc.getProductsForFamily("bricks")[0] }),
 );
@@ -155,7 +156,7 @@ freshStorage();
 for (const fam of ["bricks", "cladding", "roofing"]) {
   const lib = svc.getBuilderProducts(ORG, fam).length;
   const cli = svc.getClientSelectableProducts(ORG, fam).length;
-  check(`${fam}: Product Library count`, lib, { bricks: 147, cladding: 10, roofing: 3 }[fam]);
+  check(`${fam}: Product Library count`, lib, { bricks: 147, cladding: 10, roofing: ROOFING_MASTER_COUNT }[fam]);
   check(`${fam}: library === selections`, lib, cli);
 }
 // A disable moves both in step: library still lists it, selections hides it.
