@@ -272,11 +272,26 @@ export default function WebsiteBuilderDashboard() {
         }
       }
 
-      const nextWebsites = nextProjects.map((site) => ({
-        ...site,
-        projectStatus: String(site?.status || "saved"),
-        pageCount: Array.isArray(site?.pages) && site.pages.length ? site.pages.length : Object.keys(site?.pagesContent || {}).length || 1,
-      }));
+      // Isolate each record: one malformed website must not empty the dashboard.
+      const sourceProjects = Array.isArray(nextProjects) ? nextProjects : [];
+      const skippedRecords = [];
+      const nextWebsites = sourceProjects.reduce((accumulated, site, index) => {
+        try {
+          accumulated.push({
+            ...site,
+            projectStatus: String(site?.status || "saved"),
+            pageCount: Array.isArray(site?.pages) && site.pages.length ? site.pages.length : Object.keys(site?.pagesContent || {}).length || 1,
+          });
+        } catch (recordError) {
+          skippedRecords.push(String(site?.name || site?.id || `record ${index + 1}`));
+          console.warn("Skipped a malformed website record", { id: site?.id, index, error: recordError });
+        }
+        return accumulated;
+      }, []);
+
+      if (skippedRecords.length) {
+        setError(`${skippedRecords.length} website record${skippedRecords.length > 1 ? "s" : ""} could not be read and ${skippedRecords.length > 1 ? "were" : "was"} skipped: ${skippedRecords.join(", ")}. The remaining websites are shown below.`);
+      }
 
       setWebsites(nextWebsites);
       setSelectedWebsiteId((prev) => prev || String(nextWebsites[0]?.id || ""));

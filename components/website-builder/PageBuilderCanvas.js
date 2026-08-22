@@ -1688,7 +1688,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         enableParallax: nextEnabled,
         ...(nextEnabled ? {
           backgroundStyle: selectedBlock?.props?.backgroundStyle || "image",
-          backgroundImage: selectedBlock?.props?.backgroundImage || "https://placehold.co/1600x900/0f172a/1e293b?text=%20",
+          // Never persist a fallback placeholder into saved block data. Keep whatever
+          // image the block already has; an empty background stays empty so the user
+          // can pick a real Media Library asset.
+          ...(selectedBlock?.props?.backgroundImage
+            ? { backgroundImage: selectedBlock.props.backgroundImage }
+            : {}),
         } : {}),
       });
       return;
