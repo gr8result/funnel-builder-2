@@ -783,7 +783,7 @@ export default function BuilderSelectionsBookPage({
   const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
   const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
   const [guidedBrickRange, setGuidedBrickRange] = useState("");
-  const [guidedRoofingStep, setGuidedRoofingStep] = useState("roofType");
+  const [guidedRoofingStep, setGuidedRoofingStep] = useState("fascia");
   const [roofingConfiguration, setRoofingConfiguration] = useState({
     roofType: "",
     productSystem: "",
@@ -1531,7 +1531,7 @@ export default function BuilderSelectionsBookPage({
   }
 
   function resetGuidedRoofingFlow() {
-    setGuidedRoofingStep("roofType");
+    setGuidedRoofingStep("fascia");
     setRoofingConfiguration({
       roofType: "",
       productSystem: "",
@@ -2883,12 +2883,16 @@ function GuidedRoofingWorkflow({
         <aside className="guidedProgressMenu" data-testid="guided-roofing-hierarchy">
           <h2>Roofing</h2>
           {[
+            ["fascia", "Fascia", config.fasciaProductCode],
+            ["gutters", "Gutters", config.gutterProductCode],
+            ["downpipes", "Downpipes", config.downpipeProductCode],
             ["roofType", "Roof Type", config.roofType],
             ...(config.roofType === "roof_tiles"
               ? [
-                ["tileManufacturer", "Manufacturer", config.tileManufacturer],
-                ["tileRange", "Range", config.tileRange],
-                ["tileProduct", "Colour / Product", config.tileProductCode],
+                ["tileManufacturer", "Product System", config.tileManufacturer],
+                ["tileRange", "Profile", config.tileRange],
+                ["tileProduct", "Colour", config.tileProductCode],
+                ["tileFinish", "Finish", config.finish],
               ]
               : [
                 ["productSystem", "Product System", config.productSystem],
@@ -2896,11 +2900,8 @@ function GuidedRoofingWorkflow({
                 ["colour", "Colour", config.colour],
                 ["finish", "Finish", config.finish],
               ]),
-            ["fascia", "Fascia", config.fasciaProductCode],
-            ["gutters", "Gutters", config.gutterProductCode],
-            ["downpipes", "Downpipes", config.downpipeProductCode],
           ].map(([step, label, value]) => (
-            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)} disabled={step !== "roofType" && !config.roofType}>
+            <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)}>
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
               <RoofingProgressThumb step={step} config={config} profile={selectedProfile} colour={selectedColour} finish={selectedFinish} products={products} requirement={requirement} />
               <span>{label}</span>
@@ -2918,7 +2919,7 @@ function GuidedRoofingWorkflow({
             <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-roof-type-step">
               {roofTypeCards.map((card) => (
                 <button key={card.key} type="button" className={`roofingVisualCard ${config.roofType === card.key ? "selected" : ""} ${card.awaiting ? "awaiting" : ""}`} onClick={() => {
-                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", fasciaProductCode: "", gutterProductCode: "", downpipeProductCode: "", colour: "", finish: "" });
+                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", colour: "", finish: "" });
                   if (card.key === "metal_roofing") onRoofingStepChange("productSystem");
                   if (card.key === "roof_tiles") onRoofingStepChange("tileManufacturer");
                 }}>
@@ -2951,7 +2952,7 @@ function GuidedRoofingWorkflow({
                     onRoofingConfigurationChange(nextConfig);
                     if (roofingStep === "fascia") onRoofingStepChange("gutters");
                     if (roofingStep === "gutters") onRoofingStepChange("downpipes");
-                    if (roofingStep === "downpipes") onSelectRoofingConfiguration(requirement, nextConfig);
+                    if (roofingStep === "downpipes") onRoofingStepChange("roofType");
                   }}>
                     <img src={roofingProfileImage(accessory, requirement)} alt={accessory.productName} />
                     <span className="roofingProfileBody">
@@ -3006,6 +3007,24 @@ function GuidedRoofingWorkflow({
                   </button>
                 ))}
               </div>
+            ) : roofingStep === "tileFinish" ? (
+              <div className="roofingSelectionSummary" data-testid="roofing-tile-finish-step">
+                <img src={roofingProfileImage(selectedTile, requirement)} alt={selectedTile ? selectedTile.productName : "Selected roof tile"} />
+                <div className="roofingSummaryDetails">
+                  <strong>Roof Tile Selection</strong>
+                  <dl>
+                    <div><dt>Roof Type</dt><dd>Roof Tiles</dd></div>
+                    <div><dt>Manufacturer</dt><dd>{selectedTile?.manufacturer || config.tileManufacturer || "Choose manufacturer"}</dd></div>
+                    <div><dt>Range</dt><dd>{selectedTile?.range || config.tileRange || "Choose range"}</dd></div>
+                    <div><dt>Colour</dt><dd>{selectedTile?.colour || config.colour || "Choose tile colour"}</dd></div>
+                    <div><dt>Finish</dt><dd>{selectedTile?.finish || config.finish || "Manufacturer finish"}</dd></div>
+                    <div><dt>Fascia</dt><dd>{selectedFascia?.productName || "Choose fascia"}</dd></div>
+                    <div><dt>Gutters</dt><dd>{selectedGutter?.productName || "Choose gutters"}</dd></div>
+                    <div><dt>Downpipes</dt><dd>{selectedDownpipe?.productName || "Choose downpipes"}</dd></div>
+                  </dl>
+                </div>
+                <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
+              </div>
             ) : (
               <div className="roofingProfileGrid" data-testid="roofing-tile-product-step">
                 {tileProducts.map((tile) => {
@@ -3016,7 +3035,7 @@ function GuidedRoofingWorkflow({
                   return (
                     <button key={tile.id} type="button" className={config.tileProductCode === tile.productCode ? "selected" : ""} onClick={() => {
                       setConfig({ tileProductCode: tile.productCode, colour: tile.colour || "", finish: tile.finish || "Manufacturer finish" });
-                      onRoofingStepChange("fascia");
+                      onRoofingStepChange("tileFinish");
                     }}>
                       <img src={roofingProfileImage(tile, requirement)} alt={tile.productName} />
                       <span className="roofingProfileBody">
@@ -3054,7 +3073,7 @@ function GuidedRoofingWorkflow({
             <div className="roofingProfileGrid" data-testid="roofing-profile-step">
               {profiles.map((profile) => (
                 <button key={profile.id} type="button" className={config.profileProductCode === profile.productCode ? "selected" : ""} onClick={() => {
-                  setConfig({ profileProductCode: profile.productCode, fasciaProductCode: "", gutterProductCode: "", downpipeProductCode: "", colour: "", finish: "" });
+                  setConfig({ profileProductCode: profile.productCode, colour: "", finish: "" });
                   onRoofingStepChange("colour");
                 }}>
                   <img src={roofingProfileImage(profile, requirement)} alt={profile.profile || profile.productName} />
@@ -3108,7 +3127,7 @@ function GuidedRoofingWorkflow({
                     <div><dt>Variation</dt><dd>{selectedPriceState === PRICE_STATES.current ? signedMoney(selectedVariation) : "Pending"}</dd></div>
                   </dl>
                 </div>
-                <button type="button" className="primary" disabled={!canSelect} onClick={() => onRoofingStepChange("fascia")}>Continue to Fascia</button>
+                <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
               </div>
             </div>
           )}
@@ -4449,6 +4468,7 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
 }
 
 function roofingHeaderForStep(step) {
+  if (step === "tileFinish") return "Confirm roof tile finish";
   if (step === "downpipes") return "Choose downpipes";
   if (step === "gutters") return "Choose gutters";
   if (step === "fascia") return "Choose fascia";
@@ -4888,16 +4908,8 @@ function handleGuidedBack({
       return;
     }
     if (guidedRequirement?.requirementKey === "roofing") {
-      if (guidedRoofingStep === "downpipes") {
-        setGuidedRoofingStep("gutters");
-        return;
-      }
-      if (guidedRoofingStep === "gutters") {
-        setGuidedRoofingStep("fascia");
-        return;
-      }
-      if (guidedRoofingStep === "fascia") {
-        setGuidedRoofingStep(roofingConfiguration?.roofType === "roof_tiles" ? "tileProduct" : "finish");
+      if (guidedRoofingStep === "tileFinish") {
+        setGuidedRoofingStep("tileProduct");
         return;
       }
       if (guidedRoofingStep === "tileProduct") {
@@ -4926,6 +4938,18 @@ function handleGuidedBack({
       }
       if (guidedRoofingStep === "productSystem") {
         setGuidedRoofingStep("roofType");
+        return;
+      }
+      if (guidedRoofingStep === "roofType") {
+        setGuidedRoofingStep("downpipes");
+        return;
+      }
+      if (guidedRoofingStep === "downpipes") {
+        setGuidedRoofingStep("gutters");
+        return;
+      }
+      if (guidedRoofingStep === "gutters") {
+        setGuidedRoofingStep("fascia");
         return;
       }
       setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", fasciaProductCode: "", gutterProductCode: "", downpipeProductCode: "", colour: "", finish: "" });

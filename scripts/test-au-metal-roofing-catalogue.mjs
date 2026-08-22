@@ -235,7 +235,7 @@ const roofingPayload = {
 };
 assert.equal(statusForRequirement(roofingRequirement, roofingPayload), "complete", "completed roofing configuration should be green even when final price is quote required");
 
-["GuidedRoofingWorkflow", "roofingConfiguration", "Continue to Fascia", "tileManufacturer", "roofing-tile-product-step", 'data-roofing-package-steps="fascia gutters downpipes"', "Matt is only available"].forEach((needle) => {
+["GuidedRoofingWorkflow", "roofingConfiguration", "Select Roofing Configuration", "tileManufacturer", "roofing-tile-product-step", 'data-roofing-package-steps="fascia gutters downpipes"', "Matt is only available"].forEach((needle) => {
   assert.ok(selectionsSource.includes(needle), `Selections Book must include ${needle}`);
 });
 assert.ok(selectionsSource.includes("Choose fascia, gutters and downpipes before saving the roofing package."), "Roofing selection must validate the full roof package");

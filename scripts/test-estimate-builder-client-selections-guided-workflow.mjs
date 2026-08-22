@@ -27,6 +27,13 @@ assert.ok(!selectionsBookSource.includes("Austral Bricks Premium Range"), "Brick
 assert.ok(!selectionsBookSource.includes('["roof-colour", "Roof Colour"'), "Roof Colour must not be a separate Exterior category");
 assert.ok(!selectionsBookSource.includes('requirement("gutters-fascia", "Gutters & Fascia"'), "Gutters & Fascia must not be a separate Exterior category");
 assert.ok(selectionsBookSource.includes('data-roofing-package-steps="fascia gutters downpipes"'), "Roofing guided workflow must include fascia, gutters and downpipes inside the roofing package");
+assert.ok(selectionsBookSource.includes('const [guidedRoofingStep, setGuidedRoofingStep] = useState("fascia")'), "Roofing workflow must start at Fascia");
+assert.ok(selectionsBookSource.includes('["fascia", "Fascia", config.fasciaProductCode]'), "Roofing progress must list Fascia first");
+assert.ok(selectionsBookSource.includes('["gutters", "Gutters", config.gutterProductCode]'), "Roofing progress must list Gutters second");
+assert.ok(selectionsBookSource.includes('["downpipes", "Downpipes", config.downpipeProductCode]'), "Roofing progress must list Downpipes third");
+assert.ok(selectionsBookSource.includes('if (roofingStep === "fascia") onRoofingStepChange("gutters")'), "Fascia must auto-advance to Gutters");
+assert.ok(selectionsBookSource.includes('if (roofingStep === "gutters") onRoofingStepChange("downpipes")'), "Gutters must auto-advance to Downpipes");
+assert.ok(selectionsBookSource.includes('if (roofingStep === "downpipes") onRoofingStepChange("roofType")'), "Downpipes must auto-advance to Roof Type");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "exterior"'), "Back from Exterior product pages must return to Exterior categories");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "kitchen"'), "Back from Kitchen product pages must return to Kitchen checklist");
 assert.ok(selectionsBookSource.includes('guidedBrickStep === "products"'), "Back from brick products must return to the brick range step");
