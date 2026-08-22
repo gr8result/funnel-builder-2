@@ -38,7 +38,7 @@ function freshStorage(seed = {}) {
 
 const sel = (fam) => svc.getClientSelectableProducts(ORG, fam).length;
 const mas = (fam) => svc.getProductsForFamily(fam).length;
-const ROOFING_MASTER_COUNT = 184;
+const ROOFING_MASTER_COUNT = 188;
 
 console.log("\n=== B4: master counts are immutable base data ===");
 freshStorage();

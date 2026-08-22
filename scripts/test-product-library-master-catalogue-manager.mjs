@@ -36,10 +36,11 @@ const australBricks = masterProducts.filter((product) => product.familyKey === "
 const roofingProducts = masterProducts.filter((product) => product.familyKey === "roofing");
 const monierRoofTiles = roofingProducts.filter((product) => product.manufacturer === "Monier" && product.configuration === "roof_tiles");
 const bristileRoofTiles = roofingProducts.filter((product) => product.manufacturer === "Bristile" && product.configuration === "roof_tiles");
+const roofingAccessories = roofingProducts.filter((product) => ["fascia", "gutters", "downpipes"].includes(product.attributes?.roofPackageStep));
 const windowsProducts = masterProducts.filter((product) => product.familyKey === "windows");
 const entryDoorProducts = masterProducts.filter((product) => product.familyKey === "entry-doors");
 const garageDoorProducts = masterProducts.filter((product) => product.familyKey === "garage-doors");
-const exteriorFinishFamilies = ["cladding", "gutters-fascia", "balustrades", "external-lighting", "exterior-paint", "driveway", "decking", "pool", "retaining-walls", "landscaping"];
+const exteriorFinishFamilies = ["cladding", "balustrades", "external-lighting", "exterior-paint", "driveway", "decking", "pool", "retaining-walls", "landscaping"];
 const kitchenFamilies = ["cabinetry", "cabinet-finish", "handles", "stone-benchtops", "splashback", "kitchen-sinks", "kitchen-sink-mixers", "ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "flooring", "lighting", "paint"];
 
 assert.ok(pghBricks.length > 0, "Product Library master catalogue exposes PGH brick products");
@@ -47,6 +48,10 @@ assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Au
 assert.ok(roofingProducts.length > 0, "Product Library master catalogue exposes roofing products");
 assert.ok(monierRoofTiles.length >= 60, "Product Library master catalogue exposes Monier roof tile variants");
 assert.ok(bristileRoofTiles.length >= 100, "Product Library master catalogue exposes Bristile roof tile variants");
+assert.equal(roofingAccessories.length, 4, "Product Library master catalogue exposes roofing fascia/gutters/downpipes package records");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "fascia").length, 1, "Product Library exposes fascia inside Roofing");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "gutters").length, 2, "Product Library exposes gutters inside Roofing");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 1, "Product Library exposes downpipes inside Roofing");
 assert.ok(windowsProducts.length > 0, "Product Library master catalogue exposes Windows products");
 assert.ok(entryDoorProducts.length > 0, "Product Library master catalogue exposes Entry Door products");
 assert.ok(garageDoorProducts.length > 0, "Product Library master catalogue exposes Garage Door products");

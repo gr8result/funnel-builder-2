@@ -51,7 +51,7 @@ const roofingRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirement
 assert.equal(roofingRequirement.familyKey, "roofing", "Roofing must be one client selection family");
 assert.equal(EXTERIOR_REQUIREMENTS.filter((item) => item.label === "Roofing").length, 1, "Exterior must expose one Roofing card");
 assert.ok(!EXTERIOR_REQUIREMENTS.some((item) => /roof colour|roof finish|metal roofing colour/i.test(item.label)), "roof colour and finish must not be separate Client Selection categories");
-assert.equal(EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "gutters-fascia").familyKey, "gutters-fascia", "Gutters/Fascia must remain separate from Roofing without using a visual placeholder");
+assert.ok(!EXTERIOR_REQUIREMENTS.some((item) => item.requirementKey === "gutters-fascia" || item.label === "Gutters & Fascia"), "Gutters/Fascia must not remain a separate Exterior Client Selection card");
 
 assert.equal(catalogue.familyKey, "roofing", "catalogue must use the canonical roofing family");
 assert.deepEqual(catalogue.roofTypes.map((item) => item.key), ["metal_roofing", "roof_tiles"], "roof type branch must include metal roofing and roof tiles");
@@ -91,8 +91,14 @@ const allRoofingProducts = [
   ...catalogue.products,
   ...monierRoofTilesCatalogue.products,
   ...bristileRoofTilesCatalogue.products,
+  ...exteriorFinishesCatalogue.products.filter((product) => product.family_key === "roofing"),
 ].map((product) => normalizeMasterProductRecord(product));
 const qldRoofingCount = allRoofingProducts.filter((product) => product.regions.includes("AU") || product.regions.includes("QLD")).length;
+const roofingAccessoryProducts = allRoofingProducts.filter((product) => ["fascia", "gutters", "downpipes"].includes(product.attributes?.roofPackageStep));
+assert.equal(roofingAccessoryProducts.length, 4, "Roofing master catalogue must include fascia/gutters/downpipes package products");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "fascia").length, 1, "Roofing package must include fascia");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "gutters").length, 2, "Roofing package must include gutters");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 1, "Roofing package must include downpipes");
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
 assert.equal(colourNames.length, 22, "COLORBOND core colours must include 22 official colours");
 ["CUSTOM ORB", "TRIMDEK", "KLIP-LOK 700 CLASSIC"].forEach((profile) => {
@@ -229,9 +235,10 @@ const roofingPayload = {
 };
 assert.equal(statusForRequirement(roofingRequirement, roofingPayload), "complete", "completed roofing configuration should be green even when final price is quote required");
 
-["GuidedRoofingWorkflow", "roofingConfiguration", "Select Roofing Configuration", "tileManufacturer", "roofing-tile-product-step", "Matt is only available"].forEach((needle) => {
+["GuidedRoofingWorkflow", "roofingConfiguration", "Continue to Fascia", "tileManufacturer", "roofing-tile-product-step", 'data-roofing-package-steps="fascia gutters downpipes"', "Matt is only available"].forEach((needle) => {
   assert.ok(selectionsSource.includes(needle), `Selections Book must include ${needle}`);
 });
+assert.ok(selectionsSource.includes("Choose fascia, gutters and downpipes before saving the roofing package."), "Roofing selection must validate the full roof package");
 assert.ok(selectionsSource.includes("roofingGuidedProducts"), "Roofing workflow must use master roofing products instead of approved quote rows");
 assert.ok(selectionsSource.includes('products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedProducts}'), "Roofing workflow must be fed by filtered roofing master products");
 ["Colorbond Corrugated", "Premium Colorbond Profile", "Monier Horizon Roof Tile"].forEach((fakeName) => {
@@ -240,5 +247,6 @@ assert.ok(selectionsSource.includes('products={guidedRequirement.requirementKey 
 assert.ok(selectionsSource.includes('setGuidedRoofingStep("colour")'), "Back from finish must return to colour");
 assert.ok(selectionsSource.includes('setGuidedScreen("exterior")'), "Back from Roofing Configuration must return to Exterior");
 assert.ok(productLibrarySource.includes('data-roofing-admin="systems-profiles-colours-compatibility-builder-availability"'), "Product Library admin must expose Roofing management sections");
+assert.ok(productLibrarySource.includes('data-testid="product-library-roofing-hierarchy-proof"'), "Product Library must expose Roofing group proof for metal/tile/fascia/gutters/downpipes");
 
 console.log("AU metal roofing catalogue regression passed.");

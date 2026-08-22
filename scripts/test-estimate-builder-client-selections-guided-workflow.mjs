@@ -25,6 +25,8 @@ assert.ok(!selectionsBookSource.includes("BRICK_FALLBACK_PRODUCTS"), "Bricks flo
 assert.ok(!selectionsBookSource.includes("PGH Bricks Premier Range"), "Bricks flow must not fabricate PGH Premier products");
 assert.ok(!selectionsBookSource.includes("Austral Bricks Premium Range"), "Bricks flow must not fabricate Austral Premium products");
 assert.ok(!selectionsBookSource.includes('["roof-colour", "Roof Colour"'), "Roof Colour must not be a separate Exterior category");
+assert.ok(!selectionsBookSource.includes('requirement("gutters-fascia", "Gutters & Fascia"'), "Gutters & Fascia must not be a separate Exterior category");
+assert.ok(selectionsBookSource.includes('data-roofing-package-steps="fascia gutters downpipes"'), "Roofing guided workflow must include fascia, gutters and downpipes inside the roofing package");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "exterior"'), "Back from Exterior product pages must return to Exterior categories");
 assert.ok(selectionsBookSource.includes('guidedRequirement?.areaKey === "kitchen"'), "Back from Kitchen product pages must return to Kitchen checklist");
 assert.ok(selectionsBookSource.includes('guidedBrickStep === "products"'), "Back from brick products must return to the brick range step");

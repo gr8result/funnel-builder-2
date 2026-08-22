@@ -2,7 +2,6 @@
   "catalogue": "AU Exterior Finishes Catalogue",
   "families": [
     "cladding",
-    "gutters-fascia",
     "balustrades",
     "external-lighting",
     "exterior-paint",
@@ -10,7 +9,8 @@
     "decking",
     "pool",
     "retaining-walls",
-    "landscaping"
+    "landscaping",
+    "roofing"
   ],
   "officialSources": [
     "https://www.jameshardie.com.au/products/scyon-axon-cladding",
@@ -648,32 +648,32 @@
     },
     {
       "product_code": "GUTTER-LYSAGHT-QUAD-COLORBOND",
-      "family_key": "gutters-fascia",
-      "requirement_keys": "gutters-fascia",
-      "category_key": "Gutters & Fascia",
+      "family_key": "roofing",
+      "requirement_keys": "roofing",
+      "category_key": "Roofing",
       "top_level_area": "exterior",
       "manufacturer": "LYSAGHT",
       "brand": "COLORBOND steel",
       "supplier": "LYSAGHT",
       "range": "LYSAGHT guttering and fascia",
-      "product_name": "LYSAGHT Quad gutter and fascia system",
+      "product_name": "LYSAGHT Quad gutter COLORBOND steel system",
       "model": "Quad Gutter",
-      "description": "COLORBOND steel compatible gutter and fascia selection configured by gutter profile, fascia type and colour.",
+      "description": "Official LYSAGHT Quad eaves gutter option configured inside the roofing package with shared COLORBOND steel colour selection.",
       "colour": "Match roof colour",
       "official_colour_name": "COLORBOND steel compatible colour",
       "colour_group": "COLORBOND steel",
       "finish": "COLORBOND steel",
       "profile": "Quad gutter",
-      "configuration": "gutter_fascia_system",
+      "configuration": "gutters",
       "material": "COLORBOND steel",
       "primary_image_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
       "thumbnail_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
       "image_source_url": "https://lysaght.com/products/roofing-guttering-fascia",
       "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
+      "image_verified_at": "2026-08-23",
       "image_status": "verified_range",
       "official_product_url": "https://lysaght.com/profiles/quad",
-      "specification_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "specification_url": "https://lysaght.com/profiles/quad",
       "supplier_url": "https://lysaght.com/products/roofing-guttering-fascia",
       "price_status": "quote_required",
       "price_unit": "lineal metre quote",
@@ -685,20 +685,142 @@
       "discontinued": "false",
       "archived": "false",
       "source_type": "official_manufacturer_pages",
-      "source_name": "LYSAGHT roofing, guttering and fascia pages",
-      "source_url": "https://lysaght.com/products/roofing-guttering-fascia",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
+      "source_name": "LYSAGHT QUAD gutter official profile page",
+      "source_url": "https://lysaght.com/profiles/quad",
+      "source_retrieved_at": "2026-08-23",
+      "source_verified_at": "2026-08-23",
       "colourSwatches": [
         {
-          "name": "Match Roof Colour",
-          "hex": "#dcdacc",
-          "source": "shared COLORBOND-compatible roof colour selection"
+          "name": "Dover White",
+          "officialName": "Dover White",
+          "hex": "#F9FBF1",
+          "source": "shared COLORBOND steel colour catalogue"
         },
         {
-          "name": "Choose Different Colour",
-          "hex": "#323232",
-          "source": "shared COLORBOND-compatible colour selection"
+          "name": "Surfmist",
+          "officialName": "Surfmist",
+          "hex": "#DCDACC",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Evening Haze",
+          "officialName": "Evening Haze",
+          "hex": "#BFB9A1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Classic Cream",
+          "officialName": "Classic Cream",
+          "hex": "#E7D4B0",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Paperbark",
+          "officialName": "Paperbark",
+          "hex": "#C6B69B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Dune",
+          "officialName": "Dune",
+          "hex": "#A8A59C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Southerly",
+          "officialName": "Southerly",
+          "hex": "#D2D1CB",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Shale Grey",
+          "officialName": "Shale Grey",
+          "hex": "#B1B6B1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Bluegum",
+          "officialName": "Bluegum",
+          "hex": "#969799",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Windspray",
+          "officialName": "Windspray",
+          "hex": "#888B8A",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Gully",
+          "officialName": "Gully",
+          "hex": "#7F776E",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Jasper",
+          "officialName": "Jasper",
+          "hex": "#675D51",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Wallaby",
+          "officialName": "Wallaby",
+          "hex": "#767572",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Basalt",
+          "officialName": "Basalt",
+          "hex": "#656668",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Woodland Grey",
+          "officialName": "Woodland Grey",
+          "hex": "#414440",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Monument",
+          "officialName": "Monument",
+          "hex": "#2C2D31",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Night Sky",
+          "officialName": "Night Sky",
+          "hex": "#000000",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Ironstone",
+          "officialName": "Ironstone",
+          "hex": "#343E4C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Deep Ocean",
+          "officialName": "Deep Ocean",
+          "hex": "#273C4F",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Cottage Green",
+          "officialName": "Cottage Green",
+          "hex": "#0E4A39",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Pale Eucalypt",
+          "officialName": "Pale Eucalypt",
+          "hex": "#74826B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Manor Red",
+          "officialName": "Manor Red",
+          "hex": "#65100F",
+          "source": "shared COLORBOND steel colour catalogue"
         }
       ],
       "variants": [
@@ -714,42 +836,496 @@
         }
       ],
       "attributes": {
-        "recordType": "gutter_fascia_system",
+        "recordType": "roofing_accessory",
         "gutterType": "Eaves gutter",
         "gutterProfile": "Quad",
         "fasciaType": "Metal fascia",
         "material": "COLORBOND steel",
         "matchRoofColour": true,
         "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
-        "colourSelectionMode": "reuse_roof_colour_or_choose_colour_inside_gutters_fascia"
+        "colourSelectionMode": "reuse_roof_colour_or_choose_colour_inside_roofing_package",
+        "roofType": "roofing_accessory",
+        "roofPackageStep": "gutters",
+        "compatibleRoofTypes": [
+          "metal_roofing",
+          "roof_tiles"
+        ],
+        "colours": [
+          {
+            "name": "Dover White",
+            "officialName": "Dover White",
+            "hex": "#F9FBF1",
+            "swatchHex": "#F9FBF1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Surfmist",
+            "officialName": "Surfmist",
+            "hex": "#DCDACC",
+            "swatchHex": "#DCDACC",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Evening Haze",
+            "officialName": "Evening Haze",
+            "hex": "#BFB9A1",
+            "swatchHex": "#BFB9A1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Classic Cream",
+            "officialName": "Classic Cream",
+            "hex": "#E7D4B0",
+            "swatchHex": "#E7D4B0",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Paperbark",
+            "officialName": "Paperbark",
+            "hex": "#C6B69B",
+            "swatchHex": "#C6B69B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Dune",
+            "officialName": "Dune",
+            "hex": "#A8A59C",
+            "swatchHex": "#A8A59C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Southerly",
+            "officialName": "Southerly",
+            "hex": "#D2D1CB",
+            "swatchHex": "#D2D1CB",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Shale Grey",
+            "officialName": "Shale Grey",
+            "hex": "#B1B6B1",
+            "swatchHex": "#B1B6B1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Bluegum",
+            "officialName": "Bluegum",
+            "hex": "#969799",
+            "swatchHex": "#969799",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Windspray",
+            "officialName": "Windspray",
+            "hex": "#888B8A",
+            "swatchHex": "#888B8A",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Gully",
+            "officialName": "Gully",
+            "hex": "#7F776E",
+            "swatchHex": "#7F776E",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Jasper",
+            "officialName": "Jasper",
+            "hex": "#675D51",
+            "swatchHex": "#675D51",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Wallaby",
+            "officialName": "Wallaby",
+            "hex": "#767572",
+            "swatchHex": "#767572",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Basalt",
+            "officialName": "Basalt",
+            "hex": "#656668",
+            "swatchHex": "#656668",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Woodland Grey",
+            "officialName": "Woodland Grey",
+            "hex": "#414440",
+            "swatchHex": "#414440",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Monument",
+            "officialName": "Monument",
+            "hex": "#2C2D31",
+            "swatchHex": "#2C2D31",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Night Sky",
+            "officialName": "Night Sky",
+            "hex": "#000000",
+            "swatchHex": "#000000",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Ironstone",
+            "officialName": "Ironstone",
+            "hex": "#343E4C",
+            "swatchHex": "#343E4C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Deep Ocean",
+            "officialName": "Deep Ocean",
+            "hex": "#273C4F",
+            "swatchHex": "#273C4F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Cottage Green",
+            "officialName": "Cottage Green",
+            "hex": "#0E4A39",
+            "swatchHex": "#0E4A39",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Pale Eucalypt",
+            "officialName": "Pale Eucalypt",
+            "hex": "#74826B",
+            "swatchHex": "#74826B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Manor Red",
+            "officialName": "Manor Red",
+            "hex": "#65100F",
+            "swatchHex": "#65100F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          }
+        ]
       }
     },
     {
       "product_code": "GUTTER-GENERIC-HALF-ROUND-COLORBOND",
-      "family_key": "gutters-fascia",
-      "requirement_keys": "gutters-fascia",
-      "category_key": "Gutters & Fascia",
+      "family_key": "roofing",
+      "requirement_keys": "roofing",
+      "category_key": "Roofing",
       "top_level_area": "exterior",
-      "manufacturer": "Builder Configurable",
-      "brand": "Builder Configurable",
-      "supplier": "Builder Configurable",
-      "range": "COLORBOND-compatible gutter and fascia",
-      "product_name": "Half round gutter and fascia colour system",
+      "manufacturer": "LYSAGHT",
+      "brand": "COLORBOND steel",
+      "supplier": "LYSAGHT",
+      "range": "LYSAGHT guttering and fascia",
+      "product_name": "LYSAGHT Half Round gutter COLORBOND steel system",
       "model": "Half Round",
-      "description": "Builder-configurable half round gutter and fascia option using the shared roofing colour workflow.",
+      "description": "Official LYSAGHT Half Round gutter option for steel and tile roofs, configured inside the roofing package with shared COLORBOND steel colour selection.",
       "colour": "Match roof colour",
-      "finish": "COLORBOND-compatible steel",
+      "finish": "COLORBOND steel",
       "profile": "Half round gutter",
-      "configuration": "gutter_fascia_system",
-      "material": "Metal",
-      "primary_image_url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80",
-      "thumbnail_url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=900&q=80",
-      "image_source_url": "https://unsplash.com/photos/white-and-brown-concrete-house-ab600027ffc6",
-      "image_source_type": "family_specific_generic",
-      "image_verified_at": "2026-08-15",
+      "configuration": "gutters",
+      "material": "COLORBOND steel",
+      "primary_image_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "thumbnail_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "image_source_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-23",
       "image_status": "verified_range",
-      "official_product_url": "",
-      "specification_url": "",
+      "official_product_url": "https://lysaght.com/profiles/half-round",
+      "specification_url": "https://lysaght.com/profiles/half-round",
       "price_status": "quote_required",
       "price_unit": "lineal metre quote",
       "currency": "AUD",
@@ -759,20 +1335,624 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
-      "source_type": "builder_configurable_generic",
-      "source_name": "Builder configurable gutter profile",
-      "source_url": "https://colorbond.com/colours",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "LYSAGHT HALF ROUND gutter official profile page",
+      "source_url": "https://lysaght.com/profiles/half-round",
+      "source_retrieved_at": "2026-08-23",
+      "source_verified_at": "2026-08-23",
       "attributes": {
-        "recordType": "gutter_fascia_system",
+        "recordType": "roofing_accessory",
         "gutterType": "Eaves gutter",
-        "gutterProfile": "Half round",
+        "gutterProfile": "Half Round",
         "fasciaType": "Metal fascia",
-        "material": "Metal",
+        "material": "COLORBOND steel",
         "matchRoofColour": true,
-        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours"
-      }
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "roofType": "roofing_accessory",
+        "roofPackageStep": "gutters",
+        "colourSelectionMode": "reuse_roof_colour_or_choose_colour_inside_roofing_package",
+        "compatibleRoofTypes": [
+          "metal_roofing",
+          "roof_tiles"
+        ],
+        "colours": [
+          {
+            "name": "Dover White",
+            "officialName": "Dover White",
+            "hex": "#F9FBF1",
+            "swatchHex": "#F9FBF1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Surfmist",
+            "officialName": "Surfmist",
+            "hex": "#DCDACC",
+            "swatchHex": "#DCDACC",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Evening Haze",
+            "officialName": "Evening Haze",
+            "hex": "#BFB9A1",
+            "swatchHex": "#BFB9A1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Classic Cream",
+            "officialName": "Classic Cream",
+            "hex": "#E7D4B0",
+            "swatchHex": "#E7D4B0",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Paperbark",
+            "officialName": "Paperbark",
+            "hex": "#C6B69B",
+            "swatchHex": "#C6B69B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Dune",
+            "officialName": "Dune",
+            "hex": "#A8A59C",
+            "swatchHex": "#A8A59C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Southerly",
+            "officialName": "Southerly",
+            "hex": "#D2D1CB",
+            "swatchHex": "#D2D1CB",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Shale Grey",
+            "officialName": "Shale Grey",
+            "hex": "#B1B6B1",
+            "swatchHex": "#B1B6B1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Bluegum",
+            "officialName": "Bluegum",
+            "hex": "#969799",
+            "swatchHex": "#969799",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Windspray",
+            "officialName": "Windspray",
+            "hex": "#888B8A",
+            "swatchHex": "#888B8A",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Gully",
+            "officialName": "Gully",
+            "hex": "#7F776E",
+            "swatchHex": "#7F776E",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Jasper",
+            "officialName": "Jasper",
+            "hex": "#675D51",
+            "swatchHex": "#675D51",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Wallaby",
+            "officialName": "Wallaby",
+            "hex": "#767572",
+            "swatchHex": "#767572",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Basalt",
+            "officialName": "Basalt",
+            "hex": "#656668",
+            "swatchHex": "#656668",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Woodland Grey",
+            "officialName": "Woodland Grey",
+            "hex": "#414440",
+            "swatchHex": "#414440",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Monument",
+            "officialName": "Monument",
+            "hex": "#2C2D31",
+            "swatchHex": "#2C2D31",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Night Sky",
+            "officialName": "Night Sky",
+            "hex": "#000000",
+            "swatchHex": "#000000",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Ironstone",
+            "officialName": "Ironstone",
+            "hex": "#343E4C",
+            "swatchHex": "#343E4C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Deep Ocean",
+            "officialName": "Deep Ocean",
+            "hex": "#273C4F",
+            "swatchHex": "#273C4F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Cottage Green",
+            "officialName": "Cottage Green",
+            "hex": "#0E4A39",
+            "swatchHex": "#0E4A39",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Pale Eucalypt",
+            "officialName": "Pale Eucalypt",
+            "hex": "#74826B",
+            "swatchHex": "#74826B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Manor Red",
+            "officialName": "Manor Red",
+            "hex": "#65100F",
+            "swatchHex": "#65100F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          }
+        ]
+      },
+      "official_colour_name": "COLORBOND steel compatible colour",
+      "colour_group": "COLORBOND steel",
+      "supplier_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "colourSwatches": [
+        {
+          "name": "Dover White",
+          "officialName": "Dover White",
+          "hex": "#F9FBF1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Surfmist",
+          "officialName": "Surfmist",
+          "hex": "#DCDACC",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Evening Haze",
+          "officialName": "Evening Haze",
+          "hex": "#BFB9A1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Classic Cream",
+          "officialName": "Classic Cream",
+          "hex": "#E7D4B0",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Paperbark",
+          "officialName": "Paperbark",
+          "hex": "#C6B69B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Dune",
+          "officialName": "Dune",
+          "hex": "#A8A59C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Southerly",
+          "officialName": "Southerly",
+          "hex": "#D2D1CB",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Shale Grey",
+          "officialName": "Shale Grey",
+          "hex": "#B1B6B1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Bluegum",
+          "officialName": "Bluegum",
+          "hex": "#969799",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Windspray",
+          "officialName": "Windspray",
+          "hex": "#888B8A",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Gully",
+          "officialName": "Gully",
+          "hex": "#7F776E",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Jasper",
+          "officialName": "Jasper",
+          "hex": "#675D51",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Wallaby",
+          "officialName": "Wallaby",
+          "hex": "#767572",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Basalt",
+          "officialName": "Basalt",
+          "hex": "#656668",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Woodland Grey",
+          "officialName": "Woodland Grey",
+          "hex": "#414440",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Monument",
+          "officialName": "Monument",
+          "hex": "#2C2D31",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Night Sky",
+          "officialName": "Night Sky",
+          "hex": "#000000",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Ironstone",
+          "officialName": "Ironstone",
+          "hex": "#343E4C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Deep Ocean",
+          "officialName": "Deep Ocean",
+          "hex": "#273C4F",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Cottage Green",
+          "officialName": "Cottage Green",
+          "hex": "#0E4A39",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Pale Eucalypt",
+          "officialName": "Pale Eucalypt",
+          "hex": "#74826B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Manor Red",
+          "officialName": "Manor Red",
+          "hex": "#65100F",
+          "source": "shared COLORBOND steel colour catalogue"
+        }
+      ],
+      "variants": [
+        {
+          "variantName": "Match roof colour",
+          "colour": "Match roof colour",
+          "finish": "COLORBOND steel"
+        },
+        {
+          "variantName": "Choose different COLORBOND colour",
+          "colour": "Choose different colour",
+          "finish": "COLORBOND steel"
+        }
+      ]
     },
     {
       "product_code": "BALUSTRADE-PROTECTORAL-GLASS",
@@ -1623,6 +2803,1310 @@
         "finishType": "Mulch / Feature Gravel",
         "material": "Mulch or gravel",
         "optionalRequirement": true
+      }
+    },
+    {
+      "product_code": "ROOFING-LYSAGHT-NOVALINE-FASCIA-COLORBOND",
+      "family_key": "roofing",
+      "requirement_keys": "roofing",
+      "category_key": "Roofing",
+      "top_level_area": "exterior",
+      "manufacturer": "LYSAGHT",
+      "brand": "COLORBOND steel",
+      "supplier": "LYSAGHT",
+      "range": "LYSAGHT NOVALINE fascia",
+      "product_name": "LYSAGHT NOVALINE fascia COLORBOND steel system",
+      "model": "NOVALINE Fascia",
+      "description": "Official LYSAGHT NOVALINE steel fascia system compatible with LYSAGHT gutters and configured inside the roofing package.",
+      "colour": "Match roof colour",
+      "official_colour_name": "COLORBOND steel compatible colour",
+      "colour_group": "COLORBOND steel",
+      "finish": "COLORBOND steel",
+      "profile": "NOVALINE fascia",
+      "configuration": "fascia",
+      "material": "COLORBOND steel",
+      "primary_image_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "thumbnail_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "image_source_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-23",
+      "image_status": "verified_range",
+      "official_product_url": "https://lysaght.com/profiles/novaline",
+      "specification_url": "https://lysaght.com/profiles/novaline",
+      "supplier_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "price_status": "quote_required",
+      "price_unit": "lineal metre quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "LYSAGHT NOVALINE fascia official profile page",
+      "source_url": "https://lysaght.com/profiles/novaline",
+      "source_retrieved_at": "2026-08-23",
+      "source_verified_at": "2026-08-23",
+      "colourSwatches": [
+        {
+          "name": "Dover White",
+          "officialName": "Dover White",
+          "hex": "#F9FBF1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Surfmist",
+          "officialName": "Surfmist",
+          "hex": "#DCDACC",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Evening Haze",
+          "officialName": "Evening Haze",
+          "hex": "#BFB9A1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Classic Cream",
+          "officialName": "Classic Cream",
+          "hex": "#E7D4B0",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Paperbark",
+          "officialName": "Paperbark",
+          "hex": "#C6B69B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Dune",
+          "officialName": "Dune",
+          "hex": "#A8A59C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Southerly",
+          "officialName": "Southerly",
+          "hex": "#D2D1CB",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Shale Grey",
+          "officialName": "Shale Grey",
+          "hex": "#B1B6B1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Bluegum",
+          "officialName": "Bluegum",
+          "hex": "#969799",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Windspray",
+          "officialName": "Windspray",
+          "hex": "#888B8A",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Gully",
+          "officialName": "Gully",
+          "hex": "#7F776E",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Jasper",
+          "officialName": "Jasper",
+          "hex": "#675D51",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Wallaby",
+          "officialName": "Wallaby",
+          "hex": "#767572",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Basalt",
+          "officialName": "Basalt",
+          "hex": "#656668",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Woodland Grey",
+          "officialName": "Woodland Grey",
+          "hex": "#414440",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Monument",
+          "officialName": "Monument",
+          "hex": "#2C2D31",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Night Sky",
+          "officialName": "Night Sky",
+          "hex": "#000000",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Ironstone",
+          "officialName": "Ironstone",
+          "hex": "#343E4C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Deep Ocean",
+          "officialName": "Deep Ocean",
+          "hex": "#273C4F",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Cottage Green",
+          "officialName": "Cottage Green",
+          "hex": "#0E4A39",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Pale Eucalypt",
+          "officialName": "Pale Eucalypt",
+          "hex": "#74826B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Manor Red",
+          "officialName": "Manor Red",
+          "hex": "#65100F",
+          "source": "shared COLORBOND steel colour catalogue"
+        }
+      ],
+      "variants": [
+        {
+          "variantName": "Match roof colour",
+          "colour": "Match roof colour",
+          "finish": "COLORBOND steel"
+        },
+        {
+          "variantName": "Choose different COLORBOND colour",
+          "colour": "Choose different colour",
+          "finish": "COLORBOND steel"
+        }
+      ],
+      "attributes": {
+        "recordType": "roofing_accessory",
+        "roofType": "roofing_accessory",
+        "roofPackageStep": "fascia",
+        "material": "COLORBOND steel",
+        "matchRoofColour": true,
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "colourSelectionMode": "reuse_roof_colour_or_choose_colour_inside_roofing_package",
+        "compatibleRoofTypes": [
+          "metal_roofing",
+          "roof_tiles"
+        ],
+        "colours": [
+          {
+            "name": "Dover White",
+            "officialName": "Dover White",
+            "hex": "#F9FBF1",
+            "swatchHex": "#F9FBF1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Surfmist",
+            "officialName": "Surfmist",
+            "hex": "#DCDACC",
+            "swatchHex": "#DCDACC",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Evening Haze",
+            "officialName": "Evening Haze",
+            "hex": "#BFB9A1",
+            "swatchHex": "#BFB9A1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Classic Cream",
+            "officialName": "Classic Cream",
+            "hex": "#E7D4B0",
+            "swatchHex": "#E7D4B0",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Paperbark",
+            "officialName": "Paperbark",
+            "hex": "#C6B69B",
+            "swatchHex": "#C6B69B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Dune",
+            "officialName": "Dune",
+            "hex": "#A8A59C",
+            "swatchHex": "#A8A59C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Southerly",
+            "officialName": "Southerly",
+            "hex": "#D2D1CB",
+            "swatchHex": "#D2D1CB",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Shale Grey",
+            "officialName": "Shale Grey",
+            "hex": "#B1B6B1",
+            "swatchHex": "#B1B6B1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Bluegum",
+            "officialName": "Bluegum",
+            "hex": "#969799",
+            "swatchHex": "#969799",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Windspray",
+            "officialName": "Windspray",
+            "hex": "#888B8A",
+            "swatchHex": "#888B8A",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Gully",
+            "officialName": "Gully",
+            "hex": "#7F776E",
+            "swatchHex": "#7F776E",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Jasper",
+            "officialName": "Jasper",
+            "hex": "#675D51",
+            "swatchHex": "#675D51",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Wallaby",
+            "officialName": "Wallaby",
+            "hex": "#767572",
+            "swatchHex": "#767572",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Basalt",
+            "officialName": "Basalt",
+            "hex": "#656668",
+            "swatchHex": "#656668",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Woodland Grey",
+            "officialName": "Woodland Grey",
+            "hex": "#414440",
+            "swatchHex": "#414440",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Monument",
+            "officialName": "Monument",
+            "hex": "#2C2D31",
+            "swatchHex": "#2C2D31",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Night Sky",
+            "officialName": "Night Sky",
+            "hex": "#000000",
+            "swatchHex": "#000000",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Ironstone",
+            "officialName": "Ironstone",
+            "hex": "#343E4C",
+            "swatchHex": "#343E4C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Deep Ocean",
+            "officialName": "Deep Ocean",
+            "hex": "#273C4F",
+            "swatchHex": "#273C4F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Cottage Green",
+            "officialName": "Cottage Green",
+            "hex": "#0E4A39",
+            "swatchHex": "#0E4A39",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Pale Eucalypt",
+            "officialName": "Pale Eucalypt",
+            "hex": "#74826B",
+            "swatchHex": "#74826B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Manor Red",
+            "officialName": "Manor Red",
+            "hex": "#65100F",
+            "swatchHex": "#65100F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          }
+        ],
+        "fasciaType": "Steel fascia system"
+      }
+    },
+    {
+      "product_code": "ROOFING-LYSAGHT-DOWNPIPE-COLORBOND",
+      "family_key": "roofing",
+      "requirement_keys": "roofing",
+      "category_key": "Roofing",
+      "top_level_area": "exterior",
+      "manufacturer": "LYSAGHT",
+      "brand": "COLORBOND steel",
+      "supplier": "LYSAGHT",
+      "range": "LYSAGHT rainwater goods",
+      "product_name": "LYSAGHT COLORBOND steel downpipe system",
+      "model": "Downpipe",
+      "description": "Official LYSAGHT downpipe option for steel and tile roofs, available in COLORBOND steel colours to match or contrast with the roof.",
+      "colour": "Match roof colour",
+      "official_colour_name": "COLORBOND steel compatible colour",
+      "colour_group": "COLORBOND steel",
+      "finish": "COLORBOND steel",
+      "profile": "Downpipe",
+      "configuration": "downpipes",
+      "material": "COLORBOND steel",
+      "primary_image_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "thumbnail_url": "https://lysaght.com/sites/default/files/styles/1200x630/public/2023-11/55162.jpg?h=364c45d5&itok=eq30jWjC",
+      "image_source_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-23",
+      "image_status": "verified_range",
+      "official_product_url": "https://cdn.dcs.lysaght.com/download/lysaght-rainwater-solutions-queensland-brochure",
+      "specification_url": "https://cdn.dcs.lysaght.com/download/lysaght-rainwater-solutions-queensland-brochure",
+      "supplier_url": "https://lysaght.com/products/roofing-guttering-fascia",
+      "price_status": "quote_required",
+      "price_unit": "lineal metre quote",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "source_type": "official_manufacturer_pages",
+      "source_name": "LYSAGHT Rainwater Solutions Queensland brochure",
+      "source_url": "https://cdn.dcs.lysaght.com/download/lysaght-rainwater-solutions-queensland-brochure",
+      "source_retrieved_at": "2026-08-23",
+      "source_verified_at": "2026-08-23",
+      "colourSwatches": [
+        {
+          "name": "Dover White",
+          "officialName": "Dover White",
+          "hex": "#F9FBF1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Surfmist",
+          "officialName": "Surfmist",
+          "hex": "#DCDACC",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Evening Haze",
+          "officialName": "Evening Haze",
+          "hex": "#BFB9A1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Classic Cream",
+          "officialName": "Classic Cream",
+          "hex": "#E7D4B0",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Paperbark",
+          "officialName": "Paperbark",
+          "hex": "#C6B69B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Dune",
+          "officialName": "Dune",
+          "hex": "#A8A59C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Southerly",
+          "officialName": "Southerly",
+          "hex": "#D2D1CB",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Shale Grey",
+          "officialName": "Shale Grey",
+          "hex": "#B1B6B1",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Bluegum",
+          "officialName": "Bluegum",
+          "hex": "#969799",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Windspray",
+          "officialName": "Windspray",
+          "hex": "#888B8A",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Gully",
+          "officialName": "Gully",
+          "hex": "#7F776E",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Jasper",
+          "officialName": "Jasper",
+          "hex": "#675D51",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Wallaby",
+          "officialName": "Wallaby",
+          "hex": "#767572",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Basalt",
+          "officialName": "Basalt",
+          "hex": "#656668",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Woodland Grey",
+          "officialName": "Woodland Grey",
+          "hex": "#414440",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Monument",
+          "officialName": "Monument",
+          "hex": "#2C2D31",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Night Sky",
+          "officialName": "Night Sky",
+          "hex": "#000000",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Ironstone",
+          "officialName": "Ironstone",
+          "hex": "#343E4C",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Deep Ocean",
+          "officialName": "Deep Ocean",
+          "hex": "#273C4F",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Cottage Green",
+          "officialName": "Cottage Green",
+          "hex": "#0E4A39",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Pale Eucalypt",
+          "officialName": "Pale Eucalypt",
+          "hex": "#74826B",
+          "source": "shared COLORBOND steel colour catalogue"
+        },
+        {
+          "name": "Manor Red",
+          "officialName": "Manor Red",
+          "hex": "#65100F",
+          "source": "shared COLORBOND steel colour catalogue"
+        }
+      ],
+      "variants": [
+        {
+          "variantName": "Match roof colour",
+          "colour": "Match roof colour",
+          "finish": "COLORBOND steel"
+        },
+        {
+          "variantName": "Choose different COLORBOND colour",
+          "colour": "Choose different colour",
+          "finish": "COLORBOND steel"
+        }
+      ],
+      "attributes": {
+        "recordType": "roofing_accessory",
+        "roofType": "roofing_accessory",
+        "roofPackageStep": "downpipes",
+        "material": "COLORBOND steel",
+        "matchRoofColour": true,
+        "sharedColourCatalogueKey": "colorbond-steel-compatible-colours",
+        "colourSelectionMode": "reuse_roof_colour_or_choose_colour_inside_roofing_package",
+        "compatibleRoofTypes": [
+          "metal_roofing",
+          "roof_tiles"
+        ],
+        "colours": [
+          {
+            "name": "Dover White",
+            "officialName": "Dover White",
+            "hex": "#F9FBF1",
+            "swatchHex": "#F9FBF1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Surfmist",
+            "officialName": "Surfmist",
+            "hex": "#DCDACC",
+            "swatchHex": "#DCDACC",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Evening Haze",
+            "officialName": "Evening Haze",
+            "hex": "#BFB9A1",
+            "swatchHex": "#BFB9A1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Classic Cream",
+            "officialName": "Classic Cream",
+            "hex": "#E7D4B0",
+            "swatchHex": "#E7D4B0",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Paperbark",
+            "officialName": "Paperbark",
+            "hex": "#C6B69B",
+            "swatchHex": "#C6B69B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Dune",
+            "officialName": "Dune",
+            "hex": "#A8A59C",
+            "swatchHex": "#A8A59C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Southerly",
+            "officialName": "Southerly",
+            "hex": "#D2D1CB",
+            "swatchHex": "#D2D1CB",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Shale Grey",
+            "officialName": "Shale Grey",
+            "hex": "#B1B6B1",
+            "swatchHex": "#B1B6B1",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Bluegum",
+            "officialName": "Bluegum",
+            "hex": "#969799",
+            "swatchHex": "#969799",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Windspray",
+            "officialName": "Windspray",
+            "hex": "#888B8A",
+            "swatchHex": "#888B8A",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Gully",
+            "officialName": "Gully",
+            "hex": "#7F776E",
+            "swatchHex": "#7F776E",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Jasper",
+            "officialName": "Jasper",
+            "hex": "#675D51",
+            "swatchHex": "#675D51",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Wallaby",
+            "officialName": "Wallaby",
+            "hex": "#767572",
+            "swatchHex": "#767572",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Basalt",
+            "officialName": "Basalt",
+            "hex": "#656668",
+            "swatchHex": "#656668",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Woodland Grey",
+            "officialName": "Woodland Grey",
+            "hex": "#414440",
+            "swatchHex": "#414440",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Monument",
+            "officialName": "Monument",
+            "hex": "#2C2D31",
+            "swatchHex": "#2C2D31",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic",
+              "Matt"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Night Sky",
+            "officialName": "Night Sky",
+            "hex": "#000000",
+            "swatchHex": "#000000",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Ironstone",
+            "officialName": "Ironstone",
+            "hex": "#343E4C",
+            "swatchHex": "#343E4C",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Deep Ocean",
+            "officialName": "Deep Ocean",
+            "hex": "#273C4F",
+            "swatchHex": "#273C4F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Cottage Green",
+            "officialName": "Cottage Green",
+            "hex": "#0E4A39",
+            "swatchHex": "#0E4A39",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Pale Eucalypt",
+            "officialName": "Pale Eucalypt",
+            "hex": "#74826B",
+            "swatchHex": "#74826B",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          },
+          {
+            "name": "Manor Red",
+            "officialName": "Manor Red",
+            "hex": "#65100F",
+            "swatchHex": "#65100F",
+            "material": "COLORBOND steel",
+            "availableFinishes": [
+              "Classic"
+            ],
+            "officialColourUrl": "https://colorbond.com/colours",
+            "sourceUrl": "https://colorbond.com/colours",
+            "sourceVerifiedAt": "2026-08-13",
+            "reusableFor": [
+              "roofing",
+              "gutters-fascia",
+              "fascia",
+              "gutters",
+              "downpipes"
+            ]
+          }
+        ],
+        "downpipeType": "Rectangular, square or round downpipe"
       }
     }
   ]

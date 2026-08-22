@@ -458,6 +458,17 @@ export default function BuilderProductLibraryPage() {
       enabled: builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled && roofingProducts.some((product) => product.productCode === item.masterProductCode)).length,
     };
   }, [builderEnablements, masterProducts, workspaceId]);
+  const roofingGroupProof = useMemo(() => {
+    const roofingProducts = familyMasterProducts.filter((product) => product.familyKey === "roofing");
+    const packageStep = (product, step) => product.attributes?.roofPackageStep === step || product.configuration === step;
+    return {
+      metal: roofingProducts.filter((product) => product.attributes?.roofType === "metal_roofing" || product.roofType === "metal_roofing" || product.configuration === "metal_roofing").length,
+      tiles: roofingProducts.filter((product) => product.attributes?.roofType === "roof_tiles" || product.roofType === "roof_tiles" || product.configuration === "roof_tiles").length,
+      fascia: roofingProducts.filter((product) => packageStep(product, "fascia")).length,
+      gutters: roofingProducts.filter((product) => packageStep(product, "gutters")).length,
+      downpipes: roofingProducts.filter((product) => packageStep(product, "downpipes")).length,
+    };
+  }, [familyMasterProducts]);
   const selectableProof = useMemo(() => queryClientSelectableProducts({
     organisationId: workspaceId || "",
     familyKey: selectedFamily?.familyKey || "ovens",
@@ -1403,6 +1414,15 @@ export default function BuilderProductLibraryPage() {
                     <span>{builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled && familyMasterProducts.some((product) => product.productCode === item.masterProductCode)).length} enabled</span>
                     <span className={familyIsLocked(selectedFamily.familyKey) ? "status-pill on" : "status-pill off"}>{familyCatalogueStatus(selectedFamily.familyKey).toUpperCase()}</span>
                   </div>
+                  {selectedFamily.familyKey === "roofing" ? (
+                    <div className="chips" data-testid="product-library-roofing-hierarchy-proof">
+                      <span>Metal Roofing {roofingGroupProof.metal}</span>
+                      <span>Roof Tiles {roofingGroupProof.tiles}</span>
+                      <span>Fascia {roofingGroupProof.fascia}</span>
+                      <span>Gutters {roofingGroupProof.gutters}</span>
+                      <span>Downpipes {roofingGroupProof.downpipes}</span>
+                    </div>
+                  ) : null}
                   {familyIsLocked(selectedFamily.familyKey) ? (
                     <small className="lock-note">Locked - protected from bulk catalogue changes</small>
                   ) : null}
