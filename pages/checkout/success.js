@@ -60,6 +60,7 @@ export default function CheckoutSuccess() {
             socialPlan: socialPlanTier || null,
             websitePlan: websitePlanTier || null,
             selectedModules,
+            billingCycle: router.query.annual === "1" ? "annual" : "monthly",
           }),
         });
 

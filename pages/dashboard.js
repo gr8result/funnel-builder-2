@@ -6,33 +6,15 @@ import Link from "next/link";
 import { supabase } from "../utils/supabase-client";
 import { useWorkspace } from "../hooks/useWorkspace";
 import ICONS from "../components/iconMap";
+import {
+  MODULE_STATE,
+  buildEntitledModuleIds,
+  buildSubscriptionSummary,
+  moduleSetupLabel,
+  readBillingCycle,
+  resolveModuleState,
+} from "../lib/moduleEntitlements";
 
-const DASHBOARD_MODULE_ALIASES = {
-  crm: "crm",
-  email: "email_marketing",
-  email_marketing: "email_marketing",
-  sms: "sms_marketing",
-  sms_marketing: "sms_marketing",
-  social: "social_media",
-  social_media: "social_media",
-  calendar: "booking_calendar",
-  booking_calendar: "booking_calendar",
-  "website-builder": "website_builder",
-  website_builder: "website_builder",
-  automation: "business_automation",
-  business_automation: "business_automation",
-  webinars: "evergreen_webinars",
-  evergreen_webinars: "evergreen_webinars",
-  subscription: "pipelines",
-  pipelines: "pipelines",
-  funnels: "funnels",
-  affiliates: "affiliate_management",
-  affiliate_management: "affiliate_management",
-};
-
-function normalizeDashboardModuleId(moduleId) {
-  return DASHBOARD_MODULE_ALIASES[moduleId] || moduleId;
-}
 
 // Light-background colours that need dark text
 const LIGHT_COLORS = new Set(["#facc15", "#84cc16", "#0df118", "#a3e635", "#fbbf24"]);
@@ -162,7 +144,7 @@ const CORE_ITEMS = [
   },
   {
     id: "construction",
-    title: "Projects Hub",
+    title: "Project Workspace",
     emoji: "🗂️",
     desc: "Job Board and work schedules — suits any industry",
     color: "#f97316",
@@ -189,14 +171,6 @@ const MODULE_ITEMS = [
     desc: "Manage contacts and customer records",
     color: "#ec4899",
     href: "/modules/email/crm",
-  },
-  {
-    id: "construction",
-    title: "Projects Hub",
-    emoji: "🗂️",
-    desc: "Job Board and work schedules — suits any industry",
-    color: "#f97316",
-    href: "/modules/construction",
   },
   {
     id: "sms_marketing",
@@ -290,7 +264,8 @@ const MODULE_ITEMS = [
 ];
 
 // ─── Solid colour card ────────────────────────────────────────────────────────
-function SolidCard({ item, active, count, coreCard }) {
+function SolidCard({ item, state = MODULE_STATE.NOT_INCLUDED, count, coreCard }) {
+  const active = coreCard || state === MODULE_STATE.READY;
   const hasCount = typeof count === "number" && count > 0;
   const activityText = hasCount && item.activityLabel
     ? `${count} ${item.activityLabel}${count !== 1 ? "s" : ""}`
@@ -298,7 +273,7 @@ function SolidCard({ item, active, count, coreCard }) {
   const fg = textFor(item.color);
 
   // Coming soon modules: always show as greyed-out / coming soon
-  if (item.comingSoon) {
+  if (state === MODULE_STATE.COMING_SOON) {
     return (
       <Link href={item.href} style={{ textDecoration: "none" }}>
         <div style={{
@@ -351,12 +326,64 @@ function SolidCard({ item, active, count, coreCard }) {
     );
   }
 
-  // Inactive module cards: dark with coloured border
-  if (!coreCard && !active) {
+  // ENTITLED but genuinely needs configuration (item 5).
+  // Never implies the customer has not purchased the module.
+  if (state === MODULE_STATE.SETUP_REQUIRED) {
+    return (
+      <Link href={item.href} style={{ textDecoration: "none" }}>
+        <div style={{
+          background: "#0d1522",
+          border: `2px solid ${item.color}66`,
+          borderRadius: 14,
+          padding: "18px 18px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          position: "relative",
+          cursor: "pointer",
+        }}>
+          <div style={{
+            position: "absolute", top: 12, right: 12,
+            fontSize: 16, fontWeight: 600, padding: "3px 10px",
+            borderRadius: 20, background: "rgba(69,39,3,0.9)",
+            color: "#fbbf24", whiteSpace: "nowrap", userSelect: "none",
+          }}>
+            ⚙ Setup required
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, paddingRight: 130 }}>
+            <div style={{
+              fontSize: 22, width: 44, height: 44, display: "grid",
+              placeItems: "center", background: item.color + "18",
+              border: `1px solid ${item.color}33`, borderRadius: 10, flexShrink: 0,
+            }}>
+              {item.icon ? <item.icon size={22} color={item.color} /> : item.emoji}
+            </div>
+            <div style={{ fontWeight: 600, fontSize: 18, color: "#e2e8f0", lineHeight: 1.3 }}>
+              {item.title}
+            </div>
+          </div>
+          <div style={{ fontSize: 16, color: "#94a3b8", lineHeight: 1.4 }}>
+            {moduleSetupLabel(item.id) || item.desc}
+          </div>
+          <span style={{
+            display: "inline-block", fontSize: 16, fontWeight: 600,
+            padding: "7px 15px", borderRadius: 8,
+            background: "rgba(120,53,15,0.5)", color: "#fbbf24",
+            border: "1px solid rgba(180,83,9,0.7)",
+          }}>
+            Set Up →
+          </span>
+        </div>
+      </Link>
+    );
+  }
+
+  // NOT INCLUDED in the subscription (item 6). Routes to Billing to add it.
+  if (!coreCard && state === MODULE_STATE.NOT_INCLUDED) {
     return (
       <div style={{
         background: "#0d1522",
-        border: `2px solid ${item.color}44`,
+        border: `2px solid ${item.color}33`,
         borderRadius: 14,
         padding: "18px 18px 16px",
         display: "flex",
@@ -367,33 +394,33 @@ function SolidCard({ item, active, count, coreCard }) {
         <div style={{
           position: "absolute", top: 12, right: 12,
           fontSize: 16, fontWeight: 600, padding: "3px 10px",
-          borderRadius: 20, background: "rgba(69,10,10,0.9)",
-          color: "#f87171", whiteSpace: "nowrap", userSelect: "none",
+          borderRadius: 20, background: "rgba(30,41,59,0.95)",
+          color: "#94a3b8", whiteSpace: "nowrap", userSelect: "none",
         }}>
-          ✕ Not set up
+          Not included
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 11, paddingRight: 90 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, paddingRight: 120 }}>
           <div style={{
             fontSize: 22, width: 44, height: 44, display: "grid",
-            placeItems: "center", background: item.color + "18",
-            border: `1px solid ${item.color}33`, borderRadius: 10, flexShrink: 0,
+            placeItems: "center", background: item.color + "14",
+            border: `1px solid ${item.color}28`, borderRadius: 10, flexShrink: 0,
           }}>
             {item.icon ? <item.icon size={22} color={item.color} /> : item.emoji}
           </div>
-          <div style={{ fontWeight: 600, fontSize: 18, color: "#64748b", lineHeight: 1.3 }}>
+          <div style={{ fontWeight: 600, fontSize: 18, color: "#94a3b8", lineHeight: 1.3 }}>
             {item.title}
           </div>
         </div>
-        <div style={{ fontSize: 16, color: "#3c82e4", lineHeight: 1.4 }}>{item.desc}</div>
-        <Link href="/billing">
+        <div style={{ fontSize: 16, color: "#64748b", lineHeight: 1.4 }}>{item.desc}</div>
+        <Link href="/billing" style={{ textDecoration: "none" }}>
           <span style={{
             display: "inline-block", fontSize: 16, fontWeight: 600,
             padding: "7px 15px", borderRadius: 8,
-            background: "rgba(69,10,10,0.6)", color: "#f87171",
-            border: "1px solid rgba(127,29,29,0.7)",
-            cursor: "pointer", textDecoration: "none",
+            background: "rgba(30,58,95,0.6)", color: "#60a5fa",
+            border: "1px solid rgba(37,99,235,0.6)",
+            cursor: "pointer",
           }}>
-            Start Setup →
+            Add Module →
           </span>
         </Link>
       </div>
@@ -454,6 +481,17 @@ function SolidCard({ item, active, count, coreCard }) {
           {activityText ?? item.desc}
         </div>
 
+        {/* Entitled and ready: the whole card opens the module (item 4) */}
+        {!coreCard && (
+          <span style={{
+            display: "inline-block", fontSize: 16, fontWeight: 600,
+            padding: "5px 12px", borderRadius: 8, alignSelf: "flex-start",
+            background: "rgba(0,0,0,0.22)", color: fg,
+          }}>
+            Open →
+          </span>
+        )}
+
       </div>
     </Link>
   );
@@ -478,6 +516,39 @@ function SkeletonCard() {
 }
 
 // ─── Section heading ──────────────────────────────────────────────────────────
+// ─── Subscription summary (item 9) ───────────────────────────────────────────
+// Renders only real subscription data. Any field without backing data is
+// omitted rather than invented, and nothing here is hardcoded to a plan name.
+function SubscriptionSummary({ subscription, loading }) {
+  if (loading || !subscription?.hasSubscription) return null;
+  const fields = [
+    subscription.plan ? { label: "Current Plan", value: subscription.plan } : null,
+    subscription.cycle ? { label: "Billing", value: subscription.cycle } : null,
+    subscription.status ? { label: "Status", value: subscription.status } : null,
+  ].filter(Boolean);
+  if (!fields.length) return null;
+
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: 22, alignItems: "center",
+      margin: "-6px 0 16px", padding: "12px 16px",
+      background: "#0d1522", border: "1px solid #1e2d42", borderRadius: 12,
+    }}>
+      {fields.map((field) => (
+        <div key={field.label} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>{field.label}:</span>
+          <span style={{
+            fontSize: 15, fontWeight: 700,
+            color: field.label === "Status" && field.value === "Active" ? "#4ade80" : "#e2e8f0",
+          }}>
+            {field.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SectionLabel({ label, note }) {
   return (
     <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
@@ -551,9 +622,11 @@ function ImpactBar({ stats, loading }) {
 
 // ─── Dashboard page ───────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { role } = useWorkspace();
+  const { role, workspaceId } = useWorkspace();
   const isOwner = !role || role === "owner";
   const [activeModules, setActiveModules] = useState(new Set());
+  const [subscription, setSubscription] = useState(null);
+  const [setupContext, setSetupContext] = useState({ account: null });
   const [counts, setCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [impactStats, setImpactStats] = useState(null);
@@ -564,38 +637,77 @@ export default function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         const uid = session?.user?.id;
         if (!uid) { setLoading(false); return; }
+        if (!workspaceId) { setLoading(false); return; }
 
-        const [{ data: moduleRows }, { data: acc }] = await Promise.all([
+        // ENTITLEMENT SOURCES (item 2 - one source of truth):
+        //   workspace_entitlements  canonical, workspace-scoped module rows
+        //   user_modules            legacy user-scoped mirror
+        //   workspaces.plan         base-plan tier, resolved via lib/featureGates
+        //   accounts.*_plan_tier    per-module plan purchases
+        //
+        // NOTE: user_modules has no `workspace_id` column. Selecting/filtering
+        // on it made PostgREST error, the rows returned null, and every module
+        // fell through to "Not set up" regardless of subscription.
+        const [
+          { data: entitlementRows },
+          { data: legacyModuleRows },
+          { data: acc },
+          { data: workspaceRow },
+          { data: subscriptionRows },
+        ] = await Promise.all([
+          supabase
+            .from("workspace_entitlements")
+            .select("module_id, enabled")
+            .eq("workspace_id", workspaceId)
+            .eq("enabled", true),
           supabase.from("user_modules").select("module_id").eq("user_id", uid),
           supabase.from("accounts")
-            .select("sms_plan_tier, calendar_plan_tier, email_plan_tier")
+            .select("sms_plan_tier, calendar_plan_tier, email_plan_tier, social_plan_tier, sendgrid_connected, sendgrid_from_email, sender_id, sms_api_key, twilio_phone")
             .eq("user_id", uid)
             .maybeSingle(),
+          supabase.from("workspaces").select("id, plan").eq("id", workspaceId).maybeSingle(),
+          supabase.from("subscriptions").select("plan_id, status, current_period_end").eq("account_id", uid).limit(1),
         ]);
 
-        const active = new Set(
-          (moduleRows || [])
-            .map((r) => normalizeDashboardModuleId(r.module_id))
-            .filter((id) => id && !id.startsWith("__"))
-        );
-        if (acc?.sms_plan_tier)      active.add("sms_marketing");
-        if (acc?.calendar_plan_tier) active.add("booking_calendar");
-        if (acc?.email_plan_tier)    active.add("email_marketing");
-        if ((moduleRows || []).some(r => r.module_id?.startsWith("__social_plan_tier:"))) {
-          active.add("social_media");
-        }
+        const legacyRows = legacyModuleRows || [];
+        const active = buildEntitledModuleIds({
+          planId: workspaceRow?.plan || "",
+          entitlementRows: entitlementRows || [],
+          legacyRows,
+          account: acc || null,
+        });
         setActiveModules(active);
+        setSetupContext({ account: acc || null });
+        setSubscription(buildSubscriptionSummary({
+          subscription: subscriptionRows?.[0] || null,
+          workspace: workspaceRow || null,
+          billingCycle: readBillingCycle(legacyRows.map((row) => row.module_id)),
+        }));
 
         const countables = [...CORE_ITEMS, ...MODULE_ITEMS].filter(m => m.countTable);
+        // Workspace-scoped tables must be counted by workspace, not by user.
+        const workspaceCountTables = new Set([
+          "leads",
+          "email_lists",
+          "sms_messages",
+          "social_posts",
+          "funnels",
+          "email_automations",
+          "sms_sent_history",
+          "email_sends",
+        ]);
         const results = await Promise.all(
-          countables.map(m =>
-            supabase
+          countables.map(m => {
+            let query = supabase
               .from(m.countTable)
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", uid)
+              .select("id", { count: "exact", head: true });
+            query = workspaceCountTables.has(m.countTable)
+              ? query.eq("workspace_id", workspaceId)
+              : query.eq("user_id", uid);
+            return query
               .then(({ count }) => ({ id: m.id, n: count ?? 0 }))
-              .catch(() => ({ id: m.id, n: 0 }))
-          )
+              .catch(() => ({ id: m.id, n: 0 }));
+          })
         );
         const cm = {};
         results.forEach(r => { cm[r.id] = r.n; });
@@ -640,7 +752,7 @@ export default function Dashboard() {
       }
     }
     loadWorkspace();
-  }, []);
+  }, [workspaceId]);
 
   const activeCount = activeModules.size;
   const hasInactive = !loading && MODULE_ITEMS.some(m => !activeModules.has(m.id));
@@ -701,14 +813,15 @@ export default function Dashboard() {
           {CORE_ITEMS.filter(item =>
             isOwner || (item.id !== "core_account" && item.id !== "core_billing")
           ).map(item => (
-            <SolidCard key={item.id} item={item} active coreCard count={counts[item.id]} />
+            <SolidCard key={item.id} item={item} state={MODULE_STATE.READY} coreCard count={counts[item.id]} />
           ))}
         </div>
       </div>
 
       {/* Gated Modules */}
       <div style={{ width: "100%", maxWidth: 1320 }}>
-        <SectionLabel label="Your Modules" note="Activate via Billing & Modules" />
+        <SectionLabel label="Your Modules" note="Manage in Billing & Modules" />
+        <SubscriptionSummary subscription={subscription} loading={loading} />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {loading
             ? MODULE_ITEMS.map(m => <SkeletonCard key={m.id} />)
@@ -716,7 +829,12 @@ export default function Dashboard() {
                 <SolidCard
                   key={item.id}
                   item={item}
-                  active={activeModules.has(item.id)}
+                  state={resolveModuleState({
+                    moduleId: item.id,
+                    comingSoon: Boolean(item.comingSoon),
+                    entitledIds: activeModules,
+                    context: setupContext,
+                  })}
                   count={counts[item.id]}
                 />
               ))

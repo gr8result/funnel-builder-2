@@ -4,6 +4,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { normalizePlanId } from "../../../lib/planResolver";
+import { billingCycleRow, isPseudoModuleRow, normalizeDashboardModuleId } from "../../../lib/moduleEntitlements";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -59,6 +60,51 @@ async function writeAccount({ accountId, user, payload }) {
   return { error: new Error("Could not write account after schema fallback retries."), omittedColumns: [] };
 }
 
+// Writes the workspace-scoped entitlement rows that the Navigation Dashboard
+// reads. This table is the canonical module entitlement store; `user_modules`
+// is kept in sync above purely as the legacy user-scoped mirror.
+async function writeWorkspaceEntitlements({ userId, moduleIds = [], basePlan = "" }) {
+  const { data: workspaces, error: wsErr } = await supabaseAdmin
+    .from("workspaces")
+    .select("id")
+    .eq("owner_id", userId)
+    .limit(1);
+
+  if (wsErr || !workspaces?.length) {
+    console.warn("apply-plan: no workspace for entitlement write", wsErr?.message || "none found");
+    return { workspaceId: null, moduleIds: [] };
+  }
+
+  const workspaceId = workspaces[0].id;
+  const realModules = [...new Set(
+    moduleIds
+      .filter((id) => id && !isPseudoModuleRow(id))
+      .map((id) => normalizeDashboardModuleId(id))
+      .filter(Boolean),
+  )];
+
+  if (!realModules.length && !basePlan) return { workspaceId, moduleIds: [] };
+
+  const rows = realModules.map((moduleId) => ({
+    workspace_id: workspaceId,
+    module_id: moduleId,
+    enabled: true,
+    updated_at: new Date().toISOString(),
+  }));
+
+  if (rows.length) {
+    const { error } = await supabaseAdmin
+      .from("workspace_entitlements")
+      .upsert(rows, { onConflict: "workspace_id,module_id" });
+    if (error) {
+      console.error("apply-plan: workspace_entitlements write failed:", error.message);
+      return { workspaceId, moduleIds: [] };
+    }
+  }
+
+  return { workspaceId, moduleIds: realModules };
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -72,6 +118,10 @@ export default async function handler(req, res) {
   if (authErr || !user) return res.status(401).json({ error: "Unauthorized" });
 
   const { emailPlan, smsPlan, calendarPlan, socialPlan, websitePlan, selectedModules, basePlan, stripeSubscriptionId, stripeCustomerId } = req.body || {};
+  // "annual" | "monthly". There is no billing-cycle column on any table, so the
+  // cadence is stored as a pseudo module row, matching the existing
+  // "__social_plan_tier:" convention.
+  const billingCycle = req.body?.billingCycle === "annual" ? "annual" : "monthly";
 
   if (!basePlan && !emailPlan && !smsPlan && !calendarPlan && !socialPlan && !websitePlan && (!selectedModules || selectedModules.length === 0)) {
     return res.status(400).json({ error: "No plan tiers provided" });
@@ -125,9 +175,12 @@ export default async function handler(req, res) {
 
   const writeResult = await writeAccount({ accountId, user, payload: safePayload });
 
+  // The accounts row carries profile/plan-tier detail. It must NOT gate
+  // activation: previously a failure here returned 500 and aborted before any
+  // entitlement, workspace or subscription record was written, so a completed
+  // checkout left the customer with nothing while Billing reported success.
   if (writeResult.error) {
-    console.error("apply-plan: accounts write error", writeResult.error);
-    return res.status(500).json({ error: writeResult.error.message });
+    console.error("apply-plan: accounts write error (continuing with activation)", writeResult.error);
   }
 
   // Keep legacy profile flag in sync for environments still using it.
@@ -154,6 +207,9 @@ export default async function handler(req, res) {
   }
   if (websitePlan) {
     moduleRows.push(`__website_plan_tier:${websitePlan}`);
+  }
+  if (basePlan) {
+    moduleRows.push(billingCycleRow(billingCycle));
   }
   if (moduleRows.length > 0) {
     const rows = moduleRows.map((module_id) => ({
@@ -185,12 +241,15 @@ export default async function handler(req, res) {
       }
     }
 
+    // NOTE: `current_period_start` does not exist on this table. Including it
+    // made every upsert fail silently, which is why no subscription row was
+    // ever created for any customer.
+    const periodDays = billingCycle === "annual" ? 365 : 30;
     const subPayload = {
       account_id: user.id,
       plan_id: normalizedBasePlan || basePlan,
       status: "active",
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      current_period_end: new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString(),
     };
     if (stripeSubscriptionId) subPayload.stripe_subscription_id = stripeSubscriptionId;
     if (stripeCustomerId)     subPayload.stripe_customer_id     = stripeCustomerId;
@@ -200,10 +259,38 @@ export default async function handler(req, res) {
       .upsert(subPayload, { onConflict: "account_id" });
 
     if (subErr) {
-      // Non-fatal — log but don't block activation
+      // Fall back to an explicit select/insert when no unique constraint on
+      // account_id is present for upsert to target.
       console.warn("apply-plan: subscriptions upsert warning:", subErr.message);
+      const { data: existingSub } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id")
+        .eq("account_id", user.id)
+        .limit(1);
+      const retry = existingSub?.[0]?.id
+        ? await supabaseAdmin.from("subscriptions").update(subPayload).eq("id", existingSub[0].id)
+        : await supabaseAdmin.from("subscriptions").insert(subPayload);
+      if (retry.error) {
+        console.error("apply-plan: subscriptions write failed:", retry.error.message);
+      }
     }
   }
 
-  return res.status(200).json({ ok: true });
+  // Write the canonical workspace-scoped entitlements the dashboard reads.
+  const entitlementResult = await writeWorkspaceEntitlements({
+    userId: user.id,
+    moduleIds: moduleRows,
+    basePlan,
+  });
+
+  return res.status(200).json({
+    ok: true,
+    activated: {
+      plan: basePlan || null,
+      billingCycle: billingCycle || null,
+      modules: entitlementResult.moduleIds,
+      workspaceId: entitlementResult.workspaceId,
+      accountWriteFailed: Boolean(writeResult.error),
+    },
+  });
 }
