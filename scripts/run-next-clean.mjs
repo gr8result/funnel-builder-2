@@ -6,7 +6,12 @@ import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
 const mode = String(process.argv[2] || "dev").toLowerCase();
-const cleanDist = process.argv.includes("--clean") || mode === "dev";
+// Only wipe the dist dir when explicitly asked (npm run dev:fresh passes --clean).
+// `dev` used to wipe unconditionally, which deleted .next-dev out from under an
+// already-running dev server sharing that directory. The running server then threw
+// unhandled exceptions on every route whose chunks had vanished, surfacing as plain
+// "Internal Server Error" 500s that "fixed themselves" on restart.
+const cleanDist = process.argv.includes("--clean");
 const isVercelBuild = Boolean(process.env.VERCEL) || process.env.CI === "true";
 
 if (!["dev", "build", "start"].includes(mode)) {
