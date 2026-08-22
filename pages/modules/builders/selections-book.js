@@ -748,6 +748,7 @@ export default function BuilderSelectionsBookPage({
   projectContext = {},
   fileState = {},
   onEmbeddedMount = null,
+  onEmbeddedBack = null,
 } = {}) {
   const { workspaceId: activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
   const workspaceId = providedWorkspaceId || providedOrganisationId || projectContext?.workspaceId || projectContext?.organisationId || activeWorkspaceId;
@@ -783,7 +784,8 @@ export default function BuilderSelectionsBookPage({
   const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
   const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
   const [guidedBrickRange, setGuidedBrickRange] = useState("");
-  const [guidedRoofingStep, setGuidedRoofingStep] = useState("fascia");
+  const [guidedRoofingMode, setGuidedRoofingMode] = useState("");
+  const [guidedRoofingStep, setGuidedRoofingStep] = useState("landing");
   const [roofingConfiguration, setRoofingConfiguration] = useState({
     roofType: "",
     productSystem: "",
@@ -1531,7 +1533,8 @@ export default function BuilderSelectionsBookPage({
   }
 
   function resetGuidedRoofingFlow() {
-    setGuidedRoofingStep("fascia");
+    setGuidedRoofingMode("");
+    setGuidedRoofingStep("landing");
     setRoofingConfiguration({
       roofType: "",
       productSystem: "",
@@ -2235,16 +2238,20 @@ export default function BuilderSelectionsBookPage({
               guidedArea,
               guidedRequirement,
               guidedBrickStep,
+              guidedRoofingMode,
               guidedRoofingStep,
               roofingConfiguration,
               setGuidedBrickStep,
               setGuidedBrickSupplier,
               setGuidedBrickRange,
+              setGuidedRoofingMode,
               setGuidedRoofingStep,
               setRoofingConfiguration,
               setGuidedScreen,
               setGuidedArea,
               setGuidedRequirementKey,
+              embedded: Boolean(embeddedWorkbook),
+              onEmbeddedBack,
             })} aria-label="Back">
               <ArrowLeft size={18} />
               <span>Back</span>
@@ -2391,6 +2398,7 @@ export default function BuilderSelectionsBookPage({
               brickStep={guidedBrickStep}
               brickSupplier={guidedBrickSupplier}
               brickRange={guidedBrickRange}
+              roofingMode={guidedRoofingMode}
               roofingStep={guidedRoofingStep}
               roofingConfiguration={roofingConfiguration}
               onOpenArea={openGuidedArea}
@@ -2400,6 +2408,7 @@ export default function BuilderSelectionsBookPage({
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
+              onRoofingModeChange={setGuidedRoofingMode}
               onRoofingStepChange={setGuidedRoofingStep}
               onRoofingConfigurationChange={setRoofingConfiguration}
               onSelectRoofingConfiguration={selectGuidedRoofingConfiguration}
@@ -2488,6 +2497,7 @@ function GuidedSelectionsWorkflow({
   brickStep,
   brickSupplier,
   brickRange,
+  roofingMode,
   roofingStep,
   roofingConfiguration,
   onOpenArea,
@@ -2497,6 +2507,7 @@ function GuidedSelectionsWorkflow({
   onBrickStepChange,
   onBrickSupplierChange,
   onBrickRangeChange,
+  onRoofingModeChange,
   onRoofingStepChange,
   onRoofingConfigurationChange,
   onSelectRoofingConfiguration,
@@ -2614,8 +2625,10 @@ function GuidedSelectionsWorkflow({
           masterProductCount={masterProductCount}
           enabledProductCount={enabledProductCount}
           runningTotals={runningTotals}
+          roofingMode={roofingMode}
           roofingStep={roofingStep}
           roofingConfiguration={roofingConfiguration}
+          onRoofingModeChange={onRoofingModeChange}
           onRoofingStepChange={onRoofingStepChange}
           onRoofingConfigurationChange={onRoofingConfigurationChange}
           onSelectRoofingConfiguration={onSelectRoofingConfiguration}
@@ -2839,8 +2852,10 @@ function GuidedRoofingWorkflow({
   masterProductCount = 0,
   enabledProductCount = 0,
   runningTotals,
+  roofingMode,
   roofingStep,
   roofingConfiguration,
+  onRoofingModeChange,
   onRoofingStepChange,
   onRoofingConfigurationChange,
   onSelectRoofingConfiguration,
@@ -2864,10 +2879,9 @@ function GuidedRoofingWorkflow({
   const finishes = roofingFinishesForColour(selectedColour);
   const selectedFinish = roofingFinishForColour(selectedColour, config.finish);
   const canSelect = Boolean(
-    (config.roofType === "metal_roofing" && config.productSystem && selectedProfile && selectedColour && selectedFinish)
-    || (config.roofType === "roof_tiles" && selectedTile),
+    (config.roofType === "metal_roofing" && selectedProfile && selectedColour && selectedFinish)
+    || (config.roofType === "roof_tiles" && selectedTile)
   );
-  const roofTypeCards = roofingRoofTypeCards(products, requirement);
   const selectedSystem = systems.find((system) => system.key === config.productSystem) || null;
   const selectedProfileImage = roofingProfileImage(selectedProfile, requirement);
   const selectedPriceState = priceStateForGuidedOption(selectedProfile);
@@ -2875,32 +2889,127 @@ function GuidedRoofingWorkflow({
   const selectedAllowance = numberValue(selectedProfile?.allowance ?? requirement.defaultAllowance);
   const selectedVariation = selectedPriceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance: selectedAllowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   const setConfig = (patch) => onRoofingConfigurationChange((current) => ({ ...(current || {}), ...patch }));
+  const accessoriesComplete = Boolean(config.fasciaProductCode && config.gutterProductCode && config.downpipeProductCode);
+  const colorbondComplete = Boolean(config.roofType === "metal_roofing" && config.profileProductCode && config.colour && config.finish);
+  const roofTilesComplete = Boolean(config.roofType === "roof_tiles" && config.tileManufacturer && config.tileRange && config.tileProductCode && config.finish);
+  const roofingCardStatus = (cardKey) => {
+    if (cardKey === "fascia-gutter") {
+      if (accessoriesComplete) return "Complete";
+      if (config.fasciaProductCode || config.gutterProductCode || config.downpipeProductCode) return "In Progress";
+      return "Not Started";
+    }
+    if (cardKey === "colorbond") {
+      if (colorbondComplete) return "Complete";
+      if (config.roofType === "metal_roofing" || config.profileProductCode || config.colour || config.finish) return "In Progress";
+      return "Not Started";
+    }
+    if (roofTilesComplete) return "Complete";
+    if (config.roofType === "roof_tiles" || config.tileManufacturer || config.tileRange || config.tileProductCode) return "In Progress";
+    return "Not Started";
+  };
+  const roofingCardTone = (status) => status === "Complete" ? "complete" : status === "In Progress" ? "active" : "";
+  const returnToRoofingHome = (nextConfig = config) => {
+    const nextAccessoriesComplete = Boolean(nextConfig.fasciaProductCode && nextConfig.gutterProductCode && nextConfig.downpipeProductCode);
+    const nextColorbondComplete = Boolean(nextConfig.roofType === "metal_roofing" && nextConfig.profileProductCode && nextConfig.colour && nextConfig.finish);
+    const nextRoofTilesComplete = Boolean(nextConfig.roofType === "roof_tiles" && nextConfig.tileManufacturer && nextConfig.tileRange && nextConfig.tileProductCode && nextConfig.finish);
+    if (nextAccessoriesComplete && (nextColorbondComplete || nextRoofTilesComplete)) {
+      onSelectRoofingConfiguration(requirement, nextConfig);
+      return;
+    }
+    onRoofingModeChange("");
+    onRoofingStepChange("landing");
+  };
+  const roofingHomeCards = [
+    {
+      key: "fascia-gutter",
+      label: "Fascia & Gutter",
+      description: "Select fascia, gutters and downpipes for the roofing package.",
+      image: roofingProfileImage(selectedFascia || selectedGutter || selectedDownpipe || fasciaProducts[0] || gutterProducts[0] || downpipeProducts[0], requirement),
+      onOpen: () => {
+        onRoofingModeChange("fascia-gutter");
+        onRoofingStepChange("fascia");
+      },
+    },
+    {
+      key: "colorbond",
+      label: "COLORBOND Roofing",
+      description: "Choose the COLORBOND steel profile, colour and finish.",
+      image: selectedProfileImage || roofingImageForProducts(products, requirement),
+      onOpen: () => {
+        onRoofingModeChange("colorbond");
+        onRoofingConfigurationChange((current) => ({ ...(current || {}), roofType: "metal_roofing", tileManufacturer: "", tileRange: "", tileProductCode: "" }));
+        onRoofingStepChange("profile");
+      },
+    },
+    {
+      key: "roof-tiles",
+      label: "Roof Tiles",
+      description: "Choose manufacturer, range, tile colour and finish.",
+      image: selectedTile ? roofingProfileImage(selectedTile, requirement) : ROOF_TILE_VISUAL_URL,
+      onOpen: () => {
+        onRoofingModeChange("roof-tiles");
+        onRoofingConfigurationChange((current) => ({ ...(current || {}), roofType: "roof_tiles", productSystem: "", profileProductCode: "", colour: "", finish: "" }));
+        onRoofingStepChange("tileManufacturer");
+      },
+    },
+  ];
+  const progressSteps = roofingMode === "fascia-gutter"
+    ? [
+      ["fascia", "Fascia", config.fasciaProductCode],
+      ["gutters", "Gutters", config.gutterProductCode],
+      ["downpipes", "Downpipes", config.downpipeProductCode],
+    ]
+    : roofingMode === "roof-tiles"
+      ? [
+        ["tileManufacturer", "Manufacturer", config.tileManufacturer],
+        ["tileRange", "Range", config.tileRange],
+        ["tileProduct", "Tile / Colour", config.tileProductCode],
+        ["tileFinish", "Finish", config.finish],
+      ]
+      : [
+        ["profile", "Profile", config.profileProductCode],
+        ["colour", "Colour", config.colour],
+        ["finish", "Finish", config.finish],
+      ];
+
+  if (!roofingMode || roofingStep === "landing") {
+    return (
+      <section className="guidedShell" data-testid="guided-roofing-workflow" data-roofing-home-cards="fascia-gutter colorbond roof-tiles">
+        <GuidedBudgetDock totals={runningTotals} />
+        <main className="guidedProductPanel roofingShowroom" data-testid="roofing-package-home">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Roofing</span>
+            <strong>Choose a roofing package section.</strong>
+            <em>Complete Fascia & Gutter, COLORBOND Roofing or Roof Tiles independently.</em>
+          </div>
+          <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-three-card-home">
+            {roofingHomeCards.map((card) => {
+              const status = roofingCardStatus(card.key);
+              return (
+                <button key={card.key} type="button" className={`roofingVisualCard ${roofingCardTone(status)}`} onClick={card.onOpen}>
+                  <span className="roofingVisualImage" style={{ backgroundImage: `url(${card.image})` }} />
+                  <span className="roofingCardBody">
+                    <strong>{card.label}</strong>
+                    <span>{card.description}</span>
+                    <em>{status}</em>
+                    <b>{status === "Not Started" ? "Start" : "Open"}</b>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </main>
+      </section>
+    );
+  }
 
   return (
-    <section className="guidedShell" data-testid="guided-roofing-workflow" data-roofing-package-steps="fascia gutters downpipes">
+    <section className="guidedShell" data-testid="guided-roofing-workflow" data-roofing-package-steps={progressSteps.map(([step]) => step).join(" ")}>
       <GuidedBudgetDock totals={runningTotals} />
       <div className="guidedProductLayout roofingLayout">
         <aside className="guidedProgressMenu" data-testid="guided-roofing-hierarchy">
           <h2>Roofing</h2>
-          {[
-            ["fascia", "Fascia", config.fasciaProductCode],
-            ["gutters", "Gutters", config.gutterProductCode],
-            ["downpipes", "Downpipes", config.downpipeProductCode],
-            ["roofType", "Roof Type", config.roofType],
-            ...(config.roofType === "roof_tiles"
-              ? [
-                ["tileManufacturer", "Product System", config.tileManufacturer],
-                ["tileRange", "Profile", config.tileRange],
-                ["tileProduct", "Colour", config.tileProductCode],
-                ["tileFinish", "Finish", config.finish],
-              ]
-              : [
-                ["productSystem", "Product System", config.productSystem],
-                ["profile", "Profile", config.profileProductCode],
-                ["colour", "Colour", config.colour],
-                ["finish", "Finish", config.finish],
-              ]),
-          ].map(([step, label, value]) => (
+          {progressSteps.map(([step, label, value]) => (
             <button key={step} type="button" className={`guidedProgressItem ${roofingStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => onRoofingStepChange(step)}>
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
               <RoofingProgressThumb step={step} config={config} profile={selectedProfile} colour={selectedColour} finish={selectedFinish} products={products} requirement={requirement} />
@@ -2912,28 +3021,10 @@ function GuidedRoofingWorkflow({
           <div className="guidedSectionHeader">
             <span>Exterior / Roofing</span>
             <strong>{roofingHeaderForStep(roofingStep)}</strong>
-            <em>Roofing is one package: roof product, fascia, gutters and downpipes.</em>
+            <em>{roofingMode === "fascia-gutter" ? "Fascia, gutters and downpipes complete this section." : "Return to Roofing after completing this section."}</em>
           </div>
 
-          {roofingStep === "roofType" ? (
-            <div className="roofingChoiceGrid roofingVisualGrid" data-testid="roofing-roof-type-step">
-              {roofTypeCards.map((card) => (
-                <button key={card.key} type="button" className={`roofingVisualCard ${config.roofType === card.key ? "selected" : ""} ${card.awaiting ? "awaiting" : ""}`} onClick={() => {
-                  setConfig({ roofType: card.key, productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", colour: "", finish: "" });
-                  if (card.key === "metal_roofing") onRoofingStepChange("productSystem");
-                  if (card.key === "roof_tiles") onRoofingStepChange("tileManufacturer");
-                }}>
-                  <span className="roofingVisualImage" style={{ backgroundImage: `url(${card.image})` }} />
-                  <span className="roofingCardBody">
-                    <strong>{card.label}</strong>
-                    <span>{card.description}</span>
-                    {card.awaiting ? <em>Catalogue coming soon</em> : null}
-                    <b>{config.roofType === card.key ? "Selected" : "Select"}</b>
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : ["fascia", "gutters", "downpipes"].includes(roofingStep) ? (
+          {["fascia", "gutters", "downpipes"].includes(roofingStep) ? (
             <div className="roofingProfileGrid" data-testid={`roofing-accessory-${roofingStep}-step`}>
               {(roofingStep === "fascia" ? fasciaProducts : roofingStep === "gutters" ? gutterProducts : downpipeProducts).map((accessory) => {
                 const isSelected = (
@@ -2952,7 +3043,7 @@ function GuidedRoofingWorkflow({
                     onRoofingConfigurationChange(nextConfig);
                     if (roofingStep === "fascia") onRoofingStepChange("gutters");
                     if (roofingStep === "gutters") onRoofingStepChange("downpipes");
-                    if (roofingStep === "downpipes") onRoofingStepChange("roofType");
+                    if (roofingStep === "downpipes") returnToRoofingHome(nextConfig);
                   }}>
                     <img src={roofingProfileImage(accessory, requirement)} alt={accessory.productName} />
                     <span className="roofingProfileBody">
@@ -2960,7 +3051,7 @@ function GuidedRoofingWorkflow({
                       <strong>{accessory.productName}</strong>
                       <em>{accessory.profile || accessory.model || accessory.range}</em>
                       <b>{accessory.colour || config.colour || "Match roof colour"} / {accessory.finish || "COLORBOND steel"}</b>
-                      <i>{isSelected ? "Selected" : roofingStep === "downpipes" ? "Select Package" : "Select"}</i>
+                      <i>{isSelected ? "Selected" : roofingStep === "downpipes" ? "Complete Section" : "Select"}</i>
                     </span>
                   </button>
                 );
@@ -3023,7 +3114,7 @@ function GuidedRoofingWorkflow({
                     <div><dt>Downpipes</dt><dd>{selectedDownpipe?.productName || "Choose downpipes"}</dd></div>
                   </dl>
                 </div>
-                <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
+                <button type="button" className="primary" disabled={!canSelect} onClick={() => returnToRoofingHome(config)}>Complete Section</button>
               </div>
             ) : (
               <div className="roofingProfileGrid" data-testid="roofing-tile-product-step">
@@ -3127,7 +3218,7 @@ function GuidedRoofingWorkflow({
                     <div><dt>Variation</dt><dd>{selectedPriceState === PRICE_STATES.current ? signedMoney(selectedVariation) : "Pending"}</dd></div>
                   </dl>
                 </div>
-                <button type="button" className="primary" disabled={!canSelect} onClick={() => onSelectRoofingConfiguration(requirement, config)}>Select Roofing Configuration</button>
+                <button type="button" className="primary" disabled={!canSelect} onClick={() => returnToRoofingHome(config)}>Complete Section</button>
               </div>
             </div>
           )}
@@ -4879,16 +4970,20 @@ function handleGuidedBack({
   guidedArea,
   guidedRequirement,
   guidedBrickStep,
+  guidedRoofingMode,
   guidedRoofingStep,
   roofingConfiguration,
   setGuidedBrickStep,
   setGuidedBrickSupplier,
   setGuidedBrickRange,
+  setGuidedRoofingMode,
   setGuidedRoofingStep,
   setRoofingConfiguration,
   setGuidedScreen,
   setGuidedArea,
   setGuidedRequirementKey,
+  embedded = false,
+  onEmbeddedBack = null,
 }) {
   if (guidedScreen === "product") {
     if (guidedRequirement?.requirementKey === "bricks") {
@@ -4908,6 +5003,56 @@ function handleGuidedBack({
       return;
     }
     if (guidedRequirement?.requirementKey === "roofing") {
+      if (!guidedRoofingMode || guidedRoofingStep === "landing") {
+        setGuidedRoofingMode("");
+        setGuidedRoofingStep("landing");
+        setGuidedScreen("exterior");
+        setGuidedRequirementKey("");
+        return;
+      }
+      if (guidedRoofingMode === "fascia-gutter") {
+        if (guidedRoofingStep === "downpipes") {
+          setGuidedRoofingStep("gutters");
+          return;
+        }
+        if (guidedRoofingStep === "gutters") {
+          setGuidedRoofingStep("fascia");
+          return;
+        }
+        setGuidedRoofingMode("");
+        setGuidedRoofingStep("landing");
+        return;
+      }
+      if (guidedRoofingMode === "colorbond") {
+        if (guidedRoofingStep === "finish") {
+          setGuidedRoofingStep("colour");
+          return;
+        }
+        if (guidedRoofingStep === "colour") {
+          setGuidedRoofingStep("profile");
+          return;
+        }
+        setGuidedRoofingMode("");
+        setGuidedRoofingStep("landing");
+        return;
+      }
+      if (guidedRoofingMode === "roof-tiles") {
+        if (guidedRoofingStep === "tileFinish") {
+          setGuidedRoofingStep("tileProduct");
+          return;
+        }
+        if (guidedRoofingStep === "tileProduct") {
+          setGuidedRoofingStep("tileRange");
+          return;
+        }
+        if (guidedRoofingStep === "tileRange") {
+          setGuidedRoofingStep("tileManufacturer");
+          return;
+        }
+        setGuidedRoofingMode("");
+        setGuidedRoofingStep("landing");
+        return;
+      }
       if (guidedRoofingStep === "tileFinish") {
         setGuidedRoofingStep("tileProduct");
         return;
@@ -4952,6 +5097,7 @@ function handleGuidedBack({
         setGuidedRoofingStep("fascia");
         return;
       }
+      setGuidedRoofingMode("");
       setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", fasciaProductCode: "", gutterProductCode: "", downpipeProductCode: "", colour: "", finish: "" });
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
@@ -4974,6 +5120,10 @@ function handleGuidedBack({
   if (guidedScreen === "interior" || guidedScreen === "exterior" || guidedScreen === "review") {
     setGuidedScreen("areas");
     setGuidedArea("");
+    return;
+  }
+  if (embedded) {
+    onEmbeddedBack?.();
     return;
   }
   window.history.back();

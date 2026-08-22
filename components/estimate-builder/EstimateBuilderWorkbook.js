@@ -1,7 +1,8 @@
-import { Component, memo, useEffect, useMemo, useRef, useState } from "react";
+import { Component, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import {
   BarChart3,
   Briefcase,
@@ -378,6 +379,7 @@ function workspaceVisual(pageKey) {
 }
 
 export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
+  const router = useRouter();
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
   const { workspaceId, loading: workspaceLoading } = useWorkspace();
   const moduleWorkspaceId = organisationId || workspaceId;
@@ -424,11 +426,31 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   useEffect(() => {
     if (jobFileError && isWorkbookLoaded(sheet.workbook)) setJobFileError("");
   }, [jobFileError, sheet.workbook]);
+  const setEstimateBuilderPageQuery = useCallback((pageKey) => {
+    if (!router?.isReady || previewMode || mode || !WORKSPACE_VISUALS[pageKey]) return;
+    const currentPage = typeof router.query.page === "string" ? router.query.page : "";
+    if (currentPage === pageKey) return;
+    router.replace(
+      { pathname: router.pathname, query: { ...router.query, page: pageKey } },
+      undefined,
+      { shallow: true }
+    );
+  }, [mode, previewMode, router]);
+  const navigateWorkspacePage = useCallback((pageKey) => {
+    if (!WORKSPACE_VISUALS[pageKey]) return;
+    if (sheet.workbook.page !== pageKey) sheet.setPage(pageKey);
+    setEstimateBuilderPageQuery(pageKey);
+  }, [setEstimateBuilderPageQuery, sheet]);
   useEffect(() => {
-    if (!initialPage || previewMode || mode) return;
-    if (!WORKSPACE_VISUALS[initialPage] || sheet.workbook.page === initialPage) return;
-    sheet.setPage(initialPage);
-  }, [initialPage, mode, previewMode, sheet]);
+    if (previewMode || mode) return;
+    const routePage = typeof router.query.page === "string" ? router.query.page : initialPage;
+    if (!routePage || !WORKSPACE_VISUALS[routePage] || sheet.workbook.page === routePage) return;
+    sheet.setPage(routePage);
+  }, [initialPage, mode, previewMode, router.query.page, sheet]);
+  useEffect(() => {
+    if (previewMode || mode || !WORKSPACE_VISUALS[sheet.workbook.page]) return;
+    setEstimateBuilderPageQuery(sheet.workbook.page);
+  }, [mode, previewMode, setEstimateBuilderPageQuery, sheet.workbook.page]);
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
@@ -650,7 +672,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
               background: active ? visual.color : "#ffffff",
               boxShadow: active ? `0 14px 28px ${visual.color}33` : "0 8px 18px rgba(15, 23, 42, 0.05)",
             }}
-            onClick={() => sheet.setPage(page.key)}
+            onClick={() => navigateWorkspacePage(page.key)}
           >
             <span className="project-workspace-nav-icon" style={{ ...styles.navButtonIcon, background: active ? "rgba(255,255,255,0.18)" : visual.soft }}>
               <NavIcon size={22} strokeWidth={2.4} />
@@ -802,7 +824,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
             {sheet.workbook.page === "projectDashboard" && (
-              <ProjectDashboardSheet sheet={sheet} />
+              <ProjectDashboardSheet sheet={sheet} navigateWorkspacePage={navigateWorkspacePage} />
             )}
             {sheet.workbook.page === "dataInput" && (
               <DataInputSheet
@@ -839,7 +861,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           {sheet.workbook.page === "clientSelections" && (
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
-              onBackToDashboard={() => sheet.setPage("projectDashboard")}
+              onBackToDashboard={() => navigateWorkspacePage("projectDashboard")}
             />
           )}
           {sheet.workbook.page === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
@@ -1012,6 +1034,7 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
     <ClientSelectionsErrorBoundary onError={setLoadError}>
       <LoadedClientSelectionsPage
         {...moduleContext}
+        onEmbeddedBack={onBackToDashboard}
         onEmbeddedMount={() => {
           mountedRef.current = true;
         }}
@@ -1265,7 +1288,7 @@ const DASHBOARD_WORKSPACE_CARDS = [
   },
 ];
 
-function ProjectDashboardSheet({ sheet }) {
+function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
   return (
     <div style={styles.dashboardShell}>
       <section style={styles.dashboardTopGrid}>
@@ -1275,7 +1298,7 @@ function ProjectDashboardSheet({ sheet }) {
               <h3 style={styles.dashboardPanelTitle}>General</h3>
               <p style={styles.dashboardPanelSubtitle}>Linked directly to Project Setup. Updating these fields updates the workbook source data.</p>
             </div>
-            <button type="button" style={styles.dashboardSmallNavButton} onClick={() => sheet.setPage("dataInput")}>Open Project Setup</button>
+            <button type="button" style={styles.dashboardSmallNavButton} onClick={() => navigateWorkspacePage("dataInput")}>Open Project Setup</button>
           </div>
           <div style={styles.dashboardFieldGrid}>
             {DASHBOARD_GENERAL_FIELDS.map((field) => (
@@ -1315,7 +1338,7 @@ function ProjectDashboardSheet({ sheet }) {
             type="button"
             className="project-workspace-card"
             style={{ ...styles.dashboardWorkspaceCard, background: visual.soft, borderColor: visual.border }}
-            onClick={() => sheet.setPage(card.page)}
+            onClick={() => navigateWorkspacePage(card.page)}
           >
             <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: visual.color, borderColor: visual.color }}>
               <CardIcon size={30} strokeWidth={2.3} />

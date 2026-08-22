@@ -39,20 +39,21 @@ try {
   await waitForText(page, "Roofing");
   await screenshot(page, "03-client-selections-exterior.png");
   await clickByText(page, "button", "Roofing");
-  await page.waitForSelector('[data-testid="roofing-roof-type-step"]');
-  await assertText(page, "Metal Roofing");
+  await page.waitForSelector('[data-testid="roofing-three-card-home"]');
+  await assertText(page, "Fascia & Gutter");
+  await assertText(page, "COLORBOND Roofing");
   await assertText(page, "Roof Tiles");
-  await screenshot(page, "04-roofing-roof-type.png");
+  await screenshot(page, "04-roofing-three-card-home.png");
 
-  await clickByText(page, '[data-testid="roofing-roof-type-step"] button', "Metal Roofing");
-  await page.waitForSelector('[data-testid="roofing-system-step"]');
+  await clickByText(page, '[data-testid="roofing-three-card-home"] button', "COLORBOND Roofing");
+  await page.waitForSelector('[data-testid="roofing-profile-step"]');
   await assertText(page, "COLORBOND");
   await assertText(page, "LYSAGHT");
   await screenshot(page, "05-metal-roofing-regression.png");
 
-  await clickByText(page, "button", "Roof Type");
-  await page.waitForSelector('[data-testid="roofing-roof-type-step"]');
-  await clickByText(page, '[data-testid="roofing-roof-type-step"] button', "Roof Tiles");
+  await clickByText(page, "button", "Back");
+  await page.waitForSelector('[data-testid="roofing-three-card-home"]');
+  await clickByText(page, '[data-testid="roofing-three-card-home"] button', "Roof Tiles");
   await page.waitForSelector('[data-testid="roofing-tile-manufacturer-step"]');
   await assertText(page, "Monier");
   await assertText(page, "Bristile");
@@ -75,8 +76,8 @@ try {
   await clickByText(page, "button", "Exterior");
   await waitForText(page, "Roofing");
   await clickByText(page, "button", "Roofing");
-  await page.waitForSelector('[data-testid="roofing-roof-type-step"]');
-  await clickByText(page, '[data-testid="roofing-roof-type-step"] button', "Roof Tiles");
+  await page.waitForSelector('[data-testid="roofing-three-card-home"]');
+  await clickByText(page, '[data-testid="roofing-three-card-home"] button', "Roof Tiles");
   await page.waitForSelector('[data-testid="roofing-tile-manufacturer-step"]');
   await clickByText(page, '[data-testid="roofing-tile-manufacturer-step"] button', "Bristile");
   await page.waitForSelector('[data-testid="roofing-tile-range-step"]');
