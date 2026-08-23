@@ -26,6 +26,7 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const jsonPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.json");
+const fasciaGutterDownpipePath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE.json");
 const monierRoofTilesPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-MONIER-ROOF-TILES-CATALOGUE.json");
 const bristileRoofTilesPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-BRISTILE-ROOF-TILES-CATALOGUE.json");
 const csvPath = path.join(repoRoot, "data", "product-library", "catalogues", "roofing", "AU-METAL-ROOFING-CATALOGUE.csv");
@@ -37,6 +38,7 @@ const selectionsPath = path.join(repoRoot, "pages", "modules", "builders", "sele
 const productLibraryPath = path.join(repoRoot, "pages", "modules", "builders", "product-library.js");
 
 const catalogue = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+const fasciaGutterDownpipeCatalogue = JSON.parse(fs.readFileSync(fasciaGutterDownpipePath, "utf8"));
 const monierRoofTilesCatalogue = JSON.parse(fs.readFileSync(monierRoofTilesPath, "utf8"));
 const bristileRoofTilesCatalogue = JSON.parse(fs.readFileSync(bristileRoofTilesPath, "utf8"));
 const brickCatalogue = JSON.parse(fs.readFileSync(bricksPath, "utf8"));
@@ -57,6 +59,8 @@ assert.equal(catalogue.familyKey, "roofing", "catalogue must use the canonical r
 assert.deepEqual(catalogue.roofTypes.map((item) => item.key), ["metal_roofing", "roof_tiles"], "roof type branch must include metal roofing and roof tiles");
 assert.equal(catalogue.products.length, 3, "first roofing release should seed the official metal profiles only");
 assert.ok(catalogue.officialSources.every((url) => ["colorbond.com", "lysaght.com"].includes(new URL(url).hostname)), "all source URLs must be official COLORBOND or LYSAGHT pages");
+assert.equal(fasciaGutterDownpipeCatalogue.familyKey, "roofing", "Fascia/Gutter/Downpipe catalogue must stay in the Roofing family");
+assert.ok(fasciaGutterDownpipeCatalogue.products.length >= 12, "Fascia/Gutter/Downpipe catalogue must populate actual product choices");
 assert.equal(monierRoofTilesCatalogue.familyKey, "roofing", "Monier tiles must stay in the Roofing family");
 assert.equal(bristileRoofTilesCatalogue.familyKey, "roofing", "Bristile tiles must stay in the Roofing family");
 assert.ok(monierRoofTilesCatalogue.products.length >= 60, "Monier roof tiles must import real colour variants");
@@ -89,16 +93,17 @@ assert.equal(activeAuMetalRoofingMasterProducts(committed.products).length, 3, "
 const products = catalogue.products;
 const allRoofingProducts = [
   ...catalogue.products,
+  ...fasciaGutterDownpipeCatalogue.products,
   ...monierRoofTilesCatalogue.products,
   ...bristileRoofTilesCatalogue.products,
   ...exteriorFinishesCatalogue.products.filter((product) => product.family_key === "roofing"),
 ].map((product) => normalizeMasterProductRecord(product));
 const qldRoofingCount = allRoofingProducts.filter((product) => product.regions.includes("AU") || product.regions.includes("QLD")).length;
 const roofingAccessoryProducts = allRoofingProducts.filter((product) => ["fascia", "gutters", "downpipes"].includes(product.attributes?.roofPackageStep));
-assert.equal(roofingAccessoryProducts.length, 4, "Roofing master catalogue must include fascia/gutters/downpipes package products");
-assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "fascia").length, 1, "Roofing package must include fascia");
-assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "gutters").length, 2, "Roofing package must include gutters");
-assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 1, "Roofing package must include downpipes");
+assert.equal(roofingAccessoryProducts.length, 13, "Roofing master catalogue must include populated fascia/gutters/downpipes package products");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "fascia").length, 3, "Roofing package must include fascia choices");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "gutters").length, 6, "Roofing package must include gutter profile choices");
+assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 4, "Roofing package must include downpipe choices");
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
 assert.equal(colourNames.length, 22, "COLORBOND core colours must include 22 official colours");
 ["CUSTOM ORB", "TRIMDEK", "KLIP-LOK 700 CLASSIC"].forEach((profile) => {

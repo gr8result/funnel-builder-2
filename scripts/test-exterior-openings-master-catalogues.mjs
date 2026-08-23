@@ -22,10 +22,14 @@ import {
 const require = createRequire(import.meta.url);
 const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json");
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
+const auFasciaGutterDownpipeCatalogue = require("../data/product-library/catalogues/roofing/AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE.json");
 const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
-const roofing = auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product));
+const roofing = [
+  ...auMetalRoofingCatalogue.products,
+  ...auFasciaGutterDownpipeCatalogue.products,
+].map((product) => normalizeMasterProductRecord(product));
 const exteriorOpenings = exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const masterProducts = [...bricks, ...roofing, ...exteriorOpenings];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);

@@ -13,6 +13,7 @@ import {
 const require = createRequire(import.meta.url);
 const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json");
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
+const auFasciaGutterDownpipeCatalogue = require("../data/product-library/catalogues/roofing/AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE.json");
 const auMonierRoofTilesCatalogue = require("../data/product-library/catalogues/roofing/AU-MONIER-ROOF-TILES-CATALOGUE.json");
 const auBristileRoofTilesCatalogue = require("../data/product-library/catalogues/roofing/AU-BRISTILE-ROOF-TILES-CATALOGUE.json");
 const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
@@ -22,6 +23,7 @@ const kitchenProductCatalogue = require("../data/product-library/catalogues/kitc
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const roofing = [
   ...auMetalRoofingCatalogue.products,
+  ...auFasciaGutterDownpipeCatalogue.products,
   ...auMonierRoofTilesCatalogue.products,
   ...auBristileRoofTilesCatalogue.products,
 ].map((product) => normalizeMasterProductRecord(product));
@@ -48,10 +50,10 @@ assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Au
 assert.ok(roofingProducts.length > 0, "Product Library master catalogue exposes roofing products");
 assert.ok(monierRoofTiles.length >= 60, "Product Library master catalogue exposes Monier roof tile variants");
 assert.ok(bristileRoofTiles.length >= 100, "Product Library master catalogue exposes Bristile roof tile variants");
-assert.equal(roofingAccessories.length, 4, "Product Library master catalogue exposes roofing fascia/gutters/downpipes package records");
-assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "fascia").length, 1, "Product Library exposes fascia inside Roofing");
-assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "gutters").length, 2, "Product Library exposes gutters inside Roofing");
-assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 1, "Product Library exposes downpipes inside Roofing");
+assert.equal(roofingAccessories.length, 13, "Product Library master catalogue exposes populated roofing fascia/gutters/downpipes package records");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "fascia").length, 3, "Product Library exposes fascia inside Roofing");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "gutters").length, 6, "Product Library exposes gutters inside Roofing");
+assert.equal(roofingAccessories.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 4, "Product Library exposes downpipes inside Roofing");
 assert.ok(windowsProducts.length > 0, "Product Library master catalogue exposes Windows products");
 assert.ok(entryDoorProducts.length > 0, "Product Library master catalogue exposes Entry Door products");
 assert.ok(garageDoorProducts.length > 0, "Product Library master catalogue exposes Garage Door products");

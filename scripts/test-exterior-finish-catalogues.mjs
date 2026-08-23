@@ -25,12 +25,12 @@ import {
 const require = createRequire(import.meta.url);
 const qldBrickMasterCatalogue = require("../data/product-library/catalogues/bricks/QLD-BRICKS-MASTER-CATALOGUE.json");
 const auMetalRoofingCatalogue = require("../data/product-library/catalogues/roofing/AU-METAL-ROOFING-CATALOGUE.json");
+const auFasciaGutterDownpipeCatalogue = require("../data/product-library/catalogues/roofing/AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE.json");
 const exteriorOpeningsCatalogue = require("../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json");
 const exteriorFinishesCatalogue = require("../data/product-library/catalogues/exterior/AU-EXTERIOR-FINISHES-CATALOGUE.json");
 
 const finishFamilyKeys = [
   "cladding",
-  "gutters-fascia",
   "balustrades",
   "external-lighting",
   "exterior-paint",
@@ -43,13 +43,16 @@ const finishFamilyKeys = [
 const optionalProjectFamilies = new Set(["balustrades", "driveway", "decking", "pool", "retaining-walls", "landscaping"]);
 
 const bricks = qldBrickMasterCatalogue.products.map((product) => normalizeMasterProductRecord(product));
-const roofing = auMetalRoofingCatalogue.products.map((product) => normalizeMasterProductRecord(product));
+const roofing = [
+  ...auMetalRoofingCatalogue.products,
+  ...auFasciaGutterDownpipeCatalogue.products,
+].map((product) => normalizeMasterProductRecord(product));
 const exteriorOpenings = exteriorOpeningsCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const exteriorFinishes = exteriorFinishesCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const masterProducts = [...bricks, ...roofing, ...exteriorOpenings, ...exteriorFinishes];
 const enablements = ensureDemoBuilderCatalogueEnablements(masterProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 
-assert.equal(exteriorFinishes.length, 29, "Exterior finishes catalogue must expose every requested finish record");
+assert.equal(exteriorFinishes.length, 27, "Exterior finishes catalogue must expose every requested finish record");
 assert.equal(activeExteriorFinishMasterProducts(masterProducts).length, exteriorFinishes.length, "Exterior finish demo enablement candidates must cover the new catalogue");
 
 const expectedCladdingCodes = [
@@ -185,7 +188,7 @@ finishFamilyKeys.forEach((familyKey) => {
 assert.equal(EXTERIOR_REQUIREMENTS.some((requirement) => requirement.familyKey.startsWith("visual-")), false, "Exterior requirements must not use visual-only placeholder families");
 assert.equal(EXTERIOR_REQUIREMENTS.some((requirement) => /colour$/i.test(requirement.label)), false, "Exterior colour choices must live inside product/family variants, not standalone colour requirements");
 
-const completedSelections = ["bricks", "roofing", "windows", "entry-door", "garage-door", "cladding", "gutters-fascia", "external-lighting"].map(selectionFor);
+const completedSelections = ["bricks", "roofing", "windows", "entry-door", "garage-door", "cladding", "external-lighting"].map(selectionFor);
 const selectionMap = selectedByRequirement(completedSelections, EXTERIOR_REQUIREMENTS);
 const paintRequirement = EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "exterior-paint");
 const paintProduct = exteriorFinishes.find((product) => product.familyKey === "exterior-paint");
@@ -201,7 +204,10 @@ assert.equal(statusForRequirement(paintRequirement, selectionFor("exterior-paint
 assert.equal(nextIncompleteRequirement(EXTERIOR_REQUIREMENTS, selectionMap, EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "external-lighting"))?.requirementKey, "exterior-paint", "Exterior auto-advance reaches Exterior Paint after External Lighting");
 
 const selectionsPageSource = fs.readFileSync(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
-assert.match(selectionsPageSource, /AU-EXTERIOR-FINISHES-CATALOGUE\.json/, "Client Selections imports the exterior finishes master catalogue");
+const catalogueServiceSource = fs.readFileSync(new URL("../lib/product-library/catalogueService.js", import.meta.url), "utf8");
+assert.match(selectionsPageSource, /catalogueService/, "Client Selections uses the shared Product Library catalogue service");
+assert.match(catalogueServiceSource, /AU-EXTERIOR-FINISHES-CATALOGUE\.json/, "Shared Product Library catalogue service imports the exterior finishes master catalogue");
+assert.match(catalogueServiceSource, /AU-FASCIA-GUTTER-DOWNPIPE-CATALOGUE\.json/, "Shared Product Library catalogue service imports the Roofing fascia/gutter/downpipe catalogue");
 assert.match(selectionsPageSource, /requirementAppliesToBook/, "Client Selections must filter project-conditional exterior requirements");
 assert.match(selectionsPageSource, /requirementsForGuidedArea\("exterior", book\)/, "Exterior card flow must use book-aware requirement filtering");
 assert.match(selectionsPageSource, /applicableGuidedRequirementsForBook\(book\)/, "Auto-advance must use book-aware guided requirements");
@@ -209,7 +215,7 @@ assert.match(selectionsPageSource, /EXTERIOR COMPLETE\. Opening Interior\./, "Co
 assert.doesNotMatch(selectionsPageSource, /data\/product-library\/catalogues\/client-selections/i, "Client Selections must not load a separate client-only product catalogue");
 
 const productLibraryPageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
-assert.match(productLibraryPageSource, /AU-EXTERIOR-FINISHES-CATALOGUE\.json/, "Product Library imports the exterior finishes master catalogue");
+assert.match(productLibraryPageSource, /catalogueService/, "Product Library uses the shared catalogue service");
 assert.match(productLibraryPageSource, /function addSupplier\(\)/, "Product Library must expose real Add Supplier management");
 assert.match(productLibraryPageSource, /function addRange\(\)/, "Product Library must expose real Add Range management");
 assert.match(productLibraryPageSource, /startNewProduct\(\)/, "Product Library Add Product must open the canonical product form");
