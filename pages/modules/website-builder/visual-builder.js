@@ -30,6 +30,7 @@ import { DEFAULT_FOOTER_COMPANY_LINKS, GR8_RESULT_FOOTER_NAVIGATION_LINKS, apply
 import { VIDEO_HERO_CANONICAL_MEDIA_FIELDS, isUnsafeVideoHeroUrl, isVideoHeroMediaFieldKey, mergeVideoHeroProps, normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, resolveVideoHeroUrl } from "../../../lib/website-builder/videoHero";
 import { fetchWebsiteProjectFromServer, saveWebsiteProjectToServer } from "../../../lib/website-builder/remoteProjects";
 import { normalizeSharedPrimaryNavigation } from "../../../lib/website-builder/sharedNavigation";
+import { useWorkspace } from "../../../hooks/useWorkspace";
 import { hasGlobalPageWidthMode, normalizePageWidthMode, resolveGlobalPageWidthMode, resolvePageWidthMode } from "../../../lib/website-builder/pageLayout";
 import {
   preserveExistingTestimonialAvatarUrls,
@@ -43,6 +44,8 @@ import {
 } from "../../../lib/website-builder/sharedBlockTemplates";
 
 const DEVELOPER_USER_IDS = new Set(["35ab846e-0764-498b-b1f8-7d2cf27d85a5"]);
+const FINAL_APPROVED_WEBSITE_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+const WEBSITE_LOCK_STORAGE_PREFIX = "gr8:website-builder-unlock:";
 const WEBSITE_BUILDER_SAVE_DEBUG = process.env.NODE_ENV !== "production";
 const WEBSITE_BUILDER_MAX_VIDEO_BYTES = 250 * 1024 * 1024;
 
@@ -268,6 +271,14 @@ function getSavedPageBlocks(projectLike, pageName) {
   if (mapKey && Array.isArray(projectLike?.pageBlocks?.[mapKey])) return projectLike.pageBlocks[mapKey];
   if (mapKey && Array.isArray(projectLike?.chaiData?.[mapKey]?.blocks)) return projectLike.chaiData[mapKey].blocks;
   return null;
+}
+
+function normalizeWebsiteProjectId(value = "") {
+  return String(value || "").trim().replace(/^draft:/, "");
+}
+
+function isFinalApprovedWebsiteProjectId(value = "") {
+  return normalizeWebsiteProjectId(value) === FINAL_APPROVED_WEBSITE_PROJECT_ID;
 }
 
 function buildCanonicalSubmittedPageBlocksForSave(projectLike, pageName, blocks) {
@@ -856,6 +867,7 @@ function isLegacyAiStarterProject(project) {
 
 export default function VisualBuilderPage() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const { id: _idParam, projectId: _projectIdParam, page, name, mode, type, template, forceReload } = router.query;
   const projectId = _idParam || _projectIdParam;
   const [project, setProject] = useState(null);
@@ -883,6 +895,9 @@ export default function VisualBuilderPage() {
   const [customDomain, setCustomDomain] = useState("");
   const [primaryWebsite, setPrimaryWebsite] = useState(false);
   const [blockDefaults, setBlockDefaults] = useState({});
+  const [websiteLock, setWebsiteLock] = useState({ protected: false, locked: false, session: null });
+  const [unlockToken, setUnlockToken] = useState("");
+  const [unlockBusy, setUnlockBusy] = useState(false);
   const canSaveTemplates = DEVELOPER_USER_IDS.has(String(session?.user?.id || ""));
   const previewActionsRef = useRef(null);
   const syncInFlightRef = useRef(false);
@@ -892,10 +907,84 @@ export default function VisualBuilderPage() {
   // Tracks which projectId we've already resolved activePage for.
   // Prevents session token refreshes from snapping the user back to the URL's ?page= param.
   const activePageInitializedForRef = useRef(null);
+  const protectedProjectId = normalizeWebsiteProjectId(project?.id || projectId || "");
+  const isProtectedFinalWebsite = isFinalApprovedWebsiteProjectId(protectedProjectId);
+  // Editing sessions lapse after 60 minutes of inactivity. Surface that in the
+  // builder instead of letting the owner discover it when a Save is refused.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const expiryWarnedRef = useRef("");
+  const isWebsiteEditingUnlocked = !isProtectedFinalWebsite
+    || (!!unlockToken && websiteLock?.locked === false && !sessionExpired);
+  const builderReadOnly = isProtectedFinalWebsite && !isWebsiteEditingUnlocked;
+
+  useEffect(() => {
+    const expiresAt = Date.parse(websiteLock?.expiresAt || "");
+    if (!isProtectedFinalWebsite || !unlockToken || !Number.isFinite(expiresAt)) {
+      setSessionExpired(false);
+      return undefined;
+    }
+    const WARN_BEFORE_MS = 5 * 60 * 1000;
+    const tick = () => {
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        setSessionExpired(true);
+        return;
+      }
+      setSessionExpired(false);
+      if (remaining <= WARN_BEFORE_MS && expiryWarnedRef.current !== websiteLock.expiresAt) {
+        expiryWarnedRef.current = websiteLock.expiresAt;
+        flashNotice(
+          `Editing session expires in ${Math.max(1, Math.round(remaining / 60000))} minute(s). Save and Lock Website, or keep editing to extend it.`,
+          "info",
+          9000
+        );
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 30_000);
+    return () => clearInterval(timer);
+  }, [isProtectedFinalWebsite, unlockToken, websiteLock?.expiresAt]);
 
   useEffect(() => {
     setBrandAssets(getWebsiteBuilderAssets());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const safeProjectId = normalizeWebsiteProjectId(project?.id || projectId || "");
+    if (!safeProjectId || !isFinalApprovedWebsiteProjectId(safeProjectId)) {
+      setWebsiteLock({ protected: false, locked: false, session: null });
+      setUnlockToken("");
+      return;
+    }
+    const storedToken = window.sessionStorage.getItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${safeProjectId}`) || "";
+    if (storedToken && !unlockToken) setUnlockToken(storedToken);
+    const controller = new AbortController();
+    const loadStatus = async () => {
+      try {
+        const response = await fetch(`/api/website-builder/content-lock?projectId=${encodeURIComponent(safeProjectId)}${storedToken ? `&unlockToken=${encodeURIComponent(storedToken)}` : ""}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload = await readApiJson(response);
+        if (!response.ok || !payload?.ok) return;
+        if (storedToken && payload.locked) {
+          window.sessionStorage.removeItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${safeProjectId}`);
+          setUnlockToken("");
+        }
+        setWebsiteLock({
+          protected: true,
+          locked: !!payload.locked,
+          session: payload.session || null,
+          expiresAt: payload.expiresAt || null,
+        });
+      } catch (error) {
+        if (error?.name !== "AbortError") console.warn("Could not load website lock status", error);
+      }
+    };
+    loadStatus();
+    return () => controller.abort();
+  }, [project?.id, projectId, unlockToken]);
 
   useEffect(() => {
     if (!session?.user?.id) return undefined;
@@ -1497,8 +1586,109 @@ export default function VisualBuilderPage() {
     setNoticeDuration(2400);
   }
 
+  async function refreshWebsiteLockStatus(nextToken = unlockToken) {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return null;
+    const response = await fetch(`/api/website-builder/content-lock?projectId=${encodeURIComponent(protectedProjectId)}${nextToken ? `&unlockToken=${encodeURIComponent(nextToken)}` : ""}`, {
+      cache: "no-store",
+    });
+    const payload = await readApiJson(response);
+    if (response.ok && payload?.ok) {
+      setWebsiteLock({ protected: true, locked: !!payload.locked, session: payload.session || null, expiresAt: payload.expiresAt || null });
+    }
+    return payload;
+  }
+
+  async function handleUnlockForEditing() {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return;
+    if (!session?.access_token) {
+      flashNotice("Log in as the site owner before unlocking this website.", "error", 6000);
+      return;
+    }
+    const confirmation = window.prompt("This approved website is protected. Type UNLOCK to edit.");
+    if (confirmation !== "UNLOCK") {
+      flashNotice("Unlock cancelled. The website remains protected.", "info", 3600);
+      return;
+    }
+    setUnlockBusy(true);
+    try {
+      const response = await fetch("/api/website-builder/content-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ projectId: protectedProjectId, action: "unlock", confirmation }),
+      });
+      const payload = await readApiJson(response);
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || `Could not unlock website (HTTP ${response.status})`);
+      }
+      window.sessionStorage.setItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${protectedProjectId}`, payload.unlockToken || "");
+      setUnlockToken(payload.unlockToken || "");
+      setWebsiteLock({ protected: true, locked: false, session: payload.session || null, expiresAt: payload.expiresAt || null });
+      flashNotice("Editing unlocked. Save, Preview and Publish now use this owner session.", "success", 5200);
+    } catch (error) {
+      flashNotice(error?.message || "Could not unlock website.", "error", 8000);
+    } finally {
+      setUnlockBusy(false);
+    }
+  }
+
+  async function handleRelockWebsite({ silent = false } = {}) {
+    if (!isProtectedFinalWebsite || !protectedProjectId) return true;
+    try {
+      await fetch("/api/website-builder/content-lock", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(unlockToken ? { "x-website-unlock-token": unlockToken } : {}),
+        },
+        body: JSON.stringify({ projectId: protectedProjectId, unlockToken }),
+      });
+    } catch (error) {
+      console.warn("Could not relock website session", error);
+    }
+    if (typeof window !== "undefined") window.sessionStorage.removeItem(`${WEBSITE_LOCK_STORAGE_PREFIX}${protectedProjectId}`);
+    setUnlockToken("");
+    setWebsiteLock({ protected: true, locked: true, session: null });
+    if (!silent) flashNotice("Website locked again.", "success", 3600);
+    return true;
+  }
+
+  async function handleSaveAndLockWebsite() {
+    if (builderReadOnly) return handleUnlockForEditing();
+    const saved = await Promise.resolve(previewActionsRef.current?.saveCurrent?.({ saveSource: "manual-save-lock" }));
+    if (saved?._saveError) {
+      flashNotice(saved._saveErrorMessage || "Save failed, so the website was not locked.", "error", 9000);
+      return false;
+    }
+    return handleRelockWebsite();
+  }
+
+  async function handleCancelEditing() {
+    if (!isProtectedFinalWebsite) return;
+    if (window.confirm("Cancel editing and reload the latest verified saved draft? Unsaved browser-only changes will be discarded.")) {
+      try {
+        if (session?.access_token && project?.id) {
+          const latestSavedProject = await fetchWebsiteProjectFromServer(session, project.id, { pageName: activeProjectPageName });
+          if (latestSavedProject?.id) {
+            cacheWebsiteProject(latestSavedProject, { onlyIfNewer: false });
+            setProject(latestSavedProject);
+          }
+        }
+      } catch (error) {
+        console.warn("Could not reload latest draft while cancelling editing", error);
+      }
+      await handleRelockWebsite({ silent: true });
+      flashNotice("Editing cancelled. Website locked and latest saved draft reloaded.", "success", 5200);
+    }
+  }
+
   async function syncProjectToServer(nextProject, options = {}) {
     if (!session?.access_token || !nextProject?.id) return nextProject;
+    if (isFinalApprovedWebsiteProjectId(nextProject.id) && !unlockToken) {
+      const message = "Website protected - click Unlock for Editing before saving.";
+      if (options?.force) flashNotice(message, "error", 7000);
+      return { ...(nextProject || {}), _saveError: true, _saveErrorMessage: message };
+    }
     const syncPageName = resolveProjectPageName(options?.pageName || activePage, nextProject);
     const saveSource = options?.saveSource || (options?.force ? "manual-save" : "autosave");
 
@@ -1562,6 +1752,7 @@ export default function VisualBuilderPage() {
           pageName: options?.siteOnly ? "" : syncPageName,
           siteOnly: options?.siteOnly === true,
           saveSource,
+          unlockToken,
         });
       } catch (firstError) {
         // If the token is stale (401), refresh and retry once
@@ -1573,6 +1764,7 @@ export default function VisualBuilderPage() {
                 pageName: options?.siteOnly ? "" : syncPageName,
                 siteOnly: options?.siteOnly === true,
                 saveSource,
+                unlockToken,
               });
             } else {
               throw firstError;
@@ -1644,6 +1836,9 @@ export default function VisualBuilderPage() {
       };
 
       const cachedProject = cacheWebsiteProject(mergedProject, { onlyIfNewer: false });
+      if (isFinalApprovedWebsiteProjectId(nextProject.id)) {
+        refreshWebsiteLockStatus(unlockToken).catch((error) => console.warn("Could not refresh website lock after save", error));
+      }
       if (cachedProject?.id === project?.id) {
         setProject(cachedProject);
       }
@@ -1750,6 +1945,11 @@ export default function VisualBuilderPage() {
       return;
     }
 
+    if (isProtectedFinalWebsite && !unlockToken) {
+      flashNotice("Website protected - click Unlock for Editing before publishing.", "error", 7000);
+      return;
+    }
+
     const normalizedSlug = slugify(siteSlug || project.name || "site");
     if (!normalizedSlug) {
       flashNotice("Add a valid site slug before publishing.", "error");
@@ -1789,11 +1989,14 @@ export default function VisualBuilderPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
+          ...(unlockToken ? { "x-website-unlock-token": unlockToken } : {}),
         },
         body: JSON.stringify({
           slug: normalizedSlug,
           customDomain: normalizeDomain(customDomain || projectForPublish?.customDomain || projectForPublish?.custom_domain || projectForPublish?.publication?.customDomain || projectForPublish?.publication?.custom_domain || ""),
           primaryWebsite,
+          unlockToken,
           project: {
             ...projectForPublish,
             brandAssets,
@@ -1863,6 +2066,11 @@ export default function VisualBuilderPage() {
         setProject((current) => current ? { ...current, publication: nextPublication } : current);
         flashNotice("Website published", "success");
       }
+      if (isProtectedFinalWebsite) {
+        const shouldLock = window.confirm("Publish completed. Lock this website again?");
+        if (shouldLock) await handleRelockWebsite({ silent: true });
+        else await refreshWebsiteLockStatus(unlockToken);
+      }
     } catch (error) {
       flashNotice(error?.message || "Could not publish website", "error");
     } finally {
@@ -1872,6 +2080,10 @@ export default function VisualBuilderPage() {
 
   function saveProjectPatch(patch, successMessage = "Saved changes", syncOptions = {}) {
     if (!project?.id) return null;
+    if (isProtectedFinalWebsite && !unlockToken) {
+      flashNotice("Website protected - click Unlock for Editing before changing this website.", "error", 7000);
+      return null;
+    }
 
     // If the project isn't in localStorage yet (e.g. freshly loaded from server),
     // cache it first so updateWebsiteProject can find it by id.
@@ -2310,6 +2522,11 @@ export default function VisualBuilderPage() {
 
   function saveBlockPage(blocks, successMessage = `Saved ${activePage}`, options = {}) {
     const currentProject = project?.id ? (getWebsiteProject(project.id) || project) : project;
+    if (isFinalApprovedWebsiteProjectId(currentProject?.id) && !unlockToken) {
+      const message = "Website protected - click Unlock for Editing before saving.";
+      flashNotice(message, "error", 7000);
+      return { _saveError: true, _saveErrorMessage: message };
+    }
     const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
     const imageIssues = validateImageReferences(Array.isArray(blocks) ? blocks : []);
     if (imageIssues.length) {
@@ -2360,6 +2577,11 @@ export default function VisualBuilderPage() {
       const pageName = resolveProjectPageName(options?.pageName || activePage, currentProject);
       const saveSource = options?.saveSource || "manual-save";
       const isPreviewSave = options?.saveSource === "preview-autosave";
+      if (isFinalApprovedWebsiteProjectId(currentProject?.id) && !unlockToken) {
+        const message = "Website protected - click Unlock for Editing before saving.";
+        if (!isPreviewSave) flashNotice(message, "error", 7000);
+        return { ...(currentProject || {}), _saveError: true, _saveErrorMessage: message };
+      }
       if (!currentProject?.id) {
         console.error("[forceSaveBlockPage] project has no id — project state:", project);
         flashNotice("Could not save — project not loaded yet. Please wait and try again.", "error");
@@ -3467,7 +3689,7 @@ export default function VisualBuilderPage() {
               </div>
 
               <div style={styles.publishActionRow}>
-                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || saveBusy || !session}>
+                <button type="button" onClick={handlePublishWebsite} style={styles.publishBtn} disabled={publishBusy || saveBusy || !session || builderReadOnly}>
                   {publishBusy ? "Publishing..." : saveBusy ? "Saving..." : publication?.publishedAt ? "Update Published Site" : "Publish Site"}
                 </button>
 
@@ -3521,6 +3743,7 @@ export default function VisualBuilderPage() {
               ) : null}
 
               {!session ? <span style={styles.publishAuthHint}>Log in to publish this website.</span> : null}
+              {builderReadOnly ? <span style={styles.publishAuthHint}>Website protected - unlock for editing before publishing.</span> : null}
             </div>
 
             <div style={styles.controlsPanel}>
@@ -3636,6 +3859,16 @@ export default function VisualBuilderPage() {
                       previewActionsRef.current = actions;
                     }}
                     blockDefaults={blockDefaults}
+                    readOnly={builderReadOnly}
+                    lockStatusLabel={isProtectedFinalWebsite
+                      ? (sessionExpired
+                          ? "Editing session expired"
+                          : (builderReadOnly ? "Website Protected" : "Editing Unlocked"))
+                      : ""}
+                    onUnlockForEditing={handleUnlockForEditing}
+                    onSaveAndLockWebsite={handleSaveAndLockWebsite}
+                    onCancelEditing={handleCancelEditing}
+                    unlockBusy={unlockBusy}
                     showHeader={true}
                   />
                 </CanvasErrorBoundary>

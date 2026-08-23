@@ -8,7 +8,24 @@ import { getPublishedWebsiteBySlug } from "../lib/website-builder/publicationSto
 
 dotenv.config({ path: ".env.local" });
 
-const PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+const APPROVED_LIVE_WEBSITE_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
+
+// This test saves AND publishes whatever project it is pointed at. It must therefore
+// never target the approved live website: doing so rewrote real page content and
+// pushed it live on every run, and is exactly what the content lock now refuses
+// (WEBSITE_LOCKED / 423). Point it at an isolated fixture project to run it.
+const PROJECT_ID = String(process.env.WB_PIPELINE_TEST_PROJECT_ID || "").trim();
+
+if (!PROJECT_ID || PROJECT_ID === APPROVED_LIVE_WEBSITE_PROJECT_ID) {
+  console.log(
+    "SKIPPED: website save/publish live pipeline runtime test.\n" +
+    "  This test mutates and publishes its target project, so it will not run against\n" +
+    "  the approved live website. Set WB_PIPELINE_TEST_PROJECT_ID to an isolated fixture\n" +
+    "  project id to exercise the full save -> publish -> live pipeline."
+  );
+  process.exit(0);
+}
+
 const USER_ID = "35ab846e-0764-498b-b1f8-7d2cf27d85a5";
 const TOKEN = "diagnostic-local-token";
 const MARKER_ONE = "LIVE-PUBLISH-TEST-20260810";

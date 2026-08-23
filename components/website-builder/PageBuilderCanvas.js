@@ -373,7 +373,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSharedTemplate, onDetachSharedTemplate, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false, readOnly = false, lockStatusLabel = "", onUnlockForEditing, onSaveAndLockWebsite, onCancelEditing, unlockBusy = false }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -1201,6 +1201,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleInsertAt = (insertIndex, dataTransfer) => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     const safeIndex = Math.max(0, Math.min(insertIndex, blocks.length));
     const newBlockType = dataTransfer.getData("newBlockType");
 
@@ -1236,12 +1240,14 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleCanvasDragOver = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     if (dropIndex !== blocks.length) setDropIndex(blocks.length);
   };
 
   const handleCanvasDrop = (e) => {
+    if (readOnly) return;
     e.preventDefault();
     handleInsertAt(blocks.length, e.dataTransfer);
     setDropIndex(null);
@@ -1710,6 +1716,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const insertPresetBlock = (blockType, patch = {}) => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     if (!BlockDefinitions[blockType]) return;
     const newBlock = createNewBlock(blockType);
     newBlock.props = { ...newBlock.props, ...patch };
@@ -2184,11 +2194,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
-    const committedBlocks = await commitPendingInlineEdits();
+    const committedBlocks = readOnly ? blocks : await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
+    let saved = readOnly ? project : null;
     try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+      if (!readOnly) saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
     } catch (error) {
       console.error("Could not save before preview", error);
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
@@ -2232,11 +2242,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
       return;
     }
     previewWindow.document.write("<title>Opening preview...</title><body style=\"font-family:system-ui;padding:24px;color:#0f172a\">Opening preview...</body>");
-    const committedBlocks = await commitPendingInlineEdits();
+    const committedBlocks = readOnly ? blocks : await commitPendingInlineEdits();
     // Use forceSave so the server copy is up-to-date before the preview tab fetches it
-    let saved = null;
+    let saved = readOnly ? project : null;
     try {
-      saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
+      if (!readOnly) saved = await Promise.resolve((onForceSave || onSave)?.(committedBlocks, { saveSource: "preview-autosave" }));
     } catch (error) {
       console.error("Could not save before preview", error);
       saved = { _saveError: true, _saveErrorMessage: error?.message || "Could not save before preview" };
@@ -3461,6 +3471,10 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
 
   const handleSave = async () => {
+    if (readOnly) {
+      showSavePopup("Website protected - click Unlock for Editing.", "error");
+      return;
+    }
     showSavePopup("Saving...", "info");
     try {
       const committedBlocks = await commitPendingInlineEdits();
@@ -3729,12 +3743,36 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             ) : null}
           </div>
           <div style={{ ...styles.primaryActionGroup, flexShrink: 0 }}>
+            {lockStatusLabel ? (
+              <span style={{ ...styles.panelToggleBtn, cursor: "default", borderColor: readOnly ? "#f59e0b" : "#22c55e", color: readOnly ? "#fef3c7" : "#dcfce7" }}>
+                {lockStatusLabel}
+              </span>
+            ) : null}
+            {readOnly && onUnlockForEditing ? (
+              <button type="button" style={{ ...styles.saveBtn, opacity: unlockBusy ? 0.65 : 1 }} onClick={onUnlockForEditing} disabled={unlockBusy}>
+                {unlockBusy ? "Unlocking..." : "Unlock for Editing"}
+              </button>
+            ) : null}
+            {!readOnly && lockStatusLabel ? (
+              <>
+                {onSaveAndLockWebsite ? (
+                  <button type="button" style={styles.panelToggleBtn} onClick={onSaveAndLockWebsite}>
+                    Save and Lock Website
+                  </button>
+                ) : null}
+                {onCancelEditing ? (
+                  <button type="button" style={styles.panelToggleBtn} onClick={onCancelEditing}>
+                    Cancel Editing
+                  </button>
+                ) : null}
+              </>
+            ) : null}
             {project?.id ? (
               <button type="button" style={styles.previewBtn} onClick={handlePreviewPage}>
                 👁 Preview Page
               </button>
             ) : null}
-            <button style={styles.saveBtn} onClick={handleSave}>
+            <button style={{ ...styles.saveBtn, opacity: readOnly ? 0.45 : 1, cursor: readOnly ? "not-allowed" : "pointer" }} onClick={handleSave} disabled={readOnly}>
               💾 Save  {lastSavedAt ? <span style={{ fontSize: 16, opacity: 0.7, marginLeft: 4 }}>· ✓ {formatSavedAgo(lastSavedAt)}</span> : null}
             </button>
           </div>
@@ -3907,13 +3945,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                     return (
                     <React.Fragment key={block.id || `${block.type}-${blockIndex}`}>
                       <DropInsertZone
-                        active={dropIndex === blockIndex}
-                        onDragOver={(e) => {
+                        active={!readOnly && dropIndex === blockIndex}
+                        onDragOver={readOnly ? null : (e) => {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = "copy";
                           if (dropIndex !== blockIndex) setDropIndex(blockIndex);
                         }}
-                        onDrop={(e) => {
+                        onDrop={readOnly ? null : (e) => {
                           e.preventDefault();
                           handleInsertAt(blockIndex, e.dataTransfer);
                           setDropIndex(null);
@@ -3922,6 +3960,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       <CanvasBlock
                         block={displayBlock}
                         index={blockIndex}
+                        activePage={activePage}
                         pageCanvasWidth={responsiveCanvasLayoutWidth}
                         pageFullWidth={pageIsFullWidth}
                         frameBackground={resolveCanvasFrameBackground(canvasBlockEntries, idx)}
@@ -3933,7 +3972,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                         selected={selectedIndex === blockIndex}
                         hovered={hoveredIndex === blockIndex}
                         allowHoverOverlay={!selectedGlobalRole && typeof selectedIndex !== "number"}
-                        onSelect={selectCanvasBlock}
+                        readOnly={readOnly}
+                        onSelect={readOnly ? null : selectCanvasBlock}
                         onHover={(value) => setHoveredIndex(value)}
                         onDelete={handleDelete}
                         onDuplicate={handleDuplicate}
@@ -3959,13 +3999,13 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                     );
                   })}
                   <DropInsertZone
-                    active={dropIndex === blocks.length}
-                    onDragOver={(e) => {
+                    active={!readOnly && dropIndex === blocks.length}
+                    onDragOver={readOnly ? null : (e) => {
                       e.preventDefault();
                       e.dataTransfer.dropEffect = "copy";
                       if (dropIndex !== blocks.length) setDropIndex(blocks.length);
                     }}
-                    onDrop={(e) => {
+                    onDrop={readOnly ? null : (e) => {
                       e.preventDefault();
                       handleInsertAt(blocks.length, e.dataTransfer);
                       setDropIndex(null);
@@ -3981,8 +4021,8 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
                       device={previewMode}
                       layoutWidth={responsiveCanvasLayoutWidth}
                       selected={selectedGlobalRole === "footer"}
-                      onSelect={() => selectGlobalBlock("footer")}
-                      onChange={(nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
+                      onSelect={readOnly ? null : () => selectGlobalBlock("footer")}
+                      onChange={readOnly ? null : (nextBlock) => onUpdateGlobalBlock?.("footer", nextBlock)}
                       onSaveAsGlobal={onSaveAsGlobal}
                       onDelete={() => onUpdateGlobalBlock?.("footer", null)}
                     />
@@ -3998,11 +4038,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         {showProperties ? (
           <div data-builder-sidepanel="true" style={{ ...styles.sidePanelShell, ...(isNarrowLayout ? { alignSelf: "stretch" } : {}) }}>
             {rightPanelMode === "global" ? (
-              <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
+              readOnly ? <div style={styles.emptyState}>Website protected - unlock to edit styles.</div> : <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
             ) : rightPanelMode === "sections" ? (
-              <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
+              <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={readOnly ? null : selectCanvasBlock} onMove={readOnly ? null : moveBlockByStep} />
             ) : (
-              <PropertiesPanel
+              readOnly ? <div style={styles.emptyState}>Website protected - unlock to edit blocks.</div> : <PropertiesPanel
                 block={selectedGlobalBlock || (blocks[selectedIndex] ? resolveSharedBlockInstance(blocks[selectedIndex], project) : null)}
                 index={selectedGlobalBlock ? -1 : selectedIndex}
                 device={previewMode}

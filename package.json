@@ -20,6 +20,7 @@
     "sms:flush": "node scripts/flush-sms-queue.js",
     "sendgrid:download-templates": "node scripts/download-sendgrid-templates.mjs",
     "test:wb-typography": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-builder-typography-persistence.mjs",
+    "test:wb-content-lock": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-content-lock.mjs",
     "test:wb-image-integrity": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-image-reference-integrity.mjs",
     "test:wb-persistence": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-save-publish-persistence-regression.mjs",
     "test:standard-inclusions-management": "node scripts/test-standard-inclusions-management-regression.mjs",
