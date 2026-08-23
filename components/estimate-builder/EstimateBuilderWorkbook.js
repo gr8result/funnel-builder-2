@@ -441,12 +441,18 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     if (sheet.workbook.page !== pageKey) sheet.setPage(pageKey);
     setEstimateBuilderPageQuery(pageKey);
   }, [setEstimateBuilderPageQuery, sheet]);
+  const requestedPage = !previewMode && !mode && typeof router.query.page === "string" && WORKSPACE_VISUALS[router.query.page]
+    ? router.query.page
+    : !previewMode && !mode && WORKSPACE_VISUALS[initialPage]
+      ? initialPage
+      : "";
+  const activePageKey = requestedPage || sheet.workbook.page;
   useEffect(() => {
     if (previewMode || mode) return;
-    const routePage = typeof router.query.page === "string" ? router.query.page : initialPage;
+    const routePage = requestedPage;
     if (!routePage || !WORKSPACE_VISUALS[routePage] || sheet.workbook.page === routePage) return;
     sheet.setPage(routePage);
-  }, [initialPage, mode, previewMode, router.query.page, sheet]);
+  }, [mode, previewMode, requestedPage, sheet]);
   useEffect(() => {
     if (previewMode || mode || !WORKSPACE_VISUALS[sheet.workbook.page]) return;
     setEstimateBuilderPageQuery(sheet.workbook.page);
@@ -454,7 +460,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
-  const activeVisual = workspaceVisual(sheet.workbook.page);
+  const activeVisual = workspaceVisual(activePageKey);
   const ActivePageIcon = activeVisual.Icon;
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
   const commercialModuleContext = useMemo(() => ({
@@ -746,9 +752,9 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             ) : sheet.lastSavedAt ? (
               <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
             ) : null}
-            {(sheet.workbook.page === "quotation" || sheet.workbook.page === "clientSelections") && (
+            {(activePageKey === "quotation" || activePageKey === "clientSelections") && (
               <div style={styles.quoteSearchControls}>
-                {sheet.workbook.page === "quotation" ? (
+                {activePageKey === "quotation" ? (
                   <>
                     <input
                       style={styles.searchInput}
@@ -823,10 +829,10 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
         </section>
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
-            {sheet.workbook.page === "projectDashboard" && (
+            {activePageKey === "projectDashboard" && (
               <ProjectDashboardSheet sheet={sheet} navigateWorkspacePage={navigateWorkspacePage} />
             )}
-            {sheet.workbook.page === "dataInput" && (
+            {activePageKey === "dataInput" && (
               <DataInputSheet
                 sheet={sheet}
                 sections={dataInputWorkbookSections(sheet)}
@@ -835,11 +841,11 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                 canEditFormulas={isAdminMode}
               />
             )}
-            {sheet.workbook.page === "supplierQuotations" && (
+            {activePageKey === "supplierQuotations" && (
               <SupplierQuotationsSheet sheet={sheet} />
             )}
-            {sheet.workbook.page === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
-            {sheet.workbook.page === "formulaSheet" && (
+            {activePageKey === "windowsDoors" && <WindowsDoorsSheet sheet={sheet} />}
+            {activePageKey === "formulaSheet" && (
               <FormulaSheet
                 sheet={sheet}
                 formulaTarget={formulaTarget}
@@ -847,34 +853,34 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
                 canEditFormulas={isAdminMode}
               />
           )}
-          {sheet.workbook.page === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
-          {sheet.workbook.page === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
-          {sheet.workbook.page === "productLibrary" && <ProductLibrarySheet sheet={sheet} organisationId={moduleWorkspaceId} />}
-          {sheet.workbook.page === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
-          {sheet.workbook.page === "estimateInclusions" && <EstimateInclusionsSheet sheet={sheet} />}
-          {sheet.workbook.page === "summary" && <SummarySheet sheet={sheet} />}
-          {sheet.workbook.page === "projectEstimate" && <ProjectEstimateSheet sheet={sheet} />}
-          {sheet.workbook.page === "clientPage" && <ClientPageSheet sheet={sheet} />}
-          {sheet.workbook.page === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "clientSelections" && (
+          {activePageKey === "quotation" && <QuotationSheet sheet={sheet} onFormulaTarget={setFormulaTarget} />}
+          {activePageKey === "standardInclusions" && <StandardInclusionsSheet sheet={sheet} />}
+          {activePageKey === "productLibrary" && <ProductLibrarySheet sheet={sheet} organisationId={moduleWorkspaceId} />}
+          {activePageKey === "estimatingCatalogue" && <EstimatingCatalogueSheet sheet={sheet} />}
+          {activePageKey === "estimateInclusions" && <EstimateInclusionsSheet sheet={sheet} />}
+          {activePageKey === "summary" && <SummarySheet sheet={sheet} />}
+          {activePageKey === "projectEstimate" && <ProjectEstimateSheet sheet={sheet} />}
+          {activePageKey === "clientPage" && <ClientPageSheet sheet={sheet} />}
+          {activePageKey === "boq" && <CommercialBoqPage {...commercialModuleContext} />}
+          {activePageKey === "variations" && <CommercialVariationsPage {...commercialModuleContext} />}
+          {activePageKey === "purchaseOrders" && <CommercialPurchaseOrdersPage {...commercialModuleContext} />}
+          {activePageKey === "clientSelections" && (
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               onBackToDashboard={() => navigateWorkspacePage("projectDashboard")}
             />
           )}
-          {sheet.workbook.page === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "documentVault" && <CommercialDocumentVaultPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "rfis" && <CommercialRfisPage {...commercialModuleContext} />}
-          {sheet.workbook.page === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
-          {sheet.workbook.page === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
-          {sheet.workbook.page === "aiPlanTakeoff" && (
+          {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
+          {activePageKey === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
+          {activePageKey === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
+          {activePageKey === "documentVault" && <CommercialDocumentVaultPage {...commercialModuleContext} />}
+          {activePageKey === "rfis" && <CommercialRfisPage {...commercialModuleContext} />}
+          {activePageKey === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
+          {activePageKey === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
+          {activePageKey === "aiPlanTakeoff" && (
             <AIPlanTakeoffPage sheet={sheet} />
           )}
-          {sheet.workbook.page === "gantt" && (
+          {activePageKey === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
           )}
         </fieldset>
@@ -885,10 +891,10 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       </main>
 
       <aside style={styles.summary}>
-        {sheet.workbook.page === "projectEstimate" || sheet.workbook.page === "clientPage" || sheet.workbook.page === "cashflowSummary" ? (
+        {activePageKey === "projectEstimate" || activePageKey === "clientPage" || activePageKey === "cashflowSummary" ? (
           <>
-            <div style={styles.eyebrow}>{sheet.workbook.page === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
-            <h2 style={styles.navTitle}>{sheet.workbook.page === "cashflowSummary" ? "Contract Total" : "Estimate Total"}</h2>
+            <div style={styles.eyebrow}>{activePageKey === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
+            <h2 style={styles.navTitle}>{activePageKey === "cashflowSummary" ? "Contract Total" : "Estimate Total"}</h2>
             <div style={styles.finalBox}>
               <span>Total quoted price</span>
               <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
@@ -913,7 +919,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             </div>
           </>
         )}
-        {sheet.workbook.page !== "projectEstimate" && sheet.workbook.page !== "clientPage" && sheet.workbook.page !== "cashflowSummary" && sheet.workbook.page !== "procurement" && (
+        {activePageKey !== "projectEstimate" && activePageKey !== "clientPage" && activePageKey !== "cashflowSummary" && activePageKey !== "procurement" && (
           <>
             <Panel title="Missing Required Inputs">
               {sheet.preview.missingRequired.length ? (

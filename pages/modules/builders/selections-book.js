@@ -759,6 +759,7 @@ export default function BuilderSelectionsBookPage({
   const [products, setProducts] = useState([]);
   const [approvedCatalogueProducts, setApprovedCatalogueProducts] = useState([]);
   const [approvedCatalogueAudit, setApprovedCatalogueAudit] = useState(null);
+  const [approvedCatalogueError, setApprovedCatalogueError] = useState("");
   const [masterCatalogueProducts, setMasterCatalogueProducts] = useState([]);
   const [builderEnablements, setBuilderEnablements] = useState([]);
   const [brickImportModalOpen, setBrickImportModalOpen] = useState(false);
@@ -1009,15 +1010,25 @@ export default function BuilderSelectionsBookPage({
 
   async function loadApprovedClientSelectionCatalogue() {
     try {
-      const response = await fetch(`/api/product-library/approved-client-selection-catalogue?workspaceId=${encodeURIComponent(workspaceId || "approved-template")}`);
-      if (!response.ok) throw new Error("Approved catalogue API failed.");
+      const requestUrl = `/api/product-library/approved-client-selection-catalogue?workspaceId=${encodeURIComponent(workspaceId || "approved-template")}`;
+      const response = await fetch(requestUrl);
+      if (!response.ok) {
+        let body = "";
+        try {
+          body = await response.text();
+        } catch {}
+        const message = `Approved catalogue API returned ${response.status}${body ? `: ${body.slice(0, 220)}` : ""}`;
+        console.error("[Client Selections] approved catalogue load failed", { requestUrl, status: response.status, body });
+        setApprovedCatalogueError(message);
+        return;
+      }
       const payload = await response.json();
       setApprovedCatalogueProducts(Array.isArray(payload.products) ? payload.products : []);
       setApprovedCatalogueAudit(payload.audit || null);
+      setApprovedCatalogueError("");
     } catch (loadError) {
       console.error("[Client Selections] approved catalogue load error", loadError);
-      setApprovedCatalogueProducts([]);
-      setApprovedCatalogueAudit(null);
+      setApprovedCatalogueError(loadError?.message || "Approved catalogue could not be loaded.");
     }
   }
 
@@ -2388,6 +2399,12 @@ export default function BuilderSelectionsBookPage({
               </div>
             </div>
           </header>
+
+          {approvedCatalogueError ? (
+            <div className="alert warning" role="status">
+              Approved catalogue feed is temporarily unavailable. Existing master catalogue products remain available.
+            </div>
+          ) : null}
 
           {guidedScreen === "review" ? (
             <>
@@ -5559,6 +5576,7 @@ const styles = `
   .alert { padding: 10px 12px; border-radius: 6px; margin: 0 auto 12px; max-width: 1500px; font-weight: 700; }
   .alert.error { background: #fee2e2; color: #991b1b; }
   .alert.success { background: #dcfce7; color: #166534; }
+  .alert.warning { background: #fef3c7; color: #92400e; }
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
   .documentViewer { --viewer-page-width: calc(100% - 48px); width: 100%; max-width: none; box-sizing: border-box; display: grid; justify-items: center; background: #eef2f7; border: 1px solid #d7deea; border-radius: 8px; padding: 24px; overflow: visible; }
   .documentViewer.fit-width { overflow-x: hidden; }
