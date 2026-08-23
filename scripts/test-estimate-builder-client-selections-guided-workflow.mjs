@@ -30,6 +30,9 @@ assert.ok(!selectionsBookSource.includes('["roof-colour", "Roof Colour"'), "Roof
 assert.ok(!selectionsBookSource.includes('requirement("gutters-fascia", "Gutters & Fascia"'), "Gutters & Fascia must not be a separate Exterior category");
 assert.ok(selectionsBookSource.includes('data-roofing-home-cards="fascia-gutter colorbond roof-tiles"'), "Roofing must open on the three-card package home");
 assert.ok(selectionsBookSource.includes('data-testid="roofing-three-card-home"'), "Roofing three-card home marker must exist");
+assert.ok(selectionsBookSource.includes("openGuidedRoofingLanding()"), "Opening Roofing from Exterior must force the three-card landing, not a persisted internal step");
+assert.ok(selectionsBookSource.includes('const FASCIA_GUTTER_VISUAL_URL = "/images/product-library/roofing/fascia-gutter.jpg"'), "Fascia & Gutter home card must use the supplied static image");
+assert.ok(selectionsBookSource.includes("image: FASCIA_GUTTER_VISUAL_URL"), "Fascia & Gutter card image must be pinned to the supplied photo");
 assert.ok(selectionsBookSource.includes('label: "Fascia & Gutter"'), "Roofing home must show Fascia & Gutter first");
 assert.ok(selectionsBookSource.includes('label: "COLORBOND Roofing"'), "Roofing home must show COLORBOND Roofing");
 assert.ok(selectionsBookSource.includes('label: "Roof Tiles"'), "Roofing home must show Roof Tiles");

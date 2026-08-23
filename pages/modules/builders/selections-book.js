@@ -1447,7 +1447,8 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(next.requirementKey);
     setGuidedScreen("product");
     if (next.requirementKey !== "bricks") resetGuidedBrickFlow();
-    if (next.requirementKey !== "roofing") resetGuidedRoofingFlow();
+    if (next.requirementKey === "roofing") openGuidedRoofingLanding();
+    else resetGuidedRoofingFlow();
   }
 
   function navigateToGuidedRequirement(requirement) {
@@ -1463,7 +1464,8 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(requirement.requirementKey);
     setGuidedScreen("product");
     if (requirement.requirementKey !== "bricks") resetGuidedBrickFlow();
-    if (requirement.requirementKey !== "roofing") resetGuidedRoofingFlow();
+    if (requirement.requirementKey === "roofing") openGuidedRoofingLanding();
+    else resetGuidedRoofingFlow();
   }
 
   function autoAdvanceAfterGuidedCommit(committedRequirement, nextBook) {
@@ -1548,6 +1550,11 @@ export default function BuilderSelectionsBookPage({
       colour: "",
       finish: "",
     });
+  }
+
+  function openGuidedRoofingLanding() {
+    setGuidedRoofingMode("");
+    setGuidedRoofingStep("landing");
   }
 
   function openBrickImportModal() {
@@ -2924,7 +2931,7 @@ function GuidedRoofingWorkflow({
       key: "fascia-gutter",
       label: "Fascia & Gutter",
       description: "Select fascia, gutters and downpipes for the roofing package.",
-      image: roofingProfileImage(selectedFascia || selectedGutter || selectedDownpipe || fasciaProducts[0] || gutterProducts[0] || downpipeProducts[0], requirement),
+      image: FASCIA_GUTTER_VISUAL_URL,
       onOpen: () => {
         onRoofingModeChange("fascia-gutter");
         onRoofingStepChange("fascia");
@@ -4596,6 +4603,7 @@ function roofingProductSystems(products = [], roofType = "") {
 }
 
 const ROOF_TILE_VISUAL_URL = "https://celumcsrcomaublobs.blob.core.windows.net/celum/20195_Desktop_Original.jpg";
+const FASCIA_GUTTER_VISUAL_URL = "/images/product-library/roofing/fascia-gutter.jpg";
 
 function roofingRoofTypeCards(products = [], requirement = null) {
   const tileProducts = products.filter((product) => (product.roofType || product.configuration) === "roof_tiles");
