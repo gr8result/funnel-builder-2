@@ -28,10 +28,6 @@ export function middleware(req) {
       }
 
       if (isLikelyCustomDomain(host)) {
-        if ((host === "gr8result.solutions" || host === "www.gr8result.solutions") && pathname === "/website-builder") {
-          return NextResponse.next();
-        }
-
         rewriteUrl.pathname = `/sites/__host__${pathname === "/" ? "" : pathname}`;
         const requestHeaders = new Headers(req.headers);
         requestHeaders.set("x-site-host", host);
