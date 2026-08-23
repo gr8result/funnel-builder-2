@@ -52,17 +52,13 @@ function removeLock(expectedPid = null) {
 }
 
 const existingLock = readLock();
-if (existingLock?.pid && processExists(existingLock.pid)) {
-  console.error(
-    `Another Next ${mode} process is already running for ${distDir} (pid ${existingLock.pid}). Stop it first or use the existing server.`
-  );
-  process.exit(1);
-}
 
-// The lock file is not enough: it can be deleted, or written by a wrapper that
-// died while its server kept the port. Two dev servers share one dist dir, so a
-// second start would delete the first one's chunks and make it return 500s.
-// Probe the port as an independent check before going any further.
+// Whether another dev server is really running is decided by the port, not by the
+// lock file. A lock can be deleted, or its wrapper can die while the server keeps
+// serving; and on Windows process.kill(pid, 0) also succeeds for a *recycled* pid,
+// which made a stale lock permanently block startup. Two dev servers share one dist
+// dir, so a genuine second start would delete the first one's chunks and make it
+// return 500s - that is the case worth blocking.
 async function devPortInUse() {
   if (mode !== "dev") return false;
   const port = Number(process.env.PORT) || 3000;
@@ -79,15 +75,24 @@ async function devPortInUse() {
 
 if (await devPortInUse()) {
   const port = Number(process.env.PORT) || 3000;
+  const owner = existingLock?.pid ? ` (lock pid ${existingLock.pid})` : "";
   console.error(
-    `A dev server is already serving port ${port} for this workspace and shares ${distDir}.\n` +
+    `A dev server is already serving port ${port} for this workspace and shares ${distDir}${owner}.\n` +
     `Starting another one would delete its build output and make it return HTTP 500.\n` +
     `Use the running server, or stop it first (then 'npm run dev:fresh' if you need a clean build).`
   );
   process.exit(1);
 }
 
-if (existingLock) removeLock();
+// Port is free, so nothing can be harmed: any lock left behind is stale.
+if (existingLock) {
+  if (existingLock.pid && processExists(existingLock.pid)) {
+    console.warn(
+      `Clearing a stale ${distDir} lock (pid ${existingLock.pid} is no longer serving port ${Number(process.env.PORT) || 3000}).`
+    );
+  }
+  removeLock();
+}
 
 if (cleanDist) {
   try {
