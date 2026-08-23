@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" aria-label="90mm round metal downpipe">
+  <defs>
+    <linearGradient id="pipe" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f3f5f2"/>
+      <stop offset="0.18" stop-color="#bfc6c0"/>
+      <stop offset="0.45" stop-color="#eef1ec"/>
+      <stop offset="0.72" stop-color="#a4aba5"/>
+      <stop offset="1" stop-color="#f8faf7"/>
+    </linearGradient>
+    <linearGradient id="end" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#9aa29b"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="540" fill="#eef2f7"/>
+  <g transform="translate(80 80) rotate(-24 370 180)">
+    <rect x="120" y="120" width="620" height="112" rx="56" fill="url(#pipe)"/>
+    <ellipse cx="740" cy="176" rx="58" ry="56" fill="url(#end)" stroke="#8b948e" stroke-width="8"/>
+    <ellipse cx="740" cy="176" rx="36" ry="35" fill="#eef2ed" stroke="#c9cec9" stroke-width="4"/>
+    <ellipse cx="120" cy="176" rx="58" ry="56" fill="#a8b0aa"/>
+    <path d="M120 124h620" stroke="#ffffff" stroke-opacity=".55" stroke-width="14"/>
+    <path d="M120 228h620" stroke="#737b75" stroke-opacity=".35" stroke-width="8"/>
+  </g>
+</svg>

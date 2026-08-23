@@ -104,6 +104,17 @@ assert.equal(roofingAccessoryProducts.length, 13, "Roofing master catalogue must
 assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "fascia").length, 3, "Roofing package must include fascia choices");
 assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "gutters").length, 6, "Roofing package must include gutter profile choices");
 assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 4, "Roofing package must include downpipe choices");
+assert.ok(roofingAccessoryProducts.every((product) => product.primaryImageUrl), "Roofing fascia/gutter/downpipe records must all have card images");
+assert.ok(roofingAccessoryProducts.every((product) => !/globalassets\/product-images|2023\/06\/Gutters-and-Accessories/i.test(product.primaryImageUrl)), "Roofing accessory images must not use stale broken image paths");
+const downpipeImageUrls = roofingAccessoryProducts
+  .filter((product) => product.attributes.roofPackageStep === "downpipes")
+  .map((product) => product.primaryImageUrl);
+assert.ok(downpipeImageUrls.every((url) => !/53860|53874|gutter/i.test(url)), "Downpipe records must not reuse gutter/profile images");
+assert.ok(downpipeImageUrls.includes("/images/product-library/roofing/lysaght-round-downpipe-90.svg"), "LYSAGHT round downpipe must use a downpipe-specific image");
+assert.ok(downpipeImageUrls.includes("/images/product-library/roofing/lysaght-rectangular-downpipe-100x50.svg"), "LYSAGHT rectangular downpipe must use a downpipe-specific image");
+["public/images/product-library/roofing/lysaght-round-downpipe-90.svg", "public/images/product-library/roofing/lysaght-rectangular-downpipe-100x50.svg"].forEach((assetPath) => {
+  assert.ok(fs.existsSync(path.join(repoRoot, assetPath)), `${assetPath} must exist for persistent downpipe imagery`);
+});
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
 assert.equal(colourNames.length, 22, "COLORBOND core colours must include 22 official colours");
 ["CUSTOM ORB", "TRIMDEK", "KLIP-LOK 700 CLASSIC"].forEach((profile) => {
