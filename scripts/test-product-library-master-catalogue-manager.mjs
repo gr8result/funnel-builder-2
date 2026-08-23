@@ -5,6 +5,7 @@ import {
   FAMILY_IMAGE_FALLBACKS,
   createBuilderProductReference,
   ensureDemoBuilderCatalogueEnablements,
+  masterProductToClientSelectionProduct,
   normalizeMasterProductRecord,
   queryClientSelectableProducts,
   resolveProductLibraryImage,
@@ -84,6 +85,11 @@ assert.equal(clientSelectableRoofing.length, roofingProducts.filter((product) =>
 assert.ok(clientSelectableRoofing.some((product) => product.manufacturer === "Monier" && product.configuration === "roof_tiles"), "Client Selections sees Monier roof tile records");
 assert.ok(clientSelectableRoofing.some((product) => product.manufacturer === "Bristile" && product.configuration === "roof_tiles"), "Client Selections sees Bristile roof tile records");
 assert.ok(!clientSelectableRoofing.some((product) => product.manufacturer === "Monier" && product.range === "Madison"), "QLD Client Selections does not expose Monier Madison when master availability excludes QLD");
+const clientRoofingProducts = clientSelectableRoofing.map((product) => masterProductToClientSelectionProduct(product, { organisationId: DEMO_BUILDER_ORGANISATION_ID, requirement: { defaultAllowance: 0 } }));
+const clientRoofingAccessories = clientRoofingProducts.filter((product) => product.familyKey === "roofing" && ["fascia", "gutters", "downpipes"].includes(product.attributes?.roofPackageStep || product.configuration));
+assert.equal(clientRoofingAccessories.filter((product) => product.attributes.roofPackageStep === "fascia" || product.configuration === "fascia").length, 3, "Converted Client Selections roofing products retain fascia catalogue fields");
+assert.equal(clientRoofingAccessories.filter((product) => product.attributes.roofPackageStep === "gutters" || product.configuration === "gutters").length, 6, "Converted Client Selections roofing products retain gutter catalogue fields");
+assert.equal(clientRoofingAccessories.filter((product) => product.attributes.roofPackageStep === "downpipes" || product.configuration === "downpipes").length, 4, "Converted Client Selections roofing products retain downpipe catalogue fields");
 
 exteriorFinishFamilies.forEach((familyKey) => {
   const familyProducts = masterProducts.filter((product) => product.familyKey === familyKey);
