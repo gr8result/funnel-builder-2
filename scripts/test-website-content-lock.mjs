@@ -1,9 +1,10 @@
 /**
  * Website Builder content-lock regression test.
  *
- * Exercises protected -> unlock -> save -> save again -> relock entirely against an
- * ISOLATED FIXTURE project. The approved live website is never read, written or
- * published by this test; the fixture site row is deleted again at the end.
+ * Exercises protected -> unlock -> save -> save again -> publish-style relock
+ * entirely against an ISOLATED FIXTURE project. The approved live website is
+ * never read, written or published by this test; the fixture site row is deleted
+ * again at the end.
  */
 import assert from "node:assert";
 import crypto from "node:crypto";
@@ -157,8 +158,14 @@ try {
     assert.ok(stale.status === 409 || stale.status === 423, `expected 409/423, got ${stale.status}`);
   });
 
-  // --- 5. relock ----------------------------------------------------------------
-  await checkAsync("relock ends the session and refuses further saves", async () => {
+  // --- 5. publish-style commit relocks -----------------------------------------
+  await checkAsync("publish-style commit relocks and refuses further saves", async () => {
+    markWebsiteMutationCommitted({
+      projectId: FIXTURE_SITE_ID,
+      unlockToken: unlocked.token,
+      action: "publish",
+      draftRevision: "rev-published",
+    });
     relockWebsite(FIXTURE_SITE_ID, unlocked.token);
     assert.equal(getWebsiteLockStatus(FIXTURE_SITE_ID).locked, true, "expected the website to be locked again");
     await assert.rejects(

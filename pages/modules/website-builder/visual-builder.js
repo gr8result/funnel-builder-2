@@ -2067,9 +2067,8 @@ export default function VisualBuilderPage() {
         flashNotice("Website published", "success");
       }
       if (isProtectedFinalWebsite) {
-        const shouldLock = window.confirm("Publish completed. Lock this website again?");
-        if (shouldLock) await handleRelockWebsite({ silent: true });
-        else await refreshWebsiteLockStatus(unlockToken);
+        await handleRelockWebsite({ silent: true });
+        flashNotice("Website published and locked.", "success", 5200);
       }
     } catch (error) {
       flashNotice(error?.message || "Could not publish website", "error");

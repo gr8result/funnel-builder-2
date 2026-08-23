@@ -24,6 +24,13 @@ import {
   websitePersistenceHash,
 } from "../../../lib/website-builder/documentVersion";
 import { mergeWebsiteBuilderAssetSources } from "../../../lib/website-builder/mediaAssets";
+import {
+  assertWebsiteUnlockedForMutation,
+  getWebsiteUnlockTokenFromRequest,
+  markWebsiteMutationCommitted,
+  relockWebsite,
+  websiteLockedResponse,
+} from "../../../lib/website-builder/contentLock";
 
 export const config = {
   api: {
@@ -219,6 +226,7 @@ async function handler(req, res) {
   }
 
   const userId = userData.user.id;
+  const unlockToken = getWebsiteUnlockTokenFromRequest(req);
   const incomingProject = req.body?.project;
   const splitProjectId = String(incomingProject?.id || "").trim();
   const requestedDomainForProject = normalizeDomain(req.body?.customDomain);
@@ -246,6 +254,14 @@ async function handler(req, res) {
   if (!project || typeof project !== "object") {
     return res.status(400).json({ ok: false, error: "Missing website project payload" });
   }
+  const projectId = String(project.id || "").trim() || null;
+  const lock = assertWebsiteUnlockedForMutation({
+    projectId,
+    userId,
+    unlockToken,
+    action: "publish",
+  });
+  if (!lock.ok) return websiteLockedResponse(res, lock);
   const savedVersionMeta = project?.projectVersion && project?.savedAt && project?.contentHash
     ? { projectVersion: project.projectVersion, savedAt: project.savedAt, contentHash: project.contentHash }
     : buildWebsiteProjectVersion(project, project?.savedAt || project?.updatedAt || new Date().toISOString());
@@ -263,7 +279,6 @@ async function handler(req, res) {
     before: videoHeroMediaBeforePublish,
     published: videoHeroMediaForPublish,
   });
-  const projectId = String(project.id || "").trim() || null;
   const requestedCustomDomain = requestedDomainForProject || normalizeDomain(project?.customDomain || project?.custom_domain);
   const requestedSlug = slugifyWebsiteValue(req.body?.slug || project?.slug || project?.name || splitProjectId);
   if (!requestedSlug) {
@@ -599,6 +614,8 @@ async function handler(req, res) {
     }
   }
 
+  markWebsiteMutationCommitted({ projectId, unlockToken, action: "publish", draftRevision: project?.projectVersion || "", draftUpdatedAt: project?.updatedAt || project?.savedAt || "", contentHash: project?.contentHash || "" });
+  relockWebsite(projectId, unlockToken);
   return res.status(200).json({
     ok: true,
     publication: {
