@@ -794,8 +794,14 @@ export default function BuilderSelectionsBookPage({
     tileRange: "",
     tileProductCode: "",
     fasciaProductCode: "",
+    fasciaColour: "",
+    fasciaColourMethod: "",
     gutterProductCode: "",
+    gutterColour: "",
+    gutterColourMethod: "",
     downpipeProductCode: "",
+    downpipeColour: "",
+    downpipeColourMethod: "",
     colour: "",
     finish: "",
   });
@@ -1545,14 +1551,33 @@ export default function BuilderSelectionsBookPage({
       tileRange: "",
       tileProductCode: "",
       fasciaProductCode: "",
+      fasciaColour: "",
+      fasciaColourMethod: "",
       gutterProductCode: "",
+      gutterColour: "",
+      gutterColourMethod: "",
       downpipeProductCode: "",
+      downpipeColour: "",
+      downpipeColourMethod: "",
       colour: "",
       finish: "",
     });
   }
 
   function openGuidedRoofingLanding() {
+    const savedConfig = guidedSelectionMap.get("roofing")?.selected_details?.roofingConfiguration;
+    if (savedConfig) {
+      setRoofingConfiguration((current) => ({
+        ...(current || {}),
+        ...savedConfig,
+        fasciaColour: savedConfig.fasciaColour || savedConfig.roofPackage?.fascia?.colour || "",
+        fasciaColourMethod: savedConfig.fasciaColourMethod || savedConfig.roofPackage?.fascia?.selectionMethod || "",
+        gutterColour: savedConfig.gutterColour || savedConfig.roofPackage?.gutters?.colour || "",
+        gutterColourMethod: savedConfig.gutterColourMethod || savedConfig.roofPackage?.gutters?.selectionMethod || "",
+        downpipeColour: savedConfig.downpipeColour || savedConfig.roofPackage?.downpipes?.colour || "",
+        downpipeColourMethod: savedConfig.downpipeColourMethod || savedConfig.roofPackage?.downpipes?.selectionMethod || "",
+      }));
+    }
     setGuidedRoofingMode("");
     setGuidedRoofingStep("landing");
   }
@@ -1714,26 +1739,90 @@ export default function BuilderSelectionsBookPage({
       setError("Choose fascia, gutters and downpipes before saving the roofing package.");
       return;
     }
+    const downpipeRequiresColour = roofingAccessoryRequiresColour(downpipe);
+    if (!configuration.fasciaColour || !configuration.gutterColour || (downpipeRequiresColour && !configuration.downpipeColour)) {
+      setError("Choose fascia, gutter and downpipe colours before saving the roofing package.");
+      return;
+    }
     const roofPackage = {
       fascia: {
         productCode: fascia.productCode || fascia.id,
         productName: fascia.productName,
         profile: fascia.profile || fascia.model || "",
-        colour: fascia.colour || configuration.colour || "Match roof colour",
+        colour: configuration.fasciaColour,
+        selectionMethod: configuration.fasciaColourMethod || "chooseDifferent",
       },
       gutters: {
         productCode: gutter.productCode || gutter.id,
         productName: gutter.productName,
         profile: gutter.profile || gutter.model || "",
-        colour: gutter.colour || configuration.colour || "Match roof colour",
+        colour: configuration.gutterColour,
+        selectionMethod: configuration.gutterColourMethod || "chooseDifferent",
       },
       downpipes: {
         productCode: downpipe.productCode || downpipe.id,
         productName: downpipe.productName,
         profile: downpipe.profile || downpipe.model || "",
-        colour: downpipe.colour || configuration.colour || "Match roof colour",
+        colour: configuration.downpipeColour || downpipe.colour || "White",
+        selectionMethod: configuration.downpipeColourMethod || (downpipeRequiresColour ? "chooseDifferent" : "fixedProductColour"),
+        colourRequired: downpipeRequiresColour,
       },
     };
+    if (configuration?.selectionScope === "fascia_gutter") {
+      const now = new Date().toISOString();
+      const selectedProduct = `Fascia: ${roofPackage.fascia.productName} - ${roofPackage.fascia.colour}; Gutter: ${roofPackage.gutters.profile || roofPackage.gutters.productName} - ${roofPackage.gutters.colour}; Downpipe: ${roofPackage.downpipes.productName} - ${roofPackage.downpipes.colour}`;
+      const guidedSelection = {
+        source: "guided_client_selections",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        organisationId: workspaceId || "",
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
+        requirementKey: requirement.requirementKey,
+        requirementLabel: requirement.label,
+        familyKey: "roofing",
+        productId: "fascia-gutter-package",
+        productCode: "fascia-gutter-package",
+        manufacturer: [fascia.manufacturer, gutter.manufacturer, downpipe.manufacturer].filter(Boolean).join(" / "),
+        brand: "COLORBOND steel",
+        supplier: [fascia.supplier, gutter.supplier, downpipe.supplier].filter(Boolean).join(" / "),
+        productName: selectedProduct,
+        selectedProduct,
+        roofType: configuration.roofType || "",
+        colour: configuration.gutterColour,
+        finish: "Fascia & Gutter package",
+        roofingConfiguration: {
+          ...configuration,
+          fasciaColour: roofPackage.fascia.colour,
+          gutterColour: roofPackage.gutters.colour,
+          downpipeColour: roofPackage.downpipes.colour,
+          roofPackage,
+          fasciaGutterComplete: true,
+        },
+        roofPackage,
+        configurationComplete: false,
+        fasciaGutterComplete: true,
+        selectedAt: now,
+        updatedAt: now,
+        selectionTimestamp: now,
+      };
+      commitGuidedRequirementPatch(requirement, {
+        selectedOptionId: "fascia-gutter-package",
+        selectedProduct,
+        productModel: "Fascia & Gutter",
+        brand: guidedSelection.brand,
+        description: "Fascia, gutter and downpipe profile and colour selections.",
+        supplier: guidedSelection.supplier,
+        finishColour: `Fascia ${roofPackage.fascia.colour} / Gutter ${roofPackage.gutters.colour} / Downpipe ${roofPackage.downpipes.colour}`,
+        imageUrl: FASCIA_GUTTER_VISUAL_URL,
+        allowanceAmount: numberValue(requirement.defaultAllowance),
+        selectedCost: null,
+        upgradeCost: null,
+        included: false,
+        status: "selected",
+        guidedSelection,
+      });
+      return;
+    }
     if (configuration?.roofType === "roof_tiles") {
       const tile = roofingProfileByCode(guidedProducts, configuration.tileProductCode);
       if (!tile) {
@@ -1781,8 +1870,14 @@ export default function BuilderSelectionsBookPage({
           colour: tile.colour || entity.colour || "",
           finish: tile.finish || entity.finish || "Manufacturer finish",
           fasciaProductCode: roofPackage.fascia.productCode,
+          fasciaColour: roofPackage.fascia.colour,
+          fasciaColourMethod: roofPackage.fascia.selectionMethod,
           gutterProductCode: roofPackage.gutters.productCode,
+          gutterColour: roofPackage.gutters.colour,
+          gutterColourMethod: roofPackage.gutters.selectionMethod,
           downpipeProductCode: roofPackage.downpipes.productCode,
+          downpipeColour: roofPackage.downpipes.colour,
+          downpipeColourMethod: roofPackage.downpipes.selectionMethod,
           roofPackage,
         },
         compatibility: {
@@ -1874,8 +1969,14 @@ export default function BuilderSelectionsBookPage({
         colour: colour.name,
         finish: finish.name,
         fasciaProductCode: roofPackage.fascia.productCode,
+        fasciaColour: roofPackage.fascia.colour,
+        fasciaColourMethod: roofPackage.fascia.selectionMethod,
         gutterProductCode: roofPackage.gutters.productCode,
+        gutterColour: roofPackage.gutters.colour,
+        gutterColourMethod: roofPackage.gutters.selectionMethod,
         downpipeProductCode: roofPackage.downpipes.productCode,
+        downpipeColour: roofPackage.downpipes.colour,
+        downpipeColourMethod: roofPackage.downpipes.selectionMethod,
         roofPackage,
       },
       compatibility: {
@@ -2882,7 +2983,12 @@ function GuidedRoofingWorkflow({
   const selectedGutter = roofingAccessoryByCode(gutterProducts, config.gutterProductCode);
   const selectedDownpipe = roofingAccessoryByCode(downpipeProducts, config.downpipeProductCode);
   const colours = roofingColoursForProfile(selectedProfile);
+  const accessoryColours = roofingCanonicalColours(products);
   const selectedColour = roofingColourByName(selectedProfile, config.colour);
+  const selectedFasciaColour = roofingColourByName({ attributes: { colours: accessoryColours } }, config.fasciaColour);
+  const selectedGutterColour = roofingColourByName({ attributes: { colours: accessoryColours } }, config.gutterColour);
+  const selectedDownpipeColour = roofingColourByName({ attributes: { colours: accessoryColours } }, config.downpipeColour);
+  const downpipeRequiresColour = roofingAccessoryRequiresColour(selectedDownpipe);
   const finishes = roofingFinishesForColour(selectedColour);
   const selectedFinish = roofingFinishForColour(selectedColour, config.finish);
   const canSelect = Boolean(
@@ -2896,13 +3002,13 @@ function GuidedRoofingWorkflow({
   const selectedAllowance = numberValue(selectedProfile?.allowance ?? requirement.defaultAllowance);
   const selectedVariation = selectedPriceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance: selectedAllowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   const setConfig = (patch) => onRoofingConfigurationChange((current) => ({ ...(current || {}), ...patch }));
-  const accessoriesComplete = Boolean(config.fasciaProductCode && config.gutterProductCode && config.downpipeProductCode);
+  const accessoriesComplete = Boolean(config.fasciaProductCode && config.fasciaColour && config.gutterProductCode && config.gutterColour && config.downpipeProductCode && (!downpipeRequiresColour || config.downpipeColour));
   const colorbondComplete = Boolean(config.roofType === "metal_roofing" && config.profileProductCode && config.colour && config.finish);
   const roofTilesComplete = Boolean(config.roofType === "roof_tiles" && config.tileManufacturer && config.tileRange && config.tileProductCode && config.finish);
   const roofingCardStatus = (cardKey) => {
     if (cardKey === "fascia-gutter") {
       if (accessoriesComplete) return "Complete";
-      if (config.fasciaProductCode || config.gutterProductCode || config.downpipeProductCode) return "In Progress";
+      if (config.fasciaProductCode || config.fasciaColour || config.gutterProductCode || config.gutterColour || config.downpipeProductCode || config.downpipeColour) return "In Progress";
       return "Not Started";
     }
     if (cardKey === "colorbond") {
@@ -2916,21 +3022,29 @@ function GuidedRoofingWorkflow({
   };
   const roofingCardTone = (status) => status === "Complete" ? "complete" : status === "In Progress" ? "active" : "";
   const returnToRoofingHome = (nextConfig = config) => {
-    const nextAccessoriesComplete = Boolean(nextConfig.fasciaProductCode && nextConfig.gutterProductCode && nextConfig.downpipeProductCode);
+    const nextDownpipe = roofingAccessoryByCode(downpipeProducts, nextConfig.downpipeProductCode);
+    const nextDownpipeRequiresColour = roofingAccessoryRequiresColour(nextDownpipe);
+    const nextAccessoriesComplete = Boolean(nextConfig.fasciaProductCode && nextConfig.fasciaColour && nextConfig.gutterProductCode && nextConfig.gutterColour && nextConfig.downpipeProductCode && (!nextDownpipeRequiresColour || nextConfig.downpipeColour));
     const nextColorbondComplete = Boolean(nextConfig.roofType === "metal_roofing" && nextConfig.profileProductCode && nextConfig.colour && nextConfig.finish);
     const nextRoofTilesComplete = Boolean(nextConfig.roofType === "roof_tiles" && nextConfig.tileManufacturer && nextConfig.tileRange && nextConfig.tileProductCode && nextConfig.finish);
     if (nextAccessoriesComplete && (nextColorbondComplete || nextRoofTilesComplete)) {
       onSelectRoofingConfiguration(requirement, nextConfig);
       return;
     }
+    if (nextAccessoriesComplete) {
+      onSelectRoofingConfiguration(requirement, { ...nextConfig, selectionScope: "fascia_gutter" });
+    }
     onRoofingModeChange("");
     onRoofingStepChange("landing");
   };
+  const accessorySummary = accessoriesComplete
+    ? `Fascia: ${selectedFascia?.profile || selectedFascia?.productName} - ${config.fasciaColour}; Gutter: ${selectedGutter?.profile || selectedGutter?.productName} - ${config.gutterColour}; Downpipe: ${selectedDownpipe?.profile || selectedDownpipe?.productName} - ${config.downpipeColour || selectedDownpipe?.colour || "White"}`
+    : "Select fascia profile and colour, gutter profile and colour, then downpipes.";
   const roofingHomeCards = [
     {
       key: "fascia-gutter",
       label: "Fascia & Gutter",
-      description: "Select fascia, gutters and downpipes for the roofing package.",
+      description: accessorySummary,
       image: FASCIA_GUTTER_VISUAL_URL,
       onOpen: () => {
         onRoofingModeChange("fascia-gutter");
@@ -2962,9 +3076,12 @@ function GuidedRoofingWorkflow({
   ];
   const progressSteps = roofingMode === "fascia-gutter"
     ? [
-      ["fascia", "Fascia", config.fasciaProductCode],
-      ["gutters", "Gutters", config.gutterProductCode],
-      ["downpipes", "Downpipes", config.downpipeProductCode],
+      ["fascia", "Fascia Profile", config.fasciaProductCode],
+      ["fasciaColour", "Fascia Colour", config.fasciaColour],
+      ["gutters", "Gutter Profile", config.gutterProductCode],
+      ["gutterColour", "Gutter Colour", config.gutterColour],
+      ["downpipes", "Downpipe Type / Size", config.downpipeProductCode],
+      ...(downpipeRequiresColour ? [["downpipeColour", "Downpipe Colour", config.downpipeColour]] : []),
     ]
     : roofingMode === "roof-tiles"
       ? [
@@ -3043,22 +3160,29 @@ function GuidedRoofingWorkflow({
                   <button key={accessory.id || accessory.productCode} type="button" className={isSelected ? "selected" : ""} onClick={() => {
                     const nextConfig = {
                       ...config,
-                      ...(roofingStep === "fascia" ? { fasciaProductCode: accessory.productCode } : {}),
-                      ...(roofingStep === "gutters" ? { gutterProductCode: accessory.productCode } : {}),
-                      ...(roofingStep === "downpipes" ? { downpipeProductCode: accessory.productCode } : {}),
+                      ...(roofingStep === "fascia" ? { fasciaProductCode: accessory.productCode, fasciaColour: "", fasciaColourMethod: "" } : {}),
+                      ...(roofingStep === "gutters" ? { gutterProductCode: accessory.productCode, gutterColour: "", gutterColourMethod: "" } : {}),
+                      ...(roofingStep === "downpipes" ? {
+                        downpipeProductCode: accessory.productCode,
+                        downpipeColour: roofingAccessoryRequiresColour(accessory) ? "" : accessory.colour || "White",
+                        downpipeColourMethod: roofingAccessoryRequiresColour(accessory) ? "" : "fixedProductColour",
+                      } : {}),
                     };
                     onRoofingConfigurationChange(nextConfig);
-                    if (roofingStep === "fascia") onRoofingStepChange("gutters");
-                    if (roofingStep === "gutters") onRoofingStepChange("downpipes");
-                    if (roofingStep === "downpipes") returnToRoofingHome(nextConfig);
+                    if (roofingStep === "fascia") onRoofingStepChange("fasciaColour");
+                    if (roofingStep === "gutters") onRoofingStepChange("gutterColour");
+                    if (roofingStep === "downpipes") {
+                      if (roofingAccessoryRequiresColour(accessory)) onRoofingStepChange("downpipeColour");
+                      else returnToRoofingHome(nextConfig);
+                    }
                   }}>
                     <img src={roofingProfileImage(accessory, requirement)} alt={accessory.productName} />
                     <span className="roofingProfileBody">
                       <small>{roofingAccessoryLabel(roofingStep)} / {accessory.supplier || accessory.manufacturer}</small>
                       <strong>{accessory.productName}</strong>
                       <em>{accessory.profile || accessory.model || accessory.range}</em>
-                      <b>{accessory.colour || config.colour || "Match roof colour"} / {accessory.finish || "COLORBOND steel"}</b>
-                      <i>{isSelected ? "Selected" : roofingStep === "downpipes" ? "Complete Section" : "Select"}</i>
+                      <b>{accessory.colour || "COLORBOND steel colour range"} / {accessory.finish || "COLORBOND steel"}</b>
+                      <i>{isSelected ? "Selected" : roofingStep === "downpipes" && !roofingAccessoryRequiresColour(accessory) ? "Complete Section" : "Select"}</i>
                     </span>
                   </button>
                 );
@@ -3067,6 +3191,24 @@ function GuidedRoofingWorkflow({
                 <GuidedRoofingEmptyCatalogue message={`${roofingAccessoryLabel(roofingStep)} catalogue awaiting product data`} masterProductCount={masterProductCount} />
               ) : null}
             </div>
+          ) : ["fasciaColour", "gutterColour", "downpipeColour"].includes(roofingStep) ? (
+            <AccessoryColourStep
+              colours={accessoryColours}
+              config={config}
+              step={roofingStep}
+              selectedRoofColour={selectedColour}
+              selectedFasciaColour={selectedFasciaColour}
+              selectedGutterColour={selectedGutterColour}
+              selectedDownpipeColour={selectedDownpipeColour}
+              onSelect={(colour, method = "chooseDifferent") => {
+                const patch = roofingAccessoryColourPatch(roofingStep, colour.name, method);
+                const nextConfig = { ...config, ...patch };
+                onRoofingConfigurationChange(nextConfig);
+                if (roofingStep === "fasciaColour") onRoofingStepChange("gutters");
+                if (roofingStep === "gutterColour") onRoofingStepChange("downpipes");
+                if (roofingStep === "downpipeColour") returnToRoofingHome(nextConfig);
+              }}
+            />
           ) : config.roofType === "roof_tiles" ? (
             !tileManufacturers.length ? (
               <GuidedRoofingEmptyCatalogue message="Roof tile catalogue awaiting product data" masterProductCount={masterProductCount} />
@@ -3247,6 +3389,60 @@ function GuidedRoofingEmptyCatalogue({ message = "Metal roofing catalogue awaiti
   );
 }
 
+function AccessoryColourStep({
+  colours = [],
+  config = {},
+  step = "",
+  selectedRoofColour = null,
+  selectedFasciaColour = null,
+  selectedGutterColour = null,
+  selectedDownpipeColour = null,
+  onSelect,
+}) {
+  const selectedName = step === "fasciaColour" ? config.fasciaColour : step === "gutterColour" ? config.gutterColour : config.downpipeColour;
+  const selectedColour = step === "fasciaColour" ? selectedFasciaColour : step === "gutterColour" ? selectedGutterColour : selectedDownpipeColour;
+  const matchButtons = [
+    step !== "fasciaColour" && selectedFasciaColour ? { label: "Match Fascia Colour", colour: selectedFasciaColour, method: "matchFascia" } : null,
+    selectedRoofColour ? { label: "Match Roof Colour", colour: selectedRoofColour, method: "matchRoof" } : null,
+  ].filter(Boolean);
+  return (
+    <div className="roofingColourStep" data-testid={`roofing-accessory-${step}-step`} data-colour-source="canonical-colorbond-roofing-colours">
+      {matchButtons.length ? (
+        <div className="roofingChoiceGrid">
+          {matchButtons.map((shortcut) => (
+            <button key={shortcut.method} type="button" className={selectedName === shortcut.colour.name ? "selected" : ""} onClick={() => onSelect(shortcut.colour, shortcut.method)}>
+              <span className="roofingSwatch" style={{ backgroundColor: shortcut.colour.hex }}>{selectedName === shortcut.colour.name ? "\u2713" : ""}</span>
+              <strong>{shortcut.label}</strong>
+              <em>{shortcut.colour.name}</em>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="roofingSwatchGrid" data-testid="roofing-accessory-colour-swatch-grid">
+        {colours.map((colour) => (
+          <button key={colour.name} type="button" className={selectedName === colour.name ? "selected" : ""} onClick={() => onSelect(colour, "chooseDifferent")}>
+            <span className="roofingSwatch" style={{ backgroundColor: colour.hex }}>{selectedName === colour.name ? "\u2713" : ""}</span>
+            <strong>{colour.name}</strong>
+            <em>{colour.availableFinishes.join(" / ")}</em>
+          </button>
+        ))}
+      </div>
+      {selectedColour ? (
+        <div className="roofingSelectionSummary" data-testid="roofing-accessory-colour-summary">
+          <span className="roofingSummarySwatch" style={{ backgroundColor: selectedColour.hex }} />
+          <div className="roofingSummaryDetails">
+            <strong>Selected Colour</strong>
+            <dl>
+              <div><dt>Colour</dt><dd>{selectedColour.name}</dd></div>
+              <div><dt>Source</dt><dd>Canonical COLORBOND roofing colours</dd></div>
+            </dl>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function RoofingProgressThumb({ step, config, profile, colour, finish, products, requirement }) {
   if (step === "roofType" && config.roofType) {
     const image = roofingRoofTypeCards(products, requirement).find((card) => card.key === config.roofType)?.image || requirementImage(requirement);
@@ -3272,6 +3468,11 @@ function RoofingProgressThumb({ step, config, profile, colour, finish, products,
   }
   if (step === "colour" && colour) {
     return <span className="roofingProgressThumb swatch" style={{ backgroundColor: colour.hex }} />;
+  }
+  if (["fasciaColour", "gutterColour", "downpipeColour"].includes(step)) {
+    const colourName = step === "fasciaColour" ? config.fasciaColour : step === "gutterColour" ? config.gutterColour : config.downpipeColour;
+    const accessoryColour = roofingColourByName({ attributes: { colours: roofingCanonicalColours(products) } }, colourName);
+    if (accessoryColour) return <span className="roofingProgressThumb swatch" style={{ backgroundColor: accessoryColour.hex }} />;
   }
   if (step === "finish" && finish) {
     return <span className={`roofingProgressThumb finish ${slug(finish.name)}`} style={roofingFinishStyle(colour, finish)} />;
@@ -4567,9 +4768,12 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
 
 function roofingHeaderForStep(step) {
   if (step === "tileFinish") return "Confirm roof tile finish";
+  if (step === "downpipeColour") return "Choose downpipe colour";
+  if (step === "gutterColour") return "Choose gutter colour";
+  if (step === "fasciaColour") return "Choose fascia colour";
   if (step === "downpipes") return "Choose downpipes";
-  if (step === "gutters") return "Choose gutters";
-  if (step === "fascia") return "Choose fascia";
+  if (step === "gutters") return "Choose gutter profile";
+  if (step === "fascia") return "Choose fascia profile";
   if (step === "tileProduct") return "Choose roof tile colour / product";
   if (step === "tileRange") return "Choose roof tile range";
   if (step === "tileManufacturer") return "Choose roof tile manufacturer";
@@ -4684,6 +4888,26 @@ function roofingAccessoryProducts(products = [], packageStep = "") {
 
 function roofingAccessoryByCode(products = [], productCode = "") {
   return products.find((product) => product.productCode === productCode || product.id === productCode) || null;
+}
+
+function roofingCanonicalColours(products = []) {
+  const productWithColours = products.find((product) => roofingColoursForProfile(product).length);
+  return roofingColoursForProfile(productWithColours);
+}
+
+function roofingAccessoryRequiresColour(accessory = null) {
+  if (!accessory) return false;
+  const material = String(accessory.material || accessory.metadata?.productEntity?.material || "");
+  const colour = String(accessory.colour || accessory.metadata?.productEntity?.colour || "");
+  if (/PVC/i.test(material) || /^white$/i.test(colour.trim())) return false;
+  return /COLORBOND|ZINCALUME|steel colour range/i.test(`${material} ${colour}`);
+}
+
+function roofingAccessoryColourPatch(step = "", colourName = "", method = "chooseDifferent") {
+  if (step === "fasciaColour") return { fasciaColour: colourName, fasciaColourMethod: method };
+  if (step === "gutterColour") return { gutterColour: colourName, gutterColourMethod: method };
+  if (step === "downpipeColour") return { downpipeColour: colourName, downpipeColourMethod: method };
+  return {};
 }
 
 function roofingAccessoryLabel(step = "") {
@@ -5019,11 +5243,23 @@ function handleGuidedBack({
         return;
       }
       if (guidedRoofingMode === "fascia-gutter") {
+        if (guidedRoofingStep === "downpipeColour") {
+          setGuidedRoofingStep("downpipes");
+          return;
+        }
         if (guidedRoofingStep === "downpipes") {
+          setGuidedRoofingStep("gutterColour");
+          return;
+        }
+        if (guidedRoofingStep === "gutterColour") {
           setGuidedRoofingStep("gutters");
           return;
         }
         if (guidedRoofingStep === "gutters") {
+          setGuidedRoofingStep("fasciaColour");
+          return;
+        }
+        if (guidedRoofingStep === "fasciaColour") {
           setGuidedRoofingStep("fascia");
           return;
         }
@@ -5106,7 +5342,7 @@ function handleGuidedBack({
         return;
       }
       setGuidedRoofingMode("");
-      setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", fasciaProductCode: "", gutterProductCode: "", downpipeProductCode: "", colour: "", finish: "" });
+      setRoofingConfiguration({ roofType: "", productSystem: "", profileProductCode: "", tileManufacturer: "", tileRange: "", tileProductCode: "", fasciaProductCode: "", fasciaColour: "", fasciaColourMethod: "", gutterProductCode: "", gutterColour: "", gutterColourMethod: "", downpipeProductCode: "", downpipeColour: "", downpipeColourMethod: "", colour: "", finish: "" });
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
       return;

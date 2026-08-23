@@ -106,14 +106,19 @@ assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roo
 assert.equal(roofingAccessoryProducts.filter((product) => product.attributes.roofPackageStep === "downpipes").length, 4, "Roofing package must include downpipe choices");
 assert.ok(roofingAccessoryProducts.every((product) => product.primaryImageUrl), "Roofing fascia/gutter/downpipe records must all have card images");
 assert.ok(roofingAccessoryProducts.every((product) => !/globalassets\/product-images|2023\/06\/Gutters-and-Accessories/i.test(product.primaryImageUrl)), "Roofing accessory images must not use stale broken image paths");
+const highFrontGutter = roofingAccessoryProducts.find((product) => product.attributes.roofPackageStep === "gutters" && /high front/i.test(`${product.productName} ${product.profile}`));
+const quadGutter = roofingAccessoryProducts.find((product) => product.productCode === "ROOFING-LYSAGHT-QUAD-GUTTER");
+assert.ok(highFrontGutter, "Roofing package must include a High Front gutter profile");
+assert.equal(highFrontGutter.primaryImageUrl, "/images/product-library/roofing/gutter-high-front.png", "High Front gutter must use the supplied High Front image");
+assert.equal(quadGutter?.primaryImageUrl, "/images/product-library/roofing/gutter-quad.jpg", "Quad gutter must use the supplied Quad image");
 const downpipeImageUrls = roofingAccessoryProducts
   .filter((product) => product.attributes.roofPackageStep === "downpipes")
   .map((product) => product.primaryImageUrl);
 assert.ok(downpipeImageUrls.every((url) => !/53860|53874|gutter/i.test(url)), "Downpipe records must not reuse gutter/profile images");
 assert.ok(downpipeImageUrls.includes("/images/product-library/roofing/lysaght-round-downpipe-90.svg"), "LYSAGHT round downpipe must use a downpipe-specific image");
 assert.ok(downpipeImageUrls.includes("/images/product-library/roofing/lysaght-rectangular-downpipe-100x50.svg"), "LYSAGHT rectangular downpipe must use a downpipe-specific image");
-["public/images/product-library/roofing/lysaght-round-downpipe-90.svg", "public/images/product-library/roofing/lysaght-rectangular-downpipe-100x50.svg"].forEach((assetPath) => {
-  assert.ok(fs.existsSync(path.join(repoRoot, assetPath)), `${assetPath} must exist for persistent downpipe imagery`);
+["public/images/product-library/roofing/lysaght-round-downpipe-90.svg", "public/images/product-library/roofing/lysaght-rectangular-downpipe-100x50.svg", "public/images/product-library/roofing/gutter-high-front.png", "public/images/product-library/roofing/gutter-quad.jpg"].forEach((assetPath) => {
+  assert.ok(fs.existsSync(path.join(repoRoot, assetPath)), `${assetPath} must exist for persistent roofing accessory imagery`);
 });
 const colourNames = products[0].attributes.colours.map((colour) => colour.name);
 assert.equal(colourNames.length, 22, "COLORBOND core colours must include 22 official colours");
