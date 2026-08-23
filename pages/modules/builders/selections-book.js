@@ -1018,7 +1018,7 @@ export default function BuilderSelectionsBookPage({
           body = await response.text();
         } catch {}
         const message = `Approved catalogue API returned ${response.status}${body ? `: ${body.slice(0, 220)}` : ""}`;
-        console.error("[Client Selections] approved catalogue load failed", { requestUrl, status: response.status, body });
+        console.warn("[Client Selections] approved catalogue load failed", { requestUrl, status: response.status, body });
         setApprovedCatalogueError(message);
         return;
       }
@@ -1027,7 +1027,9 @@ export default function BuilderSelectionsBookPage({
       setApprovedCatalogueAudit(payload.audit || null);
       setApprovedCatalogueError("");
     } catch (loadError) {
-      console.error("[Client Selections] approved catalogue load error", loadError);
+      console.warn("[Client Selections] approved catalogue load error", {
+        message: loadError?.message || String(loadError || "Unknown approved catalogue load error"),
+      });
       setApprovedCatalogueError(loadError?.message || "Approved catalogue could not be loaded.");
     }
   }

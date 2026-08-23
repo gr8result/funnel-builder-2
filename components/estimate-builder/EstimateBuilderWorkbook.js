@@ -378,6 +378,23 @@ function workspaceVisual(pageKey) {
   return WORKSPACE_VISUALS[pageKey] || WORKSPACE_VISUALS.projectDashboard;
 }
 
+function routePageFromEstimateBuilderRoute(router, initialPage = "") {
+  const queryPage = typeof router?.query?.page === "string" ? router.query.page : "";
+  if (WORKSPACE_VISUALS[queryPage]) return queryPage;
+  if (WORKSPACE_VISUALS[initialPage]) return initialPage;
+  const candidates = [
+    typeof router?.asPath === "string" ? router.asPath : "",
+    typeof window !== "undefined" ? window.location.search : "",
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const queryText = candidate.includes("?") ? candidate.slice(candidate.indexOf("?") + 1) : candidate.replace(/^\?/, "");
+    const page = new URLSearchParams(queryText).get("page") || "";
+    if (WORKSPACE_VISUALS[page]) return page;
+  }
+  return "";
+}
+
 export default function EstimateBuilderWorkbook({ previewMode = false, mode = "", recentId = "", organisationId = "", initialPage = "" } = {}) {
   const router = useRouter();
   const sheet = useEstimateBuilderWorkbook({}, { previewMode });
@@ -441,11 +458,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     if (sheet.workbook.page !== pageKey) sheet.setPage(pageKey);
     setEstimateBuilderPageQuery(pageKey);
   }, [setEstimateBuilderPageQuery, sheet]);
-  const requestedPage = !previewMode && !mode && typeof router.query.page === "string" && WORKSPACE_VISUALS[router.query.page]
-    ? router.query.page
-    : !previewMode && !mode && WORKSPACE_VISUALS[initialPage]
-      ? initialPage
-      : "";
+  const requestedPage = !previewMode && !mode ? routePageFromEstimateBuilderRoute(router, initialPage) : "";
   const activePageKey = requestedPage || sheet.workbook.page;
   useEffect(() => {
     if (previewMode || mode) return;

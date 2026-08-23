@@ -2,13 +2,21 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import EstimateBuilderWorkbook from "../../../components/estimate-builder/EstimateBuilderWorkbook";
 
+function routePageFromRouter(router) {
+  const queryPage = typeof router.query.page === "string" ? router.query.page : "";
+  if (queryPage) return queryPage;
+  const asPath = typeof router.asPath === "string" ? router.asPath : "";
+  if (!asPath.includes("?")) return "";
+  return new URLSearchParams(asPath.slice(asPath.indexOf("?") + 1)).get("page") || "";
+}
+
 export default function EstimateBuilderPage() {
   const router = useRouter();
   const previewMode = router.query.mode === "preview";
   const mode = typeof router.query.mode === "string" ? router.query.mode : "";
   const recentId = typeof router.query.recentId === "string" ? router.query.recentId : "";
   const organisationId = typeof router.query.organisationId === "string" ? router.query.organisationId : "";
-  const initialPage = typeof router.query.page === "string" ? router.query.page : "";
+  const initialPage = routePageFromRouter(router);
 
   return (
     <>

@@ -13,8 +13,12 @@ assert.ok(!selectionsSource.includes('throw new Error("Approved catalogue API fa
 assert.ok(selectionsSource.includes("setApprovedCatalogueError(message)"), "Client Selections must store a recoverable approved catalogue error");
 assert.ok(selectionsSource.includes("Existing master catalogue products remain available."), "Client Selections must show a recoverable inline catalogue warning");
 assert.ok(!selectionsSource.includes("setApprovedCatalogueProducts([]);\n      setApprovedCatalogueAudit(null);"), "Client Selections must preserve last valid approved catalogue state on failure");
+assert.ok(!selectionsSource.includes('console.error("[Client Selections] approved catalogue load'), "Handled approved catalogue failures must not surface through Next runtime error overlay logging");
 
 assert.ok(workbookSource.includes("const requestedPage ="), "Estimate Builder must derive the requested route page before rendering modules");
+assert.ok(workbookSource.includes("routePageFromEstimateBuilderRoute(router, initialPage)"), "Estimate Builder must resolve the active module from the actual route before router.query hydration");
+assert.ok(workbookSource.includes("router.asPath"), "Estimate Builder route-page resolution must read router.asPath");
+assert.ok(workbookSource.includes("window.location.search"), "Estimate Builder route-page resolution must fall back to window.location.search");
 assert.ok(workbookSource.includes("const activePageKey = requestedPage || sheet.workbook.page"), "Estimate Builder must use route-active page gating");
 assert.ok(workbookSource.includes('activePageKey === "aiPlanTakeoff"'), "AI Plan Takeoff must mount from the route-active page");
 assert.ok(workbookSource.includes('activePageKey === "clientSelections"'), "Client Selections must only mount from the route-active page");
