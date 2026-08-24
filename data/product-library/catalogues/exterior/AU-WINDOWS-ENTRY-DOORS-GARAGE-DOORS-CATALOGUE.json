@@ -15,6 +15,16 @@
     "https://www.humedoors.com.au/ranges/entrance/haven",
     "https://www.humedoors.com.au/ranges/entrance/linear-entrance",
     "https://www.humedoors.com.au/ranges/entrance/elite-aluminium",
+    "https://www.corinthian.com.au/collections/blonde-oak/",
+    "https://www.corinthian.com.au/collections/deco-white-oak-entrance/",
+    "https://www.corinthian.com.au/collections/slimlite/",
+    "https://www.corinthian.com.au/collections/urban/",
+    "https://www.corinthian.com.au/doors/entrance/awo-2/",
+    "https://www.corinthian.com.au/doors/entrance/awo-21/",
+    "https://www.corinthian.com.au/doors/entrance/awo-2g/",
+    "https://www.corinthian.com.au/doors/entrance/exadeco-1s/",
+    "https://www.corinthian.com.au/doors/entrance/pslm-201/",
+    "https://www.corinthian.com.au/doors/entrance/purb-1/",
     "https://www.bnd.com.au/garage-doors/residential/sectional-doors/",
     "https://www.bnd.com.au/garage-doors/residential/roller-doors/",
     "https://www.bnd.com.au/garage-doors/residential/designer",
@@ -383,35 +393,14 @@
       }
     },
     {
-      "product_code": "ENTRY-HUME-NEWINGTON-XN5",
       "family_key": "entry-doors",
       "requirement_keys": "entry-door",
       "category_key": "Entry Doors",
       "top_level_area": "exterior",
-      "manufacturer": "Hume Doors & Timber",
-      "brand": "Hume",
-      "supplier": "Hume Doors & Timber",
-      "range": "Newington",
-      "product_name": "Hume Newington XN5 entrance door",
-      "model": "XN5",
-      "description": "Hume Newington XN5 entrance door design selected with final size, finish and glazing confirmed by the builder and supplier.",
-      "colour": "Finish by supplier selection",
-      "finish": "Paint or stain finish by quote",
-      "size": "Project door schedule",
-      "configuration": "single_entry_door",
-      "material": "Timber entrance door",
-      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/2e95b23a722cc78c260079723319c000c8bf0884-482x1200.jpg?width=750",
-      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/2e95b23a722cc78c260079723319c000c8bf0884-482x1200.jpg?width=640",
-      "gallery_image_urls": "https://www.humedoors.com.au/social-image?url=%2Fs%2Ffiles%2F1%2F0731%2F6868%2F3252%2Ffiles%2F6a7bcaec13bdd1eaf273147de8b9c955ab1655df-482x1200.jpg",
-      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/newington?model=XN5",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/newington?model=XN5",
-      "specification_url": "https://www.humedoors.com.au/ranges/entrance/newington",
-      "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
       "price_status": "quote_required",
-      "price_unit": "each",
+      "price_unit": "entry door",
       "currency": "AUD",
       "gst_included": "true",
       "country": "AU",
@@ -419,53 +408,159 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
       "source_type": "official_manufacturer_pages",
-      "source_name": "Hume Newington XN5 official entrance door page",
-      "source_url": "https://www.humedoors.com.au/ranges/entrance/newington?model=XN5",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-HUME-HAVEN-HAV22",
+      "manufacturer": "Hume Doors & Timber",
+      "brand": "Hume Doors",
+      "supplier": "Hume Doors & Timber",
+      "range": "Haven",
+      "product_name": "Hume Haven HAV22 entrance door",
+      "model": "HAV22",
+      "description": "Hume Haven HAV22 French-style entrance door design with glass panel styling for exterior front entry selections.",
+      "colour": "Builder selected paint or stain",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish by builder",
+      "material": "Timber entrance door",
+      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5f7ea5bad00747cc2d0dbcac8f32770077723fbd-482x1200.jpg",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5f7ea5bad00747cc2d0dbcac8f32770077723fbd-482x1200.jpg",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5f7ea5bad00747cc2d0dbcac8f32770077723fbd-482x1200.jpg",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "specification_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Haven HAV22 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
       "variants": [
-        { "variantName": "XN5 schedule size", "size": "Project door schedule", "finish": "Paint or stain finish by quote" }
+        {
+          "variantName": "Project door schedule / Paint finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Paint finish by builder",
+          "glazing": "Supplier glass option by quote"
+        },
+        {
+          "variantName": "Project door schedule / Stain finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Stain finish by builder",
+          "glazing": "Supplier glass option by quote"
+        }
       ],
       "attributes": {
         "recordType": "entry_door_design",
-        "design": "XN5",
-        "sizes": ["Project door schedule"],
-        "finishOptions": ["Paint finish by quote", "Stain finish by quote"],
-        "glazing": "As shown/available on supplier page and quote",
-        "hardwareCompatibility": "Entry hardware by builder hardware schedule"
+        "supplierOrder": 1,
+        "design": "HAV22",
+        "range": "Haven",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Paint finish by builder",
+          "Stain finish by builder"
+        ],
+        "glazingOptions": [
+          "Supplier glass option by quote"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
       }
     },
     {
-      "product_code": "ENTRY-HUME-HAVEN-HAV66",
       "family_key": "entry-doors",
       "requirement_keys": "entry-door",
       "category_key": "Entry Doors",
       "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-HUME-HAVEN-HAV66",
       "manufacturer": "Hume Doors & Timber",
-      "brand": "Hume",
+      "brand": "Hume Doors",
       "supplier": "Hume Doors & Timber",
       "range": "Haven",
       "product_name": "Hume Haven HAV66 entrance door",
       "model": "HAV66",
-      "description": "Hume Haven HAV66 entrance door design selected with final size, finish and glazing confirmed by the builder and supplier.",
-      "colour": "Finish by supplier selection",
-      "finish": "Paint or stain finish by quote",
-      "size": "Project door schedule",
-      "configuration": "single_entry_door",
+      "description": "Hume Haven HAV66 entrance door design from the official Haven exterior range, selected with finish and glass details by quote.",
+      "colour": "Builder selected paint or stain",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish by builder",
       "material": "Timber entrance door",
-      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5f7ea5bad00747cc2d0dbcac8f32770077723fbd-482x1200.jpg?width=750",
-      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5f7ea5bad00747cc2d0dbcac8f32770077723fbd-482x1200.jpg?width=640",
-      "gallery_image_urls": "https://www.humedoors.com.au/social-image?url=%2Fs%2Ffiles%2F1%2F0731%2F6868%2F3252%2Ffiles%2F662f29257b620933ac39e262b177e2aa812dd9b0-482x1200.jpg",
-      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/haven?model=HAV66",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/haven?model=HAV66",
+      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/662f29257b620933ac39e262b177e2aa812dd9b0-482x1200.jpg",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/662f29257b620933ac39e262b177e2aa812dd9b0-482x1200.jpg",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/662f29257b620933ac39e262b177e2aa812dd9b0-482x1200.jpg",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/haven",
       "specification_url": "https://www.humedoors.com.au/ranges/entrance/haven",
       "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Haven HAV66 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/haven",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
+      "variants": [
+        {
+          "variantName": "Project door schedule / Paint finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Paint finish by builder",
+          "glazing": "Supplier glass option by quote"
+        },
+        {
+          "variantName": "Project door schedule / Stain finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Stain finish by builder",
+          "glazing": "Supplier glass option by quote"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 1,
+        "design": "HAV66",
+        "range": "Haven",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Paint finish by builder",
+          "Stain finish by builder"
+        ],
+        "glazingOptions": [
+          "Supplier glass option by quote"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
       "price_status": "quote_required",
-      "price_unit": "each",
+      "price_unit": "entry door",
       "currency": "AUD",
       "gst_included": "true",
       "country": "AU",
@@ -473,53 +568,239 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
       "source_type": "official_manufacturer_pages",
-      "source_name": "Hume Haven HAV66 official entrance door page",
-      "source_url": "https://www.humedoors.com.au/ranges/entrance/haven?model=HAV66",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-HUME-NEWINGTON-XN1",
+      "manufacturer": "Hume Doors & Timber",
+      "brand": "Hume Doors",
+      "supplier": "Hume Doors & Timber",
+      "range": "Newington",
+      "product_name": "Hume Newington XN1 entrance door",
+      "model": "XN1",
+      "description": "Hume Newington XN1 front entry door design from the official entrance range with glass and sidelite options confirmed by supplier quote.",
+      "colour": "Builder selected paint or stain",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish by builder",
+      "material": "Timber entrance door",
+      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/2e95b23a722cc78c260079723319c000c8bf0884-482x1200.jpg",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/2e95b23a722cc78c260079723319c000c8bf0884-482x1200.jpg",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/2e95b23a722cc78c260079723319c000c8bf0884-482x1200.jpg",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "specification_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Newington XN1 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
       "variants": [
-        { "variantName": "HAV66 schedule size", "size": "Project door schedule", "finish": "Paint or stain finish by quote" }
+        {
+          "variantName": "Project door schedule / Paint finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Paint finish by builder",
+          "glazing": "Supplier glass option by quote"
+        },
+        {
+          "variantName": "Project door schedule / Stain finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Stain finish by builder",
+          "glazing": "Supplier glass option by quote"
+        }
       ],
       "attributes": {
         "recordType": "entry_door_design",
-        "design": "HAV66",
-        "sizes": ["Project door schedule"],
-        "finishOptions": ["Paint finish by quote", "Stain finish by quote"],
-        "glazing": "As shown/available on supplier page and quote",
-        "hardwareCompatibility": "Entry hardware by builder hardware schedule"
+        "supplierOrder": 1,
+        "design": "XN1",
+        "range": "Newington",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Paint finish by builder",
+          "Stain finish by builder"
+        ],
+        "glazingOptions": [
+          "Supplier glass option by quote"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
       }
     },
     {
-      "product_code": "ENTRY-HUME-LINEAR-LIN1",
       "family_key": "entry-doors",
       "requirement_keys": "entry-door",
       "category_key": "Entry Doors",
       "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-HUME-NEWINGTON-XN5",
       "manufacturer": "Hume Doors & Timber",
-      "brand": "Hume",
+      "brand": "Hume Doors",
+      "supplier": "Hume Doors & Timber",
+      "range": "Newington",
+      "product_name": "Hume Newington XN5 entrance door",
+      "model": "XN5",
+      "description": "Hume Newington XN5 front entry door design with official model image and project finish/glass options selected by quote.",
+      "colour": "Builder selected paint or stain",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish by builder",
+      "material": "Timber entrance door",
+      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/6a7bcaec13bdd1eaf273147de8b9c955ab1655df-482x1200.jpg",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/6a7bcaec13bdd1eaf273147de8b9c955ab1655df-482x1200.jpg",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/6a7bcaec13bdd1eaf273147de8b9c955ab1655df-482x1200.jpg",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "specification_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Newington XN5 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/newington",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
+      "variants": [
+        {
+          "variantName": "Project door schedule / Paint finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Paint finish by builder",
+          "glazing": "Supplier glass option by quote"
+        },
+        {
+          "variantName": "Project door schedule / Stain finish by builder / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Stain finish by builder",
+          "glazing": "Supplier glass option by quote"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 1,
+        "design": "XN5",
+        "range": "Newington",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Paint finish by builder",
+          "Stain finish by builder"
+        ],
+        "glazingOptions": [
+          "Supplier glass option by quote"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-HUME-LINEAR-XLR120",
+      "manufacturer": "Hume Doors & Timber",
+      "brand": "Hume Doors",
       "supplier": "Hume Doors & Timber",
       "range": "Linear Entrance",
-      "product_name": "Hume Linear Entrance LIN1 door",
-      "model": "LIN1",
-      "description": "Hume Linear Entrance LIN1 entrance door design selected with final size and finish confirmed by the builder and supplier.",
-      "colour": "Finish by supplier selection",
-      "finish": "Paint or stain finish by quote",
-      "size": "Project door schedule",
-      "configuration": "single_entry_door",
+      "product_name": "Hume Linear Entrance XLR120 door",
+      "model": "XLR120",
+      "description": "Hume Linear Entrance XLR120 contemporary front entry door design, suited to painted or natural timber exterior selections.",
+      "colour": "Builder selected paint or stain",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish by builder",
       "material": "Timber entrance door",
-      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/1cf1ace80733ab214280a96d9bf9b4375b6f6e93-482x1200.jpg?width=750",
-      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/1cf1ace80733ab214280a96d9bf9b4375b6f6e93-482x1200.jpg?width=640",
-      "gallery_image_urls": "https://www.humedoors.com.au/social-image?url=%2Fs%2Ffiles%2F1%2F0731%2F6868%2F3252%2Ffiles%2Ff5f19c70e93d2567324c29604bf9766071322bfb-5000x3031.jpg",
-      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance?model=LIN1",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance?model=LIN1",
+      "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/1cf1ace80733ab214280a96d9bf9b4375b6f6e93-482x1200.jpg",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/1cf1ace80733ab214280a96d9bf9b4375b6f6e93-482x1200.jpg",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/1cf1ace80733ab214280a96d9bf9b4375b6f6e93-482x1200.jpg",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance",
       "specification_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance",
       "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Linear Entrance XLR120 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
+      "variants": [
+        {
+          "variantName": "Project door schedule / Paint finish by builder",
+          "size": "Project door schedule",
+          "finish": "Paint finish by builder",
+          "glazing": "None"
+        },
+        {
+          "variantName": "Project door schedule / Stain finish by builder",
+          "size": "Project door schedule",
+          "finish": "Stain finish by builder",
+          "glazing": "None"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 1,
+        "design": "XLR120",
+        "range": "Linear Entrance",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Paint finish by builder",
+          "Stain finish by builder"
+        ],
+        "glazingOptions": [
+          "None"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
       "price_status": "quote_required",
-      "price_unit": "each",
+      "price_unit": "entry door",
       "currency": "AUD",
       "gst_included": "true",
       "country": "AU",
@@ -527,55 +808,79 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
       "source_type": "official_manufacturer_pages",
-      "source_name": "Hume Linear Entrance LIN1 official entrance door page",
-      "source_url": "https://www.humedoors.com.au/ranges/entrance/linear-entrance?model=LIN1",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "variants": [
-        { "variantName": "LIN1 schedule size", "size": "Project door schedule", "finish": "Paint or stain finish by quote" }
-      ],
-      "attributes": {
-        "recordType": "entry_door_design",
-        "design": "LIN1",
-        "sizes": ["Project door schedule"],
-        "finishOptions": ["Paint finish by quote", "Stain finish by quote"],
-        "glazing": "As shown/available on supplier page and quote",
-        "hardwareCompatibility": "Entry hardware by builder hardware schedule"
-      }
-    },
-    {
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
       "product_code": "ENTRY-HUME-ELITE-ALUMINIUM-XE1",
-      "family_key": "entry-doors",
-      "requirement_keys": "entry-door",
-      "category_key": "Entry Doors",
-      "top_level_area": "exterior",
       "manufacturer": "Hume Doors & Timber",
-      "brand": "Hume",
+      "brand": "Hume Doors",
       "supplier": "Hume Doors & Timber",
       "range": "Elite Aluminium",
       "product_name": "Hume Elite Aluminium XE1 entrance door",
       "model": "XE1",
-      "description": "Hume Elite Aluminium XE1 entrance door, shown by Hume in Pearl White with translucent glazing.",
-      "colour": "Pearl White",
-      "official_colour_name": "Pearl White",
-      "colour_group": "White",
-      "finish": "Powder coated aluminium",
-      "size": "Project door schedule",
-      "configuration": "single_entry_door",
+      "description": "Hume Elite Aluminium XE1 exterior entry door for weather-exposed front entries where aluminium durability is required.",
+      "colour": "Factory aluminium finish by supplier quote",
+      "official_colour_name": "Selected by builder and supplier quote",
+      "colour_group": "Paint or stain",
+      "finish": "Factory aluminium finish by supplier quote",
       "material": "Aluminium entrance door",
       "primary_image_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/XE1_Pearl_White_Translucent_Web.jpg?width=750",
-      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/XE1_Pearl_White_Translucent_Web.jpg?width=640",
-      "gallery_image_urls": "https://www.humedoors.com.au/social-image?url=%2Fs%2Ffiles%2F1%2F0731%2F6868%2F3252%2Ffiles%2FXE1_Pearl_White_Translucent_Web.jpg",
-      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium?model=XE1",
-      "image_source_type": "official_manufacturer_page",
-      "image_verified_at": "2026-08-15",
-      "image_status": "verified_exact",
-      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium?model=XE1",
+      "thumbnail_url": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/XE1_Pearl_White_Translucent_Web.jpg?width=750",
+      "gallery_image_urls": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/XE1_Pearl_White_Translucent_Web.jpg?width=750",
+      "image_source_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium",
+      "official_product_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium",
       "specification_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium",
       "supplier_url": "https://www.humedoors.com.au/ranges/entrance",
+      "source_name": "Hume Elite Aluminium XE1 official entrance door page",
+      "source_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium",
+      "notes": "Current exterior entrance door design from Hume official entrance range pages. Size and finish are confirmed during supplier quote/project door schedule where Hume page does not publish retail size rows.",
+      "variants": [
+        {
+          "variantName": "Project door schedule / Factory aluminium finish by supplier quote / Translucent glass as shown",
+          "size": "Project door schedule",
+          "finish": "Factory aluminium finish by supplier quote",
+          "glazing": "Translucent glass as shown"
+        },
+        {
+          "variantName": "Project door schedule / Factory aluminium finish by supplier quote / Supplier glass option by quote",
+          "size": "Project door schedule",
+          "finish": "Factory aluminium finish by supplier quote",
+          "glazing": "Supplier glass option by quote"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 1,
+        "design": "XE1",
+        "range": "Elite Aluminium",
+        "sizes": [
+          "Project door schedule"
+        ],
+        "finishOptions": [
+          "Factory aluminium finish by supplier quote"
+        ],
+        "glazingOptions": [
+          "Translucent glass as shown",
+          "Supplier glass option by quote"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from project door schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
       "price_status": "quote_required",
-      "price_unit": "each",
+      "price_unit": "entry door",
       "currency": "AUD",
       "gst_included": "true",
       "country": "AU",
@@ -583,24 +888,905 @@
       "active": "true",
       "discontinued": "false",
       "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
       "source_type": "official_manufacturer_pages",
-      "source_name": "Hume Elite Aluminium XE1 official entrance door page",
-      "source_url": "https://www.humedoors.com.au/ranges/entrance/elite-aluminium?model=XE1",
-      "source_retrieved_at": "2026-08-15",
-      "source_verified_at": "2026-08-15",
-      "colourSwatches": [
-        { "name": "Pearl White", "hex": "#f1f1ea", "source": "official model name/image" }
-      ],
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-BLONDE-OAK-AWO-2",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Blonde Oak",
+      "product_name": "Corinthian Blonde Oak AWO 2 entrance door",
+      "model": "AWO 2",
+      "description": "Corinthian Blonde Oak AWO 2 solid white oak veneer entrance door suitable for paint or stain.",
+      "colour": "Paint finish; Stain finish",
+      "official_colour_name": "Paint finish; Stain finish",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish",
+      "material": "Stile and rail - White Oak Veneer",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051104/Blonde-Oak_AWO-2_042_wHandle_HR-Angled-4Kpx-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051104/Blonde-Oak_AWO-2_042_wHandle_HR-Angled-4Kpx-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051104/Blonde-Oak_AWO-2_042_wHandle_HR-Angled-4Kpx-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/awo-2/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/awo-2/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/awo-2/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Blonde Oak AWO 2 official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/awo-2/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
       "variants": [
-        { "variantName": "XE1 Pearl White translucent", "colour": "Pearl White", "finish": "Powder coated aluminium", "size": "Project door schedule" }
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Paint finish",
+          "size": "2040 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Stain finish",
+          "size": "2040 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Paint finish",
+          "size": "2340 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Stain finish",
+          "size": "2340 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        }
       ],
       "attributes": {
         "recordType": "entry_door_design",
-        "design": "XE1",
-        "sizes": ["Project door schedule"],
-        "finishOptions": ["Pearl White shown on official XE1 page", "Other finishes by supplier quote"],
-        "glazing": "Translucent glazing shown on official XE1 page",
-        "hardwareCompatibility": "Entry hardware by builder hardware schedule"
+        "supplierOrder": 2,
+        "design": "AWO 2",
+        "range": "Blonde Oak",
+        "sizes": [
+          "2040 x 820 x 40",
+          "2040 x 920 x 40",
+          "2340 x 820 x 40",
+          "2340 x 920 x 40"
+        ],
+        "finishOptions": [
+          "Paint finish",
+          "Stain finish"
+        ],
+        "glazingOptions": [
+          "None"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-BLONDE-OAK-AWO-21",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Blonde Oak",
+      "product_name": "Corinthian Blonde Oak AWO 21 entrance door",
+      "model": "AWO 21",
+      "description": "Corinthian Blonde Oak AWO 21 white oak veneer entrance door with clear or translucent glass options.",
+      "colour": "Paint finish; Stain finish",
+      "official_colour_name": "Paint finish; Stain finish",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish",
+      "material": "Stile and rail - White Oak Veneer",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051311/Blonde-Oak_AWO-21_050_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051311/Blonde-Oak_AWO-21_050_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051311/Blonde-Oak_AWO-21_050_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/awo-21/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/awo-21/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/awo-21/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Blonde Oak AWO 21 official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/awo-21/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
+      "variants": [
+        {
+          "variantName": "2040 x 720 x 40 / Paint finish / Clear",
+          "size": "2040 x 720 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 720 x 40 / Paint finish / Translucent",
+          "size": "2040 x 720 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 720 x 40 / Stain finish / Clear",
+          "size": "2040 x 720 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 720 x 40 / Stain finish / Translucent",
+          "size": "2040 x 720 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Paint finish / Clear",
+          "size": "2040 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Paint finish / Translucent",
+          "size": "2040 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Stain finish / Clear",
+          "size": "2040 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Stain finish / Translucent",
+          "size": "2040 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 2,
+        "design": "AWO 21",
+        "range": "Blonde Oak",
+        "sizes": [
+          "2040 x 720 x 40",
+          "2040 x 820 x 40",
+          "2040 x 920 x 40",
+          "2340 x 820 x 40"
+        ],
+        "finishOptions": [
+          "Paint finish",
+          "Stain finish"
+        ],
+        "glazingOptions": [
+          "Clear",
+          "Translucent"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-BLONDE-OAK-AWO-2G",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Blonde Oak",
+      "product_name": "Corinthian Blonde Oak AWO 2G entrance door",
+      "model": "AWO 2G",
+      "description": "Corinthian Blonde Oak AWO 2G white oak veneer entrance door with glazed panel options for front entry selections.",
+      "colour": "Paint finish; Stain finish",
+      "official_colour_name": "Paint finish; Stain finish",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish",
+      "material": "Stile and rail - White Oak Veneer",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051115/Blonde-Oak_AWO-2G_039_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051115/Blonde-Oak_AWO-2G_039_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22051115/Blonde-Oak_AWO-2G_039_CLEAR-GLASS_wHandle_HR-Clear-Angled-4Kpx-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/awo-2g/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/awo-2g/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/awo-2g/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Blonde Oak AWO 2G official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/awo-2g/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
+      "variants": [
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Paint finish / Clear",
+          "size": "2040 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Paint finish / Translucent",
+          "size": "2040 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Stain finish / Clear",
+          "size": "2040 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 920 x 40 / Stain finish / Translucent",
+          "size": "2040 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Paint finish / Clear",
+          "size": "2340 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Paint finish / Translucent",
+          "size": "2340 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Stain finish / Clear",
+          "size": "2340 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Stain finish / Translucent",
+          "size": "2340 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "Translucent"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 2,
+        "design": "AWO 2G",
+        "range": "Blonde Oak",
+        "sizes": [
+          "2040 x 820 x 40",
+          "2040 x 920 x 40",
+          "2340 x 820 x 40",
+          "2340 x 920 x 40"
+        ],
+        "finishOptions": [
+          "Paint finish",
+          "Stain finish"
+        ],
+        "glazingOptions": [
+          "Clear",
+          "Translucent"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-DECO-WHITE-OAK-EXADECO-1S",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Deco White Oak Entrance",
+      "product_name": "Corinthian Deco White Oak Entrance EXADECO 1S entrance door",
+      "model": "EXADECO 1S",
+      "description": "Corinthian Deco White Oak Entrance EXADECO 1S routed white oak veneer entrance door suitable for paint or stain.",
+      "colour": "Paint finish; Stain finish; Clear coat finish",
+      "official_colour_name": "Paint finish; Stain finish; Clear coat finish",
+      "colour_group": "Paint or stain",
+      "finish": "Paint finish",
+      "material": "Solid - White Oak Veneer",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2026/07/14114435/EXADECO-1S-Angled-4K-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2026/07/14114435/EXADECO-1S-Angled-4K-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2026/07/14114435/EXADECO-1S-Angled-4K-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/exadeco-1s/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/exadeco-1s/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/exadeco-1s/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Deco White Oak Entrance EXADECO 1S official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/exadeco-1s/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
+      "variants": [
+        {
+          "variantName": "2040 x 820 x 40 / Paint finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Stain finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Clear coat finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Clear coat finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 870/920 x 40 / Paint finish",
+          "size": "2040 x 870/920 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 870/920 x 40 / Stain finish",
+          "size": "2040 x 870/920 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 870/920 x 40 / Clear coat finish",
+          "size": "2040 x 870/920 x 40",
+          "finish": "Clear coat finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Paint finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Stain finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Clear coat finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Clear coat finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 870 x 40 / Paint finish",
+          "size": "2340 x 870 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 870 x 40 / Stain finish",
+          "size": "2340 x 870 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 870 x 40 / Clear coat finish",
+          "size": "2340 x 870 x 40",
+          "finish": "Clear coat finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Paint finish",
+          "size": "2340 x 920 x 40",
+          "finish": "Paint finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Stain finish",
+          "size": "2340 x 920 x 40",
+          "finish": "Stain finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 920 x 40 / Clear coat finish",
+          "size": "2340 x 920 x 40",
+          "finish": "Clear coat finish",
+          "glazing": "None"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 2,
+        "design": "EXADECO 1S",
+        "range": "Deco White Oak Entrance",
+        "sizes": [
+          "2040 x 820 x 40",
+          "2040 x 870/920 x 40",
+          "2340 x 820 x 40",
+          "2340 x 870 x 40",
+          "2340 x 920 x 40"
+        ],
+        "finishOptions": [
+          "Paint finish",
+          "Stain finish",
+          "Clear coat finish"
+        ],
+        "glazingOptions": [
+          "None"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-SLIMLITE-PSLM-201",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Slimlite",
+      "product_name": "Corinthian Slimlite PSLM 201 entrance door",
+      "model": "PSLM 201",
+      "description": "Corinthian Slimlite PSLM 201 entrance door with narrow geometric glass panel and primed or veneer finish options.",
+      "colour": "Primed finish; Veneer finish",
+      "official_colour_name": "Primed finish; Veneer finish",
+      "colour_group": "Paint or veneer",
+      "finish": "Primed finish",
+      "material": "Solid MDF - Primed or veneered",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22053957/PSLM-201_HR-Clear-Angled-4Kpx-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22053957/PSLM-201_HR-Clear-Angled-4Kpx-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22053957/PSLM-201_HR-Clear-Angled-4Kpx-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/pslm-201/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/pslm-201/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/pslm-201/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Slimlite PSLM 201 official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/pslm-201/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
+      "variants": [
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish / Grey Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Grey Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish / Grey Tint",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Grey Tint"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish / Rice Paper",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Rice Paper"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish / Clear",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish / Grey Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Grey Translucent"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish / Grey Tint",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Grey Tint"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish / Rice Paper",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Rice Paper"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish / Translucent",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish / Grey Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Grey Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish / Grey Tint",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Grey Tint"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish / Rice Paper",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Rice Paper"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish / Clear",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Clear"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish / Grey Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Grey Translucent"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish / Grey Tint",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Grey Tint"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish / Rice Paper",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Rice Paper"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish / Translucent",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "Translucent"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 2,
+        "design": "PSLM 201",
+        "range": "Slimlite",
+        "sizes": [
+          "2040 x 820 x 40",
+          "2340 x 820 x 40"
+        ],
+        "finishOptions": [
+          "Primed finish",
+          "Veneer finish"
+        ],
+        "glazingOptions": [
+          "Clear",
+          "Grey Translucent",
+          "Grey Tint",
+          "Rice Paper",
+          "Translucent"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
+      }
+    },
+    {
+      "family_key": "entry-doors",
+      "requirement_keys": "entry-door",
+      "category_key": "Entry Doors",
+      "top_level_area": "exterior",
+      "collection": "Exterior entrance doors",
+      "configuration": "entry_door_design",
+      "price_status": "quote_required",
+      "price_unit": "entry door",
+      "currency": "AUD",
+      "gst_included": "true",
+      "country": "AU",
+      "regions": "AU;QLD",
+      "active": "true",
+      "discontinued": "false",
+      "archived": "false",
+      "image_source_type": "official_manufacturer_page",
+      "image_verified_at": "2026-08-24",
+      "image_status": "verified_exact",
+      "source_type": "official_manufacturer_pages",
+      "source_retrieved_at": "2026-08-24",
+      "source_verified_at": "2026-08-24",
+      "product_code": "ENTRY-CORINTHIAN-URBAN-PURB-1",
+      "manufacturer": "Corinthian Doors",
+      "brand": "Corinthian Doors",
+      "supplier": "Corinthian Doors",
+      "range": "Urban",
+      "product_name": "Corinthian Urban PURB 1 entrance door",
+      "model": "PURB 1",
+      "description": "Corinthian Urban PURB 1 entrance door with clean routed profile, EXP External Primed skin and veneer options.",
+      "colour": "Primed finish; Veneer finish",
+      "official_colour_name": "Primed finish; Veneer finish",
+      "colour_group": "Paint or veneer",
+      "finish": "Primed finish",
+      "material": "Lightweight - Primed or veneered",
+      "primary_image_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22054158/PURB-01_HR-Angled-4Kpx-600x600.png",
+      "thumbnail_url": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22054158/PURB-01_HR-Angled-4Kpx-600x600.png",
+      "gallery_image_urls": "https://cdn.corinthian.com.au/wp-content/uploads/2024/08/22054158/PURB-01_HR-Angled-4Kpx-600x600.png",
+      "image_source_url": "https://www.corinthian.com.au/doors/entrance/purb-1/",
+      "official_product_url": "https://www.corinthian.com.au/doors/entrance/purb-1/",
+      "specification_url": "https://www.corinthian.com.au/doors/entrance/purb-1/",
+      "supplier_url": "https://www.corinthian.com.au/doors/entrance/",
+      "source_name": "Corinthian Urban PURB 1 official entrance door page",
+      "source_url": "https://www.corinthian.com.au/doors/entrance/purb-1/",
+      "notes": "Current Corinthian entrance door design with official product image, size rows and finish/glazing options from the product page.",
+      "variants": [
+        {
+          "variantName": "2040 x 820 x 40 / Primed finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 820 x 40 / Veneer finish",
+          "size": "2040 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 870 x 40 / Primed finish",
+          "size": "2040 x 870 x 40",
+          "finish": "Primed finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2040 x 870 x 40 / Veneer finish",
+          "size": "2040 x 870 x 40",
+          "finish": "Veneer finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Primed finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Primed finish",
+          "glazing": "None"
+        },
+        {
+          "variantName": "2340 x 820 x 40 / Veneer finish",
+          "size": "2340 x 820 x 40",
+          "finish": "Veneer finish",
+          "glazing": "None"
+        }
+      ],
+      "attributes": {
+        "recordType": "entry_door_design",
+        "supplierOrder": 2,
+        "design": "PURB 1",
+        "range": "Urban",
+        "sizes": [
+          "2040 x 820 x 40",
+          "2040 x 870 x 40",
+          "2340 x 820 x 40"
+        ],
+        "finishOptions": [
+          "Primed finish",
+          "Veneer finish"
+        ],
+        "glazingOptions": [
+          "None"
+        ],
+        "doorType": "Entrance Door",
+        "exteriorUse": true,
+        "priceBasis": "Quote required from supplier/product schedule",
+        "optionFlow": "supplier-range-design-size-finish-glazing-save"
       }
     },
     {

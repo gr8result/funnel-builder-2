@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import {
   DEMO_BUILDER_ORGANISATION_ID,
   FAMILY_IMAGE_FALLBACKS,
@@ -50,8 +51,26 @@ requiredFamilies.forEach((familyKey) => {
 });
 
 assert.ok(productsByFamily.windows.length >= 6, "Windows catalogue includes multiple verified manufacturer/range records");
-assert.ok(productsByFamily["entry-doors"].length >= 4, "Entry Doors catalogue includes actual Hume entrance door designs");
+assert.ok(productsByFamily["entry-doors"].length >= 12, "Entry Doors catalogue includes actual Hume and Corinthian entrance door designs");
 assert.ok(productsByFamily["garage-doors"].length >= 5, "Garage Doors catalogue includes sectional, roller and designer B&D records");
+
+const entryDoorProducts = productsByFamily["entry-doors"];
+const entryDoorSuppliers = entryDoorProducts.map((product) => product.supplier);
+assert.equal(entryDoorSuppliers.filter((supplier) => /hume/i.test(supplier)).length, 6, "Entry Doors includes six Hume exterior entrance door designs");
+assert.equal(entryDoorSuppliers.filter((supplier) => /corinthian/i.test(supplier)).length, 6, "Entry Doors includes six Corinthian exterior entrance door designs");
+assert.equal(/hume/i.test(entryDoorSuppliers[0]), true, "Hume is the first default Entry Door supplier in catalogue order");
+assert.equal(/corinthian/i.test(entryDoorSuppliers.find((supplier) => /corinthian/i.test(supplier)) || ""), true, "Corinthian is present as the second default Entry Door supplier group");
+assert.ok(new Set(entryDoorProducts.map((product) => product.range)).size >= 7, "Entry Doors exposes supplier ranges before designs");
+assert.ok(entryDoorProducts.every((product) => product.attributes?.sizes?.length), "Every Entry Door record exposes size/variant options");
+assert.ok(entryDoorProducts.every((product) => product.attributes?.finishOptions?.length), "Every Entry Door record exposes finish/colour options");
+assert.ok(entryDoorProducts.every((product) => product.attributes?.glazingOptions?.length), "Every Entry Door record exposes glazing options, including None where solid");
+assert.ok(entryDoorProducts.every((product) => product.attributes?.optionFlow === "supplier-range-design-size-finish-glazing-save"), "Entry Door records declare the supplier/range/design/variant/finish/glass save flow");
+assert.ok(entryDoorProducts.every((product) => /entry|entrance/i.test(`${product.productName} ${product.officialProductUrl} ${product.attributes?.doorType || ""}`)), "Entry Door records are actual exterior entry/entrance door products");
+
+const badEntryDoorImageTerms = /\b(bathroom|ensuite|toilet|shower|bedroom|kitchen|interior|unsplash|cooktop)\b/i;
+entryDoorProducts.forEach((product) => {
+  assert.equal(badEntryDoorImageTerms.test(`${product.primaryImageUrl} ${product.thumbnailUrl} ${product.galleryImageUrls || ""}`), false, `${product.productCode} cannot use bathroom/interior fallback imagery`);
+});
 
 const exteriorFamilyKeys = EXTERIOR_REQUIREMENTS.map((requirement) => requirement.familyKey);
 assert.ok(exteriorFamilyKeys.includes("windows"), "Exterior Windows requirement uses familyKey=windows");
@@ -147,6 +166,29 @@ assert.equal(nextIncompleteRequirement(EXTERIOR_REQUIREMENTS, selectionMap, wind
 const entrySelectionMap = selectedByRequirement([...completedSelections, selectionFor("entry-door")], EXTERIOR_REQUIREMENTS);
 assert.equal(nextIncompleteRequirement(EXTERIOR_REQUIREMENTS, entrySelectionMap, entryRequirement)?.requirementKey, "garage-door", "Exterior auto-advance moves from Entry Doors to Garage Doors");
 
+const entryDoorSelectionProduct = {
+  ...entryDoorProducts.find((product) => /corinthian/i.test(product.supplier)),
+};
+entryDoorSelectionProduct.size = entryDoorSelectionProduct.attributes.sizes[0];
+entryDoorSelectionProduct.finish = entryDoorSelectionProduct.attributes.finishOptions[0];
+entryDoorSelectionProduct.colour = entryDoorSelectionProduct.finish;
+entryDoorSelectionProduct.glazing = entryDoorSelectionProduct.attributes.glazingOptions[0];
+entryDoorSelectionProduct.attributes = {
+  ...entryDoorSelectionProduct.attributes,
+  selectedGlazing: entryDoorSelectionProduct.glazing,
+};
+const entryPayload = createSelectionPayloadFromProduct({
+  workspaceId: DEMO_BUILDER_ORGANISATION_ID,
+  projectId: "project-test",
+  requirement: entryRequirement,
+  product: entryDoorSelectionProduct,
+});
+assert.equal(entryPayload.selected_details.familyKey, "entry-doors", "Entry Door selection payload persists the entry-doors family");
+assert.equal(entryPayload.selected_details.doorDesign, entryDoorSelectionProduct.model, "Entry Door selection payload persists the selected actual door design");
+assert.equal(entryPayload.selected_details.size, entryDoorSelectionProduct.size, "Entry Door selection payload persists chosen size/variant");
+assert.equal(entryPayload.selected_details.finish, entryDoorSelectionProduct.finish, "Entry Door selection payload persists chosen finish/colour");
+assert.equal(entryPayload.selected_details.glazing, entryDoorSelectionProduct.glazing, "Entry Door selection payload persists chosen glazing");
+
 const garagePayload = createSelectionPayloadFromProduct({
   workspaceId: DEMO_BUILDER_ORGANISATION_ID,
   projectId: "project-test",
@@ -155,6 +197,18 @@ const garagePayload = createSelectionPayloadFromProduct({
 });
 assert.equal(garagePayload.selected_details.familyKey, "garage-doors", "Garage Door selection payload persists the garage-doors family");
 assert.equal(garagePayload.selected_details.doorDesign, productsByFamily["garage-doors"][0].model, "Garage Door selection payload persists design/model");
+
+const selectionsBookSource = readFileSync("pages/modules/builders/selections-book.js", "utf8");
+[
+  "guided-entry-door-workflow",
+  "entry-door-supplier-step",
+  "entry-door-range-step",
+  "entry-door-design-step",
+  "entry-door-size-step",
+  "entry-door-finish-step",
+  "entry-door-glazing-step",
+].forEach((token) => assert.ok(selectionsBookSource.includes(token), `Client Selections Entry Door workflow includes ${token}`));
+assert.ok(selectionsBookSource.includes("supplier-range-design-size-finish-glazing-save"), "Client Selections Entry Door workflow cannot save from supplier/range alone");
 
 function selectionFor(requirementKey) {
   const requirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === requirementKey);

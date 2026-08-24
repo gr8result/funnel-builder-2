@@ -785,6 +785,13 @@ export default function BuilderSelectionsBookPage({
   const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
   const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
   const [guidedBrickRange, setGuidedBrickRange] = useState("");
+  const [guidedEntryDoorStep, setGuidedEntryDoorStep] = useState("supplier");
+  const [guidedEntryDoorSupplier, setGuidedEntryDoorSupplier] = useState("");
+  const [guidedEntryDoorRange, setGuidedEntryDoorRange] = useState("");
+  const [guidedEntryDoorProductCode, setGuidedEntryDoorProductCode] = useState("");
+  const [guidedEntryDoorSize, setGuidedEntryDoorSize] = useState("");
+  const [guidedEntryDoorFinish, setGuidedEntryDoorFinish] = useState("");
+  const [guidedEntryDoorGlazing, setGuidedEntryDoorGlazing] = useState("");
   const [guidedRoofingMode, setGuidedRoofingMode] = useState("");
   const [guidedRoofingStep, setGuidedRoofingStep] = useState("landing");
   const [roofingConfiguration, setRoofingConfiguration] = useState({
@@ -1440,6 +1447,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
     setGuidedRequirementKey("");
     resetGuidedBrickFlow();
+    resetGuidedEntryDoorFlow();
     resetGuidedRoofingFlow();
   }
 
@@ -1448,6 +1456,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedScreen("kitchen");
     setGuidedRequirementKey("");
     resetGuidedBrickFlow();
+    resetGuidedEntryDoorFlow();
     resetGuidedRoofingFlow();
   }
 
@@ -1456,6 +1465,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(requirementKey);
     setGuidedScreen("product");
     resetGuidedBrickFlow();
+    resetGuidedEntryDoorFlow();
     resetGuidedRoofingFlow();
   }
 
@@ -1466,6 +1476,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(next.requirementKey);
     setGuidedScreen("product");
     if (next.requirementKey !== "bricks") resetGuidedBrickFlow();
+    if (next.requirementKey !== "entry-door") resetGuidedEntryDoorFlow();
     if (next.requirementKey === "roofing") openGuidedRoofingLanding();
     else resetGuidedRoofingFlow();
   }
@@ -1476,6 +1487,7 @@ export default function BuilderSelectionsBookPage({
       setGuidedRequirementKey("");
       setGuidedArea("");
       resetGuidedBrickFlow();
+      resetGuidedEntryDoorFlow();
       resetGuidedRoofingFlow();
       return;
     }
@@ -1483,6 +1495,7 @@ export default function BuilderSelectionsBookPage({
     setGuidedRequirementKey(requirement.requirementKey);
     setGuidedScreen("product");
     if (requirement.requirementKey !== "bricks") resetGuidedBrickFlow();
+    if (requirement.requirementKey !== "entry-door") resetGuidedEntryDoorFlow();
     if (requirement.requirementKey === "roofing") openGuidedRoofingLanding();
     else resetGuidedRoofingFlow();
   }
@@ -1500,6 +1513,7 @@ export default function BuilderSelectionsBookPage({
           setGuidedArea("interior");
           setGuidedRequirementKey("");
           resetGuidedBrickFlow();
+          resetGuidedEntryDoorFlow();
           resetGuidedRoofingFlow();
           return;
         }
@@ -1509,6 +1523,7 @@ export default function BuilderSelectionsBookPage({
           setGuidedArea("interior");
           setGuidedRequirementKey("");
           resetGuidedBrickFlow();
+          resetGuidedEntryDoorFlow();
           resetGuidedRoofingFlow();
           return;
         }
@@ -1551,6 +1566,16 @@ export default function BuilderSelectionsBookPage({
     setGuidedBrickStep("suppliers");
     setGuidedBrickSupplier("");
     setGuidedBrickRange("");
+  }
+
+  function resetGuidedEntryDoorFlow() {
+    setGuidedEntryDoorStep("supplier");
+    setGuidedEntryDoorSupplier("");
+    setGuidedEntryDoorRange("");
+    setGuidedEntryDoorProductCode("");
+    setGuidedEntryDoorSize("");
+    setGuidedEntryDoorFinish("");
+    setGuidedEntryDoorGlazing("");
   }
 
   function resetGuidedRoofingFlow() {
@@ -1723,10 +1748,11 @@ export default function BuilderSelectionsBookPage({
         colour: option.colour || "",
         finish: option.finish || "",
         size: option.size || "",
+        glazing: option.glazing || entity.glazing || entity.attributes?.selectedGlazing || "",
         profile: option.profile || "",
         texture: option.texture || "",
         configuration: option.configuration || option.roofType || "",
-        variant: { model: option.model, colour: option.colour || "", finish: option.finish, size: option.size || "" },
+        variant: { model: option.model, colour: option.colour || "", finish: option.finish, size: option.size || "", glazing: option.glazing || entity.glazing || entity.attributes?.selectedGlazing || "" },
         quantity,
         allowance,
         selectedPrice: selectedCost,
@@ -2359,12 +2385,20 @@ export default function BuilderSelectionsBookPage({
               guidedArea,
               guidedRequirement,
               guidedBrickStep,
+              guidedEntryDoorStep,
               guidedRoofingMode,
               guidedRoofingStep,
               roofingConfiguration,
               setGuidedBrickStep,
               setGuidedBrickSupplier,
               setGuidedBrickRange,
+              setGuidedEntryDoorStep,
+              setGuidedEntryDoorSupplier,
+              setGuidedEntryDoorRange,
+              setGuidedEntryDoorProductCode,
+              setGuidedEntryDoorSize,
+              setGuidedEntryDoorFinish,
+              setGuidedEntryDoorGlazing,
               setGuidedRoofingMode,
               setGuidedRoofingStep,
               setRoofingConfiguration,
@@ -2525,6 +2559,13 @@ export default function BuilderSelectionsBookPage({
               brickStep={guidedBrickStep}
               brickSupplier={guidedBrickSupplier}
               brickRange={guidedBrickRange}
+              entryDoorStep={guidedEntryDoorStep}
+              entryDoorSupplier={guidedEntryDoorSupplier}
+              entryDoorRange={guidedEntryDoorRange}
+              entryDoorProductCode={guidedEntryDoorProductCode}
+              entryDoorSize={guidedEntryDoorSize}
+              entryDoorFinish={guidedEntryDoorFinish}
+              entryDoorGlazing={guidedEntryDoorGlazing}
               roofingMode={guidedRoofingMode}
               roofingStep={guidedRoofingStep}
               roofingConfiguration={roofingConfiguration}
@@ -2535,6 +2576,13 @@ export default function BuilderSelectionsBookPage({
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
+              onEntryDoorStepChange={setGuidedEntryDoorStep}
+              onEntryDoorSupplierChange={setGuidedEntryDoorSupplier}
+              onEntryDoorRangeChange={setGuidedEntryDoorRange}
+              onEntryDoorProductCodeChange={setGuidedEntryDoorProductCode}
+              onEntryDoorSizeChange={setGuidedEntryDoorSize}
+              onEntryDoorFinishChange={setGuidedEntryDoorFinish}
+              onEntryDoorGlazingChange={setGuidedEntryDoorGlazing}
               onRoofingModeChange={setGuidedRoofingMode}
               onRoofingStepChange={setGuidedRoofingStep}
               onRoofingConfigurationChange={setRoofingConfiguration}
@@ -2624,6 +2672,13 @@ function GuidedSelectionsWorkflow({
   brickStep,
   brickSupplier,
   brickRange,
+  entryDoorStep,
+  entryDoorSupplier,
+  entryDoorRange,
+  entryDoorProductCode,
+  entryDoorSize,
+  entryDoorFinish,
+  entryDoorGlazing,
   roofingMode,
   roofingStep,
   roofingConfiguration,
@@ -2634,6 +2689,13 @@ function GuidedSelectionsWorkflow({
   onBrickStepChange,
   onBrickSupplierChange,
   onBrickRangeChange,
+  onEntryDoorStepChange,
+  onEntryDoorSupplierChange,
+  onEntryDoorRangeChange,
+  onEntryDoorProductCodeChange,
+  onEntryDoorSizeChange,
+  onEntryDoorFinishChange,
+  onEntryDoorGlazingChange,
   onRoofingModeChange,
   onRoofingStepChange,
   onRoofingConfigurationChange,
@@ -2744,6 +2806,33 @@ function GuidedSelectionsWorkflow({
         />
       );
     }
+    if (requirement.requirementKey === "entry-door") {
+      return (
+        <GuidedEntryDoorWorkflow
+          requirement={requirement}
+          products={products}
+          masterProductCount={masterProductCount}
+          enabledProductCount={enabledProductCount}
+          runningTotals={runningTotals}
+          entryDoorStep={entryDoorStep}
+          entryDoorSupplier={entryDoorSupplier}
+          entryDoorRange={entryDoorRange}
+          entryDoorProductCode={entryDoorProductCode}
+          entryDoorSize={entryDoorSize}
+          entryDoorFinish={entryDoorFinish}
+          entryDoorGlazing={entryDoorGlazing}
+          onEntryDoorStepChange={onEntryDoorStepChange}
+          onEntryDoorSupplierChange={onEntryDoorSupplierChange}
+          onEntryDoorRangeChange={onEntryDoorRangeChange}
+          onEntryDoorProductCodeChange={onEntryDoorProductCodeChange}
+          onEntryDoorSizeChange={onEntryDoorSizeChange}
+          onEntryDoorFinishChange={onEntryDoorFinishChange}
+          onEntryDoorGlazingChange={onEntryDoorGlazingChange}
+          onSelectProduct={onSelectProduct}
+          onViewDetails={onViewDetails}
+        />
+      );
+    }
     if (requirement.requirementKey === "roofing") {
       return (
         <GuidedRoofingWorkflow
@@ -2847,6 +2936,262 @@ function GuidedCardGrid({ title, cards, onOpen }) {
         ))}
       </div>
     </>
+  );
+}
+
+function GuidedEntryDoorWorkflow({
+  requirement,
+  products,
+  masterProductCount = 0,
+  enabledProductCount = 0,
+  runningTotals,
+  entryDoorStep,
+  entryDoorSupplier,
+  entryDoorRange,
+  entryDoorProductCode,
+  entryDoorSize,
+  entryDoorFinish,
+  entryDoorGlazing,
+  onEntryDoorStepChange,
+  onEntryDoorSupplierChange,
+  onEntryDoorRangeChange,
+  onEntryDoorProductCodeChange,
+  onEntryDoorSizeChange,
+  onEntryDoorFinishChange,
+  onEntryDoorGlazingChange,
+  onSelectProduct,
+}) {
+  const suppliers = entryDoorSupplierOptions(products);
+  const ranges = entryDoorRangeOptions(products, entryDoorSupplier);
+  const designs = entryDoorDesignOptions(products, entryDoorSupplier, entryDoorRange);
+  const selectedProduct = products.find((product) => entryDoorProductCodeFor(product) === entryDoorProductCode) || null;
+  const sizes = entryDoorAttributeOptions(selectedProduct, "sizes", selectedProduct?.size);
+  const finishes = entryDoorAttributeOptions(selectedProduct, "finishOptions", selectedProduct?.finish || selectedProduct?.colour);
+  const glazings = entryDoorAttributeOptions(selectedProduct, "glazingOptions", "");
+  const currentStep = entryDoorStep || "supplier";
+  const progressSteps = [
+    ["supplier", "Supplier", entryDoorSupplier],
+    ["range", "Range", entryDoorRange],
+    ["design", "Door / Design", entryDoorProductCode],
+    ["size", "Size", entryDoorSize],
+    ["finish", "Colour / Finish", entryDoorFinish],
+    ...(glazings.length ? [["glazing", "Glass", entryDoorGlazing]] : []),
+  ];
+  const resetAfterSupplier = () => {
+    onEntryDoorRangeChange("");
+    onEntryDoorProductCodeChange("");
+    onEntryDoorSizeChange("");
+    onEntryDoorFinishChange("");
+    onEntryDoorGlazingChange("");
+  };
+  const resetAfterRange = () => {
+    onEntryDoorProductCodeChange("");
+    onEntryDoorSizeChange("");
+    onEntryDoorFinishChange("");
+    onEntryDoorGlazingChange("");
+  };
+  const nextAfterDesign = (product) => {
+    const nextSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const nextFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
+    const nextGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
+    if (nextSizes.length) return "size";
+    if (nextFinishes.length) return "finish";
+    if (nextGlazings.length) return "glazing";
+    return "finish";
+  };
+  const saveSelection = (patch = {}) => {
+    const product = patch.product || selectedProduct;
+    if (!product) return;
+    const nextSize = patch.size ?? entryDoorSize;
+    const nextFinish = patch.finish ?? entryDoorFinish;
+    const nextGlazing = patch.glazing ?? entryDoorGlazing;
+    const requiredSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const requiredFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
+    const requiredGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
+    if ((requiredSizes.length && !nextSize) || (requiredFinishes.length && !nextFinish) || (requiredGlazings.length && !nextGlazing)) return;
+    const entity = product.metadata?.productEntity || product;
+    const patchedEntity = {
+      ...entity,
+      size: nextSize,
+      finish: nextFinish,
+      colour: nextFinish,
+      glazing: nextGlazing,
+      attributes: {
+        ...(entity.attributes || {}),
+        selectedSize: nextSize,
+        selectedFinish: nextFinish,
+        selectedGlazing: nextGlazing,
+      },
+    };
+    onSelectProduct(requirement, {
+      ...product,
+      size: nextSize,
+      finish: nextFinish,
+      colour: nextFinish,
+      glazing: nextGlazing,
+      metadata: {
+        ...(product.metadata || {}),
+        productEntity: patchedEntity,
+      },
+    });
+  };
+
+  return (
+    <section className="guidedShell" data-testid="guided-entry-door-workflow" data-entry-door-flow="supplier-range-design-size-finish-glazing-save">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout entryDoorLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-entry-door-hierarchy">
+          <h2>Entry Doors</h2>
+          {progressSteps.map(([step, label, value]) => (
+            <button
+              key={step}
+              type="button"
+              className={`guidedProgressItem ${currentStep === step ? "active" : ""} ${value ? "complete" : ""}`}
+              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "finish", "glazing"].includes(step) && !selectedProduct)}
+              onClick={() => onEntryDoorStepChange(step)}
+            >
+              <GuidedStatusDot status={value ? "complete" : "not_started"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel entryDoorShowroom">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Entry Doors</span>
+            <strong>{entryDoorHeaderForStep(currentStep)}</strong>
+            <em>{products.length ? `${products.length} enabled exterior entry door design${products.length === 1 ? "" : "s"}` : "Import real Hume and Corinthian entry door products before client selection."}</em>
+          </div>
+          {!products.length ? (
+            <GuidedEntryDoorEmptyCatalogue masterProductCount={masterProductCount} enabledProductCount={enabledProductCount} />
+          ) : currentStep === "supplier" ? (
+            <div className="guidedSupplierGrid" data-testid="entry-door-supplier-step">
+              {suppliers.map((supplier) => (
+                <button key={supplier.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onEntryDoorSupplierChange(supplier.label);
+                  resetAfterSupplier();
+                  onEntryDoorStepChange("range");
+                }}>
+                  <img src={supplier.image} alt="" />
+                  <span>{supplier.label}</span>
+                  <strong>{supplier.count} design{supplier.count === 1 ? "" : "s"}</strong>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "range" ? (
+            <div className="guidedSupplierGrid" data-testid="entry-door-range-step">
+              {ranges.map((range) => (
+                <button key={range.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onEntryDoorRangeChange(range.label);
+                  resetAfterRange();
+                  onEntryDoorStepChange("design");
+                }}>
+                  <img src={range.image} alt="" />
+                  <span>{range.label}</span>
+                  <strong>{range.count} door design{range.count === 1 ? "" : "s"}</strong>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "design" ? (
+            <div className="guidedProductGrid" data-testid="entry-door-design-step">
+              {designs.map((product) => (
+                <button key={product.id} type="button" className="guidedProductCard entryDoorDesignCard" onClick={() => {
+                  onEntryDoorProductCodeChange(entryDoorProductCodeFor(product));
+                  onEntryDoorSizeChange("");
+                  onEntryDoorFinishChange("");
+                  onEntryDoorGlazingChange("");
+                  onEntryDoorStepChange(nextAfterDesign(product));
+                }}>
+                  <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
+                  <div>
+                    <span>{product.range || product.supplier}</span>
+                    <strong>{product.productName}</strong>
+                    <em>Model {product.model || "not recorded"}</em>
+                    <p>{product.description || "Exterior entry door design."}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "size" ? (
+            <EntryDoorOptionStep
+              testId="entry-door-size-step"
+              product={selectedProduct}
+              options={sizes}
+              selectedValue={entryDoorSize}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorSizeChange(value);
+                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glazing" : "finish");
+              }}
+            />
+          ) : currentStep === "finish" ? (
+            <EntryDoorOptionStep
+              testId="entry-door-finish-step"
+              product={selectedProduct}
+              options={finishes}
+              selectedValue={entryDoorFinish}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorFinishChange(value);
+                if (glazings.length) onEntryDoorStepChange("glazing");
+                else saveSelection({ finish: value });
+              }}
+            />
+          ) : (
+            <EntryDoorOptionStep
+              testId="entry-door-glazing-step"
+              product={selectedProduct}
+              options={glazings}
+              selectedValue={entryDoorGlazing}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorGlazingChange(value);
+                saveSelection({ glazing: value });
+              }}
+            />
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function EntryDoorOptionStep({ testId, product, options = [], selectedValue = "", labelFor, onSelect }) {
+  return (
+    <div className="entryDoorOptionPanel" data-testid={testId}>
+      {product ? (
+        <div className="roofingSelectionSummary entryDoorSelectionSummary">
+          <img src={product.imageUrl} alt={product.productName} />
+          <div className="roofingSummaryDetails">
+            <strong>{product.productName}</strong>
+            <dl>
+              <div><dt>Supplier</dt><dd>{product.supplier || "To be confirmed"}</dd></div>
+              <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
+              <div><dt>Design</dt><dd>{product.model || "To be confirmed"}</dd></div>
+            </dl>
+          </div>
+        </div>
+      ) : null}
+      <div className="roofingChoiceGrid">
+        {options.map((option) => (
+          <button key={option} type="button" className={selectedValue === option ? "selected" : ""} onClick={() => onSelect(option)}>
+            <strong>{labelFor(option)}</strong>
+            <span>{selectedValue === option ? "Selected" : "Select"}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GuidedEntryDoorEmptyCatalogue({ masterProductCount = 0, enabledProductCount = 0 }) {
+  return (
+    <div className="guidedEmptyCatalogue" data-testid="guided-entry-door-empty-catalogue">
+      <strong>{masterProductCount && !enabledProductCount ? "No entry door products are enabled for this builder." : "Entry door catalogue awaiting product data"}</strong>
+      <span>Product Library needs real exterior Hume and Corinthian entry door products before Client Selections can continue.</span>
+      <div>
+        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?area=exterior&category=Entry%20Doors&family=entry-doors"; }}>Manage Entry Doors</button>
+      </div>
+    </div>
   );
 }
 
@@ -4785,6 +5130,75 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
   };
 }
 
+function entryDoorProductCodeFor(product) {
+  const entity = product?.metadata?.productEntity || product || {};
+  return entity.productCode || product?.productCode || product?.sku || product?.id || "";
+}
+
+function entryDoorSupplierLabel(product) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const supplier = entity.supplier || product?.supplier || entity.manufacturer || product?.manufacturer || "";
+  if (/hume/i.test(supplier)) return "Hume Doors & Timber";
+  if (/corinthian/i.test(supplier)) return "Corinthian Doors";
+  return supplier || "Supplier not recorded";
+}
+
+function entryDoorSupplierRank(label) {
+  if (/hume/i.test(label)) return 1;
+  if (/corinthian/i.test(label)) return 2;
+  return 10;
+}
+
+function entryDoorSupplierOptions(products = []) {
+  const map = new Map();
+  products.forEach((product) => {
+    const label = entryDoorSupplierLabel(product);
+    const existing = map.get(label) || { key: slug(label), label, count: 0, image: product.imageUrl || "" };
+    existing.count += 1;
+    if (!existing.image) existing.image = product.imageUrl || "";
+    map.set(label, existing);
+  });
+  return Array.from(map.values()).sort((left, right) => entryDoorSupplierRank(left.label) - entryDoorSupplierRank(right.label) || left.label.localeCompare(right.label));
+}
+
+function entryDoorRangeOptions(products = [], supplier = "") {
+  const map = new Map();
+  products.filter((product) => !supplier || entryDoorSupplierLabel(product) === supplier).forEach((product) => {
+    const label = product.range || "Range not recorded";
+    const existing = map.get(label) || { key: slug(label), label, count: 0, image: product.imageUrl || "" };
+    existing.count += 1;
+    if (!existing.image) existing.image = product.imageUrl || "";
+    map.set(label, existing);
+  });
+  return Array.from(map.values()).sort((left, right) => left.label.localeCompare(right.label));
+}
+
+function entryDoorDesignOptions(products = [], supplier = "", range = "") {
+  return products
+    .filter((product) => !supplier || entryDoorSupplierLabel(product) === supplier)
+    .filter((product) => !range || product.range === range)
+    .sort((left, right) => `${left.range || ""} ${left.model || ""}`.localeCompare(`${right.range || ""} ${right.model || ""}`));
+}
+
+function entryDoorAttributeOptions(product, key, fallback = "") {
+  const entity = product?.metadata?.productEntity || product || {};
+  const value = entity.attributes?.[key] || entity[key] || product?.[key] || [];
+  const list = Array.isArray(value)
+    ? value
+    : String(value || "").split(/[;|]/).map((item) => item.trim()).filter(Boolean);
+  const withFallback = list.length ? list : fallback ? [fallback] : [];
+  return Array.from(new Set(withFallback.map((item) => String(item || "").trim()).filter(Boolean)));
+}
+
+function entryDoorHeaderForStep(step) {
+  if (step === "glazing") return "Choose glass option";
+  if (step === "finish") return "Choose colour / finish";
+  if (step === "size") return "Choose size / variant";
+  if (step === "design") return "Choose actual door design";
+  if (step === "range") return "Choose supplier range";
+  return "Choose entry door supplier";
+}
+
 function roofingHeaderForStep(step) {
   if (step === "tileFinish") return "Confirm roof tile finish";
   if (step === "downpipeColour") return "Choose downpipe colour";
@@ -5221,12 +5635,20 @@ function handleGuidedBack({
   guidedArea,
   guidedRequirement,
   guidedBrickStep,
+  guidedEntryDoorStep,
   guidedRoofingMode,
   guidedRoofingStep,
   roofingConfiguration,
   setGuidedBrickStep,
   setGuidedBrickSupplier,
   setGuidedBrickRange,
+  setGuidedEntryDoorStep,
+  setGuidedEntryDoorSupplier,
+  setGuidedEntryDoorRange,
+  setGuidedEntryDoorProductCode,
+  setGuidedEntryDoorSize,
+  setGuidedEntryDoorFinish,
+  setGuidedEntryDoorGlazing,
   setGuidedRoofingMode,
   setGuidedRoofingStep,
   setRoofingConfiguration,
@@ -5249,6 +5671,46 @@ function handleGuidedBack({
       }
       setGuidedBrickSupplier("");
       setGuidedBrickRange("");
+      setGuidedScreen("exterior");
+      setGuidedRequirementKey("");
+      return;
+    }
+    if (guidedRequirement?.requirementKey === "entry-door") {
+      if (guidedEntryDoorStep === "glazing") {
+        setGuidedEntryDoorStep("finish");
+        return;
+      }
+      if (guidedEntryDoorStep === "finish") {
+        setGuidedEntryDoorStep("size");
+        return;
+      }
+      if (guidedEntryDoorStep === "size") {
+        setGuidedEntryDoorStep("design");
+        return;
+      }
+      if (guidedEntryDoorStep === "design") {
+        setGuidedEntryDoorStep("range");
+        setGuidedEntryDoorProductCode("");
+        setGuidedEntryDoorSize("");
+        setGuidedEntryDoorFinish("");
+        setGuidedEntryDoorGlazing("");
+        return;
+      }
+      if (guidedEntryDoorStep === "range") {
+        setGuidedEntryDoorStep("supplier");
+        setGuidedEntryDoorRange("");
+        setGuidedEntryDoorProductCode("");
+        setGuidedEntryDoorSize("");
+        setGuidedEntryDoorFinish("");
+        setGuidedEntryDoorGlazing("");
+        return;
+      }
+      setGuidedEntryDoorSupplier("");
+      setGuidedEntryDoorRange("");
+      setGuidedEntryDoorProductCode("");
+      setGuidedEntryDoorSize("");
+      setGuidedEntryDoorFinish("");
+      setGuidedEntryDoorGlazing("");
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
       return;
