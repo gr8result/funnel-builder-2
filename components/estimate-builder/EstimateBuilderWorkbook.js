@@ -997,15 +997,13 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
 
   useEffect(() => {
     let cancelled = false;
-    const timeout = window.setTimeout(() => {
+    const slowMountTimer = window.setTimeout(() => {
       if (cancelled || mountedRef.current) return;
-      const error = new Error("Client Selections module did not mount within 10 seconds.");
-      console.error("[Client Selections] module mount timeout", {
+      console.warn("[Client Selections] module is still mounting", {
         fileName: moduleContext?.fileState?.fileName,
         projectId: moduleContext?.projectId,
         workspaceId: moduleContext?.workspaceId,
       });
-      setLoadError(error);
     }, 10000);
 
     setLoadedClientSelectionsPage(null);
@@ -1022,12 +1020,12 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
       .catch((error) => {
         if (cancelled) return;
         console.error("[Client Selections] import error", error);
-        setLoadError(error);
+        setLoadError({ error, source: "dynamic-import" });
       });
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
+      window.clearTimeout(slowMountTimer);
     };
   }, [retryKey, moduleContext?.fileState?.fileName, moduleContext?.projectId, moduleContext?.workspaceId]);
 
@@ -1039,6 +1037,7 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
     return (
       <ClientSelectionsErrorPanel
         error={loadError}
+        moduleContext={moduleContext}
         onRetry={retry}
         onBackToDashboard={onBackToDashboard}
       />
@@ -1050,7 +1049,7 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
   }
 
   return (
-    <ClientSelectionsErrorBoundary onError={setLoadError}>
+    <ClientSelectionsErrorBoundary onError={(error, info) => setLoadError({ error, info, source: "react-boundary" })}>
       <LoadedClientSelectionsPage
         {...moduleContext}
         onEmbeddedBack={onBackToDashboard}
@@ -1065,7 +1064,7 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
 class ClientSelectionsErrorBoundary extends Component {
   componentDidCatch(error, info) {
     console.error("[Client Selections] component mount error", error, info);
-    this.props.onError?.(error);
+    this.props.onError?.(error, info);
   }
 
   render() {
@@ -1073,7 +1072,18 @@ class ClientSelectionsErrorBoundary extends Component {
   }
 }
 
-function ClientSelectionsErrorPanel({ error, onRetry, onBackToDashboard }) {
+function clientSelectionsErrorMessage(error) {
+  const actual = error?.error || error;
+  return actual?.message || String(actual || "Unknown error");
+}
+
+function clientSelectionsErrorStack(error) {
+  const actual = error?.error || error;
+  return actual?.stack || actual?.message || String(actual || "Unknown error");
+}
+
+function ClientSelectionsErrorPanel({ error, moduleContext, onRetry, onBackToDashboard }) {
+  const componentStack = error?.info?.componentStack || "";
   return (
     <div style={styles.clientSelectionsErrorPanel} role="alert">
       <strong>Client Selections could not be opened.</strong>
@@ -1084,7 +1094,18 @@ function ClientSelectionsErrorPanel({ error, onRetry, onBackToDashboard }) {
       </div>
       <details style={styles.clientSelectionsErrorDetails}>
         <summary>Developer details</summary>
-        <pre>{error?.stack || error?.message || String(error || "Unknown error")}</pre>
+        <pre>{[
+          `Source: ${error?.source || "unknown"}`,
+          `Message: ${clientSelectionsErrorMessage(error)}`,
+          `workspaceId: ${moduleContext?.workspaceId || ""}`,
+          `organisationId: ${moduleContext?.organisationId || ""}`,
+          `projectId: ${moduleContext?.projectId || ""}`,
+          `estimateId: ${moduleContext?.estimateSnapshotId || moduleContext?.snapshotId || ""}`,
+          `jobId: ${moduleContext?.workbook?.jobId || moduleContext?.workbook?.id || ""}`,
+          "",
+          clientSelectionsErrorStack(error),
+          componentStack ? `\nComponent stack:${componentStack}` : "",
+        ].filter(Boolean).join("\n")}</pre>
       </details>
     </div>
   );
