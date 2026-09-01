@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { DndContext, useDraggable } from "@dnd-kit/core";
 import {
   BarChart3,
   Briefcase,
@@ -18,7 +19,6 @@ import {
   Presentation,
   RefreshCw,
   Ruler,
-  Settings,
   Truck,
 } from "lucide-react";
 import { useEstimateBuilderWorkbook } from "../../hooks/estimate-builder/useEstimateBuilderWorkbook";
@@ -29,6 +29,7 @@ import { isDeveloperEmail } from "../../lib/adminUsers";
 import { calculateEstimateBuilderWorkbook, V4_DEFAULT_FORMULAS } from "../../lib/construction-estimation/estimateBuilderWorkbookCalculations";
 import { windowDoorSizeCodeForRow } from "../../lib/construction-estimation/estimateBuilderWorkbookDefaults";
 import { SUBCONTRACTOR_QUOTE_DEDUCTIONS, V4_DATA_SECTIONS } from "../../lib/construction-estimation/estimateWorksheetV4Schema";
+import { quoteQuantity, quoteRate } from "../../lib/construction-estimation/finalQuotationBoq";
 import { syncCommercialSnapshot } from "../../lib/builders/syncCommercialSnapshot";
 import { BUILDER_INCLUSION_SECTION_TITLES, normaliseEstimateInclusions, selectedEstimateInclusionsPackage } from "../../lib/builders/estimateInclusions";
 import { normaliseStandardInclusions, selectedStandardInclusionsPackage } from "../../lib/builders/standardInclusions";
@@ -38,8 +39,10 @@ import { createDocument } from "../document-engine/core/documentState";
 import { createA4Page } from "../document-engine/core/pageEngine";
 import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
+import ProjectCompactBanner from "../project-workspace/ProjectCompactBanner";
+import { hasRecoverablePlanPages, prepareAiPlanTakeoffJobForSave } from "../construction-estimation/ai-plan-takeoff/jobPersistence";
 import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
-import AIPlanTakeoffPage from "./ai-takeoff/AIPlanTakeoffPage";
+import { deriveJobId } from "../../modules/takeoff-v2/jobSummary.js";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import {
@@ -67,14 +70,34 @@ import * as ProjectEstimateApi from "./project-estimate/persistence/ProjectEstim
 import ProjectEstimateTemplateManager from "./project-estimate/components/TemplateManager";
 import ProjectEstimateVersionHistoryPanel from "./project-estimate/components/VersionHistoryPanel";
 import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../website-builder/page-builder/pbPropertiesPanels";
+import ClientPortalRouteBridge from "../../Client Portal/RouteBridge";
 
 export const USE_NEW_TAKEOFF_ENGINE = true;
+
+const APP_LAYERS = Object.freeze({
+  content: 0,
+  stickyNavigation: 100,
+  dropdown: 1000,
+  modalBackdrop: 2000,
+  modalDialog: 2100,
+  toast: 3000,
+});
 
 
 // AI Gantt Builder — loaded client-side only
 const GanttBuilderPage = dynamic(() => import("./gantt/GanttBuilderPage"), {
   ssr: false,
   loading: () => <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>Loading AI Gantt Builder…</div>,
+});
+
+const JobBoardPage = dynamic(() => import("../../pages/modules/jobboard"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="Job Board" />,
+});
+
+const AIPlanTakeoffPage = dynamic(() => import("../construction-estimation/ai-plan-takeoff/AIPlanTakeoffPage.jsx"), {
+  ssr: false,
+  loading: () => <CommercialModuleLoading label="AI Plan Takeoff" />,
 });
 
 const CommercialBoqPage = dynamic(() => import("../../pages/modules/builders/boq"), {
@@ -94,7 +117,7 @@ const CommercialVariationsPage = dynamic(() => import("../../pages/modules/build
 
 const CommercialBudgetVsActualPage = dynamic(() => import("../../pages/modules/builders/budget-vs-actual"), {
   ssr: false,
-  loading: () => <CommercialModuleLoading label="Budget vs Actual" />,
+  loading: () => <CommercialModuleLoading label="Budget versus Actual" />,
 });
 
 const CommercialSupplierInvoicesPage = dynamic(() => import("../../pages/modules/builders/supplier-invoices"), {
@@ -136,6 +159,10 @@ const CommercialRfisPage = dynamic(() => import("../../pages/modules/builders/rf
 
 const DATA_INPUT_SECTIONS_FOR_LOOKUP = V4_DATA_SECTIONS || [];
 const SUPPLIER_QUOTATION_SECTION_KEY = "subcontractorQuotes";
+const ESTIMATE_WORKBOOK_SHEET_TABS = [
+  { key: "dataInput", label: "Data Input" },
+  { key: "quotation", label: "Quote Sheet" },
+];
 
 const WORKSPACE_VISUALS = {
   projectDashboard: {
@@ -157,8 +184,8 @@ const WORKSPACE_VISUALS = {
     Icon: Briefcase,
   },
   dataInput: {
-    title: "Project Setup",
-    subtitle: "The source of truth for construction assumptions, quantities and linked workbook inputs.",
+    title: "Job Details",
+    subtitle: "Manage job details, setup, settings, construction assumptions and linked workbook inputs.",
     color: "#0d9488",
     soft: "#f0fdfa",
     border: "#99f6e4",
@@ -166,7 +193,7 @@ const WORKSPACE_VISUALS = {
     Icon: Building2,
   },
   aiPlanTakeoff: {
-    title: "Takeoff Engine",
+    title: "AI Plan Takeoff",
     subtitle: "Upload plans, measure areas, scale drawings and create takeoff quantities.",
     color: "#7c3aed",
     soft: "#f5f3ff",
@@ -238,7 +265,7 @@ const WORKSPACE_VISUALS = {
     Icon: FileText,
   },
   supplierQuotations: {
-    title: "Supplier Quotations",
+    title: "Supplier Quotes",
     subtitle: "Track supplier and subcontractor quotes before converting them to costs or purchase orders.",
     color: "#0891b2",
     soft: "#ecfeff",
@@ -255,8 +282,17 @@ const WORKSPACE_VISUALS = {
     gradient: "linear-gradient(135deg, #059669 0%, #34d399 100%)",
     Icon: Truck,
   },
+  supplierProcurement: {
+    title: "Supplier & Procurement",
+    subtitle: "Manage supplier quotes, approvals, procurement, purchase orders, deliveries, invoices and reconciliation.",
+    color: "#0891b2",
+    soft: "#ecfeff",
+    border: "#a5f3fc",
+    gradient: "linear-gradient(135deg, #0891b2 0%, #22d3ee 100%)",
+    Icon: Truck,
+  },
   budgetVsActual: {
-    title: "Budget vs Actual",
+    title: "Budget versus Actual",
     subtitle: "Compare original estimate, approved changes, committed costs, invoices and remaining budget.",
     color: "#65a30d",
     soft: "#f7fee7",
@@ -328,8 +364,8 @@ const WORKSPACE_VISUALS = {
     Icon: FolderKanban,
   },
   rfis: {
-    title: "RFIs",
-    subtitle: "Manage client questions, builder responses, priorities and due dates.",
+    title: "RFIs & Reports",
+    subtitle: "Manage RFIs, reporting records, responses, priorities and due dates.",
     color: "#be123c",
     soft: "#fff1f2",
     border: "#fecdd3",
@@ -344,6 +380,24 @@ const WORKSPACE_VISUALS = {
     border: "#bae6fd",
     gradient: "linear-gradient(135deg, #0ea5e9 0%, #7dd3fc 100%)",
     Icon: FileText,
+  },
+  gantt: {
+    title: "Gantt Chart",
+    subtitle: "Plan schedules, milestones, dependencies and project timing.",
+    color: "#3b82f6",
+    soft: "#eff6ff",
+    border: "#bfdbfe",
+    gradient: "linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)",
+    Icon: BarChart3,
+  },
+  jobBoard: {
+    title: "Job Board",
+    subtitle: "Track daily construction work, progress, ownership and site activity.",
+    color: "#f97316",
+    soft: "#fff7ed",
+    border: "#fed7aa",
+    gradient: "linear-gradient(135deg, #f97316 0%, #f59e0b 100%)",
+    Icon: FolderKanban,
   },
   cashflowSummary: {
     title: "Reports",
@@ -362,15 +416,6 @@ const WORKSPACE_VISUALS = {
     border: "#d9f99d",
     gradient: "linear-gradient(135deg, #65a30d 0%, #bef264 100%)",
     Icon: BarChart3,
-  },
-  settings: {
-    title: "Settings",
-    subtitle: "Manage job settings, estimate rules, defaults and workbook options.",
-    color: "#475569",
-    soft: "#f8fafc",
-    border: "#cbd5e1",
-    gradient: "linear-gradient(135deg, #475569 0%, #94a3b8 100%)",
-    Icon: Settings,
   },
 };
 
@@ -402,37 +447,86 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
   const moduleWorkspaceId = organisationId || workspaceId;
   const saveStatusTimerRef = useRef(null);
   const modeHandledRef = useRef("");
-  const [fileMenuOpen, setFileMenuOpen] = useState(false);
-  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+  const localJobFileInputRef = useRef(null);
+  const localJobFileResolvedToPlatformRef = useRef(false);
+  const [openWorkbookMenu, setOpenWorkbookMenu] = useState("");
+  const fileMenuOpen = openWorkbookMenu === "file";
+  const templateMenuOpen = openWorkbookMenu === "template";
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [jobPickerMessage, setJobPickerMessage] = useState("");
+  const [jobPickerError, setJobPickerError] = useState(null);
+  const [openingJobKey, setOpeningJobKey] = useState("");
   const [formulaTarget, setFormulaTarget] = useState(null);
   const [newJobModalOpen, setNewJobModalOpen] = useState(false);
   const [newJobForm, setNewJobForm] = useState({ jobName: "", clientName: "", jobNumber: "", address: "", notes: "" });
   const [jobFileError, setJobFileError] = useState("");
+  const [localJobFilePrompt, setLocalJobFilePrompt] = useState(null);
   const [saveStatus, setSaveStatus] = useState({ state: "idle", label: "", detail: "" });
   const [commercialSyncStatus, setCommercialSyncStatus] = useState({ state: "idle", message: "", projectId: "", snapshotId: "", syncedAt: "" });
   const [showDeveloperControls, setShowDeveloperControls] = useState(false);
+  const [takeoffWorkflowSnapshot, setTakeoffWorkflowSnapshot] = useState(null);
   const jobFilePayload = useMemo(() => workbookToJobFileData(sheet.workbook), [sheet.workbook]);
   const jobFile = useJobFile({
     enabled: !previewMode,
     jobData: jobFilePayload,
     autoSaveDelayMs: 3000,
     onError: (message) => {
-      if (message && !isWorkbookLoaded(sheet.workbook)) setJobFileError(message);
+      if (message) setJobFileError(message);
     },
     onOpenJob: async (job, fileName) => {
       setJobFileError("");
+      const workbookSource = job.workbook || {};
+      const resolvedProject = await resolvePlatformProjectForOpenedJob({
+        workspaceId: moduleWorkspaceId,
+        fileName,
+        job,
+        workbook: workbookSource,
+      }).catch((error) => {
+        console.warn("[Estimate Builder] Local job platform resolution skipped", error?.message || error);
+        return null;
+      });
+      if (resolvedProject?.id) {
+        const result = await sheet.openSavedJob?.(`project:${resolvedProject.id}`);
+        if (result?.ok) {
+          localJobFileResolvedToPlatformRef.current = true;
+          setLocalJobFilePrompt(null);
+          return;
+        }
+        setJobFileError(result?.message || "The attached platform project could not be opened.");
+        return;
+      }
+      const existingMeta = workbookSource.jobFileMeta || {};
+      const fallbackProjectName = job.jobName || workbookDataValue(workbookSource, "projectName") || workbookSource.projectName || "";
+      const fallbackClientName = job.clientName || workbookDataValue(workbookSource, "clientName") || workbookDataValue(workbookSource, "customerName") || "";
+      const fallbackJobNumber = job.jobNumber || workbookDataValue(workbookSource, "jobNumber") || workbookDataValue(workbookSource, "quoteNumber") || "";
+      const fallbackAddress = job.address
+        || workbookDataValue(workbookSource, "projectAddress")
+        || workbookDataValue(workbookSource, "siteAddress")
+        || workbookDataValue(workbookSource, "address")
+        || workbookSource.clientPage?.projectAddress
+        || "";
       const nextWorkbook = {
-        ...(job.workbook || {}),
+        ...workbookSource,
+        projectId: "",
+        commercialProjectId: "",
+        registeredJobId: "",
+        registeredJob: workbookSource.registeredJob
+          ? { ...workbookSource.registeredJob, jobId: "", workspaceId: "" }
+          : workbookSource.registeredJob,
         jobFileMeta: {
-          jobName: job.jobName || "",
-          clientName: job.clientName || "",
-          jobNumber: job.jobNumber || "",
-          address: job.address || "",
-          notes: job.notes || "",
-          created: job.created || new Date().toISOString(),
-          lastModified: job.lastModified || new Date().toISOString(),
+          ...existingMeta,
+          detachedProjectId: existingMeta.projectId || workbookSource.projectId || workbookSource.commercialProjectId || workbookSource.registeredJob?.jobId || "",
+          detachedWorkspaceId: existingMeta.workspaceId || workbookSource.workspaceId || workbookSource.registeredJob?.workspaceId || "",
+          projectId: "",
+          workspaceId: "",
+          jobName: existingMeta.jobName || fallbackProjectName,
+          clientName: existingMeta.clientName || fallbackClientName,
+          jobNumber: existingMeta.jobNumber || fallbackJobNumber,
+          address: existingMeta.address || fallbackAddress,
+          notes: existingMeta.notes || job.notes || workbookDataValue(workbookSource, "projectNotes") || workbookDataValue(workbookSource, "notes") || "",
+          created: existingMeta.created || job.created || new Date().toISOString(),
+          lastModified: job.lastModified || existingMeta.lastModified || new Date().toISOString(),
+          localFileOnly: true,
         },
       };
       await sheet.loadJobFileText(JSON.stringify({ ...job, workbook: nextWorkbook }), fileName || "job.gr8job");
@@ -466,29 +560,116 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
     if (!routePage || !WORKSPACE_VISUALS[routePage] || sheet.workbook.page === routePage) return;
     sheet.setPage(routePage);
   }, [mode, previewMode, requestedPage, sheet]);
-  useEffect(() => {
-    if (previewMode || mode || !WORKSPACE_VISUALS[sheet.workbook.page]) return;
-    setEstimateBuilderPageQuery(sheet.workbook.page);
-  }, [mode, previewMode, setEstimateBuilderPageQuery, sheet.workbook.page]);
   const isAdminMode = typeof window !== "undefined" && window.localStorage.getItem("estimate-builder-permission-mode") === "admin";
   const isSaving = saveStatus.state === "saving";
   const isCommercialSyncing = commercialSyncStatus.state === "syncing";
   const activeVisual = workspaceVisual(activePageKey);
-  const ActivePageIcon = activeVisual.Icon;
   const openJobDetails = openJobHeaderDetails(sheet.workbook);
+  const activeCommercialProjectId = sheet.workbook?.commercialProjectId || sheet.workbook?.projectId || commercialSyncStatus.projectId || "";
+  const clientPortalPreviewUrl = activeCommercialProjectId
+    ? `/client-portal/${encodeURIComponent(activeCommercialProjectId)}?${new URLSearchParams({
+        mode: "preview",
+        ...(moduleWorkspaceId ? { workspace_id: moduleWorkspaceId } : {}),
+      }).toString()}`
+    : "";
+  const takeoffEngineContext = useMemo(() => ({
+    embedded: true,
+    jobId: deriveTakeoffEngineJobId(sheet.workbook, openJobDetails, moduleWorkspaceId),
+    initialJob: selectAiPlanTakeoffJob(sheet.workbook),
+    initialQuoteRows: quoteRowsForAiPlanTakeoff(sheet.workbook),
+    platformContext: {
+      noJobOpen: openJobDetails.noJobOpen,
+      isHydratingProject: !sheet.hydrated,
+      projectId: activeCommercialProjectId || openJobDetails.projectId || "",
+      jobNumber: openJobDetails.jobNumber,
+      projectName: openJobDetails.projectName,
+      clientName: openJobDetails.clientName,
+      siteAddress: openJobDetails.projectAddress,
+      projectAddress: openJobDetails.projectAddress,
+      builder: workbookDataValue(sheet.workbook, "builderName") || sheet.workbook?.jobFileMeta?.builderName || "",
+      numberOfStoreys: workbookDataValue(sheet.workbook, "floorCount") || "",
+      fileName: openJobDetails.fileName,
+      organisationId: moduleWorkspaceId || "",
+      workspaceId: moduleWorkspaceId || "",
+    },
+    jobSummary: {
+      projectName: openJobDetails.projectName,
+      jobNumber: openJobDetails.jobNumber,
+      projectAddress: openJobDetails.projectAddress,
+      fileName: openJobDetails.fileName,
+      organisationId: moduleWorkspaceId || "",
+      workspaceId: moduleWorkspaceId || "",
+      projectId: activeCommercialProjectId,
+    },
+    onTakeoffWorkflowChange: setTakeoffWorkflowSnapshot,
+    workflowSnapshot: takeoffWorkflowSnapshot,
+    onBackToDashboard: () => navigateWorkspacePage("projectDashboard"),
+    onSaveToPlatform: async (jobData) => {
+      const prepared = prepareAiPlanTakeoffJobForSave(selectAiPlanTakeoffJob(sheet.workbook), {
+        ...jobData,
+        platformProject: {
+          ...(jobData?.platformProject || {}),
+          projectId: activeCommercialProjectId || openJobDetails.projectId || "",
+          jobNumber: openJobDetails.jobNumber || "",
+          projectName: openJobDetails.projectName || "",
+          takeoffName: jobData?.takeoffName || jobData?.jobName || "",
+          sourceFileName: jobData?.sourceFileName || jobData?.planFilename || "",
+          workspaceId: moduleWorkspaceId || "",
+          organisationId: moduleWorkspaceId || "",
+        },
+      }, activeCommercialProjectId || openJobDetails.projectId || "");
+      if (!prepared.ok) return prepared;
+      return sheet.saveAiPlanTakeoffJob?.(prepared.job);
+    },
+    onJobSetupUpdate: async (payload) => {
+      if (payload?.projectName) sheet.updateData("inputDataSheet", "projectName", "value", payload.projectName);
+      if (payload?.siteAddress) sheet.updateData("inputDataSheet", "projectAddress", "value", payload.siteAddress);
+      const totalLiving = takeoffQuantityByItem(payload, "floor_total_living");
+      const externalLm = takeoffWallLength(payload, "External walls");
+      const internalLm = takeoffWallLength(payload, "Internal walls");
+      if (totalLiving) sheet.updateData("inputDataSheet", "lowerFloorAreaM2", "value", String(totalLiving));
+      if (externalLm) sheet.updateData("inputDataSheet", "lowerExternalWallsLm", "value", String(externalLm));
+      if (internalLm) sheet.updateData("inputDataSheet", "lowerInternalWallsLm", "value", String(internalLm));
+      sheet.updateTakeoffEngineState?.({
+        ...(sheet.workbook?.takeoffEngine || {}),
+        lastJobSetupSync: { payload, syncedAt: new Date().toISOString(), projectId: activeCommercialProjectId || openJobDetails.projectId || "" },
+      });
+      return { ok: true };
+    },
+    onQuoteSheetUpdate: async ({ previewRows = [], mappings = {}, scheduleSignature = "", syncedAt = new Date().toISOString() }) => {
+      const quoteRows = quoteRowsForAiPlanTakeoff(sheet.workbook);
+      previewRows.forEach((previewRow) => {
+        const target = quoteRows.find((row) => row.id === previewRow.destinationRowId);
+        if (!target?.section) return;
+        sheet.updateQuote(target.section, target.id, "quantity", String(previewRow.newQuantity ?? ""));
+        sheet.updateQuote(target.section, target.id, "importedQuantity", String(previewRow.newQuantity ?? ""));
+        sheet.updateQuote(target.section, target.id, "quantityKey", `aiPlanTakeoff:${previewRow.itemId}`);
+        sheet.updateQuote(target.section, target.id, "takeoffSourceId", previewRow.itemId);
+        sheet.updateQuote(target.section, target.id, "takeoffUnit", previewRow.unit);
+        sheet.updateQuote(target.section, target.id, "takeoffLastSyncedAt", syncedAt);
+      });
+      sheet.updateTakeoffEngineState?.({
+        ...(sheet.workbook?.takeoffEngine || {}),
+        quoteMappings: mappings,
+        lastQuoteSyncSignature: scheduleSignature,
+        lastQuoteSyncedAt: syncedAt,
+      });
+      return { ok: true };
+    },
+  }), [sheet, openJobDetails, moduleWorkspaceId, activeCommercialProjectId, takeoffWorkflowSnapshot, navigateWorkspacePage]);
   const commercialModuleContext = useMemo(() => ({
     embedded: true,
     organisationId: moduleWorkspaceId,
     workspaceId: moduleWorkspaceId,
     workbook: sheet.workbook,
     calculated: sheet.preview,
-    projectId: commercialSyncStatus.projectId || "",
+    projectId: activeCommercialProjectId,
     estimateSnapshotId: commercialSyncStatus.snapshotId || "",
     snapshotId: commercialSyncStatus.snapshotId || "",
     projectContext: {
       organisationId: moduleWorkspaceId,
       workspaceId: moduleWorkspaceId,
-      projectId: commercialSyncStatus.projectId || "",
+      projectId: activeCommercialProjectId,
       projectName: openJobDetails.projectName,
       jobNumber: openJobDetails.jobNumber,
       client: jobFilePayload.clientName || workbookDataValue(sheet.workbook, "clientName") || workbookDataValue(sheet.workbook, "customerName") || "",
@@ -505,7 +686,7 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       saveStatus: saveStatus.state,
     },
     onSyncSnapshot: handleCommercialSnapshotSync,
-  }), [moduleWorkspaceId, sheet.workbook, sheet.preview, commercialSyncStatus.projectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state]);
+  }), [moduleWorkspaceId, sheet.workbook, sheet.preview, activeCommercialProjectId, commercialSyncStatus.snapshotId, openJobDetails, jobFilePayload, sheet.lastSavedAt, saveStatus.state]);
 
   useEffect(() => () => {
     if (saveStatusTimerRef.current) window.clearTimeout(saveStatusTimerRef.current);
@@ -538,19 +719,78 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
 
   async function openJobPicker() {
     setJobPickerMessage("");
-    const jobs = await sheet.refreshSavedJobSummaries?.();
-    if (!jobs?.length) setJobPickerMessage("No saved jobs found");
+    setJobPickerError(null);
     setJobPickerOpen(true);
+    if (workspaceLoading || !moduleWorkspaceId) {
+      setJobPickerMessage("Loading workspace...");
+      return;
+    }
+    const jobs = await sheet.refreshSavedJobSummaries?.({ workspaceId: moduleWorkspaceId });
+    if (!jobs?.length) setJobPickerMessage(sheet.savedJobSummariesStatus?.message || "No jobs exist in this workspace");
   }
 
   async function openSavedJob(key) {
-    const result = await sheet.openSavedJob?.(key);
+    setOpeningJobKey(key);
+    setJobPickerMessage("");
+    setJobPickerError(null);
+    try {
+      const result = await sheet.openSavedJob?.(key);
+      if (result?.ok) {
+        setJobPickerOpen(false);
+        setOpenWorkbookMenu("");
+        return;
+      }
+      const selectedJob = (sheet.savedJobSummaries || []).find((job) => job.key === key);
+      setJobPickerError({
+        operation: result?.errorDetails?.operation || "open project job",
+        projectId: result?.errorDetails?.projectId || selectedJob?.projectId || "",
+        status: result?.errorDetails?.status || "failed",
+        message: result?.message || result?.errorDetails?.message || "Saved job could not be opened.",
+        retryKey: key,
+      });
+      setJobPickerMessage(result?.message || "Saved job could not be opened.");
+    } catch (error) {
+      const selectedJob = (sheet.savedJobSummaries || []).find((job) => job.key === key);
+      console.error("[Estimate Builder] Open Job click failed", { key, projectId: selectedJob?.projectId || "", error });
+      setJobPickerError({
+        operation: "open project job",
+        projectId: selectedJob?.projectId || "",
+        status: error?.status || error?.statusCode || error?.code || "error",
+        message: error?.message || "Saved job could not be opened.",
+        retryKey: key,
+      });
+      setJobPickerMessage(error?.message || "Saved job could not be opened.");
+    } finally {
+      setOpeningJobKey("");
+    }
+  }
+
+  function openLocalJobFilePicker() {
+    setJobFileError("");
+    localJobFileInputRef.current?.click();
+  }
+
+  async function handleLocalJobFileSelected(event) {
+    const file = event.target.files?.[0] || null;
+    event.target.value = "";
+    if (!file) return;
+    setJobFileError("");
+    setLocalJobFilePrompt(null);
+    localJobFileResolvedToPlatformRef.current = false;
+    const result = await jobFile.openFile(file);
     if (result?.ok) {
-      setJobPickerOpen(false);
-      setFileMenuOpen(false);
+      setOpenWorkbookMenu("");
+      if (localJobFileResolvedToPlatformRef.current) {
+        localJobFileResolvedToPlatformRef.current = false;
+        return;
+      }
+      setLocalJobFilePrompt({
+        fileName: file.name,
+        importedAt: new Date().toISOString(),
+      });
       return;
     }
-    setJobPickerMessage(result?.message || "Saved job could not be opened.");
+    if (result?.message) setJobFileError(result.message);
   }
 
   function updateNewJobField(key, value) {
@@ -663,6 +903,21 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           transform: translateY(-6px);
           box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
         }
+        @media (max-width: 1500px) {
+          .project-workspace-card-grid {
+            grid-template-columns: repeat(3, minmax(190px, 1fr)) !important;
+          }
+        }
+        @media (max-width: 980px) {
+          .project-workspace-card-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .project-workspace-card-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+        }
       `}</style>
       <aside style={styles.nav}>
         <div style={styles.navBrand}>
@@ -676,33 +931,13 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           <span>Current quote total</span>
           <strong>{money(sheet.preview.summary.finalQuoteTotal)}</strong>
         </div>
-        {sheet.pages.map((page) => {
-          const visual = workspaceVisual(page.key);
-          const NavIcon = visual.Icon;
-          const active = sheet.workbook.page === page.key;
-          return (
-          <button
-            key={page.key}
-            className="project-workspace-nav-button"
-            style={{
-              ...styles.navButton,
-              borderColor: visual.color,
-              color: active ? "#ffffff" : visual.color,
-              background: active ? visual.color : "#ffffff",
-              boxShadow: active ? `0 14px 28px ${visual.color}33` : "0 8px 18px rgba(15, 23, 42, 0.05)",
-            }}
-            onClick={() => navigateWorkspacePage(page.key)}
-          >
-            <span className="project-workspace-nav-icon" style={{ ...styles.navButtonIcon, background: active ? "rgba(255,255,255,0.18)" : visual.soft }}>
-              <NavIcon size={22} strokeWidth={2.4} />
-            </span>
-            <span>{page.label}</span>
-          </button>
-        );})}
+        <WorkspaceNavGroup pages={DASHBOARD_PROJECT_WORKFLOW_CARDS} activePageKey={sheet.workbook.page} onNavigate={navigateWorkspacePage} />
+        <div style={styles.navDivider} />
+        <WorkspaceNavGroup pages={DASHBOARD_PROJECT_RESOURCE_CARDS} activePageKey={sheet.workbook.page} onNavigate={navigateWorkspacePage} />
         <div style={styles.navNote}>
           {previewMode
             ? "Preview mode is blank and locked. Data entry, editing, copying, saving, and exports are disabled."
-            : "Project Setup remains the source of truth. Dashboard fields, quote totals, supplier quotes, and workbook pages stay linked to the same estimate data."}
+            : "Job Details remains the source of truth. Dashboard fields, quote totals, supplier quotes, and workbook pages stay linked to the same estimate data."}
         </div>
         {!previewMode && (
           <FloatingSaveJob
@@ -713,95 +948,14 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       </aside>
 
       <main style={styles.main}>
-        <div style={styles.compactControlRow}>
-          <div style={styles.topControls}>
-            <a href="/dashboard" style={styles.bannerBackButton}>Back to Dashboard</a>
-            {previewMode ? (
-              <span style={styles.lockedBadge}>Locked Preview</span>
-            ) : (
-              <>
-            <FileMenu
-              open={fileMenuOpen}
-              onToggle={() => setFileMenuOpen((current) => !current)}
-              onClose={() => setFileMenuOpen(false)}
-              busy={isSaving}
-              recentJobs={jobFile.recentJobs}
-              onOpenRecentJob={(id) => jobFile.openRecent(id)}
-              items={[
-                { label: "New Job", action: () => setNewJobModalOpen(true) },
-                {
-                  label: "Open Job",
-                  action: async () => {
-                    const result = await jobFile.open();
-                    if (!result.ok && result.message) setJobFileError(result.message);
-                  },
-                },
-                { label: "Save", action: () => runSaveAction("Saving job", jobFile.save), primary: true },
-                { label: "Save As", action: () => runSaveAction("Saving job as", jobFile.saveAs) },
-                { label: "Save As Base Template", action: () => runSaveAction("Saving base template", sheet.saveAsBaseTemplate) },
-              ]}
-            />
-            <TemplateFileMenu
-              sheet={sheet}
-              open={templateMenuOpen}
-              onToggle={() => setTemplateMenuOpen((current) => !current)}
-              onClose={() => setTemplateMenuOpen(false)}
-              onSaveAction={runSaveAction}
-              busy={isSaving}
-              showDeveloperControls={showDeveloperControls}
-            />
-            {showDeveloperControls ? (
-              <button
-                type="button"
-                style={{ ...styles.commercialSyncButton, ...(isCommercialSyncing ? styles.commercialSyncButtonDisabled : {}) }}
-                disabled={isCommercialSyncing || workspaceLoading}
-                onClick={handleCommercialSnapshotSync}
-              >
-                {isCommercialSyncing ? "Syncing..." : "Sync to Project Commercials"}
-              </button>
-            ) : null}
-            {saveStatus.state !== "idle" ? (
-              <SaveProgress status={saveStatus} />
-            ) : sheet.lastSavedAt ? (
-              <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
-            ) : null}
-            {(activePageKey === "quotation" || activePageKey === "clientSelections") && (
-              <div style={styles.quoteSearchControls}>
-                {activePageKey === "quotation" ? (
-                  <>
-                    <input
-                      style={styles.searchInput}
-                      placeholder="Search line item"
-                      value={sheet.lineSearch}
-                      onChange={(event) => sheet.setLineSearch(event.target.value)}
-                    />
-                    <label style={styles.checkLabel}>
-                      <input
-                        type="checkbox"
-                        checked={sheet.hideUnused}
-                        onChange={(event) => sheet.setHideUnused(event.target.checked)}
-                      />
-                      Hide unused
-                    </label>
-                    <button type="button" style={styles.secondaryButton} onClick={() => exportQuoteSelectionsCsv(sheet)}>
-                      Export to Selections CSV
-                    </button>
-                  </>
-                ) : null}
-                <button
-                  type="button"
-                  style={styles.secondaryButton}
-                  onClick={() => exportQuoteSheetCsv(sheet)}
-                  title="Download the current quote sheet line items as a CSV"
-                >
-                  Download Quote Sheet CSV
-                </button>
-              </div>
-            )}
-              </>
-            )}
-          </div>
-        </div>
+        <input
+          ref={localJobFileInputRef}
+          type="file"
+          accept=".gr8job,application/json"
+          style={{ display: "none" }}
+          onChange={handleLocalJobFileSelected}
+          data-testid="open-local-job-file-input"
+        />
 
         {showDeveloperControls && commercialSyncStatus.state !== "idle" && (
           <div
@@ -818,32 +972,123 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
           </div>
         )}
 
-        <section style={{ ...styles.topbar, background: activeVisual.gradient }}>
-          <div style={styles.pageBannerTitleGroup}>
-            <span style={styles.pageBannerIcon}><ActivePageIcon size={34} strokeWidth={2.3} /></span>
-            <span>
-              <span style={styles.pageBannerEyebrow}>Estimate Builder</span>
-              <h1 style={styles.pageTitle}>{activeVisual.title}</h1>
-              <p style={styles.pageBannerSubtitle}>{activeVisual.subtitle}</p>
-            </span>
+        <ProjectCompactBanner
+          projectName={openJobDetails.projectName}
+          projectAddress={openJobDetails.projectAddress}
+          accent={activeVisual.gradient}
+          actions={(
+            <>
+              <button type="button" style={styles.bannerBackButton} onClick={() => navigateWorkspacePage("projectDashboard")}>Back to Project Workspace</button>
+              {previewMode ? (
+                <span style={styles.lockedBadge}>Locked Preview</span>
+              ) : (
+                <>
+                  <FileMenu
+                    open={fileMenuOpen}
+                    onToggle={() => setOpenWorkbookMenu((current) => current === "file" ? "" : "file")}
+                    onClose={() => setOpenWorkbookMenu("")}
+                    busy={isSaving}
+                    recentJobs={sheet.recentJobs}
+                    recentLocalJobFiles={jobFile.recentJobs}
+                    onOpenRecentJob={openSavedJob}
+                    onOpenRecentLocalJobFile={(id) => jobFile.openRecent(id)}
+                    onRemoveRecentJob={sheet.removeRecentJob}
+                    onRemoveRecentLocalJobFile={jobFile.removeRecent}
+                    items={[
+                      { section: "NEW", label: "New Job", action: () => setNewJobModalOpen(true) },
+                      { section: "OPEN", label: "Open Platform Job", action: openJobPicker },
+                      { section: "OPEN", label: "Open Job File from Computer", action: openLocalJobFilePicker },
+                      { section: "OPEN", label: "Open Saved Estimate", action: openJobPicker },
+                      { section: "OPEN", label: "Open Template", action: () => setOpenWorkbookMenu("template"), closeAfter: false },
+                      { section: "SAVE", label: "Save Progress", action: () => runSaveAction("Saving master job file", jobFile.save), primary: true },
+                      { section: "SAVE", label: "Save Master Job File As", action: () => runSaveAction("Saving master job file as", jobFile.saveAs) },
+                      { section: "SAVE", label: "Save Job File to Computer", action: () => runSaveAction("Saving job file", jobFile.saveAs) },
+                    ]}
+                  />
+                  <TemplateFileMenu
+                    sheet={sheet}
+                    open={templateMenuOpen}
+                    onToggle={() => setOpenWorkbookMenu((current) => current === "template" ? "" : "template")}
+                    onClose={() => setOpenWorkbookMenu("")}
+                    onSaveAction={runSaveAction}
+                    busy={isSaving}
+                    showDeveloperControls={showDeveloperControls}
+                  />
+                  {showDeveloperControls ? (
+                    <button
+                      type="button"
+                      style={{ ...styles.commercialSyncButton, ...(isCommercialSyncing ? styles.commercialSyncButtonDisabled : {}) }}
+                      disabled={isCommercialSyncing || workspaceLoading}
+                      onClick={handleCommercialSnapshotSync}
+                    >
+                      {isCommercialSyncing ? "Syncing..." : "Sync to Project Commercials"}
+                    </button>
+                  ) : null}
+                  {saveStatus.state !== "idle" ? (
+                    <SaveProgress status={saveStatus} />
+                  ) : sheet.lastSavedAt ? (
+                    <span style={styles.savedText}>Saved {new Date(sheet.lastSavedAt).toLocaleTimeString()}</span>
+                  ) : null}
+                  {(activePageKey === "quotation" || activePageKey === "clientSelections") ? (
+                    <div style={styles.quoteSearchControls}>
+                      {activePageKey === "quotation" ? (
+                        <>
+                          <input
+                            style={styles.searchInput}
+                            placeholder="Search line item"
+                            value={sheet.lineSearch}
+                            onChange={(event) => sheet.setLineSearch(event.target.value)}
+                          />
+                          <label style={styles.checkLabel}>
+                            <input
+                              type="checkbox"
+                              checked={sheet.hideUnused}
+                              onChange={(event) => sheet.setHideUnused(event.target.checked)}
+                            />
+                            Hide unused
+                          </label>
+                          <button type="button" style={styles.secondaryButton} onClick={() => exportQuoteSelectionsCsv(sheet)}>
+                            Export to Selections CSV
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        style={styles.secondaryButton}
+                        onClick={() => exportQuoteSheetCsv(sheet)}
+                        title="Download the current quote sheet line items as a CSV"
+                      >
+                        Download Quote Sheet CSV
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </>
+          )}
+        />
+        {openJobDetails.unattachedEstimate ? (
+          <div style={styles.unattachedEstimateNotice}>
+            <strong>This estimate is not attached to a project.</strong>
+            <span>Attach to Existing Job or Create New Job from Estimate before relying on project-bound fields.</span>
+            <div style={styles.unattachedEstimateActions}>
+              <button type="button" style={styles.secondaryButton} onClick={openJobPicker}>Attach to Existing Job</button>
+              <button type="button" style={styles.primaryButton} onClick={() => setNewJobModalOpen(true)}>Create New Job from Estimate</button>
+            </div>
           </div>
-          <div style={styles.openFileBanner}>
-            <span style={styles.openFileLabel}>Current saved file</span>
-            <span style={styles.openFileName}>{openJobDetails.fileName}</span>
-            <Link href="/modules/estimate-builder/register-job" style={styles.newJobButton}>
-              + New Job
-            </Link>
-          </div>
-          <div style={styles.openJobBanner}>
-            <OpenJobHeaderField label="Open Job" value={openJobDetails.projectName} />
-            <OpenJobHeaderField label="Job #" value={openJobDetails.jobNumber} />
-            <OpenJobHeaderField label="Address" value={openJobDetails.projectAddress} wide />
-          </div>
-        </section>
+        ) : null}
+        {ESTIMATE_WORKBOOK_SHEET_TABS.some((tab) => tab.key === activePageKey) ? (
+          <WorkbookSheetTabs activePageKey={activePageKey} onNavigate={navigateWorkspacePage} />
+        ) : null}
 
         <fieldset disabled={previewMode} style={styles.previewFieldset}>
             {activePageKey === "projectDashboard" && (
-              <ProjectDashboardSheet sheet={sheet} navigateWorkspacePage={navigateWorkspacePage} />
+              <ProjectDashboardSheet
+                sheet={sheet}
+                navigateWorkspacePage={navigateWorkspacePage}
+                clientPortalPreviewUrl={clientPortalPreviewUrl}
+                onClientPortalUnavailable={() => window.alert("Open or sync a Project Workspace job before previewing the Client Portal.")}
+              />
             )}
             {activePageKey === "dataInput" && (
               <DataInputSheet
@@ -881,29 +1126,56 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
             <ClientSelectionsModuleHost
               moduleContext={commercialModuleContext}
               onBackToDashboard={() => navigateWorkspacePage("projectDashboard")}
+              showDeveloperControls={showDeveloperControls}
             />
           )}
           {activePageKey === "budgetVsActual" && <CommercialBudgetVsActualPage {...commercialModuleContext} />}
+          {activePageKey === "supplierProcurement" && <SupplierProcurementSheet navigateWorkspacePage={navigateWorkspacePage} />}
           {activePageKey === "supplierInvoices" && <CommercialSupplierInvoicesPage {...commercialModuleContext} />}
           {activePageKey === "quoteApprovals" && <CommercialQuoteApprovalsPage {...commercialModuleContext} />}
           {activePageKey === "documentVault" && <CommercialDocumentVaultPage {...commercialModuleContext} />}
           {activePageKey === "rfis" && <CommercialRfisPage {...commercialModuleContext} />}
           {activePageKey === "cashflowSummary" && <CashflowSummarySheet sheet={sheet} />}
           {activePageKey === "procurement" && <CommercialProcurementSchedulePage {...commercialModuleContext} />}
+          {activePageKey === "clientPortal" && <ClientPortalRouteBridge />}
           {activePageKey === "aiPlanTakeoff" && (
-            <AIPlanTakeoffPage sheet={sheet} />
+            <AIPlanTakeoffPage {...takeoffEngineContext} />
           )}
           {activePageKey === "gantt" && (
             <GanttBuilderPage sheet={sheet} />
+          )}
+          {activePageKey === "jobBoard" && (
+            <JobBoardPage />
           )}
         </fieldset>
 
         {jobFileError ? (
           <div style={styles.fileErrorBanner} role="alert">{jobFileError}</div>
         ) : null}
+        {localJobFilePrompt ? (
+          <div style={styles.localJobFilePrompt} role="status">
+            <div>
+              <strong>Local job file opened</strong>
+              <span>{localJobFilePrompt.fileName} was validated and loaded. Keep this estimate as a local file, or attach it to a platform project.</span>
+            </div>
+            <div style={styles.localJobFilePromptActions}>
+              <button type="button" style={styles.secondaryButton} onClick={() => setLocalJobFilePrompt(null)}>Keep Local</button>
+              <button
+                type="button"
+                style={styles.primaryButton}
+                onClick={async () => {
+                  setLocalJobFilePrompt(null);
+                  await handleCommercialSnapshotSync();
+                }}
+              >
+                Attach to Platform Project
+              </button>
+            </div>
+          </div>
+        ) : null}
       </main>
 
-      <aside style={styles.summary}>
+      <aside style={styles.summary} data-estimate-builder-live-summary="true">
         {activePageKey === "projectEstimate" || activePageKey === "clientPage" || activePageKey === "cashflowSummary" ? (
           <>
             <div style={styles.eyebrow}>{activePageKey === "cashflowSummary" ? "Cashflow" : "Project Estimate"}</div>
@@ -957,8 +1229,11 @@ export default function EstimateBuilderWorkbook({ previewMode = false, mode = ""
       {jobPickerOpen && (
         <JobPickerModal
           jobs={sheet.savedJobSummaries || []}
-          message={jobPickerMessage}
-          busy={isSaving}
+          status={sheet.savedJobSummariesStatus}
+          message={jobPickerMessage || sheet.savedJobSummariesStatus?.message || ""}
+          busy={isSaving || Boolean(openingJobKey) || sheet.savedJobSummariesStatus?.state === "loading"}
+          openingJobKey={openingJobKey}
+          error={jobPickerError}
           onRefresh={openJobPicker}
           onOpen={openSavedJob}
           onClose={() => setJobPickerOpen(false)}
@@ -989,11 +1264,16 @@ function FloatingSaveJob({ saveStatus, onSaveJob }) {
   );
 }
 
-function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
+function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard, showDeveloperControls = false }) {
   const [LoadedClientSelectionsPage, setLoadedClientSelectionsPage] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
   const mountedRef = useRef(false);
+  const showDeveloperDetails = useMemo(() => {
+    if (process.env.NODE_ENV !== "development" || !showDeveloperControls) return false;
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("client-selections-show-developer-details") === "true";
+  }, [showDeveloperControls]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1037,7 +1317,7 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
     return (
       <ClientSelectionsErrorPanel
         error={loadError}
-        moduleContext={moduleContext}
+        showDeveloperDetails={showDeveloperDetails}
         onRetry={retry}
         onBackToDashboard={onBackToDashboard}
       />
@@ -1049,9 +1329,16 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
   }
 
   return (
-    <ClientSelectionsErrorBoundary onError={(error, info) => setLoadError({ error, info, source: "react-boundary" })}>
+    <ClientSelectionsErrorBoundary
+      resetKey={`${retryKey}:${moduleContext?.projectId || ""}:${moduleContext?.estimateSnapshotId || moduleContext?.snapshotId || ""}`}
+      showDeveloperDetails={showDeveloperDetails}
+      onRetry={retry}
+      onBackToDashboard={onBackToDashboard}
+      onError={(error, info) => setLoadError({ error, info, source: "react-boundary" })}
+    >
       <LoadedClientSelectionsPage
         {...moduleContext}
+        embedded
         onEmbeddedBack={onBackToDashboard}
         onEmbeddedMount={() => {
           mountedRef.current = true;
@@ -1062,14 +1349,49 @@ function ClientSelectionsModuleHost({ moduleContext, onBackToDashboard }) {
 }
 
 class ClientSelectionsErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, info: null, errorCode: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
   componentDidCatch(error, info) {
     console.error("[Client Selections] component mount error", error, info);
+    this.setState({ info, errorCode: clientSelectionsErrorCode(error, "react-boundary") });
     this.props.onError?.(error, info);
   }
 
+  componentDidUpdate(previousProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null, info: null, errorCode: "" });
+    }
+  }
+
   render() {
+    if (this.state.error) {
+      return (
+        <ClientSelectionsErrorPanel
+          error={{ error: this.state.error, info: this.state.info, source: "react-boundary", errorCode: this.state.errorCode }}
+          showDeveloperDetails={this.props.showDeveloperDetails}
+          onRetry={this.props.onRetry}
+          onBackToDashboard={this.props.onBackToDashboard}
+        />
+      );
+    }
     return this.props.children;
   }
+}
+
+function clientSelectionsErrorCode(error, source = "unknown") {
+  const message = clientSelectionsErrorMessage(error);
+  let hash = 0;
+  for (let index = 0; index < message.length; index += 1) {
+    hash = ((hash << 5) - hash + message.charCodeAt(index)) | 0;
+  }
+  return `CS-${String(source || "unknown").slice(0, 3).toUpperCase()}-${Math.abs(hash).toString(36).slice(0, 5).toUpperCase() || "00000"}`;
 }
 
 function clientSelectionsErrorMessage(error) {
@@ -1082,31 +1404,31 @@ function clientSelectionsErrorStack(error) {
   return actual?.stack || actual?.message || String(actual || "Unknown error");
 }
 
-function ClientSelectionsErrorPanel({ error, moduleContext, onRetry, onBackToDashboard }) {
+function ClientSelectionsErrorPanel({ error, showDeveloperDetails = false, onRetry, onBackToDashboard }) {
   const componentStack = error?.info?.componentStack || "";
+  const errorCode = error?.errorCode || clientSelectionsErrorCode(error, error?.source);
   return (
     <div style={styles.clientSelectionsErrorPanel} role="alert">
       <strong>Client Selections could not be opened.</strong>
-      <span>The current selections schedule failed to load inside the Estimate Builder workspace.</span>
+      <span>We couldn&apos;t load this section. Your saved selections have not been changed.</span>
+      <small>Reference code: {errorCode}</small>
       <div style={styles.clientSelectionsErrorActions}>
         <button type="button" style={styles.primaryButton} onClick={onRetry}>Retry</button>
-        <button type="button" style={styles.secondaryButton} onClick={onBackToDashboard}>Back to Project Dashboard</button>
+        <button type="button" style={styles.secondaryButton} onClick={onBackToDashboard}>Back to Project Workspace</button>
       </div>
-      <details style={styles.clientSelectionsErrorDetails}>
-        <summary>Developer details</summary>
-        <pre>{[
-          `Source: ${error?.source || "unknown"}`,
-          `Message: ${clientSelectionsErrorMessage(error)}`,
-          `workspaceId: ${moduleContext?.workspaceId || ""}`,
-          `organisationId: ${moduleContext?.organisationId || ""}`,
-          `projectId: ${moduleContext?.projectId || ""}`,
-          `estimateId: ${moduleContext?.estimateSnapshotId || moduleContext?.snapshotId || ""}`,
-          `jobId: ${moduleContext?.workbook?.jobId || moduleContext?.workbook?.id || ""}`,
-          "",
-          clientSelectionsErrorStack(error),
-          componentStack ? `\nComponent stack:${componentStack}` : "",
-        ].filter(Boolean).join("\n")}</pre>
-      </details>
+      {showDeveloperDetails ? (
+        <details style={styles.clientSelectionsErrorDetails}>
+          <summary>Developer details</summary>
+          <pre>{[
+            `Reference code: ${errorCode}`,
+            `Source: ${error?.source || "unknown"}`,
+            `Message: ${clientSelectionsErrorMessage(error)}`,
+            "",
+            clientSelectionsErrorStack(error),
+            componentStack ? `\nComponent stack:${componentStack}` : "",
+          ].filter(Boolean).join("\n")}</pre>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -1117,15 +1439,6 @@ function CommercialModuleLoading({ label }) {
       <strong>Loading {label}</strong>
       <span>Opening inside the Estimate Builder workspace...</span>
     </div>
-  );
-}
-
-function OpenJobHeaderField({ label, value, wide = false }) {
-  return (
-    <span style={{ ...styles.openJobField, ...(wide ? styles.openJobFieldWide : {}) }}>
-      <span style={styles.openJobLabel}>{label}</span>
-      <strong style={styles.openJobValue}>{value}</strong>
-    </span>
   );
 }
 
@@ -1148,187 +1461,132 @@ const DASHBOARD_GENERAL_FIELDS = [
   { label: "Status", key: "projectStatus" },
 ];
 
-// Moved here from the Projects Hub dashboard (/modules/construction), which is
-// now redirected. These navigate to standalone module routes rather than
-// workbook pages, so they render as links instead of setPage() buttons.
-const PROJECT_HUB_CARDS = [
-  {
-    title: "Job Board",
-    subtitle: "Track every job or project across its full lifecycle, from quote and kick-off through to completion and handover.",
-    href: "/modules/jobboard",
-    accent: "#f97316",
-    Icon: FolderKanban,
-    badge: "Jobs",
-  },
-  {
-    title: "Gantt Charts",
-    subtitle: "Visual project schedules with phases, milestones and progress tracking for construction or any multi-stage workflow.",
-    href: "/modules/gantt",
-    accent: "#3b82f6",
-    Icon: BarChart3,
-    badge: "Schedule",
-  },
-  {
-    title: "Production Flow",
-    subtitle: "Track each job through procurement steps: quote, sample, order, delivery, install and sign-off.",
-    href: "/modules/production",
-    accent: "#22c55e",
-    Icon: Truck,
-    badge: "Flow",
-  },
-];
-
-const DASHBOARD_WORKSPACE_CARDS = [
+const DASHBOARD_PROJECT_WORKFLOW_CARDS = [
   {
     title: "Job Details",
-    subtitle: "Manage project name, client, address, builder and estimate basics.",
-    page: "projectDashboard",
-    visualKey: "jobDetails",
-    badge: "Here",
-  },
-  {
-    title: "Project Setup",
-    subtitle: "Enter detailed construction assumptions, areas, wall types, floor systems and formula inputs.",
+    subtitle: "Job Details, Project Setup and project-specific Settings.",
     page: "dataInput",
     visualKey: "dataInput",
-    badge: "Source",
+    badge: "Details",
   },
   {
-    title: "Takeoff Engine",
-    subtitle: "Upload plans, measure areas, scale drawings and create takeoff quantities.",
+    title: "AI Plan Takeoff",
+    subtitle: "Plan upload, measurements, walls, rooms, doors, windows and quantities.",
     page: "aiPlanTakeoff",
     visualKey: "aiPlanTakeoff",
     badge: "Plans",
   },
   {
-    title: "BOQ",
-    subtitle: "Review quantities, trade categories, materials, labour and estimate build-up.",
-    page: "boq",
-    visualKey: "boq",
-    badge: "Quantities",
+    title: "Project Estimate",
+    subtitle: "Client-facing estimate/proposal document.",
+    page: "projectEstimate",
+    visualKey: "projectEstimate",
+    badge: "Proposal",
+  },
+  {
+    title: "Client Selections",
+    subtitle: "Client product choices, allowances, approvals and final contract schedule.",
+    page: "clientSelections",
+    visualKey: "clientSelections",
+    badge: "Choices",
   },
   {
     title: "Quotation Builder",
-    subtitle: "Build the detailed quote and final quotation workflow with line items, margins, GST, allowances and totals.",
+    subtitle: "Internal project estimate and final pricing calculations.",
     page: "quotation",
     visualKey: "quotation",
     badge: "Quote",
   },
   {
+    title: "Gantt Chart",
+    subtitle: "Construction programme, milestones and dependencies.",
+    page: "gantt",
+    visualKey: "gantt",
+    badge: "Schedule",
+  },
+  {
+    title: "Job Board",
+    subtitle: "Daily construction tasks, trades, inspections and job progress.",
+    page: "jobBoard",
+    visualKey: "jobBoard",
+    badge: "Work",
+  },
+  {
+    title: "BOQ",
+    subtitle: "Project quantities, materials, labour and trade requirements.",
+    page: "boq",
+    visualKey: "boq",
+    badge: "Quantities",
+  },
+  {
+    title: "Supplier & Procurement",
+    subtitle: "Supplier Quotes, Quote Approvals, Procurement, Purchase Orders, Deliveries and Supplier Invoices.",
+    page: "supplierProcurement",
+    visualKey: "supplierProcurement",
+    badge: "Supply",
+  },
+  {
+    title: "Variations",
+    subtitle: "Client changes, pricing, approval and time impacts.",
+    page: "variations",
+    visualKey: "variations",
+    badge: "Changes",
+  },
+];
+
+const DASHBOARD_PROJECT_RESOURCE_CARDS = [
+  {
+    title: "Document Vault",
+    subtitle: "Plans, proposals, contracts, schedules, approvals, certificates, warranties and issued-document versions.",
+    page: "documentVault",
+    visualKey: "documentVault",
+    badge: "Files",
+  },
+  {
+    title: "RFIs & Reports",
+    subtitle: "Requests for information, site reports, inspections, incidents, defects and project reporting.",
+    page: "rfis",
+    visualKey: "rfis",
+    badge: "Reports",
+  },
+  {
     title: "Standard Inclusions",
-    subtitle: "Edit the builder baseline inclusions schedule used to price Project Estimates.",
+    subtitle: "Classic, Premier, Premium and custom inclusion templates.",
     page: "standardInclusions",
     visualKey: "standardInclusions",
-    badge: "Base",
+    badge: "Templates",
   },
   {
     title: "Product Library",
-    subtitle: "Manage the client-selectable product hierarchy from the approved Product Library CSV.",
+    subtitle: "Products, suppliers, images, specifications and selection options.",
     page: "productLibrary",
     visualKey: "productLibrary",
     badge: "Products",
   },
   {
     title: "Estimating Catalogue",
-    subtitle: "Open the QS, rates, labour, preliminaries and quote-sheet catalogue used by estimating.",
+    subtitle: "Builder rates, components, labour and material pricing.",
     page: "estimatingCatalogue",
     visualKey: "estimatingCatalogue",
-    badge: "QS",
+    badge: "Rates",
   },
   {
-    title: "Project Estimate",
-    subtitle: "Prepare the estimate pack with cover, summary, price/trade summary, standard inclusions, terms and acceptance.",
-    page: "projectEstimate",
-    visualKey: "projectEstimate",
-    badge: "Pack",
-  },
-  {
-    title: "Supplier Quotations",
-    subtitle: "Track supplier and subcontractor quotes before converting them to costs or purchase orders.",
-    page: "supplierQuotations",
-    visualKey: "supplierQuotations",
-    badge: "Quotes",
-  },
-  {
-    title: "Procurement",
-    subtitle: "Manage required materials, ordering dates, delivery status and supplier follow-up.",
-    page: "procurement",
-    visualKey: "procurement",
-    badge: "Orders",
-  },
-  {
-    title: "Budget vs Actual",
-    subtitle: "Compare the estimate, variations, purchase orders, supplier invoices and remaining budget.",
+    title: "Budget versus Actual",
+    subtitle: "Estimated, committed and actual project costs.",
     page: "budgetVsActual",
     visualKey: "budgetVsActual",
     badge: "Cost",
   },
   {
-    title: "Purchase Orders",
-    subtitle: "Create and track purchase orders for suppliers, subcontractors and materials.",
-    page: "purchaseOrders",
-    visualKey: "purchaseOrders",
-    badge: "Drafts",
-  },
-  {
-    title: "Supplier Invoices",
-    subtitle: "Record invoice costs against suppliers and purchase orders.",
-    page: "supplierInvoices",
-    visualKey: "supplierInvoices",
-    badge: "Actuals",
-  },
-  {
-    title: "Variations",
-    subtitle: "Create, approve and track client changes and cost adjustments.",
-    page: "variations",
-    visualKey: "variations",
-    badge: "Changes",
-  },
-  {
-    title: "Client Selections",
-    subtitle: "Open the premium tablet-friendly Selections Book for finishes, fixtures, colours and client choices.",
-    page: "clientSelections",
-    visualKey: "clientSelections",
-    badge: "Choices",
-  },
-  {
-    title: "Quote Approvals",
-    subtitle: "Create durable signed approval records for quotes, variations and selections.",
-    page: "quoteApprovals",
-    visualKey: "quoteApprovals",
-    badge: "Signed",
-  },
-  {
-    title: "Document Vault",
-    subtitle: "Manage project plans, signed documents, contracts, warranties and supplier records.",
-    page: "documentVault",
-    visualKey: "documentVault",
-    badge: "Files",
-  },
-  {
-    title: "RFIs",
-    subtitle: "Track client questions, responses, priorities and required response dates.",
-    page: "rfis",
-    visualKey: "rfis",
-    badge: "Questions",
-  },
-  {
-    title: "Reports",
-    subtitle: "View budget, cost, margin, procurement and project status reports.",
-    page: "summary",
-    visualKey: "summary",
-    badge: "Reports",
-  },
-  {
-    title: "Settings",
-    subtitle: "Manage job settings, estimate rules, defaults and workbook options.",
-    page: "dataInput",
-    visualKey: "settings",
-    badge: "Defaults",
+    title: "Client Portal",
+    subtitle: "Client documents, selections, approvals, variations, photos, claims and messages.",
+    page: "clientPortal",
+    visualKey: "clientPortal",
+    badge: "Client",
   },
 ];
 
-function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
+function ProjectDashboardSheet({ sheet, navigateWorkspacePage, clientPortalPreviewUrl = "", onClientPortalUnavailable }) {
   return (
     <div style={styles.dashboardShell}>
       <section style={styles.dashboardTopGrid}>
@@ -1336,9 +1594,9 @@ function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
           <div style={styles.dashboardPanelHeader}>
             <div>
               <h3 style={styles.dashboardPanelTitle}>General</h3>
-              <p style={styles.dashboardPanelSubtitle}>Linked directly to Project Setup. Updating these fields updates the workbook source data.</p>
+              <p style={styles.dashboardPanelSubtitle}>Linked directly to Job Details. Updating these fields updates the workbook source data.</p>
             </div>
-            <button type="button" style={styles.dashboardSmallNavButton} onClick={() => navigateWorkspacePage("dataInput")}>Open Project Setup</button>
+            <button type="button" style={styles.dashboardSmallNavButton} onClick={() => navigateWorkspacePage("dataInput")}>Open Job Details</button>
           </div>
           <div style={styles.dashboardFieldGrid}>
             {DASHBOARD_GENERAL_FIELDS.map((field) => (
@@ -1348,28 +1606,67 @@ function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
         </div>
       </section>
 
-      <section style={styles.dashboardCardGrid}>
-        {PROJECT_HUB_CARDS.map((card) => {
-          const CardIcon = card.Icon;
-          return (
-            <Link
-              key={`hub-${card.title}`}
-              href={card.href}
-              className="project-workspace-card"
-              style={{ ...styles.dashboardWorkspaceCard, background: `${card.accent}14`, borderColor: `${card.accent}30`, textDecoration: "none" }}
-            >
-              <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: card.accent, borderColor: card.accent }}>
-                <CardIcon size={30} strokeWidth={2.3} />
-              </span>
-              <span style={styles.dashboardCardCopy}>
-                <span style={styles.dashboardCardTitle}>{card.title}</span>
-                <span style={styles.dashboardCardSubtitle}>{card.subtitle}</span>
-              </span>
-              <span style={{ ...styles.dashboardCardBadge, background: "#ffffff", borderColor: `${card.accent}30`, color: card.accent }}>{card.badge}</span>
-            </Link>
-          );
-        })}
-        {DASHBOARD_WORKSPACE_CARDS.map((card) => {
+      <DashboardSectionHeader
+        title="Project Workflow"
+        subtitle="Tools used to prepare, price and manage the project."
+      />
+      <DashboardCardSection cards={DASHBOARD_PROJECT_WORKFLOW_CARDS} navigateWorkspacePage={navigateWorkspacePage} />
+      <div style={styles.dashboardFullDivider} />
+      <DashboardSectionHeader
+        title="Supporting Tools & Administration"
+        subtitle="Project libraries, records, reporting, financial review and client access."
+      />
+      <DashboardCardSection
+        cards={DASHBOARD_PROJECT_RESOURCE_CARDS}
+        navigateWorkspacePage={navigateWorkspacePage}
+        clientPortalPreviewUrl={clientPortalPreviewUrl}
+        onClientPortalUnavailable={onClientPortalUnavailable}
+      />
+    </div>
+  );
+}
+
+function WorkspaceNavGroup({ pages, activePageKey, onNavigate }) {
+  return pages.map((page) => {
+    const visual = workspaceVisual(page.visualKey || page.page);
+    const NavIcon = visual.Icon;
+    const active = activePageKey === page.page;
+    return (
+      <button
+        key={`nav-${page.page}`}
+        className="project-workspace-nav-button"
+        style={{
+          ...styles.navButton,
+          borderColor: visual.color,
+          color: active ? "#ffffff" : visual.color,
+          background: active ? visual.color : "#ffffff",
+          boxShadow: active ? `0 14px 28px ${visual.color}33` : "0 8px 18px rgba(15, 23, 42, 0.05)",
+        }}
+        onClick={() => onNavigate(page.page)}
+        type="button"
+      >
+        <span className="project-workspace-nav-icon" style={{ ...styles.navButtonIcon, background: active ? "rgba(255,255,255,0.18)" : visual.soft }}>
+          <NavIcon size={22} strokeWidth={2.4} />
+        </span>
+        <span>{page.title}</span>
+      </button>
+    );
+  });
+}
+
+function DashboardSectionHeader({ title, subtitle }) {
+  return (
+    <div style={styles.dashboardSectionHeader}>
+      <h3 style={styles.dashboardSectionTitle}>{title}</h3>
+      <p style={styles.dashboardSectionSubtitle}>{subtitle}</p>
+    </div>
+  );
+}
+
+function DashboardCardSection({ cards, navigateWorkspacePage, clientPortalPreviewUrl = "", onClientPortalUnavailable }) {
+  return (
+    <section className="project-workspace-card-grid" style={styles.dashboardCardGrid}>
+      {cards.map((card) => {
           const visual = workspaceVisual(card.visualKey || card.page);
           const CardIcon = visual.Icon;
           return (
@@ -1378,7 +1675,14 @@ function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
             type="button"
             className="project-workspace-card"
             style={{ ...styles.dashboardWorkspaceCard, background: visual.soft, borderColor: visual.border }}
-            onClick={() => navigateWorkspacePage(card.page)}
+            onClick={() => {
+              if (card.page === "clientPortal") {
+                if (clientPortalPreviewUrl) window.location.href = clientPortalPreviewUrl;
+                else onClientPortalUnavailable?.();
+                return;
+              }
+              navigateWorkspacePage(card.page);
+            }}
           >
             <span className="project-workspace-card-icon" style={{ ...styles.dashboardCardIcon, background: visual.color, borderColor: visual.color }}>
               <CardIcon size={30} strokeWidth={2.3} />
@@ -1390,7 +1694,33 @@ function ProjectDashboardSheet({ sheet, navigateWorkspacePage }) {
             <span style={{ ...styles.dashboardCardBadge, background: "#ffffff", borderColor: visual.border, color: visual.color }}>{card.badge}</span>
           </button>
         );})}
+    </section>
+  );
+}
+
+const SUPPLIER_PROCUREMENT_MODULE_CARDS = [
+  { title: "Quote Requests", page: "supplierQuotations", visualKey: "supplierQuotations", subtitle: "Prepare and track supplier and subcontractor quote requests.", badge: "Requests" },
+  { title: "Quotes Received", page: "supplierQuotations", visualKey: "supplierQuotations", subtitle: "Capture supplier pricing, inclusions, exclusions and quote context.", badge: "Quotes" },
+  { title: "Quote Comparison & Approval", page: "quoteApprovals", visualKey: "quoteApprovals", subtitle: "Compare supplier quotes and record approval decisions.", badge: "Approvals" },
+  { title: "Procurement Schedule", page: "procurement", visualKey: "procurement", subtitle: "Manage required materials, lead times, ordering dates and follow-up.", badge: "Schedule" },
+  { title: "Purchase Orders", page: "purchaseOrders", visualKey: "purchaseOrders", subtitle: "Create and track supplier and subcontractor purchase orders.", badge: "Orders" },
+  { title: "Deliveries & Backorders", page: "procurement", visualKey: "procurement", subtitle: "Track deliveries, partial fulfilment, backorders and site requirements.", badge: "Deliveries" },
+  { title: "Supplier Invoices", page: "supplierInvoices", visualKey: "supplierInvoices", subtitle: "Record supplier invoices for actual cost tracking.", badge: "Invoices" },
+  { title: "Reconciliation", page: "budgetVsActual", visualKey: "budgetVsActual", subtitle: "Reconcile committed and actual supplier costs against budget.", badge: "Reconcile" },
+];
+
+function SupplierProcurementSheet({ navigateWorkspacePage }) {
+  return (
+    <div style={styles.dashboardShell}>
+      <section style={styles.dashboardPanel}>
+        <div>
+          <h3 style={styles.dashboardPanelTitle}>Supplier & Procurement</h3>
+          <p style={styles.dashboardPanelSubtitle}>
+            Supplier quotes, quote approvals, procurement, purchase orders, deliveries and backorders, supplier invoices and reconciliation are managed here as one project workflow module.
+          </p>
+        </div>
       </section>
+      <DashboardCardSection cards={SUPPLIER_PROCUREMENT_MODULE_CARDS} navigateWorkspacePage={navigateWorkspacePage} />
     </div>
   );
 }
@@ -1401,7 +1731,7 @@ function DashboardLinkedField({ sheet, field }) {
     return (
       <label style={styles.dashboardField}>
         <span>{field.label}</span>
-        <div style={styles.dashboardUnavailable}>Not in Project Setup yet</div>
+        <div style={styles.dashboardUnavailable}>Not in Job Details yet</div>
       </label>
     );
   }
@@ -1452,6 +1782,27 @@ function dashboardDataInputRow(sheet, key) {
   return (sheet.dataInputSections || [])
     .flatMap((section) => section.rows || [])
     .find((row) => row.key === key) || null;
+}
+
+function WorkbookSheetTabs({ activePageKey, onNavigate }) {
+  return (
+    <div style={styles.workbookSheetTabs} aria-label="Workbook sheets">
+      {ESTIMATE_WORKBOOK_SHEET_TABS.map((tab) => {
+        const active = activePageKey === tab.key;
+        return (
+          <button
+            key={tab.key}
+            type="button"
+            style={{ ...styles.workbookSheetTab, ...(active ? styles.workbookSheetTabActive : {}) }}
+            aria-current={active ? "page" : undefined}
+            onClick={() => onNavigate(tab.key)}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function DataInputSheet({ sheet, sections = null, formulaTarget, onPickFormulaReference, canEditFormulas = false }) {
@@ -2647,6 +2998,12 @@ export function ClientPageSheet({ sheet }) {
   const [pageEditMode, setPageEditMode] = useState(false);
   const [addElementOpen, setAddElementOpen] = useState(false);
   const [projectEstimateInspectorTab, setProjectEstimateInspectorTab] = useState("properties");
+  const [projectEstimateFileMenuOpen, setProjectEstimateFileMenuOpen] = useState(false);
+  const [projectEstimateTool, setProjectEstimateTool] = useState("select");
+  const [projectEstimateZoom, setProjectEstimateZoom] = useState(100);
+  const [projectEstimateShowGrid, setProjectEstimateShowGrid] = useState(false);
+  const [projectEstimateShowGuides, setProjectEstimateShowGuides] = useState(true);
+  const [projectEstimateSnapEnabled, setProjectEstimateSnapEnabled] = useState(true);
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const [mediaLibraryLoading, setMediaLibraryLoading] = useState(false);
   const [mediaLibraryAssets, setMediaLibraryAssets] = useState([]);
@@ -2658,6 +3015,7 @@ export function ClientPageSheet({ sheet }) {
   const [documentLibraryLoading, setDocumentLibraryLoading] = useState(false);
   const undoStackRef = useRef([]);
   const redoStackRef = useRef([]);
+  const blockClipboardRef = useRef(null);
   const saveTimerRef = useRef(null);
   const draftRef = useRef(null);
   const dirtyRef = useRef(false);
@@ -2667,47 +3025,82 @@ export function ClientPageSheet({ sheet }) {
   const inclusionsInputRef = useRef(null);
   const modifiedInclusionsInputRef = useRef(null);
   const plansInputRef = useRef(null);
+  const projectEstimatePdfInputRef = useRef(null);
   const client = useMemo(
     () => clientPageValues(sheet),
     [sheet.workbook.clientPage, sheet.workbook.data, sheet.preview.summary.finalQuoteTotal, sheet.preview.summary.gst]
   );
   const linkedFields = useMemo(() => quoteProposalLinkedFields(sheet, client), [sheet, client]);
   const sourceBuilder = useMemo(
-    () => normaliseQuoteProposalBuilder(sheet.workbook.clientPage?.proposalBuilder, client, sheet),
-    [sheet.workbook.clientPage?.proposalBuilder, client]
+    () => normaliseQuoteProposalBuilder(sheet.workbook.projectEstimateBuilder || sheet.workbook.clientPage?.proposalBuilder, client, sheet),
+    [sheet.workbook.projectEstimateBuilder, sheet.workbook.clientPage?.proposalBuilder, client]
   );
   const [builder, setBuilder] = useState(sourceBuilder);
   const orderedProposalPages = useMemo(() => orderedProjectEstimatePages(builder), [builder]);
   const activePage = orderedProposalPages.find((page) => page.id === activePageId) || orderedProposalPages[0] || builder.pages[0];
-  const selectedBlock = activePage?.blocks?.find((block) => block.id === selectedBlockId) || null;
+  const selectedBlock = activePage
+    ? [
+      ...defaultProjectEstimateBlocks(activePage.page_type || activePage.id || ""),
+      ...(Array.isArray(activePage.blocks) ? activePage.blocks : []),
+    ].find((block) => block.id === selectedBlockId) || null
+    : null;
   const logoInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const backgroundInputRef = useRef(null);
   const estimateDocuments = builder.importedDocuments || {};
   const inclusionsDocument = estimateDocuments.inclusions || null;
   const pricedPlans = estimateDocuments.pricedPlans || { files: [], pages: [] };
+  const activeProjectEstimatePdf = activeProjectEstimateDocument(builder);
+  const activeProjectEstimateLabel = projectEstimateDocumentRecoveryLabel(activeProjectEstimatePdf);
+  const projectEstimateDocumentName = linkedFields.projectName?.value || client.projectName || client.clientName || "Project Estimate";
+  const projectEstimateDocumentAddress = linkedFields.projectAddress?.value || client.projectAddress || "";
   const [templateManagerOpen, setTemplateManagerOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [baseTemplateConfirmOpen, setBaseTemplateConfirmOpen] = useState(false);
   const [isPlatformAdminUser, setIsPlatformAdminUser] = useState(false);
   const estimateProjectId = proposalProjectId(sheet)
-    || sheet.workbook?.id
-    || sheet.workbook?.jobId
-    || sheet.workbook?.openedFileName
+    || validUuidOrEmpty(sheet.workbook?.id)
+    || validUuidOrEmpty(sheet.workbook?.jobId)
     || "";
+  const localProjectAttachmentUnresolved = Boolean(sheet.workbook?.jobFileMeta?.localFileOnly && !estimateProjectId);
   const instanceSync = useProjectEstimateInstanceSync({
     workspaceId,
     projectId: estimateProjectId,
+    localFileOnly: Boolean(sheet.workbook?.jobFileMeta?.localFileOnly),
     builder,
     setBuilder,
     dirtyRef,
     readonly,
     hydratePage: (pageShell) => hydrateProjectEstimatePageFromApi(pageShell, client, sheet),
   });
+  const projectEstimateLoadBlocked = Boolean(
+    estimateProjectId
+    && !activeProjectEstimatePdf
+    && ["loading", "missing_saved_instance", "save_failed"].includes(instanceSync.status)
+  );
+  const documentContextIssue = projectEstimateDocumentContextIssue({
+    builder,
+    sheet,
+    estimateProjectId,
+    instanceSyncStatus: instanceSync.status,
+    activeProjectEstimatePdf,
+    projectEstimateLoadBlocked,
+    localProjectAttachmentUnresolved,
+  });
+  const documentContextInvalid = Boolean(documentContextIssue);
+  const guardedProjectEstimateAction = () => {
+    if (!documentContextIssue) return true;
+    setStatusMessage(documentContextIssue);
+    return false;
+  };
 
   useEffect(() => {
     if (instanceSync.status === "saving") setStatusMessage("Saving...");
     else if (instanceSync.status === "saved") setStatusMessage("Saved");
+    else if (instanceSync.status === "missing_saved_instance") {
+      setStatusMessage(instanceSync.errorMessage || "The saved Project Estimate could not be loaded. No replacement document has been created.");
+    }
+    else if (instanceSync.status === "created_from_template") setStatusMessage("New Project Estimate created from template.");
     else if (instanceSync.status === "save_failed") setStatusMessage(instanceSync.errorMessage || "Save failed");
     else if (instanceSync.status === "conflict") setStatusMessage(instanceSync.errorMessage || "Save conflict — reload to see the latest version.");
   }, [instanceSync.status, instanceSync.errorMessage]);
@@ -2796,7 +3189,8 @@ export function ClientPageSheet({ sheet }) {
       if (!pageEditMode || readonly) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
-        undoProjectEstimateEdit();
+        if (event.shiftKey) redoProjectEstimateEdit();
+        else undoProjectEstimateEdit();
         return;
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
@@ -2804,7 +3198,34 @@ export function ClientPageSheet({ sheet }) {
         redoProjectEstimateEdit();
         return;
       }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        saveCurrentEstimateChanges("Project Estimate saved.");
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setEditingBlockId("");
+        setSelectedBlockId("");
+        setAddElementOpen(false);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
+        event.preventDefault();
+        pasteProjectEstimateBlock();
+        return;
+      }
       if (!selectedBlock || editingBlockId) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
+        event.preventDefault();
+        copySelectedProjectEstimateBlock();
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        duplicateBlock(selectedBlock.id);
+        return;
+      }
       if (["Delete", "Backspace"].includes(event.key)) {
         event.preventDefault();
         if (isSubscriberProjectEstimateBlock(selectedBlock, activePage)) removeBlock(selectedBlock.id);
@@ -2824,9 +3245,23 @@ export function ClientPageSheet({ sheet }) {
 
   const persistBuilder = async (nextBuilder, { message = "Proposal autosaved.", fullWorkbookSaveTriggered = true } = {}) => {
     if (readonly) return;
+    const contextIssue = projectEstimateDocumentContextIssue({
+      builder: nextBuilder,
+      sheet,
+      estimateProjectId,
+      instanceSyncStatus: instanceSync.status,
+      activeProjectEstimatePdf: activeProjectEstimateDocument(nextBuilder),
+      projectEstimateLoadBlocked,
+      localProjectAttachmentUnresolved,
+    });
+    if (contextIssue) {
+      setStatusMessage(contextIssue);
+      return;
+    }
     const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
     const nextWorkbook = {
       ...sheet.workbook,
+      projectEstimateBuilder: nextBuilder,
       clientPage: {
         ...(sheet.workbook.clientPage || {}),
         proposalBuilder: nextBuilder,
@@ -2847,6 +3282,19 @@ export function ClientPageSheet({ sheet }) {
 
   const scheduleBuilderSave = (nextBuilder, message = "Proposal autosaved.") => {
     if (readonly) return;
+    const contextIssue = projectEstimateDocumentContextIssue({
+      builder: nextBuilder,
+      sheet,
+      estimateProjectId,
+      instanceSyncStatus: instanceSync.status,
+      activeProjectEstimatePdf: activeProjectEstimateDocument(nextBuilder),
+      projectEstimateLoadBlocked,
+      localProjectAttachmentUnresolved,
+    });
+    if (contextIssue) {
+      setStatusMessage(contextIssue);
+      return;
+    }
     dirtyRef.current = true;
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
@@ -2866,6 +3314,19 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const saveBuilderImmediate = async (nextBuilder, message = "Proposal updated.") => {
+    const contextIssue = projectEstimateDocumentContextIssue({
+      builder: nextBuilder,
+      sheet,
+      estimateProjectId,
+      instanceSyncStatus: instanceSync.status,
+      activeProjectEstimatePdf: activeProjectEstimateDocument(nextBuilder),
+      projectEstimateLoadBlocked,
+      localProjectAttachmentUnresolved,
+    });
+    if (contextIssue) {
+      setStatusMessage(contextIssue);
+      return nextBuilder;
+    }
     const updatedBuilder = { ...nextBuilder, updatedAt: new Date().toISOString() };
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
@@ -2898,7 +3359,84 @@ export function ClientPageSheet({ sheet }) {
     redoStackRef.current = [];
   };
 
+  const pushProjectEstimatePageUndo = (snapshot) => {
+    if (!snapshot?.kind) return;
+    undoStackRef.current = [...undoStackRef.current, { ...snapshot, capturedAt: Date.now() }].slice(-80);
+    redoStackRef.current = [];
+  };
+
+  const projectEstimatePageOrderSnapshot = () => ({
+    kind: "page-order",
+    pageOrder: (draftRef.current || builder).pages?.map((page) => page.id) || [],
+    activePageId,
+  });
+
   const restoreProjectEstimateSnapshot = (snapshot, targetStackRef) => {
+    if (snapshot?.kind === "block-delete") {
+      const currentBuilder = draftRef.current || builder;
+      const page = (currentBuilder.pages || []).find((item) => item.id === snapshot.pageId);
+      const index = page?.blocks?.findIndex((block) => block.id === snapshot.blockId) ?? -1;
+      const block = index >= 0 ? page.blocks[index] : snapshot.block;
+      if (block) targetStackRef.current = [...targetStackRef.current, { kind: "block-add", pageId: snapshot.pageId, block: cloneJson(block), index }].slice(-80);
+      updateBuilder((builderState) => ({
+        ...builderState,
+        pages: (builderState.pages || []).map((pageItem) => pageItem.id === snapshot.pageId ? {
+          ...pageItem,
+          blocks: (pageItem.blocks || []).filter((blockItem) => blockItem.id !== snapshot.blockId),
+        } : pageItem),
+      }), "Element removed.");
+      setSelectedBlockId("");
+      return;
+    }
+    if (snapshot?.kind === "block-add") {
+      targetStackRef.current = [...targetStackRef.current, { kind: "block-delete", pageId: snapshot.pageId, blockId: snapshot.block?.id, block: cloneJson(snapshot.block), index: snapshot.index }].slice(-80);
+      updateBuilder((builderState) => ({
+        ...builderState,
+        pages: (builderState.pages || []).map((pageItem) => {
+          if (pageItem.id !== snapshot.pageId || !snapshot.block) return pageItem;
+          if ((pageItem.blocks || []).some((blockItem) => blockItem.id === snapshot.block.id)) return pageItem;
+          const blocks = [...(pageItem.blocks || [])];
+          blocks.splice(clampNumber(Number(snapshot.index || blocks.length), 0, blocks.length), 0, cloneJson(snapshot.block));
+          return { ...pageItem, blocks };
+        }),
+      }), "Element restored.");
+      setSelectedBlockId(snapshot.block?.id || "");
+      return;
+    }
+    if (snapshot?.kind === "page-delete") {
+      targetStackRef.current = [...targetStackRef.current, { kind: "page-restore", pageId: snapshot.page?.id, page: cloneJson(snapshot.page), index: snapshot.index }].slice(-80);
+      updateBuilder((builderState) => {
+        if ((builderState.pages || []).some((page) => page.id === snapshot.page?.id)) return builderState;
+        const pages = [...(builderState.pages || [])];
+        pages.splice(clampNumber(Number(snapshot.index || 0), 0, pages.length), 0, cloneJson(snapshot.page));
+        return { ...builderState, pages };
+      }, "Page restored.");
+      setActivePageId(snapshot.page?.id || "");
+      setSelectedBlockId("");
+      return;
+    }
+    if (snapshot?.kind === "page-restore") {
+      const currentBuilder = draftRef.current || builder;
+      const index = (currentBuilder.pages || []).findIndex((page) => page.id === snapshot.pageId);
+      const page = index >= 0 ? currentBuilder.pages[index] : snapshot.page;
+      if (page) targetStackRef.current = [...targetStackRef.current, { kind: "page-delete", page: cloneJson(page), index }].slice(-80);
+      updateBuilder((builderState) => ({ ...builderState, pages: (builderState.pages || []).filter((pageItem) => pageItem.id !== snapshot.pageId) }), "Page removed.");
+      setActivePageId("");
+      setSelectedBlockId("");
+      return;
+    }
+    if (snapshot?.kind === "page-order") {
+      targetStackRef.current = [...targetStackRef.current, projectEstimatePageOrderSnapshot()].slice(-80);
+      updateBuilder((builderState) => {
+        const byId = new Map((builderState.pages || []).map((page) => [page.id, page]));
+        const ordered = (snapshot.pageOrder || []).map((id) => byId.get(id)).filter(Boolean);
+        const remaining = (builderState.pages || []).filter((page) => !(snapshot.pageOrder || []).includes(page.id));
+        return { ...builderState, pages: [...ordered, ...remaining] };
+      }, "Page order restored.");
+      setActivePageId(snapshot.activePageId || activePageId || "");
+      setSelectedBlockId("");
+      return;
+    }
     if (!snapshot?.pageId || !snapshot?.blockId) return;
     const current = snapshotProjectEstimateBlock(snapshot.blockId);
     if (current) targetStackRef.current = [...targetStackRef.current, current].slice(-80);
@@ -3019,6 +3557,43 @@ export function ClientPageSheet({ sheet }) {
     }), "Proposal theme updated.");
   };
 
+  const applyProjectEstimateBrandingOverrides = () => {
+    const currentBuilder = draftRef.current || builder;
+    const resolvedTheme = { ...defaultLuxuryProposalTheme(client), ...(currentBuilder.theme || {}) };
+    const companyName = String(resolvedTheme.companyNameOverride || linkedFields.companyName?.value || "").trim();
+    const logoUrl = String(resolvedTheme.logoUrl || linkedFields.logoUrl?.value || "").trim();
+    const accentColor = String(resolvedTheme.accentColor || "").trim();
+    const builderNamePatterns = [
+      /GR8 RESULT Digital Solutions/gi,
+      /GR8 RESULT/gi,
+      /Your Building Team/gi,
+    ];
+    updateBuilder((current) => ({
+      ...current,
+      pages: (current.pages || []).map((page) => ({
+        ...page,
+        blocks: (page.blocks || []).map((block) => {
+          const nextBlock = { ...block, content: { ...(block.content || {}) }, design: { ...(block.design || {}) } };
+          if (companyName && projectEstimateIsTextBlock(nextBlock)) {
+            const contentKey = projectEstimateEditorContentKey(nextBlock);
+            const text = String(nextBlock.content?.[contentKey] || "");
+            const brandedText = builderNamePatterns.reduce((value, pattern) => value.replace(pattern, companyName), text);
+            if (brandedText !== text) nextBlock.content[contentKey] = brandedText;
+          }
+          const label = `${nextBlock.id || ""} ${nextBlock.name || ""} ${nextBlock.content?.editorLabel || ""} ${nextBlock.content?.alt || ""}`;
+          if (logoUrl && projectEstimateIsImageBlock(nextBlock) && /logo/i.test(label)) {
+            nextBlock.content[nextBlock.type === "logo" ? "logoUrl" : "imageUrl"] = logoUrl;
+          }
+          if (accentColor && ["divider", "shape"].includes(nextBlock.type) && /^#?c89d4a$/i.test(String(nextBlock.design.color || nextBlock.design.backgroundColor || ""))) {
+            nextBlock.design.color = accentColor;
+            nextBlock.design.backgroundColor = accentColor;
+          }
+          return nextBlock;
+        }),
+      })),
+    }), "Company branding applied to editable pages.");
+  };
+
   const updateThemeStat = (index, key, value) => {
     const theme = { ...defaultLuxuryProposalTheme(client), ...(draftRef.current?.theme || builder.theme || {}) };
     const stats = [...(theme.stats || [])];
@@ -3036,6 +3611,7 @@ export function ClientPageSheet({ sheet }) {
       ...createProposalVisualElement(type, linkedFields, activePage?.blocks?.length || 0),
       pageType: activePage?.page_type || activePage?.id || "",
     };
+    pushProjectEstimatePageUndo({ kind: "block-delete", pageId: activePage.id, blockId: nextBlock.id, block: cloneJson(nextBlock), index: activePage?.blocks?.length || 0 });
     updateBuilder((current) => ({
       ...current,
       pages: current.pages.map((page) => page.id === activePage.id ? {
@@ -3048,8 +3624,10 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const removeBlock = (blockId) => {
-    const block = activePage.blocks.find((item) => item.id === blockId);
+    const blockIndex = activePage.blocks.findIndex((item) => item.id === blockId);
+    const block = blockIndex >= 0 ? activePage.blocks[blockIndex] : null;
     if (block?.design?.locked) return;
+    if (block) pushProjectEstimatePageUndo({ kind: "block-add", pageId: activePage.id, block: cloneJson(block), index: blockIndex });
     updateBuilder((current) => ({
       ...current,
       pages: current.pages.map((page) => page.id === activePage.id ? {
@@ -3062,13 +3640,66 @@ export function ClientPageSheet({ sheet }) {
   const duplicateBlock = (blockId) => {
     const block = activePage.blocks.find((item) => item.id === blockId);
     if (!block || block.design?.locked) return;
+    const duplicatedId = proposalBuilderId("block");
+    const duplicatedBlock = {
+      ...block,
+      id: duplicatedId,
+      source: "builder-created",
+      content: { ...block.content },
+      design: {
+        ...block.design,
+        frame: moveProposalFrame(block.design?.frame, 18, 18),
+      },
+    };
+    pushProjectEstimatePageUndo({ kind: "block-delete", pageId: activePage.id, blockId: duplicatedId, block: cloneJson(duplicatedBlock), index: activePage.blocks.findIndex((item) => item.id === blockId) + 1 });
     updateBuilder((current) => ({
       ...current,
       pages: current.pages.map((page) => page.id === activePage.id ? {
         ...page,
-        blocks: page.blocks.flatMap((item) => item.id === blockId ? [item, { ...item, id: proposalBuilderId("block"), content: { ...item.content }, design: { ...item.design } }] : [item]),
+        blocks: page.blocks.flatMap((item) => item.id === blockId ? [item, duplicatedBlock] : [item]),
       } : page),
     }), "Block duplicated.");
+    setSelectedBlockId(duplicatedId);
+  };
+
+  const copySelectedProjectEstimateBlock = () => {
+    if (!selectedBlock) return;
+    blockClipboardRef.current = cloneJson(selectedBlock);
+    setStatusMessage("Element copied.");
+  };
+
+  const renameProjectEstimateBlock = (blockId) => {
+    const block = activePage?.blocks?.find((item) => item.id === blockId);
+    if (!block || typeof window === "undefined") return;
+    const label = window.prompt("Layer name", block.content?.editorLabel || proposalBlockLabel(block.type));
+    if (!label) return;
+    updateBlockContent(blockId, "editorLabel", label);
+  };
+
+  const pasteProjectEstimateBlock = () => {
+    if (!activePage || !blockClipboardRef.current) return;
+    const sourceBlock = cloneJson(blockClipboardRef.current);
+    const nextId = proposalBuilderId("block");
+    const nextBlock = normaliseProposalBuilderBlock({
+      ...sourceBlock,
+      id: nextId,
+      source: "builder-created",
+      pageType: activePage.page_type || activePage.id || "",
+      content: { ...(sourceBlock.content || {}) },
+      design: {
+        ...(sourceBlock.design || {}),
+        frame: moveProposalFrame(sourceBlock.design?.frame, 24, 24),
+      },
+    });
+    pushProjectEstimatePageUndo({ kind: "block-delete", pageId: activePage.id, blockId: nextId, block: cloneJson(nextBlock), index: activePage.blocks?.length || 0 });
+    updateBuilder((current) => ({
+      ...current,
+      pages: current.pages.map((page) => page.id === activePage.id ? {
+        ...page,
+        blocks: [...(page.blocks || []), nextBlock],
+      } : page),
+    }), "Element pasted.");
+    setSelectedBlockId(nextId);
   };
 
   const moveBlock = (blockId, direction) => {
@@ -3124,6 +3755,7 @@ export function ClientPageSheet({ sheet }) {
 
   const addProjectEstimatePage = () => {
     const page = createBuilderProjectEstimatePage(builder.pages?.length || 0);
+    pushProjectEstimatePageUndo({ kind: "page-restore", pageId: page.id, page: cloneJson(page), index: builder.pages?.length || 0 });
     updateBuilder((current) => ({ ...current, pages: [...(current.pages || []), page] }), "Page added.");
     setActivePageId(page.id);
     setSelectedBlockId("");
@@ -3151,6 +3783,7 @@ export function ClientPageSheet({ sheet }) {
       const pages = [...(current.pages || [])];
       const index = pages.findIndex((item) => item.id === activePage.id);
       pages.splice(index >= 0 ? index + 1 : pages.length, 0, page);
+      pushProjectEstimatePageUndo({ kind: "page-restore", pageId: page.id, page: cloneJson(page), index: index >= 0 ? index + 1 : pages.length - 1 });
       return { ...current, pages };
     }, "Page duplicated.");
     setActivePageId(page.id);
@@ -3165,17 +3798,26 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const deleteProjectEstimatePage = () => {
-    if (!activePage || activePage.source !== "builder-created") return;
+    if (!activePage) return;
+    if (orderedProposalPages.length <= 1) {
+      setStatusMessage("A Project Estimate needs at least one page.");
+      return;
+    }
+    if (typeof window !== "undefined" && !window.confirm(`Delete "${activePage.title || "this page"}" from this Project Estimate? You can undo this action.`)) return;
+    const deleteIndex = (draftRef.current || builder).pages?.findIndex((page) => page.id === activePage.id) ?? -1;
+    pushProjectEstimatePageUndo({ kind: "page-delete", page: cloneJson(activePage), index: deleteIndex >= 0 ? deleteIndex : 0 });
     updateBuilder((current) => {
       const pages = (current.pages || []).filter((page) => page.id !== activePage.id);
       return { ...current, pages };
     }, "Page deleted.");
-    setActivePageId("");
+    const nextPage = orderedProposalPages.find((page) => page.id !== activePage.id);
+    setActivePageId(nextPage?.id || "");
     setSelectedBlockId("");
   };
 
   const moveProjectEstimatePage = (direction) => {
     if (!activePage) return;
+    pushProjectEstimatePageUndo(projectEstimatePageOrderSnapshot());
     updateBuilder((current) => {
       const pages = [...(current.pages || [])];
       const index = pages.findIndex((page) => page.id === activePage.id);
@@ -3242,6 +3884,7 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const saveCurrentEstimateChanges = async (message = "Estimate changes saved.") => {
+    if (!guardedProjectEstimateAction()) return;
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
@@ -3251,12 +3894,14 @@ export function ClientPageSheet({ sheet }) {
     const nextBuilder = { ...(draftRef.current || builder), updatedAt: new Date().toISOString() };
     const nextWorkbook = {
       ...sheet.workbook,
+      projectEstimateBuilder: nextBuilder,
       clientPage: {
         ...(sheet.workbook.clientPage || {}),
         proposalBuilder: nextBuilder,
       },
     };
     sheet.updateClientPage("proposalBuilder", nextBuilder);
+    sheet.updateProjectEstimateBuilder?.(nextBuilder);
     dirtyRef.current = false;
     await Promise.resolve(sheet.saveDraft?.(nextWorkbook));
     await instanceSync.persistNow(nextBuilder);
@@ -3281,12 +3926,14 @@ export function ClientPageSheet({ sheet }) {
     draftRef.current = nextBuilder;
     dirtyRef.current = false;
     sheet.updateClientPage("proposalBuilder", nextBuilder);
+    sheet.updateProjectEstimateBuilder?.(nextBuilder);
     setSelectedBlockId("");
     setEditingBlockId("");
     setStatusMessage(message);
   };
 
   const updateMyTemplate = async () => {
+    if (!guardedProjectEstimateAction()) return;
     const templateId = instanceSync.templateId;
     if (!workspaceId || !templateId) {
       setStatusMessage("Save this estimate at least once before updating a template.");
@@ -3336,6 +3983,7 @@ export function ClientPageSheet({ sheet }) {
 
   const projectEstimateBaseTemplateSettings = (sourceBuilder) => {
     const theme = { ...(sourceBuilder.theme || {}) };
+    delete theme.companyNameOverride;
     delete theme.clientNameOverride;
     delete theme.siteAddressOverride;
     delete theme.projectNameOverride;
@@ -3354,6 +4002,7 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const updateSystemBaseTemplate = async () => {
+    if (!guardedProjectEstimateAction()) return;
     if (!workspaceId) {
       setStatusMessage("A workspace is required before updating the base template.");
       return;
@@ -3389,6 +4038,7 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const resetToMyTemplate = async () => {
+    if (!guardedProjectEstimateAction()) return;
     const templateId = instanceSync.templateId;
     if (!workspaceId || !instanceSync.instanceId || !templateId) return;
     if (typeof window !== "undefined" && !window.confirm("Discard unsaved changes and reload this estimate from its linked template?")) return;
@@ -3412,6 +4062,81 @@ export function ClientPageSheet({ sheet }) {
       applyApiPagesToBuilder(instance.pages, "Reset to system default template.");
     } catch (error) {
       setStatusMessage(error?.message || "Could not reset to system default.");
+    }
+  };
+
+  const setProjectEstimateNotReady = (label) => {
+    setStatusMessage(`${label} is staged in the new File menu but needs the next storage/template package stage before it can run safely.`);
+  };
+
+  const createNewBlankProjectEstimateDocument = async () => {
+    if (typeof window !== "undefined" && !window.confirm("Create a new blank Project Estimate document? Unsaved changes in this document will be replaced.")) return;
+    const page = createBuilderProjectEstimatePage(0);
+    const nextBuilder = normaliseQuoteProposalBuilder({
+      ...builder,
+      id: proposalBuilderId("project-estimate"),
+      name: "Blank Project Estimate",
+      pages: [page],
+      importedDocuments: {},
+      updatedAt: new Date().toISOString(),
+    }, client, sheet);
+    await saveBuilderImmediate(nextBuilder, "New blank Project Estimate created.");
+    setActivePageId(page.id);
+    setSelectedBlockId("");
+    setEditingBlockId("");
+    setPageEditMode(true);
+  };
+
+  const openProjectEstimateFromComputer = () => {
+    setProjectEstimateNotReady("Open Project Estimate From Computer");
+  };
+
+  const saveProjectEstimateCopyToComputer = () => {
+    const source = draftRef.current || builder;
+    const payload = {
+      format: "gr8-project-estimate-document",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      document: {
+        ...source,
+        importedDocuments: normaliseProposalImportedDocuments(source.importedDocuments || {}),
+      },
+      assetManifest: projectEstimateAssetManifest(source),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    downloadBlob(blob, `${slug(proposalPdfFileName(sheet, source).replace(/\.pdf$/i, "")) || "project-estimate"}.gr8estimate.json`);
+    setStatusMessage("Project Estimate copy saved to computer.");
+  };
+
+  const attachLocalProjectEstimateToPlatformProject = () => {
+    setProjectEstimateNotReady("Attach Local File to Platform Project");
+  };
+
+  const previewProjectEstimatePdf = async () => {
+    if (!guardedProjectEstimateAction()) return;
+    setStatusMessage("Preparing PDF preview...");
+    try {
+      const rawBuilder = draftRef.current || builder;
+      const exportBuilder = {
+        ...rawBuilder,
+        importedDocuments: normaliseProposalImportedDocuments(rawBuilder.importedDocuments || {}),
+      };
+      await saveBuilderImmediate(exportBuilder, "Latest estimate pack saved for PDF preview.");
+      validateProjectEstimateExportBounds(exportPagesRef.current);
+      const renderedPages = await renderProposalPagesForPdf(exportPagesRef.current);
+      const mergeWarnings = [];
+      const blob = await createProposalPdfBlobFromProjectEstimate({
+        renderedPages,
+        importedDocuments: exportBuilder.importedDocuments || {},
+        onWarning: (message) => mergeWarnings.push(message),
+      });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setStatusMessage(mergeWarnings.length ? `${mergeWarnings.join(" ")} PDF preview opened.` : "PDF preview opened.");
+    } catch (error) {
+      console.error("Project Estimate PDF preview failed", error);
+      setStatusMessage("PDF preview could not be completed. Your estimate has not been changed.");
     }
   };
 
@@ -3521,21 +4246,87 @@ export function ClientPageSheet({ sheet }) {
         }),
       });
       const payload = await response.json().catch(() => ({}));
+      if (!response.ok && payload.code === "NO_ACTIVE_STANDARD_INCLUSIONS_MASTER") {
+        setStatusMessage("Upload or export a Standard Inclusions master PDF before assigning it to this project.");
+        return;
+      }
       if (!response.ok || !payload.ok) throw new Error(payload.error || "Could not assign current Standard Inclusions.");
       const document = normaliseImportedProposalDocument(payload.document);
       await saveBuilderImmediate(replaceActiveInclusionsDocument(draftRef.current || builder, document, document.sourceType || "standard_inclusions"), "Project inclusions updated from current Standard.");
       setStatusMessage("Project inclusions updated from current Standard.");
     } catch (error) {
-      console.error("Use Current Standard failed", error);
+      console.warn("Use Current Standard failed", error);
       setStatusMessage(error?.message || "Use Current Standard failed.");
     }
   };
 
+  const importEditableProjectEstimatePdf = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const validation = await validateSelectedPdfFile(file);
+      if (!validation.ok) {
+        setStatusMessage(validation.error || "The selected file is not a valid PDF");
+        return;
+      }
+      const importMode = selectProjectEstimatePdfImportMode();
+      if (!importMode) {
+        setStatusMessage("Project Estimate PDF import cancelled.");
+        return;
+      }
+      const importModeLabel = projectEstimatePdfImportModeLabel(importMode);
+      setStatusMessage(`Importing Project Estimate PDF (${importModeLabel})...`);
+      const preview = await importPdfAsStandardDocumentPreview(file, { mode: importMode });
+      const uploadedDocument = await uploadProposalPdf(file, "project_estimate_pdf");
+      if (!uploadedDocument) return;
+      const importedDocument = normaliseImportedProposalDocument({
+        ...uploadedDocument,
+        sourceType: "project_estimate_pdf",
+        editableTemplateRecovered: true,
+        metadata: {
+          ...(uploadedDocument.metadata || {}),
+          editableTemplateRecovered: true,
+          importMode,
+          importReview: preview.importReview,
+          importReviewSummary: preview.importReview,
+        },
+      });
+      const editablePages = projectEstimatePagesFromImportedDocumentBuilder(preview.document, importedDocument);
+      if (!editablePages.length) throw new Error("The PDF imported, but no pages could be rendered for editing.");
+      await saveBuilderImmediate({
+        ...(draftRef.current || builder),
+        importedDocuments: {
+          ...((draftRef.current || builder).importedDocuments || {}),
+          projectEstimate: importedDocument,
+        },
+        pages: [
+          ...((draftRef.current || builder).pages || []).filter((page) => page?.importedDocument?.sourceType !== "project_estimate_pdf"),
+          ...editablePages,
+        ],
+      }, "Editable Project Estimate PDF imported.");
+      setActivePageId(editablePages[0].id);
+      setPageEditMode(true);
+      setSelectedBlockId("");
+      const reviewCount = Number(preview.importReview?.needsReviewCount || 0);
+      setStatusMessage(`${importModeLabel} import complete. ${preview.editableTextCount || 0} editable text blocks and ${preview.editableImageCount || 0} embedded image blocks found.${reviewCount ? ` ${reviewCount} preserved regions remain as locked reference artwork.` : ""}`);
+      showProjectEstimatePdfImportReport(preview);
+    } catch (error) {
+      console.error("Project Estimate PDF import failed", error);
+      setStatusMessage(error?.message || "Project Estimate PDF import failed.");
+    }
+  };
+
   const importPlanPdfs = async (event) => {
-    const files = Array.from(event.target.files || []).filter((file) => file.type === "application/pdf");
+    const files = Array.from(event.target.files || []).filter(isPdfLikeFile);
     event.target.value = "";
     if (!files.length) return;
     try {
+      const validation = await validateSelectedPdfFile(files[0]);
+      if (!validation.ok) {
+        setStatusMessage(validation.error || "The selected file is not a valid PDF");
+        return;
+      }
       const document = await uploadProposalPdf(files[0], "priced_plans");
       if (!document) return;
       const nextPages = (document.pages || []).map((page, index) => ({
@@ -3602,9 +4393,19 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const exportMergedProposalPdf = async () => {
+    if (!guardedProjectEstimateAction()) return;
     setStatusMessage("Preparing PDF...");
     try {
       const rawBuilder = draftRef.current || builder;
+      const projectEstimateDocument = activeProjectEstimateDocument(rawBuilder);
+      if (referencedPdfUrl(projectEstimateDocument) && !hasEditableProjectEstimatePdfPages(rawBuilder)) {
+        const response = await fetch(referencedPdfUrl(projectEstimateDocument));
+        if (!response.ok) throw new Error(`Could not download Project Estimate PDF: HTTP ${response.status}`);
+        const blob = await response.blob();
+        downloadBlob(blob, projectEstimateDocument.fileName || projectEstimateDocument.title || proposalPdfFileName(sheet, rawBuilder));
+        setStatusMessage("PDF downloaded.");
+        return;
+      }
       const rawInclusionsCheck = validateActiveInclusionsState(rawBuilder.importedDocuments || {});
       if (!rawInclusionsCheck.ok) throw new Error(rawInclusionsCheck.error);
       if (rawInclusionsCheck.legacyFound) {
@@ -3694,6 +4495,7 @@ export function ClientPageSheet({ sheet }) {
   };
 
   const saveAsNewSubscriberTemplate = async (options = {}) => {
+    if (!guardedProjectEstimateAction()) return;
     if (!workspaceId) {
       setStatusMessage("Join a workspace before saving a Project Estimate template.");
       return;
@@ -3824,6 +4626,79 @@ export function ClientPageSheet({ sheet }) {
     }
   };
 
+  const projectEstimateFileSections = [
+    {
+      title: "NEW",
+      items: [
+        { label: "New Project Estimate", action: resetToMyTemplate },
+        { label: "New Blank Document", action: createNewBlankProjectEstimateDocument },
+        { label: "Create From Template", action: () => setTemplateManagerOpen(true) },
+      ],
+    },
+    {
+      title: "OPEN",
+      items: [
+        { label: "Open Project Estimate From Computer", action: openProjectEstimateFromComputer },
+        { label: "Open Platform Project Estimate", action: () => openDocumentLibrary("project_estimate_pdf") },
+        { label: "Open Recent", action: () => setProjectEstimateNotReady("Open Recent Project Estimate") },
+        { label: "Open Template", action: () => setTemplateManagerOpen(true) },
+      ],
+    },
+    {
+      title: "IMPORT",
+      items: [
+        { label: "Import PDF", action: () => projectEstimatePdfInputRef.current?.click() },
+        { label: "Import Images as Pages", action: () => setProjectEstimateNotReady("Import Images as Pages") },
+        { label: "Insert Standard Inclusions Schedule", action: () => inclusionsInputRef.current?.click() },
+        { label: "Insert Plans PDF", action: () => plansInputRef.current?.click() },
+        { label: "Insert Pages From Another Estimate", action: () => openDocumentLibrary("project_estimate_pdf") },
+      ],
+    },
+    {
+      title: "SAVE",
+      items: [
+        { label: "Save", action: () => saveCurrentEstimateChanges("Project Estimate saved.") },
+        { label: "Save As", action: () => setProjectEstimateNotReady("Save As") },
+        { label: "Save Copy to Computer", action: saveProjectEstimateCopyToComputer },
+        { label: "Attach Local File to Platform Project", action: attachLocalProjectEstimateToPlatformProject },
+      ],
+    },
+    {
+      title: "TEMPLATES",
+      items: [
+        { label: "Save as My Template", action: saveAsNewSubscriberTemplate },
+        { label: "Update My Template", action: updateMyTemplate },
+        { label: "Save as Organisation Template", action: () => saveAsNewSubscriberTemplate({ promptMessage: "Name this organisation template" }) },
+        { label: "Manage Templates", action: () => setTemplateManagerOpen(true) },
+      ],
+    },
+    {
+      title: "EXPORT",
+      items: [
+        { label: "Preview PDF", action: previewProjectEstimatePdf },
+        { label: "Download PDF", action: exportMergedProposalPdf },
+        { label: "Export Page as Image", action: () => setProjectEstimateNotReady("Export Page as Image") },
+      ],
+    },
+    {
+      title: "DOCUMENT",
+      items: [
+        { label: "Document Information", action: () => setProjectEstimateInspectorTab("document") },
+        { label: "Page Setup", action: () => setProjectEstimateInspectorTab("document") },
+        { label: "Version History", action: () => setVersionHistoryOpen(true) },
+        { label: "Revert to Last Saved Version", action: resetToMyTemplate },
+        { label: "Close Document", action: () => setProjectEstimateNotReady("Close Document") },
+      ],
+    },
+    ...(isPlatformAdminUser ? [{
+      title: "ADMIN ONLY",
+      items: [
+        { label: "Save as Platform Base Template", action: () => setBaseTemplateConfirmOpen(true) },
+        { label: "Update Platform Base Template", action: () => setBaseTemplateConfirmOpen(true) },
+      ],
+    }] : []),
+  ];
+
   return (
     <div style={styles.proposalBuilderShell}>
       <style>{`
@@ -3836,23 +4711,17 @@ export function ClientPageSheet({ sheet }) {
           .proposal-builder-page-landscape { size: A4 landscape; width: 297mm !important; height: 210mm !important; }
         }
       `}</style>
-      <div className="proposal-builder-tools" style={styles.proposalBuilderToolbar}>
-        <strong>Estimate Pack</strong>
-        <button style={pageEditMode ? styles.primaryButton : styles.secondaryButton} disabled={readonly} onClick={() => {
-          setPageEditMode((current) => !current);
-          setSelectedBlockId("");
-          setEditingBlockId("");
-          setAddElementOpen(false);
-        }}>{pageEditMode ? "Done Editing" : "Edit Page"}</button>
-        <button style={styles.secondaryButton} disabled={readonly} onClick={() => saveCurrentEstimateChanges("Estimate changes saved.")}>Save Changes to This Estimate</button>
-        <button style={styles.secondaryButton} disabled={readonly} onClick={saveAsNewSubscriberTemplate}>Save as My Template</button>
-        <button style={styles.secondaryButton} disabled={readonly} onClick={updateMyTemplate}>Update My Template</button>
-        {isPlatformAdminUser ? (
-          <button style={styles.secondaryButton} disabled={readonly} onClick={() => setBaseTemplateConfirmOpen(true)}>Update Base Template</button>
-        ) : null}
-        <button style={styles.secondaryButton} disabled={readonly} onClick={resetToMyTemplate}>Reset</button>
-        <button style={styles.secondaryButton} onClick={exportMergedProposalPdf}>Download PDF</button>
-      </div>
+      <ProjectEstimateDocumentHeader
+        projectName={projectEstimateDocumentName}
+        projectAddress={projectEstimateDocumentAddress}
+        saveStatus={statusMessage || instanceSync.status}
+        recoveredLabel={activeProjectEstimateLabel}
+        contextIssue={documentContextIssue}
+        fileMenuOpen={projectEstimateFileMenuOpen}
+        onToggleFileMenu={() => setProjectEstimateFileMenuOpen((current) => !current)}
+        onCloseFileMenu={() => setProjectEstimateFileMenuOpen(false)}
+        fileSections={projectEstimateFileSections}
+      />
       {baseTemplateConfirmOpen ? (
         <div style={styles.projectEstimateAdminModalOverlay} onMouseDown={() => setBaseTemplateConfirmOpen(false)}>
           <div style={styles.projectEstimateAdminModal} onMouseDown={(event) => event.stopPropagation()}>
@@ -3901,6 +4770,16 @@ export function ClientPageSheet({ sheet }) {
       <div style={styles.proposalBuilderLayout}>
           <aside className="proposal-builder-sidebar" style={styles.proposalBuilderSidebar}>
             <h3>Pages</h3>
+            <div style={styles.projectEstimatePageControls}>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || documentContextInvalid} onClick={addProjectEstimatePage}>Add Page</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || !activePage || documentContextInvalid} onClick={duplicateProjectEstimatePage}>Duplicate</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || !activePage || documentContextInvalid} onClick={renameProjectEstimatePage}>Rename</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || !activePage || documentContextInvalid} onClick={() => moveProjectEstimatePage(-1)}>Move Up</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || !activePage || documentContextInvalid} onClick={() => moveProjectEstimatePage(1)}>Move Down</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || !activePage || documentContextInvalid} onClick={toggleProjectEstimatePageHidden}>{activePage?.hiddenFromPdf ? "Show PDF" : "Hide PDF"}</button>
+              <button type="button" style={styles.dangerButton} disabled={readonly || orderedProposalPages.length <= 1 || documentContextInvalid} onClick={deleteProjectEstimatePage}>Delete</button>
+              <button type="button" style={styles.secondaryButton} disabled={readonly || documentContextInvalid} onClick={() => projectEstimatePdfInputRef.current?.click()}>Import PDF</button>
+            </div>
             {orderedProposalPages.map((page) => (
               <button
                 key={page.id}
@@ -3934,7 +4813,75 @@ export function ClientPageSheet({ sheet }) {
             </div>
           </aside>
         <main className="proposal-builder-print" style={styles.proposalBuilderCanvas}>
-          {isProposalImportPage(activePage) ? (
+          <ProjectEstimateEditorToolbar
+            tool={projectEstimateTool}
+            onTool={setProjectEstimateTool}
+            editMode={pageEditMode && !readonly}
+            readonly={readonly || documentContextInvalid}
+            selectedBlock={selectedBlock}
+            zoom={projectEstimateZoom}
+            showGrid={projectEstimateShowGrid}
+            showGuides={projectEstimateShowGuides}
+            snapEnabled={projectEstimateSnapEnabled}
+            onToggleEditMode={() => {
+              setPageEditMode((current) => !current);
+              setSelectedBlockId("");
+              setEditingBlockId("");
+              setAddElementOpen(false);
+            }}
+            onAddBlock={addBlock}
+            onUndo={undoProjectEstimateEdit}
+            onRedo={redoProjectEstimateEdit}
+            onMoveBlock={moveBlockLayer}
+            onDuplicate={() => selectedBlock && duplicateBlock(selectedBlock.id)}
+            onDelete={() => selectedBlock && removeBlock(selectedBlock.id)}
+            onLock={() => selectedBlock && updateBlockDesign(selectedBlock.id, "locked", !selectedBlock.design?.locked)}
+            onAlign={(value) => selectedBlock && updateBlockDesign(selectedBlock.id, "textAlign", value)}
+            onZoom={(value) => setProjectEstimateZoom(clampNumber(value, 35, 180))}
+            onFitPage={() => setProjectEstimateZoom(78)}
+            onFitWidth={() => setProjectEstimateZoom(100)}
+            onToggleGrid={() => setProjectEstimateShowGrid((current) => !current)}
+            onToggleGuides={() => setProjectEstimateShowGuides((current) => !current)}
+            onToggleSnap={() => setProjectEstimateSnapEnabled((current) => !current)}
+          />
+          <div
+            style={{
+              ...styles.projectEstimateCanvasViewport,
+              ...(projectEstimateShowGrid ? styles.projectEstimateCanvasViewportGrid : {}),
+            }}
+          >
+            <div
+              style={{
+                ...styles.projectEstimateCanvasZoomFrame,
+                transform: `scale(${projectEstimateZoom / 100})`,
+              }}
+            >
+          {projectEstimateLoadBlocked ? (
+            <ProjectEstimateRecoveryNotice status={instanceSync.status} message={instanceSync.errorMessage} />
+          ) : isEditableProjectEstimatePdfPage(activePage) ? (
+            <ProjectEstimateApprovedPage
+              key={activePage.id}
+              page={activePage}
+              theme={builder.theme}
+              linkedFields={linkedFields}
+              Brochure={EstimateInclusionsBrochure}
+              editMode={pageEditMode && !readonly}
+              selectedBlockId={selectedBlockId}
+              editingBlockId={editingBlockId}
+              onSelectBlock={setSelectedBlockId}
+              onEditBlock={setEditingBlockId}
+              onTextCommit={updateBlockContent}
+              onBlockDesign={updateBlockDesign}
+              onReplaceImage={(block) => {
+                setSelectedBlockId(block?.id || "");
+                blockImageUploadPurposeRef.current = block?.type === "logo" ? "logo" : "image";
+                imageInputRef.current?.click();
+              }}
+              onDuplicateBlock={duplicateBlock}
+              onDeleteBlock={removeBlock}
+              onMoveBlockLayer={moveBlockLayer}
+            />
+          ) : isProposalImportPage(activePage) ? (
             <ProposalImportedDocumentPage
               key={activePage.id}
               page={activePage}
@@ -3975,22 +4922,70 @@ export function ClientPageSheet({ sheet }) {
               onMoveBlockLayer={moveBlockLayer}
             />
           )}
+            </div>
+          </div>
           <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "logo")} />
           <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp, image/svg+xml" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, themeUploadTargetRef.current ? "theme" : blockImageUploadPurposeRef.current || "image")} />
           <input ref={backgroundInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={(event) => uploadImageForBlock(event, "background")} />
           <input ref={inclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "standard_inclusions")} />
           <input ref={modifiedInclusionsInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={(event) => importInclusionsPdf(event, "project_specific_inclusions")} />
           <input ref={plansInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importPlanPdfs} />
+          <input ref={projectEstimatePdfInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={importEditableProjectEstimatePdf} />
           </main>
+        <aside className="proposal-builder-panel" style={styles.proposalBuilderPanel}>
+          <ProjectEstimateContextualInspector
+            page={activePage}
+            block={selectedBlock}
+            theme={builder.theme}
+            linkedFields={linkedFields}
+            inclusionsDocument={inclusionsDocument}
+            pricedPlans={pricedPlans}
+            revisions={builder.pageRevisions || []}
+            readonly={readonly || documentContextInvalid}
+            editMode={pageEditMode && !readonly}
+            onToggleEditMode={() => setPageEditMode((current) => !current)}
+            onBlockContent={updateBlockContent}
+            onBlockDesign={updateBlockDesign}
+            onSelectedBlockDesign={updateSelectedBlockDesign}
+            onPageChange={updatePage}
+            onDuplicateBlock={duplicateBlock}
+            onDeleteBlock={removeBlock}
+            onMoveBlock={moveBlockLayer}
+            onRenameBlock={renameProjectEstimateBlock}
+            onSelectBlock={setSelectedBlockId}
+            activeTab={projectEstimateInspectorTab}
+            onActiveTab={setProjectEstimateInspectorTab}
+            addElementOpen={addElementOpen}
+            onToggleAddElement={() => setAddElementOpen((current) => !current)}
+            onAddBlock={addBlock}
+            onUploadLogo={() => openBlockImageUpload("logo")}
+            onUploadImage={() => openBlockImageUpload("image")}
+            onOpenMediaLibrary={openProjectEstimateMediaLibrary}
+            onOpenAiRewrite={openAiRewriteForSelectedBlock}
+            onUndo={undoProjectEstimateEdit}
+            onRedo={redoProjectEstimateEdit}
+            onViewDocument={openReferencedPdfDocument}
+            onUploadStandardInclusions={() => inclusionsInputRef.current?.click()}
+            onUploadModifiedInclusions={() => modifiedInclusionsInputRef.current?.click()}
+            onUseCurrentStandard={useCurrentStandardInclusions}
+            onUploadPlans={() => plansInputRef.current?.click()}
+            onRemoveInclusions={removeInclusionsDocument}
+            onRemovePlans={removePlansDocument}
+            onOpenDocumentLibrary={openDocumentLibrary}
+            onThemeChange={updateTheme}
+            onThemeImageUpload={openThemeImageUpload}
+            onApplyBranding={applyProjectEstimateBrandingOverrides}
+          />
+        </aside>
       </div>
       <div ref={exportPagesRef} style={styles.proposalExportSource} aria-hidden="true">
-        {orderedProposalPages.filter((page) => !page.hiddenFromPdf).map((page) => (
+        {!projectEstimateLoadBlocked && orderedProposalPages.filter((page) => !page.hiddenFromPdf).map((page) => (
           <div
             key={`export-${page.id}`}
             data-proposal-export-page="true"
             data-orientation={proposalPageOrientation(page)}
             data-page-type={page.page_type || ""}
-            data-page-id={page.page_type || page.id || ""}
+            data-page-id={page.id || page.page_type || ""}
             data-source-file={page.importedDocument?.fileName || page.importedDocument?.title || ""}
             data-source-path={page.importedDocument?.storagePath || page.importedDocument?.publicUrl || ""}
             data-source-page-number={page.importedPageNumber || page.importedDocument?.pageNumber || ""}
@@ -4076,8 +5071,27 @@ function isProposalImportPage(page = {}) {
   return ["standardInclusions", "pricedPlans", "importedInclusionsPdf", "importedPlanPdf"].includes(page.page_type);
 }
 
+function isEditableProjectEstimatePdfPage(page = {}) {
+  return page?.page_type === "importedPlanPdf" && page?.importedDocument?.sourceType === "project_estimate_pdf";
+}
+
+function isBlockCanvasProjectEstimatePage(page = {}) {
+  return page?.source === "builder-created"
+    || page?.page_type === "builderCreated"
+    || isEditableProjectEstimatePdfPage(page);
+}
+
 function orderedProjectEstimatePages(builder = {}) {
   const pages = Array.isArray(builder.pages) ? builder.pages : [];
+  const projectEstimatePages = activeProjectEstimateImportedPages(builder);
+  const builderCreatedPages = pages.filter((page) => page?.source === "builder-created" || page?.page_type === "builderCreated");
+  if (projectEstimatePages.length) {
+    const importedIds = new Set(projectEstimatePages.map((page) => page.id));
+    return [
+      ...projectEstimatePages,
+      ...builderCreatedPages.filter((page) => !importedIds.has(page.id)),
+    ];
+  }
   const byType = new Map();
   pages.forEach((page) => {
     const pageType = page?.page_type || page?.id || "";
@@ -4089,7 +5103,7 @@ function orderedProjectEstimatePages(builder = {}) {
       return byType.get(pageId) || defaultQuoteProposalPage(pageId, {}, {});
     })
     .filter((page) => page && projectEstimatePageDefinitionFor(page.page_type || page.id))
-    .concat(pages.filter((page) => page?.source === "builder-created"));
+    .concat(builderCreatedPages);
 }
 
 function expandProposalPagesForImportedDocuments(pages = [], importedDocuments = {}, { editing = false } = {}) {
@@ -4329,6 +5343,22 @@ function ProposalImportedDocumentPage({
   );
 }
 
+function ProjectEstimateRecoveryNotice({ status, message }) {
+  const loading = status === "loading";
+  return (
+    <section className="proposal-builder-page" style={{ ...styles.luxuryPage, ...styles.importPlaceholderPage }}>
+      <div style={styles.importPlaceholderContent}>
+        <h1 style={styles.importPlaceholderTitle}>The saved Project Estimate could not be loaded.</h1>
+        <p style={styles.importPlaceholderText}>
+          {loading
+            ? "Checking project-specific saved revisions before any base template is used."
+            : message || "Choose a recovery version before editing or saving this project estimate."}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function planPageOrientation(page = {}) {
   if (page.orientation === "portrait" || page.orientation === "landscape") return page.orientation;
   const rotation = Number(page.rotation || page.metadataRotation || 0);
@@ -4359,6 +5389,39 @@ function proposalPdfFileName(sheet, builder = {}) {
   const quoteNumber = safePdfNamePart(clientWorkbookDataValue(sheet, "quoteNumber") || clientWorkbookDataValue(sheet, "estimateNumber") || "");
   const parts = [clientName, quoteNumber, "Project Estimate"].filter(Boolean);
   return `${parts.join(" - ")}.pdf`;
+}
+
+function projectEstimateAssetManifest(builder = {}) {
+  const assets = new Map();
+  const addAsset = (url, usage, meta = {}) => {
+    const value = String(url || "").trim();
+    if (!value) return;
+    const key = value.startsWith("data:") ? `inline:${value.length}:${value.slice(0, 48)}` : value;
+    if (!assets.has(key)) {
+      assets.set(key, {
+        id: `asset-${assets.size + 1}`,
+        source: value.startsWith("data:") ? "inline-data-url" : "external-reference",
+        ref: value.startsWith("data:") ? "" : value,
+        usages: [],
+        byteLength: value.startsWith("data:") ? value.length : 0,
+      });
+    }
+    assets.get(key).usages.push({ usage, ...meta });
+  };
+  addAsset(builder.theme?.logoUrl, "theme.logoUrl");
+  addAsset(builder.theme?.heroImageUrl, "theme.heroImageUrl");
+  (builder.pages || []).forEach((page, pageIndex) => {
+    addAsset(page.design?.backgroundImageUrl, "page.background", { pageId: page.id, pageIndex });
+    addAsset(page.baseArtwork || page.data?.baseArtwork || page.data?.originalPageAsset, "page.importedPdfBackground", { pageId: page.id, pageIndex });
+    (page.blocks || []).forEach((block) => {
+      addAsset(block.content?.imageUrl || block.content?.logoUrl || block.data?.imageRef, `block.${block.type || "asset"}`, { pageId: page.id, blockId: block.id });
+    });
+  });
+  Object.values(builder.importedDocuments || {}).forEach((document) => {
+    if (!document) return;
+    addAsset(document.publicUrl, `importedDocument.${document.sourceType || "pdf"}`, { documentId: document.id, fileName: document.fileName });
+  });
+  return Array.from(assets.values());
 }
 
 function nextAnimationFrame() {
@@ -4550,6 +5613,7 @@ async function createProposalPdfBlobFromProjectEstimate({ renderedPages = [], im
     const pageId = renderedPage.pageId || renderedPage.pageType || "";
     if (pageId && !renderedByPageId.has(pageId)) renderedByPageId.set(pageId, renderedPage);
   });
+  const appendedRenderedPageIds = new Set();
   const diagnostics = [];
 
   const appendRenderedPage = async (pageId, reasonIncluded) => {
@@ -4560,6 +5624,7 @@ async function createProposalPdfBlobFromProjectEstimate({ renderedPages = [], im
     const { mimeType, bytes } = parseRenderedPageImage(renderedPage.imageData);
     const image = mimeType === "image/png" ? await outputPdf.embedPng(bytes) : await outputPdf.embedJpg(bytes);
     page.drawImage(image, { x: 0, y: 0, width: size[0], height: size[1] });
+    appendedRenderedPageIds.add(pageId);
     diagnostics.push({
       outputPage: outputPdf.getPageCount(),
       sourceType: "rendered page",
@@ -4568,30 +5633,40 @@ async function createProposalPdfBlobFromProjectEstimate({ renderedPages = [], im
     });
   };
 
-  for (const item of PROJECT_ESTIMATE_EXPORT_ORDER) {
-    if (item.type === "page") {
-      await appendRenderedPage(item.pageId, "declared project estimate page");
-      continue;
-    }
-    if (item.type === "documentSlot") {
-      const document = resolveProjectEstimateSlotDocument(importedDocuments, item.slotId);
-      if (referencedPdfUrl(document)) {
-        const result = await appendReferencedPdfDocument({
-          outputPdf,
-          document,
-          warningMessage: item.slotId === "plans" ? "Plans could not be included." : "The selected Inclusions Schedule could not be found.",
-          onWarning,
-        });
-        if (result.appendedPageCount > 0) {
-          diagnostics.push(...result.pages.map((entry) => ({
-            ...entry,
-            reasonIncluded: `${item.slotId} document replaces ${item.placeholderPageId} placeholder`,
-          })));
-          continue;
-        }
+  const hasTemplateRenderedPages = PROJECT_ESTIMATE_EXPORT_ORDER.some((item) => renderedByPageId.has(item.type === "documentSlot" ? item.placeholderPageId : item.pageId));
+  if (hasTemplateRenderedPages) {
+    for (const item of PROJECT_ESTIMATE_EXPORT_ORDER) {
+      const declaredPageId = item.type === "documentSlot" ? item.placeholderPageId : item.pageId;
+      if (!renderedByPageId.has(declaredPageId)) continue;
+      if (item.type === "page") {
+        await appendRenderedPage(item.pageId, "declared project estimate page");
+        continue;
       }
-      await appendRenderedPage(item.placeholderPageId, `${item.slotId} placeholder because no PDF is attached`);
+      if (item.type === "documentSlot") {
+        const document = resolveProjectEstimateSlotDocument(importedDocuments, item.slotId);
+        if (referencedPdfUrl(document)) {
+          const result = await appendReferencedPdfDocument({
+            outputPdf,
+            document,
+            warningMessage: item.slotId === "plans" ? "Plans could not be included." : "The selected Inclusions Schedule could not be found.",
+            onWarning,
+          });
+          if (result.appendedPageCount > 0) {
+            diagnostics.push(...result.pages.map((entry) => ({
+              ...entry,
+              reasonIncluded: `${item.slotId} document replaces ${item.placeholderPageId} placeholder`,
+            })));
+            continue;
+          }
+        }
+        await appendRenderedPage(item.placeholderPageId, `${item.slotId} placeholder because no PDF is attached`);
+      }
     }
+  }
+  for (const renderedPage of renderedPages) {
+    const pageId = renderedPage.pageId || renderedPage.pageType || "";
+    if (!pageId || appendedRenderedPageIds.has(pageId)) continue;
+    await appendRenderedPage(pageId, "custom or imported editable page");
   }
   if (process.env.NODE_ENV !== "production") {
     console.info("[Project Estimate PDF export] Final PDF assembly", diagnostics.map((entry, index) => ({
@@ -4716,13 +5791,19 @@ function bytesStartWithPdf(bytes) {
   return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2d;
 }
 
+function isPdfLikeFile(file) {
+  if (!file) return false;
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || file.fileName || "");
+  return /\.pdf$/i.test(name)
+    || ["application/pdf", "application/x-pdf", "application/octet-stream", "binary/octet-stream"].includes(type)
+    || !type;
+}
+
 async function validateSelectedPdfFile(file) {
   if (!file) return { ok: false, error: "Please choose a PDF document." };
-  const type = String(file.type || "").toLowerCase();
-  const name = String(file.name || "");
   if (file.size <= 0) return { ok: false, error: "The selected file is not a valid PDF" };
-  if (type && type !== "application/pdf" && !/\.pdf$/i.test(name)) return { ok: false, error: "The selected file is not a valid PDF" };
-  if (!type && !/\.pdf$/i.test(name)) return { ok: false, error: "The selected file is not a valid PDF" };
+  if (!isPdfLikeFile(file)) return { ok: false, error: "The selected file is not a valid PDF" };
   const firstBytes = new Uint8Array(await file.slice(0, 5).arrayBuffer());
   if (!bytesStartWithPdf(firstBytes)) return { ok: false, error: "The selected file is not a valid PDF" };
   return { ok: true };
@@ -4842,7 +5923,7 @@ async function loadUploadedPdfDocument(url) {
   const bytes = await fetchVerifiedPdfBytes(url);
   try {
     const pdfjsLib = await loadPdfJs();
-    return await pdfjsLib.getDocument({ data: bytes }).promise;
+    return await pdfjsLib.getDocument({ data: bytes, disableWorker: true }).promise;
   } catch (error) {
     throw new Error(error?.message || "The uploaded PDF could not be parsed.");
   }
@@ -4937,6 +6018,26 @@ function ProjectEstimateApprovedPage({
   onDeleteBlock,
   onMoveBlockLayer,
 }) {
+  if (isBlockCanvasProjectEstimatePage(page)) {
+    return (
+      <ProjectEstimateDocumentEditor
+        page={page}
+        theme={theme}
+        linkedFields={linkedFields}
+        editMode={editMode}
+        selectedBlockId={selectedBlockId}
+        editingBlockId={editingBlockId}
+        onSelectBlock={onSelectBlock}
+        onEditBlock={onEditBlock}
+        onBlockContent={onTextCommit}
+        onBlockDesign={onBlockDesign}
+        onReplaceImage={onReplaceImage}
+        onDuplicateBlock={onDuplicateBlock}
+        onDeleteBlock={onDeleteBlock}
+        onMoveBlockLayer={onMoveBlockLayer}
+      />
+    );
+  }
   const frameRef = useRef(null);
   const savedTextSelectionRef = useRef(null);
   const toolbarDragRef = useRef(null);
@@ -5327,7 +6428,7 @@ function ProjectEstimateApprovedPage({
           {canMoveOrResizeSelected ? <button type="button" style={styles.projectEstimateMoveHandle} onPointerDown={startMoveSelected} onMouseDown={startMoveSelected}>Move</button> : null}
           <div style={styles.projectEstimateElementName}>{selectedIsGroup ? "Section" : selectedBlock.content?.editorLabel || selectedBlock.id}</div>
           <div style={{ position: "absolute", right: 0, top: -34, display: "flex", gap: 4, pointerEvents: "auto" }}>
-            {selectedIsLinked ? <span style={styles.projectEstimateLinkedIndicator}>Linked to Project Setup</span> : null}
+            {selectedIsLinked ? <span style={styles.projectEstimateLinkedIndicator}>Linked to Job Details</span> : null}
             {selectedIsImage ? <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onReplaceImage?.(selectedBlock)}>Replace</button> : null}
             {selectedIsGroup ? <button type="button" style={styles.projectEstimateToolbarButton} onClick={() => onBlockDesign?.(selectedBlock.id, "locked", !selectedBlock.design?.locked)}>{selectedBlock.design?.locked ? "Unlock" : "Lock"}</button> : null}
             <button type="button" style={styles.projectEstimateToolbarButton} disabled={!canRemoveNative} onClick={() => onDuplicateBlock?.(selectedBlock.id)}>Duplicate</button>
@@ -5416,7 +6517,6 @@ function projectEstimateToolbarPositionForRect(rect = {}, measured = {}) {
 
 function ProjectEstimateDocumentEditor({
   page,
-  theme,
   linkedFields,
   editMode,
   selectedBlockId,
@@ -5435,6 +6535,8 @@ function ProjectEstimateDocumentEditor({
   const [toolbarPosition, setToolbarPosition] = useState({ x: 160, y: 96, width: 1080 });
   const [transientFrames, setTransientFrames] = useState({});
   const pageType = page?.page_type || page?.id || "";
+  const baseArtwork = page?.baseArtwork || page?.design?.backgroundImageUrl || page?.importedDocument?.baseArtwork || "";
+  const shouldRenderUploadedPdfReference = !baseArtwork && pageType === "importedPlanPdf" && referencedPdfUrl(page?.importedDocument);
   const sourceBlocks = useMemo(() => (page?.blocks || [])
     .filter((block) => !block.design?.hidden)
     .map((block) => projectEstimateElementWithFrame(block, pageType))
@@ -5602,6 +6704,10 @@ function ProjectEstimateDocumentEditor({
             position: "relative",
             overflow: "hidden",
             background: page?.design?.backgroundColor || "#ffffff",
+            backgroundImage: baseArtwork ? `url(${baseArtwork})` : undefined,
+            backgroundSize: "100% 100%",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
           }}
           onMouseDown={() => {
             if (editMode) {
@@ -5611,6 +6717,17 @@ function ProjectEstimateDocumentEditor({
             }
           }}
         >
+          {shouldRenderUploadedPdfReference ? (
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+              overflow: "hidden",
+            }}>
+              <ImportedPdfPageImage document={page.importedDocument} pageNumber={page.importedPageNumber || page.importedDocument?.pageNumber || 1} title={page.title} />
+            </div>
+          ) : null}
           {blocks.map((block) => (
             <ProjectEstimateDocumentElement
               key={block.id}
@@ -5630,7 +6747,7 @@ function ProjectEstimateDocumentEditor({
             <ProjectEstimateObjectToolbar
               block={selectedBlock}
               onDuplicate={() => onDuplicateBlock?.(selectedBlock.id)}
-              onDelete={() => onDeleteBlock?.(selectedBlock)}
+              onDelete={() => onDeleteBlock?.(selectedBlock.id)}
               onBringForward={() => onMoveBlockLayer?.(selectedBlock.id, "front")}
               onSendBackward={() => onMoveBlockLayer?.(selectedBlock.id, "back")}
               onReplaceImage={() => onReplaceImage?.(selectedBlock)}
@@ -5638,7 +6755,7 @@ function ProjectEstimateDocumentEditor({
           ) : null}
           {editMode && selectedBlock?.type === "quote_field" ? (
             <div style={{ position: "absolute", left: proposalBlockFrame(selectedBlock, page).x, top: Math.max(0, proposalBlockFrame(selectedBlock, page).y - 28), zIndex: 400, ...styles.projectEstimateLinkedIndicator }}>
-              Linked to Project Setup
+              Linked to Job Details
             </div>
           ) : null}
         </section>
@@ -6232,6 +7349,8 @@ function ClientTextBlock({ title, value, summary, collapsed, onToggle }) {
 function ProjectEstimateContextualInspector({
   page,
   block,
+  theme,
+  linkedFields = {},
   inclusionsDocument,
   pricedPlans,
   revisions = [],
@@ -6241,6 +7360,7 @@ function ProjectEstimateContextualInspector({
   onBlockContent,
   onBlockDesign,
   onSelectedBlockDesign,
+  onPageChange,
   onDuplicateBlock,
   onDeleteBlock,
   onMoveBlock,
@@ -6265,14 +7385,18 @@ function ProjectEstimateContextualInspector({
   onRemoveInclusions,
   onRemovePlans,
   onOpenDocumentLibrary,
+  onThemeChange,
+  onThemeImageUpload,
+  onApplyBranding,
 }) {
   const definition = projectEstimatePageDefinitionFor(page?.page_type || page?.id);
-  if (!definition) return null;
+  const pageTitle = definition?.navigationTitle || page?.title || "Custom Page";
   const tabs = (
     <>
       <div style={styles.projectEstimateInspectorTabs}>
         <button type="button" style={activeTab === "properties" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("properties")}>Edit</button>
         <button type="button" style={activeTab === "layers" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("layers")}>Layers</button>
+        <button type="button" style={activeTab === "document" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("document")}>Document</button>
       </div>
       {editMode ? (
         <div style={styles.projectEstimateAddDock}>
@@ -6287,8 +7411,23 @@ function ProjectEstimateContextualInspector({
       <div style={styles.projectEstimateInspectorTabs}>
         <button type="button" style={activeTab === "properties" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("properties")}>Edit</button>
         <button type="button" style={activeTab === "layers" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("layers")}>Layers</button>
+        <button type="button" style={activeTab === "document" ? styles.projectEstimateInspectorTabActive : styles.projectEstimateInspectorTab} onClick={() => onActiveTab?.("document")}>Document</button>
       </div>
     );
+    if (activeTab === "document") {
+      return (
+        <ProjectEstimateDocumentInspector
+          tabs={documentTabs}
+          page={page}
+          readonly={readonly}
+          onPageChange={onPageChange}
+          onUploadStandardInclusions={onUploadStandardInclusions}
+          onUploadModifiedInclusions={onUploadModifiedInclusions}
+          onUploadPlans={onUploadPlans}
+          onUseCurrentStandard={onUseCurrentStandard}
+        />
+      );
+    }
     if (activeTab === "layers") {
       return (
         <div style={styles.proposalPropertiesStack}>
@@ -6319,41 +7458,79 @@ function ProjectEstimateContextualInspector({
     return (
       <div style={styles.proposalPropertiesStack}>
         {tabs}
-        <ProjectEstimateLayersPanel page={page} selectedBlockId={block?.id || ""} readonly={readonly} onSelectBlock={onSelectBlock} onMoveBlock={onMoveBlock} onBlockDesign={onBlockDesign} />
+        <ProjectEstimateLayersPanel page={page} selectedBlockId={block?.id || ""} readonly={readonly} onSelectBlock={onSelectBlock} onMoveBlock={onMoveBlock} onBlockDesign={onBlockDesign} onRenameBlock={onRenameBlock} onDuplicateBlock={onDuplicateBlock} onDeleteBlock={onDeleteBlock} />
       </div>
+    );
+  }
+  if (activeTab === "document") {
+    return (
+      <ProjectEstimateDocumentInspector
+        tabs={tabs}
+        page={page}
+        readonly={readonly}
+        onPageChange={onPageChange}
+        onUploadStandardInclusions={onUploadStandardInclusions}
+        onUploadModifiedInclusions={onUploadModifiedInclusions}
+        onUploadPlans={onUploadPlans}
+        onUseCurrentStandard={onUseCurrentStandard}
+      />
     );
   }
   const frame = block ? proposalBlockFrame(block, page) : null;
   const setContent = (key, value) => block && onBlockContent(block.id, key, value);
   const setDesign = (key, value) => block && onBlockDesign(block.id, key, value);
   if (!block) {
+    const resolvedTheme = { ...defaultLuxuryProposalTheme({}), ...(theme || {}) };
     return (
       <div style={styles.proposalPropertiesStack}>
         {tabs}
         <button type="button" style={editMode ? styles.primaryButton : styles.secondaryButton} disabled={readonly} onClick={onToggleEditMode}>{editMode ? "Done Editing" : "Edit Page"}</button>
-        <h3>{definition.navigationTitle}</h3>
+        <h3>{pageTitle}</h3>
         <p style={styles.mutedText}>Click text or an image on the page to edit it.</p>
+        <h4 style={styles.proposalPanelSubheading}>Company Branding</h4>
+        <div style={styles.proposalThemeLinkedBox}>
+          <strong>Workbook defaults</strong>
+          <span>Builder: {linkedFields.companyName?.value || "Not entered"}</span>
+          <span>Client: {linkedFields.clientName?.value || "Not entered"}</span>
+          <span>Site: {linkedFields.projectAddress?.value || "Not entered"}</span>
+        </div>
+        <ProposalPanelInput label="Company name override" value={resolvedTheme.companyNameOverride || ""} disabled={readonly} onCommit={(value) => onThemeChange?.({ companyNameOverride: value })} />
+        <ProposalPanelColor label="Accent colour" value={resolvedTheme.accentColor || "#0f6b5f"} disabled={readonly} onChange={(value) => onThemeChange?.({ accentColor: value })} />
+        <ProposalPanelInput label="Logo URL" value={resolvedTheme.logoUrl || ""} disabled={readonly} onCommit={(value) => onThemeChange?.({ logoUrl: value })} />
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onThemeImageUpload?.("logoUrl")}>Change logo</button>
+        <ProposalPanelInput label="Cover image URL" value={resolvedTheme.heroImageUrl || ""} disabled={readonly} onCommit={(value) => onThemeChange?.({ heroImageUrl: value })} />
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => onThemeImageUpload?.("heroImageUrl")}>Change cover image</button>
+        <button type="button" style={styles.primaryButton} disabled={readonly} onClick={onApplyBranding}>Apply branding to editable pages</button>
+        <ProposalPanelTextarea label="Company story" value={resolvedTheme.companyStory || ""} disabled={readonly} onCommit={(value) => onThemeChange?.({ companyStory: value })} />
         {process.env.NODE_ENV !== "production" ? (
           <ProjectEstimatePageRecoveryPanel page={page} revisions={revisions} />
         ) : null}
       </div>
     );
   }
-  const field = definition.editorFields.find((item) => item.blockId === block.id) || {
+  const field = (definition?.editorFields || []).find((item) => item.blockId === block.id) || {
     blockId: block.id,
     label: block.content?.editorLabel || block.type || "Element",
     type: block.type === "heading" ? "textarea" : "text",
   };
   const contentKey = projectEstimateEditorContentKey(block);
   const value = block.content?.[contentKey] || "";
-  const isText = ["heading", "text", "quote_field", "signature"].includes(block.type);
+  const isText = ["heading", "text", "signature"].includes(block.type);
   const isImage = ["image", "logo"].includes(block.type);
   const isShape = ["shape", "container", "divider", "spacer"].includes(block.type);
+  const linkedFieldOptions = Object.keys(linkedFields || {}).filter((key) => !["pricingGroups", "inclusions"].includes(key));
   return (
     <div style={styles.proposalPropertiesStack}>
       {tabs}
-      <h3>{definition.navigationTitle}</h3>
+      <h3>{pageTitle}</h3>
       <p style={styles.mutedText}>{block.content?.editorLabel || field.label || proposalBlockLabel(block.type)}</p>
+      {block.type === "quote_field" ? (
+        <>
+          <h4 style={styles.proposalPanelSubheading}>Dynamic Field</h4>
+          <ProposalPanelSelect label="Project data source" value={block.content?.fieldKey || "clientName"} disabled={readonly} options={linkedFieldOptions} labels={linkedFields} onChange={(nextValue) => setContent("fieldKey", nextValue)} />
+          <ProposalPanelInput label="Display label" value={block.content?.label || ""} disabled={readonly} onCommit={(nextValue) => setContent("label", nextValue)} />
+        </>
+      ) : null}
       {isText ? (
         <>
           <h4 style={styles.proposalPanelSubheading}>Content</h4>
@@ -6422,6 +7599,58 @@ function ProjectEstimateContextualInspector({
   );
 }
 
+function ProjectEstimateDocumentInspector({
+  tabs,
+  page,
+  readonly,
+  onPageChange,
+  onUploadStandardInclusions,
+  onUploadModifiedInclusions,
+  onUploadPlans,
+  onUseCurrentStandard,
+}) {
+  const pageId = page?.id || "";
+  const pageSetup = page?.pageSetup || {};
+  const setPageSetup = (patch) => {
+    if (!pageId) return;
+    onPageChange?.(pageId, {
+      pageSetup: { ...pageSetup, ...patch },
+      ...(patch.orientation ? { orientation: patch.orientation } : {}),
+    });
+  };
+  const setNamedSize = (label, widthMm, heightMm) => {
+    const orientation = widthMm >= heightMm ? "landscape" : "portrait";
+    setPageSetup({ size: label, widthMm, heightMm, orientation });
+  };
+  return (
+    <div style={styles.proposalPropertiesStack}>
+      {tabs}
+      <h3>Document</h3>
+      <div style={styles.proposalThemeLinkedBox}>
+        <strong>{page?.title || "Untitled page"}</strong>
+        <span>Status: {page?.hiddenFromPdf ? "Hidden from PDF" : "Included in PDF"}</span>
+        <span>Source: {page?.source || page?.importedDocument?.sourceType || "template"}</span>
+        <span>Size: {pageSetup.widthMm || (page?.orientation === "landscape" ? 297 : 210)}mm x {pageSetup.heightMm || (page?.orientation === "landscape" ? 210 : 297)}mm</span>
+      </div>
+      <h4 style={styles.proposalPanelSubheading}>Page Setup</h4>
+      <div style={styles.projectEstimatePageSetupGrid}>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => setNamedSize("A4", 210, 297)}>A4 Portrait</button>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => setNamedSize("A4", 297, 210)}>A4 Landscape</button>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => setNamedSize("A3", 297, 420)}>A3 Portrait</button>
+        <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={() => setNamedSize("A3", 420, 297)}>A3 Landscape</button>
+      </div>
+      <NumberCommitInput label="Margin mm" value={pageSetup.marginMm ?? 12} disabled={readonly} onCommit={(value) => setPageSetup({ marginMm: value })} />
+      <NumberCommitInput label="Bleed mm" value={pageSetup.bleedMm ?? 0} disabled={readonly} onCommit={(value) => setPageSetup({ bleedMm: value })} />
+      <ProposalPanelColor label="Page background" value={page?.design?.backgroundColor || "#ffffff"} disabled={readonly} onChange={(value) => onPageChange?.(pageId, { design: { ...(page?.design || {}), backgroundColor: value } })} />
+      <h4 style={styles.proposalPanelSubheading}>Project Inserts</h4>
+      <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUseCurrentStandard}>Insert current standard inclusions</button>
+      <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUploadStandardInclusions}>Upload inclusions PDF</button>
+      <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUploadModifiedInclusions}>Upload project-specific inclusions</button>
+      <button type="button" style={styles.secondaryButton} disabled={readonly} onClick={onUploadPlans}>Insert plans PDF</button>
+    </div>
+  );
+}
+
 function ProjectEstimateDocumentSlotPanel({
   tabs,
   page,
@@ -6477,12 +7706,16 @@ function ProjectEstimateDocumentSlotPanel({
   );
 }
 
-function ProjectEstimateLayersPanel({ page, selectedBlockId, readonly, onSelectBlock, onMoveBlock, onBlockDesign }) {
+function ProjectEstimateLayersPanel({ page, selectedBlockId, readonly, onSelectBlock, onMoveBlock, onBlockDesign, onRenameBlock, onDuplicateBlock, onDeleteBlock }) {
   return (
     <section style={styles.projectEstimateLayersPanel}>
       {(page?.blocks || []).slice().sort((a, b) => Number(b.order || 0) - Number(a.order || 0)).map((block) => (
         <div key={block.id} style={{ ...styles.projectEstimateLayerRow, ...(selectedBlockId === block.id ? styles.projectEstimateLayerRowActive : {}) }}>
-          <button type="button" style={styles.projectEstimateLayerNameButton} onClick={() => onSelectBlock(block.id)}>{block.content?.editorLabel || proposalBlockLabel(block.type)}</button>
+          <button type="button" style={styles.projectEstimateLayerNameButton} onClick={() => onSelectBlock(block.id)}>
+            <span>{block.content?.editorLabel || proposalBlockLabel(block.type)}</span>
+            <small style={styles.projectEstimateLayerMeta}>{proposalBlockLabel(block.type)}{block.content?.fieldKey ? ` - ${pretty(block.content.fieldKey)}` : ""}{block.source ? ` - ${block.source}` : ""}</small>
+          </button>
+          <button type="button" disabled={readonly} style={styles.projectEstimateLayerIconButton} onClick={() => onRenameBlock?.(block.id)}>Name</button>
           <button type="button" disabled={readonly || block.design?.locked} style={styles.projectEstimateLayerIconButton} onClick={() => onMoveBlock(block.id, 1)}>Up</button>
           <button type="button" disabled={readonly || block.design?.locked} style={styles.projectEstimateLayerIconButton} onClick={() => onMoveBlock(block.id, -1)}>Dn</button>
           <button type="button" disabled={readonly} style={styles.projectEstimateLayerIconButton} onClick={() => onBlockDesign(block.id, "locked", !block.design?.locked)}>{block.design?.locked ? "Unlock" : "Lock"}</button>
@@ -6490,6 +7723,8 @@ function ProjectEstimateLayersPanel({ page, selectedBlockId, readonly, onSelectB
             onBlockDesign(block.id, "hidden", !block.design?.hidden);
             if (!block.design?.hidden) onBlockDesign(block.id, "hiddenBySubscriber", true);
           }}>{block.design?.hidden ? "Show" : "Hide"}</button>
+          <button type="button" disabled={readonly || block.design?.locked} style={styles.projectEstimateLayerIconButton} onClick={() => onDuplicateBlock?.(block.id)}>Copy</button>
+          <button type="button" disabled={readonly || block.design?.locked} style={styles.projectEstimateLayerIconButton} onClick={() => onDeleteBlock?.(block.id)}>Del</button>
         </div>
       ))}
     </section>
@@ -6846,13 +8081,16 @@ function projectEstimateBlockTextValue(block = {}, linkedFields = {}) {
 
 function projectEstimateBlockTextStyle(block = {}) {
   const design = block.design || {};
+  const backgroundColor = design.backgroundColor && (design.backgroundColor !== "#ffffff" || block.source === "pdf-import")
+    ? design.backgroundColor
+    : "transparent";
   return {
     width: "100%",
     height: "100%",
     boxSizing: "border-box",
     padding: Number(design.padding || 0),
     color: design.color || (block.type === "heading" ? "#ffffff" : "#0f172a"),
-    background: design.backgroundColor && design.backgroundColor !== "#ffffff" ? design.backgroundColor : "transparent",
+    background: backgroundColor,
     fontFamily: design.fontFamily || "Arial",
     fontSize: Number(design.fontSize || (block.type === "heading" ? 40 : 17)),
     fontWeight: Number(design.fontWeight || (block.type === "heading" ? 800 : 500)),
@@ -6869,12 +8107,13 @@ function projectEstimateBlockTextStyle(block = {}) {
 }
 
 function createProposalVisualElement(type, linkedFields, order = 0) {
-  const mappedType = type === "paragraph" ? "text" : type;
+  const mappedType = type === "paragraph" ? "text" : type === "table" ? "text_box" : type === "page_number" ? "quote_field" : type;
   const baseType = mappedType === "text_box" ? "text" : mappedType;
   const block = createProposalBuilderBlock(baseType, linkedFields, order, {
     content: {
-      text: ["heading"].includes(baseType) ? "New heading" : "New text block",
+      text: type === "table" ? "Item | Description | Amount\n--- | --- | ---" : ["heading"].includes(baseType) ? "New heading" : "New text block",
       editorLabel: proposalBlockLabel(mappedType),
+      ...(type === "page_number" ? { fieldKey: "pageNumber", label: "Page number" } : {}),
       ...(baseType === "image" ? { imageUrl: "/assets/builders/standard-inclusions-hero.jpg", defaultImageUrl: "/assets/builders/standard-inclusions-hero.jpg" } : {}),
     },
     design: {
@@ -7857,7 +9096,12 @@ export function StandardInclusionsSheet({ sheet }) {
   async function preparePdfImport(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || file.type !== "application/pdf") return;
+    if (!file) return;
+    const validation = await validateSelectedPdfFile(file);
+    if (!validation.ok) {
+      setStandardStatus(validation.error || "The selected file is not a valid PDF");
+      return;
+    }
     setPendingPdfFile(file);
     setManagementMode("pdf-import-options");
     setStandardStatus("Choose how to import this PDF.");
@@ -9359,11 +10603,75 @@ async function renderPdfDataUrlToPageImages(pdfDataUrl) {
 async function loadStandardInclusionsPdfJs() {
   try {
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+    if (pdfjsLib.GlobalWorkerOptions && typeof window !== "undefined") {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
+    }
     return pdfjsLib;
-  } catch {
+  } catch (error) {
+    console.warn("Bundled PDF.js import failed; falling back to shared PDF.js loader.", error);
     return loadPdfJs();
   }
+}
+
+async function openPdfDocumentForEditableImport(pdfjsLib, bytes, file, warnings = []) {
+  const sourceBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const attempts = [
+    {
+      label: "standard",
+      data: sourceBytes,
+      options: { disableWorker: true, stopAtErrors: false, useSystemFonts: true, isEvalSupported: false },
+    },
+    {
+      label: "compatibility",
+      data: new Uint8Array(sourceBytes),
+      options: { disableWorker: true, stopAtErrors: false },
+    },
+  ];
+  for (const attempt of attempts) {
+    try {
+      return await pdfjsLib.getDocument({ data: attempt.data, ...attempt.options }).promise;
+    } catch (error) {
+      warnings.push(`PDF parser ${attempt.label} pass failed: ${error?.message || "unknown parser error"}.`);
+    }
+  }
+  try {
+    const repaired = await repairPdfFile(file);
+    const repairedBytes = new Uint8Array(await repaired.file.arrayBuffer());
+    warnings.push("PDF was normalized before import because the original structure was not parser-friendly.");
+    return await pdfjsLib.getDocument({ data: repairedBytes, disableWorker: true, stopAtErrors: false, useSystemFonts: true, isEvalSupported: false }).promise;
+  } catch (error) {
+    throw new Error(`PDF import failed: ${error?.message || "the PDF could not be parsed"}`);
+  }
+}
+
+async function renderPdfPageCanvasWithFallback(page, renderViewport, nativeViewport, pageWidth, pageHeight, warnings = [], pageNumber = 1) {
+  const renderAttempts = [
+    { label: "high-resolution", viewport: renderViewport },
+    { label: "medium-resolution", viewport: page.getViewport({ scale: Math.max(1.5, pageWidth * 1.5 / Math.max(1, nativeViewport.width)) }) },
+    { label: "native-resolution", viewport: page.getViewport({ scale: 1 }) },
+  ];
+  for (const attempt of renderAttempts) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.ceil(attempt.viewport.width));
+    canvas.height = Math.max(1, Math.ceil(attempt.viewport.height));
+    const context = canvas.getContext("2d", { alpha: false });
+    try {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: context, viewport: attempt.viewport, intent: "display" }).promise;
+      return { canvas, viewport: attempt.viewport, rendered: true };
+    } catch (error) {
+      warnings.push(`Page ${pageNumber}: ${attempt.label} render failed (${error?.message || "unsupported page content"}).`);
+    }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = pageWidth;
+  canvas.height = pageHeight;
+  const context = canvas.getContext("2d", { alpha: false });
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  warnings.push(`Page ${pageNumber}: imported with a blank visual base because PDF rendering failed.`);
+  return { canvas, viewport: page.getViewport({ scale: Math.max(1, pageWidth / Math.max(1, nativeViewport.width)) }), rendered: false };
 }
 
 function detectPdfImageRegionsFromCanvas(canvas, pageId, pageSize = { width: 794, height: 1123 }, textRegions = []) {
@@ -9495,7 +10803,11 @@ async function extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderVi
         preservedRegions.push({ boundingBox: null, reason: "invalid-transform-operator", operatorIndex: index });
         continue;
       }
-      ctm = matrix.transform(ctm, args);
+      try {
+        ctm = matrix.transform(ctm, args);
+      } catch (error) {
+        preservedRegions.push({ boundingBox: null, reason: "unsupported-transform-operator", operatorIndex: index, message: error?.message || "" });
+      }
       continue;
     }
     if (![ops.paintImageXObject, ops.paintJpegXObject, ops.paintInlineImageXObject].includes(fn)) continue;
@@ -9545,8 +10857,14 @@ async function extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderVi
 }
 
 function pdfCtmUnitBoxToPageBox(pdfjsLib, viewport, ctm, pageSize) {
-  const transform = pdfjsLib.Util.transform(viewport.transform, ctm);
-  const points = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => pdfjsLib.Util.applyTransform([x, y], transform));
+  let transform = null;
+  let points = [];
+  try {
+    transform = pdfjsLib.Util.transform(viewport.transform, ctm);
+    points = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => pdfjsLib.Util.applyTransform([x, y], transform));
+  } catch {
+    return null;
+  }
   const xs = points.map((point) => point[0]);
   const ys = points.map((point) => point[1]);
   const minX = Math.min(...xs);
@@ -9570,10 +10888,19 @@ function resolvePdfImageObject(page, name) {
   return new Promise((resolve) => {
     if (!name) return resolve(null);
     const stores = [page.objs, page.commonObjs].filter(Boolean);
+    if (!stores.length) return resolve(null);
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value || null);
+    };
+    const timer = setTimeout(() => finish(null), 900);
     let pending = stores.length;
     const done = (value) => {
-      if (value) resolve(value);
-      else if ((pending -= 1) <= 0) resolve(null);
+      if (value) finish(value);
+      else if ((pending -= 1) <= 0) finish(null);
     };
     stores.forEach((store) => {
       try {
@@ -9590,32 +10917,36 @@ function resolvePdfImageObject(page, name) {
 }
 
 async function pdfImageDataToDataUrl(imageData) {
-  if (!imageData || typeof document === "undefined") return "";
-  if (typeof HTMLImageElement !== "undefined" && imageData instanceof HTMLImageElement) return imageElementToDataUrl(imageData);
-  if (typeof ImageBitmap !== "undefined" && imageData instanceof ImageBitmap) return bitmapToDataUrl(imageData);
-  const width = Number(imageData.width || 0);
-  const height = Number(imageData.height || 0);
-  const data = imageData.data;
-  if (!width || !height || !data?.length) return "";
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-  const rgba = new Uint8ClampedArray(width * height * 4);
-  if (data.length >= width * height * 4) {
-    rgba.set(data.slice(0, rgba.length));
-  } else if (data.length >= width * height * 3) {
-    for (let source = 0, target = 0; target < rgba.length; source += 3, target += 4) {
-      rgba[target] = data[source];
-      rgba[target + 1] = data[source + 1];
-      rgba[target + 2] = data[source + 2];
-      rgba[target + 3] = 255;
+  try {
+    if (!imageData || typeof document === "undefined") return "";
+    if (typeof HTMLImageElement !== "undefined" && imageData instanceof HTMLImageElement) return imageElementToDataUrl(imageData);
+    if (typeof ImageBitmap !== "undefined" && imageData instanceof ImageBitmap) return bitmapToDataUrl(imageData);
+    const width = Number(imageData.width || 0);
+    const height = Number(imageData.height || 0);
+    const data = imageData.data;
+    if (!width || !height || !data?.length) return "";
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    const rgba = new Uint8ClampedArray(width * height * 4);
+    if (data.length >= width * height * 4) {
+      rgba.set(data.slice(0, rgba.length));
+    } else if (data.length >= width * height * 3) {
+      for (let source = 0, target = 0; target < rgba.length; source += 3, target += 4) {
+        rgba[target] = data[source];
+        rgba[target + 1] = data[source + 1];
+        rgba[target + 2] = data[source + 2];
+        rgba[target + 3] = 255;
+      }
+    } else {
+      return "";
     }
-  } else {
+    context.putImageData(new ImageData(rgba, width, height), 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch {
     return "";
   }
-  context.putImageData(new ImageData(rgba, width, height), 0, 0);
-  return canvas.toDataURL("image/png");
 }
 
 function imageElementToDataUrl(image) {
@@ -9634,99 +10965,169 @@ function bitmapToDataUrl(bitmap) {
   return canvas.toDataURL("image/png");
 }
 
+const PROJECT_ESTIMATE_PDF_IMPORT_MODES = {
+  preserveOriginal: "preserve-original",
+  convertToEditable: "convert-to-editable",
+  rebuildEditableTemplate: "rebuild-editable-template",
+};
+
+function normalizeProjectEstimatePdfImportMode(mode = PROJECT_ESTIMATE_PDF_IMPORT_MODES.preserveOriginal) {
+  if (mode === "editable-text") return PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable;
+  if (mode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable) return PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable;
+  if (mode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate) return PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate;
+  return PROJECT_ESTIMATE_PDF_IMPORT_MODES.preserveOriginal;
+}
+
+function projectEstimatePdfImportModeLabel(mode) {
+  const normalizedMode = normalizeProjectEstimatePdfImportMode(mode);
+  if (normalizedMode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable) return "Convert to Editable";
+  if (normalizedMode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate) return "Rebuild as Editable Template";
+  return "Preserve Original";
+}
+
+function selectProjectEstimatePdfImportMode() {
+  if (typeof window === "undefined" || typeof window.prompt !== "function") {
+    return PROJECT_ESTIMATE_PDF_IMPORT_MODES.preserveOriginal;
+  }
+  const choice = window.prompt(
+    [
+      "Choose PDF import mode:",
+      "1 - Preserve Original (default): keep the uploaded PDF as locked reference artwork.",
+      "2 - Convert to Editable: extract real PDF text and embedded images where possible.",
+      "3 - Rebuild as Editable Template: extract editable blocks and keep the original page as a lighter reference layer.",
+    ].join("\n"),
+    "1",
+  );
+  if (choice === null) return null;
+  const normalizedChoice = String(choice || "1").trim().toLowerCase();
+  if (normalizedChoice === "2" || normalizedChoice.includes("convert")) return PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable;
+  if (normalizedChoice === "3" || normalizedChoice.includes("rebuild") || normalizedChoice.includes("template")) return PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate;
+  return PROJECT_ESTIMATE_PDF_IMPORT_MODES.preserveOriginal;
+}
+
+function showProjectEstimatePdfImportReport(preview = {}) {
+  if (typeof window === "undefined" || typeof window.alert !== "function") return;
+  const review = preview.importReview || {};
+  const warnings = Array.isArray(preview.warnings) ? preview.warnings : [];
+  const preservedCount = Number(review.needsReviewCount || 0);
+  const lines = [
+    "Project Estimate PDF import complete.",
+    "",
+    `Mode: ${projectEstimatePdfImportModeLabel(preview.importMode || preview.document?.metadata?.importMode)}`,
+    `Pages: ${preview.pageCount || review.pageCount || 0}`,
+    `Editable text blocks: ${preview.editableTextCount || 0}`,
+    `Editable embedded image blocks: ${preview.editableImageCount || 0}`,
+    `Preserved reference regions: ${preservedCount}`,
+  ];
+  if (warnings.length) lines.push("", "Warnings:", ...warnings.slice(0, 8).map((warning) => `- ${warning}`));
+  if (warnings.length > 8) lines.push(`- ${warnings.length - 8} more warning(s)`);
+  window.setTimeout(() => window.alert(lines.join("\n")), 0);
+}
+
 async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text" } = {}) {
+  const importMode = normalizeProjectEstimatePdfImportMode(mode);
+  const shouldExtractEditableBlocks = importMode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.convertToEditable
+    || importMode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate;
   const pdfjsLib = await loadStandardInclusionsPdfJs();
-  const bytes = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes), disableWorker: true }).promise;
+  const warnings = [];
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const pdf = await openPdfDocumentForEditableImport(pdfjsLib, bytes, file, warnings);
   const pages = [];
   let editableTextCount = 0;
   let editableImageCount = 0;
-  const warnings = [];
   const importId = createPdfImportBatchId(file.name);
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const pageId = createStableImportedPdfPageId(importId, pageNumber);
-    const page = await pdf.getPage(pageNumber);
+    let page = null;
+    try {
+      page = await pdf.getPage(pageNumber);
+    } catch (error) {
+      warnings.push(`Page ${pageNumber}: could not be read (${error?.message || "unknown page error"}).`);
+      continue;
+    }
     const nativeViewport = page.getViewport({ scale: 1 });
     const pageWidth = 794;
     const pageHeight = Math.max(1, Math.round((nativeViewport.height / Math.max(1, nativeViewport.width)) * pageWidth));
     const renderViewport = page.getViewport({ scale: Math.max(4.1667, pageWidth * 3 / Math.max(1, nativeViewport.width)) });
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(renderViewport.width);
-    canvas.height = Math.ceil(renderViewport.height);
-    const context = canvas.getContext("2d", { alpha: false });
-    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
+    const renderedPage = await renderPdfPageCanvasWithFallback(page, renderViewport, nativeViewport, pageWidth, pageHeight, warnings, pageNumber);
+    const canvas = renderedPage.canvas;
+    const extractionViewport = renderedPage.viewport || renderViewport;
     const objects = [];
     const detectedRegions = [];
     const textRegions = [];
-    if (mode === "editable-text") {
+    if (shouldExtractEditableBlocks) {
       const textContent = await page.getTextContent().catch(() => null);
       const fontStyles = textContent?.styles || {};
       (textContent?.items || []).forEach((item, index) => {
-        const text = String(item.str || "").trim();
-        if (!text) return;
-        const tx = pdfjsLib.Util.transform(renderViewport.transform, item.transform);
-        const fontHeight = Math.max(6, Math.hypot(tx[2], tx[3]) || Number(item.height) || 12);
-        const scaledWidth = Math.max(1, Number(item.width || 0) * (renderViewport.scale || 1));
-        const x = tx[4];
-        const y = tx[5] - fontHeight;
-        const style = fontStyles[item.fontName] || {};
-        const fontFamily = cleanPdfFontFamily(style.fontFamily || item.fontName || "Arial");
-        const fontWeight = /bold|black|heavy|semibold/i.test(`${fontFamily} ${item.fontName || ""}`) ? "700" : "400";
-        const fontStyle = /italic|oblique/i.test(`${fontFamily} ${item.fontName || ""}`) ? "italic" : "normal";
-        const boundingBox = {
-          x: clampNumber((x / canvas.width) * pageWidth, 0, pageWidth - 1),
-          y: clampNumber((y / canvas.height) * pageHeight, 0, pageHeight - 1),
-          width: clampNumber((scaledWidth / canvas.width) * pageWidth, 8, pageWidth),
-          height: clampNumber((fontHeight * 1.18 / canvas.height) * pageHeight, 8, 96),
-        };
-        const region = createPdfDetectedTextRegion({
-          pageId,
-          index,
-          text,
-          boundingBox,
-          confidence: 0.86,
-        });
-        detectedRegions.push(region);
-        textRegions.push(region);
-        objects.push(createObject("text", {
-          name: `Extracted text ${index + 1}`,
-          x: boundingBox.x,
-          y: boundingBox.y,
-          width: boundingBox.width,
-          height: boundingBox.height,
-          locked: false,
-          style: {
-            fontFamily,
-            fontSize: clampNumber(Math.round(boundingBox.height * 0.82), 6, 96),
-            fontWeight,
-            fontStyle,
-            color: "#111827",
-            lineHeight: 1.1,
-            textAlign: "left",
-            backgroundColor: "#ffffff",
-          },
-          data: {
+        try {
+          const text = String(item.str || "").trim();
+          if (!text || !Array.isArray(item.transform)) return;
+          const tx = pdfjsLib.Util.transform(extractionViewport.transform, item.transform);
+          const fontHeight = Math.max(6, Math.hypot(tx[2], tx[3]) || Number(item.height) || 12);
+          const scaledWidth = Math.max(1, Number(item.width || 0) * (extractionViewport.scale || 1));
+          const x = tx[4];
+          const y = tx[5] - fontHeight;
+          const style = fontStyles[item.fontName] || {};
+          const fontFamily = cleanPdfFontFamily(style.fontFamily || item.fontName || "Arial");
+          const fontWeight = /bold|black|heavy|semibold/i.test(`${fontFamily} ${item.fontName || ""}`) ? "700" : "400";
+          const fontStyle = /italic|oblique/i.test(`${fontFamily} ${item.fontName || ""}`) ? "italic" : "normal";
+          const boundingBox = {
+            x: clampNumber((x / canvas.width) * pageWidth, 0, pageWidth - 1),
+            y: clampNumber((y / canvas.height) * pageHeight, 0, pageHeight - 1),
+            width: clampNumber((scaledWidth / canvas.width) * pageWidth, 8, pageWidth),
+            height: clampNumber((fontHeight * 1.18 / canvas.height) * pageHeight, 8, 96),
+          };
+          const region = createPdfDetectedTextRegion({
+            pageId,
+            index,
             text,
-            detectedText: text,
-            regionId: region.id,
-            detectedRegion: true,
-            overlayMode: "pdf-text-activation",
-            editableSource: "pdf",
-            reviewStatus: "Editable",
-            edited: true,
-            acceptedEdit: true,
-            maskOriginal: true,
-          },
-        }));
-        editableTextCount += 1;
+            boundingBox,
+            confidence: 0.86,
+          });
+          detectedRegions.push(region);
+          textRegions.push(region);
+          objects.push(createObject("text", {
+            name: `Extracted text ${index + 1}`,
+            x: boundingBox.x,
+            y: boundingBox.y,
+            width: boundingBox.width,
+            height: boundingBox.height,
+            locked: false,
+            style: {
+              fontFamily,
+              fontSize: clampNumber(Math.round(boundingBox.height * 0.82), 6, 96),
+              fontWeight,
+              fontStyle,
+              color: "#111827",
+              lineHeight: 1.1,
+              textAlign: "left",
+              backgroundColor: "transparent",
+            },
+            data: {
+              text,
+              detectedText: text,
+              regionId: region.id,
+              detectedRegion: true,
+              overlayMode: "pdf-text-activation",
+              editableSource: "pdf",
+              reviewStatus: "Editable",
+              edited: true,
+              acceptedEdit: true,
+              maskOriginal: false,
+            },
+          }));
+          editableTextCount += 1;
+        } catch (error) {
+          warnings.push(`Page ${pageNumber}: skipped one text item (${error?.message || "unsupported text transform"}).`);
+        }
       });
       if (!objects.length) warnings.push(`Page ${pageNumber}: no editable text could be extracted; page will import as a fixed visual page.`);
     }
     const originalPageAsset = canvas.toDataURL("image/jpeg", 0.94);
     let extractedImages = { objects: [], regions: [], preservedRegions: [] };
-    if (mode === "editable-text") {
+    if (shouldExtractEditableBlocks) {
       try {
-        extractedImages = await extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport, pageId, pageSize: { width: pageWidth, height: pageHeight }, textRegions });
+        extractedImages = await extractPdfImageObjectsFromOperatorList({ pdfjsLib, page, renderViewport: extractionViewport, pageId, pageSize: { width: pageWidth, height: pageHeight }, textRegions });
       } catch (error) {
         warnings.push(`Page ${pageNumber}: image extraction was preserved as page artwork (${error?.message || "unsupported PDF image operator"}).`);
       }
@@ -9734,39 +11135,23 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
     detectedRegions.push(...extractedImages.regions);
     objects.push(...extractedImages.objects);
     editableImageCount += extractedImages.objects.length;
-    const preservedImageRegions = mode === "editable-text" && !extractedImages.objects.length
-      ? detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions)
-      : [];
+    let preservedImageRegions = [];
+    if (shouldExtractEditableBlocks && !extractedImages.objects.length && renderedPage.rendered) {
+      try {
+        preservedImageRegions = detectPdfImageRegionsFromCanvas(canvas, pageId, { width: pageWidth, height: pageHeight }, textRegions);
+      } catch (error) {
+        warnings.push(`Page ${pageNumber}: visual image region detection was skipped (${error?.message || "canvas sampling failed"}).`);
+      }
+    }
     preservedImageRegions
       .filter((region) => {
         const box = region.boundingBox || {};
         return (Number(box.width || 0) * Number(box.height || 0)) < (pageWidth * pageHeight * 0.65);
       })
       .slice(0, 8)
-      .forEach((region, index) => {
-      const box = region.boundingBox || {};
-      detectedRegions.push({ ...region, reviewStatus: "Preserved", preservedReason: "raster-or-vector-artwork-not-separable" });
-      objects.push(createObject("image", {
-        name: `Needs review image region ${index + 1}`,
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
-        locked: false,
-        style: { objectFit: "contain", backgroundColor: "#ffffff" },
-        data: {
-          regionId: region.id,
-          detectedRegion: true,
-          overlayMode: "pdf-image-activation",
-          editableSource: "pdf-raster-region",
-          reviewStatus: "Needs Review",
-          edited: false,
-          acceptedEdit: false,
-          maskOriginal: false,
-        },
-      }));
-      editableImageCount += 1;
-    });
+      .forEach((region) => {
+        detectedRegions.push({ ...region, reviewStatus: "Preserved", preservedReason: "raster-or-vector-artwork-not-separable" });
+      });
     pages.push(createA4Page({
       id: pageId,
       name: `PDF Page ${pageNumber}`,
@@ -9781,7 +11166,16 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
         acceptedMasks: [],
         masks: [],
         thumbnail: originalPageAsset,
-        baseLayer: { type: "pdf-page-render", source: "canvas", status: "Preserved" },
+        importMode,
+        baseLayer: { type: "pdf-page-render", source: "canvas", status: "Preserved", locked: true },
+        referenceLayer: {
+          type: "pdf-page-render",
+          source: "uploaded-pdf",
+          status: "Preserved",
+          locked: true,
+          visible: true,
+          opacity: importMode === PROJECT_ESTIMATE_PDF_IMPORT_MODES.rebuildEditableTemplate ? 0.45 : 1,
+        },
         preservedRegions: [
           ...extractedImages.preservedRegions,
           ...preservedImageRegions.map((region) => ({ boundingBox: region.boundingBox, reason: "raster-or-vector-artwork-not-separable" })),
@@ -9790,6 +11184,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       objects,
     }));
   }
+  if (!pages.length) throw new Error("PDF import failed: no pages could be read from this document.");
   const timestamp = new Date().toISOString();
   const hybridPages = pages.map((page, index) => createPdfHybridPageModel(page, index));
   const preservedElementCount = pages.length + pages.reduce((count, page) => count + (page.data?.preservedRegions?.length || 0), 0) + warnings.length;
@@ -9808,7 +11203,7 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
     metadata: {
       documentType: "standardInclusions",
       documentSource: "pdf-import",
-      importMode: mode,
+      importMode,
       sourceFileName: file.name,
       sourcePath: file.name,
       importedAt: timestamp,
@@ -9825,7 +11220,142 @@ async function importPdfAsStandardDocumentPreview(file, { mode = "editable-text"
       editableSource: "pdf-text-objects-and-image-xobjects",
     },
   });
-  return { source: "pdf-import", fileName: file.name, document: documentBuilder, pageCount: pages.length, editableTextCount, editableImageCount, fixedVisualCount: preservedElementCount, preservedElementCount, importReview, warnings };
+  return { source: "pdf-import", fileName: file.name, importMode, document: documentBuilder, pageCount: pages.length, editableTextCount, editableImageCount, fixedVisualCount: preservedElementCount, preservedElementCount, importReview, warnings };
+}
+
+function projectEstimatePagesFromImportedDocumentBuilder(documentBuilder = {}, importedDocument = {}) {
+  const pages = Array.isArray(documentBuilder.pages) ? documentBuilder.pages : [];
+  const importMode = normalizeProjectEstimatePdfImportMode(documentBuilder.metadata?.importMode || importedDocument.metadata?.importMode);
+  return pages.map((page, index) => {
+    const pageNumber = index + 1;
+    const importedPageMeta = importedDocument.pages?.[index] || {};
+    const width = Number(page.width || PROJECT_ESTIMATE_PAGE_WIDTH);
+    const height = Number(page.height || PROJECT_ESTIMATE_PAGE_HEIGHT);
+    const baseArtwork = page.data?.originalPageAsset || page.background?.imageRef || "";
+    const title = projectEstimateImportedPageTitle(page, pageNumber);
+    return {
+      id: createStableImportedPdfPageId(importedDocument.id || documentBuilder.id || "project-estimate-pdf", pageNumber),
+      page_type: "importedPlanPdf",
+      title,
+      source: "pdf-import",
+      order: index,
+      orientation: width >= height ? "landscape" : "portrait",
+      importedPageNumber: pageNumber,
+      baseArtwork,
+      design: {
+        backgroundColor: "#ffffff",
+        backgroundImageUrl: baseArtwork,
+        overlayOpacity: 0,
+        referenceLayer: page.data?.referenceLayer || null,
+      },
+      importedDocument: {
+        ...importedPageMeta,
+        documentId: importedDocument.id,
+        fileName: importedDocument.fileName,
+        publicUrl: importedDocument.publicUrl,
+        storagePath: importedDocument.storagePath,
+        sourceType: "project_estimate_pdf",
+        pageNumber,
+        importMode,
+        pageTitle: title,
+        baseArtwork,
+        width,
+        height,
+      },
+      blocks: (page.objects || []).map((object, objectIndex) => projectEstimateBlockFromImportedPdfObject(object, {
+        pageId: page.id,
+        pageType: "importedPlanPdf",
+        order: objectIndex,
+      })).filter(Boolean),
+      importReview: documentBuilder.metadata?.importReview || documentBuilder.metadata?.importReviewSummary || null,
+    };
+  });
+}
+
+function projectEstimateImportedPageTitle(page = {}, pageNumber = 1) {
+  const objects = Array.isArray(page.objects) ? page.objects : [];
+  const text = objects
+    .map((object) => object?.data?.text || object?.data?.detectedText || object?.name || "")
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  const checks = [
+    [/acceptance|sign(?:ed|ature)|approval/, "Acceptance"],
+    [/allowance|prime cost|provisional sum/, "Allowances"],
+    [/price breakdown|pricing breakdown|cost summary|quote summary|estimate summary|total price/, "Estimate Summary"],
+    [/standard inclusion|inclusion schedule|included items/, "Standard Inclusions"],
+    [/scope of work|project scope|works included/, "Scope of Works"],
+    [/floor plan|site plan|elevation|drawing|architectural|plans?/, "Plans"],
+    [/about us|company profile|our team/, "About Us"],
+    [/cover|proposal|project estimate|quotation/, "Cover"],
+  ];
+  const match = checks.find(([pattern]) => pattern.test(text));
+  if (match) return `${match[1]} ${pageNumber}`;
+  return `Imported Page ${pageNumber}`;
+}
+
+function projectEstimateBlockFromImportedPdfObject(object = {}, { pageId = "", pageType = "importedPlanPdf", order = 0 } = {}) {
+  const data = object.data || {};
+  const style = object.style || {};
+  const frame = normaliseProposalFrame({
+    x: Number(object.x || 0),
+    y: Number(object.y || 0),
+    width: Number(object.width || 120),
+    height: Number(object.height || 40),
+  }, { type: object.type || "text" });
+  const base = {
+    id: object.id || data.regionId || proposalBuilderId("pdf-block"),
+    order,
+    source: "pdf-import",
+    pageType,
+    content: {
+      editorLabel: object.name || data.alt || data.detectedText || "PDF element",
+      sourcePageId: pageId,
+      regionId: data.regionId || "",
+      detectedText: data.detectedText || "",
+    },
+    design: {
+      frame,
+      frameEdited: true,
+      fontFamily: style.fontFamily || "Arial",
+      fontSize: Number(style.fontSize || 14),
+      fontWeight: style.fontWeight || 400,
+      fontStyle: style.fontStyle || "normal",
+      color: style.color || "#111827",
+      backgroundColor: style.backgroundColor || "transparent",
+      lineHeight: style.lineHeight || 1.15,
+      textAlign: style.textAlign || "left",
+      objectFit: style.objectFit || "contain",
+      padding: Number(style.padding || 0),
+      borderRadius: Number(style.borderRadius || 0),
+      zIndex: Number(object.layer ?? object.zIndex ?? order),
+    },
+  };
+  if (object.type === "image" || data.imageRef || data.sourceImageRef) {
+    return normaliseProposalBuilderBlock({
+      ...base,
+      type: "image",
+      content: {
+        ...base.content,
+        imageUrl: data.imageRef || data.sourceImageRef || "",
+        defaultImageUrl: data.imageRef || data.sourceImageRef || "",
+        alt: data.alt || object.name || "PDF image",
+      },
+      design: {
+        ...base.design,
+        backgroundColor: style.backgroundColor || "#ffffff",
+      },
+    });
+  }
+  return normaliseProposalBuilderBlock({
+    ...base,
+    type: object.type === "heading" ? "heading" : "text",
+    content: {
+      ...base.content,
+      text: data.text || data.detectedText || object.name || "",
+    },
+  });
 }
 
 async function importPptxAsStandardDocumentPreview(file) {
@@ -11390,12 +12920,13 @@ const CLIENT_STAGE_SUMMARIES = {
 
 function clientPageValues(sheet) {
   const saved = sheet.workbook.clientPage || {};
-  const projectName = clientWorkbookDataValue(sheet, "projectName") || saved.projectName || "";
-  const companyName = clientWorkbookDataValue(sheet, "builderName") || saved.companyName || "";
-  const estimatorName = clientWorkbookDataValue(sheet, "estimatorName") || saved.estimatorName || "";
-  const clientName = clientWorkbookDataValue(sheet, "clientName") || saved.clientName || "";
-  const projectAddress = clientWorkbookDataValue(sheet, "projectAddress") || saved.projectAddress || "";
-  const jobNumber = clientWorkbookDataValue(sheet, "jobNumber") || saved.quoteNumber || "";
+  const context = canonicalEstimateJobContext(sheet.workbook);
+  const projectName = clientWorkbookDataValue(sheet, "projectName") || context.projectName || saved.projectName || "";
+  const companyName = clientWorkbookDataValue(sheet, "builderName") || context.builderName || saved.companyName || "";
+  const estimatorName = clientWorkbookDataValue(sheet, "estimatorName") || context.estimatorName || saved.estimatorName || "";
+  const clientName = clientWorkbookDataValue(sheet, "clientName") || context.clientName || saved.clientName || "";
+  const projectAddress = clientWorkbookDataValue(sheet, "projectAddress") || context.projectAddress || saved.projectAddress || "";
+  const jobNumber = clientWorkbookDataValue(sheet, "jobNumber") || context.jobNumber || saved.quoteNumber || "";
   const quoteDate = clientWorkbookDataValue(sheet, "quoteDate") || saved.quoteDate || "";
   const constructionType = clientWorkbookDataValue(sheet, "constructionType") || clientWorkbookDataValue(sheet, "projectType") || saved.constructionType || "";
   const storeys = clientWorkbookDataValue(sheet, "floorCount") || clientWorkbookDataValue(sheet, "storeys") || saved.storeys || "";
@@ -11422,7 +12953,7 @@ function clientPageValues(sheet) {
     projectName,
     companyName,
     estimatorName,
-    logoUrl: saved.logoUrl || "",
+    logoUrl: saved.logoUrl || context.logoUrl || "",
     estimateTitle: saved.estimateTitle || projectName || "Residential Building Quote Proposal",
     clientName,
     projectAddress,
@@ -11506,17 +13037,24 @@ function normaliseQuoteProposalBuilder(savedBuilder, client, sheet) {
       };
     });
     const addedPages = savedBuilder.pages
-      .filter((page) => page?.source === "builder-created" || page?.page_type === "builderCreated")
+      .filter((page) => page?.source === "builder-created" || page?.page_type === "builderCreated" || page?.importedDocument?.sourceType === "project_estimate_pdf")
       .map((page, index) => ({
-        ...createBuilderProjectEstimatePage(QUOTE_PROPOSAL_PAGES.length + index),
+        ...(page?.importedDocument?.sourceType === "project_estimate_pdf"
+          ? createImportedProjectEstimatePdfPageShell(page, QUOTE_PROPOSAL_PAGES.length + index)
+          : createBuilderProjectEstimatePage(QUOTE_PROPOSAL_PAGES.length + index)),
         ...page,
         id: page.id || proposalBuilderId("page"),
-        page_type: "builderCreated",
-        source: "builder-created",
-        title: page.title || "Custom Page",
+        page_type: page?.importedDocument?.sourceType === "project_estimate_pdf" ? "importedPlanPdf" : "builderCreated",
+        source: page?.importedDocument?.sourceType === "project_estimate_pdf" ? (page.source || "pdf-import") : "builder-created",
+        title: page.title || (page?.importedDocument?.sourceType === "project_estimate_pdf" ? `Project Estimate ${page.importedPageNumber || index + 1}` : "Custom Page"),
         blocks: Array.isArray(page.blocks)
           ? page.blocks
-            .map((block, blockIndex) => normaliseProposalBuilderBlock({ ...block, source: "builder-created", pageType: "builderCreated", order: Number(block.order ?? blockIndex) }))
+            .map((block, blockIndex) => normaliseProposalBuilderBlock({
+              ...block,
+              source: page?.importedDocument?.sourceType === "project_estimate_pdf" ? (block.source || "pdf-import") : "builder-created",
+              pageType: page?.importedDocument?.sourceType === "project_estimate_pdf" ? "importedPlanPdf" : "builderCreated",
+              order: Number(block.order ?? blockIndex),
+            }))
             .filter((block) => !staleProjectEstimateBlockReason(block))
           : [],
       }));
@@ -11573,6 +13111,34 @@ function createBuilderProjectEstimatePage(order = 0) {
     title: "Custom Page",
     order,
     design: { backgroundColor: "#ffffff" },
+    blocks: [],
+  };
+}
+
+function createImportedProjectEstimatePdfPageShell(page = {}, order = 0) {
+  const pageNumber = Number(page.importedPageNumber || page.importedDocument?.pageNumber || order + 1) || 1;
+  const baseArtwork = page.baseArtwork || page.design?.backgroundImageUrl || page.importedDocument?.baseArtwork || "";
+  return {
+    id: page.id || proposalBuilderId("project-estimate-pdf-page"),
+    page_type: "importedPlanPdf",
+    source: page.source || "pdf-import",
+    title: page.title || page.importedDocument?.pageTitle || `Imported Page ${pageNumber}`,
+    order,
+    orientation: page.orientation || planPageOrientation(page.importedDocument || page),
+    importedPageNumber: pageNumber,
+    baseArtwork,
+    design: {
+      backgroundColor: "#ffffff",
+      backgroundImageUrl: baseArtwork,
+      overlayOpacity: 0,
+      ...(page.design || {}),
+    },
+    importedDocument: {
+      ...(page.importedDocument || {}),
+      sourceType: "project_estimate_pdf",
+      pageNumber,
+      baseArtwork,
+    },
     blocks: [],
   };
 }
@@ -11742,11 +13308,125 @@ function normaliseProposalImportedDocuments(importedDocuments = {}) {
 }
 
 function proposalProjectId(sheet) {
-  return sheet?.workbook?.commercialProjectId || sheet?.workbook?.projectId || "";
+  if (sheet?.workbook?.jobFileMeta?.localFileOnly) return "";
+  return validUuidOrEmpty(sheet?.workbook?.commercialProjectId) || validUuidOrEmpty(sheet?.workbook?.projectId);
+}
+
+function activeProjectEstimateDocument(builder = {}) {
+  const direct = builder.importedDocuments?.projectEstimate || builder.importedDocuments?.projectEstimatePdf || null;
+  if (direct && typeof direct === "object" && referencedPdfUrl(direct) && direct.active !== false && !["inactive", "removed", "archived", "deleted", "superseded"].includes(String(direct.status || ""))) {
+    return normaliseImportedProposalDocument(direct);
+  }
+  const pageDocument = (Array.isArray(builder.pages) ? builder.pages : [])
+    .map((page) => page?.importedDocument)
+    .find((document) => document && document.sourceType === "project_estimate_pdf" && referencedPdfUrl(document));
+  return pageDocument ? normaliseImportedProposalDocument(pageDocument) : null;
+}
+
+function hasEditableProjectEstimatePdfPages(builder = {}) {
+  return (Array.isArray(builder.pages) ? builder.pages : []).some((page) => (
+    page?.page_type === "importedPlanPdf"
+    && page?.importedDocument?.sourceType === "project_estimate_pdf"
+    && (Array.isArray(page.blocks) ? page.blocks.length > 0 : page.baseArtwork || page.design?.backgroundImageUrl)
+  ));
+}
+
+function projectEstimateDocumentContextIssue({
+  builder = {},
+  sheet = {},
+  estimateProjectId = "",
+  instanceSyncStatus = "",
+  activeProjectEstimatePdf = null,
+  projectEstimateLoadBlocked = false,
+  localProjectAttachmentUnresolved = false,
+} = {}) {
+  const issue = "Document context is incomplete. Select or restore the attached project before saving.";
+  if (localProjectAttachmentUnresolved) return issue;
+  if (projectEstimateLoadBlocked || ["missing_saved_instance", "save_failed"].includes(instanceSyncStatus)) {
+    return activeProjectEstimatePdf ? "" : "Johnson Project Estimate could not be loaded.";
+  }
+  const importedDocuments = builder.importedDocuments || {};
+  const hasInsertedProjectDocuments = hasProjectEstimateAttachmentDocuments(builder);
+  if (hasInsertedProjectDocuments && !estimateProjectId && !activeProjectEstimatePdf) return issue;
+  if (hasInsertedProjectDocuments && !activeProjectEstimatePdf) {
+    const projectName = workbookDataValue(sheet.workbook, "projectName") || sheet.workbook?.jobFileMeta?.jobName || sheet.workbook?.registeredJob?.jobName || "";
+    const clientName = workbookDataValue(sheet.workbook, "clientName") || workbookDataValue(sheet.workbook, "customerName") || sheet.workbook?.jobFileMeta?.clientName || sheet.workbook?.registeredJob?.clientName || "";
+    const address = workbookDataValue(sheet.workbook, "projectAddress") || workbookDataValue(sheet.workbook, "siteAddress") || workbookDataValue(sheet.workbook, "address") || sheet.workbook?.jobFileMeta?.address || sheet.workbook?.registeredJob?.siteAddress || "";
+    const genericProject = !projectName || /^estimate builder project$/i.test(String(projectName).trim());
+    const missingBindings = !clientName || !address || /not entered/i.test(`${projectName} ${clientName} ${address}`);
+    if (genericProject || missingBindings) return issue;
+  }
+  const unsafeTemplateAttachment = ["inclusions", "pricedPlans"].some((key) => {
+    const document = importedDocuments[key];
+    return document && typeof document === "object" && !activeProjectEstimatePdf && !estimateProjectId;
+  });
+  return unsafeTemplateAttachment ? issue : "";
+}
+
+function hasProjectEstimateAttachmentDocuments(builder = {}) {
+  const documents = builder.importedDocuments || {};
+  const inclusions = documents.inclusions || null;
+  const pricedPlans = documents.pricedPlans || null;
+  const inclusionsPages = Number(inclusions?.pageCount || inclusions?.page_count || inclusions?.pages?.length || 0) || 0;
+  const pricedPlanPages = Array.isArray(pricedPlans?.pages)
+    ? pricedPlans.pages.length
+    : (Array.isArray(pricedPlans?.files) ? pricedPlans.files.reduce((sum, file) => sum + (Number(file?.pageCount || file?.pages?.length || 0) || 0), 0) : 0);
+  const importedPageAttachments = (Array.isArray(builder.pages) ? builder.pages : []).some((page) => {
+    const sourceType = page?.importedDocument?.sourceType || "";
+    return sourceType && sourceType !== "project_estimate_pdf";
+  });
+  return inclusionsPages > 0 || pricedPlanPages > 0 || importedPageAttachments;
+}
+
+function projectEstimateDocumentRecoveryLabel(document = null) {
+  if (!document || document.sourceType !== "project_estimate_pdf") return "";
+  const pageCount = Number(document.pageCount || document.page_count || document.pages?.length || 0) || 0;
+  const prefix = document.editableTemplateRecovered === true || document.metadata?.editableTemplateRecovered === true
+    ? "Recovered Editable Project Estimate"
+    : "Issued Project Estimate PDF";
+  return `${prefix}${pageCount ? ` - ${pageCount} pages` : ""}`;
+}
+
+function activeProjectEstimateImportedPages(builder = {}) {
+  const pages = Array.isArray(builder.pages) ? builder.pages : [];
+  const importedPages = pages
+    .filter((page) => page?.page_type === "importedPlanPdf" && page?.importedDocument?.sourceType === "project_estimate_pdf")
+    .filter((page) => referencedPdfUrl(page.importedDocument))
+    .sort((a, b) => Number(a.importedPageNumber || a.importedDocument?.pageNumber || a.order || 0) - Number(b.importedPageNumber || b.importedDocument?.pageNumber || b.order || 0))
+    .map((page, index) => ({
+      ...page,
+      title: page.title || page.importedDocument?.pageTitle || `Imported Page ${Number(page.importedPageNumber || page.importedDocument?.pageNumber || index + 1)}`,
+    }));
+  if (importedPages.length) return importedPages;
+  const document = activeProjectEstimateDocument(builder);
+  const count = Number(document?.pageCount || document?.pages?.length || 0) || 0;
+  if (!document || !count) return [];
+  return Array.from({ length: count }, (_, index) => ({
+    id: `project-estimate-pdf-${document.id || "document"}-${index + 1}`,
+    page_type: "importedPlanPdf",
+    title: `Project Estimate ${index + 1}`,
+    source: "builder-created",
+    order: index,
+    importedPageNumber: index + 1,
+    importedDocument: {
+      ...(document.pages?.[index] || {}),
+      documentId: document.id,
+      fileName: document.fileName,
+      publicUrl: document.publicUrl,
+      storagePath: document.storagePath,
+      sourceType: "project_estimate_pdf",
+    },
+    blocks: [],
+  }));
 }
 
 function proposalEstimateId(sheet) {
-  return sheet?.workbook?.estimateSnapshotId || sheet?.workbook?.id || "";
+  return validUuidOrEmpty(sheet?.workbook?.estimateSnapshotId) || validUuidOrEmpty(sheet?.workbook?.id);
+}
+
+function validUuidOrEmpty(value) {
+  const text = String(value || "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : "";
 }
 
 function proposalLegacyInclusionsKeys(importedDocuments = {}) {
@@ -11834,6 +13514,9 @@ function normaliseImportedProposalDocument(document = {}) {
     storagePath: document.storagePath || document.storage_path || "",
     sourceType: document.sourceType || document.source_type || "",
     status: document.status || (document.active === false ? "inactive" : "active"),
+    recoveryStatus: document.recoveryStatus || document.recovery_status || document.metadata?.recoveryStatus || "",
+    metadata: document.metadata && typeof document.metadata === "object" ? document.metadata : {},
+    immutableSource: Boolean(document.immutableSource || document.metadata?.immutableSource),
     active: document.active !== false && !["inactive", "removed", "archived", "deleted"].includes(String(document.status || "")),
     fileHash: document.fileHash || document.file_hash || document.hash || "",
     version: document.version || document.fileVersion || document.file_version || "",
@@ -11865,6 +13548,7 @@ function defaultLuxuryProposalTheme(client = {}) {
     whyImageUrl: client.showcaseImages?.[3] || "",
     designImageUrl: client.designImages?.[0] || "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1500&q=80",
     thankYouImageUrl: client.finalImageUrl || client.heroImageUrl || "",
+    companyNameOverride: "",
     clientNameOverride: "",
     siteAddressOverride: "",
     companyStory: client.aboutUs || "We understand that building a home is about far more than bricks and mortar. It is about creating a place where your family will make memories for years to come. Our commitment is to deliver a home built with craftsmanship, honesty and clear communication every step of the way.",
@@ -11887,6 +13571,8 @@ function hydrateProjectEstimatePageFromApi(pageShell, client, sheet) {
   return {
     ...fallback,
     id: pageShell.id || fallback.id,
+    importedDocument: pageShell.importedDocument || fallback.importedDocument || null,
+    importedPageNumber: pageShell.importedPageNumber || fallback.importedPageNumber,
     hiddenFromPdf: pageShell.hiddenFromPdf,
     source: pageShell.source || fallback.source,
   };
@@ -12075,6 +13761,7 @@ function proposalBuilderId(prefix) {
 }
 
 function quoteProposalLinkedFields(sheet, client) {
+  const summary = estimatePreviewSummary(sheet);
   return {
     projectName: { label: "Project name", value: client.projectName },
     companyName: { label: "Company name", value: client.companyName },
@@ -12092,14 +13779,20 @@ function quoteProposalLinkedFields(sheet, client) {
     engineering: { label: "Engineering", value: client.engineering },
     estimatedStart: { label: "Estimated start", value: client.estimatedStart },
     estimatedDuration: { label: "Estimated duration", value: client.estimatedDuration },
-    quoteTotal: { label: "Quote total", value: money(sheet.preview.summary.finalQuoteTotal) },
-    gst: { label: "GST", value: money(sheet.preview.summary.gst) },
+    quoteTotal: { label: "Quote total", value: money(summary.finalQuoteTotal) },
+    gst: { label: "GST", value: money(summary.gst) },
     pricingGroups: { label: "Pricing groups", value: proposalProgressPaymentRowsFromCashflow(sheet) },
     inclusions: { label: "Inclusions", value: proposalInclusionRows(sheet, client) },
-    estimateInclusionsPackage: { label: "Estimate inclusions package", value: selectedEstimateInclusionsPackage(sheet.workbook.estimateInclusions) },
-    standardInclusionsPackage: { label: "Standard inclusions package", value: selectedStandardInclusionsPackage(sheet.workbook.standardInclusions) },
+    estimateInclusionsPackage: { label: "Estimate inclusions package", value: selectedEstimateInclusionsPackage(sheet?.workbook?.estimateInclusions) },
+    standardInclusionsPackage: { label: "Standard inclusions package", value: selectedStandardInclusionsPackage(sheet?.workbook?.standardInclusions) },
     scopeOfWorks: { label: "Scope of works", value: client.scopeOfWorks },
     exclusions: { label: "Exclusions", value: client.exclusions },
+    documentTitle: { label: "Document title", value: client.estimateTitle || "Project Estimate" },
+    documentVersion: { label: "Document version", value: client.documentVersion || "" },
+    documentStatus: { label: "Document status", value: client.documentStatus || "" },
+    pageNumber: { label: "Page number", value: "" },
+    totalPages: { label: "Total pages", value: "" },
+    generatedDate: { label: "Date generated", value: new Date().toLocaleDateString("en-AU") },
   };
 }
 
@@ -12184,6 +13877,14 @@ function normaliseWorkbookLookupText(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+function estimatePreviewSummary(sheet = {}) {
+  return sheet?.preview?.summary && typeof sheet.preview.summary === "object" ? sheet.preview.summary : {};
+}
+
+function estimatePreviewQuotation(sheet = {}) {
+  return sheet?.preview?.quotation && typeof sheet.preview.quotation === "object" ? sheet.preview.quotation : {};
+}
+
 function estimatedStartFromBuildingApproval(value) {
   const date = parseWorkbookDate(value);
   if (!date) return "Approximately 2 weeks after Building Approval";
@@ -12242,7 +13943,7 @@ function clientBuildStageGroups(sheet) {
   const fixedItems = sourceItems.filter((item) => item.adjustment);
   const normalBaseSubtotal = roundMoney(normalItems.reduce((sum, item) => sum + summaryLineTotal(item.row), 0));
   const fixedTotal = roundMoney(fixedItems.reduce((sum, item) => sum + summaryLineTotal(item.row), 0));
-  const finalQuoteTotal = roundMoney(sheet.preview.summary.finalQuoteTotal || 0);
+  const finalQuoteTotal = roundMoney(estimatePreviewSummary(sheet).finalQuoteTotal || 0);
   const hiddenAddons = roundMoney(finalQuoteTotal - normalBaseSubtotal - fixedTotal);
   let loadedItems = sourceItems.map((item) => {
     const baseTotal = roundMoney(summaryLineTotal(item.row));
@@ -12287,10 +13988,11 @@ function clientBuildStageGroups(sheet) {
 }
 
 function cashflowSummaryRows(sheet) {
-  const finalQuoteTotal = summaryNumber(sheet.preview.summary.finalQuoteTotal || 0);
+  const summary = estimatePreviewSummary(sheet);
+  const finalQuoteTotal = summaryNumber(summary.finalQuoteTotal || 0);
   const outgoingGroups = summaryBuildStageGroups(sheet);
   const outgoingByStage = new Map(outgoingGroups.map((group) => [group.stageNumber, group]));
-  const savedPayments = sheet.workbook.cashflowPayments || {};
+  const savedPayments = sheet?.workbook?.cashflowPayments || {};
   return BUILD_STAGE_GROUPS.filter((group) => Number(group.stageNumber) > 0).map((group) => {
     const savedPercent = savedPayments?.[group.stageNumber];
     const hasSavedPercent = String(savedPercent ?? "").trim() !== "";
@@ -12380,14 +14082,15 @@ function summaryBuildStageGroups(sheet) {
   const parentByChild = quoteParentByChildSection(sheet.quoteSections);
   const groups = BUILD_STAGE_GROUPS.map((stage) => ({ ...stage, rows: [], total: 0 }));
   const byNumber = new Map(groups.map((group) => [group.stageNumber, group]));
+  const quotation = estimatePreviewQuotation(sheet);
   summaryOpeningRows(sheet).forEach((item) => {
     const group = byNumber.get(item.stageNumber);
     if (!group) return;
     group.rows.push(item);
     group.total += item.total;
   });
-  (Array.isArray(sheet.quoteSections) ? sheet.quoteSections : Object.keys(sheet.preview?.quotation || {})).forEach((section) => {
-    selectedSummaryRows(sheet.preview.quotation?.[section]?.rows || []).forEach((row) => {
+  (Array.isArray(sheet.quoteSections) ? sheet.quoteSections : Object.keys(quotation)).forEach((section) => {
+    selectedSummaryRows(quotation?.[section]?.rows || []).forEach((row) => {
       const rowStageNumber = summaryStageNumberForRow(row, section, sheet, parentByChild);
       const group = byNumber.get(rowStageNumber);
       if (!group) return;
@@ -12403,11 +14106,12 @@ function summaryBuildStageGroups(sheet) {
 }
 
 function summaryOpeningRows(sheet) {
+  const summary = estimatePreviewSummary(sheet);
   return [
-    summaryOpeningRow("summary-opening-preliminary-costs", "Preliminaries Costs", sheet.preview.summary?.preliminaryCostsAmount, "Imported from Preliminaries cost below"),
-    summaryOpeningRow("summary-opening-qbcc-registration", "QBCC Registration", sheet.preview.summary?.qbsaRegistration, "Imported from QBSA/QBCC registration below"),
-    summaryOpeningRow("summary-opening-q-leave-fees", "Q Leave Fees", sheet.preview.summary?.qLeaveFees, "Imported from Q Leave fees below"),
-    summaryOpeningRow("summary-opening-sales-commission", "Sales Commission", sheet.preview.summary?.salesCommissionAmount, "Imported from Sales commission below", 2),
+    summaryOpeningRow("summary-opening-preliminary-costs", "Preliminaries Costs", summary.preliminaryCostsAmount, "Imported from Preliminaries cost below"),
+    summaryOpeningRow("summary-opening-qbcc-registration", "QBCC Registration", summary.qbsaRegistration, "Imported from QBSA/QBCC registration below"),
+    summaryOpeningRow("summary-opening-q-leave-fees", "Q Leave Fees", summary.qLeaveFees, "Imported from Q Leave fees below"),
+    summaryOpeningRow("summary-opening-sales-commission", "Sales Commission", summary.salesCommissionAmount, "Imported from Sales commission below", 2),
   ].filter(Boolean);
 }
 
@@ -12468,7 +14172,7 @@ function summarySectionDisplayName(section, sheet) {
 function summaryAdjustmentPercentDisplayValue(sheet, key) {
   const saved = sheet.workbook.summaryAdjustments?.[key];
   if (saved !== undefined && saved !== null && saved !== "") return value(summaryPercentNumber(saved));
-  const preview = sheet.preview.summary || {};
+  const preview = estimatePreviewSummary(sheet);
   const fallbackByKey = {
     preliminaryCostsPercent: preview.preliminaryCostsPercent,
     overheadsPercent: preview.overheadsPercent,
@@ -12575,7 +14279,7 @@ function subcontractorDeductionsForRow(contractorKey) {
 
 function subcontractorDeductionAmount(sheet, deduction, saved = {}) {
   if (deduction.sourceRow) {
-    return summaryNumber(findPreviewQuoteRowBySource(sheet.preview.quotation, deduction.sourceRow)?.cost);
+    return summaryNumber(findPreviewQuoteRowBySource(estimatePreviewQuotation(sheet), deduction.sourceRow)?.cost);
   }
   return summaryNumber(saved.deductions?.[`${deduction.key}Amount`]);
 }
@@ -12727,10 +14431,146 @@ function insertQuoteQuantityReference(sheet, target, key) {
   sheet.setPage("quotation");
 }
 
+function useOverlayMenuPosition(open, triggerRef, preferredWidth = 360) {
+  const menuRef = useRef(null);
+  const [position, setPosition] = useState(null);
+
+  const updatePosition = useCallback(() => {
+    if (!open || typeof window === "undefined") return;
+    const trigger = triggerRef?.current;
+    if (!trigger) return;
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewportWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1024;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 768;
+    const viewportOffsetLeft = window.visualViewport?.offsetLeft || 0;
+    const viewportOffsetTop = window.visualViewport?.offsetTop || 0;
+    const margin = 10;
+    const summaryRect = document.querySelector('[data-estimate-builder-live-summary="true"]')?.getBoundingClientRect?.();
+    const usableRight = summaryRect
+      && summaryRect.width > 80
+      && summaryRect.left > triggerRect.right
+      && summaryRect.left < viewportWidth
+      ? summaryRect.left - margin
+      : viewportWidth - margin;
+    const availableWidth = Math.max(220, usableRight - margin);
+    const width = Math.min(Math.max(preferredWidth, triggerRect.width), availableWidth);
+    const measuredHeight = menuRef.current?.offsetHeight || 0;
+    const availableBelow = viewportHeight - triggerRect.bottom - margin;
+    const availableAbove = triggerRect.top - margin;
+    const openAbove = measuredHeight > availableBelow && availableAbove > availableBelow;
+    const maxHeight = Math.max(180, Math.min(openAbove ? availableAbove : availableBelow, viewportHeight - (margin * 2)));
+    const left = Math.min(
+      Math.max(triggerRect.right - width, margin),
+      Math.max(margin, usableRight - width),
+    ) + viewportOffsetLeft;
+    const top = (openAbove
+      ? Math.max(margin, triggerRect.top - Math.min(measuredHeight || maxHeight, maxHeight) - 6)
+      : Math.min(triggerRect.bottom + 6, viewportHeight - margin)
+    ) + viewportOffsetTop;
+    setPosition({ left, top, width, maxHeight });
+  }, [open, preferredWidth, triggerRef]);
+
+  useEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return undefined;
+    }
+    updatePosition();
+    const onUpdate = () => updatePosition();
+    window.addEventListener("resize", onUpdate);
+    window.addEventListener("scroll", onUpdate, true);
+    window.visualViewport?.addEventListener("resize", onUpdate);
+    window.visualViewport?.addEventListener("scroll", onUpdate);
+    const raf = window.requestAnimationFrame(onUpdate);
+    return () => {
+      window.removeEventListener("resize", onUpdate);
+      window.removeEventListener("scroll", onUpdate, true);
+      window.visualViewport?.removeEventListener("resize", onUpdate);
+      window.visualViewport?.removeEventListener("scroll", onUpdate);
+      window.cancelAnimationFrame(raf);
+    };
+  }, [open, updatePosition]);
+
+  return { menuRef, position, updatePosition };
+}
+
+function OverlayMenuPortal({ open, triggerRef, id, labelledBy, onClose, width = 360, children, style }) {
+  const { menuRef, position, updatePosition } = useOverlayMenuPosition(open, triggerRef, width);
+
+  useEffect(() => {
+    if (!open || typeof document === "undefined") return undefined;
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (triggerRef?.current?.contains(target) || menuRef.current?.contains(target)) return;
+      onClose?.();
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        triggerRef?.current?.focus?.();
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      const items = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]:not(:disabled)') || []);
+      if (!items.length) return;
+      event.preventDefault();
+      const activeIndex = items.indexOf(document.activeElement);
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? items.length - 1
+          : event.key === "ArrowUp"
+            ? (activeIndex <= 0 ? items.length - 1 : activeIndex - 1)
+            : (activeIndex < 0 || activeIndex >= items.length - 1 ? 0 : activeIndex + 1);
+      items[nextIndex]?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      const firstItem = menuRef.current?.querySelector('[role="menuitem"]:not(:disabled)');
+      firstItem?.focus?.();
+      updatePosition();
+    }, 0);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [open, onClose, triggerRef, menuRef, updatePosition]);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      ref={menuRef}
+      id={id}
+      role="menu"
+      aria-labelledby={labelledBy}
+      style={{
+        ...style,
+        position: "fixed",
+        left: position?.left ?? -9999,
+        top: position?.top ?? -9999,
+        width: position?.width ?? width,
+        maxWidth: "calc(100vw - 20px)",
+        maxHeight: position?.maxHeight ?? "min(70vh, 560px)",
+        overflowY: "auto",
+        zIndex: APP_LAYERS.dropdown,
+      }}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy = false, showDeveloperControls = false }) {
   const simpleTemplateName = "Master Estimate Template";
   const simpleTemplateKey = "template:master-estimate-template";
   const [simpleMessage, setSimpleMessage] = useState("");
+  const triggerRef = useRef(null);
+  const menuId = "estimate-builder-template-file-menu";
 
   async function runTemplateAction(label, action) {
     setSimpleMessage("");
@@ -12756,12 +14596,27 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
 
   return (
     <div style={styles.templateFileWrap}>
-      <button style={styles.templateFileButton} onClick={onToggle} aria-haspopup="menu" aria-expanded={open}>
+      <button
+        ref={triggerRef}
+        id="estimate-builder-template-file-button"
+        style={styles.templateFileButton}
+        onClick={onToggle}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+      >
         <span style={styles.templateFileButtonLabel}>Template File</span>
         <small style={styles.templateFileButtonName}>{simpleTemplateName}</small>
       </button>
-      {open && (
-        <div style={styles.templateFileMenuSimple} role="menu">
+      <OverlayMenuPortal
+        open={open}
+        triggerRef={triggerRef}
+        id={menuId}
+        labelledBy="estimate-builder-template-file-button"
+        onClose={onClose}
+        width={300}
+        style={styles.templateFileMenuSimple}
+      >
           <div style={styles.templateFileHeader}>
             <strong>{simpleTemplateName}</strong>
             <span>{simpleTemplateKey || "No template linked"}</span>
@@ -12771,6 +14626,7 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
             style={styles.primaryActionButton}
             disabled={busy}
             onClick={createNewJob}
+            role="menuitem"
           >
             {busy ? "Working..." : "Create New Job From Master Template"}
           </button>
@@ -12779,6 +14635,7 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
             style={styles.secondaryButton}
             disabled={busy}
             onClick={saveBaseTemplate}
+            role="menuitem"
           >
             {busy ? "Saving..." : "Save As Base Template"}
           </button>
@@ -12787,12 +14644,12 @@ function TemplateFileMenu({ sheet, open, onToggle, onClose, onSaveAction, busy =
             style={styles.secondaryButton}
             disabled={busy}
             onClick={updateMaster}
+            role="menuitem"
           >
             {busy ? "Saving..." : "Update Master Template"}
           </button>
           {simpleMessage && <div style={styles.templateInlineMessage}>{simpleMessage}</div>}
-        </div>
-      )}
+      </OverlayMenuPortal>
     </div>
   );
 }
@@ -13035,12 +14892,117 @@ function suggestedUiTemplateName(workbook) {
 }
 
 function openJobHeaderDetails(workbook = {}) {
+  const context = canonicalEstimateJobContext(workbook);
+  const noJobOpen = !context.projectName && !context.jobNumber && !context.projectAddress && !context.clientName && !context.fileName;
   return {
-    projectName: valueOrNotEntered(workbookDataValue(workbook, "projectName")),
-    jobNumber: valueOrNotEntered(workbookDataValue(workbook, "jobNumber")),
-    projectAddress: valueOrNotEntered(workbookDataValue(workbook, "projectAddress")),
-    fileName: valueOrNotEntered(workbook?.openedFileName || workbook?.sourceFileName),
+    noJobOpen,
+    projectName: noJobOpen ? "No job open" : String(context.projectName || context.fileName || "Unnamed job").trim(),
+    jobNumber: noJobOpen ? "" : context.jobNumber,
+    projectAddress: noJobOpen ? "Address not recorded" : String(context.projectAddress || "Address not recorded").trim(),
+    clientName: noJobOpen ? "" : valueOrNotEntered(context.clientName),
+    fileName: noJobOpen ? "No saved estimate open" : valueOrNotEntered(context.fileName),
+    projectId: noJobOpen ? "" : valueOrNotEntered(context.projectId),
+    estimateStatus: context.estimateStatus,
+    lastSavedAt: context.lastSavedAt,
+    unattachedEstimate: Boolean(context.fileName && !context.projectId && !context.projectName),
   };
+}
+
+function canonicalEstimateJobContext(workbook = {}) {
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  const clientPage = workbook?.clientPage || {};
+  const projectAddress = workbookDataValue(workbook, "projectAddress")
+    || workbookDataValue(workbook, "siteAddress")
+    || workbookDataValue(workbook, "address")
+    || meta.address
+    || registeredJob.siteAddress
+    || clientPage.projectAddress
+    || "";
+  return {
+    projectId: String(registeredJob.jobId || workbook?.registeredJobId || workbook?.commercialProjectId || workbook?.projectId || meta.projectId || "").trim(),
+    projectName: workbookDataValue(workbook, "projectName") || meta.jobName || registeredJob.jobName || workbook?.projectName || "",
+    clientName: workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || meta.clientName || registeredJob.clientName || clientPage.clientName || "",
+    jobNumber: workbookDataValue(workbook, "jobNumber") || workbookDataValue(workbook, "quoteNumber") || meta.jobNumber || registeredJob.jobNumber || clientPage.quoteNumber || "",
+    projectAddress,
+    builderName: workbookDataValue(workbook, "builderName") || meta.builderName || clientPage.companyName || "",
+    estimatorName: workbookDataValue(workbook, "estimatorName") || meta.estimatorName || "",
+    logoUrl: clientPage.logoUrl || workbook?.branding?.logoUrl || workbook?.builderBranding?.logoUrl || meta.logoUrl || "",
+    fileName: workbook?.openedFileName || workbook?.sourceFileName || "",
+    estimateStatus: workbook?.estimateStatus || workbook?.projectStatus || clientPage.estimateStatus || "",
+    lastSavedAt: workbook?.savedAt || meta.lastModified || "",
+  };
+}
+
+function deriveTakeoffEngineJobId(workbook = {}, openJobDetails = {}, workspaceId = "") {
+  const candidates = [
+    workbook?.registeredJob?.jobId,
+    workbook?.registeredJobId,
+    workbook?.id,
+    workbook?.jobId,
+    workbook?.openedFileName,
+    workbook?.sourceFileName,
+    openJobDetails.fileName,
+    [workspaceId, openJobDetails.projectName, openJobDetails.jobNumber].filter(Boolean).join("-"),
+  ];
+  for (const candidate of candidates) {
+    const derived = deriveJobId(candidate);
+    if (derived) return derived;
+  }
+  return "estimate-builder-unsaved";
+}
+
+function selectAiPlanTakeoffJob(workbook = {}) {
+  const canonical = workbook?.aiPlanTakeoffJob && typeof workbook.aiPlanTakeoffJob === "object" ? workbook.aiPlanTakeoffJob : null;
+  const compatibility = workbook?.takeoffEngine?.aiPlanTakeoffJob && typeof workbook.takeoffEngine.aiPlanTakeoffJob === "object" ? workbook.takeoffEngine.aiPlanTakeoffJob : null;
+
+  if (canonical && hasRecoverablePlanPages(canonical)) return canonical;
+  if (!canonical && compatibility) return compatibility;
+  if (canonical && compatibility && !hasRecoverablePlanPages(canonical) && hasRecoverablePlanPages(compatibility)) return compatibility;
+  if (canonical) return canonical;
+  if (!compatibility) return null;
+
+  const candidates = [compatibility];
+
+  return candidates
+    .slice()
+    .sort((a, b) => {
+      const bPlanPages = hasRecoverablePlanPages(b) ? 1 : 0;
+      const aPlanPages = hasRecoverablePlanPages(a) ? 1 : 0;
+      if (bPlanPages !== aPlanPages) return bPlanPages - aPlanPages;
+      const bFloorCoverings = Array.isArray(b.completedAreas) ? b.completedAreas.length : 0;
+      const aFloorCoverings = Array.isArray(a.completedAreas) ? a.completedAreas.length : 0;
+      if (bFloorCoverings !== aFloorCoverings) return bFloorCoverings - aFloorCoverings;
+      return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+    })[0];
+}
+
+function quoteRowsForAiPlanTakeoff(workbook = {}) {
+  return Object.entries(workbook?.quotation || {}).flatMap(([section, data]) => (
+    (Array.isArray(data?.rows) ? data.rows : []).map((row) => ({
+      id: row.id,
+      section,
+      category: row.item || row.label || row.category || "",
+      description: row.item || row.label || row.description || row.id,
+      quantity: quoteQuantity(row),
+      unit: row.unit || "",
+      rate: quoteRate(row),
+      formula: row.formulas?.B || row.formulas?.G || "",
+      sourceRow: row.sourceRow || row.excelRow || "",
+    }))
+  )).filter((row) => row.id);
+}
+
+function takeoffQuantityByItem(schedulePayload = {}, itemId = "") {
+  const rows = Array.isArray(schedulePayload.floorAreas) ? schedulePayload.floorAreas : [];
+  return rows.find((row) => row.itemId === itemId)?.quantity || 0;
+}
+
+function takeoffWallLength(schedulePayload = {}, category = "") {
+  const rows = Array.isArray(schedulePayload.basicProjectMeasurements) ? schedulePayload.basicProjectMeasurements : [];
+  return rows
+    .filter((row) => row.section === "Walls" && row.category === category)
+    .reduce((sum, row) => sum + (Number(row.quantity) || 0), 0);
 }
 
 function valueOrNotEntered(value) {
@@ -13080,20 +15042,39 @@ function estimateTakeoffPersistenceCounts(workbook = {}) {
 function workbookToJobFileData(workbook = {}) {
   const meta = workbook?.jobFileMeta || {};
   const now = new Date().toISOString();
+  const projectEstimateBuilder = workbook?.projectEstimateBuilder || workbook?.clientPage?.proposalBuilder || null;
+  const selectionSchedule = workbook?.clientSelectionsBook || workbook?.selectionSchedule || workbook?.selectionSchedules || null;
+  const schedule = workbook?.gantt || workbook?.projectSchedule || workbook?.ganttTasks || null;
   if (typeof window !== "undefined") {
     console.info("[Estimate Builder] Saving workbook", estimateTakeoffPersistenceCounts(workbook));
   }
   return {
+    type: "gr8-master-job-package",
+    schemaVersion: "gr8job.package.v1",
+    packageVersion: 3,
     jobName: meta.jobName || workbookDataValue(workbook, "projectName") || workbook?.projectName || "",
     clientName: meta.clientName || workbookDataValue(workbook, "clientName") || workbookDataValue(workbook, "customerName") || "",
     jobNumber: meta.jobNumber || workbookDataValue(workbook, "jobNumber") || workbookDataValue(workbook, "quoteNumber") || "",
-    address: meta.address || workbookDataValue(workbook, "siteAddress") || workbookDataValue(workbook, "address") || "",
+    address: meta.address || workbookDataValue(workbook, "projectAddress") || workbookDataValue(workbook, "siteAddress") || workbookDataValue(workbook, "address") || workbook?.clientPage?.projectAddress || "",
     notes: meta.notes || workbookDataValue(workbook, "projectNotes") || workbookDataValue(workbook, "notes") || "",
     rooms: workbook?.plans || [],
     products: workbook?.procurement || [],
     pricing: workbook?.summaryAdjustments || {},
     created: meta.created || workbook?.createdFromMasterTemplateAt || now,
     lastModified: workbook?.savedAt || meta.lastModified || now,
+    projectEstimate: projectEstimateBuilder,
+    selectionSchedule,
+    schedule,
+    packageAudit: {
+      packageType: "gr8-master-job",
+      moduleSections: ["job-details", "estimate", "takeoff", "client-selections", "quotation", "boq", "procurement", "variations", "project-documents", "assets"],
+      projectEstimatePages: Array.isArray(projectEstimateBuilder?.pages) ? projectEstimateBuilder.pages.length : 0,
+      projectEstimateImportedDocuments: projectEstimateBuilder?.importedDocuments && typeof projectEstimateBuilder.importedDocuments === "object"
+        ? Object.keys(projectEstimateBuilder.importedDocuments).filter((key) => projectEstimateBuilder.importedDocuments[key]).length
+        : 0,
+      hasSelectionSchedule: Boolean(selectionSchedule),
+      hasSchedule: Boolean(schedule),
+    },
     workbook,
   };
 }
@@ -13157,49 +15138,320 @@ function formatProposalDate(value) {
   return Number.isNaN(date.getTime()) ? "unknown date" : date.toLocaleString();
 }
 
-function FileMenu({ open, items, recentJobs = [], onOpenRecentJob, onToggle, onClose, busy = false }) {
+function FileMenu({
+  open,
+  items,
+  recentJobs = [],
+  recentLocalJobFiles = [],
+  onOpenRecentJob,
+  onRemoveRecentJob,
+  onOpenRecentLocalJobFile,
+  onRemoveRecentLocalJobFile,
+  onToggle,
+  onClose,
+  busy = false,
+}) {
+  const triggerRef = useRef(null);
+  const menuId = "estimate-builder-file-menu";
+  const groupedItems = ["NEW", "OPEN", "SAVE"].map((section) => ({
+    section,
+    items: items.filter((item) => item.section === section),
+  })).filter((group) => group.items.length);
+
   return (
     <div style={styles.fileMenuWrap}>
-      <button style={styles.fileMenuButton} onClick={onToggle} disabled={busy} aria-haspopup="menu" aria-expanded={open}>
+      <button
+        ref={triggerRef}
+        id="estimate-builder-file-menu-button"
+        style={styles.fileMenuButton}
+        onClick={onToggle}
+        disabled={busy}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+      >
         {busy ? "Saving..." : "File"}
       </button>
-      {open && (
-        <div style={styles.fileMenu} role="menu">
-          {items.map((item) => (
-            <button
-              key={item.label}
-              style={{ ...styles.fileMenuItem, ...(item.primary ? styles.fileMenuItemPrimary : {}), ...(busy ? styles.fileMenuItemDisabled : {}) }}
-              disabled={busy}
-              onClick={async () => {
-                await Promise.resolve(item.action());
-                onClose();
-              }}
-              role="menuitem"
-            >
-              {busy && item.primary ? "Saving..." : item.label}
-            </button>
+      <OverlayMenuPortal
+        open={open}
+        triggerRef={triggerRef}
+        id={menuId}
+        labelledBy="estimate-builder-file-menu-button"
+        onClose={onClose}
+        width={390}
+        style={styles.fileMenu}
+      >
+          {groupedItems.map((group, groupIndex) => (
+            <div key={group.section}>
+              {groupIndex > 0 ? <div style={styles.fileMenuDivider} /> : null}
+              <div style={styles.fileMenuSectionTitle}>{group.section}</div>
+              {group.items.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  style={{ ...styles.fileMenuItem, ...(item.primary ? styles.fileMenuItemPrimary : {}), ...(busy ? styles.fileMenuItemDisabled : {}) }}
+                  disabled={busy}
+                  onClick={async () => {
+                    await Promise.resolve(item.action());
+                    if (item.closeAfter !== false) onClose();
+                  }}
+                  role="menuitem"
+                >
+                  {busy && item.primary ? "Saving..." : item.label}
+                </button>
+              ))}
+            </div>
           ))}
           <div style={styles.fileMenuDivider} />
-          <div style={styles.fileMenuSectionTitle}>Recent Jobs</div>
-          {recentJobs.length ? recentJobs.slice(0, 4).map((job) => (
-            <button
-              key={job.id}
-              style={{ ...styles.fileMenuItem, ...styles.fileMenuRecentItem, ...(busy ? styles.fileMenuItemDisabled : {}) }}
-              disabled={busy}
-              onClick={async () => {
-                await Promise.resolve(onOpenRecentJob?.(job.id));
+          <div style={styles.fileMenuSectionTitle}>RECENT PLATFORM JOBS</div>
+          {recentJobs.length ? recentJobs.slice(0, 8).map((job, index) => (
+            <RecentFileMenuRow
+              key={job.key || job.id}
+              item={job}
+              kind="job"
+              active={index === 0}
+              busy={busy}
+              onOpen={async () => {
+                await Promise.resolve(onOpenRecentJob?.(job.key || job.id));
                 onClose();
               }}
-              role="menuitem"
-            >
-              <span>{job.jobName || "Saved estimate job"}</span>
-              <small>{formatTemplateDate(job.lastModified)}</small>
-            </button>
+              onRemove={() => onRemoveRecentJob?.(job.key || job.id)}
+            />
           )) : (
-            <div style={styles.fileMenuEmpty}>No recent jobs</div>
+            <div style={styles.fileMenuEmpty}>No recent project jobs</div>
           )}
+          <div style={styles.fileMenuDivider} />
+          <div style={styles.fileMenuSectionTitle}>RECENT LOCAL JOB FILES</div>
+          {recentLocalJobFiles.length ? recentLocalJobFiles.slice(0, 8).map((estimate) => (
+            <RecentFileMenuRow
+              key={estimate.id || estimate.key}
+              item={estimate}
+              kind="local-job-file"
+              busy={busy}
+              onOpen={async () => {
+                await Promise.resolve(onOpenRecentLocalJobFile?.(estimate.id || estimate.key));
+                onClose();
+              }}
+              onRemove={() => onRemoveRecentLocalJobFile?.(estimate.id || estimate.key)}
+            />
+          )) : (
+            <div style={styles.fileMenuEmpty}>No recent local job files</div>
+          )}
+      </OverlayMenuPortal>
+    </div>
+  );
+}
+
+function ProjectEstimateDocumentHeader({
+  projectName,
+  projectAddress,
+  saveStatus,
+  recoveredLabel,
+  contextIssue,
+  fileMenuOpen,
+  onToggleFileMenu,
+  onCloseFileMenu,
+  fileSections = [],
+}) {
+  const triggerRef = useRef(null);
+  return (
+    <header style={styles.projectEstimateDocumentHeader}>
+      <div style={styles.projectEstimateDocumentTitleGroup}>
+        <Link href="/modules/projects" style={styles.projectEstimateBackLink}>Back to Project Workspace</Link>
+        <div>
+          <h2 style={styles.projectEstimateDocumentTitle}>{projectName || "Project Estimate"}</h2>
+          <p style={styles.projectEstimateDocumentAddress}>{projectAddress || "No project address set"}</p>
         </div>
-      )}
+      </div>
+      <div style={styles.projectEstimateDocumentHeaderActions}>
+        {recoveredLabel ? <span style={styles.recoveredProjectEstimatePill}>{recoveredLabel}</span> : null}
+        {contextIssue ? <span style={styles.projectEstimateHeaderWarning}>{contextIssue}</span> : null}
+        <div style={styles.fileMenuWrap}>
+          <button
+            id="project-estimate-file-menu-button"
+            ref={triggerRef}
+            type="button"
+            style={styles.projectEstimateFileButton}
+            onClick={onToggleFileMenu}
+            aria-haspopup="menu"
+            aria-expanded={fileMenuOpen}
+          >
+            File
+          </button>
+          <OverlayMenuPortal
+            open={fileMenuOpen}
+            triggerRef={triggerRef}
+            id="project-estimate-file-menu"
+            labelledBy="project-estimate-file-menu-button"
+            onClose={onCloseFileMenu}
+            width={360}
+            style={styles.projectEstimateFileMenu}
+          >
+            {fileSections.map((section, sectionIndex) => (
+              <div key={section.title}>
+                {sectionIndex > 0 ? <div style={styles.fileMenuDivider} /> : null}
+                <div style={styles.fileMenuSectionTitle}>{section.title}</div>
+                {(section.items || []).map((item) => (
+                  <button
+                    key={`${section.title}-${item.label}`}
+                    type="button"
+                    style={styles.projectEstimateFileMenuItem}
+                    disabled={item.disabled}
+                    role="menuitem"
+                    onClick={async () => {
+                      await Promise.resolve(item.action?.());
+                      if (item.closeAfter !== false) onCloseFileMenu?.();
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </OverlayMenuPortal>
+        </div>
+        <span style={styles.projectEstimateSaveStatus}>{saveStatus || "Ready"}</span>
+      </div>
+    </header>
+  );
+}
+
+function ProjectEstimateEditorToolbar({
+  tool,
+  onTool,
+  editMode,
+  readonly,
+  selectedBlock,
+  zoom,
+  showGrid,
+  showGuides,
+  snapEnabled,
+  onToggleEditMode,
+  onAddBlock,
+  onUndo,
+  onRedo,
+  onMoveBlock,
+  onDuplicate,
+  onDelete,
+  onLock,
+  onAlign,
+  onZoom,
+  onFitPage,
+  onFitWidth,
+  onToggleGrid,
+  onToggleGuides,
+  onToggleSnap,
+}) {
+  const toolItems = [
+    ["select", "Select"],
+    ["text", "Text"],
+    ["image", "Image"],
+    ["shape", "Shape"],
+    ["divider", "Line"],
+    ["table", "Table"],
+    ["quote_field", "Dynamic Field"],
+    ["page_number", "Page Number"],
+    ["signature", "Signature"],
+  ];
+  const selectedLocked = selectedBlock?.design?.locked === true;
+  const runAddTool = (type) => {
+    onTool?.(type);
+    if (type !== "select") onAddBlock?.(type);
+  };
+  return (
+    <div className="proposal-builder-tools" style={styles.projectEstimateEditorToolbar}>
+      <div style={styles.projectEstimateToolbarGroup}>
+        <button type="button" title={editMode ? "Done Editing" : "Edit Page"} style={editMode ? styles.projectEstimateToolButtonActive : styles.projectEstimateToolButton} disabled={readonly} onClick={onToggleEditMode}>{editMode ? "Done" : "Edit"}</button>
+        {toolItems.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            title={label}
+            style={tool === value ? styles.projectEstimateToolButtonActive : styles.projectEstimateToolButton}
+            disabled={readonly}
+            onClick={() => runAddTool(value)}
+          >
+            {label}
+          </button>
+        ))}
+        <button type="button" title="Upload" style={styles.projectEstimateToolButton} disabled={readonly} onClick={() => onAddBlock?.("image")}>Upload</button>
+      </div>
+      <div style={styles.projectEstimateToolbarGroup}>
+        <button type="button" title="Undo" style={styles.projectEstimateToolButton} disabled={readonly} onClick={onUndo}>Undo</button>
+        <button type="button" title="Redo" style={styles.projectEstimateToolButton} disabled={readonly} onClick={onRedo}>Redo</button>
+        <button type="button" title="Bring Forward" style={styles.projectEstimateToolButton} disabled={readonly || !selectedBlock} onClick={() => onMoveBlock?.(selectedBlock.id, "front")}>Forward</button>
+        <button type="button" title="Send Backward" style={styles.projectEstimateToolButton} disabled={readonly || !selectedBlock} onClick={() => onMoveBlock?.(selectedBlock.id, "back")}>Back</button>
+        <button type="button" title="Lock or unlock" style={styles.projectEstimateToolButton} disabled={readonly || !selectedBlock} onClick={onLock}>{selectedLocked ? "Unlock" : "Lock"}</button>
+        <button type="button" title="Duplicate" style={styles.projectEstimateToolButton} disabled={readonly || !selectedBlock} onClick={onDuplicate}>Duplicate</button>
+        <button type="button" title="Delete" style={styles.projectEstimateToolButtonDanger} disabled={readonly || !selectedBlock} onClick={onDelete}>Delete</button>
+      </div>
+      <div style={styles.projectEstimateToolbarGroup}>
+        {["left", "center", "right", "top", "middle", "bottom"].map((align) => (
+          <button key={align} type="button" title={`Align ${align}`} style={styles.projectEstimateToolButton} disabled={readonly || !selectedBlock} onClick={() => onAlign?.(align)}>{align}</button>
+        ))}
+      </div>
+      <div style={styles.projectEstimateToolbarGroup}>
+        <button type="button" title="Zoom out" style={styles.projectEstimateToolButton} onClick={() => onZoom?.(Number(zoom || 100) - 10)}>-</button>
+        <span style={styles.projectEstimateZoomLabel}>{Math.round(Number(zoom || 100))}%</span>
+        <button type="button" title="Zoom in" style={styles.projectEstimateToolButton} onClick={() => onZoom?.(Number(zoom || 100) + 10)}>+</button>
+        <button type="button" title="Fit Page" style={styles.projectEstimateToolButton} onClick={onFitPage}>Fit Page</button>
+        <button type="button" title="Fit Width" style={styles.projectEstimateToolButton} onClick={onFitWidth}>Fit Width</button>
+        <button type="button" title="Show Grid" style={showGrid ? styles.projectEstimateToolButtonActive : styles.projectEstimateToolButton} onClick={onToggleGrid}>Grid</button>
+        <button type="button" title="Show Guides" style={showGuides ? styles.projectEstimateToolButtonActive : styles.projectEstimateToolButton} onClick={onToggleGuides}>Guides</button>
+        <button type="button" title="Snap On/Off" style={snapEnabled ? styles.projectEstimateToolButtonActive : styles.projectEstimateToolButton} onClick={onToggleSnap}>Snap</button>
+      </div>
+    </div>
+  );
+}
+
+function RecentFileMenuRow({ item = {}, kind = "job", active = false, busy = false, onOpen, onRemove }) {
+  const title = kind === "job"
+    ? item.projectName || item.name || "Unnamed project"
+    : item.fileName || item.openedFileName || item.name || "Unnamed job file";
+  const detailLines = kind === "job"
+    ? [
+      item.clientName ? `Client: ${item.clientName}` : "Client: Not recorded",
+      item.jobNumber ? `Job #: ${item.jobNumber}` : "Job #: Not recorded",
+      item.siteAddress ? `Address: ${item.siteAddress}` : "Address: Not recorded",
+      `Last opened: ${formatTemplateDate(item.lastOpenedAt || item.savedAt)}`,
+    ]
+    : kind === "local-job-file"
+      ? [
+        item.clientName ? `Client: ${item.clientName}` : "Client: Not recorded",
+        item.jobName ? `Job: ${item.jobName}` : "Job: Not recorded",
+        `Last opened: ${formatTemplateDate(item.openedAt || item.lastModified)}`,
+      ]
+    : [
+      item.attachmentLabel || (item.isAttached ? item.attachedProjectName || item.projectName || "Attached job recorded" : "Unattached estimate"),
+      `Last saved/opened: ${formatTemplateDate(item.lastOpenedAt || item.savedAt)}`,
+    ];
+  return (
+    <div style={styles.fileMenuRecentShell}>
+      <button
+        type="button"
+        style={{ ...styles.fileMenuItem, ...styles.fileMenuRecentItem, ...(busy ? styles.fileMenuItemDisabled : {}) }}
+        disabled={busy}
+        onClick={onOpen}
+        role="menuitem"
+      >
+        <span style={styles.fileMenuRecentTitleLine}>
+          <strong>{title}</strong>
+          {active && kind === "job" ? <small style={styles.fileMenuOpenBadge}>Open</small> : null}
+        </span>
+        {detailLines.map((line) => <small key={line}>{line}</small>)}
+      </button>
+      <button
+        type="button"
+        style={styles.fileMenuRemoveButton}
+        disabled={busy}
+        role="menuitem"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove?.();
+        }}
+      >
+        Remove from recent list
+      </button>
     </div>
   );
 }
@@ -13247,36 +15499,88 @@ function NewJobModal({ form, onChange, busy = false, onClose, onCreate }) {
   );
 }
 
-function JobPickerModal({ jobs = [], message = "", busy = false, onRefresh, onOpen, onClose }) {
+function JobPickerModal({ jobs = [], status = {}, message = "", busy = false, openingJobKey = "", error = null, onRefresh, onOpen, onClose }) {
+  const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const q = search.trim().toLowerCase();
+  const visibleJobs = jobs.filter((job) => {
+    if (!showArchived && job.isArchived) return false;
+    if (!q) return true;
+    const haystack = [
+      job.projectName,
+      job.name,
+      job.jobNumber,
+      job.clientName,
+      job.siteAddress,
+      job.status,
+      job.projectId,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(q);
+  });
+  const statusState = status?.state || "idle";
+  const emptyMessage = statusState === "waiting_for_workspace"
+    ? "Loading workspace..."
+    : statusState === "loading"
+      ? "Loading jobs..."
+      : statusState === "error"
+        ? "Unable to load jobs"
+        : "No jobs exist in this workspace";
   return (
     <div style={styles.modalBackdrop}>
-      <div style={styles.jobPickerModal} role="dialog" aria-modal="true" aria-label="Open saved estimate job">
+      <div style={styles.jobPickerModal} role="dialog" aria-modal="true" aria-label="Open project job">
         <div style={styles.jobPickerHeader}>
           <div>
-            <div style={styles.eyebrow}>Open Job</div>
-            <h2 style={styles.jobPickerTitle}>Saved Estimate Jobs</h2>
+            <div style={styles.eyebrow}>Open Platform Job</div>
+            <h2 style={styles.jobPickerTitle}>Open Platform Job</h2>
           </div>
           <button type="button" style={styles.secondaryButton} onClick={onClose}>Close</button>
         </div>
         <div style={styles.jobPickerActions}>
+          <input style={styles.searchInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search jobs, clients, job numbers or addresses" />
+          <label style={styles.jobPickerToggle}>
+            <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
+            <span>Show archived</span>
+          </label>
           <button type="button" style={styles.secondaryButton} onClick={onRefresh} disabled={busy}>Refresh List</button>
         </div>
         {message && <div style={styles.jobPickerMessage}>{message}</div>}
-        {!jobs.length ? (
-          <div style={styles.jobPickerEmpty}>No saved jobs found</div>
+        {error ? (
+          <div style={styles.jobPickerError} role="alert">
+            <strong>Open Job failed</strong>
+            <span>Failed operation: {error.operation || "open project job"}</span>
+            <span>Project ID: {error.projectId || "Not recorded"}</span>
+            <span>HTTP/API status: {error.status || "unknown"}</span>
+            <span>Message: {error.message || "Saved job could not be opened."}</span>
+            <button type="button" style={styles.secondaryButton} onClick={() => error.retryKey && onOpen?.(error.retryKey)} disabled={busy}>
+              Retry Open Job
+            </button>
+          </div>
+        ) : null}
+        {!visibleJobs.length ? (
+          <div style={styles.jobPickerEmpty}>{jobs.length ? "No jobs match the current search or filters." : emptyMessage}</div>
         ) : (
           <div style={styles.jobPickerList}>
-            {jobs.map((job) => (
+            {visibleJobs.map((job) => (
               <button
                 key={job.key}
                 type="button"
-                style={styles.jobPickerRow}
+                style={{ ...styles.jobPickerRow, ...(job.currentlyOpen ? styles.jobPickerRowCurrent : {}) }}
                 disabled={busy}
                 onClick={() => onOpen?.(job.key)}
               >
-                <strong>{job.name || job.projectName || "Saved estimate job"}</strong>
-                <span>{job.openedFileName || job.key}</span>
-                <small>Saved {formatTemplateDate(job.savedAt)}</small>
+                <span style={styles.jobPickerRowHeader}>
+                  <strong>{job.projectName || job.name || "Unnamed project"}</strong>
+                  <span style={styles.jobPickerOpenButton}>{openingJobKey === job.key ? "Opening..." : job.currentlyOpen ? "Currently Open" : "Open Job"}</span>
+                </span>
+                <span>{job.projectId ? `Project ID: ${job.projectId}` : "Project ID: Not recorded"}</span>
+                <small>{job.jobNumber ? `Job #: ${job.jobNumber}` : "Job #: Not recorded"}</small>
+                <small>{job.clientName ? `Client: ${job.clientName}` : "Client: Not recorded"}</small>
+                <small>{job.siteAddress ? `Address: ${job.siteAddress}` : "Address: Not recorded"}</small>
+                <small>{job.status ? `Status: ${job.status}` : "Status: Not recorded"}</small>
+                <small>Existing Project Estimate: {job.hasProjectEstimate ? "Yes" : "No"}</small>
+                <small>Existing Estimate Builder workbook: {job.hasEstimateWorkbook ? "Yes" : "No"}</small>
+                {!job.hasProjectEstimate ? <small>No Project Estimate yet - opening this job will create one from the selected template.</small> : null}
+                <small>Last modified {formatTemplateDate(job.lastModified || job.savedAt)}</small>
               </button>
             ))}
           </div>
@@ -13351,7 +15655,7 @@ async function saveJobFile(sheet) {
     savedAt,
     workbook: compactWorkbookForStorage({ ...sheet.workbook, savedAt }),
   };
-  const fileName = `${jobFileName(sheet.workbook)}.json`;
+  const fileName = `${jobFileName(sheet.workbook)}.gr8job`;
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: "application/json;charset=utf-8" });
   if (typeof window.showSaveFilePicker === "function") {
@@ -13360,8 +15664,8 @@ async function saveJobFile(sheet) {
         suggestedName: fileName,
         types: [
           {
-            description: "Estimate Builder job file",
-            accept: { "application/json": [".json"] },
+            description: "GR8 job file",
+            accept: { "application/json": [".gr8job"] },
           },
         ],
       });
@@ -13429,6 +15733,92 @@ function workbookDataValue(workbook, key) {
     if (value !== undefined && value !== null && value !== "") return value;
   }
   return "";
+}
+
+async function resolvePlatformProjectForOpenedJob({ workspaceId = "", fileName = "", job = {}, workbook = {} } = {}) {
+  if (!workspaceId) return null;
+  const sourceFileName = String(fileName || workbook?.openedFileName || workbook?.sourceFileName || "").trim();
+  const sourceBaseName = sourceFileName.replace(/\.[^.\\/]+$/, "");
+  const meta = workbook?.jobFileMeta || {};
+  const registeredJob = workbook?.registeredJob || {};
+  const terms = [
+    sourceFileName,
+    sourceBaseName,
+    job?.jobName,
+    job?.jobNumber,
+    job?.clientName,
+    workbookDataValue(workbook, "projectName"),
+    workbookDataValue(workbook, "jobNumber"),
+    workbookDataValue(workbook, "quoteNumber"),
+    workbookDataValue(workbook, "clientName"),
+    workbookDataValue(workbook, "customerName"),
+    meta.jobName,
+    meta.jobNumber,
+    meta.clientName,
+    registeredJob.jobName,
+    registeredJob.jobNumber,
+    registeredJob.clientName,
+  ].map((value) => String(value || "").trim()).filter(Boolean);
+  if (!terms.length) return null;
+
+  const { data, error } = await supabase
+    .from("builder_commercial_projects")
+    .select("id, workspace_id, project_name, client_name, site_address, source_quote_number, source_workbook_file_name, updated_at")
+    .eq("workspace_id", workspaceId)
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  if (error) throw new Error(error.message || "Unable to resolve platform project for this job file.");
+
+  const normalise = (value) => String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const slugValue = (value) => normalise(value).replace(/[^a-z0-9]+/g, "");
+  const tokenise = (value) => normalise(value)
+    .replace(/\.[a-z0-9]+$/i, "")
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && token !== "gr8job" && token !== "json");
+  const sourceSlug = slugValue(sourceFileName);
+  const candidates = (data || []).map((project) => {
+    const projectValues = [
+      project.source_workbook_file_name,
+      project.source_quote_number,
+      project.project_name,
+      project.client_name,
+      project.site_address,
+    ];
+    let score = 0;
+    if (sourceSlug && slugValue(project.source_workbook_file_name) === sourceSlug) score += 100;
+    if (project.client_name) score += 20;
+    if (project.site_address) score += 10;
+    if (project.source_quote_number) score += 10;
+    if (normalise(project.project_name) === "estimate builder project") score -= 100;
+    if (!project.client_name && !project.site_address) score -= 40;
+    for (const term of terms) {
+      const exact = normalise(term);
+      const termSlug = slugValue(term);
+      const termTokens = tokenise(term);
+      if (!exact && !termSlug) continue;
+      if (projectValues.some((value) => normalise(value) === exact)) score += 30;
+      if (termSlug && projectValues.some((value) => {
+        const candidate = slugValue(value);
+        return candidate && (candidate.includes(termSlug) || termSlug.includes(candidate));
+      })) score += 10;
+      if (termTokens.length >= 2 && projectValues.some((value) => {
+        const candidateTokens = new Set(tokenise(value));
+        return termTokens.every((token) => candidateTokens.has(token));
+      })) score += 25;
+    }
+    return { project, score };
+  }).filter((item) => item.score > 0).sort((a, b) => b.score - a.score);
+  if (!candidates.length) return null;
+
+  const projectIds = candidates.slice(0, 10).map((item) => item.project.id);
+  const { data: instances } = await supabase
+    .from("project_estimate_instances")
+    .select("id, project_id, updated_at")
+    .eq("workspace_id", workspaceId)
+    .in("project_id", projectIds);
+  const instanceProjects = new Set((instances || []).map((row) => row.project_id));
+  return candidates.find((item) => instanceProjects.has(item.project.id))?.project || candidates[0].project;
 }
 
 function csvRowsForPage(sheet, page) {
@@ -15907,6 +18297,7 @@ const styles = {
   navButton: { width: "100%", border: "2px solid #cbd5e1", borderRadius: 14, padding: "11px 12px", marginBottom: 10, textAlign: "left", fontSize: 15, fontWeight: 900, cursor: "pointer", display: "grid", gridTemplateColumns: "38px minmax(0, 1fr)", gap: 10, alignItems: "center", transition: "transform 180ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease" },
   navButtonIcon: { width: 38, height: 38, borderRadius: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", transition: "transform 180ms ease" },
   navButtonActive: { background: "#0f766e", borderColor: "#0f766e", color: "#ffffff" },
+  navDivider: { width: "100%", height: 4, borderRadius: 999, background: "#111827", margin: "14px 0 18px", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.20)" },
   navNote: { marginTop: 12, color: "#475569", fontSize: 16, lineHeight: 1.5 },
   dashboardShell: { display: "grid", gap: 22 },
   dashboardHero: { border: "1px solid rgba(255,255,255,0.55)", color: "#ffffff", borderRadius: 24, padding: 26, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 22, alignItems: "center", boxShadow: "0 28px 70px rgba(37, 99, 235, 0.22)", overflow: "hidden" },
@@ -15927,6 +18318,10 @@ const styles = {
   dashboardInput: { width: "100%", boxSizing: "border-box", border: "1px solid #94a3b8", borderRadius: 10, padding: "11px 12px", color: "#0f172a", background: "#ffffff", fontSize: 16, fontWeight: 800 },
   dashboardReadOnly: { minHeight: 42, boxSizing: "border-box", border: "1px solid #e2e8f0", borderRadius: 10, padding: "11px 12px", color: "#0f172a", background: "#f8fafc", fontSize: 16, fontWeight: 900 },
   dashboardUnavailable: { minHeight: 42, boxSizing: "border-box", border: "1px dashed #cbd5e1", borderRadius: 10, padding: "11px 12px", color: "#64748b", background: "#f8fafc", fontSize: 16, fontWeight: 800 },
+  dashboardSectionHeader: { display: "grid", gap: 4, margin: "2px 0 -4px" },
+  dashboardSectionTitle: { margin: 0, color: "#0f172a", fontSize: 26, lineHeight: 1.1, fontWeight: 950 },
+  dashboardSectionSubtitle: { margin: 0, color: "#475569", fontSize: 16, lineHeight: 1.4, fontWeight: 700 },
+  dashboardFullDivider: { width: "100%", height: 8, background: "#111827", borderRadius: 999, margin: "24px 0 22px", boxShadow: "0 14px 30px rgba(15, 23, 42, 0.22)" },
   dashboardCardGrid: { display: "grid", gridTemplateColumns: "repeat(5, minmax(190px, 1fr))", gap: 18 },
   dashboardWorkspaceCard: { minHeight: 188, border: "1px solid #d8e0ea", color: "#0f172a", borderRadius: 20, padding: 20, cursor: "pointer", textAlign: "left", display: "grid", gridTemplateColumns: "64px minmax(0, 1fr)", gridTemplateRows: "auto 1fr", gap: "15px 14px", boxShadow: "0 14px 34px rgba(15, 23, 42, 0.08)", transition: "transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease" },
   dashboardCardIcon: { width: 62, height: 62, borderRadius: 18, color: "#ffffff", display: "inline-flex", alignItems: "center", justifyContent: "center", border: "1px solid #bae6fd", boxShadow: "0 16px 28px rgba(15, 23, 42, 0.14)", transition: "transform 180ms ease" },
@@ -15969,48 +18364,63 @@ const styles = {
   workspacePlaceholder: { border: "1px dashed #cbd5e1", background: "#f8fafc", color: "#475569", borderRadius: 8, padding: 18, fontWeight: 800, lineHeight: 1.5 },
   floatingSaveJob: { position: "sticky", top: 0, zIndex: 4, marginTop: 14, background: "#ffffff", padding: "8px 0", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0" },
   floatingSaveJobButton: { width: "100%", background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 7, padding: "10px 11px", fontWeight: 900, cursor: "pointer" },
-  compactControlRow: { position: "sticky", top: 12, zIndex: 5, marginBottom: 12, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8 },
-  topbar: { position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.45)", borderRadius: 24, padding: "22px 24px", marginBottom: 22, display: "grid", gridTemplateColumns: "minmax(420px, 1fr) minmax(210px, 300px) minmax(360px, 0.95fr)", gap: 18, alignItems: "center", boxShadow: "0 28px 70px rgba(15, 23, 42, 0.18)", color: "#ffffff" },
-  pageBannerTitleGroup: { display: "grid", gridTemplateColumns: "72px minmax(0, 1fr)", gap: 18, alignItems: "center", minWidth: 0 },
-  pageBannerIcon: { width: 72, height: 72, borderRadius: 20, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.24)", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.22)" },
-  pageBannerEyebrow: { color: "rgba(255,255,255,0.78)", fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" },
-  pageTitle: { margin: "1px 0 0", color: "#ffffff", fontSize: 48, lineHeight: 1.05, fontWeight: 600 },
-  pageBannerSubtitle: { margin: "5px 0 0", color: "rgba(255,255,255,0.88)", fontSize: 18, lineHeight: 1.35, fontWeight: 650 },
-  openFileBanner: { justifySelf: "stretch", minWidth: 0, textAlign: "left", border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.18)", borderRadius: 18, padding: "13px 14px", backdropFilter: "blur(14px)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.18)" },
-  openFileLabel: { display: "block", color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" },
-  openFileName: { display: "block", color: "#ffffff", fontSize: 18, fontWeight: 850, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  newJobButton: { display: "inline-block", marginTop: 10, padding: "8px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.42)", background: "rgba(255,255,255,0.94)", color: "#0f172a", fontSize: 13, fontWeight: 900, letterSpacing: "0.02em", textDecoration: "none", boxShadow: "0 6px 18px rgba(15, 23, 42, 0.18)" },
-  openJobBanner: { minWidth: 0, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 },
-  openJobField: { minWidth: 0, border: "1px solid rgba(255,255,255,0.28)", background: "rgba(255,255,255,0.16)", borderRadius: 14, padding: "10px 12px", display: "grid", gap: 3, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)" },
-  openJobFieldWide: { gridColumn: "1 / -1" },
-  openJobLabel: { color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" },
-  openJobValue: { color: "#ffffff", fontSize: 16, lineHeight: 1.25, fontWeight: 900, overflowWrap: "anywhere" },
+  topbar: { position: "relative", zIndex: 1, border: "1px solid rgba(255,255,255,0.38)", borderRadius: 14, padding: "13px 18px", marginBottom: 16, display: "block", boxShadow: "0 16px 38px rgba(15, 23, 42, 0.16)", color: "#ffffff" },
+  projectInfoStrip: { minWidth: 0, display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px 18px" },
+  projectInfoName: { color: "#ffffff", fontSize: 24, lineHeight: 1.16, fontWeight: 950, overflowWrap: "anywhere" },
+  projectInfoAddress: { color: "rgba(255,255,255,0.9)", fontSize: 15, lineHeight: 1.35, fontWeight: 750, overflowWrap: "anywhere" },
+  unattachedEstimateNotice: { margin: "-10px 0 18px", border: "1px solid #fbbf24", background: "#fffbeb", color: "#92400e", borderRadius: 12, padding: 14, display: "grid", gap: 8, fontWeight: 800 },
+  unattachedEstimateActions: { display: "flex", flexWrap: "wrap", gap: 8 },
   topControls: { minWidth: 0, display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" },
-  bannerBackButton: { minHeight: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#0f172a", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: "8px 12px", fontSize: 14, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)" },
+  bannerBackButton: { minHeight: 38, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#0f172a", border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 12, padding: "8px 12px", fontSize: 14, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)", cursor: "pointer" },
   lockedBadge: { background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", borderRadius: 999, padding: "8px 12px", fontSize: 16, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" },
   previewFieldset: { border: 0, padding: 0, margin: 0, minWidth: 0 },
   fileMenuWrap: { position: "relative", display: "inline-flex" },
   fileMenuButton: { background: "#0f766e", color: "#ffffff", border: "1px solid #0f766e", borderRadius: 12, padding: "9px 14px", fontWeight: 900, cursor: "pointer", minWidth: 76, boxShadow: "0 8px 18px rgba(15, 118, 110, 0.18)" },
-  fileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 20, minWidth: 190, background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 6 },
+  fileMenu: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 6 },
   fileMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: 0, borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 600, cursor: "pointer" },
   fileMenuItemPrimary: { background: "#ecfdf5", color: "#0f766e" },
   fileMenuItemDisabled: { opacity: 0.55, cursor: "wait" },
   fileMenuDivider: { height: 1, background: "#dbe4ef", margin: "6px 0" },
   fileMenuSectionTitle: { padding: "6px 10px 4px", color: "#64748b", fontSize: 11, fontWeight: 900, letterSpacing: "0.05em", textTransform: "uppercase" },
   fileMenuRecentItem: { display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, lineHeight: 1.25 },
+  fileMenuRecentShell: { border: "1px solid #e2e8f0", background: "#f8fafc", borderRadius: 8, margin: "4px 0", overflow: "hidden" },
+  fileMenuRecentTitleLine: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 },
+  fileMenuOpenBadge: { border: "1px solid #99f6e4", background: "#ecfdf5", color: "#0f766e", borderRadius: 999, padding: "2px 7px", fontWeight: 900 },
+  fileMenuRemoveButton: { width: "100%", border: 0, borderTop: "1px solid #e2e8f0", background: "#ffffff", color: "#64748b", padding: "6px 10px", textAlign: "left", fontSize: 12, fontWeight: 800, cursor: "pointer" },
   fileMenuEmpty: { padding: "8px 10px", color: "#64748b", fontSize: 12, fontWeight: 700 },
-  modalBackdrop: { position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15, 23, 42, 0.45)" },
-  jobPickerModal: { width: "min(760px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
-  newJobModal: { width: "min(820px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
+  projectEstimateDocumentHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, border: "1px solid #dbe4ef", background: "#ffffff", borderRadius: 10, padding: "12px 14px", boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)", color: "#0f172a" },
+  projectEstimateDocumentTitleGroup: { minWidth: 0, display: "flex", alignItems: "center", gap: 14 },
+  projectEstimateBackLink: { color: "#0f766e", textDecoration: "none", fontWeight: 900, fontSize: 13, whiteSpace: "nowrap" },
+  projectEstimateDocumentTitle: { margin: 0, fontSize: 20, lineHeight: 1.12, fontWeight: 950, color: "#0f172a", overflowWrap: "anywhere" },
+  projectEstimateDocumentAddress: { margin: "3px 0 0", color: "#64748b", fontSize: 13, lineHeight: 1.25, fontWeight: 750, overflowWrap: "anywhere" },
+  projectEstimateDocumentHeaderActions: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" },
+  projectEstimateFileButton: { height: 36, minWidth: 72, border: "1px solid #0f766e", background: "#0f766e", color: "#ffffff", borderRadius: 8, padding: "0 13px", fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 18px rgba(15, 118, 110, 0.16)" },
+  projectEstimateFileMenu: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 20px 55px rgba(15, 23, 42, 0.22)", padding: 7, maxHeight: "min(720px, calc(100vh - 90px))", overflowY: "auto" },
+  projectEstimateFileMenuItem: { width: "100%", border: 0, background: "#ffffff", color: "#0f172a", borderRadius: 6, padding: "8px 9px", textAlign: "left", fontWeight: 800, cursor: "pointer" },
+  projectEstimateSaveStatus: { border: "1px solid #dbe4ef", background: "#f8fafc", color: "#334155", borderRadius: 999, padding: "6px 9px", fontSize: 12, fontWeight: 900, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  projectEstimateHeaderWarning: { border: "1px solid #fcd34d", background: "#fffbeb", color: "#92400e", borderRadius: 8, padding: "6px 9px", fontSize: 12, fontWeight: 850, maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  modalBackdrop: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(15, 23, 42, 0.45)" },
+  jobPickerModal: { position: "relative", zIndex: APP_LAYERS.modalDialog, width: "min(760px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
+  newJobModal: { position: "relative", zIndex: APP_LAYERS.modalDialog, width: "min(820px, calc(100vw - 40px))", maxHeight: "min(720px, calc(100vh - 40px))", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, boxShadow: "0 24px 70px rgba(15, 23, 42, 0.28)", padding: 18, color: "#0f172a" },
   newJobGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 14 },
   jobPickerHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, marginBottom: 12 },
   jobPickerTitle: { margin: 0, color: "#0f172a", fontSize: 26, fontWeight: 900 },
-  jobPickerActions: { display: "flex", justifyContent: "flex-end", marginBottom: 10 },
+  jobPickerActions: { display: "flex", justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 },
   jobPickerMessage: { padding: "9px 10px", border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 8, fontWeight: 800, marginBottom: 10 },
+  jobPickerError: { display: "grid", gap: 5, padding: "10px 12px", border: "1px solid #fecaca", background: "#fff1f2", color: "#991b1b", borderRadius: 8, fontWeight: 800, marginBottom: 10 },
   jobPickerEmpty: { padding: 24, border: "1px dashed #cbd5e1", borderRadius: 8, textAlign: "center", color: "#64748b", fontWeight: 800 },
   jobPickerList: { display: "grid", gap: 8 },
   jobPickerRow: { border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#0f172a", padding: "12px 14px", display: "grid", gap: 3, textAlign: "left", cursor: "pointer" },
+  jobPickerRowCurrent: { borderColor: "#0f766e", background: "#f0fdfa", boxShadow: "0 12px 28px rgba(15, 118, 110, 0.12)" },
+  jobPickerRowHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  jobPickerOpenButton: { border: "1px solid #0f766e", background: "#0f766e", color: "#ffffff", borderRadius: 999, padding: "4px 9px", fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" },
+  jobPickerToggle: { display: "inline-flex", alignItems: "center", gap: 7, color: "#334155", fontSize: 12, fontWeight: 800 },
   fileErrorBanner: { marginTop: 10, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontWeight: 800 },
+  localJobFilePrompt: { marginTop: 10, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#14532d", borderRadius: 10, padding: 12, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)" },
+  localJobFilePromptActions: { display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" },
+  workbookSheetTabs: { margin: "0 0 12px", display: "inline-flex", alignItems: "center", gap: 4, border: "1px solid #cbd5e1", background: "#ffffff", borderRadius: 8, padding: 4, boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)" },
+  workbookSheetTab: { minHeight: 34, border: "1px solid transparent", background: "transparent", color: "#334155", borderRadius: 6, padding: "7px 13px", fontSize: 14, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap" },
+  workbookSheetTabActive: { borderColor: "#0f766e", background: "#0f766e", color: "#ffffff", boxShadow: "0 8px 18px rgba(15, 118, 110, 0.16)" },
   saveProgress: { minHeight: 38, display: "inline-flex", alignItems: "center", gap: 8, border: "1px solid #99f6e4", background: "#ecfdf5", color: "#0f766e", borderRadius: 8, padding: "7px 10px", fontSize: 13, fontWeight: 900, whiteSpace: "nowrap" },
   saveProgressError: { borderColor: "#fecaca", background: "#fff1f2", color: "#b91c1c" },
   saveSpinner: { width: 10, height: 10, borderRadius: 999, background: "#0f766e", boxShadow: "0 0 0 4px rgba(15, 118, 110, 0.14)" },
@@ -16019,8 +18429,8 @@ const styles = {
   templateFileButton: { width: 190, maxWidth: 190, background: "#fff7ed", color: "#9a3412", border: "1px solid #fed7aa", borderRadius: 12, padding: "7px 10px", fontWeight: 900, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, whiteSpace: "nowrap", overflow: "hidden", boxShadow: "0 8px 18px rgba(154, 52, 18, 0.10)" },
   templateFileButtonLabel: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
   templateFileButtonName: { maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" },
-  templateFileMenuSimple: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, width: 300, maxWidth: "calc(100vw - 32px)", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10, display: "grid", gap: 10 },
-  templateFileMenu: { position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 30, width: 360, maxWidth: "calc(100vw - 32px)", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10 },
+  templateFileMenuSimple: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10, display: "grid", gap: 10 },
+  templateFileMenu: { background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 16px 35px rgba(15, 23, 42, 0.16)", padding: 10 },
   templateFileHeader: { borderBottom: "1px solid #e2e8f0", padding: "2px 2px 9px", marginBottom: 8, display: "flex", flexDirection: "column", gap: 2, color: "#0f172a" },
   templateMenuItem: { width: "100%", background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 800, cursor: "pointer" },
   templateMenuDanger: { width: "100%", background: "#fff1f2", color: "#b91c1c", border: "1px solid #fecaca", borderRadius: 6, padding: "9px 10px", textAlign: "left", fontWeight: 800, cursor: "pointer" },
@@ -16039,8 +18449,8 @@ const styles = {
   templateActionRow: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
   templateEmptyInline: { color: "#64748b", fontWeight: 800, padding: "10px 2px", marginBottom: 8 },
   templateInlineMessage: { marginTop: 8, background: "#ecfdf5", color: "#0f766e", border: "1px solid #bbf7d0", borderRadius: 6, padding: "8px 9px", fontWeight: 800 },
-  modalOverlay: { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 },
-  templateModal: { width: "min(1120px, 96vw)", maxHeight: "92vh", overflow: "hidden", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 24px 70px rgba(15,23,42,0.28)", display: "flex", flexDirection: "column" },
+  modalOverlay: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, background: "rgba(15,23,42,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 },
+  templateModal: { position: "relative", zIndex: APP_LAYERS.modalDialog, width: "min(1120px, 96vw)", maxHeight: "92vh", overflow: "hidden", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 8, boxShadow: "0 24px 70px rgba(15,23,42,0.28)", display: "flex", flexDirection: "column" },
   templateModalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 14, padding: "16px 18px", borderBottom: "1px solid #e2e8f0" },
   templateModalTitle: { margin: "3px 0 0", color: "#0f172a", fontSize: 28, fontWeight: 800 },
   modalCloseButton: { border: "1px solid #cbd5e1", background: "#f8fafc", color: "#0f172a", borderRadius: 7, padding: "8px 12px", fontWeight: 700, cursor: "pointer" },
@@ -16251,8 +18661,10 @@ const styles = {
   fieldWrap: { display: "flex", flexDirection: "column", gap: 5, color: "#475569", fontSize: 13, fontWeight: 900 },
   proposalBuilderShell: { display: "flex", flexDirection: "column", gap: 12, minHeight: 760 },
   proposalBuilderToolbar: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#0f172a", color: "#ffffff", border: "1px solid #1e293b", borderRadius: 10, padding: 10 },
+  projectEstimateModeBadge: { border: "1px solid #bfdbfe", background: "#eff6ff", color: "#1d4ed8", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 950 },
   proposalBuilderStatus: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#075985", borderRadius: 8, padding: "9px 12px", fontWeight: 800, whiteSpace: "pre-wrap", overflowWrap: "anywhere" },
-  proposalBuilderLayout: { display: "grid", gridTemplateColumns: "230px minmax(680px, 1fr) 330px", gap: 12, alignItems: "start" },
+  recoveredProjectEstimatePill: { border: "1px solid #bbf7d0", background: "#ecfdf5", color: "#047857", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 900 },
+  proposalBuilderLayout: { display: "grid", gridTemplateColumns: "240px minmax(720px, 1fr) 340px", gap: 12, alignItems: "start" },
   proposalPreviewLayout: { display: "grid", gridTemplateColumns: "1fr", gap: 12 },
   proposalBuilderSidebar: { position: "sticky", top: 90, maxHeight: "calc(100vh - 110px)", overflowY: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 10 },
   projectEstimatePageControls: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, borderTop: "1px solid #e2e8f0", paddingTop: 8, marginBottom: 8 },
@@ -16261,7 +18673,16 @@ const styles = {
   proposalPageListButtonActive: { background: "#0f3f75", border: "1px solid #0f3f75", color: "#ffffff" },
   proposalBlockPalette: { marginTop: 16, borderTop: "1px solid #e2e8f0", paddingTop: 12, display: "grid", gap: 7 },
   proposalBlockAddButton: { border: "1px solid #bfdbfe", borderRadius: 8, background: "#eff6ff", color: "#1e3a8a", padding: "9px 10px", textAlign: "left", fontWeight: 900, cursor: "pointer" },
-  proposalBuilderCanvas: { display: "flex", flexDirection: "column", alignItems: "center", gap: 18, minWidth: 0, background: "#dbe4ee", border: "1px solid #94a3b8", borderRadius: 10, padding: 18, overflow: "auto" },
+  proposalBuilderCanvas: { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 10, minWidth: 0, background: "#dbe4ee", border: "1px solid #94a3b8", borderRadius: 10, padding: 12, overflow: "hidden" },
+  projectEstimateEditorToolbar: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 8, padding: 8, boxShadow: "0 8px 18px rgba(15,23,42,0.08)" },
+  projectEstimateToolbarGroup: { display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" },
+  projectEstimateToolButton: { minHeight: 30, border: "1px solid #cbd5e1", background: "#f8fafc", color: "#0f172a", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontWeight: 900, cursor: "pointer" },
+  projectEstimateToolButtonActive: { minHeight: 30, border: "1px solid #0f766e", background: "#ecfdf5", color: "#0f766e", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontWeight: 950, cursor: "pointer" },
+  projectEstimateToolButtonDanger: { minHeight: 30, border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontWeight: 900, cursor: "pointer" },
+  projectEstimateZoomLabel: { minWidth: 44, textAlign: "center", color: "#334155", fontSize: 12, fontWeight: 950 },
+  projectEstimateCanvasViewport: { minHeight: 640, maxHeight: "calc(100vh - 250px)", overflow: "auto", display: "grid", placeItems: "start center", padding: 24, borderRadius: 8, border: "1px solid #cbd5e1", background: "#e2e8f0" },
+  projectEstimateCanvasViewportGrid: { backgroundImage: "linear-gradient(rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.08) 1px, transparent 1px)", backgroundSize: "24px 24px" },
+  projectEstimateCanvasZoomFrame: { transformOrigin: "top center", transition: "transform 120ms ease", display: "inline-block" },
   proposalAddElementWrap: { position: "relative", display: "inline-flex" },
   projectEstimateAddElementMenu: { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 80, width: 230, display: "grid", gap: 4, background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 8, padding: 8, boxShadow: "0 18px 45px rgba(15,23,42,0.22)" },
   projectEstimateVisualEditorFrame: { position: "relative", width: 794, minHeight: 1123, flex: "0 0 auto" },
@@ -16272,19 +18693,21 @@ const styles = {
   projectEstimateElementDimensions: { position: "absolute", right: 0, bottom: -22, background: "#0f172a", color: "#ffffff", borderRadius: 4, padding: "2px 5px", fontSize: 10, fontWeight: 800 },
   projectEstimateToolbarButton: { border: "1px solid #cbd5e1", background: "#ffffff", color: "#0f172a", borderRadius: 6, padding: "5px 8px", fontSize: 11, fontWeight: 900, cursor: "pointer" },
   projectEstimateLinkedIndicator: { border: "1px solid #bae6fd", background: "#eff6ff", color: "#075985", borderRadius: 6, padding: "6px 8px", fontSize: 12, fontWeight: 900 },
-  projectEstimateAdminModalOverlay: { position: "fixed", inset: 0, zIndex: 2600, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 18 },
+  projectEstimateAdminModalOverlay: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 18 },
   projectEstimateAdminModal: { width: "min(520px, 94vw)", background: "#ffffff", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: 10, padding: 18, display: "grid", gap: 12, boxShadow: "0 24px 70px rgba(15,23,42,0.34)" },
   projectEstimateAdminModalActions: { display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" },
-  projectEstimateInspectorTabs: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", padding: 4 },
+  projectEstimateInspectorTabs: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", padding: 4 },
   projectEstimateInspectorTab: { border: 0, borderRadius: 6, background: "transparent", color: "#475569", padding: "8px 10px", fontWeight: 950, cursor: "pointer" },
   projectEstimateInspectorTabActive: { border: 0, borderRadius: 6, background: "#0f172a", color: "#ffffff", padding: "8px 10px", fontWeight: 950, cursor: "pointer" },
   projectEstimateAddDock: { position: "relative", display: "flex", justifyContent: "flex-start" },
   projectEstimateLayersPanel: { display: "grid", gap: 5 },
-  projectEstimateLayerRow: { display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto auto auto auto", gap: 4, alignItems: "center", border: "1px solid #e2e8f0", borderRadius: 7, padding: 5, background: "#ffffff" },
+  projectEstimateLayerRow: { display: "grid", gridTemplateColumns: "minmax(92px, 1fr) repeat(7, auto)", gap: 4, alignItems: "center", border: "1px solid #e2e8f0", borderRadius: 7, padding: 5, background: "#ffffff" },
   projectEstimateLayerRowActive: { borderColor: "#0ea5e9", background: "#f0f9ff" },
-  projectEstimateLayerNameButton: { minWidth: 0, border: 0, background: "transparent", color: "#0f172a", textAlign: "left", fontSize: 12, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer" },
+  projectEstimateLayerNameButton: { minWidth: 0, border: 0, background: "transparent", color: "#0f172a", textAlign: "left", fontSize: 12, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", display: "grid", gap: 1 },
+  projectEstimateLayerMeta: { color: "#64748b", fontSize: 10, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   projectEstimateLayerIconButton: { border: "1px solid #cbd5e1", borderRadius: 5, background: "#f8fafc", color: "#0f172a", padding: "5px 6px", fontSize: 11, fontWeight: 900, cursor: "pointer" },
-  projectEstimateMediaOverlay: { position: "fixed", inset: 0, zIndex: 3000, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 20 },
+  projectEstimatePageSetupGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 },
+  projectEstimateMediaOverlay: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, background: "rgba(15,23,42,0.55)", display: "grid", placeItems: "center", padding: 20 },
   projectEstimateMediaDialog: { width: "min(860px, 94vw)", maxHeight: "88vh", overflow: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, display: "grid", gap: 12 },
   projectEstimateMediaHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 },
   projectEstimateMediaGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 },
@@ -16354,7 +18777,7 @@ const styles = {
   standardPdfOverlayElementSelected: { borderColor: "#0ea5e9", boxShadow: "0 0 0 2px rgba(14,165,233,0.25)" },
   standardPdfTextOverlay: { display: "block", width: "100%", height: "100%", whiteSpace: "pre-wrap", textAlign: "left", lineHeight: 1.2, fontWeight: 700 },
   standardPdfOverlayImage: { width: "100%", height: "100%", objectFit: "contain", display: "block" },
-  modalOverlay: { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,0.46)", display: "grid", placeItems: "center", padding: 18 },
+  modalOverlay: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, background: "rgba(15,23,42,0.46)", display: "grid", placeItems: "center", padding: 18 },
   documentLibraryModal: { width: "min(760px, 96vw)", maxHeight: "82vh", overflow: "auto", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: 10, padding: 14, display: "grid", gap: 12, boxShadow: "0 24px 70px rgba(15,23,42,0.24)" },
   documentLibraryHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, color: "#0f172a", fontSize: 20 },
   documentLibraryList: { display: "grid", gap: 8 },
@@ -16527,7 +18950,7 @@ const styles = {
   selectionReferenceMeta: { display: "flex", flexWrap: "wrap", gap: 5, color: "#475569", fontSize: 11, fontWeight: 800 },
   selectionAdjustmentBad: { color: "#b45309" },
   selectionAdjustmentGood: { color: "#15803d" },
-  imageModalBackdrop: { position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,23,42,0.76)", display: "grid", placeItems: "center", padding: 24 },
+  imageModalBackdrop: { position: "fixed", inset: 0, zIndex: APP_LAYERS.modalBackdrop, background: "rgba(15,23,42,0.76)", display: "grid", placeItems: "center", padding: 24 },
   imageModal: { maxWidth: "min(920px, 92vw)", maxHeight: "92vh", background: "#ffffff", borderRadius: 14, padding: 14, display: "grid", gap: 10, boxShadow: "0 28px 80px rgba(0,0,0,0.35)" },
   imageModalImg: { maxWidth: "100%", maxHeight: "76vh", objectFit: "contain", borderRadius: 10, background: "#f8fafc" },
   imageModalClose: { justifySelf: "end", border: "1px solid #cbd5e1", borderRadius: 8, background: "#ffffff", color: "#0f172a", padding: "8px 11px", fontWeight: 900, cursor: "pointer" },

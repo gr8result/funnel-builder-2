@@ -35,7 +35,9 @@ type UseJobFileResult = {
   recentJobs: RecentJob[];
   newJob: (job: Partial<JobFileData>) => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
   open: () => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
+  openFile: (file: File) => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
   openRecent: (recentId: string) => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
+  removeRecent: (recentId: string) => void;
   save: () => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
   saveAs: () => Promise<{ ok: boolean; cancelled?: boolean; message?: string }>;
 };
@@ -80,6 +82,41 @@ function buildRecentId(fileName: string, modified: string): string {
     return window.btoa(encodeURIComponent(seed)).replace(/=+$/g, "");
   }
   return seed;
+}
+
+function createJobDataSnapshot(value: unknown): string {
+  const seen = new WeakSet<object>();
+  const dataUrlPattern = /^data:(?:image|application\/pdf)\//i;
+
+  try {
+    return JSON.stringify(value || {}, (_key, entry) => {
+      if (typeof entry === "string") {
+        if (dataUrlPattern.test(entry)) {
+          return `[embedded:${entry.slice(0, 32)}:${entry.length}]`;
+        }
+        return entry.length > 2000 ? `[text:${entry.length}:${entry.slice(0, 128)}]` : entry;
+      }
+      if (entry && typeof entry === "object") {
+        if (seen.has(entry)) return "[circular]";
+        seen.add(entry);
+      }
+      return entry;
+    });
+  } catch {
+    const candidate = value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const workbook = candidate.workbook && typeof candidate.workbook === "object" ? candidate.workbook as Record<string, unknown> : {};
+    const takeoffJob = (workbook.aiPlanTakeoffJob && typeof workbook.aiPlanTakeoffJob === "object" ? workbook.aiPlanTakeoffJob : null) as Record<string, unknown> | null;
+    const plan = takeoffJob?.plan && typeof takeoffJob.plan === "object" ? takeoffJob.plan as Record<string, unknown> : {};
+    const pages = Array.isArray(plan.pages) ? plan.pages : [];
+    const completedAreas = Array.isArray(takeoffJob?.completedAreas) ? takeoffJob.completedAreas : [];
+    return JSON.stringify({
+      jobName: candidate.jobName || takeoffJob?.jobName || "",
+      lastModified: candidate.lastModified || takeoffJob?.updatedAt || "",
+      takeoffUpdatedAt: takeoffJob?.updatedAt || "",
+      embeddedPlanPages: pages.length,
+      completedAreas: completedAreas.length,
+    });
+  }
 }
 
 async function openHandleDb(): Promise<IDBDatabase | null> {
@@ -141,7 +178,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
   const [currentFileName, setCurrentFileName] = useState("");
   const [recentJobs, setRecentJobs] = useState<RecentJob[]>(() => safeRecentJobs());
   const [dirty, setDirty] = useState(false);
-  const dataSnapshot = useMemo(() => JSON.stringify(jobData || {}), [jobData]);
+  const dataSnapshot = useMemo(() => createJobDataSnapshot(jobData), [jobData]);
   const lastSavedSnapshotRef = useRef(dataSnapshot);
   const initializedRef = useRef(false);
 
@@ -172,7 +209,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     await Promise.resolve(onOpenJob?.(data, fileName));
     if (handle) setCurrentHandle(handle);
     setCurrentFileName(fileName || (handle as FileSystemFileHandle | null)?.name || "");
-    lastSavedSnapshotRef.current = JSON.stringify(data || {});
+    lastSavedSnapshotRef.current = createJobDataSnapshot(data || {});
     setDirty(false);
     await pushRecent({ data, fileName, handle: handle || null });
   }, [onOpenJob, pushRecent]);
@@ -212,6 +249,19 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     }
   }, [enabled, onError, runOpen]);
 
+  const openFile = useCallback(async (file: File) => {
+    if (!enabled) return { ok: false, message: "Job files are disabled." };
+    try {
+      const data = await readJob(file);
+      await runOpen(data, file.name, null);
+      return { ok: true, cancelled: false };
+    } catch (error) {
+      const message = `${file?.name || "Selected file"}: ${(error as Error)?.message || "This job file could not be opened."}`;
+      onError?.(message);
+      return { ok: false, message };
+    }
+  }, [enabled, onError, runOpen]);
+
   const save = useCallback(async () => {
     if (!enabled) return { ok: false, message: "Job files are disabled." };
     const result = await saveJob(jobData, currentHandle);
@@ -220,7 +270,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     }
     if (result.handle) setCurrentHandle(result.handle);
     if (result.fileName) setCurrentFileName(result.fileName);
-    lastSavedSnapshotRef.current = JSON.stringify(result.data);
+    lastSavedSnapshotRef.current = createJobDataSnapshot(result.data);
     setDirty(false);
     await pushRecent({ data: result.data, fileName: result.fileName, handle: result.handle || null });
     return { ok: true, cancelled: false };
@@ -234,7 +284,7 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     }
     if (result.handle) setCurrentHandle(result.handle);
     if (result.fileName) setCurrentFileName(result.fileName);
-    lastSavedSnapshotRef.current = JSON.stringify(result.data);
+    lastSavedSnapshotRef.current = createJobDataSnapshot(result.data);
     setDirty(false);
     await pushRecent({ data: result.data, fileName: result.fileName, handle: result.handle || null });
     return { ok: true, cancelled: false };
@@ -263,6 +313,12 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     }
   }, [enabled, onError, runOpen]);
 
+  const removeRecent = useCallback((recentId: string) => {
+    const next = safeRecentJobs().filter((item) => item.id !== recentId);
+    saveRecentJobs(next);
+    setRecentJobs(next);
+  }, []);
+
   useEffect(() => {
     if (!enabled) return;
     if (!initializedRef.current) {
@@ -281,7 +337,9 @@ export function useJobFile(options: UseJobFileOptions): UseJobFileResult {
     recentJobs,
     newJob,
     open,
+    openFile,
     openRecent,
+    removeRecent,
     save,
     saveAs,
   };
