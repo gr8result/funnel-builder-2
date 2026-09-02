@@ -95,6 +95,22 @@ function slugFileName(name: string): string {
   return cleaned || "Job";
 }
 
+/**
+ * JobFileData has no persistent unique id (see the JobFileData type above) — the
+ * file itself, identified by name, is the closest stable identity a job has.
+ * Slugified so it is safe to use as a storage key.
+ */
+export function deriveJobId(fileName: string): string | null {
+  const trimmed = String(fileName || "").trim();
+  if (!trimmed) return null;
+  const withoutExtension = trimmed.replace(/\.gr8job$/i, "");
+  const slug = withoutExtension
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || null;
+}
+
 function normalizeJobData(input: Partial<JobFileData> = {}): JobFileData {
   const now = new Date().toISOString();
   const workbook = extractWorkbookFromJobPackage(input);

@@ -41,8 +41,8 @@ import { createObject } from "../document-engine/core/objectEngine";
 import OnlyOfficePresentationEditor from "../standard-inclusions/OnlyOfficePresentationEditor";
 import ProjectCompactBanner from "../project-workspace/ProjectCompactBanner";
 import { hasRecoverablePlanPages, prepareAiPlanTakeoffJobForSave } from "../construction-estimation/ai-plan-takeoff/jobPersistence";
-import { loadPdfJs } from "./ai-takeoff/pdfPlanRendering";
-import { deriveJobId } from "../../modules/takeoff-v2/jobSummary.js";
+import { loadPdfJs } from "../../lib/pdf/pdfjsLoader";
+import { deriveJobId } from "../../lib/jobFile";
 import ProjectEstimatePackPage from "./project-estimate/ProjectEstimatePackPage";
 import { projectEstimateTextUsesParentResize } from "./project-estimate/ProjectEstimateShared";
 import {
