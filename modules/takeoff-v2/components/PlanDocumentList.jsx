@@ -84,7 +84,7 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
     <div style={S.wrap}>
       <div style={S.title}>Plan Documents</div>
 
-      <div style={S.dropZone} onClick={() => fileRef.current?.click()}>
+      <button type="button" style={S.dropZone} onClick={() => fileRef.current?.click()} disabled={loading} data-testid="upload-pdf-plan-card">
         {loading ? (
           <div style={S.progressText}>{progress || "Working..."}</div>
         ) : (
@@ -93,7 +93,7 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
             <div style={S.uploadSub}>Click to choose a PDF</div>
           </>
         )}
-      </div>
+      </button>
       <input
         ref={fileRef}
         type="file"
@@ -141,7 +141,7 @@ export default function PlanDocumentList({ jobId, documents, onDocumentsChange, 
 const S = {
   wrap: { display: "flex", flexDirection: "column", gap: 10, padding: 12 },
   title: { fontSize: 14, fontWeight: 800, color: "#1e293b" },
-  dropZone: { border: "2px dashed #93c5fd", borderRadius: 10, padding: "16px 12px", textAlign: "center", cursor: "pointer", background: "#f0f9ff" },
+  dropZone: { width: "100%", border: "2px dashed #93c5fd", borderRadius: 10, padding: "16px 12px", textAlign: "center", cursor: "pointer", background: "#f0f9ff", font: "inherit" },
   uploadLabel: { fontSize: 14, fontWeight: 800, color: "#1d4ed8" },
   uploadSub: { fontSize: 12, color: "#64748b", marginTop: 4 },
   progressText: { fontSize: 13, color: "#64748b" },

@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { pageToScreenPoint } from "../viewer/pageToScreenPoint.js";
 import { midpoint, distance } from "../takeoff/geometry.js";
 import { formatLength } from "../takeoff/units.js";
 import { normalizeRegionCorners } from "../takeoff/planRegion.js";
 import { rectFromCorners } from "../takeoff/roomBoundaryDetection.js";
+import { buildStructuralGraph } from "../takeoff/structuralGraph.js";
 
 const IDENTITY_VIEW = { panX: 0, panY: 0, zoomScale: 1 };
 
@@ -11,7 +12,22 @@ const SNAP_STYLES = {
   intersection: { fill: "#7c3aed", radius: 4, label: "Intersection" },
   endpoint: { fill: "#2563eb", radius: 4, label: "Endpoint" },
   line: { fill: "#0d9488", radius: 3, label: "On line" },
+  "wall-band": { fill: "#0284c7", radius: 3, label: "Wall band" },
   manual: { fill: "#f59e0b", radius: 3, label: "Manual" },
+  // Wall-chain aware snap targets.
+  corner: { fill: "#7c3aed", radius: 4, label: "Corner" },
+  reentrant_corner: { fill: "#db2777", radius: 4, label: "Internal corner" },
+  jamb: { fill: "#a855f7", radius: 4, label: "Jamb" },
+  opening_jamb_continuation: { fill: "#a855f7", radius: 4, label: "Opposite jamb" },
+};
+
+// Preview label shown before committing, so the user can see the system has
+// understood the gap intentionally rather than lost the wall.
+const OPENING_PREVIEW_LABEL = {
+  garage_door: "GARAGE DOOR",
+  door: "DOOR",
+  opening_candidate: "OPENING CANDIDATE",
+  window: "WINDOW",
 };
 
 // Wall-drawing snap status text (spec: "Snap: Corner", "Snap: Wall endpoint",
@@ -23,7 +39,10 @@ const SNAP_STYLES = {
 // agrees: exterior green, internal blue, windows cyan, doors orange, open
 // openings yellow, areas translucent purple, unconfirmed automatic
 // candidates dashed red.
-const WALL_COLOR = { exterior: "#16a34a", internal: "#2563eb" };
+const WALL_COLOR = { exterior: "#31E85A", internal: "#168CFF" };
+const WALL_FILL = { exterior: "rgba(49,232,90,0.54)", internal: "rgba(22,140,255,0.52)" };
+const WALL_SELECTED_FILL = { exterior: "rgba(49,232,90,0.60)", internal: "rgba(22,140,255,0.58)" };
+const WALL_OUTLINE = { exterior: "#F8FF2E", internal: "#ffffff" };
 const HIGHLIGHTER_WALL_COLOR = {
   normal: "#6b7280",
   hover: "#0284c7",
@@ -31,19 +50,21 @@ const HIGHLIGHTER_WALL_COLOR = {
   gap: "#dc2626",
 };
 const OPENING_COLOR = {
-  window: "#06b6d4",
+  door: "#f97316",
+  window: "#00E5FF",
+  opening: "#F8FF2E",
   "internal-door": "#f97316",
   "external-door": "#f97316",
   "sliding-door": "#f97316",
-  "garage-door": "#f97316",
-  "open-opening": "#eab308",
+  "garage-door": "#A855F7",
+  "open-opening": "#F8FF2E",
 };
 const EXTERIOR_CANDIDATE = "#16a34a";
 const MISSING_SECTION = "#65a30d";
 
 function openingLayerFor(openingType) {
   if (openingType === "window") return "windows";
-  if (openingType === "open-opening") return "openings";
+  if (openingType === "opening" || openingType === "open-opening") return "openings";
   return "doors";
 }
 
@@ -62,9 +83,14 @@ function isMissingSectionIndicator(segment) {
 // handling stays on PlanViewer's own container (single source of truth for
 // click-vs-drag-vs-pan detection).
 export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeometryIndex, sourceCanvas }) {
-  if (!viewport) return null;
-  const project = (point) => pageToScreenPoint({ viewport, ...IDENTITY_VIEW }, point.x, point.y);
   const showPlanGeometryDebug = isPlanGeometryDebugEnabled();
+  const showStructuralDebug = showStructuralGraphDebug(tools);
+  const structuralGraph = useMemo(
+    () => (showStructuralDebug ? buildStructuralGraph(planGeometryIndex, page || {}) : null),
+    [planGeometryIndex, page, showStructuralDebug]
+  );
+  const project = (point) => pageToScreenPoint({ viewport, ...IDENTITY_VIEW }, point.x, point.y);
+  if (!viewport) return null;
   const layers = page?.layerVisibility || {};
   const showLayer = (key) => layers[key] !== false;
   const shouldShowWallSegment = (segment) => !isAutomaticCandidate(segment) || showLayer("automaticCandidates");
@@ -97,10 +123,12 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
   const isScaleOrMeasure = tools.activeTool === "set-scale" || tools.activeTool === "measure";
   const isWallDraw = tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall";
   const isExteriorHighlighter = tools.activeTool === "exterior-highlighter";
-  const isOpeningTool = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool);
+  const isOpeningTool = ["door", "window", "opening", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool);
   const isAreaTool = tools.activeTool === "area";
   const isPlanRegionTool = tools.activeTool === "plan-region";
-  const isEditTool = tools.activeTool === "edit" || tools.activeTool === "edit-walls";
+  const isEditTool = ["select", "move-corner", "add-corner", "edit", "edit-walls"].includes(tools.activeTool);
+  const showAreaFills = isAreaTool || tools.activeTool === "select" || tools.activeTool === "edit";
+  const showAllWallHandles = ["move-corner", "add-corner", "edit", "edit-walls"].includes(tools.activeTool);
   const preview = tools.hoverPreview;
 
   const openings = (page?.openings || []).map((o) =>
@@ -157,7 +185,7 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         )}
 
         {/* Confirmed area polygon fills */}
-        {!isExteriorHighlighter && showLayer("areas") && (page?.areas || []).map((area) => {
+        {!isExteriorHighlighter && showAreaFills && showLayer("areas") && (page?.areas || []).map((area) => {
           const boundary = tools.draggingAreaVertex?.areaId === area.id
             ? tools.draggingAreaVertex.vertices
             : area.outerBoundary || area.vertices || [];
@@ -234,21 +262,37 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
         {/* Exterior + internal wall segments */}
         {!isExteriorHighlighter && showLayer("exteriorWalls") && visibleExteriorSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={exteriorVertexById} project={project}
-            selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id} />
+            selected={tools.selectedField === "exteriorWalls" && tools.selectedSegmentId === segment.id}
+            hovered={tools.wallEditHoverTarget?.type === "segment" && tools.wallEditHoverTarget.id === segment.id && tools.wallEditHoverTarget.field === "exteriorWalls"}
+            openings={openings.filter((opening) => opening.wallGraph === "exterior" && opening.wallId === segment.id)}
+            siblingSegments={visibleExteriorSegments}
+            showWallFacesDebug={tools.wallSnapDebugEnabled} />
         ))}
         {!isExteriorHighlighter && showLayer("internalWalls") && visibleInternalSegments.map((segment) => (
           <WallSegmentLine key={segment.id} segment={segment} vertexById={internalVertexById} project={project}
-            selected={tools.selectedField === "internalWalls" && tools.selectedSegmentId === segment.id} />
+            selected={tools.selectedField === "internalWalls" && tools.selectedSegmentId === segment.id}
+            hovered={tools.wallEditHoverTarget?.type === "segment" && tools.wallEditHoverTarget.id === segment.id && tools.wallEditHoverTarget.field === "internalWalls"}
+            openings={openings.filter((opening) => opening.wallGraph === "internal" && opening.wallId === segment.id)}
+            siblingSegments={visibleInternalSegments}
+            showWallFacesDebug={tools.wallSnapDebugEnabled} />
         ))}
 
+        {!isExteriorHighlighter && (visibleExteriorSegments.length > 0 || visibleInternalSegments.length > 0) && (
+          <PlanLineworkOverlay planGeometryIndex={planGeometryIndex} project={project} />
+        )}
+
         {/* Wall vertices, numbered — shown while editing or drawing that graph */}
-        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "exterior-wall" || (exteriorWalls?.source === "auto-detector-v2" && !exteriorWalls?.confirmed)) && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
+        {!isExteriorHighlighter && isEditTool && exteriorWalls && exteriorDisplayVertices.map((vertex, index) => (
           <WallVertexDot key={vertex.id} vertex={vertex} index={index} project={project}
-            selected={tools.selectedField === "exteriorWalls" && tools.selectedVertexId === vertex.id} />
+            visible={showAllWallHandles || (tools.selectedField === "exteriorWalls" && tools.selectedVertexId === vertex.id) || (tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.id === vertex.id && tools.wallEditHoverTarget.field === "exteriorWalls")}
+            selected={tools.selectedField === "exteriorWalls" && tools.selectedVertexId === vertex.id}
+            hovered={tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.id === vertex.id && tools.wallEditHoverTarget.field === "exteriorWalls"} />
         ))}
-        {!isExteriorHighlighter && (isEditTool || tools.activeTool === "internal-wall") && internalWalls && internalDisplayVertices.map((vertex, index) => (
+        {!isExteriorHighlighter && isEditTool && internalWalls && internalDisplayVertices.map((vertex, index) => (
           <WallVertexDot key={vertex.id} vertex={vertex} index={index} project={project}
-            selected={tools.selectedField === "internalWalls" && tools.selectedVertexId === vertex.id} />
+            visible={showAllWallHandles || (tools.selectedField === "internalWalls" && tools.selectedVertexId === vertex.id) || (tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.id === vertex.id && tools.wallEditHoverTarget.field === "internalWalls")}
+            selected={tools.selectedField === "internalWalls" && tools.selectedVertexId === vertex.id}
+            hovered={tools.wallEditHoverTarget?.type === "point" && tools.wallEditHoverTarget.id === vertex.id && tools.wallEditHoverTarget.field === "internalWalls"} />
         ))}
 
         {/* Chain-draw preview while editing walls (legacy exterior-only tool) */}
@@ -258,25 +302,28 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
 
         {/* Manual Exterior/Internal Wall drawing: keep the canvas precise.
             Length/status text lives outside the drawing area in the toolbar. */}
+        {!isExteriorHighlighter && isWallDraw && tools.wallDrawHoverPreview?.snap?.wallBand && (
+          <WallBandSnapPreview wallBand={tools.wallDrawHoverPreview.snap.wallBand} wallType={tools.activeTool === "internal-wall" ? "internal" : "exterior"} project={project} />
+        )}
         {!isExteriorHighlighter && isWallDraw && tools.wallDrawHoverPreview?.point && tools.wallDrawHoverPreview?.snap && (
           <SnapMarker point={tools.wallDrawHoverPreview.point} snap={tools.wallDrawHoverPreview.snap} project={project} />
+        )}
+        {!isExteriorHighlighter && isWallDraw && tools.wallDrawHoverPreview && tools.wallDrawHoverPreview.valid === false && (
+          <g>
+            <Crosshair point={tools.wallDrawHoverPreview.rawPoint} project={project} />
+            {tools.wallDrawHoverPreview.rawPoint && (() => {
+              const p = project(tools.wallDrawHoverPreview.rawPoint);
+              return (
+                <text x={p.x + 12} y={p.y - 10} fontSize={10} fontWeight={800} fill="#b91c1c" data-testid="wall-no-snap-label">
+                  No wall/corner snap
+                </text>
+              );
+            })()}
+          </g>
         )}
         {!isExteriorHighlighter && isEditTool && tools.wallEditSnapPreview?.point && (
           <SnapMarker point={tools.wallEditSnapPreview.point} snap={tools.wallEditSnapPreview.snap} label={tools.wallEditSnapPreview.label} project={project} />
         )}
-        {!isExteriorHighlighter && isWallDraw && tools.wallDrawChainVertexId && tools.wallDrawHoverPreview?.point && (() => {
-          const field = tools.activeTool === "exterior-wall" ? "exteriorWalls" : "internalWalls";
-          const vertexById = field === "exteriorWalls" ? exteriorVertexById : internalVertexById;
-          const chainStart = vertexById.get(tools.wallDrawChainVertexId);
-          if (!chainStart) return null;
-
-          return (
-            <g data-testid="wall-draw-preview">
-              <LiveLine from={chainStart} to={tools.wallDrawHoverPreview.point} project={project} />
-            </g>
-          );
-        })()}
-
         {/* Wall openings: Window / Internal Door / External Door / Sliding Door / Garage Door / Open Opening */}
         {!isExteriorHighlighter && openings.map((opening) => {
           const layer = openingLayerFor(opening.openingType);
@@ -331,10 +378,11 @@ export default function TakeoffCanvasOverlay({ page, tools, viewport, planGeomet
           </>
         )}
 
-        {showPlanGeometryDebug && (
+        {(showPlanGeometryDebug || showStructuralDebug) && (
           <>
-            <PlanGeometryDebugOverlay planGeometryIndex={planGeometryIndex} project={project} />
-            <TraceGraphDebugOverlay diagnostics={page?.exteriorWalls?.detectionDiagnostics || page?.wallDetectionDiagnostics} project={project} />
+            {showPlanGeometryDebug && <PlanGeometryDebugOverlay planGeometryIndex={planGeometryIndex} project={project} />}
+            <StructuralGraphDebugOverlay graph={structuralGraph} project={project} />
+            {showPlanGeometryDebug && <TraceGraphDebugOverlay diagnostics={page?.exteriorWalls?.detectionDiagnostics || page?.wallDetectionDiagnostics} project={project} />}
           </>
         )}
       </svg>
@@ -350,6 +398,126 @@ function isPlanGeometryDebugEnabled() {
   if (process.env.NEXT_PUBLIC_TAKEOFF_GEOMETRY_DEBUG === "1") return true;
   if (typeof window === "undefined") return false;
   return window.localStorage?.getItem("takeoffGeometryDebug") === "1";
+}
+
+function showStructuralGraphDebug(tools) {
+  return Boolean(tools?.structuralGraphDebugEnabled);
+}
+
+const STRUCTURAL_NODE_STYLE = {
+  L: { fill: "#22c55e", label: "L" },
+  T: { fill: "#f97316", label: "T" },
+  X: { fill: "#8b5cf6", label: "X" },
+  endpoint: { fill: "#06b6d4", label: "E" },
+  jamb: { fill: "#eab308", label: "J" },
+  near_intersection: { fill: "#84cc16", label: "N" },
+};
+
+const StructuralGraphDebugOverlay = memo(function StructuralGraphDebugOverlay({ graph, project }) {
+  if (!graph) return null;
+  return (
+    <g data-testid="structural-graph-debug-overlay" pointerEvents="none">
+      {graph.wallAssemblies?.slice(0, 1600).map((assembly) => (
+        <WallAssemblyDebug key={assembly.id} assembly={assembly} project={project} />
+      ))}
+      {graph.facePairs.slice(0, 1200).map((pair) => {
+        const a1 = project(pair.faceA.start);
+        const a2 = project(pair.faceA.end);
+        const b1 = project(pair.faceB.start);
+        const b2 = project(pair.faceB.end);
+        return (
+          <g key={pair.id} data-testid="structural-wall-face-pair" data-thickness-mm={Math.round(pair.separationMm)}>
+            <line x1={a1.x} y1={a1.y} x2={a2.x} y2={a2.y} stroke="#38bdf8" strokeWidth={0.8} opacity={0.38} />
+            <line x1={b1.x} y1={b1.y} x2={b2.x} y2={b2.y} stroke="#38bdf8" strokeWidth={0.8} opacity={0.38} />
+          </g>
+        );
+      })}
+      {graph.structuralLines.slice(0, 2500).map((line) => {
+        const a = project(line.start);
+        const b = project(line.end);
+        return (
+          <line
+            key={line.id}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#0ea5e9"
+            strokeWidth={0.75}
+            opacity={0.82}
+            data-testid="structural-face-line"
+          />
+        );
+      })}
+      {graph.nodes.slice(0, 2500).map((node) => {
+        const p = project(node.point || node);
+        const style = STRUCTURAL_NODE_STYLE[node.type] || STRUCTURAL_NODE_STYLE.endpoint;
+        return (
+          <g key={node.id} data-testid="structural-graph-node" data-node-type={node.type}>
+            <circle cx={p.x} cy={p.y} r={2.4} fill={style.fill} stroke="#0f172a" strokeWidth={0.45} opacity={0.95} />
+          </g>
+        );
+      })}
+    </g>
+  );
+});
+
+function WallAssemblyDebug({ assembly, project }) {
+  const start = assembly.frame ? {
+    x: assembly.frame.ux * assembly.frame.startAlong + assembly.frame.nx * assembly.frame.fixed,
+    y: assembly.frame.uy * assembly.frame.startAlong + assembly.frame.ny * assembly.frame.fixed,
+  } : null;
+  const end = assembly.frame ? {
+    x: assembly.frame.ux * assembly.frame.endAlong + assembly.frame.nx * assembly.frame.fixed,
+    y: assembly.frame.uy * assembly.frame.endAlong + assembly.frame.ny * assembly.frame.fixed,
+  } : null;
+  if (!start || !end) return null;
+  const a = project(start);
+  const b = project(end);
+  const isExterior = assembly.exteriorScore >= 0.62;
+  const isInterior = assembly.interiorScore >= 0.58;
+  const rejected = assembly.rejectedAsExterior;
+  const stroke = rejected ? "#ef4444" : isExterior ? "#22c55e" : isInterior ? "#a855f7" : "#64748b";
+  const dash = rejected ? "6 4" : isInterior ? "3 3" : undefined;
+  return (
+    <g
+      data-testid={rejected ? "rejected-cross-building-candidate-debug" : isExterior ? "exterior-candidate-debug" : isInterior ? "interior-candidate-debug" : "wall-assembly-debug"}
+      data-wall-assembly-id={assembly.id}
+      data-exterior-score={Number(assembly.exteriorScore || 0).toFixed(2)}
+      data-interior-score={Number(assembly.interiorScore || 0).toFixed(2)}
+      data-rejection-reason={(assembly.rejectionReasons || []).join("; ")}
+    >
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={stroke} strokeWidth={rejected || isExterior || isInterior ? 2.1 : 1.1} strokeDasharray={dash} opacity={rejected ? 0.9 : 0.72} />
+      {(assembly.sideAOccupancy?.samples || []).slice(0, 7).map((sample, index) => (
+        <OccupancySample key={`a-${index}`} sample={sample} side="A" project={project} />
+      ))}
+      {(assembly.sideBOccupancy?.samples || []).slice(0, 7).map((sample, index) => (
+        <OccupancySample key={`b-${index}`} sample={sample} side="B" project={project} />
+      ))}
+      {rejected && (
+        <text x={(a.x + b.x) / 2 + 4} y={(a.y + b.y) / 2 - 4} fontSize={9} fontWeight={800} fill="#ef4444" data-testid="rejected-exterior-reason-label">
+          {(assembly.rejectionReasons || ["rejected"]).find((reason) => reason.includes("building occupancy") || reason.includes("perimeter shortcut")) || "rejected"}
+        </text>
+      )}
+    </g>
+  );
+}
+
+function OccupancySample({ sample, side, project }) {
+  const p = project(sample.point);
+  const fill = sample.classification === "building" ? "#f59e0b" : sample.classification === "outside" ? "#0ea5e9" : "#94a3b8";
+  return (
+    <circle
+      cx={p.x}
+      cy={p.y}
+      r={1.8}
+      fill={fill}
+      opacity={0.78}
+      data-testid="side-occupancy-debug-sample"
+      data-side={side}
+      data-occupancy={sample.classification}
+    />
+  );
 }
 
 function PlanGeometryDebugOverlay({ planGeometryIndex, project }) {
@@ -630,7 +798,113 @@ function GapLine({ gap, project }) {
   );
 }
 
-function WallSegmentLine({ segment, vertexById, project, selected }) {
+function PlanLineworkOverlay({ planGeometryIndex, project }) {
+  const lines = planGeometryIndex?.rawSegments || planGeometryIndex?.segments || planGeometryIndex?.lines || [];
+  if (!Array.isArray(lines) || lines.length === 0) return null;
+  return (
+    <g data-testid="plan-linework-over-wall-fill">
+      {lines.slice(0, 6000).map((line, index) => {
+        const start = line.start || line.a;
+        const end = line.end || line.b;
+        if (!start || !end) return null;
+        const a = project(start);
+        const b = project(end);
+        const strokeWidth = Math.max(0.55, Math.min(1.2, Number(line.strokeWidth) || 0.75));
+        return (
+          <line
+            key={line.id || `plan-line-${index}`}
+            x1={a.x}
+            y1={a.y}
+            x2={b.x}
+            y2={b.y}
+            stroke="#111827"
+            strokeWidth={strokeWidth}
+            strokeLinecap="square"
+            opacity={0.72}
+            data-testid="plan-linework-over-wall-fill-line"
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function WallBandSnapPreview({ wallBand, wallType, project }) {
+  const faceA = wallType === "exterior" ? (wallBand.innerFace || wallBand.faceA) : wallBand.faceA;
+  const faceB = wallType === "exterior" ? (wallBand.outerFace || wallBand.faceB) : wallBand.faceB;
+  if (!faceA?.start || !faceA?.end || !faceB?.start || !faceB?.end) {
+    return null;
+  }
+  const points = [faceA.start, faceA.end, faceB.end, faceB.start]
+    .map(project)
+    .map((p) => `${p.x},${p.y}`)
+    .join(" ");
+  const color = wallType === "internal" ? "rgba(22,140,255,0.56)" : "rgba(49,232,90,0.58)";
+  const stroke = wallType === "internal" ? "#168CFF" : "#31E85A";
+  return (
+    <polygon
+      points={points}
+      fill={color}
+      stroke={stroke}
+      strokeWidth={1}
+      style={{ mixBlendMode: "multiply" }}
+      data-testid="wall-band-snap-preview"
+    />
+  );
+}
+
+function WallDrawBandPreview({ from, to, wallBand, wallType, project }) {
+  const faces = previewFacesFromWallBand(from, to, wallBand, wallType);
+  if (!faces) return null;
+  const points = [faces.faceA.start, faces.faceA.end, faces.faceB.end, faces.faceB.start]
+    .map(project)
+    .map((p) => `${p.x},${p.y}`)
+    .join(" ");
+  const fill = wallType === "internal" ? "rgba(22,140,255,0.62)" : "rgba(49,232,90,0.64)";
+  const stroke = wallType === "internal" ? "#168CFF" : "#31E85A";
+  return (
+    <polygon
+      points={points}
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={1.2}
+      strokeLinejoin="round"
+      style={{ mixBlendMode: "multiply" }}
+      data-testid="wall-draw-band-preview"
+    />
+  );
+}
+
+function previewFacesFromWallBand(from, to, wallBand, wallType) {
+  if (!from || !to) return null;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  if (!(len > 0)) return null;
+  const normal = { nx: -dy / len, ny: dx / len };
+  const primaryFaceA = wallType === "exterior" ? (wallBand?.innerFace || wallBand?.faceA) : wallBand?.faceA;
+  const primaryFaceB = wallType === "exterior" ? (wallBand?.outerFace || wallBand?.faceB) : wallBand?.faceB;
+  const offsetA = faceOffsetForPreview(primaryFaceA, from, normal);
+  const offsetB = faceOffsetForPreview(primaryFaceB, from, normal);
+  if (!Number.isFinite(offsetA) || !Number.isFinite(offsetB) || Math.abs(offsetA - offsetB) < 1) return null;
+  return {
+    faceA: { start: offsetPreviewPoint(from, normal, offsetA), end: offsetPreviewPoint(to, normal, offsetA) },
+    faceB: { start: offsetPreviewPoint(from, normal, offsetB), end: offsetPreviewPoint(to, normal, offsetB) },
+  };
+}
+
+function faceOffsetForPreview(face, start, normal) {
+  if (!face?.start || !face?.end) return null;
+  const a = (face.start.x - start.x) * normal.nx + (face.start.y - start.y) * normal.ny;
+  const b = (face.end.x - start.x) * normal.nx + (face.end.y - start.y) * normal.ny;
+  return (a + b) / 2;
+}
+
+function offsetPreviewPoint(point, normal, offset) {
+  return { x: point.x + normal.nx * offset, y: point.y + normal.ny * offset };
+}
+
+function WallSegmentLine({ segment, vertexById, project, selected, hovered, openings = [], siblingSegments = [], showWallFacesDebug = false }) {
   const a = vertexById.get(segment.aId);
   const b = vertexById.get(segment.bId);
   if (!a || !b) return null;
@@ -639,20 +913,89 @@ function WallSegmentLine({ segment, vertexById, project, selected }) {
   const unconfirmedAutomatic = segment.source === "automatic" && !segment.confirmed;
   const missingSection = isMissingSectionIndicator(segment);
   const color = missingSection ? MISSING_SECTION : unconfirmedAutomatic ? EXTERIOR_CANDIDATE : WALL_COLOR[segment.wallType] || WALL_COLOR.exterior;
+  const wallType = segment.wallType || "exterior";
+  const outlineColor = WALL_OUTLINE[wallType] || WALL_OUTLINE.exterior;
+  const fillIntervals = wallFillIntervals(a, b, openings);
+  const openingIntervals = openingFillIntervals(a, b, openings);
+  const hasDetectedFaces = hasWallFaces(segment);
   return (
     <g data-testid={missingSection ? "missing-section-indicator" : "wall-segment"} data-wall-type={segment.wallType}>
-      <line
-        x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-        stroke={selected ? "#f97316" : color}
-        strokeWidth={selected ? 4 : 3}
-        strokeLinecap="round"
-        strokeDasharray={missingSection ? "7 7" : undefined}
-        opacity={missingSection ? 0.75 : 1}
-      />
+      {hasDetectedFaces && fillIntervals.map((interval, index) => {
+        const band = wallBandPolygon(segment, a, b, interval, siblingSegments);
+        const bandPointString = band.map(project).map((p) => `${p.x},${p.y}`).join(" ");
+        return (
+          <polygon
+            key={`fill-${index}`}
+            points={bandPointString}
+            fill={selected || hovered ? (WALL_SELECTED_FILL[wallType] || WALL_SELECTED_FILL.exterior) : (WALL_FILL[wallType] || WALL_FILL.exterior)}
+            stroke={selected || hovered ? outlineColor : "none"}
+            strokeWidth={selected ? 2.2 : hovered ? 1.4 : 0}
+            strokeLinejoin="round"
+            opacity={missingSection ? 0.65 : 1}
+            style={{ mixBlendMode: "multiply" }}
+            data-testid="wall-band-fill"
+          />
+        );
+      })}
+      {hasDetectedFaces && openingIntervals.map((interval, index) => {
+        const band = wallBandPolygon(segment, a, b, interval, siblingSegments);
+        const bandPointString = band.map(project).map((p) => `${p.x},${p.y}`).join(" ");
+        const openingColor = OPENING_COLOR[interval.openingType] || OPENING_COLOR.opening;
+        return (
+          <polygon
+            key={`opening-${index}`}
+            points={bandPointString}
+            fill={openingFillColor(interval.openingType)}
+            stroke={openingColor}
+            strokeWidth={1.4}
+            strokeLinejoin="round"
+            data-testid="wall-opening-cutout"
+          />
+        );
+      })}
+      {!hasDetectedFaces && (
+        <>
+          <line
+            x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+            stroke={selected || hovered ? "#f97316" : "#b45309"}
+            strokeWidth={selected || hovered ? 1.4 : 0.9}
+            strokeLinecap="round"
+            opacity={selected || hovered ? 0.85 : 0.45}
+            data-testid="wall-faces-uncertain-preview"
+          />
+          {(selected || hovered) && (
+            <text
+              x={(pa.x + pb.x) / 2}
+              y={(pa.y + pb.y) / 2 - 8}
+              textAnchor="middle"
+              fontSize={10}
+              fontWeight={800}
+              fill="#b91c1c"
+              paintOrder="stroke"
+              stroke="#fff"
+              strokeWidth={3}
+              data-testid="wall-thickness-unresolved-label"
+            >
+              Wall faces unresolved
+            </text>
+          )}
+        </>
+      )}
+      {hasDetectedFaces && (selected || hovered || missingSection) && (
+        <line
+          x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
+          stroke={missingSection ? color : outlineColor}
+          strokeWidth={missingSection ? 1.8 : 1.1}
+          strokeLinecap="round"
+          strokeDasharray={missingSection ? "7 7" : selected ? "4 3" : undefined}
+          opacity={missingSection ? 0.75 : 0.92}
+        />
+      )}
+      {showWallFacesDebug && hasDetectedFaces && (
+        <WallFacesDebugOverlay segment={segment} a={a} b={b} project={project} siblingSegments={siblingSegments} />
+      )}
       {missingSection && (
         <>
-          <circle cx={pa.x} cy={pa.y} r={5} fill="#fff" stroke={MISSING_SECTION} strokeWidth={2} />
-          <circle cx={pb.x} cy={pb.y} r={5} fill="#fff" stroke={MISSING_SECTION} strokeWidth={2} />
           <text x={(pa.x + pb.x) / 2} y={(pa.y + pb.y) / 2 - 6} textAnchor="middle" fontSize={13} fontWeight={900} fill={MISSING_SECTION}>?</text>
         </>
       )}
@@ -660,13 +1003,149 @@ function WallSegmentLine({ segment, vertexById, project, selected }) {
   );
 }
 
-function WallVertexDot({ vertex, index, project, selected }) {
+function WallFacesDebugOverlay({ segment, a, b, project, siblingSegments }) {
+  const faces = wallFacesWithCornerJoins(segment, a, b, { start: 0, end: 1 }, siblingSegments);
+  const topologyStart = project(a);
+  const topologyEnd = project(b);
+  const faceAStart = project(faces.faceAStart);
+  const faceAEnd = project(faces.faceAEnd);
+  const faceBStart = project(faces.faceBStart);
+  const faceBEnd = project(faces.faceBEnd);
+  return (
+    <g data-testid="wall-faces-debug-overlay" pointerEvents="none">
+      <line x1={faceAStart.x} y1={faceAStart.y} x2={faceAEnd.x} y2={faceAEnd.y} stroke="#ff00ff" strokeWidth={1} data-testid="wall-face-a-debug" />
+      <line x1={faceBStart.x} y1={faceBStart.y} x2={faceBEnd.x} y2={faceBEnd.y} stroke="#00ffff" strokeWidth={1} data-testid="wall-face-b-debug" />
+      <line x1={topologyStart.x} y1={topologyStart.y} x2={topologyEnd.x} y2={topologyEnd.y} stroke="#ef4444" strokeWidth={0.9} strokeDasharray="4 3" data-testid="wall-topology-debug" />
+      {[faceAStart, faceAEnd, faceBStart, faceBEnd].map((point, index) => (
+        <circle key={index} cx={point.x} cy={point.y} r={2} fill={index < 2 ? "#ff00ff" : "#00ffff"} stroke="#111827" strokeWidth={0.4} data-testid="wall-face-intersection-debug" />
+      ))}
+    </g>
+  );
+}
+
+function hasWallFaces(segment) {
+  const unresolved = segment?.geometryStatus === "unresolved" || segment?.geometryStatus === "unresolved_faces";
+  return Boolean(
+    !unresolved &&
+    segment?.faceA?.start &&
+    segment?.faceA?.end &&
+    segment?.faceB?.start &&
+    segment?.faceB?.end &&
+    segment.faceA.source !== "inferred" &&
+    segment.faceB.source !== "inferred" &&
+    segment.snapSource !== "builder-defined-wall-band"
+  );
+}
+
+function wallBandPolygon(segment, a, b, interval = { start: 0, end: 1 }, siblingSegments = []) {
+  const faces = wallFacesWithCornerJoins(segment, a, b, interval, siblingSegments);
+  return [
+    faces.faceAStart,
+    faces.faceAEnd,
+    faces.faceBEnd,
+    faces.faceBStart,
+  ];
+}
+
+function wallFacesWithCornerJoins(segment, a, b, interval, siblingSegments) {
+  const fullStart = Math.max(0, interval.start) <= 0.0001;
+  const fullEnd = Math.min(1, interval.end) >= 0.9999;
+  const faceAStart = lerpPoint(segment.faceA.start, segment.faceA.end, interval.start);
+  const faceAEnd = lerpPoint(segment.faceA.start, segment.faceA.end, interval.end);
+  const faceBStart = lerpPoint(segment.faceB.start, segment.faceB.end, interval.start);
+  const faceBEnd = lerpPoint(segment.faceB.start, segment.faceB.end, interval.end);
+  const joinedStart = fullStart ? joinedFaceEndpoint(segment, "start", "faceA", faceAStart, siblingSegments) : null;
+  const joinedEnd = fullEnd ? joinedFaceEndpoint(segment, "end", "faceA", faceAEnd, siblingSegments) : null;
+  const joinedBStart = fullStart ? joinedFaceEndpoint(segment, "start", "faceB", faceBStart, siblingSegments) : null;
+  const joinedBEnd = fullEnd ? joinedFaceEndpoint(segment, "end", "faceB", faceBEnd, siblingSegments) : null;
+  return {
+    faceAStart: joinedStart || faceAStart,
+    faceAEnd: joinedEnd || faceAEnd,
+    faceBStart: joinedBStart || faceBStart,
+    faceBEnd: joinedBEnd || faceBEnd,
+  };
+}
+
+function joinedFaceEndpoint(segment, endKey, faceKey, fallback, siblingSegments) {
+  const vertexId = endKey === "start" ? segment.aId : segment.bId;
+  const adjacent = siblingSegments.find((candidate) => (
+    candidate.id !== segment.id &&
+    candidate.wallType === segment.wallType &&
+    hasWallFaces(candidate) &&
+    (candidate.aId === vertexId || candidate.bId === vertexId)
+  ));
+  if (!adjacent) return null;
+
+  const currentFace = segment[faceKey];
+  const options = ["faceA", "faceB"]
+    .map((candidateFaceKey) => lineIntersection(currentFace.start, currentFace.end, adjacent[candidateFaceKey].start, adjacent[candidateFaceKey].end))
+    .filter(Boolean)
+    .filter((point) => distance(point, fallback) <= Math.max(18, Number(segment.thicknessDocUnits || segment.thicknessPx || 0) * 2.5));
+  return options.sort((left, right) => distance(left, fallback) - distance(right, fallback))[0] || null;
+}
+
+function lineIntersection(a, b, c, d) {
+  const denominator = (a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x);
+  if (Math.abs(denominator) < 1e-9) return null;
+  return {
+    x: ((a.x * b.y - a.y * b.x) * (c.x - d.x) - (a.x - b.x) * (c.x * d.y - c.y * d.x)) / denominator,
+    y: ((a.x * b.y - a.y * b.x) * (c.y - d.y) - (a.y - b.y) * (c.x * d.y - c.y * d.x)) / denominator,
+  };
+}
+
+function lerpPoint(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+function projectT(point, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const len2 = abx * abx + aby * aby;
+  if (!(len2 > 0)) return 0;
+  return Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / len2));
+}
+
+function openingFillIntervals(a, b, openings) {
+  return openings
+    .map((opening) => {
+      const t0 = Number.isFinite(opening.startOffset) ? opening.startOffset : projectT(opening.start, a, b);
+      const t1 = Number.isFinite(opening.endOffset) ? opening.endOffset : projectT(opening.end, a, b);
+      const start = Math.max(0, Math.min(t0, t1) - 0.003);
+      const end = Math.min(1, Math.max(t0, t1) + 0.003);
+      return end - start > 0.005 ? { start, end, openingType: opening.openingType } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.start - right.start);
+}
+
+function openingFillColor(openingType) {
+  if (openingType === "window") return "rgba(0,229,255,0.72)";
+  if (openingType === "garage-door") return "rgba(168,85,247,0.72)";
+  if (openingType === "opening" || openingType === "open-opening") return "rgba(248,255,46,0.72)";
+  return "rgba(249,115,22,0.72)";
+}
+
+function wallFillIntervals(a, b, openings) {
+  const gaps = openingFillIntervals(a, b, openings);
+  if (!gaps.length) return [{ start: 0, end: 1 }];
+  const intervals = [];
+  let cursor = 0;
+  gaps.forEach((gap) => {
+    if (gap.start > cursor + 0.005) intervals.push({ start: cursor, end: gap.start });
+    cursor = Math.max(cursor, gap.end);
+  });
+  if (cursor < 0.995) intervals.push({ start: cursor, end: 1 });
+  return intervals.length ? intervals : [];
+}
+
+function WallVertexDot({ vertex, index, project, selected, hovered, visible }) {
+  if (!visible) return null;
   const p = project(vertex);
   const isFirst = index === 0;
   return (
     <g data-testid="wall-vertex" data-first-corner={isFirst || undefined}>
-      {(isFirst || selected) && (
-        <circle cx={p.x} cy={p.y} r={selected ? 8 : 7} fill="none" stroke={selected ? "#f97316" : "#1d4ed8"} strokeWidth={2} />
+      {(selected || hovered) && (
+        <circle cx={p.x} cy={p.y} r={selected ? 6 : 5} fill="none" stroke={selected ? "#f97316" : "#64748b"} strokeWidth={1.3} />
       )}
       <circle
         cx={p.x} cy={p.y}
@@ -677,12 +1156,12 @@ function WallVertexDot({ vertex, index, project, selected }) {
       />
       <circle
         cx={p.x} cy={p.y}
-        r={4}
+        r={selected ? 3.6 : 3}
         fill="#fff"
-        stroke={selected ? "#f97316" : "#1d4ed8"}
-        strokeWidth={2}
+        stroke={selected ? "#f97316" : "#64748b"}
+        strokeWidth={1.3}
       />
-      <circle cx={p.x} cy={p.y} r={1.3} fill={selected ? "#f97316" : "#1d4ed8"} />
+      <circle cx={p.x} cy={p.y} r={0.9} fill={selected ? "#f97316" : "#64748b"} />
     </g>
   );
 }
@@ -707,7 +1186,7 @@ function OpeningGlyph({ opening, project, selected }) {
   return (
     <g data-testid="opening-glyph" data-opening-type={opening.openingType}>
       <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={selected ? "#f97316" : color} strokeWidth={selected ? 5 : 4} opacity={opening.confirmed === false ? 0.55 : 1} strokeDasharray={opening.confirmed === false ? "5 3" : undefined} />
-      {(opening.openingType === "internal-door" || opening.openingType === "external-door") && opening.swing && (
+      {(opening.openingType === "door" || opening.openingType === "internal-door" || opening.openingType === "external-door") && opening.swing && (
         <path
           d={`M ${a.x} ${a.y} A ${len} ${len} 0 0 1 ${a.x + nx * len} ${a.y + ny * len}`}
           fill="none" stroke={color} strokeWidth={1} opacity={0.6}
@@ -814,11 +1293,10 @@ function LiveLine({ from, to, project, dashed }) {
   const b = project(to);
   return (
     <g data-testid="live-line">
-      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#dc2626" strokeWidth={2} strokeDasharray={dashed ? "6 4" : undefined} />
-      <circle cx={a.x} cy={a.y} r={5} fill="#dc2626" stroke="#fff" strokeWidth={1.5} />
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#ef4444" strokeWidth={1.4} strokeDasharray={dashed ? "6 4" : undefined} opacity={0.85} />
       <g>
-        <line x1={b.x - 8} y1={b.y} x2={b.x + 8} y2={b.y} stroke="#dc2626" strokeWidth={1.5} />
-        <line x1={b.x} y1={b.y - 8} x2={b.x} y2={b.y + 8} stroke="#dc2626" strokeWidth={1.5} />
+        <line x1={b.x - 7} y1={b.y} x2={b.x + 7} y2={b.y} stroke="#ef4444" strokeWidth={1.1} opacity={0.85} />
+        <line x1={b.x} y1={b.y - 7} x2={b.x} y2={b.y + 7} stroke="#ef4444" strokeWidth={1.1} opacity={0.85} />
       </g>
     </g>
   );
@@ -891,6 +1369,18 @@ function SnapMarker({ point, snap, label, project }) {
       {label && (
         <text x={p.x + 10} y={p.y - 8} fontSize={10} fontWeight={800} fill={style.fill} data-testid="snap-marker-label">
           {label}
+        </text>
+      )}
+      {snap?.openingCandidate && snap.openingCandidate !== "none" && (
+        <text
+          x={p.x + 10}
+          y={p.y + 14}
+          fontSize={10}
+          fontWeight={800}
+          fill="#a855f7"
+          data-testid="opening-preview-label"
+        >
+          {`${OPENING_PREVIEW_LABEL[snap.openingCandidate] || "OPENING"}${snap.openingWidthMm ? ` ${Math.round(snap.openingWidthMm)}mm` : ""}`}
         </text>
       )}
     </g>

@@ -10,7 +10,7 @@
 // axis-lock intent (a screen concept) can be resolved correctly.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { generateId, createWallVertex, createWallSegment, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2, EXTERIOR_SOURCE_AUTO_DETECTOR_V2 } from "../types.js";
+import { generateId, createWallVertex, createWallSegment, createMeasurement, createArea, createOpening, createDefaultLayerVisibility, CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION, EXTERIOR_SOURCE_MANUAL_TRACE_V2 } from "../types.js";
 import { distance, midpoint } from "../takeoff/geometry.js";
 import { computeCalibration } from "../takeoff/scaleCalibration.js";
 import { lengthMm } from "../takeoff/measurement.js";
@@ -24,7 +24,6 @@ import {
 } from "../takeoff/lineSelection.js";
 import { findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
 import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
-import { buildSnapCandidates, snapPoint } from "../takeoff/snapping.js";
 import {
   addSegment,
   moveVertex,
@@ -36,14 +35,11 @@ import {
   findOpenEndpoints,
   isPerimeterClosed,
   changeSegmentWallType,
-  setSegmentThickness,
   segmentToWallSegment,
   sumSegmentLengthsMm,
   splitSegment,
 } from "../takeoff/wallGraph.js";
 import { findNearestWallSegment, computeOpeningWidthMm, reattachOpeningsToWall, projectOntoWall } from "../takeoff/openingPlacement.js";
-import { detectWallObjects, summarizeDetectedWalls } from "../takeoff/wallObjectDetection.js";
-import { detectExteriorWallsFromGeometry } from "../takeoff/vectorExteriorDetection.js";
 import { rectangleAreaMetrics, rectangleVerticesFromCorners } from "../takeoff/rectangleArea.js";
 import {
   validateExteriorWallsForConfirmation,
@@ -54,29 +50,137 @@ import {
 import { polygonAreaDocUnits2, isSimplePolygon } from "../takeoff/geometry.js";
 import { offsetPolygonInward, offsetPolygonOutward } from "../takeoff/polygonOffset.js";
 import { defaultPlanRegion, normalizeRegionCorners } from "../takeoff/planRegion.js";
-import { detectRoomBoundary } from "../takeoff/roomBoundaryDetection.js";
+import { manualGeometryFromPage } from "../takeoff/manualGeometry.js";
+import { buildBuilderDefinedWallBandMetadata, buildWallBandSegmentMetadata, detectWallRunFromSeed, isStructuralPlanLine, wallThicknessRangeDocUnits } from "../takeoff/manualWallBand.js";
+import { openingWorkflowPatch } from "../takeoff/windowWorkflow.js";
+import { findWallChainSnap } from "../takeoff/wallChainSnap.js";
+import { setRoomIntrusionIncluded } from "../takeoff/roomIntrusions.js";
+import { createTakeoffDetectionProvider, LOCAL_HEURISTIC_QUARANTINE_REASON } from "../detection/index.js";
 
 const UNDO_LIMIT = 50;
 const VERTEX_HIT_TOLERANCE_SCREEN_PX = 12;
 const SNAP_TOLERANCE_SCREEN_PX = 12; // spec: "10-14 screen pixels"
 const WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX = 8;
+const MIN_MANUAL_WALL_SNAP_CONFIDENCE = 0.2;
 const MANUAL_SNAP = { kind: "manual", lineId: null, lineIds: null };
 const EMPTY_WALL_GRAPH = { vertices: [], segments: [], isClosed: false, confirmed: false, confirmedAt: null, detectionConfidence: null, detectedSnapshot: null };
-const AUTO_DETECTION_DISABLED_MESSAGE = "No wall objects could be detected from this page yet. Use Trace Exterior manually, or review the PDF/vector extraction.";
-const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until wall-object review is complete.";
-const OPENING_TOOLS = ["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"];
+const AUTO_DETECTION_DISABLED_MESSAGE = LOCAL_HEURISTIC_QUARANTINE_REASON;
+const NO_EXTERIOR_PROPOSAL_MESSAGE = "Exterior suggestions are disabled until a configured detection provider supplies reviewable geometry.";
+const OPENING_TOOLS = ["door", "window", "opening", "garage-door", "internal-door", "external-door", "sliding-door", "open-opening"];
 const EXTERIOR_HIGHLIGHT_JUNCTION_SNAP_DOC_UNITS = 18;
 const MIN_HIGHLIGHTED_WALL_LENGTH_DOC_UNITS = 12;
 
+function readBooleanLocalStorage(key) {
+  if (typeof window === "undefined") return false;
+  try {
+    if (key === "takeoffStructuralGraphDebug" && process.env.NEXT_PUBLIC_TAKEOFF_ALLOW_STORED_STRUCTURAL_DEBUG !== "1") {
+      window.localStorage?.removeItem(key);
+      return false;
+    }
+    const value = window.localStorage?.getItem(key);
+    if (value === "1") return true;
+    if (value && value !== "0") window.localStorage?.removeItem(key);
+  } catch {
+    // Debug flags should never break the Takeoff runtime.
+  }
+  return false;
+}
+
+function writeBooleanLocalStorage(key, enabled) {
+  if (typeof window === "undefined") return;
+  try {
+    if (enabled) window.localStorage?.setItem(key, "1");
+    else window.localStorage?.removeItem(key);
+  } catch {
+    // Ignore private-mode/quota failures; the in-memory checkbox state still works.
+  }
+}
+
 function snapCandidateToMetadata(candidate) {
   if (!candidate) return MANUAL_SNAP;
-  return { kind: candidate.type, lineId: candidate.lineId || null, lineIds: candidate.lineIds || null };
+  return {
+    kind: candidate.type,
+    lineId: candidate.lineId || null,
+    lineIds: candidate.lineIds || null,
+    wallBand: candidate.wallBand || null,
+    confidence: candidate.confidence ?? null,
+    sourceGeometry: candidate.sourceGeometry || candidate.lineId || candidate.lineIds || null,
+    // Wall-chain aware snapping (corners, jambs, opening continuations).
+    connectedFace: candidate.connectedFace || null,
+    continuationScore: Number.isFinite(candidate.score) ? candidate.score : null,
+    scoreBreakdown: candidate.scoreBreakdown || null,
+    openingCandidate: candidate.openingCandidate || null,
+    openingWidthMm: candidate.openingWidthMm ?? null,
+    jambIds: candidate.jambIds || null,
+    rejectedCandidates: candidate.rejectedCandidates || null,
+  };
+}
+
+// Detected-opening vocabulary -> the stored openingType the renderer and the
+// opening tools already use (see TakeoffCanvasOverlay openingFillColor).
+const DETECTED_OPENING_TYPE = {
+  garage_door: "garage-door",
+  door: "door",
+  window: "window",
+  opening_candidate: "opening",
+};
+
+function storedOpeningTypeFor(detectedType) {
+  return DETECTED_OPENING_TYPE[detectedType] || "opening";
+}
+
+function lerpAlongSegment(start, end, t) {
+  return { x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t };
+}
+
+function segmentEndpointDistance(segment, start, end, vertexById) {
+  const a = vertexById.get(segment?.aId);
+  const b = vertexById.get(segment?.bId);
+  if (!a || !b || !start || !end) return Infinity;
+  return Math.min(
+    distance(a, start) + distance(b, end),
+    distance(a, end) + distance(b, start),
+  );
+}
+
+function findExistingWallRunSegment(graph, start, end, metadata, toleranceDocUnits = 3) {
+  if (!graph?.segments?.length || !graph?.vertices?.length) return null;
+  const vertexById = new Map(graph.vertices.map((vertex) => [vertex.id, vertex]));
+  const sourceIds = new Set((metadata?.sourceSegmentIds || []).filter(Boolean));
+  let best = null;
+  let bestScore = Infinity;
+  graph.segments.forEach((segment) => {
+    const endpointScore = segmentEndpointDistance(segment, start, end, vertexById);
+    const segmentSourceIds = new Set((segment.sourceSegmentIds || []).filter(Boolean));
+    const sharedSourceCount = [...sourceIds].filter((id) => segmentSourceIds.has(id)).length;
+    const sameSeededRun = String(segment.snapSource || "").startsWith("seeded-") && sharedSourceCount > 0;
+    if (endpointScore <= toleranceDocUnits * 2 || sameSeededRun) {
+      const score = sameSeededRun ? endpointScore - sharedSourceCount : endpointScore;
+      if (score < bestScore) {
+        best = segment;
+        bestScore = score;
+      }
+    }
+  });
+  return best;
 }
 
 function wallFieldForTool(tool) {
   if (tool === "exterior-wall") return "exteriorWalls";
   if (tool === "internal-wall") return "internalWalls";
   return null;
+}
+
+function openingTypeForTool(tool) {
+  if (tool === "door") return "door";
+  if (tool === "opening") return "opening";
+  if (tool === "garage-door") return "garage-door";
+  return tool;
+}
+
+function isTextEditingEvent(event) {
+  const tagName = String(event?.target?.tagName || "").toLowerCase();
+  return tagName === "input" || tagName === "textarea" || tagName === "select" || Boolean(event?.target?.isContentEditable);
 }
 
 function vertexBelongsToField(page, field, vertexId) {
@@ -88,6 +192,25 @@ function wallGraphList(page) {
     { key: "exterior", vertices: page?.exteriorWalls?.vertices || [], segments: page?.exteriorWalls?.segments || [] },
     { key: "internal", vertices: page?.internalWalls?.vertices || [], segments: page?.internalWalls?.segments || [] },
   ];
+}
+
+function manualDetectedWallSummary(walls = []) {
+  const summary = { total: 0, exterior: 0, interior: 0, unknown: 0, lowConfidence: 0, averageConfidence: 0 };
+  const values = [];
+  (Array.isArray(walls) ? walls : []).forEach((wall) => {
+    summary.total += 1;
+    const type = wall?.type || wall?.wallType || "unknown";
+    if (type === "exterior") summary.exterior += 1;
+    else if (type === "interior" || type === "internal") summary.interior += 1;
+    else summary.unknown += 1;
+    const confidence = typeof wall?.confidence === "number" ? wall.confidence : null;
+    if (confidence != null) {
+      values.push(confidence);
+      if (confidence < 0.5) summary.lowConfidence += 1;
+    }
+  });
+  summary.averageConfidence = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  return summary;
 }
 
 function vertexTouchesLockedSegment(graph, vertexId) {
@@ -136,7 +259,9 @@ function exteriorGraphMetadata(field, current = {}) {
   if (field !== "exteriorWalls") return {};
   return {
     boundaryBasis: current.boundaryBasis || "outside",
-    wallThicknessMm: current.wallThicknessMm ?? 200,
+    constructionType: current.constructionType || "brick_veneer",
+    wallThicknessMm: current.wallThicknessMm ?? 250,
+    thicknessLocked: Boolean(current.thicknessLocked),
     schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
     source: EXTERIOR_SOURCE_MANUAL_TRACE_V2,
     detectionConfidence: null,
@@ -148,6 +273,15 @@ function exteriorGraphMetadata(field, current = {}) {
     detectionDiagnostics: null,
     exteriorPerimeter: null,
     detectedSnapshot: null,
+  };
+}
+
+function internalGraphMetadata(field, current = {}) {
+  if (field !== "internalWalls") return {};
+  return {
+    constructionType: current.constructionType || "interior_partition",
+    wallThicknessMm: current.wallThicknessMm ?? 90,
+    thicknessLocked: Boolean(current.thicknessLocked),
   };
 }
 
@@ -169,6 +303,93 @@ function highlightedWallLine(wall) {
 
 function stableHighlightJunctionId(point) {
   return `hlj-${Math.round(point.x)}-${Math.round(point.y)}`;
+}
+
+function wallGraphFromAssemblies(assemblies = [], { wallType = "exterior", page, source = "automatic" } = {}) {
+  const field = wallType === "exterior" ? "exteriorWalls" : "internalWalls";
+  const tolerance = 4;
+  const vertices = [];
+  const vertexKeyToId = new Map();
+  const vertexIdFor = (point) => {
+    const key = `${Math.round(point.x / tolerance)}:${Math.round(point.y / tolerance)}`;
+    const existing = vertexKeyToId.get(key);
+    if (existing) return existing;
+    const id = generateId("wv");
+    vertexKeyToId.set(key, id);
+    vertices.push(createWallVertex({ id, x: point.x, y: point.y }));
+    return id;
+  };
+  const segments = [];
+  assemblies.forEach((assembly) => {
+    const frame = assembly.frame;
+    if (!frame) return;
+    const start = { x: frame.ux * frame.startAlong + frame.nx * frame.fixed, y: frame.uy * frame.startAlong + frame.ny * frame.fixed };
+    const end = { x: frame.ux * frame.endAlong + frame.nx * frame.fixed, y: frame.uy * frame.endAlong + frame.ny * frame.fixed };
+    if (distance(start, end) < MIN_HIGHLIGHTED_WALL_LENGTH_DOC_UNITS) return;
+    const faceA = {
+      start: { x: assembly.faceA.ux * frame.startAlong + assembly.faceA.nx * assembly.faceA.fixed, y: assembly.faceA.uy * frame.startAlong + assembly.faceA.ny * assembly.faceA.fixed },
+      end: { x: assembly.faceA.ux * frame.endAlong + assembly.faceA.nx * assembly.faceA.fixed, y: assembly.faceA.uy * frame.endAlong + assembly.faceA.ny * assembly.faceA.fixed },
+      source: "wall-assembly-graph",
+      lineId: assembly.faceA.id,
+    };
+    const faceB = {
+      start: { x: assembly.faceB.ux * frame.startAlong + assembly.faceB.nx * assembly.faceB.fixed, y: assembly.faceB.uy * frame.startAlong + assembly.faceB.ny * assembly.faceB.fixed },
+      end: { x: assembly.faceB.ux * frame.endAlong + assembly.faceB.nx * assembly.faceB.fixed, y: assembly.faceB.uy * frame.endAlong + assembly.faceB.ny * assembly.faceB.fixed },
+      source: "wall-assembly-graph",
+      lineId: assembly.faceB.id,
+    };
+    const score = wallType === "exterior" ? assembly.exteriorScore : assembly.interiorScore;
+    const metadata = {
+      type: wallType,
+      centreline: { start, end },
+      faceA: wallType === "exterior" ? faceA : faceA,
+      faceB: wallType === "exterior" ? faceB : faceB,
+      innerFace: wallType === "exterior" ? faceA : null,
+      outerFace: wallType === "exterior" ? faceB : null,
+      intermediateFaces: [],
+      orientation: Math.abs(end.x - start.x) >= Math.abs(end.y - start.y) ? "horizontal" : "vertical",
+      thicknessDocUnits: assembly.thicknessDocUnits,
+      thicknessPx: assembly.thicknessDocUnits,
+      thicknessMm: assembly.thicknessMm,
+      wallConstructionType: page?.[field]?.constructionType || (wallType === "exterior" ? "brick_veneer" : "interior_partition"),
+      passedThicknessValidation: true,
+      thicknessValidation: { source: "wall-assembly-graph", valid: true, targetMm: assembly.targetThicknessMm },
+      constructionLineCount: 2,
+      source,
+      confirmed: score >= 0.78,
+      confidence: score >= 0.78 ? "high" : "medium",
+      snapConfidence: score,
+      geometryStatus: "resolved",
+      resolutionFailure: null,
+      snapSource: `auto-detected-${wallType}-assembly`,
+      sourceSegmentIds: [...new Set([...(assembly.faceA.sourceSegmentIds || []), ...(assembly.faceB.sourceSegmentIds || [])])],
+      wallAssemblyId: assembly.id,
+      exteriorScore: assembly.exteriorScore,
+      interiorScore: assembly.interiorScore,
+      sideAOccupancy: assembly.sideAOccupancy?.classification || null,
+      sideBOccupancy: assembly.sideBOccupancy?.classification || null,
+    };
+    segments.push(createWallSegment({
+      ...metadata,
+      id: generateId("ws"),
+      aId: vertexIdFor(start),
+      bId: vertexIdFor(end),
+      wallType,
+    }));
+  });
+  return {
+    vertices,
+    segments,
+    isClosed: wallType === "exterior" ? isPerimeterClosed(vertices, segments) : false,
+    confirmed: false,
+    confirmedAt: null,
+    detectionConfidence: segments.length ? segments.filter((segment) => segment.confidence === "high").length / segments.length : null,
+    detectedSnapshot: null,
+    source: "wall-assembly-graph",
+    wallThicknessMm: page?.[field]?.wallThicknessMm ?? (wallType === "exterior" ? 250 : 90),
+    constructionType: page?.[field]?.constructionType || (wallType === "exterior" ? "brick_veneer" : "interior_partition"),
+    thicknessLocked: Boolean(page?.[field]?.thicknessLocked),
+  };
 }
 
 function infiniteLineIntersection(lineA, lineB) {
@@ -313,8 +534,12 @@ export function highlightedWallsAreValid(walls = []) {
 
 export function snapLabelForCandidate(candidate) {
   if (!candidate) return "";
-  if (candidate.type === "intersection" || candidate.kind === "intersection") return "Wall intersection";
-  if (candidate.type === "line" || candidate.kind === "line") return "Wall line";
+  const kind = candidate.type || candidate.kind;
+  if (kind === "reentrant_corner") return "Internal corner";
+  if (kind === "opening_jamb_continuation") return "Opposite jamb";
+  if (kind === "jamb") return "Opening jamb";
+  if (kind === "intersection") return "Wall intersection";
+  if (kind === "line") return "Wall line";
   return "Corner";
 }
 
@@ -395,15 +620,15 @@ export function tracedSegmentHasWallEvidence(from, to, planGeometryIndex, tolera
   });
 }
 
-export function resolveManualTracePoint(rawPoint, { snapCandidate = null, lastVertex = null, rotation = 0, forcedAxis = null, disableSnap = false } = {}) {
-  if (!disableSnap && snapCandidate) {
-    return { point: snapCandidate.point, axis: null, angleDegrees: null, locked: false, snap: snapCandidateToMetadata(snapCandidate) };
+export function resolveManualTracePoint(rawPoint, { snapCandidate = null, lastVertex = null, rotation = 0, forcedAxis = null, forceOrthogonal = false, disableSnap = false } = {}) {
+  if (disableSnap || !snapCandidate || (snapCandidate.confidence ?? 1) < MIN_MANUAL_WALL_SNAP_CONFIDENCE) {
+    return { point: null, rawPoint, axis: null, angleDegrees: null, locked: false, snap: null, valid: false, reason: "no_wall_corner_snap" };
   }
   if (lastVertex) {
-    const soft = softAxisSnap({ lastPoint: lastVertex, rawPoint, rotation, forcedAxis });
-    return { point: soft.point, axis: soft.axis, angleDegrees: soft.angleDegrees, locked: soft.locked, snap: null };
+    const soft = softAxisSnap({ lastPoint: lastVertex, rawPoint: snapCandidate.point, rotation, forcedAxis, toleranceDegrees: forceOrthogonal ? 45 : undefined });
+    return { point: soft.point, rawPoint, axis: soft.axis, angleDegrees: soft.angleDegrees, locked: soft.locked, snap: snapCandidateToMetadata(snapCandidate), valid: true };
   }
-  return { point: rawPoint, axis: null, angleDegrees: null, locked: false, snap: null };
+  return { point: snapCandidate.point, rawPoint, axis: null, angleDegrees: null, locked: false, snap: snapCandidateToMetadata(snapCandidate), valid: true };
 }
 
 export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) {
@@ -441,17 +666,27 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const [wallDetectionMessage, setWallDetectionMessage] = useState("");
   const [wallDetectionCode, setWallDetectionCode] = useState(null); // "USER_AUTH_REQUIRED"|"PROVIDER_NOT_CONFIGURED"|"PROVIDER_AUTH_FAILED"|"PROVIDER_ERROR"|null
   const [wallDetectionStatus, setWallDetectionStatus] = useState("idle"); // "idle"|"detecting"|"unavailable"
+  const detectionProvider = useMemo(() => createTakeoffDetectionProvider(), []);
   const [exteriorHighlightHoverWallId, setExteriorHighlightHoverWallId] = useState(null);
   const [exteriorHighlightPreview, setExteriorHighlightPreview] = useState(null);
   const [exteriorHighlightDiagnostics, setExteriorHighlightDiagnostics] = useState([]);
   const [exteriorHighlightPointer, setExteriorHighlightPointer] = useState(null);
   const [exteriorHighlightDebugEnabled, setExteriorHighlightDebugEnabled] = useState(false);
+  // Temporary development diagnostics for the wall-chain snapper. On by
+  // default while the garage / front-entry / re-entrant-corner cases are
+  // being verified on real plans.
+  const [wallSnapDebugEnabled, setWallSnapDebugEnabled] = useState(false);
+  const [structuralGraphDebugEnabled, setStructuralGraphDebugEnabledState] = useState(() => readBooleanLocalStorage("takeoffStructuralGraphDebug"));
   const [exteriorHighlightGap, setExteriorHighlightGap] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
   // Manual Exterior Wall / Internal Wall drawing (click-and-connect chain).
+  const [wallDrawChainStartVertexId, setWallDrawChainStartVertexId] = useState(null);
   const [wallDrawChainVertexId, setWallDrawChainVertexId] = useState(null);
+  const [wallDrawChainPoint, setWallDrawChainPoint] = useState(null);
+  const [wallDrawChainSegmentCount, setWallDrawChainSegmentCount] = useState(0);
+  const [wallDrawChainWallBand, setWallDrawChainWallBand] = useState(null);
   const [wallDrawHoverPreview, setWallDrawHoverPreview] = useState(null); // { point, axis, angleDegrees, locked, snap }
 
   // Window/Internal Door/External Door/Sliding Door/Garage Door/Open Opening
@@ -483,7 +718,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setWallEditHoverTarget(null);
     setWallEditSnapPreview(null);
     setWallEditValidation(null);
+    setWallDrawChainStartVertexId(null);
     setWallDrawChainVertexId(null);
+    setWallDrawChainPoint(null);
+    setWallDrawChainSegmentCount(0);
+    setWallDrawChainWallBand(null);
     setWallDrawHoverPreview(null);
     setOpeningHostWall(null);
     setOpeningStart(null);
@@ -510,9 +749,21 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setActiveToolState(tool);
   }, [resetDrafts]);
 
-  const cancelWallDrawPreview = useCallback(() => {
+  const setStructuralGraphDebugEnabled = useCallback((enabled) => {
+    const next = Boolean(enabled);
+    setStructuralGraphDebugEnabledState(next);
+    writeBooleanLocalStorage("takeoffStructuralGraphDebug", next);
+  }, []);
+
+  const endCurrentWallChain = useCallback(() => {
+    setWallDrawChainStartVertexId(null);
+    setWallDrawChainVertexId(null);
+    setWallDrawChainPoint(null);
+    setWallDrawChainSegmentCount(0);
+    setWallDrawChainWallBand(null);
     setWallDrawHoverPreview(null);
     setForcedAxisState(null);
+    setWallEditSnapPreview(null);
     setWallDetectionCode(null);
     setWallDetectionMessage("");
     setWallDetectionStatus("idle");
@@ -526,6 +777,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // exterior-only edit-walls tool, kept for backward compatibility).
   useEffect(() => {
     function onKeyDown(event) {
+      if (isTextEditingEvent(event)) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
         undo();
@@ -537,13 +789,18 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         return;
       }
       if (event.key === "Escape") {
-        if (activeTool === "exterior-wall" || activeTool === "internal-wall") cancelWallDrawPreview();
+        if (activeTool === "exterior-wall" || activeTool === "internal-wall") endCurrentWallChain();
         else resetDrafts();
         return;
       }
-      if (event.key === "Enter" && activeTool === "exterior-wall") {
+      if (event.key === "Enter" && (activeTool === "exterior-wall" || activeTool === "internal-wall")) {
         event.preventDefault();
-        if (canCloseShape) closeWallPerimeter("exteriorWalls");
+        if (canCloseActiveWallChain) {
+          closeWallPerimeter(wallFieldForTool(activeTool), {
+            startVertexId: wallDrawChainStartVertexId,
+            endVertexId: wallDrawChainVertexId,
+          });
+        }
         else finishWallDrawing();
         return;
       }
@@ -551,7 +808,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         if (event.key === "h" || event.key === "H") { setForcedAxisState("horizontal"); return; }
         if (event.key === "v" || event.key === "V") { setForcedAxisState("vertical"); return; }
       }
-      if ((event.key === "Delete" || event.key === "Backspace") && (activeTool === "edit-walls" || activeTool === "edit")) {
+      if ((event.key === "Delete" || event.key === "Backspace") && (activeTool === "edit-walls" || activeTool === "edit" || activeTool === "select" || activeTool === "move-corner")) {
         if (selectedVertexId) deleteSelectedWallVertex();
         else if (selectedSegmentId) deleteSelectedWallSegment();
         else if (selectedOpeningId) deleteSelectedOpening();
@@ -560,7 +817,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTool, pendingPoint, wallDrawChainVertexId, selectedVertexId, selectedSegmentId, selectedOpeningId, resetDrafts, cancelWallDrawPreview]);
+  }, [activeTool, pendingPoint, wallDrawChainStartVertexId, wallDrawChainVertexId, wallDrawChainSegmentCount, selectedVertexId, selectedSegmentId, selectedOpeningId, resetDrafts, endCurrentWallChain]);
 
   // Two-stack undo/redo: undo moves the current value onto redoStack before
   // applying the popped previous value; redo is the mirror image. Every
@@ -601,7 +858,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     pushUndo(field, page?.[field] ?? null);
     const graph = mutator({ vertices: current.vertices, segments: current.segments });
     const isClosed = isPerimeterClosed(graph.vertices, graph.segments);
-    const metadata = exteriorGraphMetadata(field, current);
+    const metadata = { ...exteriorGraphMetadata(field, current), ...internalGraphMetadata(field, current) };
     const reviewPatch = field === "exteriorWalls" ? { confirmed: false, confirmedAt: null } : {};
     commitPage({ [field]: { ...metadata, ...current, vertices: graph.vertices, segments: graph.segments, isClosed, ...metadata, ...reviewPatch }, ...extraPatch });
   }, [page, commitPage, pushUndo]);
@@ -728,10 +985,11 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       snapA: calibrationDialog.snapA,
       snapB: calibrationDialog.snapB,
     });
+    pushUndo("calibration", page?.calibration ?? null);
     commitPage({ calibration });
     resetDrafts();
     setActiveToolState("select");
-  }, [calibrationDialog, page, commitPage, resetDrafts]);
+  }, [calibrationDialog, page, commitPage, resetDrafts, pushUndo]);
 
   const cancelCalibration = useCallback(() => {
     resetDrafts();
@@ -749,8 +1007,9 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   }, [calibrationDialog]);
 
   const clearScale = useCallback(() => {
+    pushUndo("calibration", page?.calibration ?? null);
     commitPage({ calibration: null });
-  }, [commitPage]);
+  }, [commitPage, page, pushUndo]);
 
   const clearMeasurements = useCallback(() => {
     pushUndo("measurements", page?.measurements || []);
@@ -765,131 +1024,46 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // manual tool keeps working regardless, and nothing already drawn/confirmed
   // is touched.
   const runWallDetection = useCallback(async ({ imageDataUrl, imageWidth, imageHeight, viewport, planGeometryIndex: snapshotPlanGeometryIndex = null } = {}) => {
-    void imageDataUrl;
-    void imageWidth;
-    void imageHeight;
-    void viewport;
     setWallDetectionBusy(true);
     setWallDetectionStatus("detecting");
-    setWallDetectionMessage("Detecting walls...");
+    setWallDetectionMessage(`Checking ${detectionProvider.label}...`);
     setWallDetectionCode(null);
     try {
-      const result = detectWallObjects({
+      const result = await detectionProvider.detectWalls({
+        imageDataUrl,
+        imageWidth,
+        imageHeight,
+        viewport,
         planGeometryIndex: snapshotPlanGeometryIndex || planGeometryIndex,
         page,
       });
-      if (!result.walls.length) {
-        commitPage({ detectedWalls: [], wallDetectionDiagnostics: result.diagnostics, wallDetectionSummary: result.summary });
+      if (!result.ok) {
+        commitPage({ detectedWalls: [], wallDetectionDiagnostics: result.diagnostics || null, wallDetectionSummary: manualDetectedWallSummary([]) });
         setWallDetectionStatus("unavailable");
-        setWallDetectionMessage(AUTO_DETECTION_DISABLED_MESSAGE);
-        setWallDetectionCode("NO_WALL_OBJECTS");
+        setWallDetectionMessage(result.reason || AUTO_DETECTION_DISABLED_MESSAGE);
+        setWallDetectionCode("PROVIDER_NOT_CONFIGURED");
         return;
       }
       commitPage({
-        detectedWalls: result.walls,
-        wallDetectionDiagnostics: result.diagnostics,
-        wallDetectionSummary: result.summary,
+        detectedWalls: result.walls || [],
+        wallDetectionDiagnostics: result.diagnostics || null,
+        wallDetectionSummary: manualDetectedWallSummary(result.walls || []),
       });
       setWallDetectionStatus("walls-detected");
-      setWallDetectionMessage(`Walls detected: ${result.summary.total} (${result.summary.exterior} exterior, ${result.summary.interior} interior, ${result.summary.unknown} unknown).`);
+      setWallDetectionMessage(`Walls detected by ${detectionProvider.label}: ${result.walls?.length || 0}. Review before accepting.`);
       setWallDetectionCode(null);
     } finally {
       setWallDetectionBusy(false);
     }
-  }, [planGeometryIndex, page, commitPage]);
+  }, [detectionProvider, planGeometryIndex, page, commitPage]);
 
   const detectExterior = useCallback(async () => {
-    setWallDetectionBusy(true);
-    setWallDetectionStatus("detecting");
-    setWallDetectionMessage("Detecting exterior...");
+    setWallDetectionBusy(false);
+    setWallDetectionStatus("awaiting-seed");
+    setWallDetectionMessage("Exterior Wall Detection: click inside one exterior wall band to seed tracing. The outline stays unapproved until you accept it.");
     setWallDetectionCode(null);
-    try {
-      const result = detectExteriorWallsFromGeometry({
-        planGeometryIndex,
-        page,
-        planRegion: page?.planRegion?.confirmed ? page.planRegion : null,
-        stitchToleranceDocUnits: 6,
-      });
-      const candidateSegments = Array.isArray(result?.segments) ? result.segments : [];
-      const candidateVertices = Array.isArray(result?.vertices) ? result.vertices : [];
-      const missingSectionCount = Number(result?.exteriorPerimeter?.gapCount ?? result?.openGaps ?? 0) || 0;
-      const hasCandidate = Boolean(result?.exteriorPerimeter?.closed && candidateSegments.length >= 3 && candidateVertices.length >= 3);
-      const hasSelfIntersections = Number(result?.exteriorPerimeter?.selfIntersectionCount ?? result?.exteriorPerimeter?.selfIntersections ?? 0) > 0;
-      const manualTraceProof = Array.isArray(result?.diagnostics?.manualTraceProof) ? result.diagnostics.manualTraceProof : [];
-      const everySegmentTraceable = candidateSegments.length > 0 &&
-        manualTraceProof.length === candidateSegments.length &&
-        manualTraceProof.every((item) => item.traceEdgeId && item.manualTraceable === true && item.manualTraceValidation === "PASS");
-      if (!hasCandidate || hasSelfIntersections || !everySegmentTraceable) {
-        const traceableSectionCount = Number(result?.diagnostics?.traceGraphEdgeCount || 0);
-        commitPage({
-          exteriorWalls: null,
-          wallDetectionDiagnostics: result?.diagnostics || null,
-          wallDetectionSummary: null,
-        });
-        setWallDetectionStatus("unavailable");
-        setWallDetectionMessage(traceableSectionCount > 0
-          ? `Automatic exterior not detected reliably. Detected traceable geometry sections: ${traceableSectionCount}. Use Trace Exterior.`
-          : "Automatic exterior not detected reliably. Use Trace Exterior.");
-        setWallDetectionCode("NO_EXTERIOR_BOUNDARY");
-        return;
-      }
-      const candidateReady = missingSectionCount === 0;
-      const exteriorWalls = {
-        boundaryBasis: page?.exteriorWalls?.boundaryBasis || "outside",
-        wallThicknessMm: page?.exteriorWalls?.wallThicknessMm ?? 200,
-        schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
-        source: EXTERIOR_SOURCE_AUTO_DETECTOR_V2,
-        vertices: candidateVertices,
-        segments: candidateSegments.map((segment) => {
-          const missingSectionIndicator = isMissingSectionIndicator(segment);
-          return {
-            ...segment,
-            wallType: "exterior",
-            source: "automatic",
-            confirmed: candidateReady && !missingSectionIndicator,
-            confidence: segment.confidence || "high",
-            missingSectionIndicator,
-          };
-        }),
-        isClosed: candidateReady,
-        confirmed: false,
-        confirmedAt: null,
-        reviewStatus: candidateReady ? "candidate-ready" : "candidate-incomplete",
-        detectionConfidence: result.detectionConfidence ?? result.exteriorPerimeter.confidence ?? null,
-        detectionCompleteness: result.completeness ?? null,
-        connectedComponents: result.connectedComponents ?? null,
-        openGaps: missingSectionCount,
-        detectionWarnings: result.warnings || [],
-        detectionUseful: result.useful ?? true,
-        detectionDiagnostics: result.diagnostics || null,
-        exteriorPerimeter: result.exteriorPerimeter,
-        detectedSnapshot: {
-          vertices: result.vertices,
-          segments: result.segments,
-        },
-      };
-      pushUndo("exteriorWalls", page?.exteriorWalls ?? null);
-      const nextLayerVisibility = { ...(page?.layerVisibility || layerVisibility), exteriorWalls: true };
-      setLayerVisibilityState(nextLayerVisibility);
-      commitPage({
-        exteriorWalls,
-        exteriorHighlightedWalls: [],
-        exteriorHighlightedWallIds: [],
-        layerVisibility: nextLayerVisibility,
-        wallDetectionDiagnostics: result.diagnostics || null,
-        wallDetectionSummary: null,
-      });
-      setSelectedField("exteriorWalls");
-      setSelectedVertexId(null);
-      setSelectedSegmentId(null);
-      setWallDetectionStatus(candidateReady ? "candidate-ready" : "candidate-incomplete");
-      setWallDetectionMessage(`Exterior detected - ${result.exteriorPerimeter.points.length} boundary corners, ${activeWallSegments(exteriorWalls).length} exterior wall sections${missingSectionCount ? `, ${missingSectionCount} missing sections` : ""}.`);
-      setWallDetectionCode(null);
-      setActiveToolState("edit-walls");
-    } finally {
-      setWallDetectionBusy(false);
-    }
-  }, [planGeometryIndex, page, commitPage, pushUndo, layerVisibility]);
+    setActiveToolState("exterior-wall");
+  }, []);
 
   const updateExteriorHighlighterHover = useCallback((rawPoint, { zoomScale = 1, rasterContext = null } = {}) => {
     if (activeTool !== "exterior-highlighter") return;
@@ -1073,7 +1247,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const activeExteriorWallSegmentCount = useMemo(() => activeWallSegments(page?.exteriorWalls).length, [page]);
   const activeInternalWallSegmentCount = useMemo(() => activeWallSegments(page?.internalWalls).length, [page]);
-  const detectedWallSummary = useMemo(() => page?.wallDetectionSummary || summarizeDetectedWalls(page?.detectedWalls || []), [page]);
+  const detectedWallSummary = useMemo(() => page?.wallDetectionSummary || manualDetectedWallSummary(page?.detectedWalls || []), [page]);
   const exteriorHighlightJunctionState = useMemo(
     () => normalizeHighlightedWallJunctions(page?.exteriorHighlightedWalls || []),
     [page?.exteriorHighlightedWalls]
@@ -1458,12 +1632,10 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // has, vertex taking priority since deleting a vertex already implies
   // removing its connected segments.
   const canDeleteWallSelection = !!(
-    selectedVertexId && !vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)
+    (selectedVertexId && !vertexTouchesLockedSegment(page?.[selectedField], selectedVertexId)) ||
+    selectedSegmentId ||
+    selectedOpeningId
   );
-  const deleteSelectedWallItem = useCallback(() => {
-    if (selectedVertexId) deleteSelectedWallVertex();
-  }, [selectedVertexId, deleteSelectedWallVertex]);
-
   // ---- Generic Edit tool: hit-testing across both wall graphs + openings ---
 
   const findWallVertexNearAny = useCallback((point, { zoomScale = 1, toleranceScreenPx = VERTEX_HIT_TOLERANCE_SCREEN_PX } = {}) => {
@@ -1489,7 +1661,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   }, [page, findExteriorHighlightJunctionNear]);
 
   const updateWallEditHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
-    if (activeTool !== "edit-walls" && activeTool !== "edit") return;
+    if (!["select", "move-corner", "add-corner", "edit-walls", "edit"].includes(activeTool)) return;
     const vertexHit = activeTool === "edit-walls"
       ? (() => {
         const highlightedHit = findExteriorHighlightJunctionNear(rawPoint, { zoomScale, toleranceScreenPx: 10 });
@@ -1528,6 +1700,20 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       return;
     }
 
+    let bestOpening = null;
+    let bestOpeningDistance = toleranceDocUnits;
+    (page?.openings || []).forEach((opening) => {
+      const { point: projected } = projectOntoWall(rawPoint, opening.start, opening.end);
+      const d = distance(projected, rawPoint);
+      if (d <= bestOpeningDistance) { bestOpening = opening; bestOpeningDistance = d; }
+    });
+    if (bestOpening) {
+      setSelectedOpeningId(bestOpening.id);
+      setSelectedVertexId(null);
+      setSelectedSegmentId(null);
+      return;
+    }
+
     for (const field of ["exteriorWalls", "internalWalls"]) {
       const graph = page?.[field];
       if (!graph) continue;
@@ -1550,20 +1736,6 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         setSelectedOpeningId(null);
         return;
       }
-    }
-
-    let bestOpening = null;
-    let bestOpeningDistance = toleranceDocUnits;
-    (page?.openings || []).forEach((opening) => {
-      const { point: projected } = projectOntoWall(rawPoint, opening.start, opening.end);
-      const d = distance(projected, rawPoint);
-      if (d <= bestOpeningDistance) { bestOpening = opening; bestOpeningDistance = d; }
-    });
-    if (bestOpening) {
-      setSelectedOpeningId(bestOpening.id);
-      setSelectedVertexId(null);
-      setSelectedSegmentId(null);
-      return;
     }
 
     setSelectedVertexId(null);
@@ -1590,9 +1762,30 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const setSelectedSegmentThickness = useCallback((thicknessMm) => {
     if (!selectedSegmentId) return;
-    const segment = page?.[selectedField]?.segments.find((s) => s.id === selectedSegmentId);
+    const graph = page?.[selectedField];
+    const segment = graph?.segments.find((s) => s.id === selectedSegmentId);
     if (segment?.locked) return;
-    mutateWallField(selectedField, (graph) => setSegmentThickness(graph, selectedSegmentId, thicknessMm));
+    const wallType = selectedField === "exteriorWalls" ? "exterior" : "internal";
+    const byId = new Map((graph?.vertices || []).map((vertex) => [vertex.id, vertex]));
+    const start = byId.get(segment?.aId);
+    const end = byId.get(segment?.bId);
+    mutateWallField(selectedField, (currentGraph) => ({
+      vertices: currentGraph.vertices,
+      segments: currentGraph.segments.map((s) => {
+        if (s.id !== selectedSegmentId) return s;
+        const metadata = thicknessMm > 0 && start && end
+          ? buildBuilderDefinedWallBandMetadata(start, end, {
+            wallBand: s,
+            page,
+            field: selectedField,
+            wallType,
+            thicknessMmOverride: thicknessMm,
+            thicknessSourceOverride: "user_override",
+          })
+          : null;
+        return { ...s, ...(metadata || {}), thicknessMm, thicknessSource: thicknessMm > 0 ? "user_override" : s.thicknessSource };
+      }),
+    }));
   }, [selectedSegmentId, selectedField, page, mutateWallField]);
 
   const setSelectedSegmentLocked = useCallback((locked) => {
@@ -1704,13 +1897,39 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     return insertedVertexId;
   }, [selectedField, page, findWallSegmentNear, mutateWallField, planGeometryIndex]);
 
+  const handleAddCornerClick = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+    const fields = ["exteriorWalls", "internalWalls"];
+    let best = null;
+    fields.forEach((field) => {
+      const hit = findWallSegmentNear(rawPoint, { field, zoomScale, toleranceScreenPx: 18 });
+      if (!hit) return;
+      if (!best || hit.distance < best.distance) best = { ...hit, field };
+    });
+    if (!best) return null;
+    return insertWallPointAt(best.point || rawPoint, { field: best.field, zoomScale });
+  }, [findWallSegmentNear, insertWallPointAt]);
+
   // Validates *before* mutating — a failed close (e.g. the closing segment
   // would cross another wall) leaves the graph untouched and surfaces the
   // spec-exact reason via closeShapeError, rather than silently no-op'ing or
   // (worse) creating an invalid self-intersecting polygon.
-  const closeWallPerimeter = useCallback((field = "exteriorWalls") => {
+  const closeWallPerimeter = useCallback((field = "exteriorWalls", activeChain = {}) => {
     const graph = page?.[field];
     if (!graph) return;
+    if (activeChain.startVertexId && activeChain.endVertexId && activeChain.startVertexId !== activeChain.endVertexId) {
+      const start = graph.vertices.find((vertex) => vertex.id === activeChain.startVertexId);
+      const end = graph.vertices.find((vertex) => vertex.id === activeChain.endVertexId);
+      if (!start || !end) return;
+      setCloseShapeError(null);
+      setCloseShapeSuccessMessage(field === "internalWalls" ? "Interior wall chain closed" : "Exterior wall chain closed");
+      mutateWallField(field, (currentGraph) => addSegment(currentGraph, activeChain.endVertexId, activeChain.startVertexId, { wallType: field === "internalWalls" ? "internal" : "exterior" }));
+      setWallDrawChainStartVertexId(null);
+      setWallDrawChainVertexId(null);
+      setWallDrawChainSegmentCount(0);
+      setWallDrawChainWallBand(null);
+      setWallDrawHoverPreview(null);
+      return;
+    }
     const openEndpoints = findOpenEndpoints(graph.vertices, graph.segments);
     const tolerance = openEndpoints.length === 2 ? distance(openEndpoints[0], openEndpoints[1]) + 1 : Infinity;
     const result = closePerimeter(graph, tolerance);
@@ -1729,12 +1948,16 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   // "active trace" gating from the spec, expressed directly in terms of what
   // closePerimeter itself requires so the button is never enabled for a case
   // it will immediately reject.
-  const canCloseShape = !!(
-    page?.exteriorWalls &&
-    !page.exteriorWalls.isClosed &&
-    page.exteriorWalls.vertices.length >= 3 &&
-    findOpenEndpoints(page.exteriorWalls.vertices, page.exteriorWalls.segments).length === 2
+  const activeWallDrawField = wallFieldForTool(activeTool);
+  const canCloseActiveWallChain = !!(
+    activeWallDrawField &&
+    wallDrawChainStartVertexId &&
+    wallDrawChainVertexId &&
+    wallDrawChainStartVertexId !== wallDrawChainVertexId &&
+    wallDrawChainSegmentCount >= 2 &&
+    (page?.[activeWallDrawField]?.segments || []).some((segment) => segment.aId === wallDrawChainVertexId || segment.bId === wallDrawChainVertexId)
   );
+  const canCloseShape = canCloseActiveWallChain;
 
   // Clear Exterior wipes the whole exterior-wall graph (drawn or detected)
   // back to a pristine, unconfirmed state and drops any openings hosted on
@@ -1790,6 +2013,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   const totalExteriorWallLengthMm = useMemo(() => {
     if (!page?.calibration || !page?.exteriorWalls) return 0;
     return sumSegmentLengthsMm(page.exteriorWalls.vertices, activeWallSegments(page.exteriorWalls), page.calibration.mmPerDocumentUnit);
+  }, [page]);
+
+  const totalConfirmedExteriorWallLengthMm = useMemo(() => {
+    if (!page?.calibration || !page?.exteriorWalls) return 0;
+    return sumSegmentLengthsMm(
+      page.exteriorWalls.vertices,
+      activeWallSegments(page.exteriorWalls).filter((segment) => segment.confirmed !== false && segment.geometryStatus === "resolved"),
+      page.calibration.mmPerDocumentUnit,
+    );
   }, [page]);
 
   const totalInternalWallLengthMm = useMemo(() => {
@@ -1865,6 +2097,35 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     commitPage({ exteriorWalls: { ...page.exteriorWalls, wallThicknessMm: thicknessMm } });
   }, [page, commitPage, pushUndo]);
 
+  const setWallThicknessDefaults = useCallback((field, patch = {}) => {
+    const current = page?.[field];
+    if (!current) return;
+    const wallType = field === "exteriorWalls" ? "exterior" : "internal";
+    const nextGraph = { ...current, ...patch };
+    const byId = new Map((nextGraph.vertices || []).map((vertex) => [vertex.id, vertex]));
+    const pageForBuild = { ...page, [field]: nextGraph };
+    const segments = (nextGraph.segments || []).map((segment) => {
+      const shouldApplyGraphThickness = nextGraph.thicknessLocked ||
+        segment.thicknessMm == null ||
+        segment.thicknessSource !== "user_override";
+      if (!shouldApplyGraphThickness) return segment;
+      const start = byId.get(segment.aId);
+      const end = byId.get(segment.bId);
+      const metadata = start && end
+        ? buildBuilderDefinedWallBandMetadata(start, end, {
+          wallBand: segment,
+          page: pageForBuild,
+          field,
+          wallType,
+          thicknessSourceOverride: nextGraph.thicknessLocked ? "user_locked" : "user_override",
+        })
+        : null;
+      return metadata ? { ...segment, ...metadata } : segment;
+    });
+    pushUndo(field, current);
+    commitPage({ [field]: { ...nextGraph, segments } });
+  }, [page, commitPage, pushUndo]);
+
   const confirmArea = useCallback(({ confirmedAreaM2, note, name = "Ground Floor", areaType = "Living Area" } = {}) => {
     if (!areaValidation.valid || calculatedAreaM2 == null) return;
     const finalConfirmed = Number.isFinite(confirmedAreaM2) ? confirmedAreaM2 : calculatedAreaM2;
@@ -1935,19 +2196,16 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setManualAreaDialogOpen(true);
   }, []);
 
-  const handleAreaCanvasClick = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
+  const handleAreaCanvasClick = useCallback((rawPoint, { zoomScale = 1, altKey = false, disableSnap = false } = {}) => {
     if (areaMode === "room-detect") {
-      const candidate = detectRoomBoundary({
-        page,
-        seedPoint: rawPoint,
-        exclusionCandidates: page?.roomExclusionCandidates || [],
-        wallThicknessMm: page?.internalWalls?.wallThicknessMm || page?.exteriorWalls?.wallThicknessMm || 0,
-      });
-      applyDetectedRoomCandidate(candidate);
+      void rawPoint;
+      setWallDetectionStatus("unavailable");
+      setWallDetectionMessage("Room boundary fill is not wired yet. Use Manual Polygon or Rectangle while the provider/fill architecture is implemented.");
+      setWallDetectionCode("PROVIDER_NOT_CONFIGURED");
       return;
     }
     if (areaMode === "rectangle") {
-      const snapped = resolveAreaSnapPoint(rawPoint, { zoomScale });
+      const snapped = resolveAreaSnapPoint(rawPoint, { zoomScale, altKey, disableSnap });
       if (!areaSearchDraft?.start) {
         setAreaSearchDraft({ start: snapped, end: snapped });
         return;
@@ -1960,10 +2218,7 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       return;
     }
     if (areaMode !== "manual-polygon") return;
-    const candidates = buildSnapCandidates(page);
-    const { point } = snapPoint(rawPoint, candidates, { zoomScale });
-    const planCandidate = bestSnapCandidate(rawPoint, { toleranceScreenPx: SNAP_TOLERANCE_SCREEN_PX, zoomScale, planGeometryIndex });
-    const finalPoint = resolveAreaSnapPoint(planCandidate ? planCandidate.point : point, { zoomScale });
+    const finalPoint = rawPoint;
 
     if (areaDraftVertices.length >= 3) {
       const closeToleranceDocUnits = SNAP_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01);
@@ -1979,7 +2234,6 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     page,
     planGeometryIndex,
     areaDraftVertices,
-    applyDetectedRoomCandidate,
     resolveAreaSnapPoint,
     createRectangleArea,
     pushUndo,
@@ -2137,6 +2391,18 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     commitPage({ areas: areas.map((a) => (a.id === areaId ? { ...a, ...patch } : a)) });
   }, [page, commitPage, pushUndo]);
 
+  const setAreaIntrusionIncluded = useCallback((areaId, intrusionId, included) => {
+    const areas = page?.areas || [];
+    const area = areas.find((candidate) => candidate.id === areaId);
+    if (!area) return;
+    pushUndo("areas", areas);
+    commitPage({
+      areas: areas.map((candidate) => (
+        candidate.id === areaId ? setRoomIntrusionIncluded(candidate, intrusionId, included) : candidate
+      )),
+    });
+  }, [page, commitPage, pushUndo]);
+
   const deleteArea = useCallback((areaId) => {
     const areas = page?.areas || [];
     pushUndo("areas", areas);
@@ -2147,18 +2413,35 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
   //      Door / Garage Door / Open Opening) --------------------------------
 
   const OPENING_HOST_TOLERANCE_SCREEN_PX = 14;
+  const confirmedExteriorRunCount = activeWallSegments(page?.exteriorWalls).filter((segment) => segment.confirmed !== false && segment.geometryStatus === "resolved").length;
+  const exteriorOutlineApproved = Boolean(page?.exteriorWalls?.confirmed || confirmedExteriorRunCount > 0);
+  const approvedOpeningWallGraphs = useCallback(() => {
+    if (!exteriorOutlineApproved) return [];
+    return wallGraphList(page);
+  }, [exteriorOutlineApproved, page]);
 
   const updateOpeningHover = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
     if (!OPENING_TOOLS.includes(activeTool)) return;
+    if (!exteriorOutlineApproved) {
+      setOpeningHostWall(null);
+      setWallDetectionMessage("Confirm at least one exterior wall run before detecting or placing openings.");
+      return;
+    }
     const toleranceDocUnits = OPENING_HOST_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01);
-    const host = findNearestWallSegment(rawPoint, wallGraphList(page), toleranceDocUnits);
+    const host = findNearestWallSegment(rawPoint, approvedOpeningWallGraphs(), toleranceDocUnits);
     setOpeningHostWall(host);
-  }, [activeTool, page]);
+  }, [activeTool, approvedOpeningWallGraphs, exteriorOutlineApproved]);
 
   const handleOpeningCanvasClick = useCallback((rawPoint, { zoomScale = 1 } = {}) => {
     if (!OPENING_TOOLS.includes(activeTool) || !page?.calibration) return;
+    if (!exteriorOutlineApproved) {
+      setOpeningStart(null);
+      setOpeningHostWall(null);
+      setWallDetectionMessage("Confirm at least one exterior wall run before detecting or placing openings.");
+      return;
+    }
     const toleranceDocUnits = OPENING_HOST_TOLERANCE_SCREEN_PX / Math.max(zoomScale, 0.01);
-    const host = findNearestWallSegment(rawPoint, wallGraphList(page), toleranceDocUnits);
+    const host = findNearestWallSegment(rawPoint, approvedOpeningWallGraphs(), toleranceDocUnits);
     if (!host) return; // openings must be placed on a wall
     setOpeningHostWall(host);
 
@@ -2168,20 +2451,25 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     }
 
     const widthMm = computeOpeningWidthMm(openingStart, host.point, page.calibration.mmPerDocumentUnit);
+    const startOffset = projectOntoWall(openingStart, host.start, host.end).t;
+    const endOffset = projectOntoWall(host.point, host.start, host.end).t;
     const opening = createOpening({
       id: generateId("op"),
       wallId: host.wallId,
       wallGraph: host.wallGraph,
-      openingType: activeTool,
+      openingType: openingTypeForTool(activeTool),
       start: openingStart,
       end: host.point,
+      startOffset: Math.min(startOffset, endOffset),
+      endOffset: Math.max(startOffset, endOffset),
       widthMm,
-      swing: ["internal-door", "external-door"].includes(activeTool) ? { hingeSide: "start", direction: "in" } : null,
+      swing: ["door", "internal-door", "external-door"].includes(activeTool) ? { hingeSide: "start", direction: "in" } : null,
     });
+    const openings = [...(page.openings || []), opening];
     pushUndo("openings", page.openings || []);
-    commitPage({ openings: [...(page.openings || []), opening] });
+    commitPage({ openings, ...openingWorkflowPatch(openings, page) });
     setOpeningStart(null);
-  }, [activeTool, page, openingStart, commitPage, pushUndo]);
+  }, [activeTool, page, openingStart, commitPage, pushUndo, approvedOpeningWallGraphs, exteriorOutlineApproved]);
 
   const cancelOpeningPlacement = useCallback(() => {
     setOpeningStart(null);
@@ -2196,17 +2484,43 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
 
   const updateOpening = useCallback((openingId, patch) => {
     const openings = page?.openings || [];
+    const nextOpenings = openings.map((o) => (o.id === openingId ? { ...o, ...patch } : o));
     pushUndo("openings", openings);
-    commitPage({ openings: openings.map((o) => (o.id === openingId ? { ...o, ...patch } : o)) });
+    commitPage({ openings: nextOpenings, ...openingWorkflowPatch(nextOpenings, page) });
   }, [page, commitPage, pushUndo]);
 
   const deleteSelectedOpening = useCallback(() => {
     if (!selectedOpeningId) return;
     const openings = page?.openings || [];
+    const nextOpenings = openings.filter((o) => o.id !== selectedOpeningId);
     pushUndo("openings", openings);
-    commitPage({ openings: openings.filter((o) => o.id !== selectedOpeningId) });
+    commitPage({ openings: nextOpenings, ...openingWorkflowPatch(nextOpenings, page) });
     setSelectedOpeningId(null);
   }, [selectedOpeningId, page, commitPage, pushUndo]);
+
+  const deleteSelectedGeometry = useCallback(() => {
+    if (selectedVertexId) {
+      deleteSelectedWallVertex();
+      return;
+    }
+    if (selectedSegmentId) {
+      deleteSelectedWallSegment();
+      return;
+    }
+    if (selectedOpeningId) {
+      deleteSelectedOpening();
+    }
+  }, [selectedVertexId, selectedSegmentId, selectedOpeningId, deleteSelectedWallVertex, deleteSelectedWallSegment, deleteSelectedOpening]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedVertexId(null);
+    setSelectedSegmentId(null);
+    setSelectedSegmentPoint(null);
+    setSelectedOpeningId(null);
+    setWallEditHoverTarget(null);
+    setWallEditSnapPreview(null);
+    setWallEditValidation(null);
+  }, []);
 
   // Lands exactly on top of the original by default — the user drags it into
   // place on the same or a different wall.
@@ -2216,10 +2530,21 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const original = openings.find((o) => o.id === selectedOpeningId);
     if (!original) return;
     const copy = { ...original, id: generateId("op"), start: { ...original.start }, end: { ...original.end }, confirmed: false };
+    const nextOpenings = [...openings, copy];
     pushUndo("openings", openings);
-    commitPage({ openings: [...openings, copy] });
+    commitPage({ openings: nextOpenings, ...openingWorkflowPatch(nextOpenings, page) });
     setSelectedOpeningId(copy.id);
   }, [selectedOpeningId, page, commitPage, pushUndo]);
+
+  const approveWindowReconciliation = useCallback(() => {
+    const openings = page?.openings || [];
+    const approvedAt = new Date().toISOString();
+    const workflow = openingWorkflowPatch(openings, {
+      ...page,
+      windowReconciliation: { ...(page?.windowReconciliation || {}), approved: true, approvedAt },
+    });
+    commitPage({ ...workflow, windowReconciliation: { ...workflow.windowReconciliation, approved: true, approvedAt } });
+  }, [page, commitPage]);
 
   const flipOpeningSwing = useCallback((openingId) => {
     const openings = page?.openings || [];
@@ -2302,7 +2627,22 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     setDraggingOpening((current) => {
       if (!current || !page?.calibration) return null;
       const widthMm = computeOpeningWidthMm(current.start, current.end, page.calibration.mmPerDocumentUnit);
-      updateOpening(current.id, { start: current.start, end: current.end, widthMm });
+      const opening = (page?.openings || []).find((candidate) => candidate.id === current.id);
+      const hostField = opening?.wallGraph === "exterior" ? "exteriorWalls" : "internalWalls";
+      const graph = page?.[hostField];
+      const segment = graph?.segments.find((candidate) => candidate.id === opening?.wallId);
+      const byId = new Map((graph?.vertices || []).map((vertex) => [vertex.id, vertex]));
+      const wallStart = byId.get(segment?.aId);
+      const wallEnd = byId.get(segment?.bId);
+      const startOffset = wallStart && wallEnd ? projectOntoWall(current.start, wallStart, wallEnd).t : opening?.startOffset;
+      const endOffset = wallStart && wallEnd ? projectOntoWall(current.end, wallStart, wallEnd).t : opening?.endOffset;
+      updateOpening(current.id, {
+        start: current.start,
+        end: current.end,
+        startOffset: Math.min(startOffset ?? 0, endOffset ?? 0),
+        endOffset: Math.max(startOffset ?? 0, endOffset ?? 0),
+        widthMm,
+      });
       return null;
     });
   }, [page, updateOpening]);
@@ -2319,26 +2659,182 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const field = wallFieldForTool(activeTool);
     if (!field) return null;
     const snapDisabled = disableSnap || altKey;
-    const candidate = snapDisabled ? null : bestSnapCandidate(rawPoint, {
-      toleranceScreenPx: field === "exteriorWalls" ? WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX : SNAP_TOLERANCE_SCREEN_PX,
-      zoomScale,
+    const lastVertex = wallDrawChainVertexId ? page?.[field]?.vertices.find((v) => v.id === wallDrawChainVertexId) : null;
+    const toleranceScreenPx = field === "exteriorWalls" ? WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX : SNAP_TOLERANCE_SCREEN_PX;
+
+    // Wall-side-aware snapping runs first: at a re-entrant corner it picks the
+    // face intersection that continues the wall being traced rather than the
+    // one nearest the cursor, and it accepts opening jambs so a garage or
+    // front door does not break the chain. It only ever *adds* snap targets —
+    // when it finds nothing the original snap pipeline still decides, and when
+    // that finds nothing too there is still no point (snap lock preserved).
+    const chainSnap = snapDisabled ? null : findWallChainSnap(rawPoint, {
       planGeometryIndex,
       page,
-      excludeVertexId: wallDrawChainVertexId,
+      fromPoint: lastVertex || null,
+      activeBand: wallDrawChainWallBand,
+      toleranceDocUnits: (toleranceScreenPx + 6) / Math.max(zoomScale, 0.01),
+      thicknessRange: wallThicknessRangeDocUnits(page, field),
+      structuralFilter: isStructuralPlanLine,
     });
-    const lastVertex = wallDrawChainVertexId ? page?.[field]?.vertices.find((v) => v.id === wallDrawChainVertexId) : null;
+    const candidate = snapDisabled
+      ? null
+      : chainSnap || bestSnapCandidate(rawPoint, {
+        toleranceScreenPx,
+        zoomScale,
+        planGeometryIndex,
+        page,
+        excludeVertexId: wallDrawChainVertexId,
+      });
     return resolveManualTracePoint(rawPoint, { snapCandidate: candidate, lastVertex, rotation, forcedAxis, disableSnap: snapDisabled });
-  }, [activeTool, wallDrawChainVertexId, page, forcedAxis, planGeometryIndex]);
+  }, [activeTool, wallDrawChainVertexId, wallDrawChainWallBand, page, forcedAxis, planGeometryIndex]);
 
   const updateWallDrawHover = useCallback((rawPoint, options) => {
+    const field = wallFieldForTool(activeTool);
+    if (field) {
+      const wallType = field === "internalWalls" ? "internal" : "exterior";
+      const wallRun = detectWallRunFromSeed(rawPoint, {
+        planGeometryIndex,
+        page,
+        zoomScale: options?.zoomScale || 1,
+        wallType,
+        field,
+      });
+      if (wallRun?.status === "resolved" && wallRun.point) {
+        setWallDrawHoverPreview({
+          valid: true,
+          point: wallRun.point,
+          axis: null,
+          angleDegrees: null,
+          locked: false,
+          snap: {
+            kind: "wall-run",
+            confidence: wallRun.metadata?.confidence ?? 0.8,
+            wallBand: wallRun.metadata,
+            startNode: wallRun.startNode || wallRun.metadata?.wallRunDetection?.startNode || null,
+            endNode: wallRun.endNode || wallRun.metadata?.wallRunDetection?.endNode || null,
+          },
+        });
+        return;
+      }
+      setWallDrawHoverPreview(null);
+      return;
+    }
     setWallDrawHoverPreview(resolveWallDrawPoint(rawPoint, options));
-  }, [resolveWallDrawPoint]);
+  }, [activeTool, page, planGeometryIndex, resolveWallDrawPoint]);
 
   const handleWallDrawClick = useCallback((rawPoint, options) => {
     const field = wallFieldForTool(activeTool);
     if (!field) return;
+
+    if (field) {
+      const wallType = field === "internalWalls" ? "internal" : "exterior";
+      const wallRun = detectWallRunFromSeed(rawPoint, {
+        planGeometryIndex,
+        page,
+        zoomScale: options?.zoomScale || 1,
+        wallType,
+        field,
+      });
+      if (wallRun?.status !== "resolved") {
+        setWallDrawHoverPreview(null);
+        setWallDetectionMessage("No wall found");
+        setWallDetectionCode(wallRun?.reason || null);
+        return;
+      }
+
+      const graph = page?.[field] || EMPTY_WALL_GRAPH;
+      const existing = findExistingWallRunSegment(
+        graph,
+        wallRun.start,
+        wallRun.end,
+        wallRun.metadata,
+        Math.max(3, 10 / Math.max(options?.zoomScale || 1, 0.01)),
+      );
+      if (existing) {
+        setSelectedField(field);
+        setSelectedSegmentId(existing.id);
+        setSelectedSegmentPoint(rawPoint);
+        setSelectedVertexId(null);
+        setSelectedOpeningId(null);
+        setWallDrawHoverPreview(null);
+        setWallDetectionMessage(field === "internalWalls" ? "Interior wall selected" : "Exterior wall selected");
+        setWallDetectionCode(null);
+        setWallDrawChainStartVertexId(null);
+        setWallDrawChainVertexId(null);
+        setWallDrawChainPoint(null);
+        setWallDrawChainSegmentCount(0);
+        setWallDrawChainWallBand(null);
+        return;
+      }
+
+      const startVertexId = generateId("wv");
+      const endVertexId = generateId("wv");
+      const newSegmentId = generateId("ws");
+      const detectedOpenings = (wallRun.metadata.detectedOpenings || []).map((opening) => createOpening({
+        id: generateId("op"),
+        wallId: newSegmentId,
+        wallGraph: field === "internalWalls" ? "internal" : "exterior",
+        openingType: storedOpeningTypeFor(opening.type),
+        start: lerpAlongSegment(wallRun.start, wallRun.end, opening.startOffset),
+        end: lerpAlongSegment(wallRun.start, wallRun.end, opening.endOffset),
+        startOffset: opening.startOffset,
+        endOffset: opening.endOffset,
+        widthMm: opening.widthMm ?? null,
+        source: "detected",
+        confirmed: false,
+        detectionReason: opening.reason || null,
+      }));
+
+      const nextDetectedOpenings = field === "internalWalls" && detectedOpenings.length
+        ? [...(page?.openings || []), ...detectedOpenings]
+        : null;
+      const openingPatch = nextDetectedOpenings
+        ? { openings: nextDetectedOpenings, ...openingWorkflowPatch(nextDetectedOpenings, page) }
+        : {};
+      mutateWallField(field, (currentGraph) => ({
+        vertices: [
+          ...currentGraph.vertices,
+          createWallVertex({ id: startVertexId, x: wallRun.start.x, y: wallRun.start.y }),
+          createWallVertex({ id: endVertexId, x: wallRun.end.x, y: wallRun.end.y }),
+        ],
+        segments: [
+          ...currentGraph.segments,
+          createWallSegment({
+            ...wallRun.metadata,
+            id: newSegmentId,
+            aId: startVertexId,
+            bId: endVertexId,
+            wallType,
+            source: field === "exteriorWalls" ? "seeded" : "manual",
+            confirmed: true,
+          }),
+        ],
+      }), openingPatch);
+
+      setSelectedField(field);
+      setSelectedSegmentId(newSegmentId);
+      setSelectedSegmentPoint(rawPoint);
+      setSelectedVertexId(null);
+      setSelectedOpeningId(null);
+      setWallDrawChainStartVertexId(null);
+      setWallDrawChainVertexId(null);
+      setWallDrawChainPoint(null);
+      setWallDrawChainSegmentCount(0);
+      setWallDrawChainWallBand(null);
+      setWallDrawHoverPreview(null);
+      setWallDetectionStatus("idle");
+      setWallDetectionMessage(field === "internalWalls" ? "Interior wall band detected" : "Exterior wall band detected - continue with evidence-backed wall clicks");
+      setWallDetectionCode(null);
+      return;
+    }
+
     const resolved = resolveWallDrawPoint(rawPoint, options);
-    if (!resolved) return;
+    if (!resolved?.valid || !resolved.point) {
+      setWallDrawHoverPreview(resolved);
+      setWallDetectionMessage(field === "exteriorWalls" ? "No wall/corner snap" : "");
+      return;
+    }
 
     const reuseVertexId = resolved.snap?.kind === "endpoint" && vertexBelongsToField(page, field, resolved.snap.lineId)
       ? resolved.snap.lineId
@@ -2347,11 +2843,15 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     const chainStart = wallDrawChainVertexId;
     if (field === "exteriorWalls" && chainStart) {
       const vertices = page?.[field]?.vertices || [];
-      const first = vertices[0];
+      const first = vertices.find((vertex) => vertex.id === wallDrawChainStartVertexId);
       const toleranceDocUnits = WALL_TRACE_SNAP_TOLERANCE_SCREEN_PX / Math.max(options?.zoomScale || 1, 0.01);
       if (first && vertices.length >= 3 && distance(resolved.point, first) <= toleranceDocUnits) {
-        closeWallPerimeter(field);
+        closeWallPerimeter(field, { startVertexId: wallDrawChainStartVertexId, endVertexId: chainStart });
+        setWallDrawChainStartVertexId(null);
         setWallDrawChainVertexId(null);
+        setWallDrawChainPoint(null);
+        setWallDrawChainSegmentCount(0);
+        setWallDrawChainWallBand(null);
         setWallDrawHoverPreview(null);
         setWallDetectionStatus("closed-needs-review");
         setWallDetectionMessage("Exterior closed - review required");
@@ -2359,6 +2859,39 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
         return;
       }
     }
+
+    // Resolve the band before mutating so the detected openings can be
+    // committed in the same page update as the segment that hosts them.
+    const wallType = field === "exteriorWalls" ? "exterior" : "internal";
+    const chainStartVertex = chainStart ? page?.[field]?.vertices.find((vertex) => vertex.id === chainStart) : null;
+    const newSegmentId = chainStart && chainStart !== usedVertexId ? generateId("ws") : null;
+    const bandMetadata = chainStartVertex && newSegmentId
+      ? buildWallBandSegmentMetadata(chainStartVertex, resolved.point, {
+        wallBand: resolved.snap?.wallBand || wallDrawChainWallBand,
+        page,
+        field,
+        wallType,
+        planGeometryIndex,
+      })
+      : {};
+
+    // An opening interrupts the wall material but not the topology, so the
+    // segment stays whole and the opening is recorded against it. Rendering
+    // already skips the green band across any opening hosted on a wall.
+    const detectedOpenings = (bandMetadata.detectedOpenings || []).map((opening) => createOpening({
+      id: generateId("op"),
+      wallId: newSegmentId,
+      wallGraph: field === "exteriorWalls" ? "exterior" : "internal",
+      openingType: storedOpeningTypeFor(opening.type),
+      start: lerpAlongSegment(chainStartVertex, resolved.point, opening.startOffset),
+      end: lerpAlongSegment(chainStartVertex, resolved.point, opening.endOffset),
+      startOffset: opening.startOffset,
+      endOffset: opening.endOffset,
+      widthMm: opening.widthMm ?? null,
+      source: "detected",
+      confirmed: false,
+      detectionReason: opening.reason || null,
+    }));
 
     mutateWallField(field, (graph) => {
       let nextGraph = graph;
@@ -2375,25 +2908,114 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
             ((segment.aId === chainStart && segment.bId === usedVertexId) || (segment.aId === usedVertexId && segment.bId === chainStart))
           )),
         };
-        nextGraph = addSegment(nextGraph, chainStart, usedVertexId, { wallType: field === "exteriorWalls" ? "exterior" : "internal" });
+        nextGraph = addSegment(nextGraph, chainStart, usedVertexId, { wallType, ...bandMetadata, id: newSegmentId });
       }
       return nextGraph;
-    });
+    }, detectedOpenings.length
+      ? {
+        openings: [...(page?.openings || []), ...detectedOpenings],
+        ...openingWorkflowPatch([...(page?.openings || []), ...detectedOpenings], page),
+      }
+      : {});
 
+    // Carry the resolved band forward: the next click's corner snap needs to
+    // know which physical faces the chain is currently running along.
+    const nextChainBand = bandMetadata.geometryStatus === "resolved" ? bandMetadata : null;
+    if (!chainStart) {
+      setWallDrawChainStartVertexId(usedVertexId);
+      setWallDrawChainWallBand(resolved.snap?.wallBand || null);
+    } else {
+      setWallDrawChainWallBand(nextChainBand || resolved.snap?.wallBand || wallDrawChainWallBand || null);
+    }
     setWallDrawChainVertexId(usedVertexId);
+    setWallDrawChainPoint(resolved.point);
+    if (chainStart && chainStart !== usedVertexId) {
+      setWallDrawChainSegmentCount((count) => count + 1);
+    } else if (!chainStart) {
+      setWallDrawChainSegmentCount(0);
+    }
     setWallDrawHoverPreview(null);
     setWallDetectionStatus("idle");
     if (field === "exteriorWalls") {
       setWallDetectionMessage(resolved.snap ? "Snapped to local corner" : "");
       setWallDetectionCode(null);
     }
-  }, [activeTool, page, wallDrawChainVertexId, resolveWallDrawPoint, mutateWallField, closeWallPerimeter]);
+  }, [activeTool, page, planGeometryIndex, wallDrawChainVertexId, wallDrawChainStartVertexId, wallDrawChainWallBand, resolveWallDrawPoint, mutateWallField, closeWallPerimeter]);
 
   // Double-click or the toolbar's Finish button.
   const finishWallDrawing = useCallback(() => {
+    setWallDrawChainStartVertexId(null);
     setWallDrawChainVertexId(null);
+    setWallDrawChainPoint(null);
+    setWallDrawChainSegmentCount(0);
+    setWallDrawChainWallBand(null);
     setWallDrawHoverPreview(null);
   }, []);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_TAKEOFF_AUTO_ENRICH_WALL_BANDS !== "1") return;
+    if (!page?.calibration || !planGeometryIndex) return;
+
+    const enrichField = (field, wallType) => {
+      const graph = page?.[field];
+      if (!graph?.vertices?.length || !graph?.segments?.length) return null;
+      const byId = new Map(graph.vertices.map((vertex) => [vertex.id, vertex]));
+      let changed = false;
+      const segments = graph.segments.map((segment) => {
+        const start = byId.get(segment.aId);
+        const end = byId.get(segment.bId);
+        if (!start || !end) return segment;
+        const graphThicknessMm = Number(graph.wallThicknessMm);
+        const shouldUseGraphThickness = graphThicknessMm > 0 && (
+          graph.thicknessLocked ||
+          segment.geometryStatus !== "resolved" ||
+          !segment.faceA?.start ||
+          !segment.faceB?.start ||
+          segment.thicknessSource !== "user_override"
+        );
+        if (shouldUseGraphThickness) {
+          const builderMetadata = buildBuilderDefinedWallBandMetadata(start, end, {
+            wallBand: segment,
+            page,
+            field,
+            wallType,
+            thicknessSourceOverride: graph.thicknessLocked ? "user_locked" : "user_override",
+          });
+          if (builderMetadata && (
+            segment.geometryStatus !== "resolved" ||
+            Math.round(Number(segment.thicknessMm || 0)) !== Math.round(builderMetadata.thicknessMm) ||
+            segment.thicknessSource !== builderMetadata.thicknessSource ||
+            !segment.faceA?.start ||
+            !segment.faceB?.start
+          )) {
+            changed = true;
+            return { ...segment, ...builderMetadata };
+          }
+        }
+        if (segment?.faceA?.start && segment?.faceA?.end && segment?.faceB?.start && segment?.faceB?.end) return segment;
+        const metadata = buildWallBandSegmentMetadata(start, end, { page, field, wallType, planGeometryIndex });
+        if (
+          segment.geometryStatus === metadata.geometryStatus &&
+          segment.resolutionFailure === metadata.resolutionFailure &&
+          Boolean(segment.physicalBandDiagnostics) === Boolean(metadata.physicalBandDiagnostics)
+        ) {
+          return segment;
+        }
+        changed = true;
+        return { ...segment, ...metadata };
+      });
+      return changed ? { ...graph, segments } : null;
+    };
+
+    const exteriorWalls = enrichField("exteriorWalls", "exterior");
+    const internalWalls = enrichField("internalWalls", "internal");
+    if (exteriorWalls || internalWalls) {
+      commitPage({
+        ...(exteriorWalls ? { exteriorWalls } : {}),
+        ...(internalWalls ? { internalWalls } : {}),
+      });
+    }
+  }, [page, planGeometryIndex, commitPage]);
 
   // ---- Layer visibility ------------------------------------------------------
 
@@ -2404,6 +3026,8 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
       return next;
     });
   }, [commitPage]);
+
+  const manualGeometry = useMemo(() => manualGeometryFromPage(page), [page]);
 
   return {
     activeTool, setActiveTool,
@@ -2442,40 +3066,44 @@ export function useTakeoffTools({ page, commitPage, planGeometryIndex = null }) 
     updateWallEditHover, wallEditHoverTarget, wallEditSnapPreview, wallEditValidation,
     selectedField, selectedVertexId, selectedSegmentId, selectWallSegment,
     deleteSelectedWallVertex, deleteSelectedWallSegment,
-    canDeleteWallSelection, deleteSelectedWallItem,
+    canDeleteWallSelection, deleteSelectedWallItem: deleteSelectedGeometry, clearSelection,
     changeSelectedSegmentWallType, setSelectedSegmentThickness,
     setSelectedSegmentLocked, moveSelectedSegmentToWallGraph,
-    convertSelectedSegmentToManual, splitSelectedSegment, insertPointOnSelectedSegment, insertWallPointAt,
+    convertSelectedSegmentToManual, splitSelectedSegment, insertPointOnSelectedSegment, insertWallPointAt, handleAddCornerClick,
     closeWallPerimeter, closeShapeError, closeShapeSuccessMessage, canCloseShape,
     canClearExterior, clearExteriorConfirmOpen, requestClearExterior, cancelClearExterior, confirmClearExterior,
     wallValidation, confirmExteriorWalls, totalPerimeterMm,
-    totalExteriorWallLengthMm, totalInternalWallLengthMm,
+    totalExteriorWallLengthMm, totalConfirmedExteriorWallLengthMm, totalInternalWallLengthMm,
     segmentToWallSegment,
 
     // Manual Exterior Wall / Internal Wall drawing
-    wallDrawChainVertexId, wallDrawHoverPreview, updateWallDrawHover, handleWallDrawClick, finishWallDrawing,
+    wallDrawChainStartVertexId, wallDrawChainVertexId, wallDrawChainPoint, wallDrawChainSegmentCount, wallDrawHoverPreview, updateWallDrawHover, handleWallDrawClick, finishWallDrawing,
+    wallDrawChainWallBand, wallSnapDebugEnabled, setWallSnapDebugEnabled,
+    structuralGraphDebugEnabled, setStructuralGraphDebugEnabled,
 
     // Wall openings (Window / Internal Door / External Door / Sliding Door /
     // Garage Door / Open Opening)
     openingHostWall, openingStart, updateOpeningHover, handleOpeningCanvasClick, cancelOpeningPlacement,
     selectedOpeningId, selectOpening, updateOpening, deleteSelectedOpening, duplicateSelectedOpening,
+    approveWindowReconciliation,
     flipOpeningSwing, setOpeningHingeSide,
     draggingOpening, findOpeningHandleNear, beginOpeningDrag, updateOpeningDrag, endOpeningDrag,
     openingCountsByType,
 
     // Area — from a confirmed exterior perimeter (unchanged) and manual tracing (new)
     areaDialogOpen, setAreaDialogOpen, areaValidation, calculatedAreaM2, confirmArea,
-    footprintAndInternalArea, setExteriorBoundaryBasis, setExteriorWallThicknessMm,
+    footprintAndInternalArea, setExteriorBoundaryBasis, setExteriorWallThicknessMm, setWallThicknessDefaults,
     areaMode, setAreaMode,
     areaDraftVertices, areaHoverPoint, areaSearchDraft,
     updateAreaHover, handleAreaCanvasClick, beginAreaRectangle, updateAreaRectangle, finishAreaRectangle,
     draggingAreaVertex, findAreaVertexNear, beginAreaVertexDrag, updateAreaVertexDrag, endAreaVertexDrag,
     finishAreaTrace, cancelAreaTrace,
     manualAreaDialogOpen, setManualAreaDialogOpen, manualAreaCandidate, confirmManualArea,
-    updateArea, deleteArea,
+    updateArea, setAreaIntrusionIncluded, deleteArea,
 
     // Layer visibility
     layerVisibility, setLayerVisible,
+    manualGeometry,
 
     undo, redo, canUndo: undoStack.length > 0, canRedo: redoStack.length > 0,
   };

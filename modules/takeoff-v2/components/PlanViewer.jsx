@@ -4,6 +4,8 @@ import { screenToPagePoint } from "../viewer/screenToPagePoint.js";
 import { CLICK_THRESHOLD_PX, isClickPan, panViewFromDrag, shouldForcePan } from "../viewer/dragInteraction.js";
 import { cursorForPlanViewer } from "../viewer/planViewerCursor.js";
 import TakeoffCanvasOverlay from "./TakeoffCanvasOverlay.jsx";
+import WallContextPanel from "./WallContextPanel.jsx";
+import WallSnapDebugPanel from "./WallSnapDebugPanel.jsx";
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 8;
@@ -13,12 +15,18 @@ const TOOL_CURSORS = {
   area: "crosshair",
   "exterior-wall": "crosshair",
   "internal-wall": "crosshair",
+  "add-corner": "crosshair",
+  "move-corner": "default",
+  door: "crosshair",
+  window: "crosshair",
+  opening: "crosshair",
+  "garage-door": "crosshair",
   "edit-walls": "crosshair",
   "exterior-highlighter": "crosshair",
   "plan-region": "crosshair",
 };
 
-export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex, onRotateLeft, onRotateRight, onResetRotation }) {
+export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
@@ -46,7 +54,8 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     if (tools.activeTool === "set-scale" || tools.activeTool === "measure") tools.placePointerPoint?.(point, options);
     else if (tools.activeTool === "area") tools.handleAreaCanvasClick?.(point, options);
     else if (tools.activeTool === "exterior-wall" || tools.activeTool === "internal-wall") tools.handleWallDrawClick?.(point, options);
-    else if (tools.activeTool === "edit-walls" || tools.activeTool === "edit") {
+    else if (tools.activeTool === "add-corner") tools.handleAddCornerClick?.(point, options);
+    else if (tools.activeTool === "move-corner" || tools.activeTool === "edit-walls" || tools.activeTool === "edit" || tools.activeTool === "select") {
       if (event.detail >= 2) {
         const hitFields = tools.activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
         for (const field of hitFields) {
@@ -60,7 +69,7 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
       tools.handleEditToolClick?.(point, options);
     }
     else if (tools.activeTool === "plan-region") tools.handlePlanRegionClick?.(point, options);
-    else if (["window", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool)) tools.handleOpeningCanvasClick?.(point, options);
+    else if (["door", "window", "opening", "internal-door", "external-door", "sliding-door", "garage-door", "open-opening"].includes(tools.activeTool)) tools.handleOpeningCanvasClick?.(point, options);
     else if (tools.activeTool === "exterior-highlighter") tools.toggleExteriorHighlightedWall?.();
   }, [eventToPagePoint, tools, view.zoomScale]);
 
@@ -195,7 +204,13 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
     event.currentTarget?.setPointerCapture?.(event.pointerId);
     const forcePan = shouldForcePan(event, tools?.activeTool);
     const point = eventToPagePoint(event);
-    if ((tools?.activeTool === "edit-walls" || tools?.activeTool === "edit") && point && !forcePan) {
+    if ((tools?.activeTool === "move-corner" || tools?.activeTool === "edit-walls" || tools?.activeTool === "edit" || tools?.activeTool === "select") && point && !forcePan) {
+      const openingHit = tools.findOpeningHandleNear?.(point, { zoomScale: view.zoomScale });
+      if (openingHit?.openingId) {
+        tools.beginOpeningDrag?.(openingHit.openingId, openingHit.handle);
+        dragRef.current = { mode: "opening" };
+        return;
+      }
       if (event.detail >= 2) {
         const hitFields = tools.activeTool === "edit-walls" ? ["exteriorWalls"] : ["exteriorWalls", "internalWalls"];
         for (const field of hitFields) {
@@ -222,7 +237,8 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
         return;
       }
       if (tools.areaMode !== "rectangle") {
-        dragRef.current = { mode: "pan", startX: event.clientX, startY: event.clientY, panX: view.panX, panY: view.panY };
+        tools.handleAreaCanvasClick?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
+        dragRef.current = { mode: "area-point" };
         return;
       }
       tools.beginAreaRectangle?.(point, { zoomScale: view.zoomScale, altKey: event.altKey });
@@ -251,6 +267,11 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
       if (point) tools?.updateWallVertexDrag?.(point, { zoomScale: view.zoomScale, disableSnap: event.altKey });
       return;
     }
+    if (drag.mode === "opening") {
+      const point = eventToPagePoint(event);
+      if (point) tools?.updateOpeningDrag?.(point, { zoomScale: view.zoomScale });
+      return;
+    }
     setView((prev) => panViewFromDrag(prev, drag, event));
   }, [eventToPagePoint, tools, updateToolHover, view.zoomScale]);
 
@@ -268,8 +289,15 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
       tools?.endAreaVertexDrag?.();
       return;
     }
+    if (drag.mode === "area-point") {
+      return;
+    }
     if (drag.mode === "vertex") {
       tools?.endWallVertexDrag?.({ zoomScale: view.zoomScale });
+      return;
+    }
+    if (drag.mode === "opening") {
+      tools?.endOpeningDrag?.();
       return;
     }
     if (isClickPan(drag, event, CLICK_THRESHOLD_PX) && tools?.activeTool !== "pan") {
@@ -312,10 +340,6 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
   return (
     <div style={S.wrap}>
       <div style={S.toolbar}>
-        <button type="button" style={S.button} onClick={onRotateLeft} data-testid="rotate-left-button">Rotate Left</button>
-        <button type="button" style={S.button} onClick={onRotateRight} data-testid="rotate-right-button">Rotate Right</button>
-        <button type="button" style={S.button} onClick={onResetRotation} data-testid="reset-rotation-button">Reset Rotation</button>
-        <span style={S.divider} />
         <button type="button" style={S.button} onClick={() => fitTo("fit-page")} data-testid="fit-page-button">Fit Page</button>
         <button type="button" style={S.button} onClick={() => fitTo("fit-width")} data-testid="fit-width-button">Fit Width</button>
         <button type="button" style={S.button} onClick={() => fitTo("fit-page")} data-testid="reset-view-button">Reset View</button>
@@ -337,14 +361,14 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
       >
         <div
           style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
+            ...S.pageLayer,
             transform: `translate(${view.panX}px, ${view.panY}px) scale(${view.zoomScale})`,
-            transformOrigin: "0 0",
+            width: view.viewport?.width || 0,
+            height: view.viewport?.height || 0,
           }}
+          data-testid="plan-page-layer"
         >
-          <canvas ref={canvasRef} data-testid="plan-canvas" />
+          <canvas ref={canvasRef} style={S.pdfCanvas} data-testid="plan-canvas" />
           {view.viewport && tools && (
             <TakeoffCanvasOverlay
               page={page}
@@ -355,17 +379,21 @@ export default function PlanViewer({ pdfDocument, page, tools, planGeometryIndex
             />
           )}
         </div>
+        {tools && <WallContextPanel page={page} tools={tools} />}
+        {tools && <WallSnapDebugPanel page={page} tools={tools} />}
       </div>
     </div>
   );
 }
 
 const S = {
-  wrap: { display: "flex", flexDirection: "column", height: "100%" },
-  toolbar: { display: "flex", alignItems: "center", gap: 6, padding: 8, borderBottom: "1px solid #e2e8f0", background: "#f8fafc" },
-  button: { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 6, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" },
+  wrap: { position: "relative", display: "flex", flexDirection: "column", height: "100%", minHeight: 0 },
+  toolbar: { position: "absolute", top: 10, left: 10, zIndex: 12, display: "flex", alignItems: "center", gap: 4, padding: 5, border: "1px solid rgba(148, 163, 184, 0.9)", borderRadius: 7, background: "rgba(255,255,255,0.92)", boxShadow: "0 8px 24px rgba(15,23,42,0.16)" },
+  button: { border: "1px solid #cbd5e1", background: "#fff", color: "#334155", borderRadius: 5, padding: "4px 7px", fontSize: 11, fontWeight: 800, cursor: "pointer" },
   divider: { width: 1, alignSelf: "stretch", background: "#e2e8f0", margin: "0 4px" },
   rotationLabel: { marginLeft: "auto", fontSize: 12, fontWeight: 800, color: "#1d4ed8" },
   status: { padding: "4px 8px", fontSize: 12, color: "#b91c1c" },
   viewport: { position: "relative", flex: 1, overflow: "hidden", background: "#e2e8f0", cursor: "grab" },
+  pageLayer: { position: "absolute", left: 0, top: 0, transformOrigin: "0 0", background: "transparent", lineHeight: 0 },
+  pdfCanvas: { display: "block", background: "#fff" },
 };

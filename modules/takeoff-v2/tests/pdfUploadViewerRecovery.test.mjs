@@ -34,6 +34,7 @@ assert.doesNotMatch(pdfViewport, /import\(["']pdfjs-dist["']\)/, "PdfViewport mu
 assert.match(pdfViewport, /getPdfJs\(\)/, "PdfViewport must use the shared PDF.js client loader.");
 assert.match(pdfjsClient, /import \* as pdfjsLib from "pdfjs-dist\/legacy\/build\/pdf\.mjs"/, "PDF.js must have one static browser import path.");
 assert.match(pdfjsClient, /PDFJS_WORKER_SRC = "\/pdfjs\/pdf\.worker\.min\.mjs"/, "PDF.js worker must be project-controlled.");
+assert.match(pdfjsClient, /The local PDF engine could not start\. Your takeoff has not been changed\./, "PDF.js init failure must show the safe local-engine failure.");
 
 assert.match(planViewer, /baseScale: fitScaleRef\.current,[\s\S]*zoomScale,/, "Zoom must request a higher-resolution PDF render.");
 assert.match(planViewer, /displayScale: fitScaleRef\.current/, "Zoom must keep viewer coordinates tied to the fit-page display scale.");

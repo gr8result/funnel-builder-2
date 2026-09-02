@@ -5,17 +5,19 @@ const toolbar = fs.readFileSync("modules/takeoff-v2/components/TakeoffToolbar.js
 const tools = fs.readFileSync("modules/takeoff-v2/hooks/useTakeoffTools.js", "utf8");
 const overlay = fs.readFileSync("modules/takeoff-v2/components/TakeoffCanvasOverlay.jsx", "utf8");
 
-const detectButton = toolbar.match(/<ToolButton[\s\S]*?testId="tool-detect-exterior"[\s\S]*?<\/ToolButton>/)?.[0] || "";
-const finishButton = toolbar.match(/<ToolButton[\s\S]*?testId="tool-finish-exterior"[\s\S]*?<\/ToolButton>/)?.[0] || "";
-assert.match(detectButton, /onClick=\{tools\.detectExterior\}/, "toolbar Detect Exterior must call tools.detectExterior");
-assert.match(finishButton, /onClick=\{finishExterior\}/, "toolbar Finish Exterior must call the production confirmation handler");
-assert.match(toolbar, /tools\.confirmExteriorWalls\?\.\(\);/, "toolbar Finish Exterior must confirm page.exteriorWalls when no trace/highlight workflow is active");
+assert.doesNotMatch(toolbar, /tool-detect-exterior/, "toolbar must not expose the retired custom Detect Exterior button");
+assert.match(toolbar, /Exterior Wall Detection/, "toolbar must expose click-seeded exterior wall detection");
+assert.match(toolbar, /data-testid="accept-detected-exterior"/, "toolbar must expose review/accept for seeded exterior candidates");
+assert.match(toolbar, /onClick=\{tools\.confirmExteriorWalls\}/, "toolbar must confirm reviewed page.exteriorWalls candidates");
 assert.doesNotMatch(toolbar, /EXTERIOR_GENERATION_DISABLED/, "production Finish Exterior must not use the disabled exterior-generation path");
 
-const detectExteriorBody = tools.match(/const detectExterior = useCallback\([\s\S]*?\n  \}, \[planGeometryIndex, page, commitPage, pushUndo, layerVisibility\]\);/)?.[0] || "";
-assert.match(detectExteriorBody, /detectExteriorWallsFromGeometry\(/, "detectExterior must execute the existing exterior detector");
-assert.match(detectExteriorBody, /commitPage\(\{[\s\S]*exteriorWalls,/, "detectExterior must commit the detector result to page.exteriorWalls");
-assert.match(detectExteriorBody, /exteriorHighlightedWalls:\s*\[\]/, "detectExterior must clear old highlighted-wall state");
+const detectExteriorBody = tools.match(/const detectExterior = useCallback\([\s\S]*?\n  \}, \[\]\);/)?.[0] || "";
+assert.match(detectExteriorBody, /setActiveToolState\("exterior-wall"\)/, "detectExterior must switch to the click-seeded wall-band tool");
+assert.match(detectExteriorBody, /click inside one exterior wall band/, "detectExterior must ask for a user seed click");
+assert.doesNotMatch(detectExteriorBody, /detectionProvider\.detectWalls\(/, "detectExterior must not run an unrestricted provider scan");
+assert.doesNotMatch(detectExteriorBody, /detectExteriorWallsFromGeometry\(/, "detectExterior must not run the quarantined custom exterior detector");
+assert.doesNotMatch(detectExteriorBody, /normalisedWallsToExteriorCandidate\(/, "detectExterior must not convert unrestricted provider geometry into exterior walls");
+assert.doesNotMatch(detectExteriorBody, /commitPage\(\{[\s\S]*exteriorWalls,/, "detectExterior must not commit an unseeded exterior wall graph");
 assert.doesNotMatch(detectExteriorBody, /detectedWalls:/, "detectExterior must not store production exterior output in detectedWalls");
 
 const finishBody = tools.match(/const finishHighlightedExterior = useCallback\([\s\S]*?\n  \}, \[page, commitPage\]\);/)?.[0] || "";

@@ -16,6 +16,20 @@ export function validateExteriorWallsForConfirmation(page) {
   if (hasDisconnectedSegments(walls.vertices, walls.segments)) {
     return { valid: false, reason: "Exterior walls cannot be confirmed because there are disconnected wall segments." };
   }
+  const activeSegments = (walls.segments || []).filter((segment) => !segment?.missingSectionIndicator && !segment?.bridgedGapLength);
+  if (activeSegments.length !== (walls.segments || []).length) {
+    return { valid: false, reason: "Exterior walls cannot be confirmed because review gaps or rejected connections remain." };
+  }
+  const unresolved = activeSegments.find((segment) => (
+    segment.geometryStatus !== "resolved" ||
+    !segment.faceA?.start ||
+    !segment.faceA?.end ||
+    !segment.faceB?.start ||
+    !segment.faceB?.end
+  ));
+  if (unresolved) {
+    return { valid: false, reason: "Exterior walls cannot be confirmed because every segment must have wall-face evidence." };
+  }
   if (!isPerimeterClosed(walls.vertices, walls.segments)) {
     return { valid: false, reason: "Exterior walls cannot be confirmed because the exterior-wall perimeter is still open." };
   }

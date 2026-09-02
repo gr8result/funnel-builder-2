@@ -146,13 +146,13 @@ export function addVertex(graph, point) {
   return { vertices: [...graph.vertices, vertex], segments: graph.segments };
 }
 
-export function addSegment(graph, aId, bId, { wallType = "exterior", thicknessMm = null } = {}) {
+export function addSegment(graph, aId, bId, { wallType = "exterior", thicknessMm = null, ...rest } = {}) {
   if (aId === bId) return graph;
   const exists = graph.segments.some(
     (s) => (s.aId === aId && s.bId === bId) || (s.aId === bId && s.bId === aId)
   );
   if (exists) return graph;
-  const segment = createWallSegment({ id: generateId("ws"), aId, bId, wallType, thicknessMm, source: "manual" });
+  const segment = createWallSegment({ id: generateId("ws"), aId, bId, wallType, thicknessMm, source: "manual", ...rest });
   return { vertices: graph.vertices, segments: [...graph.segments, segment] };
 }
 
@@ -177,6 +177,12 @@ export function deleteVertexAndReconnect(graph, vertexId) {
   if (!neighborIds[0] || !neighborIds[1] || neighborIds[0] === neighborIds[1]) return deleteVertex(graph, vertexId);
   const locked = touching.some((segment) => segment.locked);
   const template = touching[0];
+  const {
+    id: _templateId,
+    aId: _templateAId,
+    bId: _templateBId,
+    ...templateRest
+  } = template;
   const remaining = graph.segments.filter((s) => s.aId !== vertexId && s.bId !== vertexId);
   const exists = remaining.some((s) => (
     (s.aId === neighborIds[0] && s.bId === neighborIds[1]) ||
@@ -187,11 +193,10 @@ export function deleteVertexAndReconnect(graph, vertexId) {
       id: generateId("ws"),
       aId: neighborIds[0],
       bId: neighborIds[1],
-      wallType: template.wallType,
-      thicknessMm: template.thicknessMm,
-      source: "manual",
-      confirmed: true,
-      confidence: null,
+      ...templateRest,
+      source: template.source || "manual",
+      confirmed: template.confirmed ?? true,
+      confidence: template.confidence ?? null,
       locked,
     }),
   ];
@@ -209,14 +214,59 @@ export function splitSegment(graph, segmentId, point) {
   const segment = graph.segments.find((s) => s.id === segmentId);
   if (!segment) return graph;
   const vertex = createWallVertex({ id: generateId("wv"), x: point.x, y: point.y });
-  const shared = { wallType: segment.wallType, thicknessMm: segment.thicknessMm, source: segment.source, confirmed: segment.confirmed, confidence: segment.confidence, locked: Boolean(segment.locked) };
+  const {
+    id: _segmentId,
+    aId: _segmentAId,
+    bId: _segmentBId,
+    ...shared
+  } = segment;
+  const byId = new Map(graph.vertices.map((candidate) => [candidate.id, candidate]));
+  const originalA = byId.get(segment.aId);
+  const originalB = byId.get(segment.bId);
+  const t = originalA && originalB ? projectSegmentT(point, originalA, originalB) : 0.5;
+  const firstShared = sliceSegmentFaceMetadata(shared, 0, t);
+  const secondShared = sliceSegmentFaceMetadata(shared, t, 1);
   const segments = graph.segments
     .filter((s) => s.id !== segmentId)
     .concat([
-      createWallSegment({ id: generateId("ws"), aId: segment.aId, bId: vertex.id, ...shared }),
-      createWallSegment({ id: generateId("ws"), aId: vertex.id, bId: segment.bId, ...shared }),
+      createWallSegment({ id: generateId("ws"), aId: segment.aId, bId: vertex.id, ...firstShared }),
+      createWallSegment({ id: generateId("ws"), aId: vertex.id, bId: segment.bId, ...secondShared }),
     ]);
   return { vertices: [...graph.vertices, vertex], segments };
+}
+
+function projectSegmentT(point, a, b) {
+  const abx = b.x - a.x;
+  const aby = b.y - a.y;
+  const len2 = abx * abx + aby * aby;
+  if (!(len2 > 0)) return 0.5;
+  return Math.max(0, Math.min(1, ((point.x - a.x) * abx + (point.y - a.y) * aby) / len2));
+}
+
+function lerpPoint(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+function sliceFace(face, startT, endT) {
+  if (!face?.start || !face?.end) return face ?? null;
+  return {
+    start: lerpPoint(face.start, face.end, startT),
+    end: lerpPoint(face.start, face.end, endT),
+  };
+}
+
+function sliceSegmentFaceMetadata(segment, startT, endT) {
+  if (!segment?.faceA?.start || !segment?.faceA?.end || !segment?.faceB?.start || !segment?.faceB?.end) return segment;
+  return {
+    ...segment,
+    faceA: sliceFace(segment.faceA, startT, endT),
+    faceB: sliceFace(segment.faceB, startT, endT),
+    innerFace: sliceFace(segment.innerFace, startT, endT),
+    outerFace: sliceFace(segment.outerFace, startT, endT),
+    intermediateFaces: Array.isArray(segment.intermediateFaces)
+      ? segment.intermediateFaces.map((face) => sliceFace(face, startT, endT)).filter(Boolean)
+      : [],
+  };
 }
 
 // Toggles a segment between "exterior" and "internal" (or sets an explicit

@@ -4,7 +4,7 @@ import fs from "node:fs";
 const planViewer = fs.readFileSync("modules/takeoff-v2/components/PlanViewer.jsx", "utf8");
 const tools = fs.readFileSync("modules/takeoff-v2/hooks/useTakeoffTools.js", "utf8");
 
-const runWallDetection = tools.match(/const runWallDetection = useCallback\([\s\S]*?\n  \}, \[planGeometryIndex, page, commitPage\]\);/)?.[0] || "";
+const runWallDetection = tools.match(/const runWallDetection = useCallback\([\s\S]*?\n  \}, \[detectionProvider, planGeometryIndex, page, commitPage\]\);/)?.[0] || "";
 
 assert.ok(runWallDetection, "runWallDetection body should be found");
 assert.doesNotMatch(runWallDetection, /fitTo\s*\(/, "detection must not fit page");

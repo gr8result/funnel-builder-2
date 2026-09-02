@@ -191,6 +191,8 @@ export function isLegacyAutomaticExteriorWalls(exteriorWalls) {
 }
 
 function normalizeWallGraph(graph, wallType = "exterior") {
+  const defaultThicknessMm = wallType === "exterior" ? 250 : 90;
+  const defaultConstructionType = wallType === "exterior" ? "brick_veneer" : "interior_partition";
   if (!graph || typeof graph !== "object") {
     return {
       vertices: [],
@@ -203,7 +205,9 @@ function normalizeWallGraph(graph, wallType = "exterior") {
       schemaVersion: CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
       source: wallType === "exterior" ? EXTERIOR_SOURCE_MANUAL_TRACE_V2 : "manual-trace-v2",
       boundaryBasis: "outside",
-      wallThicknessMm: 200,
+      constructionType: defaultConstructionType,
+      wallThicknessMm: defaultThicknessMm,
+      thicknessLocked: false,
     };
   }
   return {
@@ -217,8 +221,10 @@ function normalizeWallGraph(graph, wallType = "exterior") {
     schemaVersion: graph.schemaVersion || CURRENT_EXTERIOR_WALLS_SCHEMA_VERSION,
     source: graph.source || (wallType === "exterior" ? EXTERIOR_SOURCE_MANUAL_TRACE_V2 : "manual-trace-v2"),
     boundaryBasis: graph.boundaryBasis || "outside",
-    wallThicknessMm: graph.wallThicknessMm ?? 200,
     ...graph,
+    constructionType: graph.constructionType || defaultConstructionType,
+    wallThicknessMm: graph.wallThicknessMm ?? defaultThicknessMm,
+    thicknessLocked: Boolean(graph.thicknessLocked),
   };
 }
 
@@ -274,6 +280,16 @@ export function withPlanPageDefaults(rawPage) {
     exteriorHighlightedWallIds,
     internalWalls: normalizeWallGraph(page.internalWalls, "internal"),
     openings: Array.isArray(page.openings) ? page.openings : [],
+    windowRecords: Array.isArray(page.windowRecords) ? page.windowRecords : [],
+    windowOrderLines: Array.isArray(page.windowOrderLines) ? page.windowOrderLines : [],
+    windowReconciliation: page.windowReconciliation && typeof page.windowReconciliation === "object" ? page.windowReconciliation : null,
+    windowsDoorsModel: page.windowsDoorsModel && typeof page.windowsDoorsModel === "object" ? page.windowsDoorsModel : null,
+    quotationBuilderModel: page.quotationBuilderModel && typeof page.quotationBuilderModel === "object" ? page.quotationBuilderModel : null,
+    boqWindowLines: Array.isArray(page.boqWindowLines) ? page.boqWindowLines : [],
+    supplierQuotationWindowLines: Array.isArray(page.supplierQuotationWindowLines) ? page.supplierQuotationWindowLines : [],
+    procurementWindowLines: Array.isArray(page.procurementWindowLines) ? page.procurementWindowLines : [],
+    purchaseOrderWindowLines: Array.isArray(page.purchaseOrderWindowLines) ? page.purchaseOrderWindowLines : [],
+    projectEstimateWindowLines: Array.isArray(page.projectEstimateWindowLines) ? page.projectEstimateWindowLines : [],
     areas: Array.isArray(page.areas) ? page.areas : [],
     measurements: Array.isArray(page.measurements) ? page.measurements : [],
     layerVisibility: { ...createDefaultLayerVisibility(), ...(page.layerVisibility || {}) },

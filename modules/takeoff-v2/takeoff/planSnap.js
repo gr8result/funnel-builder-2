@@ -43,7 +43,13 @@ export function findSnapCandidates(point, { toleranceScreenPx = 12, zoomScale = 
     });
   }
 
-  results.sort((a, b) => PRIORITY[a.type] - PRIORITY[b.type] || a.distance - b.distance);
+  results.forEach((candidate) => {
+    candidate.confidence = Number.isFinite(candidate.confidence)
+      ? candidate.confidence
+      : Math.max(0, Math.min(1, 1 - (candidate.distance || 0) / Math.max(toleranceDocUnits, 0.0001)));
+    candidate.sourceGeometry = candidate.sourceGeometry || candidate.lineId || candidate.lineIds || candidate.type;
+  });
+  results.sort((a, b) => PRIORITY[a.type] - PRIORITY[b.type] || b.confidence - a.confidence || a.distance - b.distance);
   return results.slice(0, 1);
 }
 

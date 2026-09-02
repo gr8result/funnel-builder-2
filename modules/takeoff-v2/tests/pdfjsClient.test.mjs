@@ -92,8 +92,11 @@ function fakePdfJs() {
 {
   const packageJson = JSON.parse(fs.readFileSync("node_modules/pdfjs-dist/package.json", "utf8"));
   const worker = fs.readFileSync("public/pdfjs/pdf.worker.min.mjs", "utf8");
+  const publicWorkerBytes = fs.readFileSync("public/pdfjs/pdf.worker.min.mjs");
+  const installedLegacyWorkerBytes = fs.readFileSync("node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs");
   assert.equal(packageJson.version, getPdfJsWorkerVersion(), "main PDF.js package version should be the loaded library version");
   assert.match(worker, new RegExp(`pdfjsVersion = ${packageJson.version.replaceAll(".", "\\.")}`), "public worker must match the installed pdfjs-dist version");
+  assert.deepEqual(publicWorkerBytes, installedLegacyWorkerBytes, "public worker must be copied from the installed legacy worker build");
 }
 
 delete global.window;

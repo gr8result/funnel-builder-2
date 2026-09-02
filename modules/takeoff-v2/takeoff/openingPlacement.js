@@ -21,6 +21,30 @@ export function computeOpeningWidthMm(start, end, mmPerDocumentUnit) {
   return distance(start, end) * mmPerDocumentUnit;
 }
 
+function faceOffset(face, wallStart, normal) {
+  if (!face?.start || !face?.end) return null;
+  const a = (face.start.x - wallStart.x) * normal.nx + (face.start.y - wallStart.y) * normal.ny;
+  const b = (face.end.x - wallStart.x) * normal.nx + (face.end.y - wallStart.y) * normal.ny;
+  return (a + b) / 2;
+}
+
+function wallBandHitDistance(point, wallStart, wallEnd, segment) {
+  if (!segment?.faceA?.start || !segment?.faceA?.end || !segment?.faceB?.start || !segment?.faceB?.end) return null;
+  const dx = wallEnd.x - wallStart.x;
+  const dy = wallEnd.y - wallStart.y;
+  const len = Math.hypot(dx, dy);
+  if (!(len > 0)) return null;
+  const normal = { nx: -dy / len, ny: dx / len };
+  const offsetA = faceOffset(segment.faceA, wallStart, normal);
+  const offsetB = faceOffset(segment.faceB, wallStart, normal);
+  if (!Number.isFinite(offsetA) || !Number.isFinite(offsetB)) return null;
+  const pointerOffset = (point.x - wallStart.x) * normal.nx + (point.y - wallStart.y) * normal.ny;
+  const minOffset = Math.min(offsetA, offsetB);
+  const maxOffset = Math.max(offsetA, offsetB);
+  if (pointerOffset >= minOffset && pointerOffset <= maxOffset) return 0;
+  return Math.min(Math.abs(pointerOffset - minOffset), Math.abs(pointerOffset - maxOffset));
+}
+
 // Searches every segment across one or more wall graphs (exterior + internal)
 // for the nearest one within tolerance — used for "hover highlights the host
 // wall" and to resolve which wall a newly-placed opening belongs to.
@@ -34,7 +58,9 @@ export function findNearestWallSegment(point, wallGraphs, toleranceDocUnits) {
       const b = byId.get(segment.bId);
       if (!a || !b) return;
       const { point: projected } = projectOntoWall(point, a, b);
-      const d = distance(projected, point);
+      const centrelineDistance = distance(projected, point);
+      const bandDistance = wallBandHitDistance(point, a, b, segment);
+      const d = bandDistance == null ? centrelineDistance : Math.min(centrelineDistance, bandDistance);
       if (d <= toleranceDocUnits && (!best || d < best.distance)) {
         best = {
           wallId: segment.id,

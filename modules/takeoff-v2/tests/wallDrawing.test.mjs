@@ -11,12 +11,93 @@ import { extractVectorSegmentsFromOperatorList } from "../geometry/planVectorExt
 import { buildPlanGeometryIndex } from "../geometry/planGeometryIndex.js";
 import { createWallSegment, createWallVertex, isLegacyAutomaticExteriorWalls, withPlanPageDefaults } from "../types.js";
 import { addSegment, deleteVertexAndReconnect, moveVertex, splitSegment } from "../takeoff/wallGraph.js";
+import { findNearestWallSegment } from "../takeoff/openingPlacement.js";
 import { rectangleAreaMetrics, rectangleVerticesFromCorners } from "../takeoff/rectangleArea.js";
 import { detectWallObjects } from "../takeoff/wallObjectDetection.js";
 import { findHighlightableWallAtPoint } from "../takeoff/localWallHighlighter.js";
 import { findRasterWallBandInImage, findRasterWallBandOnCanvas } from "../takeoff/localRasterWallHit.js";
+import { detectExteriorCornerSnap, detectExteriorWallRunFromSeed, detectManualWallBand, detectWallRunFromSeed, buildWallBandSegmentMetadata } from "../takeoff/manualWallBand.js";
 
 const lastPoint = { x: 0, y: 0 };
+
+function wallBandWidthPlanUnits(segment) {
+  const start = segment.centreline?.start || { x: 0, y: 0 };
+  const end = segment.centreline?.end || { x: 1, y: 0 };
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  assert.ok(len > 0, "wall width measurement requires a non-zero centreline");
+  const nx = -dy / len;
+  const ny = dx / len;
+  const faceA = ((segment.faceA.start.x - start.x) * nx + (segment.faceA.start.y - start.y) * ny);
+  const faceB = ((segment.faceB.start.x - start.x) * nx + (segment.faceB.start.y - start.y) * ny);
+  return Math.abs(faceA - faceB);
+}
+
+function assertBuilderWallThickness({ wallType, field, thicknessMm, mmPerDocumentUnit, constructionType = "custom", locked = true }) {
+  const thicknessDocUnits = thicknessMm / mmPerDocumentUnit;
+  const page = {
+    calibration: {
+      actualLengthMm: 7000,
+      documentDistance: 7000 / mmPerDocumentUnit,
+      mmPerDocumentUnit,
+      pointA: { x: 0, y: 0 },
+      pointB: { x: 7000 / mmPerDocumentUnit, y: 0 },
+      axis: "horizontal",
+    },
+    [field]: { constructionType, wallThicknessMm: thicknessMm, thicknessLocked: locked },
+  };
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 0, y: 0 }, { x: 100, y: 0 }, { id: "face-a" }),
+      line({ x: 0, y: thicknessDocUnits }, { x: 100, y: thicknessDocUnits }, { id: "face-b" }),
+    ],
+  };
+  const metadata = buildWallBandSegmentMetadata({ x: 0, y: 0 }, { x: 100, y: 0 }, { page, field, wallType, planGeometryIndex });
+  const calculatedThicknessPlanPx = thicknessMm / mmPerDocumentUnit;
+  const actualPolygonWidthPlanPx = wallBandWidthPlanUnits(metadata);
+  const renderedGeometryThicknessMm = actualPolygonWidthPlanPx * mmPerDocumentUnit;
+  assert.equal(metadata.geometryStatus, "resolved");
+  assert.equal(metadata.thicknessSource, locked ? "user_locked" : "user_override");
+  assert.ok(Math.abs(metadata.thicknessDocUnits - calculatedThicknessPlanPx) <= 1e-9);
+  assert.ok(Math.abs(actualPolygonWidthPlanPx - calculatedThicknessPlanPx) <= 1e-9);
+  assert.ok(Math.abs(renderedGeometryThicknessMm - thicknessMm) <= 1e-6);
+  return { metadata, calculatedThicknessPlanPx, actualPolygonWidthPlanPx, renderedGeometryThicknessMm };
+}
+
+function roundedPointKey(point) {
+  return `${Math.round(point.x * 1000) / 1000},${Math.round(point.y * 1000) / 1000}`;
+}
+
+function wallPolygonKey(segment) {
+  return [
+    segment.faceA.start,
+    segment.faceA.end,
+    segment.faceB.end,
+    segment.faceB.start,
+  ].map(roundedPointKey).sort().join("|");
+}
+
+// ---- manual wall clicks require a valid snap ------------------------------
+{
+  const result = resolveManualTracePoint({ x: 50, y: 60 }, { snapCandidate: null });
+  assert.equal(result.valid, false);
+  assert.equal(result.point, null);
+  assert.equal(result.reason, "no_wall_corner_snap");
+}
+
+// ---- snapped manual wall clicks place the snap point, not raw cursor ------
+{
+  const result = resolveManualTracePoint(
+    { x: 52, y: 63 },
+    { snapCandidate: { type: "endpoint", point: { x: 50, y: 60 }, confidence: 0.9, lineId: "wall-end" } }
+  );
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.point, { x: 50, y: 60 });
+  assert.equal(result.snap.kind, "endpoint");
+  assert.equal(result.snap.confidence, 0.9);
+}
 
 // ---- near-horizontal snaps exactly -----------------------------------------
 {
@@ -244,11 +325,12 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   });
 }
 
-// ---- manual trace places raw point when no close snap exists ---------------
+// ---- manual trace rejects raw point when no close snap exists --------------
 {
   const raw = { x: 220.25, y: 118.75 };
   const result = resolveManualTracePoint(raw);
-  assert.deepEqual(result.point, raw);
+  assert.equal(result.valid, false);
+  assert.equal(result.point, null);
   assert.equal(result.snap, null);
 }
 
@@ -259,7 +341,7 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner }).point, closeCorner.point);
   const lineCandidate = { type: "line", point: { x: 100, y: 80 }, distance: 1 };
   assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: lineCandidate }).point, lineCandidate.point);
-  assert.deepEqual(resolveManualTracePoint(raw, { snapCandidate: closeCorner, disableSnap: true }).point, raw);
+  assert.equal(resolveManualTracePoint(raw, { snapCandidate: closeCorner, disableSnap: true }).valid, false);
 }
 
 // ---- rectangle area supports click-drag in any direction ------------------
@@ -294,9 +376,10 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
 {
   const last = { x: 0, y: 0 };
   const raw = { x: 100, y: 3 };
-  const result = resolveManualTracePoint(raw, { lastVertex: last, rotation: 0 });
+  const result = resolveManualTracePoint(raw, { snapCandidate: { type: "endpoint", point: raw, confidence: 1 }, lastVertex: last, rotation: 0 });
   assert.deepEqual(result.point, { x: 100, y: 0 });
-  const free = resolveManualTracePoint({ x: 100, y: 20 }, { lastVertex: last, rotation: 0 });
+  const freeRaw = { x: 100, y: 20 };
+  const free = resolveManualTracePoint(freeRaw, { snapCandidate: { type: "endpoint", point: freeRaw, confidence: 1 }, lastVertex: last, rotation: 0 });
   assert.deepEqual(free.point, { x: 100, y: 20 });
 }
 
@@ -419,6 +502,375 @@ function rectWallFaces(x1, y1, x2, y2, thickness = 8) {
   assert.ok(faceA && centre && faceB);
   assert.equal(faceA.id, centre.id);
   assert.equal(faceB.id, centre.id);
+}
+
+// ---- manual wall drawing stores the detected twin-face wall band ----------
+{
+  const planGeometryIndex = { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) };
+  const page = { sourceWidth: 400, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 80 } };
+  const band = detectManualWallBand({ x: 180, y: 108 }, { planGeometryIndex, page, zoomScale: 1 });
+  assert.ok(band, "manual click on either wall face should resolve a band");
+  assert.equal(Math.round(band.point.y), 104);
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 104 },
+    { x: 260, y: 104 },
+    { wallBand: band, page, field: "internalWalls", wallType: "internal" }
+  );
+  assert.equal(metadata.type, "internal");
+  assert.ok(metadata.faceA?.start && metadata.faceB?.end);
+  assert.equal(Math.round(metadata.thicknessDocUnits), 8);
+  assert.equal(Math.round(metadata.thicknessMm), 80);
+  assert.equal(metadata.thicknessSource, "detected");
+  assert.ok(metadata.confidence > 0.6);
+}
+
+// ---- exterior brick veneer clusters use outermost physical faces ----------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }),
+      line({ x: 100, y: 108 }, { x: 340, y: 108 }),
+      line({ x: 100, y: 116 }, { x: 340, y: 116 }),
+      line({ x: 100, y: 124 }, { x: 340, y: 124 }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const band = detectManualWallBand({ x: 220, y: 108 }, { planGeometryIndex, page, zoomScale: 1, wallType: "exterior" });
+  assert.ok(band, "exterior click should resolve a multi-line wall assembly");
+  assert.equal(band.constructionLineCount, 4);
+  assert.equal(Math.round(band.thicknessDocUnits), 24);
+  assert.equal(Math.round(band.thicknessMm), 240);
+  assert.equal(band.wallConstructionType, "brick veneer");
+  assert.equal(band.passedThicknessValidation, true);
+  assert.equal(Math.round(band.outerFace.start.y), 100);
+  assert.equal(Math.round(band.innerFace.start.y), 124);
+  assert.equal(band.intermediateFaces.length, 2);
+
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 112 },
+    { x: 320, y: 112 },
+    { wallBand: band, page, field: "exteriorWalls", wallType: "exterior" }
+  );
+  assert.equal(metadata.constructionLineCount, 4);
+  assert.equal(Math.round(metadata.thicknessMm), 240);
+  assert.equal(Math.round(metadata.faceA.start.y), 124);
+  assert.equal(Math.round(metadata.faceB.start.y), 100);
+}
+
+// ---- committed selected paths derive physical faces without changing snaps -
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "outer-face" }),
+      line({ x: 100, y: 108 }, { x: 340, y: 108 }, { id: "cavity-face-a" }),
+      line({ x: 100, y: 116 }, { x: 340, y: 116 }, { id: "cavity-face-b" }),
+      line({ x: 100, y: 124 }, { x: 340, y: 124 }, { id: "inner-face" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const start = { x: 120, y: 112 };
+  const end = { x: 320, y: 112 };
+  const metadata = buildWallBandSegmentMetadata(start, end, {
+    page,
+    field: "exteriorWalls",
+    wallType: "exterior",
+    planGeometryIndex,
+  });
+  assert.deepEqual(metadata.centreline, { start, end }, "selected path must remain the wall topology");
+  assert.equal(metadata.wallFacesUncertain, undefined);
+  assert.equal(metadata.snapSource, "segment-guided-exterior-wall-band");
+  assert.equal(metadata.constructionLineCount, 4);
+  assert.equal(metadata.wallConstructionType, "brick veneer");
+  assert.equal(Math.round(metadata.thicknessMm), 240);
+  assert.equal(Math.round(metadata.faceA.start.y), 124);
+  assert.equal(Math.round(metadata.faceB.start.y), 100);
+}
+
+// ---- segment-guided resolver rejects plausible bands beside selected path -
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 360, y: 100 }, { id: "actual-outer" }),
+      line({ x: 100, y: 108 }, { x: 360, y: 108 }, { id: "actual-cavity-a" }),
+      line({ x: 100, y: 116 }, { x: 360, y: 116 }, { id: "actual-cavity-b" }),
+      line({ x: 100, y: 124 }, { x: 360, y: 124 }, { id: "actual-inner" }),
+      line({ x: 100, y: 150 }, { x: 360, y: 150 }, { id: "wrong-parallel-a" }),
+      line({ x: 100, y: 158 }, { x: 360, y: 158 }, { id: "wrong-parallel-b" }),
+      line({ x: 100, y: 166 }, { x: 360, y: 166 }, { id: "wrong-parallel-c" }),
+      line({ x: 100, y: 174 }, { x: 360, y: 174 }, { id: "wrong-parallel-d" }),
+    ],
+  };
+  const page = { sourceWidth: 460, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const start = { x: 120, y: 112 };
+  const end = { x: 340, y: 112 };
+  const metadata = buildWallBandSegmentMetadata(start, end, {
+    page,
+    field: "exteriorWalls",
+    wallType: "exterior",
+    planGeometryIndex,
+  });
+  assert.equal(Math.round(metadata.faceA.start.y), 124);
+  assert.equal(Math.round(metadata.faceB.start.y), 100);
+  assert.ok(!metadata.sourceSegmentIds.includes("wrong-parallel-a"), "parallel wall beside selected path must be rejected");
+  assert.ok(metadata.physicalBandDiagnostics?.rejectedCandidates.some((entry) => entry.reason === "rejected: selected path outside candidate band"));
+}
+
+// ---- selected path may coincide with one physical face --------------------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 360, y: 100 }, { id: "outer-face" }),
+      line({ x: 100, y: 108 }, { x: 360, y: 108 }, { id: "cavity-a" }),
+      line({ x: 100, y: 116 }, { x: 360, y: 116 }, { id: "cavity-b" }),
+      line({ x: 100, y: 124 }, { x: 360, y: 124 }, { id: "inner-face" }),
+    ],
+  };
+  const page = { sourceWidth: 460, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 100 },
+    { x: 340, y: 100 },
+    { page, field: "exteriorWalls", wallType: "exterior", planGeometryIndex }
+  );
+  assert.equal(metadata.wallFacesUncertain, undefined);
+  assert.equal(metadata.physicalBandDiagnostics.chosen.selectedPathRelation, "touches-face");
+  assert.equal(Math.round(metadata.thicknessMm), 240);
+  assert.equal(Math.round(metadata.faceB.start.y), 100);
+  assert.equal(Math.round(metadata.faceA.start.y), 124);
+}
+
+// ---- fragmented faces across openings still resolve by sample consensus ---
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 180, y: 100 }, { id: "outer-left" }),
+      line({ x: 240, y: 100 }, { x: 360, y: 100 }, { id: "outer-right" }),
+      line({ x: 100, y: 108 }, { x: 360, y: 108 }, { id: "mid-a" }),
+      line({ x: 100, y: 116 }, { x: 360, y: 116 }, { id: "mid-b" }),
+      line({ x: 100, y: 124 }, { x: 190, y: 124 }, { id: "inner-left" }),
+      line({ x: 230, y: 124 }, { x: 360, y: 124 }, { id: "inner-right" }),
+    ],
+  };
+  const page = { sourceWidth: 460, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 112 },
+    { x: 340, y: 112 },
+    { page, field: "exteriorWalls", wallType: "exterior", planGeometryIndex }
+  );
+  assert.equal(metadata.wallFacesUncertain, undefined);
+  assert.equal(Math.round(metadata.thicknessMm), 240);
+  const faceASupport = Number(metadata.physicalBandDiagnostics.chosen.faceASupport.split("/")[0]);
+  const faceBSupport = Number(metadata.physicalBandDiagnostics.chosen.faceBSupport.split("/")[0]);
+  assert.ok(faceASupport >= 3);
+  assert.ok(faceBSupport >= 3);
+  assert.ok(metadata.sourceSegmentIds.includes("outer-left"));
+  assert.ok(metadata.sourceSegmentIds.includes("outer-right"));
+}
+
+// ---- wall-band selection requires the calibrated scale --------------------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }),
+      line({ x: 100, y: 124 }, { x: 340, y: 124 }),
+    ],
+  };
+  const uncalibrated = detectManualWallBand(
+    { x: 220, y: 100 },
+    { planGeometryIndex, page: { sourceWidth: 440, sourceHeight: 320 }, zoomScale: 1, wallType: "exterior" }
+  );
+  assert.equal(uncalibrated, null, "physical wall selection must not infer wall thickness without calibrated scale");
+}
+
+// ---- exterior corner snap wins even when drafting lines have tiny gaps ----
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 104, y: 100 }, { x: 340, y: 100 }),
+      line({ x: 104, y: 108 }, { x: 340, y: 108 }),
+      line({ x: 104, y: 116 }, { x: 340, y: 116 }),
+      line({ x: 104, y: 124 }, { x: 340, y: 124 }),
+      line({ x: 100, y: 96 }, { x: 100, y: 260 }),
+      line({ x: 108, y: 96 }, { x: 108, y: 260 }),
+      line({ x: 116, y: 96 }, { x: 116, y: 260 }),
+      line({ x: 124, y: 96 }, { x: 124, y: 260 }),
+    ],
+  };
+  const corner = detectExteriorCornerSnap({ x: 102, y: 102 }, { planGeometryIndex, page: { sourceWidth: 440, sourceHeight: 320 }, zoomScale: 1 });
+  assert.ok(corner, "corner should be inferred from near-intersecting wall faces");
+  assert.equal(corner.type, "intersection");
+  assert.ok(Math.abs(corner.point.x - 100) <= 4);
+  assert.ok(Math.abs(corner.point.y - 100) <= 4);
+}
+
+// ---- exterior clusters stop at adjacent physical faces, not distant lines -
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "face-outer" }),
+      line({ x: 100, y: 108 }, { x: 340, y: 108 }, { id: "face-cavity-a" }),
+      line({ x: 100, y: 116 }, { x: 340, y: 116 }, { id: "face-cavity-b" }),
+      line({ x: 100, y: 124 }, { x: 340, y: 124 }, { id: "face-inner" }),
+      line({ x: 100, y: 190 }, { x: 340, y: 190 }, { id: "far-internal" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const band = detectManualWallBand({ x: 220, y: 108 }, { planGeometryIndex, page, zoomScale: 1, wallType: "exterior" });
+  assert.ok(band);
+  assert.equal(band.constructionLineCount, 4);
+  assert.equal(Math.round(band.thicknessDocUnits), 24);
+  assert.ok(!band.sourceSegmentIds.includes("far-internal"), "distant parallel line must not join the cluster");
+}
+
+// ---- exterior lightweight/cladding bands pass the calibrated gate ---------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "clad-outer" }),
+      line({ x: 100, y: 108 }, { x: 340, y: 108 }, { id: "clad-inner" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const band = detectManualWallBand({ x: 220, y: 100 }, { planGeometryIndex, page, zoomScale: 1, wallType: "exterior" });
+  assert.ok(band, "80mm lightweight exterior wall should pass");
+  assert.equal(band.constructionLineCount, 2);
+  assert.equal(Math.round(band.thicknessMm), 80);
+  assert.equal(band.wallConstructionType, "lightweight/cladding");
+}
+
+// ---- implausibly wide exterior bands are rejected without custom config ---
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "wide-a" }),
+      line({ x: 100, y: 140 }, { x: 340, y: 140 }, { id: "wide-b" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const band = detectManualWallBand({ x: 220, y: 100 }, { planGeometryIndex, page, zoomScale: 1, wallType: "exterior" });
+  assert.equal(band, null, "400mm exterior wall band must be rejected without explicit custom wall type");
+}
+
+// ---- explicit custom exterior range can accept special thick walls --------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "custom-a" }),
+      line({ x: 100, y: 140 }, { x: 340, y: 140 }, { id: "custom-b" }),
+    ],
+  };
+  const page = {
+    sourceWidth: 440,
+    sourceHeight: 320,
+    calibration: { mmPerDocumentUnit: 10 },
+    exteriorWalls: { wallThicknessRangeMm: { min: 380, max: 420, target: 400 } },
+  };
+  const band = detectManualWallBand({ x: 220, y: 100 }, { planGeometryIndex, page, zoomScale: 1, wallType: "exterior" });
+  assert.ok(band, "custom exterior range should accept an explicitly configured 400mm wall");
+  assert.equal(Math.round(band.thicknessMm), 400);
+  assert.equal(band.wallConstructionType, "custom");
+}
+
+// ---- normal interior partitions pass, oversized partitions fail -----------
+{
+  const normalIndex = { source: "fixture", rawSegments: rectWallFaces(100, 100, 300, 240) };
+  const page = { sourceWidth: 400, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const normal = detectManualWallBand({ x: 180, y: 108 }, { planGeometryIndex: normalIndex, page, zoomScale: 1, wallType: "internal" });
+  assert.ok(normal, "80mm internal partition should pass");
+  assert.equal(normal.wallConstructionType, "interior partition");
+
+  const wideIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "internal-wide-a" }),
+      line({ x: 100, y: 140 }, { x: 340, y: 140 }, { id: "internal-wide-b" }),
+    ],
+  };
+  const wide = detectManualWallBand({ x: 220, y: 100 }, { planGeometryIndex: wideIndex, page, zoomScale: 1, wallType: "internal" });
+  assert.equal(wide, null, "400mm internal wall band must be rejected as a normal partition");
+}
+
+// ---- interior selected path can be one wall face, not centreline ----------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "interior-face-a" }),
+      line({ x: 100, y: 115 }, { x: 340, y: 115 }, { id: "interior-face-b" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 100 },
+    { x: 320, y: 100 },
+    { page, field: "internalWalls", wallType: "internal", planGeometryIndex }
+  );
+  assert.equal(metadata.geometryStatus, "resolved");
+  assert.equal(metadata.resolutionFailure, null);
+  assert.equal(metadata.selectedPathRelation, "touches-face");
+  assert.equal(Math.round(metadata.thicknessMm), 150);
+  assert.equal(metadata.wallConstructionType, "interior partition");
+  assert.ok(metadata.faceA?.start && metadata.faceB?.start);
+}
+
+// ---- unresolved manual walls store explicit failure state -----------------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 340, y: 100 }, { id: "single-face-only" }),
+    ],
+  };
+  const page = { sourceWidth: 440, sourceHeight: 320, calibration: { mmPerDocumentUnit: 10 } };
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 120, y: 100 },
+    { x: 320, y: 100 },
+    { page, field: "internalWalls", wallType: "internal", planGeometryIndex }
+  );
+  assert.equal(metadata.geometryStatus, "unresolved");
+  assert.equal(metadata.resolutionFailure, "no_opposing_face");
+  assert.equal(metadata.reviewMessage, "Thickness unresolved");
+  assert.equal(metadata.faceA, null);
+  assert.ok(metadata.physicalBandDiagnostics?.crossSectionOffsets?.length >= 5);
+}
+
+// ---- openings snap to the physical wall band, not only a thin line --------
+{
+  const vertices = [
+    createWallVertex({ id: "a", x: 120, y: 112 }),
+    createWallVertex({ id: "b", x: 320, y: 112 }),
+  ];
+  const segments = [
+    createWallSegment({
+      id: "wall-band-host",
+      aId: "a",
+      bId: "b",
+      wallType: "exterior",
+      source: "manual",
+      faceA: { start: { x: 120, y: 124 }, end: { x: 320, y: 124 } },
+      faceB: { start: { x: 120, y: 100 }, end: { x: 320, y: 100 } },
+      thicknessDocUnits: 24,
+      thicknessMm: 240,
+    }),
+  ];
+  const host = findNearestWallSegment(
+    { x: 210, y: 123 },
+    [{ key: "exterior", vertices, segments }],
+    2
+  );
+  assert.ok(host, "click inside the green wall band should resolve the wall host");
+  assert.equal(host.wallId, "wall-band-host");
+  assert.equal(Math.round(host.point.y), 112, "opening offsets stay on the saved wall topology");
 }
 
 // ---- fragmented vector strokes merge into one highlightable wall ----------
@@ -604,7 +1056,11 @@ for (const extra of [
 {
   const overlay = fs.readFileSync(new URL("../components/TakeoffCanvasOverlay.jsx", import.meta.url), "utf8");
   const toolbar = fs.readFileSync(new URL("../components/TakeoffToolbar.jsx", import.meta.url), "utf8");
-  assert.ok(overlay.includes("const strokeWidth = selected ? 2.5 : hovered ? 2 : 2"), "selected exterior highlight should render at 2-3px");
+  assert.ok(overlay.includes('data-testid="wall-band-fill"'), "manual wall segments should render as translucent bands");
+  assert.ok(overlay.includes("#31E85A") && overlay.includes("#168CFF") && overlay.includes("#00E5FF"), "wall overlay should use bright takeoff colours");
+  assert.ok(overlay.includes("hasWallFaces(segment)") && overlay.includes('data-testid="wall-faces-uncertain-preview"'), "wall body fill must require detected faces and fall back to a narrow uncertain cue");
+  assert.ok(!overlay.includes("nx * half"), "wall body must not be rendered from a thick centred stroke fallback");
+  assert.ok(!overlay.includes('tools.activeTool === "internal-wall") && internalWalls && internalDisplayVertices'), "wall drawing mode should not show permanent vertex dots");
   assert.ok(overlay.includes('data-testid="exterior-highlight-junction-hit-area"'), "exterior junction hit area should remain separate");
   assert.ok(overlay.includes("r={10} fill=\"transparent\""), "exterior/area hit radius should remain easy to grab");
   assert.ok(overlay.includes("r={i === 0 ? 3.8 : 3.2}"), "area point visible radius should be reduced");
@@ -612,6 +1068,400 @@ for (const extra of [
   assert.ok(!toolbar.includes("area-mode-room-detect"), "Area Tool should offer Rectangle and Manual Polygon only");
   assert.ok(toolbar.includes("area-mode-rectangle"));
   assert.ok(toolbar.includes("area-mode-manual-polygon"));
+}
+
+// ---- manual area polygons accept free-angle points ------------------------
+{
+  const toolsHook = fs.readFileSync(new URL("../hooks/useTakeoffTools.js", import.meta.url), "utf8");
+  const planViewer = fs.readFileSync(new URL("../components/PlanViewer.jsx", import.meta.url), "utf8");
+  const manualAreaStart = toolsHook.indexOf('if (areaMode !== "manual-polygon") return;');
+  const manualAreaCloseCheck = toolsHook.indexOf("if (areaDraftVertices.length >= 3)", manualAreaStart);
+  const manualAreaPointResolution = toolsHook.slice(manualAreaStart, manualAreaCloseCheck);
+  assert.ok(manualAreaPointResolution.includes("const finalPoint = rawPoint;"), "manual polygon corners should preserve the clicked free-angle point");
+  assert.ok(!manualAreaPointResolution.includes("snapPoint("), "manual polygon corners must not be forced through wall/measurement snapping");
+  assert.ok(!manualAreaPointResolution.includes("bestSnapCandidate("), "manual polygon corners must not be forced through plan-geometry snapping");
+  assert.ok(planViewer.includes('dragRef.current = { mode: "area-point" };'), "manual polygon clicks should place a point immediately instead of becoming pan drags");
+  assert.ok(planViewer.includes('if (drag.mode === "area-point")'), "manual polygon point placement should not be replayed on pointerup");
+}
+
+// ---- locked thickness without twin faces does not create a fake band -------
+{
+  const metadata = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    {
+      wallBand: { centreline: { start: { x: 0, y: 0 }, end: { x: 100, y: 0 } }, thicknessDocUnits: 10 },
+      page: { calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 100, thicknessLocked: true } },
+      field: "internalWalls",
+      wallType: "internal",
+    }
+  );
+  assert.equal(metadata.faceA, null);
+  assert.equal(metadata.faceB, null);
+  assert.equal(metadata.geometryStatus, "unresolved_faces");
+  assert.equal(metadata.resolutionFailure, "no_opposing_face");
+  assert.equal(metadata.thicknessSource, "user_locked");
+  assert.equal(Math.round(metadata.thicknessMm), 100);
+}
+
+// ---- locked builder thickness needs physical face support -----------------
+{
+  const exterior = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    {
+      page: { calibration: { mmPerDocumentUnit: 10 }, exteriorWalls: { constructionType: "brick_veneer", wallThicknessMm: 250, thicknessLocked: true } },
+      field: "exteriorWalls",
+      wallType: "exterior",
+    }
+  );
+  assert.equal(exterior.geometryStatus, "unresolved_faces");
+  assert.equal(exterior.thicknessSource, "user_locked");
+  assert.equal(Math.round(exterior.thicknessMm), 250);
+  assert.equal(Math.round(exterior.thicknessDocUnits), 25);
+  assert.equal(exterior.faceA, null);
+  assert.equal(exterior.faceB, null);
+
+  const interior = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    {
+      page: { calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 90, thicknessLocked: true } },
+      field: "internalWalls",
+      wallType: "internal",
+    }
+  );
+  assert.equal(interior.geometryStatus, "unresolved_faces");
+  assert.equal(interior.thicknessSource, "user_locked");
+  assert.equal(Math.round(interior.thicknessMm), 90);
+  assert.equal(Math.round(interior.thicknessDocUnits), 9);
+  assert.equal(interior.faceA, null);
+  assert.equal(interior.faceB, null);
+}
+
+// ---- builder thickness converts mm to plan geometry exactly ---------------
+{
+  const mmPerDocumentUnit = 35;
+  const cases = [
+    { wallType: "internal", field: "internalWalls", thicknessMm: 70, constructionType: "interior_partition" },
+    { wallType: "internal", field: "internalWalls", thicknessMm: 90, constructionType: "interior_partition" },
+    { wallType: "exterior", field: "exteriorWalls", thicknessMm: 230, constructionType: "brick_veneer" },
+    { wallType: "exterior", field: "exteriorWalls", thicknessMm: 250, constructionType: "brick_veneer" },
+  ];
+  for (const testCase of cases) {
+    const result = assertBuilderWallThickness({ ...testCase, mmPerDocumentUnit });
+    assert.equal(result.renderedGeometryThicknessMm, testCase.thicknessMm);
+  }
+}
+
+// ---- plan/real wall thickness is invariant across zoom and rotation -------
+{
+  const result = assertBuilderWallThickness({
+    wallType: "internal",
+    field: "internalWalls",
+    thicknessMm: 70,
+    mmPerDocumentUnit: 35,
+    constructionType: "interior_partition",
+  });
+  for (const zoom of [0.5, 1, 2, 4]) {
+    const screenWidth = result.actualPolygonWidthPlanPx * zoom;
+    const recoveredPlanWidth = screenWidth / zoom;
+    const recoveredMm = recoveredPlanWidth * 35;
+    assert.ok(Math.abs(recoveredMm - 70) <= 1e-9);
+  }
+  const rotations = [
+    { name: "none", point: ({ x, y }) => ({ x, y }) },
+    { name: "right", point: ({ x, y }) => ({ x: y, y: -x }) },
+    { name: "left", point: ({ x, y }) => ({ x: -y, y: x }) },
+  ];
+  for (const rotation of rotations) {
+    const rotated = {
+      centreline: {
+        start: rotation.point(result.metadata.centreline.start),
+        end: rotation.point(result.metadata.centreline.end),
+      },
+      faceA: {
+        start: rotation.point(result.metadata.faceA.start),
+        end: rotation.point(result.metadata.faceA.end),
+      },
+      faceB: {
+        start: rotation.point(result.metadata.faceB.start),
+        end: rotation.point(result.metadata.faceB.end),
+      },
+    };
+    const recoveredMm = wallBandWidthPlanUnits(rotated) * 35;
+    assert.ok(Math.abs(recoveredMm - 70) <= 1e-9, rotation.name);
+  }
+}
+
+// ---- locked face search chooses the pair matching configured thickness ----
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 0, y: 0 }, { x: 100, y: 0 }, { id: "face-0" }),
+      line({ x: 0, y: 7 }, { x: 100, y: 7 }, { id: "face-70" }),
+      line({ x: 0, y: 9 }, { x: 100, y: 9 }, { id: "face-90" }),
+    ],
+  };
+  const locked70 = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    {
+      page: { calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 70, thicknessLocked: true } },
+      field: "internalWalls",
+      wallType: "internal",
+      planGeometryIndex,
+    }
+  );
+  assert.equal(locked70.geometryStatus, "resolved");
+  assert.equal(Math.round(wallBandWidthPlanUnits(locked70)), 7);
+  assert.ok(locked70.sourceSegmentIds.includes("face-70"));
+  assert.ok(!locked70.sourceSegmentIds.includes("face-90"));
+}
+
+// ---- exterior wall tool resolves a complete run from one seed click -------
+{
+  const page = {
+    sourceWidth: 500,
+    sourceHeight: 300,
+    calibration: { mmPerDocumentUnit: 10 },
+    exteriorWalls: { constructionType: "brick_veneer", wallThicknessMm: 240, thicknessLocked: true },
+  };
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 420, y: 100 }, { id: "outside-face" }),
+      line({ x: 100, y: 108 }, { x: 420, y: 108 }, { id: "brick-line" }),
+      line({ x: 100, y: 116 }, { x: 420, y: 116 }, { id: "frame-line" }),
+      line({ x: 100, y: 124 }, { x: 420, y: 124 }, { id: "room-face" }),
+      line({ x: 100, y: 80 }, { x: 100, y: 150 }, { id: "left-return" }),
+      line({ x: 420, y: 80 }, { x: 420, y: 150 }, { id: "right-return" }),
+    ],
+  };
+  const result = detectExteriorWallRunFromSeed({ x: 250, y: 101 }, { planGeometryIndex, page, zoomScale: 1 });
+  assert.equal(result.status, "resolved");
+  assert.equal(result.metadata.geometryStatus, "resolved");
+  assert.equal(Math.round(result.metadata.thicknessMm), 240);
+  assert.equal(Math.round(result.start.x), 100);
+  assert.equal(Math.round(result.end.x), 420);
+  assert.equal(Math.round(result.metadata.faceA.start.y), 124);
+  assert.equal(Math.round(result.metadata.faceB.start.y), 100);
+  assert.equal(result.metadata.snapSource, "seeded-exterior-wall-run");
+}
+
+// ---- seeded exterior tracing bridges window/door interruptions ------------
+{
+  const page = {
+    sourceWidth: 560,
+    sourceHeight: 300,
+    calibration: { mmPerDocumentUnit: 10 },
+    exteriorWalls: { constructionType: "brick_veneer", wallThicknessMm: 240, thicknessLocked: true },
+  };
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 190, y: 100 }, { id: "outside-left" }),
+      line({ x: 250, y: 100 }, { x: 460, y: 100 }, { id: "outside-right" }),
+      line({ x: 100, y: 108 }, { x: 460, y: 108 }, { id: "brick-line" }),
+      line({ x: 100, y: 116 }, { x: 460, y: 116 }, { id: "frame-line" }),
+      line({ x: 100, y: 124 }, { x: 180, y: 124 }, { id: "room-left" }),
+      line({ x: 260, y: 124 }, { x: 460, y: 124 }, { id: "room-right" }),
+      line({ x: 100, y: 80 }, { x: 100, y: 150 }, { id: "left-return" }),
+      line({ x: 460, y: 80 }, { x: 460, y: 150 }, { id: "right-return" }),
+    ],
+  };
+  const result = detectExteriorWallRunFromSeed({ x: 310, y: 101 }, { planGeometryIndex, page, zoomScale: 1 });
+  assert.equal(result.status, "resolved");
+  assert.equal(Math.round(result.start.x), 100);
+  assert.equal(Math.round(result.end.x), 460);
+  assert.equal(Math.round(result.metadata.thicknessMm), 240);
+}
+
+// ---- seeded exterior tracing is independent of vector draw direction ------
+{
+  const page = {
+    sourceWidth: 500,
+    sourceHeight: 300,
+    calibration: { mmPerDocumentUnit: 10 },
+    exteriorWalls: { wallThicknessMm: 240, thicknessLocked: true },
+  };
+  const forwardIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 420, y: 100 }, { id: "outside-forward" }),
+      line({ x: 100, y: 108 }, { x: 420, y: 108 }, { id: "mid-forward-a" }),
+      line({ x: 100, y: 116 }, { x: 420, y: 116 }, { id: "mid-forward-b" }),
+      line({ x: 100, y: 124 }, { x: 420, y: 124 }, { id: "inside-forward" }),
+    ],
+  };
+  const reverseIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 420, y: 100 }, { x: 100, y: 100 }, { id: "outside-reverse" }),
+      line({ x: 420, y: 108 }, { x: 100, y: 108 }, { id: "mid-reverse-a" }),
+      line({ x: 420, y: 116 }, { x: 100, y: 116 }, { id: "mid-reverse-b" }),
+      line({ x: 420, y: 124 }, { x: 100, y: 124 }, { id: "inside-reverse" }),
+    ],
+  };
+  const forward = detectExteriorWallRunFromSeed({ x: 250, y: 101 }, { planGeometryIndex: forwardIndex, page, zoomScale: 1 });
+  const reverse = detectExteriorWallRunFromSeed({ x: 250, y: 101 }, { planGeometryIndex: reverseIndex, page, zoomScale: 1 });
+  assert.equal(forward.status, "resolved");
+  assert.equal(reverse.status, "resolved");
+  assert.equal(wallPolygonKey(reverse.metadata), wallPolygonKey(forward.metadata));
+}
+
+// ---- exterior wall seed rejects blank and dimension line clicks -----------
+{
+  const page = {
+    sourceWidth: 500,
+    sourceHeight: 300,
+    calibration: { mmPerDocumentUnit: 10 },
+    exteriorWalls: { wallThicknessMm: 240, thicknessLocked: true },
+  };
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 100, y: 100 }, { x: 420, y: 100 }, { id: "outside-face" }),
+      line({ x: 100, y: 124 }, { x: 420, y: 124 }, { id: "room-face" }),
+      line({ x: 80, y: 60 }, { x: 450, y: 60 }, { id: "dimension-line", isDimension: true }),
+    ],
+  };
+  const blank = detectExteriorWallRunFromSeed({ x: 250, y: 180 }, { planGeometryIndex, page, zoomScale: 1 });
+  const dimension = detectExteriorWallRunFromSeed({ x: 250, y: 60 }, { planGeometryIndex, page, zoomScale: 1 });
+  assert.equal(blank.status, "not_found");
+  assert.equal(dimension.status, "not_found");
+}
+
+// ---- interior wall tool resolves a complete run from one seed click -------
+{
+  const page = {
+    sourceWidth: 500,
+    sourceHeight: 300,
+    calibration: { mmPerDocumentUnit: 10 },
+    internalWalls: { constructionType: "interior_partition", wallThicknessMm: 90, thicknessLocked: true },
+  };
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 110, y: 140 }, { x: 410, y: 140 }, { id: "interior-face-a" }),
+      line({ x: 110, y: 149 }, { x: 410, y: 149 }, { id: "interior-face-b" }),
+      line({ x: 110, y: 90 }, { x: 110, y: 190 }, { id: "left-t" }),
+      line({ x: 410, y: 90 }, { x: 410, y: 190 }, { id: "right-t" }),
+    ],
+  };
+  const result = detectWallRunFromSeed(
+    { x: 270, y: 141 },
+    { planGeometryIndex, page, zoomScale: 1, wallType: "internal", field: "internalWalls" },
+  );
+  assert.equal(result.status, "resolved");
+  assert.equal(result.field, "internalWalls");
+  assert.equal(result.metadata.geometryStatus, "resolved");
+  assert.equal(Math.round(result.metadata.thicknessMm), 90);
+  assert.equal(Math.round(result.start.x), 110);
+  assert.equal(Math.round(result.end.x), 410);
+  assert.equal(result.metadata.snapSource, "seeded-internal-wall-run");
+}
+
+// ---- interior configured 70mm and 90mm thicknesses measure back correctly -
+{
+  for (const thicknessMm of [70, 90]) {
+    const thicknessDocUnits = thicknessMm / 10;
+    const page = {
+      sourceWidth: 420,
+      sourceHeight: 260,
+      calibration: { mmPerDocumentUnit: 10 },
+      internalWalls: { constructionType: "interior_partition", wallThicknessMm: thicknessMm, thicknessLocked: true },
+    };
+    const planGeometryIndex = {
+      source: "fixture",
+      rawSegments: [
+        line({ x: 80, y: 120 }, { x: 340, y: 120 }, { id: `int-${thicknessMm}-a` }),
+        line({ x: 80, y: 120 + thicknessDocUnits }, { x: 340, y: 120 + thicknessDocUnits }, { id: `int-${thicknessMm}-b` }),
+      ],
+    };
+    const result = detectWallRunFromSeed(
+      { x: 180, y: 120 },
+      { planGeometryIndex, page, zoomScale: 1, wallType: "internal", field: "internalWalls" },
+    );
+    assert.equal(result.status, "resolved");
+    assert.ok(Math.abs(result.metadata.thicknessMm - thicknessMm) <= 1e-9);
+    assert.ok(Math.abs(wallBandWidthPlanUnits(result.metadata) * 10 - thicknessMm) <= 1e-9);
+  }
+}
+
+// ---- interior seeded tracing is independent of vector draw direction ------
+{
+  const page = {
+    sourceWidth: 420,
+    sourceHeight: 260,
+    calibration: { mmPerDocumentUnit: 10 },
+    internalWalls: { wallThicknessMm: 90, thicknessLocked: true },
+  };
+  const forwardIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 80, y: 120 }, { x: 340, y: 120 }, { id: "forward-a" }),
+      line({ x: 80, y: 129 }, { x: 340, y: 129 }, { id: "forward-b" }),
+    ],
+  };
+  const reverseIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 340, y: 120 }, { x: 80, y: 120 }, { id: "reverse-a" }),
+      line({ x: 340, y: 129 }, { x: 80, y: 129 }, { id: "reverse-b" }),
+    ],
+  };
+  const forward = detectWallRunFromSeed({ x: 180, y: 120 }, { planGeometryIndex: forwardIndex, page, wallType: "internal", field: "internalWalls" });
+  const reverse = detectWallRunFromSeed({ x: 180, y: 120 }, { planGeometryIndex: reverseIndex, page, wallType: "internal", field: "internalWalls" });
+  assert.equal(forward.status, "resolved");
+  assert.equal(reverse.status, "resolved");
+  assert.equal(wallPolygonKey(reverse.metadata), wallPolygonKey(forward.metadata));
+}
+
+// ---- reverse trace direction produces the same physical wall polygon ------
+{
+  const planGeometryIndex = {
+    source: "fixture",
+    rawSegments: [
+      line({ x: 0, y: 0 }, { x: 100, y: 0 }, { id: "face-a" }),
+      line({ x: 0, y: 7 }, { x: 100, y: 7 }, { id: "face-b" }),
+    ],
+  };
+  const page = { calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 70, thicknessLocked: true } };
+  const forward = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { page, field: "internalWalls", wallType: "internal", planGeometryIndex }
+  );
+  const reverse = buildWallBandSegmentMetadata(
+    { x: 100, y: 0 },
+    { x: 0, y: 0 },
+    { page, field: "internalWalls", wallType: "internal", planGeometryIndex }
+  );
+  assert.equal(forward.geometryStatus, "resolved");
+  assert.equal(reverse.geometryStatus, "resolved");
+  assert.equal(wallPolygonKey(reverse), wallPolygonKey(forward));
+  assert.equal(Math.round(wallBandWidthPlanUnits(reverse) * 10), 70);
+}
+
+// ---- broken second face stays unresolved in either trace direction ---------
+{
+  const page = { calibration: { mmPerDocumentUnit: 10 }, internalWalls: { wallThicknessMm: 70, thicknessLocked: true } };
+  const forward = buildWallBandSegmentMetadata(
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { page, field: "internalWalls", wallType: "internal" }
+  );
+  const reverse = buildWallBandSegmentMetadata(
+    { x: 100, y: 0 },
+    { x: 0, y: 0 },
+    { page, field: "internalWalls", wallType: "internal" }
+  );
+  assert.equal(forward.geometryStatus, "unresolved_faces");
+  assert.equal(reverse.geometryStatus, "unresolved_faces");
+  assert.equal(forward.faceA, null);
+  assert.equal(reverse.faceA, null);
 }
 
 // ---- real sample plan rejects parallel annotation clutter -----------------

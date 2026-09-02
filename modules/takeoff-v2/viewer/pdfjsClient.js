@@ -1,7 +1,7 @@
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 export const PDFJS_WORKER_SRC = "/pdfjs/pdf.worker.min.mjs";
-export const PDFJS_INIT_ERROR_MESSAGE = "PDF viewer failed to initialise. Refresh the page and try again.";
+export const PDFJS_INIT_ERROR_MESSAGE = "The local PDF engine could not start. Your takeoff has not been changed.";
 export const PDFJS_OPS = pdfjsLib.OPS;
 
 let pdfjsInitPromise = null;

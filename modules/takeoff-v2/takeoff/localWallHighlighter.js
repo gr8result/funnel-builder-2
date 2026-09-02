@@ -1,6 +1,10 @@
 import { distance } from "./geometry.js";
 
 const MIN_WALL_LENGTH = 36;
+// A short exterior nib (the returns either side of a front entry, for example)
+// is legitimate when it connects two credible structural corners, so length
+// alone must not disqualify it. Below this it is drafting noise, not a wall.
+const MIN_SHORT_WALL_LENGTH = 14;
 const MIN_SOURCE_FRAGMENT_LENGTH = 10;
 const MIN_THICKNESS = 3;
 const MAX_THICKNESS = 34;
@@ -230,8 +234,20 @@ function openingTypeFromEvidence(gap, evidence, startJambs, endJambs) {
   const thinParallelLines = evidence.filter((entry) => entry.angleDiff <= PARALLEL_TOLERANCE_DEG && entry.length >= Math.min(14, width * 0.35)).length;
   if (width <= MAX_WINDOW_GAP && (hasJambs || thinParallelLines >= 1)) return { type: "window", confidence: hasJambs ? 0.74 : 0.68, reason: hasJambs ? "window-sized gap bounded by jambs" : "window-sized gap with parallel glazing evidence" };
   if (width <= MAX_DOOR_GAP && hasJambs) return { type: "door", confidence: 0.72, reason: "door-sized gap bounded by jambs" };
-  if (width <= MAX_GARAGE_GAP && hasJambs && thinParallelLines >= 2) return { type: "garage-door", confidence: 0.76, reason: "wide garage-door-sized gap with jambs and panel evidence" };
+  // A garage front is often drawn as a plain gap between two jambs with no
+  // panel linework at all. Requiring continuous wall-face or panel evidence
+  // there wrongly ends the exterior run, so jambs alone are enough.
+  if (width <= MAX_GARAGE_GAP && hasJambs) {
+    return thinParallelLines >= 2
+      ? { type: "garage-door", confidence: 0.76, reason: "wide garage-door-sized gap with jambs and panel evidence" }
+      : { type: "garage-door", confidence: 0.7, reason: "garage-door-sized gap bounded by jambs" };
+  }
   if (width <= MAX_WINDOW_GAP && hasJambs) return { type: "unknown-opening", confidence: 0.66, reason: "supported opening-sized wall gap" };
+  // Jamb-bounded but otherwise ambiguous: carry the run through as a
+  // candidate rather than breaking the exterior chain.
+  if (width <= MAX_GARAGE_GAP && (startJambs.length > 0 || endJambs.length > 0)) {
+    return { type: "unknown-opening", confidence: 0.6, reason: "opening candidate: wall gap with jamb evidence on one side" };
+  }
   return null;
 }
 
@@ -407,7 +423,7 @@ function trimIntervalToJunctions(lines, seed, faceAFixed, faceBFixed, interval) 
   }
   const start = crossings[0].along;
   const end = crossings[crossings.length - 1].along;
-  if (end - start < MIN_WALL_LENGTH) {
+  if (end - start < MIN_SHORT_WALL_LENGTH) {
     return { ...interval, startSource: "face-termination", endSource: "face-termination", crossings };
   }
   return { start, end, startSource: "structural-intersection", endSource: "structural-intersection", crossings };
@@ -484,7 +500,13 @@ function makeCandidate(seed, partner, lines, rawLines, pointer, pointerDistance,
   const startAlong = supportedInterval.start;
   const endAlong = supportedInterval.end;
   const length = endAlong - startAlong;
-  if (length < MIN_WALL_LENGTH) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `length ${Math.round(length)} below wall minimum`) };
+  // Short sections survive only when both ends sit on real structural
+  // intersections — the "connects two credible corners" test — so genuine nibs
+  // are selectable without letting short drafting fragments become walls.
+  const boundedByCorners = supportedInterval.startSource === "structural-intersection"
+    && supportedInterval.endSource === "structural-intersection";
+  const lengthFloor = boundedByCorners ? MIN_SHORT_WALL_LENGTH : MIN_WALL_LENGTH;
+  if (length < lengthFloor) return { rejected: true, debug: candidateDebug("parallel-pair", seed, partner, pointerDistance, `length ${Math.round(length)} below wall minimum`) };
 
   const centerFixed = (faceAFixed + faceBFixed) / 2;
   const startJunction = pointOn(seed, startAlong, centerFixed);
