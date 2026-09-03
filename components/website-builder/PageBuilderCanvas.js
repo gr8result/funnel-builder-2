@@ -3350,7 +3350,7 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   handleSaveRef.current = handleSave;
 
   const handleAddShape = (type = "rectangle", usage = "color") => {
-    const defaultProps = BlockDefinitions[BlockTypes.SHAPE]?.props || {};
+    const defaultProps = BlockDefinitions[BlockTypes.SHAPE]?.defaultProps || {};
     const newBlock = {
       id: `shape_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       type: BlockTypes.SHAPE,
@@ -3358,8 +3358,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
         ...defaultProps,
         shapeType: type,
         usage,
+        usageType: usage,
         backgroundColor: usage === "color" ? "#38bdf8" : "#1e293b",
-        text: usage === "text" ? "Shape Text" : "",
+        text: usage === "text" ? "Shape Text" : (defaultProps.text || "Shape Text"),
       },
     };
     const nextBlocks = [...blocks, newBlock];
