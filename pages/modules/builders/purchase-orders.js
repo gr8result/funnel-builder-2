@@ -430,7 +430,7 @@ export default function BuilderPurchaseOrdersPage() {
           </div>
           <div style={styles.heroActions}>
             <Link href="/modules/builders/boq" style={styles.secondaryLink}>View BOQ Snapshot</Link>
-            <Link href="/modules/estimate-builder" style={styles.primaryLink}>Back to Estimate Builder</Link>
+            <Link href="/modules/page-builder" style={styles.primaryLink}>Back to Page Builder</Link>
           </div>
         </header>
 
@@ -848,4 +848,3 @@ const styles = {
   moreText: { display: "block", marginTop: 8, color: "#64748b", fontWeight: 800 },
   statusPill: { border: "1px solid", borderRadius: 999, padding: "4px 8px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" },
 };
-

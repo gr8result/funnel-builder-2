@@ -1,5 +1,5 @@
 // /pages/modules/construction/index.js
-// Construction Hub - dashboard linking project tools and Estimate Builder workflows.
+// Construction Hub - dashboard linking project tools and Page Builder workflows.
 
 import Link from "next/link";
 import Head from "next/head";
@@ -69,7 +69,7 @@ export default function ConstructionHub() {
         <section style={S.creditsBox}>
           <div>
             <div style={S.creditsEyebrow}>Estimate credits</div>
-            <h2 style={S.creditsTitle}>{developerBypass ? "Unlimited developer estimate access" : "Buy job credits for the Estimate Builder"}</h2>
+            <h2 style={S.creditsTitle}>{developerBypass ? "Unlimited developer page access" : "Page Builder job credits"}</h2>
             <p style={S.creditsText}>
               {developerBypass
                 ? "DEV ONLY / OWNER TESTING BYPASS: support@gr8result.com can register estimate jobs without credits or payment."
@@ -111,20 +111,20 @@ export default function ConstructionHub() {
         <section style={S.estimateSection}>
           <div style={S.sectionIntro}>
             <div>
-              <div style={S.sectionEyebrow}>Estimate Builder</div>
-              <h2 style={S.sectionTitle}>Estimate jobs, registrations and saved files</h2>
+              <div style={S.sectionEyebrow}>Page Builder</div>
+              <h2 style={S.sectionTitle}>Pages, registrations and saved files</h2>
             </div>
             <div style={S.planBadge}>Subscription plus per-job workflow</div>
           </div>
 
           <div style={S.estimateGrid}>
             <ToolCard
-              href="/modules/estimate-builder"
+              href="/modules/page-builder"
               accent="#14b8a6"
               icon="$"
-              title="Builder Dashboard"
-              description="Open the main builder workspace for estimating, takeoff, BOQ, quotations, procurement, selections, documents and project controls."
-              action="Open Builder Dashboard"
+              title="Page Builder"
+              description="Open the new page builder workspace to recreate editable templates and build pages from scratch."
+              action="Open Page Builder"
               compact
             />
             <ToolCard
@@ -138,7 +138,7 @@ export default function ConstructionHub() {
               compact
             />
             <ToolCard
-              href="/modules/estimate-builder?mode=open-job"
+              href="/modules/page-builder?mode=open-job"
               accent="#8b5cf6"
               icon="OP"
               title="Open Existing Job"
@@ -157,7 +157,7 @@ export default function ConstructionHub() {
                 {recentJobs.slice(0, 10).map((job) => (
                   <Link
                     key={job.id}
-                    href={`/modules/estimate-builder?mode=open-recent&recentId=${encodeURIComponent(job.id)}`}
+                    href={`/modules/page-builder?mode=open-recent&recentId=${encodeURIComponent(job.id)}`}
                     style={S.recentRow}
                   >
                     <strong style={S.recentName}>{job.jobName || "Untitled Job"}</strong>
