@@ -1,7 +1,3 @@
-import { getPageBuilderRedirect } from "../../../lib/page-builder/redirect";
+import PageBuilder from "../../../components/page-builder/PageBuilder";
 
-export const getServerSideProps = getPageBuilderRedirect;
-
-export default function PageBuilderEntry() {
-  return null;
-}
+export default PageBuilder;
