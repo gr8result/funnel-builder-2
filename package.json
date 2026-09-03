@@ -29,6 +29,7 @@
     "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs",
     "test:pdfjs-loader": "node scripts/test-pdfjs-loader.mjs",
     "test:job-id": "node scripts/test-job-id-derivation.mjs",
+    "test:entitlements": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-entitlement-resolver.mjs",
     "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs && node modules/takeoff-v2/tests/exteriorCandidateReview.test.mjs",
     "test:takeoff-v3": "node modules/takeoff-v3/tests/run-all.mjs",
     "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs",
