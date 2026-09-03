@@ -535,3 +535,130 @@ Decisions I cannot make from the code.
 
 Counts are tracked files at `4fed0c1`, excluding `node_modules`, build output and untracked work in
 progress. Where a count is approximate it is marked `~`.
+
+---
+
+## 13. Approved decisions (2026-09-03)
+
+This section records the owner's final decisions. It supersedes the recommendations in §11 and the
+proposed mapping in earlier drafts wherever they differ.
+
+### 13.1 Architectural principle
+
+**Physical code ownership and commercial packaging are separate concerns.** Every major feature gets
+its own technical module folder even when it is commercially bundled. One subscription may unlock
+several module folders; a module may later be sold separately without another file-tree restructure.
+Page routes, API routes and database access all enforce the same entitlement. Hiding navigation is
+never sufficient protection.
+
+### 13.2 Resolved blockers
+
+| § | Decision |
+|---|---|
+| §11 #1 | All four features get own folders. Commercial status per §13.4. |
+| §11 #5 | **Freedom is multi-tenant** in the hosted platform and **single-organisation in standalone mode**. Every record belongs to a user/workspace; a standalone install creates its own local default workspace. Tenancy conversion is **not** combined with file extraction — see §13.6. |
+| §11 #10 | **Leads and CRM remain two folders with two codes.** `crm` grants `leads`; `leads` does **not** grant `crm`. |
+
+Housekeeping items §11 #2, #3, #6, #7, #8, #9 and #11 are approved subject to reference checks. The
+PostCSS choice must be proven from live build output, never from filename or age. `.vercelignore` is
+reviewed and committed deliberately as active deployment configuration.
+
+### 13.3 Module ownership corrections
+
+Purchase Orders, Supplier Invoices and Quote Approvals are **not** separate purchasable modules. They
+belong inside `modules/supplier-procurement/` under the single `supplier_procurement` entitlement,
+following the approved consolidation:
+
+> Supplier Quotes + Purchase Orders + Procurement + Quote Approvals + Deliveries + Supplier Invoices
+> = **Supplier & Procurement**
+
+Their existing routes may remain as thin compatibility routes temporarily, but the implementation must
+ultimately live inside the supplier-procurement module folder.
+
+- `quote-proposal-builder.js` belongs to `modules/quotation-builder/` under `quotation_builder`. It is
+  not a separate module or entitlement.
+- `convert-to-live-project.js` is an internal Project Workspace action, inside the Project Workspace /
+  Job Details service boundary. Not separately purchasable.
+
+**These codes must not be created:** `purchase_orders`, `supplier_invoices`, `quote_approvals`.
+
+### 13.4 Approved entitlement codes
+
+| Module folder | Code |
+|---|---|
+| `job-details` | *(none — Project Workspace core, never sold separately)* |
+| `estimate-builder` | `estimate_builder` |
+| `quotation-builder` | `quotation_builder` |
+| `estimating-catalogue` | `estimating_catalogue` |
+| `budget-actual` | `budget_vs_actual` |
+| `ai-plan-takeoff` | `ai_plan_takeoff` |
+| `product-library` | `product_library`, `product_library_read` |
+| `client-selections` | `client_selections` |
+| `standard-inclusions` | `standard_inclusions` |
+| `boq` | `boq` |
+| `variations` | `variations` |
+| `supplier-procurement` | `supplier_procurement` |
+| `document-vault` | `document_vault` |
+| `rfi-reports` | `rfi_reports` |
+| `gantt-chart` | `gantt_chart` |
+| `job-board` | `job_board` |
+| `client-portal` | `client_portal` |
+| `freedom` | `freedom` |
+| `leads` | `leads` |
+| `crm` | `crm` |
+| `website-builder` | `website_builder` |
+
+Existing marketing and business module codes are unchanged: `email_marketing`, `social_media`,
+`sms_marketing`, `booking_calendar`, `funnels`, `business_automation`, `affiliate_management`,
+`pipelines`, `evergreen_webinars`.
+
+### 13.5 Bundles and grants
+
+```
+builder_suite = [
+  estimate_builder, quotation_builder, client_selections, budget_vs_actual,
+  ai_plan_takeoff, standard_inclusions, boq, variations, supplier_procurement,
+  document_vault, rfi_reports, gantt_chart, job_board, client_portal,
+]
+
+estimate_bundle = [estimate_builder, quotation_builder]
+
+GRANTS                                  // owning the key grants the values
+  estimate_builder   -> estimating_catalogue, product_library_read
+  quotation_builder  -> estimating_catalogue, product_library_read
+  client_selections  -> product_library_read
+  product_library    -> product_library_read
+  crm                -> leads
+  leads              -> (nothing; does not grant crm)
+```
+
+Grants are resolved as a transitive closure. Every module in a bundle keeps its own code, so removing
+one from a bundle to sell separately is a data change, not a file-tree change.
+
+### 13.6 Freedom batch split
+
+Tenancy conversion is separated from physical extraction. §8's M5 is replaced by:
+
+| Batch | Scope |
+|---|---|
+| **M5A** — tenancy schema | Add workspace ownership to all Freedom-owned tables. Prepare safe backfill rules. Add indexes and foreign keys. Add RLS policies. Preserve all existing Freedom data. No destructive migration. **Migrations are not applied without separate approval.** |
+| **M5B** — auth and API isolation | Authenticate every private Freedom API. Scope every read and write to the authorised workspace. Classify intentionally public endpoints. Add cross-workspace denial tests. |
+| **M5C** — module extraction | Move Freedom pages, components, services, APIs, tests, assets and migrations into the module folder. Replace imports from API routes with module-owned services. Preserve thin Next.js route adapters where required. |
+| **M5D** — standalone packaging | `package.json`; placeholder-only `.env.example`; database setup and migrations; default local workspace bootstrap; installation documentation. Prove it can be copied into a clean directory, installed, built and run without the rest of this repository. |
+
+### 13.7 Unauthenticated route triage is a checkpoint, not a batch
+
+The 89-route classification becomes a **separate read-only checkpoint before M2**, producing these
+categories:
+
+`public` · `authenticated` · `authenticated plus entitlement` · `webhook with signature verification`
+· `obsolete / delete candidate` · `uncertain / manual review`
+
+**No security wrapper is applied until that classification is approved.**
+
+### 13.8 M1 scope, as approved
+
+M1 establishes the entitlement vocabulary, bundle expansion, grant resolution and the reusable
+server-side resolver, with comprehensive tests. M1 explicitly does **not**: move module files, gate the
+89 unresolved API routes, or alter the Supabase schema. Existing staged, unstaged and untracked work is
+preserved; environment files are not touched.
