@@ -1,10 +1,12 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import {
   loadLocalFreedomNotifications,
   updateLocalFreedomNotificationSettings,
 } from "../../../lib/freedom-trader/localPaperStore.js";
 import { maskMobile, sendFreedomNotification, sendFreedomTestSMS } from "../../../lib/freedom-trader/notifications.js";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const snapshot = await loadLocalFreedomNotifications();
@@ -33,3 +35,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error?.message || "Notification failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

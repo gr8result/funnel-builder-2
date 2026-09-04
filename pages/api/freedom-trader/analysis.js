@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
 import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
@@ -552,7 +554,7 @@ export async function analyseSymbol(symbol, snapshotInput = null, metaOverride =
   return buildAnalysis({ symbol, quote: quoteResult.data, candles: reconciledCandles, marketData, history, metaOverride });
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, analysis: [], error: "Method not allowed." });
@@ -568,3 +570,6 @@ export default async function handler(req, res) {
     updatedAt: new Date().toISOString(),
   });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

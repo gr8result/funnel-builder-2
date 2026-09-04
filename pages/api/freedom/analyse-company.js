@@ -1,10 +1,12 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { ANALYSIS_STAGES, analyseCompany } from "../../../lib/freedom-terminal/analysisEngine";
 
 function getSymbol(req) {
   return String(req.body?.symbol || req.body?.ticker || "").trim().toUpperCase();
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
@@ -35,3 +37,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

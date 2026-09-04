@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { importCompany, previewCompany, searchCompanies } from "../../../lib/freedom-terminal/importEngine";
 import { normalizeTicker } from "../../../lib/freedom-terminal/core";
 
@@ -9,7 +11,7 @@ function getTicker(req) {
   return normalizeTicker(req.query.ticker || req.query.symbol || req.body?.ticker || req.body?.symbol);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const action = getAction(req) || "search";
@@ -51,3 +53,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

@@ -1,8 +1,10 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { loadInvestmentStore, upsertInvestmentHolding } from "../../../lib/freedom-investment/localStore.js";
 import { fetchInvestmentCompanyData } from "../../../lib/freedom-investment/provider.js";
 import { analyseInvestmentCandidate, portfolioSummary } from "../../../lib/freedom-investment/scoring.js";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === "POST") {
       const holding = await upsertInvestmentHolding(req.body || {});
@@ -24,3 +26,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: error?.message || "Portfolio unavailable." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

@@ -1,6 +1,8 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { addInvestmentWatchlistItem, loadInvestmentStore } from "../../../lib/freedom-investment/localStore.js";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const store = await loadInvestmentStore();
@@ -16,3 +18,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: error?.message || "Watchlist update failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

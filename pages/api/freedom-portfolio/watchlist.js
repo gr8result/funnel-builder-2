@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 const STARTING_WATCHLIST = [
   { symbol: "MSFT", company: "Microsoft", sector: "Technology" },
   { symbol: "NVDA", company: "NVIDIA", sector: "Semiconductors" },
@@ -95,7 +97,7 @@ async function getWatchlistQuote(item) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "Method not allowed." });
@@ -158,3 +160,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

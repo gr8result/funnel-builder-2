@@ -1,4 +1,6 @@
-export default async function handler(req, res) {
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
+async function handler(req, res) {
   const apiKey = process.env.FINNHUB_API_KEY?.trim();
   const payload = {
     configured: Boolean(apiKey),
@@ -29,3 +31,10 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+// External market-data proxy: no stored Freedom rows, so no owner-isolation gate.
+export default withFreedomApi(handler, { touchesData: false });
+
+// Exposed unguarded for unit tests only; never routed.
+export { handler as __unguardedHandler };

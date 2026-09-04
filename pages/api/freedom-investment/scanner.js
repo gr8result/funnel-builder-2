@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { fetchInvestmentCompanyData, providerCapability } from "../../../lib/freedom-investment/provider.js";
 import { analyseInvestmentCandidate, prepareInvestment, rankInvestmentOpportunities } from "../../../lib/freedom-investment/scoring.js";
 import { resolveInvestmentUniverse, supportedInvestmentUniverse } from "../../../lib/freedom-investment/universe.js";
@@ -11,7 +13,7 @@ function parseLimit(value, fallback = 10) {
   return Number.isFinite(number) && number > 0 ? Math.min(Math.floor(number), 20) : fallback;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
@@ -72,3 +74,6 @@ export default async function handler(req, res) {
     error: null,
   });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

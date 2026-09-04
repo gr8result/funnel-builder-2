@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { analyseSymbol } from "./analysis.js";
 import { getMarketDataMetrics, getMarketSnapshotBatch, resetMarketDataMetrics } from "../../../lib/freedom-trader/marketDataService.js";
 import { marketMeta } from "../../../lib/freedom-trader/marketData.js";
@@ -301,7 +303,7 @@ async function runCompleteScan(settings, account = null) {
   return payload;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
@@ -342,3 +344,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, results: [], topFive: [], error: "Market scanner could not complete." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

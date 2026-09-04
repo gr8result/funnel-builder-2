@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { resolveFreedomTraderStock } from "../../../lib/freedom-trader/marketUniverse.js";
 import { buildSingleStockDecision } from "../../../lib/freedom-trader/singleStockAnalysis.js";
 import { addLocalTraderWatchlistItem, registerLocalMarketWatchPlan } from "../../../lib/freedom-trader/localPaperStore.js";
@@ -36,7 +38,7 @@ async function analyseResolvedStock(query) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
@@ -63,3 +65,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Stock analysis failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

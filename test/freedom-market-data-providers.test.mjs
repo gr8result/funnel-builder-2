@@ -8,7 +8,10 @@ import {
   providerSummary,
   selectMarketDataProvider,
 } from "../lib/freedom-trader/marketDataProviders.js";
-import testFinnhubHandler from "../pages/api/freedom/test-finnhub.js";
+// M2.1: the route default export is now wrapped by the Freedom auth guard, so an
+// anonymous call correctly returns 401. This test exercises the handler logic
+// itself, which the route exposes unguarded for exactly this purpose.
+import { __unguardedHandler as testFinnhubHandler } from "../pages/api/freedom/test-finnhub.js";
 
 function restoreEnv(name, value) {
   if (value === undefined) delete process.env[name];

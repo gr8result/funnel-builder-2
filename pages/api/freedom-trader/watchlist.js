@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 const WATCHLIST = [
   { symbol: "NVDA", companyName: "NVIDIA", exchange: "NASDAQ", sector: "Semiconductors" },
   { symbol: "AMD", companyName: "Advanced Micro Devices", exchange: "NASDAQ", sector: "Semiconductors" },
@@ -14,7 +16,7 @@ import { addLocalTraderWatchlistItem, checkLocalMarketWatch, loadLocalMarketWatc
 
 export const TRADER_WATCHLIST = WATCHLIST;
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (!["GET", "POST", "PATCH"].includes(req.method)) {
     res.setHeader("Allow", "GET, POST, PATCH");
     return res.status(405).json({ ok: false, watchlist: [], error: "Method not allowed." });
@@ -59,3 +61,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, watchlist: WATCHLIST, error: error.message || "Market Watch update failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

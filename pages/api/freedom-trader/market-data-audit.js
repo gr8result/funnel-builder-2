@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { buildFreedomChartInput, summarizeOhlc } from "../../../lib/freedom-trader/chartSeriesIntegrity.js";
 import { getMarketSnapshot } from "../../../lib/freedom-trader/marketDataService.js";
 import { resolveFreedomTraderStock } from "../../../lib/freedom-trader/marketUniverse.js";
@@ -109,7 +111,7 @@ async function auditSymbol(symbol) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (process.env.NODE_ENV === "production") {
     return res.status(404).json({ ok: false, error: "Development-only route." });
   }
@@ -126,3 +128,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Market data audit failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);
