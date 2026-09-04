@@ -253,4 +253,101 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
     "the allowlist check must precede any service-role query");
 }
 
+// ============================================================================
+// NO DEVELOPMENT BYPASS
+//
+// A dev-mode bypass was once added to this guard in a working tree: a request
+// carrying `x-dev-mode: true` was granted full access, with ownerVerified true,
+// whenever NODE_ENV was not "production". It defeated authentication,
+// entitlement and the owner-isolation gate at once, with no secret, and the
+// existing suite did not catch it because no test sent that header.
+//
+// These tests exist so it cannot come back unnoticed.
+// ============================================================================
+
+{
+  const BYPASS_HEADERS = [
+    { "x-dev-mode": "true" },
+    { "X-Dev-Mode": "true" },
+    { "x-dev-mode": "TRUE" },
+    { "x-dev-mode": "1" },
+    { "x-dev-bypass": "true" },
+    { "x-debug": "true" },
+  ];
+
+  // Every environment name the platform could run under, including unset -
+  // "not production" must never be treated as permission.
+  const ENVIRONMENTS = ["development", "test", "staging", "preview", "production", undefined];
+
+  const originalNodeEnv = process.env.NODE_ENV;
+  try {
+    for (const env of ENVIRONMENTS) {
+      if (env === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = env;
+      const label = env === undefined ? "unset" : env;
+
+      for (const headers of BYPASS_HEADERS) {
+        const headerName = Object.keys(headers)[0];
+
+        for (const method of ["GET", "POST", "PATCH", "DELETE"]) {
+          const d = deps();
+          const r = await authoriseFreedomRequest(req(method, { headers: { ...headers } }), { deps: d });
+          ok(r.ok === false,
+            `NODE_ENV=${label}: ${method} with ${headerName} must NOT be authorised`);
+          eq(r.status, 401,
+            `NODE_ENV=${label}: ${method} with ${headerName} must return 401`);
+          ok(!d.calls.includes("listFreedomHolders"),
+            `NODE_ENV=${label}: ${method} with ${headerName} must not reach any data lookup`);
+        }
+
+        // A bypass header must not rescue an invalid token either.
+        const d2 = deps({ user: { id: "u1" } });
+        const r2 = await authoriseFreedomRequest(
+          req("DELETE", { headers: { ...headers, authorization: "Bearer wrong" } }), { deps: d2 });
+        eq(r2.status, 401, `NODE_ENV=${label}: ${headerName} must not rescue an invalid token`);
+
+        // Nor must it grant the freedom entitlement to an authenticated user
+        // who has not purchased it.
+        const d3 = deps({ user: { id: "u1" }, workspaces: ["ws1"], userCodes: ["crm"] });
+        const r3 = await authoriseFreedomRequest(
+          req("GET", { headers: { ...headers, authorization: "Bearer good-token" } }), { deps: d3 });
+        eq(r3.status, 403, `NODE_ENV=${label}: ${headerName} must not confer the freedom entitlement`);
+
+        // Nor must it satisfy owner verification when ownership is unprovable.
+        const d4 = deps({
+          user: { id: "u1" }, workspaces: ["ws1"], userCodes: ["freedom"],
+          holders: { userIds: ["u1", "u2"], workspaceIds: [] },
+        });
+        const r4 = await authoriseFreedomRequest(
+          req("GET", { headers: { ...headers, authorization: "Bearer good-token" } }), { deps: d4 });
+        eq(r4.status, 503, `NODE_ENV=${label}: ${headerName} must not satisfy owner verification`);
+      }
+
+      // The authorised owner still works in every environment - the lockdown
+      // must not depend on NODE_ENV in either direction.
+      const dOk = deps({
+        user: { id: "u1" }, workspaces: ["ws1"], userCodes: ["freedom"],
+        holders: { userIds: ["u1"], workspaceIds: [] },
+      });
+      const rOk = await authoriseFreedomRequest(authed("GET"), { deps: dOk });
+      ok(rOk.ok, `NODE_ENV=${label}: the verified owner is still allowed`);
+    }
+  } finally {
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+  }
+}
+
+// Source-level guard: no environment-conditional shortcut may exist in the file.
+{
+  const guardSrc = fs.readFileSync("platform-core/api-guards/freedomApiGuard.js", "utf8");
+  for (const pattern of ["x-dev-mode", "X-Dev-Mode", "DEV MODE BYPASS", "devMode", "x-dev-bypass"]) {
+    ok(!guardSrc.includes(pattern), `the guard must not contain "${pattern}"`);
+  }
+  ok(!/NODE_ENV\s*!==\s*['"]production['"]/.test(guardSrc),
+    "the guard must not branch on NODE_ENV !== production");
+  ok(!guardSrc.includes("process.env.NODE_ENV"),
+    "the guard must not read NODE_ENV at all: authorisation cannot depend on the environment");
+}
+
 console.log(`Freedom API security checks passed (${checks} assertions).`);
