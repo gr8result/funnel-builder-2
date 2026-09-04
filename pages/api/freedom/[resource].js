@@ -6,6 +6,14 @@ import {
   supabaseAdmin,
 } from "../../../lib/freedom-terminal/core";
 
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+import {
+  allowedMethodsFor,
+  filterWritableFields,
+  isMethodAllowed,
+  isResourceAllowed,
+} from "../../../platform-core/api-guards/freedomResourcePolicy.js";
+
 function getResourceConfig(resource) {
   return FREEDOM_TABLES[String(resource || "")] || null;
 }
@@ -48,14 +56,25 @@ function applySearch(config, query, search) {
   return query.or(orFilter);
 }
 
-export default async function handler(req, res) {
-  const config = getResourceConfig(req.query.resource);
+async function handler(req, res) {
+  // Policy is checked before any table is resolved and before any service-role
+  // query is built. An unlisted resource is indistinguishable from one that does
+  // not exist, and the valid resource names are never enumerated to the caller.
+  const resource = Array.isArray(req.query.resource) ? req.query.resource[0] : req.query.resource;
 
+  if (!isResourceAllowed(resource)) {
+    return res.status(404).json({ error: "Unknown Freedom Terminal resource." });
+  }
+
+  const method = String(req.method || "").toUpperCase();
+  if (!isMethodAllowed(resource, method)) {
+    res.setHeader("Allow", allowedMethodsFor(resource).join(", "));
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+
+  const config = getResourceConfig(resource);
   if (!config) {
-    return res.status(404).json({
-      error: "Unknown Freedom Terminal resource.",
-      resources: Object.keys(FREEDOM_TABLES),
-    });
+    return res.status(404).json({ error: "Unknown Freedom Terminal resource." });
   }
 
   try {
@@ -91,7 +110,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const payload = await withCompanyId(config, req.body || {});
+      const payload = await withCompanyId(config, filterWritableFields(resource, req.body || {}));
       const { data, error } = await supabaseAdmin.from(config.table).insert(payload).select("*").maybeSingle();
       if (error) throw error;
       return res.status(201).json({ data });
@@ -101,7 +120,7 @@ export default async function handler(req, res) {
       const id = req.body?.id || req.query.id;
       if (!id) return res.status(400).json({ error: "id is required for updates." });
 
-      const payload = await withCompanyId(config, { ...(req.body || {}) });
+      const payload = await withCompanyId(config, filterWritableFields(resource, req.body || {}));
       delete payload.id;
 
       const { data, error } = await supabaseAdmin
@@ -133,3 +152,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// Authentication + freedom entitlement + owner isolation run before this handler.
+export default withFreedomApi(handler);

@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { loadStoredAnalysis, serializeStoredCommittee } from "../../../lib/freedom-terminal/analysisEngine";
 import { normalizeTicker } from "../../../lib/freedom-terminal/core";
 
@@ -19,7 +21,7 @@ function emptyCommittee(symbol, error = "Research data unavailable.") {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json(emptyCommittee(null, "Method not allowed."));
@@ -39,3 +41,6 @@ export default async function handler(req, res) {
     return res.status(error.statusCode || 500).json(emptyCommittee(symbol));
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

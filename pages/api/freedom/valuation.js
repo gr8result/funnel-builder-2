@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { loadStoredAnalysis, serializeStoredValuation } from "../../../lib/freedom-terminal/analysisEngine";
 import { normalizeTicker } from "../../../lib/freedom-terminal/core";
 
@@ -5,7 +7,7 @@ function getSymbol(req) {
   return normalizeTicker(Array.isArray(req.query.symbol) ? req.query.symbol[0] : req.query.symbol || "MSFT");
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -58,3 +60,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

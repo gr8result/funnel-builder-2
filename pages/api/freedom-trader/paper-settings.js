@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin.js";
 import { DEFAULT_STARTING_BALANCE, cleanNumber } from "../../../lib/freedom-trader/paperTrading.js";
 import { updateLocalPaperSettings } from "../../../lib/freedom-trader/localPaperStore.js";
@@ -19,7 +21,7 @@ async function resetAccount(supabase, account, startingBalance) {
   return data;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const snapshot = await loadPaperAccount(req);
     const account = snapshot.account;
@@ -92,3 +94,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Paper settings failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

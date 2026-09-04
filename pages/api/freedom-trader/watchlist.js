@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 const WATCHLIST = [
   { symbol: "NVDA", companyName: "NVIDIA", exchange: "NASDAQ", sector: "Semiconductors" },
   { symbol: "AMD", companyName: "Advanced Micro Devices", exchange: "NASDAQ", sector: "Semiconductors" },
@@ -13,7 +15,7 @@ const WATCHLIST = [
 
 export const TRADER_WATCHLIST = WATCHLIST;
 
-export default function handler(req, res) {
+function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, watchlist: [], error: "Method not allowed." });
@@ -26,3 +28,6 @@ export default function handler(req, res) {
     updatedAt: new Date().toISOString(),
   });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

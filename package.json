@@ -26,6 +26,7 @@
     "standard-inclusions:upload-master": "node scripts/upload-standard-inclusions-master.mjs",
     "test:project-estimate-template": "node scripts/test-project-estimate-approved-template.mjs",
     "test:entitlements": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-entitlement-resolver.mjs",
+    "test:freedom-security": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-freedom-api-security.mjs",
     "test:takeoff-v2": "node modules/takeoff-v2/tests/rotation.test.mjs && node modules/takeoff-v2/tests/coordinateTransform.test.mjs && node modules/takeoff-v2/tests/planStore.test.mjs",
     "test:takeoff-v2-acceptance": "node scripts/test-takeoff-v2-acceptance.mjs",
     "test:wb-live-pipeline-runtime": "node --import ./scripts/register-extensionless-loader.mjs scripts/test-website-save-publish-live-pipeline-runtime.mjs"

@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { loadStoredAnalysis, serializeStoredResearch } from "../../../lib/freedom-terminal/analysisEngine";
 import { normalizeTicker, supabaseAdmin } from "../../../lib/freedom-terminal/core";
 
@@ -53,7 +55,7 @@ async function saveManualResearch(symbol, body) {
   return loadStoredAnalysis(symbol);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const symbol = getSymbol(req);
     if (!isValidSymbol(symbol)) return res.status(400).json({ ok: false, error: "Provide a valid ticker query, such as MSFT." });
@@ -85,3 +87,6 @@ export default async function handler(req, res) {
     return res.status(safe.statusCode).json(safe.payload);
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

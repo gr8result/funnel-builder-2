@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 const COMPANY_META = {
   MSFT: { companyName: "Microsoft", sector: "Software", qualityScore: 96 },
   NVDA: { companyName: "NVIDIA", sector: "Semiconductors", qualityScore: 94 },
@@ -299,7 +301,7 @@ async function buildQuote(symbol) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -353,3 +355,7 @@ export default async function handler(req, res) {
     updatedAt: new Date().toISOString(),
   });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+// External market-data proxy: no stored Freedom rows, so no owner-isolation gate.
+export default withFreedomApi(handler, { touchesData: false });
