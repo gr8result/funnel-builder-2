@@ -1,7 +1,7 @@
 import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
 
 import { fetchTraderHistory } from "./history.js";
-import { TRADER_WATCHLIST } from "./watchlist.js";
+import { TRADER_WATCHLIST } from "../../../modules/freedom/data/watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 
 function round(value, decimals = 2) {
