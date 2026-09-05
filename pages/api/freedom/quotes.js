@@ -80,12 +80,11 @@ function friendlyCandleError(status, data) {
   return "Finnhub candle request failed.";
 }
 
-function logFinnhubRequest(symbol, apiKey, response) {
+// Never log the API key or anything derived from it - not its length, prefix,
+// suffix or presence. Server logs are retained and widely readable, and key
+// length plus four leading and four trailing characters is a material leak.
+function logFinnhubRequest(symbol, response) {
   console.log("Finnhub symbol:", symbol);
-  console.log("Finnhub key exists:", Boolean(apiKey));
-  console.log("Finnhub key length:", apiKey?.length || 0);
-  console.log("Finnhub key starts:", apiKey?.slice(0, 4));
-  console.log("Finnhub key ends:", apiKey?.slice(-4));
   console.log("Finnhub response status:", response.status);
 }
 
@@ -105,7 +104,7 @@ async function fetchFinnhubQuote(symbol) {
 
   try {
     const response = await fetch(url);
-    logFinnhubRequest(symbol, apiKey, response);
+    logFinnhubRequest(symbol, response);
     const data = await response.json().catch(() => null);
 
     return {

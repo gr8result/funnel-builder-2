@@ -235,7 +235,60 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const tracked = execSync("git ls-files pages/api/freedom*", { encoding: "utf8" })
     .split("\n").map((s) => s.trim()).filter((s) => s.endsWith(".js"));
 
-  ok(tracked.length > 0, "the tracked Freedom route surface is non-empty");
+  // The exact Freedom route surface committed on this branch.
+  //
+  // hotfix/freedom-api-lockdown is cut from main and adds no new route files -
+  // it only hardens existing ones - so this inventory is main's Freedom surface:
+  // 26 tracked routes, every one of which must be guarded. Pinning the list, not
+  // just the count, means adding a route is a deliberate act that updates this
+  // test, and a route cannot be silently dropped to make the loop below vacuous.
+  //
+  // Two separate groups of seven files are deliberately EXCLUDED. Conflating
+  // them is what produced the earlier wrong count of 33.
+  //
+  //   1. Tracked on safety/pre-takeoff-cleanup-2026-09-01, absent from main and
+  //      therefore from this branch: freedom-investment/portfolio, scanner and
+  //      watchlist, and freedom-trader/alpaca-test, market-data-audit,
+  //      notifications and stock-analysis. A count of 33 is correct only in that
+  //      cleanup working tree; here it would require files that do not exist.
+  //
+  //   2. Untracked working-tree-only files on some machines: freedom/chart,
+  //      cmc-market-import, import-trades, long-term, opportunities,
+  //      resolve-ticker and trades. Never committed on any branch, so they are
+  //      not part of the shipped surface and git ls-files never returns them.
+  //
+  // 26 is the correct number for a clean checkout of main or this branch.
+  const EXPECTED_FREEDOM_ROUTES = [
+    "pages/api/freedom-portfolio/quote.js",
+    "pages/api/freedom-portfolio/watchlist.js",
+    "pages/api/freedom-trader/alerts.js",
+    "pages/api/freedom-trader/analysis.js",
+    "pages/api/freedom-trader/check-alerts.js",
+    "pages/api/freedom-trader/history.js",
+    "pages/api/freedom-trader/paper-account.js",
+    "pages/api/freedom-trader/paper-monitor.js",
+    "pages/api/freedom-trader/paper-orders.js",
+    "pages/api/freedom-trader/paper-settings.js",
+    "pages/api/freedom-trader/positions.js",
+    "pages/api/freedom-trader/scanner.js",
+    "pages/api/freedom-trader/setups.js",
+    "pages/api/freedom-trader/twelve-data-test.js",
+    "pages/api/freedom-trader/watchlist.js",
+    "pages/api/freedom/[resource].js",
+    "pages/api/freedom/analyse-company.js",
+    "pages/api/freedom/committee.js",
+    "pages/api/freedom/history.js",
+    "pages/api/freedom/import-company.js",
+    "pages/api/freedom/jobs/run.js",
+    "pages/api/freedom/quotes.js",
+    "pages/api/freedom/research.js",
+    "pages/api/freedom/score-history.js",
+    "pages/api/freedom/test-finnhub.js",
+    "pages/api/freedom/valuation.js",
+  ];
+
+  eq([...tracked].sort(), [...EXPECTED_FREEDOM_ROUTES].sort(),
+    "the tracked Freedom route surface matches the committed inventory exactly");
 
   for (const f of tracked) {
     const src = fs.readFileSync(f, "utf8");
