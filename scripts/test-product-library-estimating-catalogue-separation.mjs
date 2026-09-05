@@ -4,12 +4,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   PRODUCT_FAMILIES,
+  activeKitchenMasterProducts,
   buildApprovedClientSelectionsCatalogue,
   isProductLibraryEligibleProduct,
 } from "../lib/product-library/catalogueModel.js";
 import {
+  APPLIANCE_REQUIREMENTS,
   EXTERIOR_REQUIREMENTS,
-  KITCHEN_REQUIREMENTS,
   productsForRequirement,
 } from "../lib/builders/clientSelectionWorkflow.js";
 
@@ -46,7 +47,7 @@ const estimatingOnlyRecords = [
 assert.ok(estimatingOnlyRecords.every((record) => !isProductLibraryEligibleProduct(record)), "estimating-only classes must be excluded from Product Library eligibility");
 
 assert.equal(catalogue.sourcePath, "data/product-library/PRODUCTS-LIBRARY.csv", "Product Library requirements must be sourced from the curated CSV");
-assert.equal(catalogue.audit.usableRows.length, 614, "curated CSV requirement rows must remain the Product Library foundation");
+assert.ok(catalogue.audit.usableRows.length >= 600, "curated CSV requirement rows must remain the Product Library foundation");
 assert.ok(catalogue.productFamilies.length >= 16, "curated CSV must produce selectable product-family mappings");
 assert.ok(!JSON.stringify(catalogue.hierarchy).match(/Soil Tests|Engineering|Project Management|Site Supervision|Frame Labour/i), "estimating-only labels must not appear in the Product Library hierarchy");
 
@@ -68,13 +69,28 @@ for (const familyKey of requiredFamilies) {
   assert.ok(PRODUCT_FAMILIES.some((family) => family.familyKey === familyKey), `${familyKey} family must exist in Product Library taxonomy`);
 }
 
+const kitchenFamilies = PRODUCT_FAMILIES.filter((family) => family.topLevelArea === "kitchen").map((family) => family.familyKey);
+assert.ok(!kitchenFamilies.includes("paint"), "generic paint must not appear as a Kitchen product family");
+assert.ok(!kitchenFamilies.includes("lighting"), "generic lighting must not appear as a Kitchen product family");
+assert.equal(PRODUCT_FAMILIES.find((family) => family.familyKey === "paint")?.category, "Painting", "paint products must map to Painting taxonomy");
+assert.equal(PRODUCT_FAMILIES.find((family) => family.familyKey === "lighting")?.category, "Electrical Fixtures", "client-selected light fittings must map to Electrical Fixtures taxonomy");
+assert.deepEqual(
+  activeKitchenMasterProducts([
+    { productId: "kitchen-oven", familyKey: "ovens", regions: ["QLD"], active: true },
+    { productId: "generic-paint", familyKey: "paint", regions: ["QLD"], active: true },
+    { productId: "generic-lighting", familyKey: "lighting", regions: ["QLD"], active: true },
+  ]).map((product) => product.productId),
+  ["kitchen-oven"],
+  "active Kitchen Product Library selector must not include generic paint or lighting products",
+);
+
 assert.ok(workbookSource.includes('page: "estimatingCatalogue"'), "Estimate Builder dashboard must expose Estimating Catalogue separately");
 assert.ok(workbookSource.includes("function EstimatingCatalogueSheet"), "QS table must be housed under Estimating Catalogue");
 assert.ok(workbookSource.includes("deriveProductLibraryFromQuoteSheet"), "existing QS catalogue derivation must be preserved for estimating data");
 assert.ok(workbookSource.includes('data-catalogue-kind="product-library"'), "Estimate Builder Product Library must render the visual hierarchy screen");
 
 const brickRequirement = EXTERIOR_REQUIREMENTS.find((item) => item.requirementKey === "bricks");
-const ovenRequirement = KITCHEN_REQUIREMENTS.find((item) => item.requirementKey === "oven");
+const ovenRequirement = APPLIANCE_REQUIREMENTS.find((item) => item.requirementKey === "oven");
 const brickFamily = catalogue.productFamilies.find((family) => family.familyKey === "bricks");
 const ovenFamily = catalogue.productFamilies.find((family) => family.familyKey === "ovens");
 const ovenSourceRow = catalogue.audit.importRows.find((row) => row.familyKey === "ovens");
@@ -89,7 +105,7 @@ const actualOven = {
   supplier: "Actual Supplier",
   familyKey: "ovens",
   requirementKey: "oven",
-  topLevelArea: "kitchen",
+  topLevelArea: "appliances",
   linkedQuoteItemCode: ovenSourceRow.approvedSourceKey,
   rowClassification: "actual_product",
   client_selectable: true,

@@ -5,6 +5,7 @@ import { TRADER_WATCHLIST } from "./watchlist.js";
 import { calculateTraderSignal } from "../../../lib/freedom/signalEngine.js";
 import { classifyPullbackReversal } from "../../../lib/freedom-trader/pullbackReversal.js";
 import { filterValidOhlcvCandles } from "../../../lib/freedom-trader/chartSeriesIntegrity.js";
+import { calculateVolatility } from "../../../lib/freedom-trader/volatility.js";
 
 function round(value, decimals = 2) {
   const number = Number(value);
@@ -280,7 +281,8 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   const recent = clean.slice(-30);
   const support = recent.length >= 10 ? round(Math.min(...recent.map((candle) => candle.low))) : null;
   const resistance = recent.length >= 10 ? round(Math.max(...recent.map((candle) => candle.high))) : null;
-  const volatility = clean.length >= 20 ? round(average(clean.slice(-20).map((candle) => ((candle.high - candle.low) / candle.close) * 100))) : null;
+  const volatilitySummary = calculateVolatility(clean.slice(-60));
+  const volatility = volatilitySummary.averageDailyMovementPercent;
   const distanceFromSupport = Number.isFinite(currentPrice) && Number.isFinite(support) ? round(((currentPrice - support) / currentPrice) * 100) : null;
   const distanceFromResistance = Number.isFinite(currentPrice) && Number.isFinite(resistance) ? round(((resistance - currentPrice) / currentPrice) * 100) : null;
   const oneMonthAgo = closes.length >= 21 ? closes[closes.length - 21] : null;
@@ -295,7 +297,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
   const trendRaw = enoughCore ? (currentPrice > ma20 ? 35 : 10) + (currentPrice > ma50 ? 35 : 10) + (Number.isFinite(ma200) && currentPrice > ma200 ? 20 : 5) + (ma20 > ma50 ? 10 : 0) : null;
   const momentumRaw = Number.isFinite(momentumReturn) && Number.isFinite(macd.histogram) ? clamp(50 + momentumReturn * 3 + macd.histogram * 10) : null;
   const volumeRaw = Number.isFinite(relativeVolume) ? clamp(40 + relativeVolume * 25) : null;
-  const volatilityRaw = Number.isFinite(volatility) ? clamp(100 - Math.abs(volatility - 4) * 15) : null;
+  const volatilityRaw = Number.isFinite(volatilitySummary.suitabilityScore) ? volatilitySummary.suitabilityScore : null;
   const supportRaw = Number.isFinite(distanceFromSupport) && Number.isFinite(distanceFromResistance) ? clamp(78 - distanceFromSupport * 2 + distanceFromResistance * 1.4) : null;
   const technicalRaw = Number.isFinite(rsi) && Number.isFinite(macd.histogram) ? clamp(100 - Math.abs(rsi - 55) * 2 + (macd.histogram > 0 ? 12 : -8)) : null;
   const components = {
@@ -394,6 +396,9 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
       support,
       resistance,
       volatility20: volatility,
+      volatilityRating: volatilitySummary.rating,
+      averageDailyRange: volatilitySummary.averageDailyRange,
+      atrPercent: volatilitySummary.atrPercent,
       distanceFromSupport,
       distanceFromResistance,
     },
@@ -446,6 +451,7 @@ export function buildAnalysis({ symbol, quote, candles, marketData = null, histo
     scoreExplanation: components,
     setup,
     setupClassification,
+    volatility: volatilitySummary,
     marketData,
     dataStatus,
     candleCount: clean.length,

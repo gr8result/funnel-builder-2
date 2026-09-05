@@ -52,7 +52,7 @@ export default function ClientPortalPage() {
         if (cancelled) return;
         if (loadError.status === 401) {
           const redirect = encodeURIComponent(router.asPath || `/client-portal/${projectId}`);
-          router.replace(`/login?redirect=${redirect}`);
+          router.replace(`/client-portal?redirect=${redirect}`);
           return;
         }
         setError(loadError.message || "Could not load the client portal.");
@@ -95,7 +95,7 @@ export default function ClientPortalPage() {
 
   async function logout() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/client-portal");
   }
 
   async function refreshPortal() {

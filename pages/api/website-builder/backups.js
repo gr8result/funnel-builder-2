@@ -9,6 +9,12 @@ import {
   loadFullSplitWebsiteProject,
   saveSplitWebsiteProject,
 } from "../../../lib/website-builder/supabaseSiteStorage";
+import {
+  assertWebsiteUnlockedForMutation,
+  getWebsiteUnlockTokenFromRequest,
+  markWebsiteMutationCommitted,
+  websiteLockedResponse,
+} from "../../../lib/website-builder/contentLock";
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || req.headers.Authorization || "").trim();
@@ -51,6 +57,14 @@ async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    const unlockToken = getWebsiteUnlockTokenFromRequest(req);
+    const lock = assertWebsiteUnlockedForMutation({
+      projectId,
+      userId,
+      unlockToken,
+      action: "restore",
+    });
+    if (!lock.ok) return websiteLockedResponse(res, lock);
     const backupId = String(req.body?.backupId || "").trim();
     if (!backupId) {
       return res.status(400).json({ ok: false, error: "backupId is required" });
@@ -59,9 +73,10 @@ async function handler(req, res) {
     const restored = await restoreWebsiteBuilderBackup(userId, projectId, backupId);
     const localProject = await loadLocalSplitWebsiteProject(userId, projectId);
     if (localProject) {
-      await saveSplitWebsiteProject(userId, localProject, { backupSource: "restore", backupReason: `Restored backup ${backupId}` });
+      await saveSplitWebsiteProject(userId, localProject, { backupSource: "restore", backupReason: `Restored backup ${backupId}`, unlockToken });
     }
     const project = await loadFullSplitWebsiteProject(userId, projectId);
+    markWebsiteMutationCommitted({ projectId, unlockToken, action: "save" });
     return res.status(200).json({ ok: true, restored, project });
   }
 

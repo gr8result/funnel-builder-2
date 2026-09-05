@@ -1,0 +1,119 @@
+{
+  "dryRun": false,
+  "suppliers": {
+    "Neolith": {
+      "sourceUrl": "https://www.neolith.com/en/all-colours/",
+      "activeProducts": 12,
+      "syncStatus": "official_source_fixture_manual_verification_required"
+    },
+    "Smartstone": {
+      "sourceUrl": "https://www.smartstone.com.au/stone-benchtops",
+      "activeProducts": 24,
+      "syncStatus": "official_source_fixture_manual_verification_required"
+    },
+    "Caesarstone": {
+      "sourceUrl": "https://www.caesarstone.com.au/colours/",
+      "activeProducts": 12,
+      "syncStatus": "official_source_fixture_manual_verification_required"
+    },
+    "Stone Ambassador": {
+      "sourceUrl": "https://stoneambassador.com.au/catalogue/",
+      "activeProducts": 100,
+      "syncStatus": "live_html_extracted"
+    }
+  },
+  "sourceUrls": {
+    "neolith": "https://www.neolith.com/en/all-colours/",
+    "smartstone": "https://www.smartstone.com.au/stone-benchtops",
+    "caesarstone": "https://www.caesarstone.com.au/colours/",
+    "stone-ambassador": "https://stoneambassador.com.au/catalogue/"
+  },
+  "verifiedAt": "2026-09-01",
+  "activeProducts": 148,
+  "activeProductsBySupplier": {
+    "Neolith": 12,
+    "Smartstone": 24,
+    "Caesarstone": 12,
+    "Stone Ambassador": 100
+  },
+  "inactiveMarked": 0,
+  "duplicatesDetected": 0,
+  "duplicateIds": [],
+  "imagesStored": 0,
+  "imagesAvailableBySupplier": {
+    "Neolith": 1,
+    "Smartstone": 24,
+    "Caesarstone": 0,
+    "Stone Ambassador": 100
+  },
+  "imageFailures": [
+    {
+      "id": "caesarstone-6011-intense-white",
+      "supplier": "Caesarstone",
+      "colourName": "Intense White",
+      "url": "https://www.caesarstone.com.au/wp-content/uploads/2020/12/6011_Intense-White_6011_CU_50x70cm_1920x890px-1.jpg",
+      "reason": "HTTP 403"
+    }
+  ],
+  "rangeTotals": {
+    "Caesarstone / ICON": 7,
+    "Caesarstone / Porcelain": 5,
+    "Neolith / Colorfeel": 1,
+    "Neolith / Fusion": 5,
+    "Neolith / The New Classtone": 6,
+    "Smartstone / Sintered Collection": 24,
+    "Stone Ambassador / Kaya Surfaces": 3,
+    "Stone Ambassador / Vasari Porcelain": 39,
+    "Stone Ambassador / Zenith Surfaces (VCS)": 58
+  },
+  "manualVerificationRequired": [
+    "caesarstone-4011-cloudburst-concrete",
+    "caesarstone-6011-intense-white",
+    "caesarstone-5102-laceline",
+    "caesarstone-5103-lightcrest",
+    "caesarstone-1141-pure-white",
+    "caesarstone-8252-sedara",
+    "caesarstone-8251-taj-whisper",
+    "caesarstone-410-aluminous",
+    "caesarstone-580-fume",
+    "caesarstone-506-mirabel",
+    "caesarstone-584-opal-taj",
+    "caesarstone-502-sleet",
+    "neolith-arctic-white-arctic-white",
+    "neolith-basalt-black-basalt-black",
+    "neolith-beton-beton",
+    "neolith-iron-frost-iron-frost",
+    "neolith-pietra-di-luna-pietra-di-luna",
+    "neolith-strata-argentum-strata-argentum",
+    "neolith-abu-dhabi-white-abu-dhabi-white",
+    "neolith-calacatta-gold-calacatta-gold",
+    "neolith-calacatta-roma-calacatta-roma",
+    "neolith-estatuario-estatuario",
+    "neolith-mont-blanc-mont-blanc",
+    "neolith-nero-marquina-nero-marquina",
+    "smartstone-arabescato-chiaro-arabescato-chiaro",
+    "smartstone-bellini-bianco-bellini-bianco",
+    "smartstone-bianco-angelico-bianco-angelico",
+    "smartstone-bianco-puro-bianco-puro",
+    "smartstone-calacatta-bianco-calacatta-bianco",
+    "smartstone-calacatta-borghini-calacatta-borghini",
+    "smartstone-calacatta-lusso-calacatta-lusso",
+    "smartstone-calacatta-oro-calacatta-oro",
+    "smartstone-calacatta-verde-calacatta-verde",
+    "smartstone-calacatta-viola-calacatta-viola",
+    "smartstone-carrara-carrara",
+    "smartstone-cemento-bianco-cemento-bianco",
+    "smartstone-concreto-grigio-concreto-grigio",
+    "smartstone-crema-naturale-crema-naturale",
+    "smartstone-grafite-titanio-grafite-titanio",
+    "smartstone-grigio-caldo-grigio-caldo",
+    "smartstone-grigio-solido-grigio-solido",
+    "smartstone-nero-puro-nero-puro",
+    "smartstone-pietra-luna-pietra-luna",
+    "smartstone-pietra-scuro-pietra-scuro",
+    "smartstone-statuario-grigio-statuario-grigio",
+    "smartstone-super-white-super-white",
+    "smartstone-taj-mahal-taj-mahal",
+    "smartstone-volakas-gold-volakas-gold"
+  ]
+}

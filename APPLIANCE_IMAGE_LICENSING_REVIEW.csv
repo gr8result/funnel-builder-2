@@ -1,0 +1,84 @@
+product_id,brand,model,family,image_status,direct_image_url,source_page_url,source_organisation,source_type,verification_confidence,checked_date,proposed_local_asset_path,licence_use_status,downloaded
+product:appliances:cooktops:ariston:nio-844-do-b-aus,Ariston,NIO 844 DO B AUS,cooktops,pending-licence,,https://ariston.com.au/inventory/nio844dob/,Ariston Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/ariston/nio-844-do-b-aus/ariston-nio-844-do-b-aus-main.webp,pending-licence,false
+product:appliances:cooktops:ariston:pc640ntx,Ariston,PC640NTX,cooktops,pending-licence,,https://ariston.com.au/inventory/pc640ntx/,Ariston Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/ariston/pc640ntx/ariston-pc640ntx-main.webp,pending-licence,false
+product:appliances:cooktops:ariston:pf604ix,Ariston,PF604IX,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:ariston:pkq-755-d-gh-aus,Ariston,PKQ 755 D GH AUS,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:blanco:bcc604t,Blanco,BCC604T,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:blanco:bcg604wx,Blanco,BCG604WX,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:blanco:bcg905wx,Blanco,BCG905WX,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:blanco:bic90x,Blanco,BIC90X,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:euromaid:ecck900,Euromaid,ECCK900,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:euromaid:gc90s,Euromaid,GC90S,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:euromaid:kcs4,Euromaid,KCS4,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:euromaid:wk60s,Euromaid,WK60S,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:omega:ocg604x,Omega,OCG604X,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:omega:oci64z,Omega,OCI64Z,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:omega:oi90z,Omega,OI90Z,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:smeg:pga64,Smeg,PGA64,cooktops,pending-licence,,https://www.smeg.com/au/products/PGA64,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/pga64/smeg-pga64-main.webp,pending-licence,false
+product:appliances:cooktops:smeg:pga95,Smeg,PGA95,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:smeg:sai4954d,Smeg,SAI4954D,cooktops,pending-licence,,https://www.smeg.com/au/products/SAI4954D,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/sai4954d/smeg-sai4954d-main.webp,pending-licence,false
+product:appliances:cooktops:smeg:si2641d,Smeg,SI2641D,cooktops,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:cooktops:westinghouse:whc642bc,Westinghouse,WHC642BC,cooktops,pending-licence,,https://www.westinghouse.com.au/cooking/cooktops/whc642bc/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/whc642bc/westinghouse-whc642bc-main.webp,pending-licence,false
+product:appliances:cooktops:westinghouse:whg644sc,Westinghouse,WHG644SC,cooktops,pending-licence,,https://www.westinghouse.com.au/cooking/cooktops/whg644sc/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/whg644sc/westinghouse-whg644sc-main.webp,pending-licence,false
+product:appliances:cooktops:westinghouse:whg958sc,Westinghouse,WHG958SC,cooktops,pending-licence,,https://www.westinghouse.com.au/cooking/cooktops/whg958sc/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/whg958sc/westinghouse-whg958sc-main.webp,pending-licence,false
+product:appliances:cooktops:westinghouse:whi955bd,Westinghouse,WHI955BD,cooktops,pending-licence,,https://www.westinghouse.com.au/cooking/cooktops/whi955bd/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/whi955bd/westinghouse-whi955bd-main.webp,pending-licence,false
+product:appliances:dishwashers:ariston:lfo3c23wf,Ariston,LFO3C23WF,dishwashers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:dishwashers:blanco:bdw146x,Blanco,BDW146X,dishwashers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:dishwashers:euromaid:edw14s,Euromaid,EDW14S,dishwashers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:dishwashers:omega:odw702xb,Omega,ODW702XB,dishwashers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:dishwashers:smeg:dwau6315x3,Smeg,DWAU6315X3,dishwashers,pending-licence,,https://www.smeg.com/au/products/DWAU6315X3,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/dwau6315x3/smeg-dwau6315x3-main.webp,pending-licence,false
+product:appliances:dishwashers:westinghouse:wsf6606x,Westinghouse,WSF6606X,dishwashers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:freestanding-cookers:ariston:cp059mdx,Ariston,CP059MDX,freestanding-cookers,pending-licence,,https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/,Ariston Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/ariston/cp059mdx/ariston-cp059mdx-main.webp,pending-licence,false
+product:appliances:freestanding-cookers:blanco:bfs90wx,Blanco,BFS90WX,freestanding-cookers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:freestanding-cookers:euromaid:gg90s,Euromaid,GG90S,freestanding-cookers,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:freestanding-cookers:omega:of916fx,Omega,OF916FX,freestanding-cookers,pending-licence,,https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/,Omega Appliances Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/omega/of916fx/omega-of916fx-main.webp,pending-licence,false
+product:appliances:freestanding-cookers:smeg:fs9606as-1,Smeg,FS9606AS-1,freestanding-cookers,pending-licence,,https://www.smeg.com/au/products/FS9606AS-1,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/fs9606as-1/smeg-fs9606as-1-main.webp,pending-licence,false
+product:appliances:freestanding-cookers:westinghouse:wfe9515sd,Westinghouse,WFE9515SD,freestanding-cookers,pending-licence,,https://www.westinghouse.com.au/cooking/freestanding-ovens/wfe9515sd/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wfe9515sd/westinghouse-wfe9515sd-main.webp,pending-licence,false
+product:appliances:ovens:ariston:fa5834hixaaus,Ariston,FA5834HIXAAUS,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus,Ariston,FI9 891 SP IX A AUS,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:blanco:bose65xm,Blanco,BOSE65XM,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:blanco:bose90x,Blanco,BOSE90X,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:euromaid:eo605dtb,Euromaid,EO605DTB,ovens,pending-licence,,https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless,Euromaid Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/euromaid/eo605dtb/euromaid-eo605dtb-main.webp,pending-licence,false
+product:appliances:ovens:euromaid:eo916astb,Euromaid,EO916ASTB,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:omega:obo660x,Omega,OBO660X,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:omega:obo960x1,Omega,OBO960X1,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:smeg:sf64m3tvx,Smeg,SF64M3TVX,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:smeg:sfpa9395x1,Smeg,SFPA9395X1,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:ovens:westinghouse:wve6314dd,Westinghouse,WVE6314DD,ovens,pending-licence,,https://www.westinghouse.com.au/cooking/ovens/wve6314dd/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wve6314dd/westinghouse-wve6314dd-main.webp,pending-licence,false
+product:appliances:ovens:westinghouse:wve916sc,Westinghouse,WVE916SC,ovens,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:arhc60x,Ariston,ARHC60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:arhc90x,Ariston,ARHC90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:arhs60x,Ariston,ARHS60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:arhs90x,Ariston,ARHS90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:aru60x,Ariston,ARU60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:ariston:aru90x,Ariston,ARU90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:brc60x,Blanco,BRC60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:brc90x,Blanco,BRC90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:bru53x,Blanco,BRU53X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:bru60x,Blanco,BRU60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:bru90ux,Blanco,BRU90UX,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:blanco:bru90x,Blanco,BRU90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:cpt6s,Euromaid,CPT6S,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:cpt9mb,Euromaid,CPT9MB,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:cs60s,Euromaid,CS60S,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:fs90s,Euromaid,FS90S,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:rs6s,Euromaid,RS6S,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:euromaid:rs9s,Euromaid,RS9S,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:orc60x,Omega,ORC60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:orc90x,Omega,ORC90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:orf60x,Omega,ORF60X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:orf90x,Omega,ORF90X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:ort6wba,Omega,ORT6WBA,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:omega:ort9wxa,Omega,ORT9WXA,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:smeg:pum601x,Smeg,PUM601X,rangehoods,pending-licence,,https://www.smeg.com/au/products/PUM601X,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/pum601x/smeg-pum601x-main.webp,pending-licence,false
+product:appliances:rangehoods:smeg:pum901x,Smeg,PUM901X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:smeg:shw610x1,Smeg,SHW610X1,rangehoods,pending-licence,,https://www.smeg.com/au/products/SHW610X1,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/shw610x1/smeg-shw610x1-main.webp,pending-licence,false
+product:appliances:rangehoods:smeg:shw910x2,Smeg,SHW910X2,rangehoods,pending-licence,,https://www.smeg.com/au/products/SHW910X2,Smeg Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/smeg/shw910x2/smeg-shw910x2-main.webp,pending-licence,false
+product:appliances:rangehoods:smeg:sth600x,Smeg,STH600X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:smeg:sth900x,Smeg,STH900X,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:westinghouse:wrc614sd,Westinghouse,WRC614SD,rangehoods,pending-licence,,https://www.westinghouse.com.au/cooking/rangehoods/wrc614sd/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wrc614sd/westinghouse-wrc614sd-main.webp,pending-licence,false
+product:appliances:rangehoods:westinghouse:wrc914sd,Westinghouse,WRC914SD,rangehoods,pending-licence,,https://www.westinghouse.com.au/cooking/rangehoods/wrc914sd/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wrc914sd/westinghouse-wrc914sd-main.webp,pending-licence,false
+product:appliances:rangehoods:westinghouse:wrf610wa,Westinghouse,WRF610WA,rangehoods,pending-licence,,https://www.westinghouse.com.au/cooking/rangehoods/wrf610wa/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wrf610wa/westinghouse-wrf610wa-main.webp,pending-licence,false
+product:appliances:rangehoods:westinghouse:wrf910wa,Westinghouse,WRF910WA,rangehoods,pending-licence,,https://www.westinghouse.com.au/cooking/rangehoods/wrf910wa/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wrf910wa/westinghouse-wrf910wa-main.webp,pending-licence,false
+product:appliances:rangehoods:westinghouse:wri930sb,Westinghouse,WRI930SB,rangehoods,exact-image-unavailable,,,,,not-verified,2026-09-02,,not-available,false
+product:appliances:rangehoods:westinghouse:wrr614sb,Westinghouse,WRR614SB,rangehoods,pending-licence,,https://www.westinghouse.com.au/cooking/rangehoods/wrr614sb/,Westinghouse Australia,official-australian-product-page,exact-model-page-image-seen,2026-09-02,public/catalogues/appliances/westinghouse/wrr614sb/westinghouse-wrr614sb-main.webp,pending-licence,false

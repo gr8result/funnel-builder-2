@@ -6,6 +6,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { supabase } from '../../../utils/supabase-client';
 import { openSharedMediaPicker } from '../../../lib/openSharedMediaPicker';
 import { apiFetch } from '../../../lib/social/apiUtils';
+import { useWorkspace } from '../../../hooks/useWorkspace';
 
 const PLATFORM_OPTIONS = [
   { key: 'facebook',  label: 'Facebook',   icon: '📘' },
@@ -196,6 +197,7 @@ function imgDataUrl(image, crop) {
 
 export default function ReviewPosts() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const [posts, setPosts]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [editing, setEditing]       = useState({});
@@ -711,8 +713,8 @@ export default function ReviewPosts() {
       const token = await getToken();
       const res  = await fetch('/api/social/publish-now', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ postId }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(workspaceId ? { 'x-workspace-id': workspaceId } : {}) },
+        body: JSON.stringify({ postId, workspace_id: workspaceId || '' }),
       });
       const json = await res.json().catch(() => ({ ok: false, success: false, error: "Server error — please try again." }));
       if (!json.ok) throw new Error(json.error || 'Publish failed');

@@ -30,6 +30,7 @@ try {
     body: card.textContent || "",
   })));
   assert.deepEqual(areaCards.map((card) => card.title), [
+    "Appliances",
     "Exterior",
     "Interior",
     "Kitchen",

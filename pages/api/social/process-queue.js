@@ -9,6 +9,7 @@ import { postToX } from "../../../lib/social/x";
 import { postToTikTok, refreshTikTokAccountAccess } from "../../../lib/social/tiktok";
 import { postToYouTube } from "../../../lib/social/youtube";
 import { withAuth } from "../../../lib/withWorkspace";
+import { isDemoWorkspace, recordDemoAction } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -54,6 +55,35 @@ async function processQueue() {
           .from('social_queue')
           .update({ status: 'completed', processed_at: new Date().toISOString() })
           .eq('id', row.id);
+        continue;
+      }
+
+      const workspaceId = row.workspace_id || post.workspace_id || null;
+      if (workspaceId && await isDemoWorkspace(workspaceId)) {
+        const result = { ok: true, demo: true, simulated: true, id: `demo_${post.id}`, message: "Demo social queue publish simulated - no external social account was contacted." };
+        await recordDemoAction({
+          workspaceId,
+          userId: row.user_id,
+          actionType: "social-publish-queue",
+          provider: row.platform,
+          target: row.post_id,
+          payload: { queueId: row.id, postId: row.post_id, platform: row.platform },
+          simulatedResult: result,
+        });
+        await supabase
+          .from("social_posts")
+          .update({ status: "demo_simulated", platform_post_id: result.id, published_at: new Date().toISOString() })
+          .eq("id", post.id);
+        await supabase
+          .from("social_schedule")
+          .update({ status: "demo_simulated", processed_at: new Date().toISOString() })
+          .eq("post_id", post.id)
+          .eq("user_id", row.user_id)
+          .in("status", ["scheduled", "queued"]);
+        await supabase
+          .from("social_queue")
+          .delete()
+          .eq("id", row.id);
         continue;
       }
 

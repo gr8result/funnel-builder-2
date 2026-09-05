@@ -1,0 +1,138 @@
+{
+  "sections": [
+    {
+      "parent": "roofing",
+      "key": "all",
+      "count": 197
+    },
+    {
+      "parent": "roofing",
+      "key": "roofing-products",
+      "count": 184
+    },
+    {
+      "parent": "roofing",
+      "key": "fascia",
+      "count": 3
+    },
+    {
+      "parent": "roofing",
+      "key": "gutters",
+      "count": 6
+    },
+    {
+      "parent": "roofing",
+      "key": "downpipes",
+      "count": 4
+    },
+    {
+      "parent": "roofing",
+      "key": "flashings",
+      "count": 0
+    },
+    {
+      "parent": "roofing",
+      "key": "roof-ventilation",
+      "count": 0
+    },
+    {
+      "parent": "roofing",
+      "key": "roof-accessories",
+      "count": 0
+    },
+    {
+      "parent": "entry-doors",
+      "key": "all",
+      "count": 449
+    },
+    {
+      "parent": "entry-doors",
+      "key": "entry-doors",
+      "count": 148
+    },
+    {
+      "parent": "entry-doors",
+      "key": "entrance-handles",
+      "count": 52
+    },
+    {
+      "parent": "entry-doors",
+      "key": "entrance-locksets",
+      "count": 150
+    },
+    {
+      "parent": "entry-doors",
+      "key": "deadbolts",
+      "count": 55
+    },
+    {
+      "parent": "entry-doors",
+      "key": "mortice-locks",
+      "count": 2
+    },
+    {
+      "parent": "entry-doors",
+      "key": "smart-digital-locks",
+      "count": 17
+    },
+    {
+      "parent": "entry-doors",
+      "key": "hinges",
+      "count": 0
+    },
+    {
+      "parent": "entry-doors",
+      "key": "door-closers",
+      "count": 0
+    },
+    {
+      "parent": "entry-doors",
+      "key": "door-accessories",
+      "count": 25
+    }
+  ],
+  "errors": [],
+  "cards": [
+    {
+      "key": "roofing",
+      "text": "Roofing\n197 active products\nBrand / Profile / Colour / Finish"
+    },
+    {
+      "key": "external-cladding",
+      "text": "External Cladding\n10 active products\nBrand / Material / Profile / Colour"
+    },
+    {
+      "key": "bricks",
+      "text": "Bricks\n147 active products\nBrand / Range / Colour / Price"
+    },
+    {
+      "key": "entry-doors",
+      "text": "Entry Doors & Door Furniture\n449 active products\nBrand / Range / Size / Finish"
+    },
+    {
+      "key": "windows",
+      "text": "Windows\n9 active products\nBrand / Type / Colour / Size"
+    },
+    {
+      "key": "garage-doors",
+      "text": "Garage Doors\n5 active products\nBrand / Range / Size / Finish"
+    },
+    {
+      "key": "external-lighting",
+      "text": "External Lighting\n87 active products\nBrand / Type / Finish / Price"
+    },
+    {
+      "key": "driveway-finishes",
+      "text": "Driveway Finishes\n2 active products\nBrand / Material / Colour / Price"
+    },
+    {
+      "key": "exterior-paint-colours",
+      "text": "Exterior Paint Colours\n22 active products\nBrand / Range / Colour / Finish"
+    },
+    {
+      "key": "balustrades",
+      "text": "Balustrades\n2 active products\nBrand / Material / Finish / Price"
+    }
+  ],
+  "passed": true
+}

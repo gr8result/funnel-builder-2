@@ -78,6 +78,30 @@ function isInclusionsSourceType(sourceType = "") {
   return ["standard_inclusions", "modified_inclusions", "project_specific_inclusions"].includes(String(sourceType || ""));
 }
 
+function documentTypeForSource(sourceType = "") {
+  return sourceType === "priced_plans" ? "general" : "other";
+}
+
+function titleForSource(sourceType = "") {
+  if (sourceType === "priced_plans") return "Priced Plans";
+  if (sourceType === "project_specific_inclusions") return "Project-Specific Inclusions";
+  if (sourceType === "project_estimate_pdf") return "Project Estimate Template";
+  return "Inclusions Schedule";
+}
+
+function descriptionForSource(sourceType = "") {
+  if (sourceType === "project_specific_inclusions") return "Project-specific inclusions PDF.";
+  if (sourceType === "project_estimate_pdf") return "Imported editable project estimate template PDF.";
+  return "Imported into quote proposal builder.";
+}
+
+function assignmentTypeForSource(sourceType = "") {
+  if (sourceType === "project_specific_inclusions") return "project_specific";
+  if (sourceType === "project_estimate_pdf") return "project_estimate_template";
+  if (sourceType === "priced_plans") return "priced_plans";
+  return "standard";
+}
+
 function isQuoteProposalInclusionsRow(row = {}) {
   const metadata = row.metadata || {};
   return metadata.source === "quote_proposal_builder" && isInclusionsSourceType(metadata.sourceType);
@@ -250,9 +274,9 @@ export default async function handler(req, res) {
           workspace_id: workspaceId,
           project_id: projectId,
           snapshot_id: estimateId && /^[0-9a-f-]{36}$/i.test(estimateId) ? estimateId : null,
-          document_type: sourceType === "priced_plans" ? "general" : "other",
-          title: sourceType === "priced_plans" ? "Priced Plans" : sourceType === "project_specific_inclusions" ? "Project-Specific Inclusions" : "Inclusions Schedule",
-          description: sourceType === "project_specific_inclusions" ? "Project-specific inclusions PDF." : "Imported into quote proposal builder.",
+          document_type: documentTypeForSource(sourceType),
+          title: titleForSource(sourceType),
+          description: descriptionForSource(sourceType),
           file_name: fileName,
           mime_type: "application/pdf",
           file_size_bytes: buffer.length,
@@ -263,7 +287,7 @@ export default async function handler(req, res) {
           metadata: {
             source: "quote_proposal_builder",
             sourceType,
-            assignmentType: sourceType === "project_specific_inclusions" ? "project_specific" : "standard",
+            assignmentType: assignmentTypeForSource(sourceType),
             projectId: projectId || null,
             estimateId: estimateId || null,
             assignedAt: new Date().toISOString(),

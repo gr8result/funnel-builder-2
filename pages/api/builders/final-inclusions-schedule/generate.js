@@ -5,6 +5,7 @@ import { createProjectInclusionsSnapshot } from "../../../../lib/builders/finalI
 import {
   FinalInclusionsPdfError,
   generateAndStoreFinalInclusionsPdf,
+  generateAndStoreStandaloneFinalInclusionsPdf,
   validatePdfBytes,
 } from "../../../../lib/builders/finalInclusionsPdfExecution.js";
 
@@ -20,6 +21,7 @@ async function handler(req, res) {
     const projectId = String(req.body?.projectId || "").trim();
     const sessionId = String(req.body?.sessionId || "").trim();
     const snapshotId = String(req.body?.snapshotId || "").trim();
+    const documentStatus = req.body?.documentStatus || req.body?.status || "draft";
     if (!projectId) return res.status(400).json({ ok: false, error: "projectId is required" });
 
     const { data: project, error: projectError } = await supabaseAdmin
@@ -59,45 +61,111 @@ async function handler(req, res) {
       .select(SELECTION_COLUMNS)
       .eq("workspace_id", workspaceId)
       .eq("project_id", projectId)
+      .eq("is_active", true)
       .order("updated_at", { ascending: false });
-    if (session?.id) selectionQuery = selectionQuery.eq("session_id", session.id);
-    else if (effectiveSnapshotId) selectionQuery = selectionQuery.eq("snapshot_id", effectiveSnapshotId);
+    const immutableSelectionSnapshot = req.body?.immutableSelectionSnapshot === true || req.body?.issuedSnapshot === true;
+    if (immutableSelectionSnapshot && session?.id) selectionQuery = selectionQuery.eq("session_id", session.id);
+    else if (immutableSelectionSnapshot && effectiveSnapshotId) selectionQuery = selectionQuery.eq("snapshot_id", effectiveSnapshotId);
     const { data: selections, error: selectionError } = await selectionQuery;
     if (selectionError) throw selectionError;
 
-    const masterRef = req.body?.masterPdfRef || configuredPdfRef("FINAL_INCLUSIONS_MASTER_PDF", "standard-inclusions/_master/premier-inclusions-schedule.pdf");
-    const closingRef = req.body?.closingPdfRef || configuredPdfRef("FINAL_INCLUSIONS_CLOSING_PDF", "standard-inclusions/_master/final-inclusions-closing.pdf");
-    const masterPdf = await loadPdfSource(masterRef, { label: "master" });
-    const closingPdf = await loadPdfSource(closingRef, { label: "closing" });
+    const { data: latestApproval, error: approvalError } = await supabaseAdmin
+      .from("builder_quote_approvals")
+      .select("id, approval_number, approval_type, status, signer_name, signer_email, signed_at, document_url, document_hash, metadata, created_at")
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", projectId)
+      .eq("status", "approved")
+      .order("signed_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (approvalError) throw approvalError;
 
+    const previousDocuments = await listPreviousFinalSchedules({ workspaceId, projectId });
+    const standaloneClientSelectionsSchedule = req.body?.standaloneClientSelectionsSchedule !== false;
+    const masterRef = standaloneClientSelectionsSchedule ? null : (req.body?.masterPdfRef || configuredPdfRef("FINAL_INCLUSIONS_MASTER_PDF", "standard-inclusions/_master/premier-inclusions-schedule.pdf"));
+    const closingRef = standaloneClientSelectionsSchedule ? null : (req.body?.closingPdfRef || configuredPdfRef("FINAL_INCLUSIONS_CLOSING_PDF", "standard-inclusions/_master/final-inclusions-closing.pdf"));
+    const masterPdf = masterRef ? await loadPdfSource(masterRef, { label: "master" }) : null;
+    const closingPdf = closingRef ? await loadPdfSource(closingRef, { label: "closing" }) : null;
+    const projectDetails = req.body?.projectDetails || {};
+    const snapshotProject = {
+      ...project,
+      project_name: projectDetails.projectName || project.project_name,
+      client_name: projectDetails.clientName || project.client_name,
+      site_address: projectDetails.siteAddress || project.site_address,
+      job_number: projectDetails.jobNumber || project.job_number,
+      builder_name: projectDetails.builderName || project.builder_name,
+      builder_logo_url: projectDetails.builderLogo || project.builder_logo_url,
+      metadata: {
+        ...(project.metadata || {}),
+        builderName: projectDetails.builderName || project.metadata?.builderName,
+        builderLogo: projectDetails.builderLogo || project.metadata?.builderLogo,
+        phone: projectDetails.builderPhone || project.metadata?.phone,
+        email: projectDetails.builderEmail || project.metadata?.email,
+        scheduleVersion: projectDetails.scheduleVersion || project.metadata?.scheduleVersion,
+        scheduleStatus: projectDetails.scheduleStatus || project.metadata?.scheduleStatus,
+        datePrepared: projectDetails.datePrepared || project.metadata?.datePrepared,
+      },
+    };
+    if (!hasClientDocumentProjectBinding(snapshotProject)) {
+      return res.status(422).json({
+        ok: false,
+        error: "The active project details could not be loaded. Reconnect the Johnson job before generating this schedule.",
+        code: "PROJECT_BINDING_REQUIRED",
+      });
+    }
     const snapshot = createProjectInclusionsSnapshot({
-      project,
+      project: snapshotProject,
       workspaceId,
       selections: selections || [],
       session: session || { id: "", project_id: projectId, snapshot_id: effectiveSnapshotId, status: "ready" },
       estimateSnapshot: estimateSnapshot || { id: effectiveSnapshotId },
       generatedBy: req.user?.id || "",
-      masterTemplate: { id: "premier-inclusions-master", version: masterRef.version || "approved-pdf", pageCount: masterPdf.validation.pageCount },
-      masterPdfRef: { ...masterRef, pageCount: masterPdf.validation.pageCount, pages: masterPdf.validation.pages },
-      closingPdfRef: { ...closingRef, pageCount: closingPdf.validation.pageCount, pages: closingPdf.validation.pages },
+      documentStatus,
+      previousDocuments,
+      builderProfile: req.body?.builderProfile || req.body?.builder || {},
+      preparedBy: req.body?.preparedBy || req.user?.email || req.user?.id || "",
+      reviewedBy: req.body?.reviewedBy || "",
+      approval: {
+        ...(req.body?.approval || {}),
+        clientName: req.body?.approval?.clientName || latestApproval?.signer_name || project.client_name || "",
+        approvedAt: req.body?.approval?.approvedAt || latestApproval?.signed_at || "",
+        approvalMethod: req.body?.approval?.approvalMethod || latestApproval?.metadata?.uiApprovalType || latestApproval?.approval_type || "",
+        documentUrl: req.body?.approval?.documentUrl || latestApproval?.document_url || "",
+        documentHash: req.body?.approval?.documentHash || latestApproval?.document_hash || "",
+      },
+      contractReference: req.body?.contractReference || "",
+      revisionReason: req.body?.revisionReason || "",
+      masterTemplate: standaloneClientSelectionsSchedule
+        ? { id: "client-selections-schedule", version: "standalone", pageCount: 0 }
+        : { id: "premier-inclusions-master", version: masterRef.version || "approved-pdf", pageCount: masterPdf.validation.pageCount },
+      masterPdfRef: masterPdf ? { ...masterRef, pageCount: masterPdf.validation.pageCount, pages: masterPdf.validation.pages } : null,
+      closingPdfRef: closingPdf ? { ...closingRef, pageCount: closingPdf.validation.pageCount, pages: closingPdf.validation.pages } : null,
     });
 
-    const previousDocuments = await listPreviousFinalSchedules({ workspaceId, projectId });
     const storage = createSupabaseFinalInclusionsStorage({ workspaceId, userId: req.user?.id || "", previousDocuments });
-    const result = await generateAndStoreFinalInclusionsPdf({
-      snapshot,
-      previousDocuments,
-      masterPdfBytes: masterPdf.bytes,
-      closingPdfBytes: closingPdf.bytes,
-      storage,
-      generatedAt: new Date().toISOString(),
-    });
+    const result = standaloneClientSelectionsSchedule
+      ? await generateAndStoreStandaloneFinalInclusionsPdf({
+        snapshot,
+        previousDocuments,
+        storage,
+        generatedAt: new Date().toISOString(),
+      })
+      : await generateAndStoreFinalInclusionsPdf({
+        snapshot,
+        previousDocuments,
+        masterPdfBytes: masterPdf.bytes,
+        closingPdfBytes: closingPdf.bytes,
+        storage,
+        generatedAt: new Date().toISOString(),
+      });
 
     return res.status(200).json({
       ok: true,
       document: result.document,
       projectEstimateDocument: result.projectEstimateDocument,
       pageCounts: result.merged.pageCounts,
+      readiness: snapshot.readiness,
       warnings: result.dynamic.warnings,
       validation: result.merged.validation,
     });
@@ -114,6 +182,25 @@ async function handler(req, res) {
 }
 
 export default withWorkspace(handler);
+
+function cleanClientDocumentText(value = "") {
+  const next = String(value || "").trim();
+  if (!next) return "";
+  if (/^(undefined|null|not entered|missing|estimator missing|builder missing|address missing)$/i.test(next)) return "";
+  if (/current\s*\.gr8job/i.test(next)) return "";
+  return next;
+}
+
+function hasClientDocumentProjectBinding(project = {}) {
+  return Boolean(
+    cleanClientDocumentText(project.project_name)
+    && cleanClientDocumentText(project.client_name)
+    && cleanClientDocumentText(project.site_address)
+    && cleanClientDocumentText(project.job_number || project.metadata?.jobNumber)
+    && cleanClientDocumentText(project.builder_name || project.metadata?.builderName)
+    && cleanClientDocumentText(project.builder_logo_url || project.metadata?.builderLogo)
+  );
+}
 
 function configuredPdfRef(prefix, fallbackPath) {
   const localPath = process.env[`${prefix}_LOCAL_PATH`] || "";
@@ -177,11 +264,17 @@ function createSupabaseFinalInclusionsStorage({ workspaceId, userId, previousDoc
       };
     },
     async registerDocument(document) {
-      const previousIds = previousDocuments.filter((row) => row.status === "generated" || row.status === "active").map((row) => row.id).filter(Boolean);
+      const previousIds = previousDocuments
+        .filter((row) => {
+          const immutable = row.metadata?.immutable === true || row.status === "issued" || row.metadata?.documentStatus === "contract";
+          return !immutable && (row.status === "generated" || row.status === "active" || row.status === "draft" || row.status === "for_approval" || row.status === "approved");
+        })
+        .map((row) => row.id)
+        .filter(Boolean);
       if (previousIds.length) {
         const { error: updateError } = await supabaseAdmin
           .from("builder_project_documents")
-          .update({ status: "outdated", updated_at: new Date().toISOString() })
+          .update({ status: "archived", updated_at: new Date().toISOString() })
           .in("id", previousIds);
         if (updateError) throw updateError;
       }
@@ -193,14 +286,14 @@ function createSupabaseFinalInclusionsStorage({ workspaceId, userId, previousDoc
           snapshot_id: /^[0-9a-f-]{36}$/i.test(document.estimateId || "") ? document.estimateId : null,
           document_type: "selection",
           title: document.title,
-          description: "Generated Final Inclusions Schedule.",
+          description: "Generated Inclusions and Selections Schedule.",
           file_name: document.fileName,
           mime_type: "application/pdf",
           file_size_bytes: document.fileSizeBytes,
           storage_bucket: BUCKET,
           storage_path: document.storagePath,
           public_url: document.publicUrl,
-          status: "generated",
+          status: "active",
           metadata: document.metadata,
           uploaded_by: userId || null,
           created_by: userId || null,

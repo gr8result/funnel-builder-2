@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -19,6 +20,20 @@ async function handler(req, res) {
     }
 
     const userId = req.user.id;
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    if (demoState.isDemo) {
+      const simulated = await demoSimulationResult({
+        workspaceId,
+        userId,
+        actionType: "stripe-connect-account",
+        provider: "stripe",
+        target: userId,
+        payload: { route: "/api/stripe/create-connect-account" },
+        message: "Demo Stripe Connect onboarding simulated - no Stripe account created.",
+      });
+      return res.status(200).json({ ...simulated, url: `/account?demo_stripe_connect=1&workspace_id=${encodeURIComponent(workspaceId)}` });
+    }
 
     // 🌍 Resolve base URL safely
     const baseUrl =

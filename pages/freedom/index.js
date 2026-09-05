@@ -1,261 +1,1045 @@
+import { supabase } from "../../lib/supabaseClient";
+import { portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
+﻿import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import FreedomModuleNav from "../../components/freedom/FreedomModuleNav";
+import { useRef } from "react";
+import { useRouter } from "next/router";
 
-const PASSWORD_SALT = "freedom-terminal-v1";
-const STORAGE_KEY = "freedom-terminal-unlocked";
+import FreedomChartModal from "../../components/freedom/FreedomChartModal.js";
+import FreedomShell, {
+  ActionBadge,
+  FreedomNotice,
+  WhyThisResult,
+  formatMoney,
+  formatPercent,
+  formatTimestamp,
+} from "../../components/freedom/FreedomShell.js";
+import { defaultMarketSelection, marketSessionSnapshot, marketsForSelection } from "../../lib/freedom/marketSessions.js";
 
-async function browserHashPassword(password) {
-  const bytes = new TextEncoder().encode(`${PASSWORD_SALT}:${password}`);
-  const digest = await window.crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+/**
+ * Today's Opportunities.
+ *
+ * Scans the configured market automatically on load and shows the best genuine
+ * opportunities. Every result carries its action, price, buy trigger, Safety Exit,
+ * targets, risk/reward, timeframe, data timestamp and a plain-English reason. Technical
+ * detail is kept behind "Why this result?".
+ */
+
+const TONE_FOR_ACTION = { BUY: "green", WAIT: "blue", WATCH: "amber", AVOID: "red", UNAVAILABLE: "grey" };
+const MARKET_OPTIONS = [
+  { value: "ASX", label: "Australian Market (ASX)" },
+  { value: "US", label: "US Markets" },
+  { value: "BOTH", label: "Both Markets" },
+];
+const ASX_UNIVERSE_OPTIONS = [
+  { value: "ASX_LIQUID", label: "ASX liquidity-filter candidates" },
+  { value: "ASX_200", label: "ASX 200" },
+  { value: "ASX_300", label: "ASX 300" },
+  { value: "CMC_IMPORTED", label: "CMC imported candidates" },
+  { value: "CUSTOM", label: "Custom watchlist" },
+];
+
+function formatDistancePercent(value) {
+  if (!Number.isFinite(Number(value))) return "--";
+  return Math.abs(Number(value)).toFixed(2) + "%";
 }
 
-export async function getServerSideProps() {
-  const { createHash } = await import("crypto");
-  const password = process.env.FREEDOM_TERMINAL_PASSWORD || "freedom123";
-  return { props: { passwordHash: createHash("sha256").update(`${PASSWORD_SALT}:${password}`).digest("hex") } };
-}
-
-function money(value, currency = "USD") {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "--";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(number);
-}
-
-function statusClass(status) {
-  return String(status || "DATA INSUFFICIENT").toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function PasswordGate({ passwordHash, onUnlock }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function unlock(event) {
-    event.preventDefault();
-    const candidateHash = await browserHashPassword(password);
-    if (candidateHash !== passwordHash) {
-      setError("Incorrect password.");
-      return;
-    }
-    window.localStorage.setItem(STORAGE_KEY, "true");
-    onUnlock();
-  }
-
+function CountPill({ label, value, tone }) {
   return (
-    <div className="gateScreen">
-      <Head><title>Freedom Investment</title></Head>
-      <form className="gate" onSubmit={unlock}>
-        <span>Private Research</span>
-        <h1>Freedom Investment</h1>
-        <p>Enter the private Freedom password.</p>
-        <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Password" />
-        {error ? <small>{error}</small> : null}
-        <button type="submit">Unlock Investment</button>
-      </form>
-      <style jsx>{styles}</style>
-    </div>
+    <span className={"fdCount fdTone-" + tone}>
+      <strong>{value}</strong> {label}
+    </span>
   );
 }
 
-export default function FreedomInvestmentDashboard({ passwordHash }) {
-  const [unlocked, setUnlocked] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [scan, setScan] = useState(null);
-  const [watchlist, setWatchlist] = useState([]);
-  const [portfolio, setPortfolio] = useState(null);
-  const [loading, setLoading] = useState(false);
+function MarketSelector({ value, onChange, sessions, universeSelection, onUniverseChange, expectedUniverseSize }) {
+  return (
+    <section className="fdMarketPanel" aria-label="Market selection and session status">
+      <div className="fdMarketChoices">
+        {MARKET_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={"fdMarketChoice" + (value === option.value ? " active" : "")}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {value === "ASX" ? (
+        <div className="fdUniverseRow">
+          <label>
+            <span>Australian scan universe</span>
+            <select value={universeSelection} onChange={(event) => onUniverseChange(event.target.value)}>
+              {ASX_UNIVERSE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <strong>{expectedUniverseSize ?? "--"} securities selected</strong>
+        </div>
+      ) : null}
+      <div className="fdMarketSessions">
+        <div>
+          <strong>ASX: {sessions?.ASX?.status || "--"}</strong>
+          <span>{sessions?.ASX?.localTime || "--"}</span>
+        </div>
+        <div>
+          <strong>US: {sessions?.US?.status || "--"}</strong>
+          <span>{sessions?.US?.localTime || "--"}</span>
+        </div>
+        <div>
+          <strong>Your time</strong>
+          <span>{sessions?.userTime || "--"}</span>
+        </div>
+      </div>
+      <style jsx>{`
+        .fdMarketPanel {
+          background: var(--fd-panel);
+          border: 1px solid var(--fd-line);
+          border-radius: 12px;
+          display: grid;
+          gap: 16px;
+          margin-bottom: 18px;
+          padding: 18px;
+        }
+        .fdMarketChoices {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .fdMarketChoice {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--fd-line);
+          border-radius: 8px;
+          color: var(--fd-ink);
+          cursor: pointer;
+          font: inherit;
+          font-weight: 850;
+          padding: 10px 14px;
+        }
+        .fdMarketChoice.active {
+          background: rgba(43, 108, 224, 0.22);
+          border-color: #8ab4ff;
+          color: #ffffff;
+        }
+        .fdUniverseRow {
+          align-items: end;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: space-between;
+        }
+        .fdUniverseRow label {
+          display: grid;
+          gap: 6px;
+          min-width: min(100%, 280px);
+        }
+        .fdUniverseRow span {
+          color: var(--fd-ink-dim);
+          font-size: 12px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+        .fdUniverseRow select {
+          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--fd-line);
+          border-radius: 8px;
+          color: var(--fd-ink);
+          font: inherit;
+          font-weight: 850;
+          padding: 10px 12px;
+        }
+        .fdUniverseRow strong {
+          color: var(--fd-ink);
+          font-size: 15px;
+        }
+        .fdMarketSessions {
+          display: grid;
+          gap: 10px;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+        .fdMarketSessions div {
+          border-left: 3px solid var(--fd-line);
+          display: grid;
+          gap: 4px;
+          padding-left: 12px;
+        }
+        .fdMarketSessions strong {
+          color: var(--fd-ink);
+          font-size: 15px;
+          font-weight: 900;
+        }
+        .fdMarketSessions span {
+          color: var(--fd-ink-dim);
+          font-size: 13px;
+          font-weight: 750;
+        }
+      `}</style>
+    </section>
+  );
+}
+
+function CmcImportPanel({ rows, setRows, onAnalyse, universeSelection }) {
+  const [sourceType, setSourceType] = useState("text");
+  const [text, setText] = useState("");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    setUnlocked(window.localStorage.getItem(STORAGE_KEY) === "true");
-    setChecking(false);
-  }, []);
-
-  async function loadAll({ force = false } = {}) {
-    setLoading(true);
-    setMessage("");
+  const importRows = useCallback(async () => {
     try {
-      const [scanResponse, watchlistResponse, portfolioResponse] = await Promise.all([
-        fetch("/api/freedom-investment/scanner", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ limit: 10, force }),
-        }),
-        fetch("/api/freedom-investment/watchlist"),
-        fetch("/api/freedom-investment/portfolio"),
-      ]);
-      const [scanData, watchlistData, portfolioData] = await Promise.all([
-        scanResponse.json().catch(() => null),
-        watchlistResponse.json().catch(() => null),
-        portfolioResponse.json().catch(() => null),
-      ]);
-      setScan(scanData);
-      setWatchlist(watchlistData?.watchlist || []);
-      setPortfolio(portfolioData?.ok ? portfolioData : null);
-      if (!scanData?.ok) setMessage(scanData?.error || "Investment scan could not complete.");
-    } catch (error) {
-      setMessage(error?.message || "Investment scan could not complete.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    if (unlocked) loadAll();
-  }, [unlocked]);
-
-  async function addToWatchlist(row) {
-    const response = await fetch("/api/freedom-investment/watchlist", {
+    setMessage("Reading CMC candidates...");
+    const response = await fetch("/api/freedom/cmc-market-import", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(row),
+      headers: await portfolioHeaders(supabase.auth, true),
+      body: JSON.stringify({ sourceType, text, csv: sourceType === "csv" ? text : "" }),
     });
-    const data = await response.json().catch(() => null);
-    setMessage(data?.ok ? `${row.symbol} added to Investment Watchlist.` : data?.error || "Unable to update watchlist.");
-    await loadAll({ force: false });
-  }
+    const payload = await response.json();
+    if (!payload.ok) {
+      setMessage(payload.error || "CMC import failed.");
+      return;
+    }
+    setRows(payload.candidates || []);
+    setMessage(payload.warning || `${payload.candidates?.length || 0} CMC candidates ready for review.`);
+    } catch (error) { setMessage(error.message || "CMC import failed."); }
+  }, [sourceType, text, setRows]);
 
-  const attractive = useMemo(() => scan?.attractive || [], [scan]);
-  const watchCandidates = useMemo(() => scan?.watchlistCandidates || [], [scan]);
-  const topFive = useMemo(() => attractive.slice(0, 5), [attractive]);
+  const readFile = useCallback(async (event) => {
+    try {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (/image\//.test(file.type)) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      setMessage("Reading screenshot text...");
+      const response = await fetch("/api/freedom/cmc-market-import", {
+        method: "POST",
+        headers: await portfolioHeaders(supabase.auth, true),
+        body: JSON.stringify({ sourceType: "image", image: { name: file.name, type: file.type, dataUrl } }),
+      });
+      const payload = await response.json();
+      setRows(payload.candidates || []);
+      setMessage(payload.ok ? payload.warning || `${payload.candidates?.length || 0} screenshot candidates ready for review.` : payload.error);
+      return;
+    }
+    setSourceType(file.name.toLowerCase().endsWith(".csv") ? "csv" : "text");
+    setText(await file.text());
+    setMessage("File loaded. Review or import the rows.");
+    } catch (error) { setMessage(error.message || "Could not read the file."); }
+  }, [setRows]);
 
-  if (checking) return <div className="boot">Opening Freedom Investment...</div>;
-  if (!unlocked) return <PasswordGate passwordHash={passwordHash} onUnlock={() => setUnlocked(true)} />;
+  const updateRow = (index, key, value) => {
+    setRows(rows.map((row, rowIndex) => rowIndex === index ? { ...row, [key]: value } : row));
+  };
 
   return (
-    <div className="page">
-      <Head><title>Freedom Investment</title></Head>
-      <section className="platformBanner"><strong>Freedom Investment</strong><span>Long-Term Opportunity Scanner</span></section>
-      <FreedomModuleNav module="investment" />
-
-      <header className="hero">
+    <section className="fdImportPanel">
+      <div className="fdImportHeader">
         <div>
-          <span>Long-Term Ownership</span>
-          <h1>Best Long-Term Opportunities</h1>
-          <p>Quality businesses, valuation discipline, and 5-10 year ownership logic. No trader signals.</p>
+          <h2>CMC Imported Candidates</h2>
+          <p>Use CMC rows as candidates only. Freedom still validates ASX identity and daily OHLCV independently.</p>
         </div>
-        <button type="button" onClick={() => loadAll({ force: true })} disabled={loading}>{loading ? "Scanning..." : "Run Investment Scan"}</button>
+        <div className="fdImportActions">
+          <button type="button" className="fdButton secondary" onClick={() => setSourceType("text")}>Paste rows</button>
+          <button type="button" className="fdButton secondary" onClick={() => setSourceType("csv")}>CSV rows</button>
+          <label className="fdButton secondary">
+            Screenshot
+            <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp,.csv,.txt" onChange={readFile} hidden />
+          </label>
+        </div>
+      </div>
+      <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="Paste CMC Movers, Gainers, Losers or theScreener rows here." />
+      <div className="fdImportActions">
+        <button type="button" className="fdButton" onClick={importRows}>Extract for review</button>
+        <button type="button" className="fdButton secondary" onClick={onAnalyse} disabled={!rows.length || universeSelection !== "CMC_IMPORTED"}>Analyse reviewed candidates</button>
+      </div>
+      {message ? <p className="fdImportMessage">{message}</p> : null}
+      {rows.length ? (
+        <div className="fdReviewTable">
+          <table>
+            <thead><tr><th>Code</th><th>Company</th><th>CMC price</th><th>Move %</th><th>Volume</th><th>CMC rating</th></tr></thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index}>
+                  <td><input value={row.symbol || ""} onChange={(event) => updateRow(index, "symbol", event.target.value.toUpperCase())} /></td>
+                  <td><input value={row.companyName || ""} onChange={(event) => updateRow(index, "companyName", event.target.value)} /></td>
+                  <td><input value={row.cmcPrice ?? ""} onChange={(event) => updateRow(index, "cmcPrice", event.target.value)} /></td>
+                  <td><input value={row.cmcMovePercent ?? ""} onChange={(event) => updateRow(index, "cmcMovePercent", event.target.value)} /></td>
+                  <td><input value={row.volume ?? ""} onChange={(event) => updateRow(index, "volume", event.target.value)} /></td>
+                  <td><input value={row.importedRating || row.importedValuation || ""} onChange={(event) => updateRow(index, "importedRating", event.target.value)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+      <style jsx>{`
+        .fdImportPanel {
+          background: var(--fd-panel);
+          border: 1px solid var(--fd-line);
+          border-radius: 12px;
+          display: grid;
+          gap: 14px;
+          margin-bottom: 18px;
+          padding: 18px;
+        }
+        .fdImportHeader {
+          align-items: start;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 14px;
+          justify-content: space-between;
+        }
+        .fdImportHeader h2 { font-size: 20px; margin: 0; }
+        .fdImportHeader p, .fdImportMessage { color: var(--fd-ink-dim); margin: 6px 0 0; }
+        .fdImportActions { display: flex; flex-wrap: wrap; gap: 10px; }
+        textarea {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--fd-line);
+          border-radius: 8px;
+          color: var(--fd-ink);
+          min-height: 110px;
+          padding: 12px;
+          resize: vertical;
+          width: 100%;
+        }
+        .fdReviewTable { overflow-x: auto; }
+        table { border-collapse: collapse; min-width: 820px; width: 100%; }
+        th, td { border-bottom: 1px solid var(--fd-line); padding: 8px; text-align: left; }
+        th { color: var(--fd-ink-dim); font-size: 12px; text-transform: uppercase; }
+        input {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--fd-line);
+          border-radius: 6px;
+          color: var(--fd-ink);
+          padding: 7px;
+          width: 100%;
+        }
+      `}</style>
+    </section>
+  );
+}
+
+function OpportunityCard({ opportunity, onAddToTrades, onViewChart }) {
+  const currency = opportunity.currency || "USD";
+  const range = opportunity.entryRange;
+  const detail = opportunity.detail || {};
+  const trigger = opportunity.triggerStatus || {};
+  const distance = trigger.distance || {};
+  const belowTrigger = distance.state === "below";
+  const triggerPrefix = belowTrigger ? "CURRENTLY WAITING" : trigger.label ? trigger.label.toUpperCase() : "TRIGGER STATUS";
+  const triggerLine = belowTrigger && distance.dollars !== null && distance.percent !== null && range
+    ? `${opportunity.symbol} must rise at least ${formatMoney(distance.dollars, currency)} / ${formatDistancePercent(distance.percent)} before the entry can trigger. Do not buy yet based on this setup.`
+    : trigger.howToRead || "No reliable market dataâ€”do not buy from this setup.";
+  const actionLabel = trigger.canConfirmPurchase ? "Confirm Purchase" : "Add to Watchlist";
+  const cmc = opportunity.cmcComparison || null;
+  const primaryInstruction = opportunity.action === "BUY" && range
+    ? opportunity.opportunityType === "BUY NOW"
+      ? `BUY NOW within ${formatMoney(range.low, currency)}-${formatMoney(range.high, currency)}`
+      : `READY AT MARKET OPEN within ${formatMoney(range.low, currency)}-${formatMoney(range.high, currency)}`
+    : trigger.distance?.state === "above"
+    ? "DO NOT BUY YET - entry range has been missed"
+    : range
+    ? `DO NOT BUY YET - wait for ${formatMoney(range.preferred || range.low, currency)}`
+    : opportunity.primaryInstruction;
+
+  return (
+    <article className={"fdCard fdTone-" + TONE_FOR_ACTION[opportunity.action]}>
+      <header className="fdCardHead">
+        <div className="fdCardIdentity">
+          <h2>{opportunity.symbol}</h2>
+          <p>{opportunity.companyName || "Unknown company"}</p>
+          <p className="fdCardVenue">
+            {opportunity.exchange || "Unknown exchange"} &middot; {currency}
+          </p>
+        </div>
+        <ActionBadge action={opportunity.action} />
       </header>
 
-      {message ? <section className="notice">{message}</section> : null}
+      <p className="fdCardHeadline">{opportunity.actionHeadline}</p>
+      <p className="fdPrimaryInstruction">{primaryInstruction}</p>
+      {opportunity.opportunityType === "READY AT MARKET OPEN" ? (
+        <p className="fdOpenGuard">Market is closed. Revalidate the price when the market opens before entering any order.</p>
+      ) : null}
+      {opportunity.missingCondition ? (
+        <p className="fdOpenGuard">Missing condition: {opportunity.missingCondition}</p>
+      ) : null}
+      {range ? (
+        <div className="fdTriggerCallout">
+          <strong>BUY TRIGGER: {formatMoney(range.low, currency)}â€“{formatMoney(range.high, currency)}</strong>
+          <span>{triggerPrefix}: {triggerLine}</span>
+        </div>
+      ) : null}
+      <p className="fdHowToRead">How to read this: {trigger.howToRead || "No reliable market dataâ€”do not buy from this setup."}</p>
 
-      <section className="summary">
-        <article><span>Supported universe</span><strong>{scan?.scanSummary?.supportedUniverse ?? "--"}</strong></article>
-        <article><span>Successfully analysed</span><strong>{scan?.scanSummary?.successfullyAnalysed ?? "--"}</strong></article>
-        <article><span>Data unavailable</span><strong>{scan?.scanSummary?.dataUnavailable ?? "--"}</strong></article>
-        <article><span>Attractive</span><strong>{scan?.scanSummary?.attractive ?? "--"}</strong></article>
-        <article><span>Fair Value</span><strong>{scan?.scanSummary?.fairValue ?? "--"}</strong></article>
-        <article><span>Watch</span><strong>{scan?.scanSummary?.watch ?? "--"}</strong></article>
-        <article><span>Expensive</span><strong>{scan?.scanSummary?.expensive ?? "--"}</strong></article>
-        <article><span>Avoid</span><strong>{scan?.scanSummary?.avoid ?? "--"}</strong></article>
-      </section>
-
-      <section className="panel">
-        <div className="panelHeader"><h2>What Should I Consider Buying?</h2></div>
-        {topFive.length ? (
-          <div className="cards">
-            {topFive.map((row, index) => (
-              <article key={row.symbol} className="opportunity">
-                <span>#{index + 1} {row.symbol}</span>
-                <h3>{row.companyName}</h3>
-                <strong>Investment Score: {row.investmentScore}/100</strong>
-                <p>{row.reason}</p>
-                <div><b>Quality {row.businessQuality?.score ?? "--"}</b><b>{row.growth?.classification}</b><b>{row.valuation?.classification}</b></div>
-                <Link href={`/freedom/company/${row.symbol}`}>Open Company</Link>
-              </article>
-            ))}
+      <dl className="fdFacts">
+        <div>
+          <dt>Current price</dt>
+          <dd className="fdBig">{formatMoney(opportunity.currentPrice, currency)}</dd>
+        </div>
+        <div>
+          <dt>Market status</dt>
+          <dd>{opportunity.marketStatus || "--"}</dd>
+        </div>
+        <div>
+          <dt>Price session</dt>
+          <dd>{opportunity.priceSession || "--"}</dd>
+        </div>
+        <div>
+          <dt>Quote type</dt>
+          <dd>{opportunity.quoteMode || "--"}</dd>
+        </div>
+        <div>
+          <dt>Data source</dt>
+          <dd>{opportunity.dataSource || "--"}</dd>
+        </div>
+        {cmc ? (
+          <div>
+            <dt>CMC comparison</dt>
+            <dd className={cmc.material ? "fdRed" : ""}>
+              {formatMoney(cmc.cmcPrice, currency)} / {formatPercent(cmc.discrepancyPercent)}
+            </dd>
           </div>
-        ) : (
-          <div className="empty">No attractive long-term purchases currently identified.</div>
-        )}
-      </section>
+        ) : null}
+        {opportunity.importedRating || opportunity.importedValuation ? (
+          <div>
+            <dt>CMC rating</dt>
+            <dd>{opportunity.importedRating || opportunity.importedValuation}</dd>
+          </div>
+        ) : null}
+        <div>
+          <dt>Buy Trigger</dt>
+          <dd>{range ? formatMoney(range.low, currency) + " - " + formatMoney(range.high, currency) : "--"}</dd>
+        </div>
+        <div>
+          <dt>Distance to trigger</dt>
+          <dd>{distance.dollars === null || distance.dollars === undefined ? "--" : formatMoney(distance.dollars, currency) + " / " + formatDistancePercent(distance.percent)}</dd>
+        </div>
+        <div>
+          <dt>Safety Exit</dt>
+          <dd className="fdRed">{formatMoney(opportunity.safetyExit, currency)}</dd>
+        </div>
+        <div>
+          <dt>Targets</dt>
+          <dd className="fdGreen">
+            {opportunity.targets.length
+              ? opportunity.targets.map((value) => formatMoney(value, currency)).join("  /  ")
+              : "--"}
+          </dd>
+        </div>
+        <div>
+          <dt>Risk / reward</dt>
+          <dd>{opportunity.riskRewardLabel || "--"}</dd>
+        </div>
+        <div>
+          <dt>Potential profit</dt>
+          <dd className="fdGreen">{formatPercent(opportunity.potentialProfitPercent)}</dd>
+        </div>
+        <div>
+          <dt>Max planned loss</dt>
+          <dd className="fdRed">{formatPercent(opportunity.maximumPlannedLossPercent)}</dd>
+        </div>
+        <div>
+          <dt>Volatility</dt>
+          <dd>{detail.volatility?.rating || opportunity.volatility?.rating || "--"}</dd>
+        </div>
+        <div>
+          <dt>Timeframe</dt>
+          <dd>{opportunity.timeframe}</dd>
+        </div>
+      </dl>
 
-      <section className="panel">
-        <div className="panelHeader"><h2>Top 10 Long-Term Opportunities</h2></div>
-        <InvestmentTable rows={scan?.topTen || []} onWatch={addToWatchlist} />
-      </section>
+      <p className="fdReason">{opportunity.reason}</p>
+      {!opportunity.chartValidated ? (
+        <p className="fdChartGuard">Historical chart data is not validated. Freedom will not enable a purchase from this setup.</p>
+      ) : null}
 
-      <section className="panel" id="watchlist">
-        <div className="panelHeader"><h2>Quality Companies Worth Watching</h2></div>
-        <InvestmentTable rows={watchCandidates.length ? watchCandidates : watchlist} onWatch={addToWatchlist} compact />
-      </section>
+      <p className="fdStamp">Market data as at {formatTimestamp(opportunity.dataTimestamp)}</p>
 
-      <section className="panel" id="portfolio">
-        <div className="panelHeader"><h2>Portfolio View</h2></div>
-        {portfolio?.holdings?.length ? (
+      <div className="fdCardActions">
+        <button type="button" className="fdButton fdViewChart" onClick={() => onViewChart(opportunity)}>
+          View Chart
+        </button>
+        <button type="button" className="fdButton secondary" onClick={() => onAddToTrades(opportunity)} disabled={trigger.canConfirmPurchase && !opportunity.chartValidated}>
+          {actionLabel}
+        </button>
+      </div>
+
+      <WhyThisResult>
+        <dl>
+          <dt>Internal status</dt>
+          <dd>{detail.internalStatus || "--"}</dd>
+          <dt>Setup type</dt>
+          <dd>{detail.setupType || "--"}</dd>
+          <dt>Reversal state</dt>
+          <dd>{detail.reversalState || "--"}</dd>
+          <dt>Trading score</dt>
+          <dd>{detail.tradingScore ?? "--"}</dd>
+          <dt>Opportunity score</dt>
+          <dd>{detail.opportunityScore ?? "--"}</dd>
+          <dt>Confidence</dt>
+          <dd>{detail.confidence ?? "--"}</dd>
+          <dt>Capital flow</dt>
+          <dd>{detail.capitalFlowState || "--"} ({detail.capitalFlowScore ?? "--"})</dd>
+          <dt>Buying / selling pressure</dt>
+          <dd>{detail.buyingSellingPressure || "--"}</dd>
+          <dt>Relative volume</dt>
+          <dd>{detail.relativeVolume ?? "--"}</dd>
+          <dt>Volatility</dt>
+          <dd>{detail.volatility?.rating || opportunity.volatility?.rating || "--"}</dd>
+          <dt>Avg daily move</dt>
+          <dd>{detail.volatility?.averageDailyMovementPercent === null || detail.volatility?.averageDailyMovementPercent === undefined ? "--" : formatPercent(detail.volatility.averageDailyMovementPercent)}</dd>
+          <dt>ATR</dt>
+          <dd>{detail.volatility?.atr === null || detail.volatility?.atr === undefined ? "--" : detail.volatility.atr + " (" + formatPercent(detail.volatility.atrPercent) + ")"}</dd>
+          <dt>Recent high</dt>
+          <dd>{formatMoney(detail.recentHigh, currency)}</dd>
+          <dt>Pullback low</dt>
+          <dd>{formatMoney(detail.pullbackLow, currency)}</dd>
+          <dt>Pullback</dt>
+          <dd>{detail.pullbackPercent === null || detail.pullbackPercent === undefined ? "--" : formatPercent(detail.pullbackPercent)}</dd>
+          <dt>Distance from entry</dt>
+          <dd>{detail.entryDistancePercent === null || detail.entryDistancePercent === undefined ? "--" : formatPercent(detail.entryDistancePercent)}</dd>
+          <dt>Trigger rule status</dt>
+          <dd>{trigger.label || "--"}</dd>
+          {cmc ? (
+            <>
+              <dt>CMC timestamp</dt>
+              <dd>{cmc.cmcTimestamp ? formatTimestamp(cmc.cmcTimestamp) : "--"}</dd>
+              <dt>Freedom timestamp</dt>
+              <dd>{cmc.freedomTimestamp ? formatTimestamp(cmc.freedomTimestamp) : "--"}</dd>
+              <dt>Price discrepancy</dt>
+              <dd>{cmc.discrepancyPercent === null || cmc.discrepancyPercent === undefined ? "--" : formatPercent(cmc.discrepancyPercent)}{cmc.material ? " material" : ""}</dd>
+            </>
+          ) : null}
+          <dt>Setup expiry</dt>
+          <dd>{detail.setupExpiryDate ? formatTimestamp(detail.setupExpiryDate) : "--"}</dd>
+        </dl>
+
+        {detail.calculations?.length ? (
           <>
-            <InvestmentPortfolio rows={portfolio.holdings} />
-            {portfolio.concentrationWarnings?.length ? <div className="notice">{portfolio.concentrationWarnings.join(" ")}</div> : null}
+            <strong>Calculations</strong>
+            <ul>{detail.calculations.map((line, index) => <li key={index}>{line}</li>)}</ul>
           </>
-        ) : <div className="empty">No Freedom Investment holdings recorded yet.</div>}
-      </section>
+        ) : null}
 
-      <footer>Freedom Investment uses real provider data only. Missing fundamentals become DATA INSUFFICIENT, not invented recommendations.</footer>
-      <style jsx>{styles}</style>
-    </div>
+        {detail.plainEnglish?.length ? (
+          <>
+            <strong>Setup detail</strong>
+            <ul>{detail.plainEnglish.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          </>
+        ) : null}
+
+        {detail.eligibilityReasons?.length ? (
+          <>
+            <strong>Rules not yet met</strong>
+            <ul>{detail.eligibilityReasons.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          </>
+        ) : null}
+
+        {detail.whyRankedFirst?.length ? (
+          <>
+            <strong>Why this ranked first</strong>
+            <ul>{detail.whyRankedFirst.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          </>
+        ) : null}
+      </WhyThisResult>
+
+      <style jsx>{`
+        .fdCard {
+          background: var(--fd-panel);
+          border: 1px solid var(--fd-line);
+          border-left: 8px solid var(--tone);
+          border-radius: 14px;
+          padding: 24px 26px;
+        }
+        .fdCardHead {
+          align-items: flex-start;
+          display: flex;
+          gap: 20px;
+          justify-content: space-between;
+        }
+        .fdCardIdentity h2 {
+          font-size: 38px;
+          font-weight: 900;
+          letter-spacing: -0.5px;
+          line-height: 1;
+          margin: 0;
+        }
+        .fdCardIdentity p {
+          color: var(--fd-ink-dim);
+          font-size: 17px;
+          margin: 7px 0 0;
+        }
+        .fdCardVenue { font-size: 14px !important; }
+        .fdCardHeadline {
+          color: var(--tone);
+          font-size: 20px;
+          font-weight: 800;
+          line-height: 1.35;
+          margin: 18px 0 0;
+        }
+        .fdPrimaryInstruction {
+          color: #ffffff;
+          font-size: 26px;
+          font-weight: 950;
+          line-height: 1.2;
+          margin: 14px 0 0;
+        }
+        .fdOpenGuard {
+          background: rgba(245, 158, 11, 0.14);
+          border: 1px solid rgba(245, 158, 11, 0.45);
+          border-radius: 10px;
+          color: #ffd899;
+          font-size: 15px;
+          font-weight: 850;
+          line-height: 1.45;
+          margin: 12px 0 0;
+          padding: 12px 14px;
+        }
+        .fdTriggerCallout {
+          background: rgba(43, 108, 224, 0.14);
+          border: 1px solid rgba(43, 108, 224, 0.55);
+          border-radius: 10px;
+          display: grid;
+          gap: 8px;
+          margin: 18px 0 0;
+          padding: 14px 18px;
+        }
+        .fdTriggerCallout strong {
+          color: #8ab4ff;
+          font-size: 18px;
+          font-weight: 950;
+        }
+        .fdTriggerCallout span {
+          color: var(--fd-ink);
+          font-size: 16px;
+          font-weight: 850;
+          line-height: 1.35;
+        }
+        .fdHowToRead {
+          color: var(--fd-ink-dim);
+          font-size: 14px;
+          font-weight: 750;
+          margin: 12px 0 0;
+        }
+        .fdFacts {
+          display: grid;
+          gap: 16px 22px;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          margin: 22px 0 0;
+        }
+        .fdFacts dt {
+          color: var(--fd-ink-dim);
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.4px;
+          text-transform: uppercase;
+        }
+        .fdFacts dd {
+          font-size: 20px;
+          font-weight: 800;
+          margin: 5px 0 0;
+        }
+        .fdBig { font-size: 26px !important; }
+        .fdRed { color: #ff8f8f; }
+        .fdGreen { color: #6fd99b; }
+        .fdReason {
+          background: var(--tone-soft);
+          border-radius: 10px;
+          font-size: 17px;
+          line-height: 1.5;
+          margin: 22px 0 0;
+          padding: 14px 18px;
+        }
+        .fdChartGuard {
+          background: rgba(198, 40, 40, 0.15);
+          border: 1px solid rgba(198, 40, 40, 0.45);
+          border-radius: 10px;
+          color: #ffb0b0;
+          font-size: 15px;
+          font-weight: 850;
+          line-height: 1.45;
+          margin: 14px 0 0;
+          padding: 12px 14px;
+        }
+        .fdStamp {
+          color: var(--fd-ink-dim);
+          font-size: 13px;
+          margin: 14px 0 0;
+        }
+        .fdCardActions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 18px;
+        }
+      `}</style>
+    </article>
   );
 }
 
-function InvestmentTable({ rows = [], onWatch, compact = false }) {
+function OpportunitySection({ title, rows, emptyMessage, onAddToTrades, onViewChart }) {
   return (
-    <div className="tableWrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Company</th><th>Ticker</th><th>Current Price</th><th>Investment Score</th><th>Business Quality</th><th>Growth</th><th>Financial Strength</th><th>Valuation</th><th>Status</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length ? rows.map((row) => (
-            <tr key={row.symbol}>
-              <td><Link href={`/freedom/company/${row.symbol}`}>{row.companyName || row.symbol}</Link><small>{row.reason}</small></td>
-              <td>{row.symbol}</td>
-              <td>{money(row.currentPrice, row.currency || "USD")}</td>
-              <td>{row.investmentScore ?? "--"}</td>
-              <td>{row.businessQuality?.score ?? row.investmentScore ?? "--"}</td>
-              <td>{row.growth?.classification || "--"}</td>
-              <td>{row.financialStrength?.classification || "--"}</td>
-              <td>{row.valuation?.classification || "--"}</td>
-              <td><span className={`status ${statusClass(row.status)}`}>{row.status || "--"}</span></td>
-              <td>{compact ? "--" : <button type="button" onClick={() => onWatch(row)}>Watch</button>}</td>
-            </tr>
-          )) : <tr><td colSpan="10">No rows available.</td></tr>}
-        </tbody>
-      </table>
-    </div>
+    <section className="fdOpportunitySection">
+      <h2>{title}</h2>
+      {rows.length ? rows.map((opportunity) => (
+        <OpportunityCard
+          key={opportunity.market + ":" + opportunity.symbol + ":" + title}
+          opportunity={opportunity}
+          onAddToTrades={onAddToTrades}
+          onViewChart={onViewChart}
+        />
+      )) : (
+        <FreedomNotice tone="grey" title={title} message={emptyMessage} />
+      )}
+      <style jsx>{`
+        .fdOpportunitySection {
+          display: grid;
+          gap: 18px;
+        }
+        .fdOpportunitySection h2 {
+          color: var(--fd-ink);
+          font-size: 24px;
+          font-weight: 950;
+          margin: 10px 0 0;
+        }
+      `}</style>
+    </section>
   );
 }
 
-function InvestmentPortfolio({ rows = [] }) {
+function DiagnosticReport({ diagnostics, scan }) {
+  const rejected = diagnostics?.rejected || [];
+  if (!rejected.length && !scan?.perSymbolDiagnostics?.length) return null;
   return (
-    <div className="tableWrap">
-      <table>
-        <thead>
-          <tr><th>Company</th><th>Shares</th><th>Average Cost</th><th>Current Value</th><th>Gain/Loss</th><th>Portfolio Weight</th><th>Investment Score</th><th>Current Status</th></tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.symbol}>
-              <td>{row.companyName || row.symbol}<small>{row.symbol}</small></td>
-              <td>{row.shares}</td>
-              <td>{money(row.averageCost, row.currency || "USD")}</td>
-              <td>{money(row.currentValue, row.currency || "USD")}</td>
-              <td>{money(row.gainLoss, row.currency || "USD")}</td>
-              <td>{Number.isFinite(Number(row.portfolioWeight)) ? `${row.portfolioWeight}%` : "--"}</td>
-              <td>{row.investmentScore ?? "--"}</td>
-              <td><span className={`status ${statusClass(row.currentStatus)}`}>{row.currentStatus}</span></td>
-            </tr>
+    <details className="fdDiagnostics">
+      <summary>Diagnostic report: rejected and unavailable securities</summary>
+      <div className="fdDiagnosticGrid">
+        <span>Rejected: {diagnostics?.counts?.avoid ?? 0}</span>
+        <span>No data: {diagnostics?.counts?.unavailable ?? 0}</span>
+        <span>Provider failures: {scan?.providerFailures ?? scan?.failed ?? 0}</span>
+        <span>Rate limited: {scan?.rateLimited ?? 0}</span>
+      </div>
+      {rejected.length ? (
+        <ul>
+          {rejected.slice(0, 40).map((item) => (
+            <li key={item.market + ":" + item.symbol}>{item.symbol} - {item.reason}</li>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </ul>
+      ) : null}
+      <style jsx>{`
+        .fdDiagnostics {
+          background: var(--fd-panel);
+          border: 1px solid var(--fd-line);
+          border-radius: 8px;
+          margin-top: 24px;
+          padding: 16px 18px;
+        }
+        .fdDiagnostics summary {
+          color: var(--fd-ink);
+          cursor: pointer;
+          font-weight: 900;
+        }
+        .fdDiagnosticGrid {
+          color: var(--fd-ink-dim);
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px 18px;
+          margin-top: 14px;
+        }
+        .fdDiagnostics ul {
+          color: var(--fd-ink-dim);
+          display: grid;
+          gap: 7px;
+          margin: 14px 0 0;
+          padding-left: 18px;
+        }
+      `}</style>
+    </details>
   );
 }
 
-const styles = `
-  .boot,.page,.gateScreen{background:#08100d;color:#f4f7f5;font-family:Inter,ui-sans-serif,system-ui;min-height:100vh}.boot,.gateScreen{align-items:center;display:flex;justify-content:center}.page{padding:96px 28px 28px}.platformBanner{align-items:center;background:#0f6b4f;box-shadow:0 10px 28px rgba(0,0,0,.32);display:flex;justify-content:space-between;left:0;padding:14px 28px;position:fixed;right:0;top:0;z-index:100}.platformBanner strong{font-size:clamp(24px,2.6vw,34px);font-weight:950}.platformBanner span{font-weight:900}.hero,.panel,.notice,.summary article,.gate{background:rgba(8,16,13,.94);border:1px solid rgba(145,196,174,.2);border-radius:8px}.hero,.panel,.summary,.notice,footer{margin:0 auto 18px;max-width:1760px}.hero{align-items:center;display:flex;gap:20px;justify-content:space-between;padding:28px}.hero span,.summary span,.panelHeader span,label{color:#a9bdb4;font-size:12px;font-weight:900;text-transform:uppercase}h1,h2,h3,p{margin:0}h1{font-size:48px}p,footer,small{color:#a9bdb4}.hero button,td button,.gate button{background:#d4af37;border:0;border-radius:7px;color:#07100d;cursor:pointer;font-weight:950;min-height:40px;padding:0 14px}.summary{display:grid;gap:12px;grid-template-columns:repeat(4,minmax(0,1fr))}.summary article{padding:16px}.summary strong{display:block;font-size:30px;margin-top:8px}.panel{overflow:hidden}.panelHeader{border-bottom:1px solid rgba(255,255,255,.08);padding:18px 20px}.cards{display:grid;gap:14px;grid-template-columns:repeat(5,minmax(0,1fr));padding:16px}.opportunity{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:16px}.opportunity h3{font-size:20px;margin:8px 0}.opportunity strong{color:#d7f4e6;display:block}.opportunity div{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.opportunity b{background:rgba(255,255,255,.08);border-radius:999px;font-size:12px;padding:6px 8px}.opportunity a,td a{color:#d7f4e6;font-weight:950;text-decoration:none}.tableWrap{overflow-x:auto}table{border-collapse:collapse;min-width:1260px;width:100%}th,td{border-bottom:1px solid rgba(255,255,255,.08);padding:13px 14px;text-align:left;vertical-align:top}th{color:#a9bdb4;font-size:12px;text-transform:uppercase}td small{display:block;margin-top:4px}.status{border-radius:999px;display:inline-flex;font-size:11px;font-weight:950;padding:7px 10px}.status.attractive{background:rgba(57,217,138,.16);border:1px solid rgba(57,217,138,.42);color:#bff6d9}.status.fairvalue,.status.watch{background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.34);color:#ffe98a}.status.expensive{background:rgba(255,153,0,.16);border:1px solid rgba(255,153,0,.38);color:#ffd7a1}.status.avoid,.status.datainsufficient{background:rgba(255,92,92,.14);border:1px solid rgba(255,92,92,.38);color:#ffc8c8}.empty{color:#a9bdb4;font-weight:850;padding:18px 20px}.notice{color:#d7f4e6;font-weight:850;padding:14px 16px}.gate{max-width:460px;padding:34px;width:100%}.gate h1{margin-top:8px}.gate input{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:7px;color:#fff;height:48px;margin-top:22px;padding:0 14px;width:100%}.gate small{color:#ffb1a5;display:block;margin-top:10px}.gate button{height:48px;margin-top:16px;width:100%}@media(max-width:1100px){.summary,.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:flex-start;flex-direction:column}}@media(max-width:720px){.page{padding:88px 16px 16px}.summary,.cards{grid-template-columns:1fr}h1{font-size:38px}}
-`;
+export default function TodaysOpportunities() {
+  const router = useRouter();
+  const [marketSelection, setMarketSelection] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("freedom.marketSelection");
+      if (stored && MARKET_OPTIONS.some((option) => option.value === stored)) return stored;
+    }
+    return defaultMarketSelection();
+  });
+  const [sessions, setSessions] = useState(() => marketSessionSnapshot());
+  const [universeSelection, setUniverseSelection] = useState(() => {
+    if (typeof window !== "undefined") return window.localStorage.getItem("freedom.asxUniverse") || "ASX_LIQUID";
+    return "ASX_LIQUID";
+  });
+  const [cmcRows, setCmcRows] = useState([]);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [chartOpportunity, setChartOpportunity] = useState(null);
+  const scanInFlightRef = useRef(null);
 
-FreedomInvestmentDashboard.disableLayout = true;
+  useEffect(() => {
+    window.localStorage.setItem("freedom.marketSelection", marketSelection);
+  }, [marketSelection]);
+  useEffect(() => {
+    window.localStorage.setItem("freedom.asxUniverse", universeSelection);
+  }, [universeSelection]);
+
+  const runScan = useCallback(async (force = false) => {
+    const diagnosticSymbols = process.env.NODE_ENV !== "production" ? ["CBA", "BHP", "CSL"] : null;
+    const scanKey = JSON.stringify({ marketSelection, universeSelection, force, diagnosticSymbols, cmcSymbols: cmcRows.map((row) => row.symbol).filter(Boolean) });
+    if (scanInFlightRef.current?.key === scanKey) return scanInFlightRef.current.promise;
+    setLoading(true);
+    setError("");
+    const promise = (async () => {
+      const markets = marketsForSelection(marketSelection);
+      const body = diagnosticSymbols
+        ? { marketSelection: "ASX", markets: ["ASX"], universeSelection: "DIAGNOSTIC", symbols: diagnosticSymbols, force }
+        : { marketSelection, markets, universeSelection, force };
+      if (universeSelection === "CMC_IMPORTED") {
+        body.importedCandidates = cmcRows;
+        body.symbols = cmcRows.map((row) => row.symbol).filter(Boolean);
+      }
+      const response = await fetch("/api/freedom/opportunities", {
+        method: "POST",
+        headers: await portfolioHeaders(supabase.auth, true),
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Freedom request failed.");
+      setData(payload);
+      setSessions(payload?.scan?.sessions || marketSessionSnapshot());
+    })();
+    scanInFlightRef.current = { key: scanKey, promise };
+    try {
+      await promise;
+    } catch (fetchError) {
+      // A transport failure is a market-data failure, never "no trades found".
+      setData({
+        ok: false,
+        outcome: "market-data-failure",
+        headline: "Market data failure",
+        message: "Freedom could not reach the market scanner: " + (fetchError?.message || "network error") + ".",
+        opportunities: [],
+        counts: { buy: 0, wait: 0, watch: 0, avoid: 0, unavailable: 0 },
+        scan: { sessions: marketSessionSnapshot(), marketSelection, requestedMarkets: marketsForSelection(marketSelection) },
+      });
+      setSessions(marketSessionSnapshot());
+    } finally {
+      if (scanInFlightRef.current?.promise === promise) scanInFlightRef.current = null;
+      setLoading(false);
+    }
+  }, [marketSelection, universeSelection, cmcRows]);
+
+  useEffect(() => {
+    runScan(false);
+  }, [runScan]);
+
+  /** Hand the opportunity to My Trades with the plan pre-filled. */
+  const addToTrades = useCallback((opportunity) => {
+      const query = {
+      symbol: opportunity.symbol,
+      exchange: opportunity.exchange || "",
+      currency: opportunity.currency || "USD",
+      companyName: opportunity.companyName || "",
+      entryPrice: opportunity.entryRange?.preferred ?? opportunity.currentPrice ?? "",
+      safetyExit: opportunity.safetyExit ?? "",
+      takeSomeProfit: opportunity.targets?.[0] ?? "",
+      finalExit: opportunity.targets?.[1] ?? "",
+    };
+    router.push({ pathname: "/freedom/my-trades", query });
+  }, [router]);
+
+  const counts = data?.counts || { buy: 0, wait: 0, watch: 0, avoid: 0, unavailable: 0 };
+  const scan = data?.scan;
+  const sections = data?.sections || { buyNow: [], readyAtMarketOpen: [], waitingForBuyTrigger: [], closestOpportunities: [] };
+
+  return (
+    <>
+      <Head><title>Today&apos;s Opportunities | Freedom</title></Head>
+      <FreedomShell
+        title="Today's Opportunities"
+        subtitle="Freedom scans the whole configured market and shows only genuine, validated setups."
+        actions={
+          <button type="button" className="fdButton" onClick={() => runScan(true)} disabled={loading}>
+            {loading ? "Scanning market..." : "Run a fresh scan"}
+          </button>
+        }
+      >
+        <MarketSelector
+          value={marketSelection}
+          onChange={setMarketSelection}
+          sessions={sessions}
+          universeSelection={universeSelection}
+          onUniverseChange={setUniverseSelection}
+          expectedUniverseSize={universeSelection === "CMC_IMPORTED" ? cmcRows.length : data?.scan?.expectedUniverseSize}
+        />
+
+        {marketSelection === "ASX" && universeSelection === "CMC_IMPORTED" ? (
+          <CmcImportPanel rows={cmcRows} setRows={setCmcRows} onAnalyse={() => runScan(true)} universeSelection={universeSelection} />
+        ) : null}
+
+        {loading && !data ? (
+          <FreedomNotice tone="blue" title="Scanning the market" message="Freedom is checking the configured universe with live market data. This can take a minute." />
+        ) : null}
+
+        {data?.outcome === "market-data-failure" ? (
+          <FreedomNotice tone="red" title="Market data failure" message={data.message}>
+            <button type="button" className="fdButton secondary" onClick={() => runScan(true)}>Retry</button>
+            <p className="fdNoticeExtra">
+              This is <strong>not</strong> the same as finding no trades. Freedom could not read the market
+              reliably, so no recommendation can be trusted right now.
+            </p>
+          </FreedomNotice>
+        ) : null}
+
+        {data?.outcome === "scan-incomplete" ? (
+          <FreedomNotice tone="red" title="SCAN INCOMPLETE—NO MARKET CONCLUSION AVAILABLE" message={data.message}>
+            <p className="fdNoticeExtra">
+              Freedom did not analyse enough of the selected universe to make a market conclusion. This is not the same as finding no trades.
+            </p>
+          </FreedomNotice>
+        ) : null}
+
+        {data?.outcome === "no-qualifying-trades" ? (
+          <FreedomNotice tone="amber" title="No qualifying trades today" message={data.message}>
+            <p className="fdNoticeExtra">
+              The market data was read successfully. Nothing currently meets the trading rules, and Freedom
+              will not relax the rules to manufacture a result.
+            </p>
+          </FreedomNotice>
+        ) : null}
+
+        {data && !loading ? (
+          <FreedomNotice
+            tone="blue"
+            title="Freedom waits for confirmation"
+            message="Freedom waits for confirmation that a falling price has begun recovering. The buy trigger may therefore be above the current price."
+          />
+        ) : null}
+
+        {data && !loading ? (
+          <section className="fdScanBar" aria-label="Scan summary">
+            <div className="fdCounts">
+              <CountPill label="BUY" value={counts.buy} tone="green" />
+              <CountPill label="WAITING" value={counts.wait + counts.watch} tone="blue" />
+              <CountPill label="NO DATA" value={counts.unavailable} tone="grey" />
+            </div>
+            {scan ? (
+              <>
+              <p className="fdScanMeta">
+                {scan.companiesChecked ?? "?"} companies checked &middot; {scan.successfullyAnalysed ?? "?"} analysed &middot;{" "}
+                {scan.unavailable ?? "?"} unavailable &middot; {scan.dataProvider}
+                {scan.feed ? " (" + scan.feed + " feed)" : ""} &middot; completed {formatTimestamp(scan.scanCompletedAt)}
+                {data.fromCache ? " Â· cached result" : ""}
+                {data.stale ? " Â· STALE" : ""}
+              </p>
+              <p className="fdScanMeta">
+                Universe: {scan.selectedUniverse || "--"} &middot; expected {scan.expectedUniverseSize ?? scan.universeCount ?? "?"} &middot; attempted {scan.attempted ?? "?"} &middot; loaded {scan.marketDataLoaded ?? "?"} &middot; fully analysed {scan.fullyAnalysed ?? "?"} &middot; rejected {scan.rejectedByStrategy ?? "?"} &middot; provider failures {scan.providerFailures ?? scan.failed ?? 0} &middot; rate limited {scan.rateLimited ?? 0}
+              </p>
+              <p className="fdScanMeta">
+                Completed {scan.completedPercentage ?? 0}% of selected universe.
+              </p>
+              </>
+            ) : null}
+          </section>
+        ) : null}
+
+        {error ? <p className="fdError">{error}</p> : null}
+
+        <div className="fdCards">
+          <OpportunitySection
+            title="BUY NOW"
+            rows={sections.buyNow || []}
+            emptyMessage="No share currently satisfies every entry and risk requirement while the market is open."
+            onAddToTrades={addToTrades}
+            onViewChart={setChartOpportunity}
+          />
+          <OpportunitySection
+            title="READY AT MARKET OPEN"
+            rows={sections.readyAtMarketOpen || []}
+            emptyMessage="No closed-market setup currently satisfies every rule. Any previous close must be revalidated at the open."
+            onAddToTrades={addToTrades}
+            onViewChart={setChartOpportunity}
+          />
+          <OpportunitySection
+            title="WAITING FOR BUY TRIGGER"
+            rows={sections.waitingForBuyTrigger || []}
+            emptyMessage="No strong setup is close enough to show a defined trigger right now."
+            onAddToTrades={addToTrades}
+            onViewChart={setChartOpportunity}
+          />
+          <OpportunitySection
+            title="CLOSEST OPPORTUNITIES"
+            rows={sections.closestOpportunities || []}
+            emptyMessage="No near-miss opportunities were available from this scan."
+            onAddToTrades={addToTrades}
+            onViewChart={setChartOpportunity}
+          />
+        </div>
+
+        <DiagnosticReport diagnostics={data?.diagnostics} scan={scan} />
+
+        {chartOpportunity ? (
+          <FreedomChartModal opportunity={chartOpportunity} onClose={() => setChartOpportunity(null)} />
+        ) : null}
+
+        <style jsx>{`
+          .fdScanBar {
+            background: var(--fd-panel);
+            border: 1px solid var(--fd-line);
+            border-radius: 12px;
+            margin-bottom: 24px;
+            padding: 18px 22px;
+          }
+          .fdCounts { display: flex; flex-wrap: wrap; gap: 10px; }
+          .fdScanMeta {
+            color: var(--fd-ink-dim);
+            font-size: 14px;
+            margin: 14px 0 0;
+          }
+          .fdCards {
+            display: grid;
+            gap: 22px;
+            grid-template-columns: 1fr;
+          }
+          .fdMarketResults {
+            display: grid;
+            gap: 18px;
+          }
+          .fdMarketResults h2 {
+            color: var(--fd-ink);
+            font-size: 22px;
+            font-weight: 950;
+            margin: 8px 0 0;
+          }
+          .fdError { color: #ff9d9d; font-size: 16px; }
+          @media (max-width: 640px) {
+            .fdCards { grid-template-columns: 1fr; }
+          }
+        `}</style>
+        <style jsx global>{`
+          .fdCount {
+            background: var(--tone-soft);
+            border: 1px solid var(--tone);
+            border-radius: 999px;
+            color: var(--fd-ink);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 8px 16px;
+          }
+          .fdCount strong { color: var(--tone); font-size: 17px; font-weight: 900; }
+          .fdNoticeExtra {
+            color: var(--fd-ink-dim) !important;
+            font-size: 15px !important;
+            margin-top: 12px !important;
+          }
+        `}</style>
+      </FreedomShell>
+    </>
+  );
+}

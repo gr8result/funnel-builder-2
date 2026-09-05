@@ -1,7 +1,7 @@
 {
   "templateOverrides": {
     "business-solution-template": {
-      "updatedAt": "2026-07-20T06:16:38.510Z",
+      "updatedAt": "2026-08-17T23:39:39.245Z",
       "pageBlocks": {
         "Home": [
           {
@@ -3357,111 +3357,6 @@
         ],
         "Pricing": [
           {
-            "id": "da4384ea-3386-4b3e-9287-72d79e7bfd09",
-            "type": "nav-bar",
-            "props": {
-              "logo": "",
-              "brand": "Gr8 Result Digital Solutions",
-              "links": [
-                {
-                  "href": "/",
-                  "label": "Home",
-                  "id": "nav-item-0-0-home",
-                  "linkType": "page",
-                  "pageId": "home",
-                  "slug": "home",
-                  "children": []
-                },
-                {
-                  "href": "/about-us",
-                  "label": "About Us",
-                  "id": "nav-item-1-0-about-us",
-                  "linkType": "page",
-                  "pageId": "about-us",
-                  "slug": "about-us",
-                  "children": []
-                },
-                {
-                  "href": "/modules",
-                  "label": "Modules",
-                  "id": "nav-item-2-0-modules",
-                  "linkType": "page",
-                  "pageId": "modules",
-                  "slug": "modules",
-                  "children": []
-                },
-                {
-                  "href": "/contact-us",
-                  "label": "Contact Us",
-                  "id": "nav-item-3-0-contact-us",
-                  "linkType": "page",
-                  "pageId": "contact-us",
-                  "slug": "contact-us",
-                  "children": []
-                },
-                {
-                  "href": "/email",
-                  "label": "Email",
-                  "id": "nav-item-4-0-email",
-                  "linkType": "page",
-                  "pageId": "email",
-                  "slug": "email",
-                  "children": []
-                },
-                {
-                  "href": "/sms",
-                  "label": "SMS",
-                  "id": "nav-item-5-0-sms",
-                  "linkType": "page",
-                  "pageId": "sms",
-                  "slug": "sms",
-                  "children": []
-                },
-                {
-                  "href": "/crm",
-                  "label": "CRM",
-                  "id": "nav-item-6-0-crm",
-                  "linkType": "page",
-                  "pageId": "crm",
-                  "slug": "crm",
-                  "children": []
-                },
-                {
-                  "href": "/pricing",
-                  "label": "Pricing",
-                  "id": "nav-item-7-0-pricing",
-                  "linkType": "page",
-                  "pageId": "pricing",
-                  "slug": "pricing",
-                  "children": []
-                }
-              ],
-              "ctaLink": "#contact",
-              "ctaText": "Contact",
-              "variant": "boxed-brand",
-              "showLogo": true,
-              "logoWidth": 44,
-              "textColor": "#e2e8f0",
-              "stickyMode": "sticky-transparent",
-              "borderColor": "rgba(148,163,184,0.24)",
-              "buttonColor": "#0ea5e9",
-              "ctaFontSize": 16,
-              "linkFontSize": 16,
-              "brandFontSize": 20,
-              "bodyFontFamily": "'Manrope','Avenir Next','Segoe UI',sans-serif",
-              "backgroundColor": "#0b1220",
-              "buttonTextColor": "#ffffff",
-              "linkHoverEffect": "fill",
-              "mobileMenuStyle": "hamburger",
-              "headingFontFamily": "'Sora','Avenir Next','Segoe UI',sans-serif",
-              "linkHoverTextColor": "#ffffff",
-              "activeLinkTextColor": "#ffffff",
-              "fullWidthBackground": true,
-              "linkHoverBackgroundColor": "rgba(255,255,255,0.14)",
-              "activeLinkBackgroundColor": "rgba(255,255,255,0.18)"
-            }
-          },
-          {
             "id": "hero-4xaodxr",
             "type": "hero",
             "props": {
@@ -3473,7 +3368,7 @@
               "alignment": "center",
               "backgroundImageAssetId": "56651d40-cbf5-4c63-bcca-2902059f1cee",
               "backgroundImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781659257155-c39d3c71-f414-466d-9ef9-ca59acf027e8.png",
-              "marginTop": 130,
+              "marginTop": 0,
               "headline": "Click to type headline",
               "subheadline": "Add supporting text here",
               "contentX": 50,
@@ -3796,65 +3691,6 @@
               "baseLayoutWidth": 1500,
               "headlineFontSize": 20,
               "headingFontSize": 20
-            }
-          },
-          {
-            "id": "3b857ebf-8153-42ea-8dbd-49e835f1d080",
-            "type": "chart",
-            "props": {
-              "plans": [
-                {
-                  "id": "starter",
-                  "name": "Starter",
-                  "color": "#6366f1",
-                  "billingPrice": 159,
-                  "individualPrice": 215
-                },
-                {
-                  "id": "growth",
-                  "name": "Growth",
-                  "color": "#22c55e",
-                  "billingPrice": 359,
-                  "individualPrice": 474
-                },
-                {
-                  "id": "scale",
-                  "name": "Scale",
-                  "color": "#f59e0b",
-                  "billingPrice": 499,
-                  "individualPrice": 913
-                },
-                {
-                  "id": "professional",
-                  "name": "Professional",
-                  "color": "#7c3aed",
-                  "billingPrice": 999,
-                  "individualPrice": 1883
-                }
-              ],
-              "heading": "Price Savings Comparison",
-              "textColor": "#f8fafc",
-              "subheading": "See how much you save vs. buying each module individually",
-              "backgroundColor": "#0f172a",
-              "baseLayoutWidth": 1500,
-              "showAnnualSavings": true,
-              "fullWidthBackground": true,
-              "headline": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
-              "headlineBlock": {
-                "content": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 64px;\">Replace Multiple Expensive Subscriptions &amp; Save Up To $10,600 Per Year</span></span>",
-                "fontSize": 64,
-                "lineHeight": 1.1,
-                "fontFamily": "system-ui",
-                "fontWeight": "700",
-                "color": "#ffff00",
-                "alignment": "center"
-              },
-              "headlineFontSize": 64,
-              "headlineLineHeight": 1.1,
-              "headlineFontFamily": "system-ui",
-              "headlineFontWeight": "700",
-              "headlineColor": "#ffff00",
-              "headlineAlignment": "center"
             }
           },
           {
@@ -6473,27 +6309,33 @@
               "items": [
                 {
                   "title": "Drag and Drop Calendar",
-                  "body": "Visualise your entire content schedule on a clean calendar view. Drag posts to different days, reorder your queue and spot gaps instantly — managing a month of content takes minutes."
+                  "body": "Visualise your entire content schedule on a clean calendar view. Drag posts to different days, reorder your queue and spot gaps instantly — managing a month of content takes minutes.",
+                  "image": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=900&q=80"
                 },
                 {
                   "title": "Queue Management",
-                  "body": "Add posts to a smart publishing queue and Gr8 Result automatically schedules them at optimal times. Content flows out consistently without you having to micromanage every post."
+                  "body": "Add posts to a smart publishing queue and Gr8 Result automatically schedules them at optimal times. Content flows out consistently without you having to micromanage every post.",
+                  "image": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=900&q=80"
                 },
                 {
                   "title": "Recurring Campaigns",
-                  "body": "Set up repeating content campaigns — weekly tips, monthly promotions, daily quotes — and Gr8 Result regenerates and republishes them automatically, keeping your feed consistently active."
+                  "body": "Set up repeating content campaigns — weekly tips, monthly promotions, daily quotes — and Gr8 Result regenerates and republishes them automatically, keeping your feed consistently active.",
+                  "image": "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=900&q=80"
                 },
                 {
                   "title": "Best Posting Times",
-                  "body": "Gr8 Result analyses engagement data and automatically schedules your posts at the times your audience is most active, maximising reach and interaction on every platform."
+                  "body": "Gr8 Result analyses engagement data and automatically schedules your posts at the times your audience is most active, maximising reach and interaction on every platform.",
+                  "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80"
                 },
                 {
                   "title": "Timezone Support",
-                  "body": "Serving multiple markets or audiences in different regions? Schedule posts to publish at the right local time for each audience without manually tracking timezone differences."
+                  "body": "Serving multiple markets or audiences in different regions? Schedule posts to publish at the right local time for each audience without manually tracking timezone differences.",
+                  "image": "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?auto=format&fit=crop&w=900&q=80"
                 },
                 {
                   "title": "Draft Mode and Approval Workflows",
-                  "body": "Save posts as drafts for review before they go live. Set up approval steps so content can be reviewed and signed off before publishing — perfect for teams and agency-managed accounts."
+                  "body": "Save posts as drafts for review before they go live. Set up approval steps so content can be reviewed and signed off before publishing — perfect for teams and agency-managed accounts.",
+                  "image": "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=900&q=80"
                 }
               ],
               "backgroundColor": "linear-gradient(180deg,#0d0520,#06020f)",
@@ -6852,7 +6694,7 @@
                 {
                   "id": "ims1-b",
                   "kind": "image",
-                  "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies",
+                  "src": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1800&q=88",
                   "x": 455,
                   "y": 62,
                   "width": 420,
@@ -6876,7 +6718,7 @@
                 {
                   "id": "ims1-d",
                   "kind": "image",
-                  "src": "https://placehold.co/1600x980/111827/38bdf8?text=Project+Hub+Dashboard",
+                  "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785804654525-screenshot-2026-07-24-182552.png",
                   "x": 180,
                   "y": 358,
                   "width": 560,
@@ -6946,27 +6788,27 @@
                 {
                   "title": "Estimate Builder",
                   "body": "<p>Build professional, detailed estimates with itemised line items, quantity-based calculations, labour allowances, material costs, subcontractor rates, markups, margin controls, provisional sums, optional extras and staged payment schedules. Every estimate is designed to become a live project record the moment the client approves — without your team having to retype a single piece of scope, pricing or client information into a separate system. The Estimate Builder is the commercial foundation that every other module in Project Hub builds on.</p>",
-                  "image": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1783991075925-estimate.png"
                 },
                 {
                   "title": "Gantt Chart Planner",
                   "body": "<p>Visualise the entire project as a connected timeline with phases, task dependencies, critical path milestones, resource allocations, deadlines and live progress tracking. The Gantt Planner helps your team understand what needs to happen next, what is blocked, where the schedule is exposed and which delays are about to compound into something expensive. It connects directly to the Job Board so the timeline and the day-to-day execution always stay in alignment, even when the real world changes the plan.</p>",
-                  "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+%2B+Dependencies"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785804617320-gantt.png"
                 },
                 {
                   "title": "Job Board",
                   "body": "<p>Move work through clear visual stages using a drag-and-drop kanban board that every team member can see and update in real time. Each task card carries the full context the assigned person needs: ownership, priority level, due date, file attachments, comments, status history and connection to the broader project record. The Job Board is where the plan becomes execution, where accountability becomes visible and where bottlenecks can be caught before they cost the business money.</p>",
-                  "image": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784881470869-job-board.png"
                 },
                 {
                   "title": "Production Flow",
                   "body": "<p>Track procurement and production steps for every component of a job: quote submitted, sample approved, order placed, delivery confirmed, installation started and sign-off completed. Production Flow gives businesses managing materials, subcontractors and staged delivery a clear operational view of where every job component stands so nothing gets missed in the gap between quote completion and job handover.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/2dd4bf?text=Production+Flow+Steps"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784881391992-reports.png"
                 },
                 {
                   "title": "Reports and Visibility",
                   "body": "<p>Owners and managers get a live operational picture across every active job without holding status meetings or manually assembling reports from multiple sources. Project status, task progress, document history, communication activity, milestone tracking, variation records and timeline performance all belong to the same connected data environment. Reporting becomes observation rather than construction. The business stops spending twenty hours a month pulling data from five places and starts spending that time making the decisions that actually grow the business.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Project+Reports+Analytics"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1781557332360-Automation.png"
                 }
               ]
             }
@@ -7066,7 +6908,7 @@
               "title": "Estimate Builder: the commercial foundation of every project",
               "leftTitle": "Build quotes that protect your margin and convert directly into live projects without re-entering a single piece of data",
               "leftContent": "<p>The Estimate Builder is not a price calculator you use once and forget about. It is the commercial engine at the heart of Project Hub — the system that determines whether a job starts with accurate scope, realistic labour assumptions, properly priced materials and the margin protection your business depends on. Every detail entered during the quoting process becomes the foundation of the project that follows, which means the quality of the estimate directly determines the quality of the delivery.</p><p>This matters because the biggest source of project problems is the gap between what was quoted and what the delivery team was actually told to do. When the estimate lives in a quoting tool and the project plan lives in a separate system, that gap opens up immediately after approval. Labour assumptions get lost in translation. Material quantities become vague references rather than specific scope items. Variation accountability disappears into email threads that nobody can find months later. Margin that was built into the original price quietly evaporates between systems that do not talk to each other.</p><p>Project Hub closes that gap permanently. When a client approves the proposal, the commercial information flows directly into the project workspace. The scope that was priced becomes the basis for the Gantt timeline. The labour assumptions inform the scheduling. The materials context sits next to the procurement tasks on the Job Board. That connected handover from quote to delivery is one of the biggest operational advantages Project Hub offers over competitors who treat estimating and project management as entirely separate workflows that need separate software.</p><p>Beyond the numbers, the Estimate Builder supports client-ready proposals with professional structure, cover pages, terms and conditions, optional extras presented clearly and variation tracking built in from the beginning. Your team sends a document that reflects the quality of the business, tracks whether the client has opened it and can follow up with a clear next step — all without leaving the platform.</p><ul><li>Itemised line items with quantities and unit costs</li><li>Labour rates, allowances and role-based costing</li><li>Material costs connected to specific scope items</li><li>Markup and margin controls at line and total level</li><li>Provisional sums, optional extras and staged pricing</li><li>Variation tracking built into the commercial record</li><li>Client-ready proposal with approval workflow</li><li>Approved quotes convert directly into live project workspaces</li></ul>",
-              "rightImage": "https://placehold.co/1600x980/08251c/22c55e?text=Estimate+Builder+Worksheet+%2B+Proposal",
+              "rightImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784097358526-f2.png",
               "ratio": "50-50",
               "fullWidthBackground": true,
               "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
@@ -7098,7 +6940,7 @@
                 {
                   "title": "Labour visibility that survives the handover",
                   "body": "<p>Most margin leakage on project-based jobs happens in labour, not materials. Estimates are built with one set of labour assumptions and delivered with another because nothing connected the two systems. Project Hub keeps labour allowances, role types, rates and cost assumptions visible from quote right through to delivery so the team executing the job can see exactly where the margins were set and how the current performance compares to those original assumptions.</p><p>When labour thinking is preserved through the handover rather than lost in translation, the business has a genuine chance of finishing the job at the margin it was originally priced at. That is a structural advantage that most businesses with disconnected tools never achieve.</p>",
-                  "image": "https://placehold.co/1600x980/08251c/22c55e?text=Labour+Rates+Roles+Allowances"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/funnels/1776066970927-images.jpeg"
                 },
                 {
                   "title": "Materials with real scope accountability",
@@ -7108,7 +6950,7 @@
                 {
                   "title": "Markup, margin and variation control that actually works",
                   "body": "<p>Margins are easy to protect when the commercial structure is transparent and variations are treated as part of the official record rather than informal side agreements. Project Hub supports markup and margin settings that apply across the entire estimate so pricing decisions are deliberate and documented. When a client requests additional scope, that variation enters the commercial record with its own pricing, approval status and connection to the original quote.</p><p>Every variation that is agreed, requested, declined or pending should have a paper trail. When it does not, that is money the business is giving away without even knowing it. Variation control is one of the highest-impact commercial capabilities in any real-world project management system.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Markup+Margin+Variation+Tracking"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/funnels/1777495922054-pngtree-coins-stacked-in-layers-from-small-money-growth-concept-to-big-image_15740742.jpg"
                 }
               ]
             }
@@ -7118,7 +6960,7 @@
             "type": "columns-2",
             "props": {
               "title": "Gantt Charts: turn complex delivery into a timeline your whole team can follow",
-              "leftImage": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies+Milestones",
+              "leftImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785804617320-gantt.png",
               "rightTitle": "Plan dependencies, milestones and the critical path before delays cost you money",
               "rightContent": "<p>Most project failures do not happen because the team stopped trying. They happen because the schedule was never properly planned, the dependencies between tasks were not visible and the first delay was not caught early enough to prevent it cascading into something far more expensive. The Gantt Chart in Project Hub is designed to solve that problem at its source — not after the damage has already been done.</p><p>Visual timeline planning gives your team and your clients a shared understanding of the work. Every phase, task, milestone and deadline is mapped so that the relationship between activities is immediately clear. When Task B cannot start until Task A is finished, that dependency is visible in the chart. When a dependent task slips, the team can see which downstream tasks are now at risk and respond before the impact reaches the client relationship or the final completion date.</p><p>Critical path visibility is one of the most powerful capabilities in professional project management. The critical path is the sequence of tasks that directly controls when the project finishes. When any task on the critical path is delayed, the project end date moves. When the critical path is visible in the system, the team knows precisely where to focus protective attention to keep the timeline intact. Most project management tools show you a nice chart. Project Hub shows you where the real risk is hiding.</p><p>Resource planning is the other major advantage of proper Gantt scheduling. When you can see who is assigned to what, when their capacity is fully allocated and when multiple tasks are competing for the same person or equipment, you can make smarter scheduling decisions before the conflict reaches the job site. That is the difference between reactive project management and genuine operational control that protects both delivery dates and client relationships.</p><ul><li>Full timeline view across all project phases</li><li>Task dependencies and predecessor relationships</li><li>Critical path identification and monitoring</li><li>Milestone markers with accountability owners</li><li>Resource allocation across the team</li><li>Delay visibility before it cascades</li><li>Progress tracking against the original plan</li><li>Connected to the Job Board for daily execution alignment</li></ul>",
               "ratio": "50-50",
@@ -7152,17 +6994,17 @@
                 {
                   "title": "Dependencies that make risk visible before it becomes expensive",
                   "body": "<p>Dependencies are the relationships between tasks that determine whether the schedule will hold when reality deviates from the plan. When Task B cannot start until Task A is complete, and Task A slips by three days, the team needs to understand that impact immediately — not after the schedule has already unravelled and the client is asking uncomfortable questions about the new completion date.</p><p>Project Hub makes dependency chains visible so project managers can think ahead. They can see the knock-on effect of a single delay, communicate it to stakeholders before it becomes a crisis and adjust the plan while there are still options available. That early visibility is worth more than any other scheduling feature, because it is the difference between managing a problem and being managed by it.</p>",
-                  "image": "https://placehold.co/1600x980/15162b/a78bfa?text=Dependencies+Critical+Path+View"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785298496135-4f8f0f61-fd4b-4311-ae38-fdc7f415c063.png"
                 },
                 {
                   "title": "Milestones that create real accountability across the team",
                   "body": "<p>Milestones mark the moments in a project that matter most. They are the dates clients measure progress against, the checkpoints that trigger staged payments, the events that define whether a project is running to plan or quietly falling behind schedule. When milestones are built into the Gantt structure rather than written on a whiteboard, accountability follows automatically.</p><p>Project Hub builds milestones into the operational plan so they are part of the live schedule, visible to the whole team and connected to the specific tasks that determine whether they will be achieved on time. When a milestone is at risk, the system shows exactly which task is creating that risk.</p>",
-                  "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Milestones+Deadlines+Progress"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785298252502-chatgpt-image-jul-29-2026-07_59_43-am.png"
                 },
                 {
                   "title": "Progress owners can understand without calling a meeting",
                   "body": "<p>Project visibility should not require a status meeting. When the Gantt chart is maintained as part of the daily workflow rather than updated sporadically before a client review, owners and managers can look at the plan at any moment and immediately understand which phases are complete, which are in progress, which are delayed and which are approaching risk territory.</p><p>That transparency reduces time spent on update calls, status requests and internal progress meetings. It also builds significantly stronger trust with clients. When a project manager can speak confidently about exactly where the job stands, backed by a live operational picture rather than a verbal estimate from memory, the client relationship becomes more professional and more resilient when things change.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Progress+Tracking+Owner+Dashboard"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784097658770-chatgpt-image-jun-24-2026-01_33_00-pm.png"
                 }
               ]
             }
@@ -7174,7 +7016,7 @@
               "title": "Job Board: the live operational centre for every active job in the business",
               "leftTitle": "Move work through the business without losing context, accountability or momentum",
               "leftContent": "<p>The Job Board is where the project plan becomes daily execution. It is the place your team comes to understand what needs to happen today, what they are currently working on, what is blocked, what is waiting on someone else and what has been successfully completed. Without a clear, shared, real-time view of the work queue, jobs stall at handover points, accountability disappears between team members and supervisors spend most of their day chasing people for updates instead of actually managing the business and protecting its margins.</p><p>Project Hub's Job Board organises every task and every job into visual stages that the whole team can see and interact with. Work moves through customisable kanban columns — from pending through in-progress, waiting on external, under review and complete — using simple drag-and-drop task management that every team member can master in minutes. Each task card carries the full context the assigned person needs: who owns it, when it is due, what priority level it is, what files are attached, what comments have been added and what the current status is in the broader project timeline.</p><p>The most valuable aspect of a well-designed job board is not just what it shows when everything is working. It is what it reveals when something is wrong. Tasks sitting in the wrong column for too long. Work that has been waiting for a client approval for three days. Stages that have accumulated too many items because upstream work is bottlenecked. These are early warning signals that the job needs attention and management intervention. Project Hub makes those signals impossible to miss.</p><p>For businesses managing multiple active projects simultaneously — construction companies running four sites, trade businesses juggling six concurrent jobs, commercial fit-out teams handling different client schedules — the Job Board provides the visibility that makes multi-project management possible without the chaos. Every job has its own board, every task has a clear owner and the overall business picture is always available without needing to call a meeting or wait for someone to compile a report.</p><ul><li>Kanban-style visual task stages</li><li>Drag-and-drop task movement between stages</li><li>Ownership assignments with due dates and priority levels</li><li>File attachments directly on task cards</li><li>Threaded comments and update history</li><li>Status visibility for owners, supervisors and team members</li><li>Multi-project overview across all active jobs</li><li>Connected to the Gantt timeline for schedule alignment</li></ul>",
-              "rightImage": "https://placehold.co/1600x980/2b1908/f97316?text=Kanban+Job+Board+Tasks+Files+Comments",
+              "rightImage": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784881470869-job-board.png",
               "ratio": "50-50",
               "fullWidthBackground": true,
               "backgroundColor": "linear-gradient(180deg,#020617,#0f172a)",
@@ -7206,12 +7048,12 @@
                 {
                   "title": "Assignments with genuine ownership and accountability",
                   "body": "<p>A task without a clear owner is a task that will probably not get done — or will get done poorly because no single person felt fully responsible for its outcome. Assignments in Project Hub remove the ambiguity that causes work to stall between office staff, site supervisors and management teams. Every task has one owner, a due date and a priority level so the responsibility is absolutely clear from the moment the task is created to the moment it is completed.</p><p>When someone is assigned a task in Project Hub, they know it is their responsibility. When a due date approaches, it is visible to the whole team. When a task becomes overdue, it stands out. That simple, unambiguous clarity eliminates one of the most common and costly sources of delivery failure in project-based businesses of every size.</p>",
-                  "image": "https://placehold.co/1600x980/2b1908/f97316?text=Task+Assignments+Due+Dates+Priority"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808145929-chatgpt-image-aug-4-2026-11_48_12-am.png"
                 },
                 {
                   "title": "Files and comments where the actual work happens",
                   "body": "<p>Project context should live near the project work — not in a separate email thread, not in a WhatsApp group and not in a shared drive folder with seventeen versions of the same document. When photos, approval documents, specifications, site plans, subcontractor quotes and client sign-offs are attached directly to the relevant task in Project Hub, the person doing that work has everything they need without wasting time searching through unrelated conversations and cloud folders.</p><p>Comments on task cards create a conversation thread that belongs permanently to the work itself. When a supervisor needs to understand why something was done a particular way three months later, the answer is in the task history. When a client disputes an aspect of the delivery, the documentation is attached to the relevant card with timestamps. That record reduces misunderstandings and protects the business in the conversations that matter most.</p>",
-                  "image": "https://placehold.co/1600x980/172554/60a5fa?text=Files+Comments+Approvals+Photos"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808228485-chatgpt-image-aug-4-2026-11_50_09-am.png"
                 },
                 {
                   "title": "Status columns that make bottlenecks immediately visible",
@@ -7314,32 +7156,32 @@
                 {
                   "title": "Calendar Sync",
                   "body": "<p>Project milestones, task due dates, site visit bookings, team scheduling and client appointments can all align within the same calendar layer. Deadlines do not exist in isolation from people's availability. When the calendar is connected to the project timeline, scheduling conflicts become visible before they reach the job site rather than after someone has already committed to an impossible date.</p>",
-                  "image": "https://placehold.co/1600x980/1e1b4b/c4b5fd?text=Calendar+Sync+Scheduling+Resources"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1784881391992-reports.png"
                 },
                 {
                   "title": "SMS Automation",
                   "body": "<p>Automated SMS reminders for project milestones, appointment confirmations, delivery notifications, approval requests and client progress updates can be triggered from within the project workflow without switching to a separate messaging tool. SMS automation is particularly valuable for trade businesses where clients and subcontractors are frequently in the field and respond to text messages faster and more reliably than email.</p>",
-                  "image": "https://placehold.co/1600x980/052e2b/2dd4bf?text=SMS+Automation+Notifications"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1782073029960-ChatGPT-Image-Jun-22-2026-06_16_46-AM.png"
                 },
                 {
                   "title": "Email Campaigns and Automation",
                   "body": "<p>Project status updates, proposal follow-up sequences, onboarding communications, completion notifications and re-engagement campaigns can all be automated through the same platform that manages the project itself. Removing the need to switch between a project management tool and a separate email marketing platform ensures consistent communication and eliminates the manual work of keeping clients informed throughout the delivery process.</p>",
-                  "image": "https://placehold.co/1600x980/172554/60a5fa?text=Email+Campaigns+Automation"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808593106-chatgpt-image-aug-4-2026-11_56_15-am.png"
                 },
                 {
                   "title": "Document Management",
                   "body": "<p>Proposals, contracts, specifications, site plans, subcontractor agreements, compliance certificates, site photos, variation approvals and handover documents all belong near the work they relate to rather than scattered across shared drives. Document management connected to the project record means the whole team always has the right version of the right document available exactly when they need it, with no searching, no duplication and no version confusion.</p>",
-                  "image": "https://placehold.co/1600x980/172554/38bdf8?text=Documents+Files+Proposals+Contracts"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808660225-chatgpt-image-aug-4-2026-11_57_17-am.png"
                 },
                 {
                   "title": "Workflow Automation",
                   "body": "<p>Repetitive project management tasks — sending milestone notifications, assigning follow-up work, triggering approval requests, updating client records when project status changes — can all be automated through the GR8 Result automation engine. When routine process steps are handled automatically, the team spends their time on the judgment-dependent work that actually requires human attention and professional expertise.</p>",
-                  "image": "https://placehold.co/1600x980/052e2b/22c55e?text=Automation+Workflows+Triggers"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808781394-chatgpt-image-aug-4-2026-11_59_15-am.png"
                 },
                 {
                   "title": "Reporting and Analytics",
                   "body": "<p>Business performance summaries, project status overviews, completion rate tracking, revenue forecasting, team productivity metrics and profitability analysis can all be drawn from the same connected data environment. When business data lives in one platform, reporting becomes real-time observation rather than manual monthly construction. Owners get a clearer, more current and more trustworthy picture of the business without the spreadsheet work.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785808915940-chatgpt-image-aug-4-2026-12_01_02-pm.png"
                 },
                 {
                   "title": "Communities and Client Portals",
@@ -7390,7 +7232,7 @@
                 {
                   "id": "plt-c",
                   "kind": "image",
-                  "src": "https://placehold.co/1600x980/0f172a/38bdf8?text=Reports+Analytics+Dashboard",
+                  "src": "https://app.gr8result.digital/assets/website-builder/2208a52a-8175-477e-823c-fc6de7fe4afe/crm-list-card-2.png",
                   "x": 830,
                   "y": 220,
                   "width": 360,
@@ -7402,7 +7244,7 @@
                 {
                   "id": "plt-d",
                   "kind": "image",
-                  "src": "https://placehold.co/1600x980/15162b/a78bfa?text=Gantt+Timeline+Dependencies",
+                  "src": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785809007500-chatgpt-image-aug-4-2026-12_02_57-pm.png",
                   "x": 175,
                   "y": 375,
                   "width": 560,
@@ -7535,7 +7377,7 @@
                 {
                   "title": "Priced for growth at every stage, not just for enterprise budgets",
                   "body": "<p>Enterprise project management platforms can cost thousands of dollars per month before implementation, training, custom development and ongoing support are added to the subscription cost. The total cost of ownership for a Procore or Autodesk Construction Cloud implementation is out of reach for the vast majority of the businesses that need real project management discipline the most — the growing trade business, the commercial fit-out team, the residential construction company trying to scale past five concurrent projects.</p><p>GR8 Result is priced to be genuinely accessible at every stage of business growth, from the first project manager through to a full multi-project organisation. The platform grows with the business rather than waiting for the business to grow large enough to justify the subscription.</p>",
-                  "image": "https://placehold.co/1600x980/0f172a/38bdf8?text=Pricing+Plans+Growth+Scale"
+                  "image": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1785809259587-chatgpt-image-aug-4-2026-12_07_29-pm.png"
                 }
               ]
             }
@@ -7617,125 +7459,132 @@
         ]
       },
       "globalNavBlock": {
-        "id": "wb_1778363723819_90ebd6",
+        "id": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+        "role": "primary-navigation",
         "type": "nav-bar",
         "props": {
           "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/logo-1779485614189-logo-1776030030268-gr8-result-logo-transparant-background.png",
+          "role": "primary-navigation",
           "brand": "Gr8 Result Digital Solutions",
           "links": [
             {
+              "id": "nav-home",
               "href": "/",
-              "label": "Home",
-              "highlighted": false,
-              "id": "nav-item-0-0-home",
-              "linkType": "page",
-              "pageId": "home",
               "slug": "home",
-              "children": []
+              "label": "Home",
+              "pageId": "home",
+              "children": [],
+              "linkType": "page",
+              "highlighted": false
             },
             {
               "id": "nav-link-1779144221759-grnh3q",
               "href": "/modules",
-              "label": "Modules",
-              "highlighted": false,
-              "linkType": "page",
-              "pageId": "modules",
               "slug": "modules",
+              "label": "Modules",
+              "pageId": "modules",
               "children": [
                 {
                   "id": "nav-child-1779149028164-pd9mfy",
                   "href": "/email",
-                  "label": "Email",
-                  "linkType": "page",
                   "slug": "email",
+                  "label": "Email Marketing",
                   "pageId": "email",
-                  "children": []
+                  "children": [],
+                  "linkType": "page"
                 },
                 {
                   "id": "nav-child-1779149044705-0ov9ih",
                   "href": "/sms",
-                  "label": "SMS",
-                  "linkType": "page",
                   "slug": "sms",
+                  "label": "SMS Marketing",
                   "pageId": "sms",
-                  "children": []
+                  "children": [],
+                  "linkType": "page"
                 },
                 {
                   "id": "nav-child-1779149064546-ii5sie",
                   "href": "/crm",
-                  "label": "CRM",
-                  "linkType": "page",
                   "slug": "crm",
+                  "label": "CRM  Management",
                   "pageId": "crm",
-                  "children": []
+                  "children": [],
+                  "linkType": "page"
                 },
                 {
                   "id": "nav-child-funnels",
                   "href": "/funnels",
-                  "label": "Funnels",
-                  "linkType": "page",
-                  "pageId": "funnels",
                   "slug": "funnels",
-                  "children": []
+                  "label": "Funnels",
+                  "pageId": "funnels",
+                  "children": [],
+                  "linkType": "page"
                 },
                 {
                   "id": "nav-child-website-builder",
                   "href": "/website-builder",
-                  "label": "Website Builder",
-                  "linkType": "page",
-                  "pageId": "website-builder",
                   "slug": "website-builder",
-                  "children": []
-                },
-                {
-                  "id": "nav-social-media",
-                  "label": "Social Media",
-                  "href": "/social-media",
-                  "children": []
+                  "label": "Website Builder",
+                  "pageId": "website-builder",
+                  "children": [],
+                  "linkType": "page"
                 },
                 {
                   "id": "nav-child-project-hub",
                   "href": "/project-hub",
-                  "label": "Project Hub",
-                  "linkType": "page",
-                  "pageId": "project-hub",
                   "slug": "project-hub",
-                  "children": []
+                  "label": "Project Hub",
+                  "pageId": "project-hub",
+                  "children": [],
+                  "linkType": "page"
                 }
-              ]
+              ],
+              "linkType": "page",
+              "highlighted": false
             },
             {
               "id": "nav-link-1779143115150-nrgcvs",
               "href": "/about-us",
-              "label": "About Us",
-              "highlighted": false,
-              "linkType": "page",
-              "pageId": "about-us",
               "slug": "about-us",
-              "children": []
-            },
-            {
-              "href": "/pricing",
-              "label": "Pricing",
-              "id": "nav-item-3-0-pricing",
+              "label": "About Us",
+              "pageId": "about-us",
+              "children": [],
               "linkType": "page",
-              "pageId": "pricing",
-              "slug": "pricing",
-              "children": []
+              "highlighted": false
             },
             {
+              "id": "nav-contact-us",
               "href": "/contact-us",
-              "label": "Contact Us",
-              "id": "nav-item-4-0-contact-us",
-              "linkType": "page",
-              "pageId": "contact-us",
               "slug": "contact-us",
-              "children": []
+              "label": "Contact Us",
+              "pageId": "contact-us",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-page-pricing",
+              "href": "/pricing",
+              "slug": "pricing",
+              "label": "Pricing",
+              "pageId": "pricing",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-page-social-media",
+              "href": "/social-media",
+              "slug": "social-media",
+              "label": "Social Media",
+              "pageId": "social-media",
+              "children": [],
+              "linkType": "page"
             }
           ],
+          "style": "solid",
+          "sticky": true,
           "ctaLink": "#contact",
           "ctaText": "Contact Support",
-          "variant": "boxed-brand",
+          "variant": "solid",
           "showLogo": true,
           "logoWidth": 150,
           "textColor": "#06b6d4",
@@ -7747,24 +7596,147 @@
           "linkFontSize": 20,
           "brandFontSize": 24,
           "textAnimation": "slide-up",
+          "positionSticky": true,
           "backgroundColor": "#121c26",
           "buttonTextColor": "#052e16",
           "linkHoverEffect": "glow",
           "mobileMenuStyle": "hamburger",
+          "navigationLinks": [
+            {
+              "id": "nav-home",
+              "href": "/",
+              "slug": "home",
+              "label": "Home",
+              "pageId": "home",
+              "children": [],
+              "linkType": "page",
+              "highlighted": false
+            },
+            {
+              "id": "nav-link-1779144221759-grnh3q",
+              "href": "/modules",
+              "slug": "modules",
+              "label": "Modules",
+              "pageId": "modules",
+              "children": [
+                {
+                  "id": "nav-child-1779149028164-pd9mfy",
+                  "href": "/email",
+                  "slug": "email",
+                  "label": "Email Marketing",
+                  "pageId": "email",
+                  "children": [],
+                  "linkType": "page"
+                },
+                {
+                  "id": "nav-child-1779149044705-0ov9ih",
+                  "href": "/sms",
+                  "slug": "sms",
+                  "label": "SMS Marketing",
+                  "pageId": "sms",
+                  "children": [],
+                  "linkType": "page"
+                },
+                {
+                  "id": "nav-child-1779149064546-ii5sie",
+                  "href": "/crm",
+                  "slug": "crm",
+                  "label": "CRM  Management",
+                  "pageId": "crm",
+                  "children": [],
+                  "linkType": "page"
+                },
+                {
+                  "id": "nav-child-funnels",
+                  "href": "/funnels",
+                  "slug": "funnels",
+                  "label": "Funnels",
+                  "pageId": "funnels",
+                  "children": [],
+                  "linkType": "page"
+                },
+                {
+                  "id": "nav-child-website-builder",
+                  "href": "/website-builder",
+                  "slug": "website-builder",
+                  "label": "Website Builder",
+                  "pageId": "website-builder",
+                  "children": [],
+                  "linkType": "page"
+                },
+                {
+                  "id": "nav-child-project-hub",
+                  "href": "/project-hub",
+                  "slug": "project-hub",
+                  "label": "Project Hub",
+                  "pageId": "project-hub",
+                  "children": [],
+                  "linkType": "page"
+                }
+              ],
+              "linkType": "page",
+              "highlighted": false
+            },
+            {
+              "id": "nav-link-1779143115150-nrgcvs",
+              "href": "/about-us",
+              "slug": "about-us",
+              "label": "About Us",
+              "pageId": "about-us",
+              "children": [],
+              "linkType": "page",
+              "highlighted": false
+            },
+            {
+              "id": "nav-contact-us",
+              "href": "/contact-us",
+              "slug": "contact-us",
+              "label": "Contact Us",
+              "pageId": "contact-us",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-page-pricing",
+              "href": "/pricing",
+              "slug": "pricing",
+              "label": "Pricing",
+              "pageId": "pricing",
+              "children": [],
+              "linkType": "page"
+            },
+            {
+              "id": "nav-page-social-media",
+              "href": "/social-media",
+              "slug": "social-media",
+              "label": "Social Media",
+              "pageId": "social-media",
+              "children": [],
+              "linkType": "page"
+            }
+          ],
+          "useGlobalHeader": true,
+          "navigationManual": true,
           "sectionAnimation": "fade-in",
+          "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
           "linkHoverTextColor": "#ec4899",
           "textAnimationDelay": 0.08,
           "textAnimationSpeed": 0.95,
           "activeLinkTextColor": "#f59e0b",
           "fullWidthBackground": true,
+          "globalHeaderRevision": "2026-08-13T00:12:04.622Z",
           "subheadlineAnimation": "fade-up",
           "sectionAnimationDelay": 0,
           "sectionAnimationSpeed": 1,
+          "syncPagesToNavigation": false,
           "linkHoverBackgroundColor": "#ec4899",
           "activeLinkBackgroundColor": "#121c26",
+          "globalHeaderSchemaVersion": 1,
           "subheadlineAnimationDelay": 0.16,
           "subheadlineAnimationSpeed": 1.05
-        }
+        },
+        "sharedComponentId": "shared-primary-navigation-2208a52a-8175-477e-823c-fc6de7fe4afe",
+        "globalHeaderRevision": "2026-08-13T00:12:04.622Z"
       },
       "globalFooterBlock": {
         "id": 1779416282454,
@@ -7773,109 +7745,245 @@
           "logo": "https://bvtxfphktypdqmlnveqf.supabase.co/storage/v1/object/public/assets/35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
           "brand": "Gr8 Result Digital Solutions",
           "tagline": "Code Hard or Code Home",
+          "__blockId": 1779416282454,
           "linkColor": "#f59e0b",
           "logoWidth": 200,
           "textColor": "#ffffff",
           "extraLinks": [
             {
-              "label": "Blog",
-              "href": "/blog"
+              "href": "#blog",
+              "label": "Blog"
             },
             {
-              "label": "Privacy Policy",
-              "href": "/privacy-policy"
+              "href": "#privacy",
+              "label": "Privacy Policy"
             },
             {
-              "label": "Terms",
-              "href": "/terms"
+              "href": "#terms",
+              "label": "Terms"
+            }
+          ],
+          "linkGroups": [
+            {
+              "id": "footer-navigation-card",
+              "role": "navigation",
+              "type": "navigation-links",
+              "links": [
+                {
+                  "id": "footer-nav-home",
+                  "href": "/",
+                  "role": "navigation-link",
+                  "slug": "home",
+                  "label": "Home",
+                  "pageId": "home"
+                },
+                {
+                  "id": "footer-nav-modules",
+                  "href": "/modules",
+                  "role": "navigation-link",
+                  "slug": "modules",
+                  "label": "Modules",
+                  "pageId": "modules"
+                },
+                {
+                  "id": "footer-nav-email",
+                  "href": "/email",
+                  "role": "navigation-link",
+                  "slug": "email",
+                  "label": "Email",
+                  "pageId": "email"
+                },
+                {
+                  "id": "footer-nav-sms",
+                  "href": "/sms",
+                  "role": "navigation-link",
+                  "slug": "sms",
+                  "label": "SMS",
+                  "pageId": "sms"
+                },
+                {
+                  "id": "footer-nav-crm",
+                  "href": "/crm",
+                  "role": "navigation-link",
+                  "slug": "crm",
+                  "label": "CRM",
+                  "pageId": "crm"
+                },
+                {
+                  "id": "footer-nav-funnels",
+                  "href": "/funnels",
+                  "role": "navigation-link",
+                  "slug": "funnels",
+                  "label": "Funnels",
+                  "pageId": "funnels"
+                },
+                {
+                  "id": "footer-nav-website-builder",
+                  "href": "/website-builder",
+                  "role": "navigation-link",
+                  "slug": "website-builder",
+                  "label": "Website Builder",
+                  "pageId": "website-builder"
+                },
+                {
+                  "id": "footer-nav-social-media",
+                  "href": "/social-media",
+                  "role": "navigation-link",
+                  "slug": "social-media",
+                  "label": "Social Media",
+                  "pageId": "social-media"
+                },
+                {
+                  "id": "footer-nav-project-hub",
+                  "href": "/project-hub",
+                  "role": "navigation-link",
+                  "slug": "project-hub",
+                  "label": "Project Hub",
+                  "pageId": "project-hub"
+                },
+                {
+                  "id": "footer-nav-about-us",
+                  "href": "/about-us",
+                  "role": "navigation-link",
+                  "slug": "about-us",
+                  "label": "About Us",
+                  "pageId": "about-us"
+                },
+                {
+                  "id": "footer-nav-pricing",
+                  "href": "/pricing",
+                  "role": "navigation-link",
+                  "slug": "pricing",
+                  "label": "Pricing",
+                  "pageId": "pricing"
+                },
+                {
+                  "id": "footer-nav-contact-us",
+                  "href": "/contact-us",
+                  "role": "navigation-link",
+                  "slug": "contact-us",
+                  "label": "Contact Us",
+                  "pageId": "contact-us"
+                }
+              ],
+              "heading": "Navigation"
+            },
+            {
+              "id": "footer-australian-company-panel",
+              "type": "australian-company-panel",
+              "heading": "Proudly Australian",
+              "body": "Gr8 Result Digital Solutions is proudly Australian owned and operated. Our platform development and customer support are handled by our Australian team.",
+              "location": "Sunshine Coast, Queensland",
+              "timezone": "UTC+10",
+              "flagImageUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20360%20240%27%3E%3Crect%20width%3D%27360%27%20height%3D%27240%27%20rx%3D%2724%27%20fill%3D%27%23012249%27/%3E%3Cpath%20d%3D%27M0%200h176v112H0z%27%20fill%3D%27%23012169%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2720%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2710%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2734%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2720%27/%3E%3Cg%20fill%3D%27%23f8d15c%27%3E%3Cpath%20d%3D%27M271%2039l7%2020h21l-17%2012%206%2020-17-12-17%2012%206-20-17-12h21z%27/%3E%3Cpath%20d%3D%27M230%20111l5%2014h15l-12%209%205%2014-13-9-12%209%205-14-12-9h15z%27/%3E%3Cpath%20d%3D%27M307%20120l5%2015h16l-13%209%205%2015-13-9-13%209%205-15-13-9h16z%27/%3E%3Cpath%20d%3D%27M269%20173l6%2018h19l-15%2011%206%2018-16-11-15%2011%206-18-16-11h19z%27/%3E%3Cpath%20d%3D%27M315%2069l4%2011h12l-10%207%204%2012-10-7-10%207%204-12-10-7h12z%27/%3E%3C/g%3E%3C/svg%3E",
+              "role": "australian-company"
             }
           ],
           "navHeading": "Navigation",
+          "__blockType": "footer",
           "borderColor": "#f59e0b",
+          "contactRole": "contact",
           "logoAssetId": "asset:35ab846e-0764-498b-b1f8-7d2cf27d85a5/web-1779421709551-logo-1776030030268-gr8-result-logo-transparant-background.png",
+          "companyLinks": [
+            {
+              "href": "#blog",
+              "label": "Blog"
+            },
+            {
+              "href": "#privacy",
+              "label": "Privacy Policy"
+            },
+            {
+              "href": "#terms",
+              "label": "Terms"
+            }
+          ],
           "contactEmail": "support@gr8result.com",
           "contactPhone": "Sunshine Coast 4557",
           "extraHeading": "Company",
           "copyrightText": "© 2026 Gr8 Result Digital Solutions. All rights reserved.",
           "contactAddress": "Queensland, Australia",
           "contactHeading": "Contact details",
+          "newsletterRole": "newsletter",
           "showNewsletter": true,
+          "spotlightItems": [],
           "backgroundColor": "#121c26",
           "baseLayoutWidth": 1500,
+          "footerCardOrder": [
+            "contact",
+            "navigation",
+            "australian-company",
+            "newsletter"
+          ],
+          "footerNavManual": true,
+          "navigationLinks": [
+            {
+              "href": "/",
+              "label": "Home"
+            },
+            {
+              "href": "/modules",
+              "label": "Modules"
+            },
+            {
+              "href": "/email",
+              "label": "Email"
+            },
+            {
+              "href": "/sms",
+              "label": "SMS"
+            },
+            {
+              "href": "/crm",
+              "label": "CRM"
+            },
+            {
+              "href": "/funnels",
+              "label": "Funnels"
+            },
+            {
+              "href": "/website-builder",
+              "label": "Website Builder"
+            },
+            {
+              "href": "/social-media",
+              "label": "Social Media"
+            },
+            {
+              "href": "/project-hub",
+              "label": "Project Hub"
+            },
+            {
+              "href": "/about-us",
+              "label": "About Us"
+            },
+            {
+              "href": "/pricing",
+              "label": "Pricing"
+            },
+            {
+              "href": "/contact-us",
+              "label": "Contact Us"
+            }
+          ],
           "newsletterHeading": "Stay Updated",
           "newsletterSubtitle": "Get the latest news or updates on new modules added to the platform, delivered to your inbox.",
           "newsletterActionUrl": "suppport@gr8result.com",
           "newsletterButtonText": "Submit",
           "newsletterButtonColor": "#2563eb",
+          "australianCompanyPanel": {
+            "id": "footer-australian-company-panel",
+            "type": "australian-company-panel",
+            "heading": "Proudly Australian",
+            "body": "Gr8 Result Digital Solutions is proudly Australian owned and operated. Our platform development and customer support are handled by our Australian team.",
+            "location": "Sunshine Coast, Queensland",
+            "timezone": "UTC+10",
+            "flagImageUrl": "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20360%20240%27%3E%3Crect%20width%3D%27360%27%20height%3D%27240%27%20rx%3D%2724%27%20fill%3D%27%23012249%27/%3E%3Cpath%20d%3D%27M0%200h176v112H0z%27%20fill%3D%27%23012169%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2720%27/%3E%3Cpath%20d%3D%27M0%200l176%20112M176%200L0%20112%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2710%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23fff%27%20stroke-width%3D%2734%27/%3E%3Cpath%20d%3D%27M88%200v112M0%2056h176%27%20stroke%3D%27%23c8102e%27%20stroke-width%3D%2720%27/%3E%3Cg%20fill%3D%27%23f8d15c%27%3E%3Cpath%20d%3D%27M271%2039l7%2020h21l-17%2012%206%2020-17-12-17%2012%206-20-17-12h21z%27/%3E%3Cpath%20d%3D%27M230%20111l5%2014h15l-12%209%205%2014-13-9-12%209%205-14-12-9h15z%27/%3E%3Cpath%20d%3D%27M307%20120l5%2015h16l-13%209%205%2015-13-9-13%209%205-15-13-9h16z%27/%3E%3Cpath%20d%3D%27M269%20173l6%2018h19l-15%2011%206%2018-16-11-15%2011%206-18-16-11h19z%27/%3E%3Cpath%20d%3D%27M315%2069l4%2011h12l-10%207%204%2012-10-7-10%207%204-12-10-7h12z%27/%3E%3C/g%3E%3C/svg%3E",
+            "role": "australian-company"
+          },
           "newsletterSubmitMethod": "post",
           "newsletterFallbackEmail": "",
-          "newsletterButtonTextColor": "#ffffff",
-          "navigationLinks": [
-            {
-              "label": "Home",
-              "href": "/"
-            },
-            {
-              "label": "Modules",
-              "href": "/modules"
-            },
-            {
-              "label": "Email",
-              "href": "/email"
-            },
-            {
-              "label": "SMS",
-              "href": "/sms"
-            },
-            {
-              "label": "CRM",
-              "href": "/crm"
-            },
-            {
-              "label": "Funnels",
-              "href": "/funnels"
-            },
-            {
-              "label": "Website Builder",
-              "href": "/website-builder"
-            },
-            {
-              "label": "Social Media",
-              "href": "/social-media"
-            },
-            {
-              "label": "Project Hub",
-              "href": "/project-hub"
-            },
-            {
-              "label": "About Us",
-              "href": "/about-us"
-            },
-            {
-              "label": "Pricing",
-              "href": "/pricing"
-            },
-            {
-              "label": "Contact Us",
-              "href": "/contact-us"
-            }
-          ],
-          "companyLinks": [
-            {
-              "label": "Blog",
-              "href": "/blog"
-            },
-            {
-              "label": "Privacy Policy",
-              "href": "/privacy-policy"
-            },
-            {
-              "label": "Terms",
-              "href": "/terms"
-            }
-          ],
-          "spotlightItems": [],
-          "footerNavManual": true
+          "newsletterButtonTextColor": "#ffffff"
         }
       }
     }
@@ -8648,22 +8756,24 @@
       ]
     },
     "cta-button": {
-      "eyebrow": "<br>",
-      "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
-      "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
-      "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
-      "link": "https://gr8result.digital/login.",
+      "link": "https://app.gr8result.digital/login",
       "note": "<br>",
-      "style": "stacked-card",
       "size": "large",
+      "text": "<span style=\"font-size: 24px;\"><span style=\"font-weight: bold;\"><span style=\"font-size: 24px;\">Click Here To Start Your 14 Day Free Trial</span></span></span>",
+      "style": "stacked-card",
+      "title": "<span style=\"color: rgb(255, 192, 0);\"><span style=\"font-size: 48px; font-weight: normal;\">Ready To See What Your Business Could Become?</span></span>",
+      "eyebrow": "<br>",
+      "__blockId": 1781393291494,
       "alignment": "center",
-      "backgroundColor": "#121c26",
       "textColor": "#ffffff",
-      "buttonColor": "#00b0f0",
-      "buttonTextColor": "#1f2937",
+      "__blockType": "cta-button",
       "borderColor": "rgba(255,255,255,0.18)",
-      "fullWidthBackground": true,
-      "baseLayoutWidth": 1500
+      "buttonColor": "#00b0f0",
+      "description": "<span style=\"font-size: 24px;\">Experience the platform built by business owners, for business owners. Get started with a <span style=\"font-size: 24px; color: rgb(255, 192, 0);\">FREE 14-Day Trial</span> or book a personalised demonstration and see how easy it can be to manage, market, automate, and scale your business from one powerful platform.<br></span><br>",
+      "backgroundColor": "#121c26",
+      "baseLayoutWidth": 1500,
+      "buttonTextColor": "#1f2937",
+      "fullWidthBackground": true
     },
     "text": {
       "text": "",

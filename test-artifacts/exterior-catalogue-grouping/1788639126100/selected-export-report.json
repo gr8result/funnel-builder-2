@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "errors": [],
+  "csv": "product-library-entry-doors-selected.csv",
+  "zip": "product-library-entry-doors-selected.zip",
+  "files": [
+    "catalogue.csv",
+    "manifest.json",
+    "images/",
+    "images/895tle.jpg"
+  ]
+}

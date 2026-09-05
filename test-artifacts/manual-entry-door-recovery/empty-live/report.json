@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "noTakeoffSchedule": true,
+  "manualDoorAdded": true,
+  "steps": [
+    {
+      "name": "01-empty-job-browse",
+      "url": "http://localhost:3015/modules/estimate-builder?page=clientSelections&selectionArea=exterior"
+    },
+    {
+      "name": "02-new-manual-hardware",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3A4f366c3d-8cf7-4bc7-995e-bb72d7a7428f&doorStep=hardware&mode=client-selection&page=clientSelections&projectId=empty-door-verification-20260906&returnPage=clientSelections&room=exterior&roomCategory=door-furniture&selectionArea=exterior"
+    },
+    {
+      "name": "03-new-door-after-refresh",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3A4f366c3d-8cf7-4bc7-995e-bb72d7a7428f&doorStep=design&page=clientSelections&projectId=empty-door-verification-20260906&room=exterior&roomCategory=entry-doors&selectionArea=exterior"
+    }
+  ],
+  "errors": []
+}

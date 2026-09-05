@@ -1,0 +1,136 @@
+GR8 RESULT
+Digital Solutions
+Core
+🧩
+Navigation Dashboard
+📌
+Command Centre
+🛍️
+The Xchange Marketplace
+🏪
+Vendor's Dashboard
+🤝
+Affiliates Dashboard
+🖼️
+Media Library
+📥
+Leads
+⚙️
+Account
+👥
+Team Members
+🧾
+Pricing & Billing
+👥
+Communities
+📊
+Accounting
+Modules
+📧
+Email Marketing
+🗂️
+CRM
+🗂️
+Project Workspace
+Client Portal
+💬
+SMS Marketing
+📱
+Social Media
+📅
+Booking Calendar
+🌐
+Website Builder
+Sales Funnels
+⚙️
+Business Automation
+🎥
+Evergreen Webinars
+🌿
+Subscription Pipelines
+👨‍💼
+Human Resources
+🏢
+Agency Dashboard
+Gr8 Result Digital Solutions
+🚀
+Getting Started
+0/5
+PROJECTS HUB
+Project Workspace
+Current quote total
+$0.00
+Job Setup
+AI Plan Takeoff
+Project Estimate
+Client Selections
+Quotation Builder
+Gantt Chart
+Job Board
+BOQ
+Supplier & Procurement
+Variations
+Document Vault
+RFIs & Reports
+Standard Inclusions
+Product Library
+Estimating Catalogue
+Budget versus Actual
+Client Portal
+Job Details remains the source of truth. Dashboard fields, quote totals, supplier quotes, and workbook pages stay linked to the same estimate data.
+Save Job
+Client Selections
+Door Furniture Verification · Test address
+File
+Back to Project Workspace
+Saved at 06:17:41
+Loading Selections Book
+Opening inside the Estimate Builder workspace...
+LIVE SUMMARY
+Quote Totals
+Base line item subtotal
+$0.00
+Preliminaries 0%
+$0.00
+Overheads 0%
+$0.00
+Materials & labour margin 0%
+$0.00
+Profit 0%
+$0.00
+GST 10%
+$0.00
+QBSA registration
+$0.00
+Q Leave fees
+$0.00
+Sales commission 0%
+$0.00
+Final quote total
+$0.00
+MISSING REQUIRED INPUTS
+Lower External Walls lm
+Lower Internal Walls lm
+Lower Ceiling Height
+Lower Floor Area m2
+QUOTE / RATE REVIEW
+ALTERATIONS TO EXISTING
+rate missing
+INCIDENTIALS
+rate missing
+WIND BEAM
+rate missing
+POSTS
+rate missing
+STEEL BEARERS
+rate missing
+BEARERS & JOISTS
+rate missing
+FLOORING
+rate missing
+COMPRESSED SHEET FLOORING
+rate missing
+WALL FRAMES
+rate missing
+WEATHERBOARDS
+rate missing

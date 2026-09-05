@@ -1,3 +1,7 @@
+import { EXTERIOR_CATALOGUE_SECTIONS, exteriorSectionForProduct } from "../../../lib/product-library/exteriorCatalogueSections";
+import { useDoorFurniturePicker } from '../../../components/estimate-builder/DoorFurniturePicker';
+import VerifiedProductImage from '../../../components/product-library/VerifiedProductImage';
+import { safeSelectionNavigate } from "../../../lib/navigation/selectionNavigation.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
@@ -40,11 +44,54 @@ import {
   addBuilderProduct,
   disableProduct,
   getBuilderEnablementRefs,
+  getEffectiveProductCatalogue,
   getMasterProducts,
   updateBuilderProductOverride,
 } from "../../../lib/product-library/catalogueService";
+import {
+  PRODUCT_LIBRARY_ROOMS,
+  PRODUCT_LIBRARY_ROOM_CATEGORIES,
+  PRODUCT_LIBRARY_CATALOGUE_SECTIONS,
+  getProductLibraryRoom,
+  getProductLibraryRoomCategories,
+  getProductLibraryRoomCategory,
+  getProductLibraryCatalogueSection,
+  getProductLibrarySectionFamilies,
+  productBelongsToRoom,
+  productBelongsToRoomCategory,
+  resolveProductLibrarySectionForFamily,
+  resolveQuotationBuilderMappingForProduct,
+} from "../../../lib/product-library/productLibraryTaxonomy";
+import {
+  PRODUCT_LIBRARY_EXCHANGE_COLUMNS,
+  buildProductLibraryExportPackage,
+  commitProductLibraryPackageImport,
+  filterProductsForProductLibraryExchange,
+  parseProductLibraryPackageFile,
+  previewProductLibraryPackageImport,
+  productLibraryExchangeTemplateRows,
+} from "../../../lib/product-library/productLibraryExchange";
+import { PRODUCT_LIBRARY_CABINETRY_BRAND_ASSETS } from "../../../lib/product-library/cabinetryCatalogueSelectors";
+import {
+  APPLIANCE_ELIGIBILITY_STATES,
+  APPLIANCE_IMAGE_FALLBACK_LABEL,
+  filterApplianceRecords,
+  getApplianceBrandsByFamily,
+  getApplianceFamilies,
+  getApplianceModelsByFamilyAndBrand,
+  getApplianceProductById,
+  getApplianceRecordsByFamily,
+  getApplianceRecordsRequiringVerification,
+  getActiveProductLibraryApplianceRecords,
+  getClientSelectableApplianceRecords,
+  getApplianceBrands,
+  getApplianceBrandByName,
+  getLegacyQuotationCompatibleApplianceRecords,
+  getPlatformMasterApplianceRecords,
+} from "../../../lib/product-library/applianceCatalogueSelectors";
 import { supabase } from "../../../utils/supabase-client";
 
+// Product Library kitchen seed/import coverage includes AU-KITCHEN-PRODUCT-CATALOGUE.json.
 const EMPTY_PRODUCT = {
   product_code: "",
   product_name: "",
@@ -111,6 +158,10 @@ function downloadJson(fileName, payload) {
 
 function downloadText(fileName, text, type = "text/plain;charset=utf-8") {
   const blob = new Blob([text], { type });
+  downloadBlob(fileName, blob);
+}
+
+function downloadBlob(fileName, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -138,27 +189,300 @@ function masterProductMatchesFilters(product, filters) {
   const haystack = [product.productName, product.brand, product.manufacturer, product.supplier, product.range, product.model, product.sku, product.productCode].filter(Boolean).join(" ").toLowerCase();
   if (search && !haystack.includes(search)) return false;
   if (filters.area && product.topLevelArea !== filters.area) return false;
-  if (filters.category && product.categoryKey !== filters.category && product.category !== filters.category) return false;
+  if (filters.section) {
+    const section = PRODUCT_LIBRARY_CATALOGUE_SECTIONS.find((item) => item.key === filters.section);
+    const quotationMapping = resolveQuotationBuilderMappingForProduct(product);
+    const productSection = resolveProductLibrarySectionForFamily(product.familyKey || product.familyId || "");
+    const sectionMatches = quotationMapping.quotationSectionId
+      ? quotationMapping.quotationSectionId === filters.section
+      : productSection?.key === filters.section || productBelongsToCatalogueSection(product, section);
+    if (section && !sectionMatches) return false;
+  }
+  if (filters.category) {
+    const roomCategory = getProductLibraryRoomCategory(filters.category);
+    if (roomCategory) {
+      if (!productBelongsToRoomCategory(product, roomCategory)) return false;
+    } else if (product.categoryKey !== filters.category && product.category !== filters.category) {
+      return false;
+    }
+  }
   if (filters.family && product.familyKey !== filters.family) return false;
   if (filters.manufacturer && product.manufacturer !== filters.manufacturer) return false;
   if (filters.brand && product.brand !== filters.brand) return false;
   if (filters.supplier && product.supplier !== filters.supplier) return false;
   if (filters.range && product.range !== filters.range) return false;
+  if (filters.room && !productBelongsToRoom(product, filters.room)) return false;
   if (filters.region && !(product.regions || []).includes("AU") && !(product.regions || []).includes(filters.region)) return false;
   if (filters.imageStatus && product.imageStatus !== filters.imageStatus) return false;
   if (filters.priceStatus && product.priceStatus !== filters.priceStatus) return false;
+  if (filters.ownership === "builder-private" && !product.isCustom && !product.organisationId && !product.builderId) return false;
+  if (filters.ownership === "platform-master" && (product.isCustom || product.organisationId || product.builderId)) return false;
+  if (filters.clientSelectable) {
+    const selectable = product.clientSelectable ?? product.attributes?.clientSelectable ?? product.attributes?.selectableStatus !== "reference-only";
+    if (filters.clientSelectable === "yes" && selectable === false) return false;
+    if (filters.clientSelectable === "no" && selectable !== false) return false;
+  }
+  if (filters.quotationEnabled) {
+    const quotationEnabled = product.quotationEnabled ?? product.attributes?.quotationEnabled ?? true;
+    if (filters.quotationEnabled === "yes" && quotationEnabled === false) return false;
+    if (filters.quotationEnabled === "no" && quotationEnabled !== false) return false;
+  }
   if (filters.status === "active" && product.active === false) return false;
+  if (filters.status === "inactive" && product.active !== false && product.archived !== true) return false;
   if (filters.status === "discontinued" && !product.discontinued) return false;
   return true;
 }
 
 function productPriceLabel(product) {
   const status = product.priceStatus || "price_pending";
+  if (product.builderPrice != null) return money(product.builderPrice);
   if (status === "current") return money(product.clientPrice ?? product.rrp ?? product.normalizedUnitPrice);
   if (status === "quote_required") return "Quote required";
   if (status === "allowance_only") return "Allowance only";
   if (status === "expired") return "Price expired";
   return "Price pending";
+}
+
+function productUnitLabel(product = {}) {
+  return product.priceUnit || product.unit || product.uom || "EACH";
+}
+
+function productEnabledLabel(product = {}, field = "clientSelectable") {
+  const attributes = product.attributes || {};
+  const value = product[field] ?? attributes[field] ?? (field === "quotationEnabled" ? true : attributes.selectableStatus !== "reference-only");
+  return value === false ? "No" : "Yes";
+}
+
+function quotationSectionLabel(product = {}) {
+  const mapping = resolveQuotationBuilderMappingForProduct(product);
+  return mapping.quotationSection || "Unmapped";
+}
+
+function productCategoryLabel(product = {}) {
+  if (product.sourceType === "canonical_cabinetry_workflow") return product.categoryKey;
+  const category = PRODUCT_LIBRARY_ROOM_CATEGORIES.find((item) => productBelongsToRoomCategory(product, item));
+  return category?.name || familyByKey(product.familyKey)?.displayName || product.category || product.categoryKey || "Uncategorised";
+}
+
+function catalogueProductSelectionKey(product = {}) {
+  return product.productId || product.productCode || product.model || product.sku || "";
+}
+
+const CABINETRY_SECTION_KEY = "cabinetry-joinery";
+const PLUMBING_SECTION_KEY = "plumbing-fixtures-tapware";
+const LIGHTING_ELECTRICAL_SECTION_KEY = "lighting-electrical";
+const CABINETRY_SUBCATEGORIES = [
+  { key: "all", label: "All Cabinetry", fileName: "cabinetry-all.csv" },
+  { key: "cabinetry-products", label: "Cabinetry Products", fileName: "cabinetry-products.csv" },
+  { key: "cabinet-doors-panels", label: "Cabinet Doors & Panels", fileName: "cabinet-doors-panels.csv" },
+  { key: "board-colours-finishes", label: "Board Colours & Finishes", fileName: "cabinet-board-colours-finishes.csv" },
+  { key: "cabinet-handles", label: "Handles", fileName: "cabinet-handles.csv" },
+  { key: "cabinet-hardware", label: "Cabinet Hardware", fileName: "cabinet-hardware.csv" },
+  { key: "cabinet-benchtops", label: "Benchtops & Surfaces", fileName: "cabinet-benchtops.csv" },
+  { key: "cabinet-accessories", label: "Cabinet Accessories", fileName: "cabinet-accessories.csv" },
+];
+
+const PLUMBING_SUBCATEGORIES = [
+  { key: "all", label: "All Plumbing", fileName: "plumbing-fixtures-tapware-all.csv" },
+  { key: "toilets", label: "Toilets", fileName: "plumbing-toilets.csv" },
+  { key: "basins", label: "Basins", fileName: "plumbing-basins.csv" },
+  { key: "baths", label: "Baths", fileName: "plumbing-baths.csv" },
+  { key: "showers-screens", label: "Showers and Screens", fileName: "plumbing-showers-screens.csv" },
+  { key: "kitchen-sinks", label: "Kitchen Sinks", fileName: "plumbing-kitchen-sinks.csv" },
+  { key: "laundry-tubs", label: "Laundry Tubs", fileName: "plumbing-laundry-tubs.csv" },
+  { key: "basin-mixers", label: "Basin Mixers", fileName: "tapware-basin-mixers.csv" },
+  { key: "sink-mixers", label: "Sink Mixers", fileName: "tapware-sink-mixers.csv" },
+  { key: "shower-mixers", label: "Shower Mixers", fileName: "tapware-shower-mixers.csv" },
+  { key: "bath-mixers", label: "Bath Mixers", fileName: "tapware-bath-mixers.csv" },
+  { key: "shower-outlets", label: "Shower Outlets", fileName: "tapware-shower-outlets.csv" },
+  { key: "accessories", label: "Accessories", fileName: "plumbing-accessories.csv" },
+];
+
+const LIGHTING_ELECTRICAL_SUBCATEGORIES = [
+  { key: "all", label: "All Lighting & Electrical", fileName: "lighting-electrical-all.csv" },
+  { key: "interior-lighting", label: "Interior Lighting", fileName: "lighting-interior.csv" },
+  { key: "exterior-lighting", label: "Exterior Lighting", fileName: "lighting-exterior.csv" },
+  { key: "downlights", label: "Downlights", fileName: "lighting-downlights.csv" },
+  { key: "pendant-lights", label: "Pendant Lights", fileName: "lighting-pendant-lights.csv" },
+  { key: "wall-lights", label: "Wall Lights", fileName: "lighting-wall-lights.csv" },
+  { key: "power-points", label: "Power Points", fileName: "electrical-power-points.csv" },
+  { key: "switches", label: "Switches", fileName: "electrical-switches.csv" },
+  { key: "fans", label: "Fans", fileName: "electrical-fans.csv" },
+  { key: "smoke-alarms", label: "Smoke Alarms", fileName: "electrical-smoke-alarms.csv" },
+  { key: "electrical-appliances-accessories", label: "Electrical Appliances/Accessories", fileName: "electrical-appliances-accessories.csv" },
+];
+
+const CATALOGUE_GROUP_SUBCATEGORIES = {
+  roofing: EXTERIOR_CATALOGUE_SECTIONS.roofing.map(([key, label]) => ({ key, label, fileName: `roofing-${key}.csv` })),
+  [CABINETRY_SECTION_KEY]: CABINETRY_SUBCATEGORIES,
+  [PLUMBING_SECTION_KEY]: PLUMBING_SUBCATEGORIES,
+  [LIGHTING_ELECTRICAL_SECTION_KEY]: LIGHTING_ELECTRICAL_SUBCATEGORIES,
+};
+
+const SECTION_EXPORT_FILE_NAMES = {
+  appliances: "appliances-white-goods.csv",
+  [CABINETRY_SECTION_KEY]: "cabinetry-all.csv",
+  [PLUMBING_SECTION_KEY]: "plumbing-fixtures-tapware-all.csv",
+  "doors-door-furniture": "doors-door-furniture.csv",
+  windows: "windows.csv",
+  roofing: "roofing.csv",
+  cladding: "cladding.csv",
+  flooring: "flooring.csv",
+  tiles: "tiles.csv",
+  painting: "painting.csv",
+  [LIGHTING_ELECTRICAL_SECTION_KEY]: "lighting-electrical-all.csv",
+  "fix-out": "fix-out.csv",
+  "external-products": "external-products.csv",
+};
+
+function cabinetrySubcategoryForProduct(product = {}) {
+  const assignedCategory = CABINETRY_SUBCATEGORIES.find((item) => item.label === product.categoryKey);
+  if (assignedCategory) return assignedCategory.key;
+  const familyKey = product.familyKey || product.familyId || "";
+  const attributes = product.attributes || {};
+  const canonicalType = String(attributes.canonicalType || attributes.categoryType || "").toLowerCase();
+  const productType = String(product.productType || product.product_type || attributes.productType || "").toLowerCase();
+  const text = [
+    product.categoryKey,
+    product.category,
+    product.categoryId,
+    product.section,
+    product.sectionName,
+    product.range,
+    product.collection,
+    product.productName,
+    product.model,
+    product.sku,
+    product.productCode,
+    product.description,
+    product.sourceName,
+    product.sourceType,
+    attributes.fixtureType,
+    attributes.handleUse,
+    attributes.choiceType,
+    attributes.productApplication,
+    attributes.application,
+    attributes.quotationMappingId,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/oven|cooktop|rangehood|dishwasher|microwave|fridge|refrigerat|appliance/.test(familyKey) || /appliance catalogue|appliance pack|white goods/.test(text)) return "";
+  if (["entry-doors", "garage-doors", "internal-doors", "door-hardware"].includes(familyKey)) return "";
+  if (/entry door|external door|garage door|internal door|door furniture|mortice lock|deadbolt|smart lock|digital lock|door closer/.test(text)) return "";
+  if (["stone-benchtops", "stone-20mm-tops", "stone-40mm-tops"].includes(familyKey) || /benchtop|stone benchtop|caesarstone|smartstone|neolith|stone ambassador/.test(text)) return "cabinet-benchtops";
+  if (familyKey === "cabinet-finish" || canonicalType === "finish_product" || productType === "cabinet-finish" || /cabinet finish|board colour|board color|laminex|polytec|decorated panel|decorative board|colour collection/.test(text)) return "board-colours-finishes";
+  if (familyKey === "handles") return /entry|external|door/.test(text) ? "" : "cabinet-handles";
+  if (canonicalType === "handle_product" || productType === "handles" || /cabinet handle|handle house|pull handle|finger pull|sharkfin|channel pull/.test(text)) return /entry|external|door furniture/.test(text) ? "" : "cabinet-handles";
+  if (canonicalType === "hardware_product" || productType === "hardware" || /blum|hinge|runner|hardware|soft-close|soft close|drawer runner|cabinet hardware/.test(text)) return "cabinet-hardware";
+  if (canonicalType === "cabinet_unit" || productType === "cabinetry" || /cabinet unit|base unit|wall unit|overhead|pantry|vanity|cupboard|cabinet product|cabinetry product/.test(text)) return "cabinetry-products";
+  if (/cabinet door|door panel|drawer front|end panel|appliance panel|kick panel|doors & panels|doors and panels/.test(text)) return "cabinet-doors-panels";
+  if (familyKey === "cabinetry") return "cabinet-accessories";
+  if (/cabinet|cabinetry|joinery|cleated shelving|bulkhead|shelving/.test(text)) return "cabinet-accessories";
+  return "";
+}
+
+function productBelongsToCabinetryCatalogue(product = {}) {
+  return cabinetrySubcategoryForProduct(product) !== "";
+}
+
+function productMatchesCabinetrySubcategory(product = {}, subcategoryKey = "all") {
+  if (subcategoryKey === "cabinetry-products") return product.categoryKey === "Cabinetry Products";
+  if (!productBelongsToCabinetryCatalogue(product)) return false;
+  if (!subcategoryKey || subcategoryKey === "all") return true;
+  return cabinetrySubcategoryForProduct(product) === subcategoryKey;
+}
+
+function catalogueProductText(product = {}) {
+  const attributes = product.attributes || {};
+  return [
+    product.familyKey,
+    product.familyId,
+    product.categoryKey,
+    product.category,
+    product.categoryId,
+    product.section,
+    product.sectionName,
+    product.range,
+    product.collection,
+    product.productName,
+    product.model,
+    product.sku,
+    product.productCode,
+    product.description,
+    product.sourceName,
+    product.productType,
+    attributes.fixtureType,
+    attributes.handleUse,
+    attributes.choiceType,
+    attributes.productApplication,
+    attributes.application,
+    attributes.canonicalType,
+    attributes.categoryType,
+    attributes.quotationMappingId,
+    attributes.quotationLineCategory,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function plumbingSubcategoryForProduct(product = {}) {
+  const familyKey = product.familyKey || product.familyId || "";
+  const text = catalogueProductText(product);
+  if (/oven|cooktop|rangehood|dishwasher|microwave|fridge|refrigerat|appliance/.test(familyKey) || /appliance catalogue|appliance pack|white goods/.test(text)) return "";
+  if (familyKey === "toilet" || /toilet|wc suite/.test(text)) return "toilets";
+  if (familyKey === "basin" || /basin/.test(text) && !/mixer|tap/.test(text)) return "basins";
+  if (familyKey === "bath" || /bath/.test(text) && !/mixer|tap/.test(text)) return "baths";
+  if (familyKey === "shower-screen" || /shower screen|shower panel|shower rail/.test(text)) return "showers-screens";
+  if (familyKey === "kitchen-sinks" && /laundry|tub/.test(text)) return "laundry-tubs";
+  if (familyKey === "kitchen-sinks" || /kitchen sink|sink bowl|flushline sink/.test(text)) return "kitchen-sinks";
+  if (familyKey === "basin-mixer" || /basin mixer/.test(text)) return "basin-mixers";
+  if (familyKey === "kitchen-sink-mixers" || /sink mixer|kitchen mixer|laundry mixer/.test(text)) return "sink-mixers";
+  if (familyKey === "shower-mixer" || /shower mixer/.test(text)) return "shower-mixers";
+  if (/bath mixer|bath tap/.test(text)) return "bath-mixers";
+  if (familyKey === "shower-outlet" || /shower outlet|shower head|hand shower|rail shower/.test(text)) return "shower-outlets";
+  if (familyKey === "tapware" || /mixer|tapware|tap /.test(text)) return "sink-mixers";
+  if (["vanity", "accessories"].includes(familyKey) || /accessor|towel rail|floor waste|soap|robe hook|toilet roll/.test(text)) return "accessories";
+  return "";
+}
+
+function lightingElectricalSubcategoryForProduct(product = {}) {
+  const familyKey = product.familyKey || product.familyId || "";
+  const text = catalogueProductText(product);
+  if (!["lighting", "external-lighting", "electrical", "electrical-fixtures"].includes(familyKey) && !/light|downlight|pendant|wall light|power point|switch|fan|smoke alarm|electrical/.test(text)) return "";
+  if (familyKey === "external-lighting" || /external|exterior|outdoor|alfresco/.test(text) && /light/.test(text)) return "exterior-lighting";
+  if (/downlight/.test(text)) return "downlights";
+  if (/pendant/.test(text)) return "pendant-lights";
+  if (/wall light|wall sconce/.test(text)) return "wall-lights";
+  if (/power point|gpo|outlet/.test(text)) return "power-points";
+  if (/switch/.test(text)) return "switches";
+  if (/fan|ceiling fan|exhaust fan/.test(text)) return "fans";
+  if (/smoke alarm|smoke detector/.test(text)) return "smoke-alarms";
+  if (/appliance|accessor|electrical/.test(text) && !/light/.test(text)) return "electrical-appliances-accessories";
+  return "interior-lighting";
+}
+
+function catalogueSubcategoryForProduct(product = {}, sectionKey = "") {
+  if (sectionKey === "roofing") return exteriorSectionForProduct(product, "roofing");
+  if (sectionKey === CABINETRY_SECTION_KEY) return cabinetrySubcategoryForProduct(product);
+  if (sectionKey === PLUMBING_SECTION_KEY) return plumbingSubcategoryForProduct(product);
+  if (sectionKey === LIGHTING_ELECTRICAL_SECTION_KEY) return lightingElectricalSubcategoryForProduct(product);
+  return "";
+}
+
+function productBelongsToCatalogueSection(product = {}, sectionItem = null) {
+  if (!sectionItem) return false;
+  if (sectionItem.key === CABINETRY_SECTION_KEY || sectionItem.key === PLUMBING_SECTION_KEY || sectionItem.key === LIGHTING_ELECTRICAL_SECTION_KEY) {
+    return catalogueSubcategoryForProduct(product, sectionItem.key) !== "";
+  }
+  const familyKey = product.familyKey || product.familyId || "";
+  return new Set(sectionItem.familyKeys || []).has(familyKey);
+}
+
+function productMatchesCatalogueSubcategory(product = {}, sectionKey = "", subcategoryKey = "all") {
+  if (sectionKey === CABINETRY_SECTION_KEY && subcategoryKey === "cabinetry-products") return product.categoryKey === "Cabinetry Products";
+  if (!subcategoryKey || subcategoryKey === "all") return true;
+  return catalogueSubcategoryForProduct(product, sectionKey) === subcategoryKey;
+}
+
+function catalogueSectionExportFileName(sectionItem = null) {
+  if (!sectionItem) return "product-library-section.csv";
+  return SECTION_EXPORT_FILE_NAMES[sectionItem.key] || `${slugify(sectionItem.displayName)}.csv`;
 }
 
 function swatchLabel(swatch) {
@@ -182,6 +506,37 @@ function builderEnablementForProduct(product, enablements = [], organisationId =
 
 function productDisplayImage(product, familyItem) {
   return resolveProductLibraryImage({ product, family: familyItem, familyKey: familyItem?.familyKey, areaKey: familyItem?.topLevelArea });
+}
+
+function productHasVerifiedImage(product = {}) {
+  const image = product.primaryImage || product.primaryImageUrl || product.primary_image || product.primary_image_url || "";
+  const status = String(product.imageStatus || product.image_status || "").toLowerCase();
+  if (!image) return false;
+  if (/unavailable|missing|pending|review|required/.test(status)) return false;
+  return /verified|exact|official/.test(status);
+}
+
+function productVerifiedImage(product = {}) {
+  return productHasVerifiedImage(product) ? (product.primaryImage || product.primaryImageUrl || product.primary_image || product.primary_image_url) : "";
+}
+
+function ProductImageAwaitingVerification({ product, large = false }) {
+  return (
+    <span className={large ? "product-image-awaiting large" : "product-image-awaiting"} role="img" aria-label="Product image awaiting verification">
+      <strong>{product?.brand || product?.manufacturer || "Product Library"}</strong>
+      <small>Image awaiting verification</small>
+    </span>
+  );
+}
+
+function ProductLibraryProductImage({ product, familyItem, large = false }) {
+  const verifiedImage = productVerifiedImage(product);
+  if (product.attributes?.internalAreasCatalogue) return <div><VerifiedProductImage src={verifiedImage} name={product.productName} style={{width:'100%',height:large?360:220}}/>{product.attributes.imageScope?<small>{product.attributes.imageScope}</small>:null}</div>;
+  if (verifiedImage) return <img src={verifiedImage} alt={product.productName} loading={large ? "eager" : "lazy"} decoding="async" />;
+  if (productIsAppliance(product, familyItem)) {
+    return <ProductImageAwaitingVerification product={product} large={large} />;
+  }
+  return <img src={productDisplayImage(product, familyItem)} alt={product.productName} loading={large ? "eager" : "lazy"} decoding="async" />;
 }
 
 function supplierNameForProduct(product) {
@@ -219,10 +574,176 @@ function groupedSupplierHierarchy(products = [], familyItem = null, enablements 
   })).sort((left, right) => left.name.localeCompare(right.name));
 }
 
-const PRODUCT_LIBRARY_HOME_AREAS = [
-  TOP_LEVEL_AREAS.find((area) => area.key === "exterior"),
-  { ...TOP_LEVEL_AREAS.find((area) => area.key === "interior"), description: "Internal finishes, kitchens, bathrooms, laundry, garage interiors and living area selections." },
-].filter(Boolean);
+const APPLIANCE_FALLBACK_IMAGES = {
+  ovens: "/images/catalogues/appliances/fallbacks/oven.svg",
+  cooktops: "/images/catalogues/appliances/fallbacks/cooktop.svg",
+  rangehoods: "/images/catalogues/appliances/fallbacks/rangehood.svg",
+  dishwashers: "/images/catalogues/appliances/fallbacks/dishwasher.svg",
+  "freestanding-cookers": "/images/catalogues/appliances/fallbacks/freestanding-cooker.svg",
+  microwaves: "/images/catalogues/appliances/fallbacks/microwave.svg",
+  fridges: "/images/catalogues/appliances/fallbacks/refrigerator.svg",
+  "appliance-packs": "/images/catalogues/appliances/fallbacks/appliance-pack.svg",
+  generic: "/images/catalogues/appliances/fallbacks/generic.svg",
+};
+
+const APPLIANCE_FAMILY_KEYS = new Set(Object.keys(APPLIANCE_FALLBACK_IMAGES));
+
+function productIsAppliance(product = {}, familyItem = null) {
+  const familyKey = product.familyKey || familyItem?.familyKey || "";
+  return APPLIANCE_FAMILY_KEYS.has(familyKey)
+    || familyItem?.categoryKey === "appliances"
+    || product.categoryKey === "appliances"
+    || product.sourceName === "Canonical Appliance Catalogue";
+}
+
+function appliancePriceLabel(record, { admin = true } = {}) {
+  if (!admin) return record.priceStatus === "quote_required" ? "Quote required" : "Price held in Product Library";
+  if (record.priceStatus === "quote_required") return "Quote required";
+  if (record.priceStatus === "price_pending") return "Price pending";
+  if (record.price == null || record.price === "") return record.priceStatus || "No price";
+  return `${money(record.price)} ${record.unit || ""}`.trim();
+}
+
+function applianceStatusClass(status = "") {
+  if (status === "active-selectable") return "status-pill on";
+  if (status === "active-reference-only") return "status-pill";
+  return "status-pill off";
+}
+
+function applianceValue(value, fallback = "Not supplied") {
+  if (Array.isArray(value)) return value.length ? value.join(", ") : fallback;
+  if (value == null || value === "") return fallback;
+  return String(value);
+}
+
+function applianceSizeBucket(record = {}) {
+  const widthText = `${record.width || ""} ${record.widthMm || ""} ${record.name || ""} ${record.productName || ""}`.toUpperCase();
+  if (/\b90\s*CM\b|\b900\s*MM\b/.test(widthText) || Number(record.widthMm) >= 850) return "900 mm";
+  if (/\b60\s*CM\b|\b600\s*MM\b/.test(widthText) || (Number(record.widthMm) >= 550 && Number(record.widthMm) < 850)) return "600 mm";
+  return "Other size";
+}
+
+function applianceConfigurationBucket(record = {}) {
+  const text = [
+    record.fuelOrEnergyType,
+    record.installationType,
+    record.finish,
+    record.name,
+    record.productName,
+    record.specificationSummary?.rangehoodType,
+    record.specificationSummary?.cooktopType,
+  ].join(" ").toLowerCase();
+  if (/induction/.test(text)) return "Induction";
+  if (/ceramic/.test(text)) return "Ceramic";
+  if (/\bgas\b/.test(text)) return "Gas";
+  if (/electric/.test(text)) return "Electric";
+  if (/canopy/.test(text)) return "Canopy";
+  if (/slide/.test(text)) return "Slide-out";
+  if (/fixed/.test(text)) return "Fixed";
+  if (/undermount|under mount/.test(text)) return "Undermount";
+  if (/freestanding|free standing/.test(text)) return "Freestanding";
+  return "Other configuration";
+}
+
+function applianceDimensionLabel(record = {}) {
+  const width = record.width || (record.widthMm ? `W${record.widthMm}` : "");
+  const depth = record.depth || (record.depthMm ? `D${record.depthMm}` : "");
+  const height = record.height || (record.heightMm ? `H${record.heightMm}` : "");
+  return [width, depth, height].filter(Boolean).join(" x ");
+}
+
+function applianceFeatureList(record = {}) {
+  const specs = record.specificationSummary || record.specifications || {};
+  const candidates = [
+    specs.capacity,
+    specs.functions,
+    specs.zones,
+    specs.placeSettings,
+    specs.rangehoodType,
+    specs.cooktopType,
+    specs.energyRating,
+    specs.warranty,
+    record.warranty,
+  ];
+  return uniqueValues(candidates.flatMap((value) => Array.isArray(value) ? value : [value])).slice(0, 8);
+}
+
+function applianceFilterOptionValues(records = []) {
+  return {
+    widths: uniqueValues(records.map(applianceSizeBucket)),
+    fuels: uniqueValues(records.map((record) => record.fuelOrEnergyType || applianceConfigurationBucket(record))),
+    installs: uniqueValues(records.map((record) => record.installationType)),
+    finishes: uniqueValues(records.map((record) => record.finish)),
+    verifications: uniqueValues(records.map((record) => record.verificationStatus)),
+  };
+}
+
+function groupAppliancesForBrand(records = []) {
+  return records.reduce((groups, record) => {
+    const family = record.familyId || "other";
+    const size = applianceSizeBucket(record);
+    const configuration = applianceConfigurationBucket(record);
+    const key = `${family}::${size}::${configuration}`;
+    if (!groups.has(key)) groups.set(key, { family, size, configuration, records: [] });
+    groups.get(key).records.push(record);
+    return groups;
+  }, new Map());
+}
+
+function ApplianceImage({ record, large = false }) {
+  if (record?.image) return <img src={record.image} alt={`${record.name || record.productName || "Appliance"} product`} loading={large ? "eager" : "lazy"} />;
+  return (
+    <span
+      className={large ? "appliance-image-fallback large" : "appliance-image-fallback"}
+      role="img"
+      aria-label={`${record?.familyName || "Appliance"} exact image required`}
+    >
+      <strong>{record?.brandName || record?.brand || "Product Library"}</strong>
+      <small>{record?.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL}</small>
+    </span>
+  );
+}
+
+function ApplianceCard({ record, brand, onOpen, onSelect, compareLabel = "Compare" }) {
+  return (
+    <article className="product-option management-card appliance-visual-card" data-appliance-product={record.productId} data-appliance-family={record.familyId}>
+      <div className="appliance-card-logo">{brand ? <ApplianceBrandLogo brand={brand} /> : <strong>{record.brand || "Brand"}</strong>}</div>
+      <div className="appliance-card-media">
+        <ApplianceImage record={record} />
+      </div>
+      <div className="appliance-card-copy">
+        <span>{record.familyName || "Appliance"}</span>
+        <strong>{record.name}</strong>
+        <small>{record.model || record.productCode || "Model pending"}</small>
+        <small>{[
+          applianceDimensionLabel(record),
+          applianceConfigurationBucket(record),
+          record.finish,
+        ].filter(Boolean).join(" / ")}</small>
+      </div>
+      <div className="appliance-card-footer">
+        <strong>{appliancePriceLabel(record)}</strong>
+        <span className={record.image ? "status-pill on" : "status-pill"}>{record.image ? "verified image" : "exact image required"}</span>
+      </div>
+      <div className="card-actions appliance-card-actions">
+        <button type="button" onClick={() => onOpen(record)}>View Details</button>
+        <button type="button" onClick={() => onSelect(record)}><Check size={15} /> Select Product</button>
+        <button type="button" className="secondary" onClick={() => onOpen(record)}><Copy size={15} /> {compareLabel}</button>
+      </div>
+    </article>
+  );
+}
+
+function ApplianceBrandLogo({ brand }) {
+  if (brand?.logoUrl) {
+    return (
+      <span className="appliance-brand-logo" style={brand.logoBackground ? { "--brand-logo-background": brand.logoBackground } : {}}>
+        <img src={brand.logoUrl} alt={`${brand.brandName} logo`} />
+      </span>
+    );
+  }
+  return <span className="appliance-brand-logo text-logo">{brand?.brandName || "Brand"}</span>;
+}
 
 function categoryBelongsToArea(categoryItem, areaKey) {
   if (areaKey === "exterior") return categoryItem.topLevelArea === "exterior";
@@ -373,9 +894,10 @@ function mapDbProductToEntity(product, categoryName = "", supplierName = "", bra
   };
 }
 
-export default function BuilderProductLibraryPage() {
+export default function BuilderProductLibraryPage({ embeddedInEstimateBuilder = false, workbook, projectId, onClientSelectionsSave, selectionBook, selectionMode } = {}) {
   const router = useRouter();
   const { workspaceId, activeWorkspace, loading: workspaceLoading } = useWorkspace();
+  const furniturePicker = useDoorFurniturePicker({workbook, projectId, workspaceId, onClientSelectionsSave, selectionBook, selectionMode});
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
@@ -392,11 +914,19 @@ export default function BuilderProductLibraryPage() {
   const [jobFileName, setJobFileName] = useState(DEFAULT_JOB_FILE_NAME);
   const [adminOpen, setAdminOpen] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
-  const [masterCatalogueOpen, setMasterCatalogueOpen] = useState(true);
+  const [masterCatalogueOpen, setMasterCatalogueOpen] = useState(false);
   const [masterProducts, setMasterProducts] = useState([]);
   const [builderEnablements, setBuilderEnablements] = useState([]);
   const [masterImportPreview, setMasterImportPreview] = useState(null);
-  const [masterFilters, setMasterFilters] = useState({ search: "", area: "", category: "", family: "", manufacturer: "", brand: "", supplier: "", range: "", region: "", imageStatus: "", priceStatus: "", status: "" });
+  const [packageImportPreview, setPackageImportPreview] = useState(null);
+  const [packageImportMode, setPackageImportMode] = useState("update");
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportOptions, setExportOptions] = useState({ scope: "current-filtered", sectionId: "", categoryId: "", brand: "", range: "", mode: "zip" });
+  const [selectedCatalogueItemIds, setSelectedCatalogueItemIds] = useState([]);
+  const [catalogueRevision, setCatalogueRevision] = useState(0);
+  const [masterFilters, setMasterFilters] = useState({ search: "", area: "", section: "", category: "", family: "", manufacturer: "", brand: "", supplier: "", range: "", room: "", region: "", imageStatus: "", priceStatus: "", ownership: "", clientSelectable: "", quotationEnabled: "", status: "" });
+  const [applianceFilters, setApplianceFilters] = useState({ search: "", productType: "", width: "", fuel: "", install: "", finish: "", status: "", verification: "", selectable: "", sourcePlatform: "", tenantId: "", sort: "name" });
+  const [applianceImportInfoOpen, setApplianceImportInfoOpen] = useState(false);
   const [productForm, setProductForm] = useState(EMPTY_PRODUCT);
   const [editingProductId, setEditingProductId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -405,6 +935,29 @@ export default function BuilderProductLibraryPage() {
   const [success, setSuccess] = useState("");
 
   const selectedArea = TOP_LEVEL_AREAS.find((area) => area.key === selectedAreaKey) || null;
+  const catalogueMode = typeof router.query.catalogue === "string" ? router.query.catalogue : "";
+  const applianceMode = catalogueMode === "appliances";
+  const browseMode = router.query.browse === "all" ? "all" : "room";
+  const selectedRoomKey = typeof router.query.room === "string" ? router.query.room : "";
+  const selectedRoomCategoryKey = typeof router.query.roomCategory === "string" ? router.query.roomCategory : "";
+  const [roomVisibleCount,setRoomVisibleCount]=useState(48);
+  const paginatedInternalCategory=['internal-doors','door-furniture','skirting-architraves','skirting','architraves'].includes(selectedRoomCategoryKey);
+  useEffect(()=>setRoomVisibleCount(48),[selectedRoomCategoryKey,masterFilters.brand,masterFilters.range,masterFilters.search]);
+  const selectedRoomProductId = typeof router.query.roomProduct === "string" ? router.query.roomProduct : "";
+  const selectedRoom = selectedRoomKey ? getProductLibraryRoom(selectedRoomKey) : null;
+  const selectedRoomCategories = useMemo(() => selectedRoomKey ? getProductLibraryRoomCategories(selectedRoomKey) : [], [selectedRoomKey]);
+  const selectedRoomCategory = selectedRoomCategoryKey ? getProductLibraryRoomCategory(selectedRoom?.key === "exterior" && selectedRoomCategoryKey === "door-furniture" ? "external-door-furniture" : selectedRoomCategoryKey) : null;
+  const catalogueSectionKey = typeof router.query.catalogueSection === "string" ? router.query.catalogueSection : "";
+  const selectedCatalogueSection = catalogueSectionKey ? getProductLibraryCatalogueSection(catalogueSectionKey) : null;
+  const cabinetrySubcategoryKey = typeof router.query.cabinetrySubcategory === "string" ? router.query.cabinetrySubcategory : "all";
+  const selectedCabinetrySubcategory = CABINETRY_SUBCATEGORIES.find((item) => item.key === cabinetrySubcategoryKey) || CABINETRY_SUBCATEGORIES[0];
+  const catalogueSubcategoryKey = typeof router.query.catalogueSubcategory === "string" ? router.query.catalogueSubcategory : cabinetrySubcategoryKey;
+  const selectedCatalogueSubcategories = selectedCatalogueSection ? CATALOGUE_GROUP_SUBCATEGORIES[selectedCatalogueSection.key] || [] : [];
+  const selectedCatalogueSubcategory = selectedCatalogueSubcategories.find((item) => item.key === catalogueSubcategoryKey) || selectedCatalogueSubcategories[0] || null;
+  const catalogueSectionFamilies = useMemo(() => getProductLibrarySectionFamilies(catalogueSectionKey), [catalogueSectionKey]);
+  const applianceFamilyKey = typeof router.query.applianceFamily === "string" ? router.query.applianceFamily : "";
+  const applianceBrandName = typeof router.query.applianceBrand === "string" ? router.query.applianceBrand : "";
+  const applianceProductId = typeof router.query.applianceProduct === "string" ? router.query.applianceProduct : "";
   const selectedCategory = TAXONOMY_CATEGORY_DEFINITIONS.find((category) => category.key === selectedCategoryKey) || null;
   const selectedFamily = familyByKey(selectedFamilyKey);
   const categoryById = useMemo(() => new Map(categories.map((category) => [category.id, category.category_name])), [categories]);
@@ -444,6 +997,137 @@ export default function BuilderProductLibraryPage() {
   const masterSuppliers = useMemo(() => uniqueValues(masterProducts.map((product) => product.supplier)), [masterProducts]);
   const masterRanges = useMemo(() => uniqueValues(masterProducts.map((product) => product.range)), [masterProducts]);
   const filteredMasterProducts = useMemo(() => masterProducts.filter((product) => masterProductMatchesFilters(product, masterFilters)), [masterFilters, masterProducts]);
+  const effectiveCatalogueProducts = useMemo(() => getEffectiveProductCatalogue({
+    tenantId: workspaceId || "",
+    builderId: workspaceId || "",
+    catalogueVersion: "product-library.current",
+  }).products, [builderEnablements, catalogueRevision, masterProducts, workspaceId]);
+  const managementCatalogueProducts = useMemo(() => getEffectiveProductCatalogue({
+    tenantId: workspaceId || "",
+    builderId: workspaceId || "",
+    catalogueVersion: "product-library.current",
+    includeDisabled: true,
+  }).products, [builderEnablements, catalogueRevision, masterProducts, workspaceId]);
+  const roomProducts = useMemo(() => selectedRoom ? effectiveCatalogueProducts.filter((product) => productBelongsToRoom(product, selectedRoom.key)) : [], [effectiveCatalogueProducts, selectedRoom]);
+  const exteriorSections = EXTERIOR_CATALOGUE_SECTIONS[selectedRoomCategory?.key] || [];
+  const exteriorSectionKey = typeof router.query.exteriorSection === "string" && exteriorSections.some(([key]) => key === router.query.exteriorSection) ? router.query.exteriorSection : "all";
+  const allRoomCategoryProducts = useMemo(() => effectiveCatalogueProducts.filter((product) => productBelongsToRoomCategory(product, selectedRoomCategory)), [effectiveCatalogueProducts, selectedRoomCategory]);
+  const roomCategoryProducts = useMemo(() => {
+    if (!selectedRoomCategory) return [];
+    return effectiveCatalogueProducts
+      .filter((product) => productBelongsToRoomCategory(product, selectedRoomCategory))
+      .filter((product) => exteriorSectionKey === "all" || (selectedRoomCategory.key === 'skirting-architraves' ? productBelongsToRoomCategory(product, getProductLibraryRoomCategory(exteriorSectionKey)) : exteriorSectionForProduct(product, selectedRoomCategory.key) === exteriorSectionKey))
+      .filter((product) => !selectedRoom || productBelongsToRoom(product, selectedRoom.key))
+      .filter((product) => masterProductMatchesFilters(product, masterFilters));
+  }, [effectiveCatalogueProducts, masterFilters, selectedRoom, selectedRoomCategory, exteriorSectionKey]);
+  const currentFilteredProducts = useMemo(() => {
+    if (selectedRoomCategory) return roomCategoryProducts;
+    if (selectedRoom) return roomProducts.filter((product) => masterProductMatchesFilters(product, masterFilters));
+    return effectiveCatalogueProducts.filter((product) => masterProductMatchesFilters(product, masterFilters));
+  }, [effectiveCatalogueProducts, masterFilters, roomCategoryProducts, roomProducts, selectedRoom, selectedRoomCategory]);
+  const exportableProducts = useMemo(() => filterProductsForProductLibraryExchange(effectiveCatalogueProducts, {
+    scope: exportOptions.scope,
+    sectionId: exportOptions.sectionId,
+    categoryId: exportOptions.categoryId,
+    brand: exportOptions.brand,
+    range: exportOptions.range,
+    currentProducts: currentFilteredProducts,
+    builderId: workspaceId || "",
+  }), [currentFilteredProducts, effectiveCatalogueProducts, exportOptions, workspaceId]);
+  const manageableProducts = useMemo(() => managementCatalogueProducts.filter((product) => masterProductMatchesFilters(product, masterFilters)), [managementCatalogueProducts, masterFilters]);
+  const selectedCatalogueItemSet = useMemo(() => new Set(selectedCatalogueItemIds), [selectedCatalogueItemIds]);
+  const selectedCatalogueProducts = useMemo(() => managementCatalogueProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))), [managementCatalogueProducts, selectedCatalogueItemSet]);
+  const cabinetryCatalogueProducts = useMemo(() => managementCatalogueProducts.filter(productBelongsToCabinetryCatalogue), [managementCatalogueProducts]);
+  const cabinetryVisibleProducts = useMemo(
+    () => cabinetryCatalogueProducts.filter((product) => productMatchesCabinetrySubcategory(product, selectedCabinetrySubcategory.key)),
+    [cabinetryCatalogueProducts, selectedCabinetrySubcategory.key]
+  );
+  const selectedCabinetryProducts = useMemo(
+    () => cabinetryCatalogueProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))),
+    [cabinetryCatalogueProducts, selectedCatalogueItemSet]
+  );
+  const catalogueGroupProducts = useMemo(
+    () => selectedCatalogueSection ? managementCatalogueProducts.filter((product) => productBelongsToCatalogueSection(product, selectedCatalogueSection)) : [],
+    [managementCatalogueProducts, selectedCatalogueSection]
+  );
+  const catalogueGroupVisibleProducts = useMemo(
+    () => catalogueGroupProducts.filter((product) => productMatchesCatalogueSubcategory(product, selectedCatalogueSection?.key, selectedCatalogueSubcategory?.key || "all")),
+    [catalogueGroupProducts, selectedCatalogueSection?.key, selectedCatalogueSubcategory?.key]
+  );
+  const selectedCatalogueGroupProducts = useMemo(
+    () => catalogueGroupProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))),
+    [catalogueGroupProducts, selectedCatalogueItemSet]
+  );
+  const cabinetryBrandName = typeof router.query.cabinetryBrand === "string" ? router.query.cabinetryBrand : "";
+  const cabinetryRangeName = typeof router.query.cabinetryRange === "string" ? router.query.cabinetryRange : "";
+  const cabinetDoorPanelProducts = useMemo(() => {
+    if (selectedRoomCategory?.key !== "cabinet-doors-panels") return [];
+    return roomCategoryProducts.filter((product) => product.familyKey === "cabinet-finish" && ["Laminex", "Polytec"].includes(product.brand || product.supplier));
+  }, [roomCategoryProducts, selectedRoomCategory]);
+  const cabinetryBrandGroups = useMemo(() => {
+    const groups = new Map();
+    cabinetDoorPanelProducts.forEach((product) => {
+      const brandName = product.brand || product.supplier || "Unassigned";
+      if (!groups.has(brandName)) {
+        groups.set(brandName, { name: brandName, logo: PRODUCT_LIBRARY_CABINETRY_BRAND_ASSETS[brandName]?.logo || "", products: [], ranges: new Map() });
+      }
+      const group = groups.get(brandName);
+      group.products.push(product);
+      const rangeName = product.range || product.collection || "Unassigned Range";
+      if (!group.ranges.has(rangeName)) group.ranges.set(rangeName, { name: rangeName, products: [], image: product.primaryImageUrl || product.thumbnailUrl || "" });
+      group.ranges.get(rangeName).products.push(product);
+    });
+    return Array.from(groups.values()).map((group) => ({
+      ...group,
+      ranges: Array.from(group.ranges.values()).sort((left, right) => left.name.localeCompare(right.name)),
+    })).sort((left, right) => left.name.localeCompare(right.name));
+  }, [cabinetDoorPanelProducts]);
+  const cabinetrySelectedBrand = cabinetryBrandGroups.find((group) => group.name === cabinetryBrandName) || null;
+  const cabinetrySelectedRange = cabinetrySelectedBrand?.ranges.find((range) => range.name === cabinetryRangeName) || null;
+  const cabinetryVisibleColourProducts = cabinetrySelectedRange?.products || cabinetrySelectedBrand?.products || cabinetDoorPanelProducts;
+  const selectedRoomProduct = useMemo(() => {
+    if (!selectedRoomProductId) return null;
+    return effectiveCatalogueProducts.find((product) => product.productId === selectedRoomProductId || product.productCode === selectedRoomProductId) || null;
+  }, [effectiveCatalogueProducts, selectedRoomProductId]);
+  const applianceFamilies = useMemo(() => getApplianceFamilies(), []);
+  const applianceFamily = applianceFamilies.find((family) => family.familyId === applianceFamilyKey) || null;
+  const applianceBrands = useMemo(() => applianceFamilyKey ? getApplianceBrandsByFamily(applianceFamilyKey) : getApplianceBrands().map((brand) => brand.brandName), [applianceFamilyKey]);
+  const applianceBrandCards = useMemo(() => getApplianceBrands({ familyId: applianceFamilyKey }), [applianceFamilyKey]);
+  const selectedApplianceBrand = useMemo(() => getApplianceBrandByName(applianceBrandName), [applianceBrandName]);
+  const applianceSourceRecordsForBrand = useMemo(() => {
+    if (!applianceBrandName) return getPlatformMasterApplianceRecords();
+    return getPlatformMasterApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
+  }, [applianceBrandName]);
+  const applianceFilterOptions = useMemo(() => applianceFilterOptionValues(applianceSourceRecordsForBrand), [applianceSourceRecordsForBrand]);
+  const applianceModels = useMemo(() => {
+    if (!applianceBrandName) return [];
+    const sourceRecords = applianceFamilyKey
+      ? getApplianceModelsByFamilyAndBrand(applianceFamilyKey, applianceBrandName)
+      : getPlatformMasterApplianceRecords().filter((record) => record.brand === applianceBrandName || record.brandName === applianceBrandName);
+    return filterApplianceRecords(sourceRecords, { ...applianceFilters, family: applianceFamilyKey, brand: applianceBrandName });
+  }, [applianceBrandName, applianceFamilyKey, applianceFilters]);
+  const appliancePacksForBrand = useMemo(() => {
+    if (!applianceBrandName) return [];
+    if (applianceFamilyKey && applianceFamilyKey !== "appliance-packs") return [];
+    return filterApplianceRecords(getApplianceRecordsByFamily("appliance-packs"), { ...applianceFilters, family: "", productType: "", brand: applianceBrandName });
+  }, [applianceBrandName, applianceFamilyKey, applianceFilters]);
+  const visibleApplianceFamilies = useMemo(() => {
+    const physicalFamilies = applianceFamilies.filter((family) => family.familyId !== "appliance-packs");
+    if (applianceFamilyKey && applianceFamilyKey !== "appliance-packs") return physicalFamilies.filter((family) => family.familyId === applianceFamilyKey);
+    return physicalFamilies;
+  }, [applianceFamilies, applianceFamilyKey]);
+  const selectedApplianceProductContainers = useMemo(() => {
+    if (!applianceProductId) return [];
+    return getApplianceRecordsByFamily("appliance-packs").filter((pack) => (pack.components || []).some((component) => component.productId === applianceProductId));
+  }, [applianceProductId]);
+  const selectedApplianceProduct = useMemo(() => applianceProductId ? getApplianceProductById(applianceProductId) : null, [applianceProductId]);
+  const applianceCatalogueStats = useMemo(() => ({
+    platformMaster: getPlatformMasterApplianceRecords().length,
+    active: getActiveProductLibraryApplianceRecords().length,
+    clientSelectable: getClientSelectableApplianceRecords().length,
+    legacyCompatible: getLegacyQuotationCompatibleApplianceRecords().length,
+    requiringVerification: getApplianceRecordsRequiringVerification().length,
+  }), []);
   const roofingAdminProof = useMemo(() => {
     const roofingProducts = masterProducts.filter((product) => product.familyKey === "roofing");
     const colourNames = new Set();
@@ -479,14 +1163,52 @@ export default function BuilderProductLibraryPage() {
   }), [builderEnablements, masterFilters.region, masterProducts, selectedFamily, workspaceId]);
   const selections = productLibrarySelectionsFromJobFile(jobFile);
   const garageDoorSelection = selections[GARAGE_DOOR_SELECTION_KEY] || null;
-  const bannerTitle = selectedFamily?.displayName || selectedCategory?.category || selectedArea?.displayName || "Product Library";
-  const bannerSubtitle = selectedFamily
+  const bannerTitle = applianceMode
+    ? (selectedApplianceProduct?.name || applianceBrandName || applianceFamily?.name || "Appliances")
+    : selectedRoomProduct?.productName || selectedRoomCategory?.name || selectedRoom?.name || selectedFamily?.displayName || selectedCategory?.category || selectedArea?.displayName || selectedCatalogueSection?.displayName || "Product Library";
+  const bannerSubtitle = applianceMode
+    ? "Product Library appliance catalogue: family, brand, model and product details from the canonical AU appliance data."
+    : selectedRoomProduct
+    ? [selectedRoomProduct.brand, selectedRoomProduct.model, selectedRoomProduct.familyKey].filter(Boolean).join(" / ")
+    : selectedRoomCategory
+    ? `${selectedRoom?.name || "Room"} / ${selectedRoomCategory.group}`
+    : selectedRoom
+    ? selectedRoom.description
+    : selectedCatalogueSection
+    ? selectedCatalogueSection.description
+    : selectedFamily
     ? `${selectedFamily.category} / ${selectedFamily.subcategory}`
     : selectedCategory
       ? `Choose products and families for ${selectedCategory.category}.`
       : selectedArea
         ? `Choose one ${selectedArea.displayName} category.`
-        : "Choose an area, then a category, then the products available for selections.";
+        : "Browse master physical-product catalogues by trade/product section, supplier, brand, model, image status and source status.";
+
+  const routeArea = typeof router.query.area === 'string' ? router.query.area : '';
+  const routeCategory = typeof router.query.category === 'string' ? router.query.category : '';
+  const routeFamily = typeof router.query.family === 'string' ? router.query.family : '';
+  const routePage = typeof router.query.page === 'string' ? router.query.page : '';
+  function productLibraryRouteQuery(query = {}) {
+    const nextQuery = { ...query };
+    if (furniturePicker.enabled) { nextQuery.mode='client-selection';nextQuery.returnPage='clientSelections'; }
+    if (furniturePicker.enabled) for (const key of ['mode','returnPage','door','projectId','jobId']) {
+      if (router.query[key]) nextQuery[key] = router.query[key];
+    }
+    if (embeddedInEstimateBuilder || router.pathname === "/modules/estimate-builder") {
+      nextQuery.page = furniturePicker.enabled && router.query.page === "clientSelections" ? "clientSelections" : "productLibrary";
+    }
+    return nextQuery;
+  }
+
+  function pushProductLibraryRoute(query = {}, options = {}) {
+    if (embeddedInEstimateBuilder && (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('page') : router.query.page) !== "productLibrary" && !furniturePicker.enabled) return Promise.resolve(false);
+    return safeSelectionNavigate(router, { pathname: router.pathname, query: productLibraryRouteQuery(query) }, { shallow: true, ...options });
+  }
+
+  function replaceProductLibraryRoute(query = {}, options = {}) {
+    if (embeddedInEstimateBuilder && (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('page') : router.query.page) !== "productLibrary" && !furniturePicker.enabled) return Promise.resolve(false);
+    return safeSelectionNavigate(router, { pathname: router.pathname, query: productLibraryRouteQuery(query) }, { replace: true, shallow: true, ...options });
+  }
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -495,6 +1217,10 @@ export default function BuilderProductLibraryPage() {
 
   useEffect(() => {
     if (!router.isReady || routeHydrated) return;
+    if (typeof router.query.catalogue === "string" && router.query.catalogue) {
+      setRouteHydrated(true);
+      return;
+    }
     const area = typeof router.query.area === "string" ? router.query.area : "";
     const category = typeof router.query.category === "string" ? router.query.category : "";
     const family = typeof router.query.family === "string" ? router.query.family : "";
@@ -502,7 +1228,7 @@ export default function BuilderProductLibraryPage() {
     if (category) setSelectedCategoryKey(category);
     if (family) setSelectedFamilyKey(family);
     setRouteHydrated(true);
-  }, [routeHydrated, router.isReady, router.query.area, router.query.category, router.query.family]);
+  }, [routeHydrated, router.isReady, routeArea, routeCategory, routeFamily]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -526,12 +1252,64 @@ export default function BuilderProductLibraryPage() {
 
   useEffect(() => {
     if (!routeHydrated || !router.isReady) return;
+    if (applianceMode || catalogueSectionKey || selectedRoomKey || browseMode === "all") return;
+    const hasLegacyRouteState = Boolean(
+      selectedAreaKey
+      || selectedCategoryKey
+      || selectedFamilyKey
+      || router.query.area
+      || router.query.category
+      || router.query.family
+    );
+    if (!hasLegacyRouteState) return;
     const query = {};
     if (selectedAreaKey) query.area = selectedAreaKey;
     if (selectedCategoryKey) query.category = selectedCategoryKey;
     if (selectedFamilyKey) query.family = selectedFamilyKey;
-    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  }, [routeHydrated, router, selectedAreaKey, selectedCategoryKey, selectedFamilyKey]);
+    const nextQuery = productLibraryRouteQuery(query);
+    const currentQuery = router.query || {};
+    const keys = new Set([...Object.keys(currentQuery), ...Object.keys(nextQuery)]);
+    const changed = Array.from(keys).some((key) => String(currentQuery[key] || "") !== String(nextQuery[key] || ""));
+    if (changed) replaceProductLibraryRoute(query);
+  }, [
+    applianceMode,
+    browseMode,
+    catalogueSectionKey,
+    routeHydrated,
+    router.isReady,
+    routeArea,
+    routeCategory,
+    routeFamily,
+    routePage,
+    selectedAreaKey,
+    selectedCategoryKey,
+    selectedFamilyKey,
+    selectedRoomKey,
+  ]);
+
+  useEffect(() => {
+    if (!routeHydrated || !router.isReady) return;
+    if (selectedRoomCategory?.key !== "cabinet-doors-panels") return;
+    if (!selectedRoom || !masterProducts.length || !cabinetDoorPanelProducts.length) return;
+    if (cabinetryBrandName && !cabinetrySelectedBrand) {
+      replaceProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategoryKey });
+      return;
+    }
+    if (cabinetryBrandName && cabinetryRangeName && !cabinetrySelectedRange) {
+      replaceProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, cabinetryBrand: cabinetryBrandName });
+    }
+  }, [
+    cabinetDoorPanelProducts.length,
+    cabinetryBrandName,
+    cabinetryRangeName,
+    Boolean(cabinetrySelectedBrand),
+    Boolean(cabinetrySelectedRange),
+    masterProducts.length,
+    routeHydrated,
+    router.isReady,
+    selectedRoom?.key,
+    selectedRoomCategory?.key,
+  ]);
 
   useEffect(() => {
     setSelectedSupplierName("");
@@ -569,8 +1347,52 @@ export default function BuilderProductLibraryPage() {
   }
 
   function goBack() {
+    if (furniturePicker.enabled) { furniturePicker.returnToDoor(); return; }
     setError("");
     setSuccess("");
+    if (applianceMode) {
+      if (applianceProductId) {
+        const query = { catalogue: "appliances" };
+        if (applianceFamilyKey) query.applianceFamily = applianceFamilyKey;
+        if (applianceBrandName) query.applianceBrand = applianceBrandName;
+        pushProductLibraryRoute(query);
+        return;
+      }
+      if (applianceBrandName) {
+        pushProductLibraryRoute({ catalogue: "appliances" });
+        return;
+      }
+      if (applianceFamilyKey) {
+        pushProductLibraryRoute({ catalogue: "appliances" });
+        return;
+      }
+      pushProductLibraryRoute({});
+      return;
+    }
+    if (selectedRoomProductId && selectedRoom && selectedRoomCategory) {
+      pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key });
+      return;
+    }
+    if (selectedRoomCategory?.key === "cabinet-doors-panels" && cabinetryRangeName && selectedRoom) {
+      pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, cabinetryBrand: cabinetryBrandName });
+      return;
+    }
+    if (selectedRoomCategory?.key === "cabinet-doors-panels" && cabinetryBrandName && selectedRoom) {
+      pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key });
+      return;
+    }
+    if (selectedRoomCategory && selectedRoom) {
+      pushProductLibraryRoute({ room: selectedRoom.key });
+      return;
+    }
+    if (selectedRoom) {
+      pushProductLibraryRoute({});
+      return;
+    }
+    if (selectedCatalogueSection) {
+      pushProductLibraryRoute({});
+      return;
+    }
     if (selectedFamilyKey) {
       setSelectedFamilyKey("");
       setSelectedSupplierName("");
@@ -585,7 +1407,7 @@ export default function BuilderProductLibraryPage() {
       setSelectedAreaKey("");
       return;
     }
-    router.push("/modules/builders");
+    safeSelectionNavigate(router, embeddedInEstimateBuilder ? "/modules/estimate-builder" : "/modules/builders");
   }
 
   function openFamily(familyKey) {
@@ -596,6 +1418,7 @@ export default function BuilderProductLibraryPage() {
   }
 
   function openArea(areaKey) {
+    replaceProductLibraryRoute({});
     setSelectedAreaKey(areaKey);
     setSelectedCategoryKey("");
     setSelectedFamilyKey("");
@@ -611,6 +1434,137 @@ export default function BuilderProductLibraryPage() {
     setSelectedRangeName("");
     setSelectedProductCode("");
     setAdminOpen(false);
+  }
+
+  function openCatalogueSection(sectionKey) {
+    setSelectedAreaKey("");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+    pushProductLibraryRoute({ catalogueSection: sectionKey });
+  }
+
+  function openBrowseAllProducts() {
+    setSelectedAreaKey("");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+    pushProductLibraryRoute({ browse: "all" });
+  }
+
+  function openRoom(roomKey) {
+    setSelectedAreaKey("");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+    pushProductLibraryRoute({ room: roomKey });
+  }
+
+  function openRoomCategory(categoryKey) {
+    if (!selectedRoom) return;
+    setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+    pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: furniturePicker.enabled ? selectedRoomCategoryKey : categoryKey });
+  }
+
+  function openCabinetryBrand(brandName) {
+    if (!selectedRoom || selectedRoomCategory?.key !== "cabinet-doors-panels") return;
+    pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, cabinetryBrand: brandName });
+  }
+
+  function openCabinetryRange(rangeName) {
+    if (!selectedRoom || selectedRoomCategory?.key !== "cabinet-doors-panels" || !cabinetrySelectedBrand) return;
+    pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, cabinetryBrand: cabinetrySelectedBrand.name, cabinetryRange: rangeName });
+  }
+
+  function openRoomProduct(productId) {
+    if (!selectedRoom || !selectedRoomCategory) return;
+    pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategoryKey, roomProduct: productId });
+  }
+
+  function openApplianceCatalogue(next = {}) {
+    setSelectedAreaKey("");
+    setSelectedCategoryKey("");
+    setSelectedFamilyKey("");
+    setSelectedSupplierName("");
+    setSelectedRangeName("");
+    setSelectedProductCode("");
+    setAdminOpen(false);
+    const query = { catalogue: "appliances" };
+    if (next.applianceFamily) query.applianceFamily = next.applianceFamily;
+    if (next.applianceBrand) query.applianceBrand = next.applianceBrand;
+    if (next.applianceProduct) query.applianceProduct = next.applianceProduct;
+    pushProductLibraryRoute(query);
+  }
+
+  function clearApplianceFilters() {
+    setApplianceFilters({ search: "", productType: "", width: "", fuel: "", install: "", finish: "", status: "", verification: "", selectable: "", sourcePlatform: "", tenantId: "", sort: "name" });
+  }
+
+  function selectApplianceRecord(record) {
+    if (!record?.productId) return;
+    const selectionKey = `appliances:${record.recordType === "appliance-pack" ? "package" : record.familyId}:${record.productId}`;
+    const selectedAt = new Date().toISOString();
+    const nextSelection = {
+      productId: record.productId,
+      stableProductId: record.stableProductId || record.productId,
+      recordType: record.recordType || "appliance-product",
+      familyId: record.familyId,
+      familyName: record.familyName,
+      brand: record.brand,
+      model: record.model,
+      productName: record.name,
+      description: record.description,
+      specifications: record.specificationSummary || {},
+      dimensions: {
+        width: record.width || "",
+        widthMm: record.widthMm ?? null,
+        height: record.height || "",
+        heightMm: record.heightMm ?? null,
+        depth: record.depth || "",
+        depthMm: record.depthMm ?? null,
+      },
+      image: record.image || "",
+      imageFallbackLabel: record.image ? "" : record.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL,
+      selectedPrice: record.price,
+      priceStatus: record.priceStatus,
+      allowance: 0,
+      variation: 0,
+      catalogueVersion: record.schemaVersion || "product-library.appliance-catalogue.v1",
+      selectedAt,
+      components: record.recordType === "appliance-pack" ? (record.components || []).map((component) => ({
+        productId: component.productId,
+        familyId: component.familyId,
+        brand: component.brand,
+        model: component.model,
+        name: component.name,
+        image: component.image || "",
+        price: component.price ?? null,
+      })) : [],
+    };
+    const currentSelections = productLibrarySelectionsFromJobFile(jobFile);
+    const nextSelections = { ...currentSelections, [selectionKey]: nextSelection };
+    persistJobFile({
+      ...jobFile,
+      [PRODUCT_LIBRARY_SELECTIONS_KEY]: nextSelections,
+      workbook: {
+        ...(jobFile.workbook || {}),
+        [PRODUCT_LIBRARY_SELECTIONS_KEY]: nextSelections,
+      },
+    });
+    setSuccess(`${record.name || record.model || "Appliance"} selected from Product Library.`);
   }
 
   function countProductsForFamily(familyItem) {
@@ -629,12 +1583,43 @@ export default function BuilderProductLibraryPage() {
       .reduce((total, familyItem) => total + countProductsForFamily(familyItem), 0);
   }
 
+  function countProductsForSection(sectionItem) {
+    if (sectionItem.key === "appliances") return applianceCatalogueStats.platformMaster;
+    return masterProducts
+      .filter((product) => productBelongsToCatalogueSection(product, sectionItem))
+      .filter((product) => product.active !== false && product.archived !== true)
+      .length;
+  }
+
+  function countProductsForRoom(roomItem) {
+    return masterProducts
+      .filter((product) => productBelongsToRoom(product, roomItem.key))
+      .filter((product) => product.active !== false && product.archived !== true)
+      .length;
+  }
+
+  function countProductsForRoomCategory(categoryItem, roomItem = selectedRoom) {
+    return masterProducts
+      .filter((product) => productBelongsToRoomCategory(product, categoryItem))
+      .filter((product) => !roomItem || productBelongsToRoom(product, roomItem.key))
+      .filter((product) => product.active !== false && product.archived !== true)
+      .length;
+  }
+
+  function reviewCountForSection(sectionItem) {
+    if (sectionItem.key === "appliances") return applianceCatalogueStats.requiringVerification;
+    return masterProducts
+      .filter((product) => productBelongsToCatalogueSection(product, sectionItem))
+      .filter((product) => ["missing", "review_required", "pending", "unverified"].includes(product.imageStatus) || !product.description)
+      .length;
+  }
+
   function statusForCount(count) {
     return count ? "Ready" : "Needs products";
   }
 
   function exportTemplateCsv() {
-    downloadCsv("MASTER-PRODUCT-CATALOGUE-IMPORT-TEMPLATE.csv", [PRODUCT_LIBRARY_IMPORT_COLUMNS]);
+    downloadCsv("PRODUCT-LIBRARY-CATEGORY-IMPORT-TEMPLATE.csv", productLibraryExchangeTemplateRows());
   }
 
   // Builder edits persist as organisation-specific products and per-product
@@ -660,26 +1645,40 @@ export default function BuilderProductLibraryPage() {
     });
     setMasterProducts(getMasterProducts());
     setBuilderEnablements(getBuilderEnablementRefs(workspaceId));
+    setCatalogueRevision((current) => current + 1);
   }
 
   function handleMasterImportPreview(event) {
     const file = event.target.files?.[0];
     if (!file) return;
+    const fileName = file.name || "";
+    const lowerName = fileName.toLowerCase();
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const format = file.name.toLowerCase().endsWith(".json") ? "json" : "csv";
-        const records = parseMasterProductCatalogueImport(reader.result || "", { format });
+        let format = "csv";
+        let records = [];
+        if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) {
+          format = "xlsx";
+          const XLSX = await import("xlsx");
+          const workbook = XLSX.read(reader.result, { type: "array" });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          records = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+        } else {
+          format = lowerName.endsWith(".json") ? "json" : "csv";
+          records = parseMasterProductCatalogueImport(reader.result || "", { format });
+        }
         const preview = previewMasterProductImport(records, masterProducts);
-        setMasterImportPreview({ fileName: file.name, format, records, preview });
+        setMasterImportPreview({ fileName, format, records, preview });
         setMasterCatalogueOpen(true);
-        setSuccess(`Previewed ${preview.totalProducts} master product${preview.totalProducts === 1 ? "" : "s"} from ${file.name}.`);
+        setSuccess(`Previewed ${preview.totalProducts} master product${preview.totalProducts === 1 ? "" : "s"} from ${fileName}.`);
       } catch (previewError) {
         setError(previewError.message || "Could not parse that catalogue import.");
       }
     };
     reader.onerror = () => setError("Could not read that catalogue import file.");
-    reader.readAsText(file);
+    if (lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls")) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
     event.target.value = "";
   }
 
@@ -697,6 +1696,165 @@ export default function BuilderProductLibraryPage() {
 
   function exportMasterJson() {
     downloadText("master-product-catalogue-export.json", exportMasterCatalogueJson(masterProducts), "application/json;charset=utf-8");
+  }
+
+  async function exportProductLibraryPackage() {
+    try {
+      setSaving(true);
+      const includeImages = exportOptions.mode !== "csv";
+      const scope = {
+        scope: exportOptions.scope,
+        sectionId: exportOptions.sectionId,
+        sectionName: PRODUCT_LIBRARY_CATALOGUE_SECTIONS.find((section) => section.key === exportOptions.sectionId)?.displayName || "",
+        categoryId: exportOptions.categoryId,
+        categoryName: PRODUCT_LIBRARY_ROOM_CATEGORIES.find((category) => category.key === exportOptions.categoryId)?.name || "",
+        brand: exportOptions.brand,
+        range: exportOptions.range,
+        activeFilters: masterFilters,
+      };
+      const result = await buildProductLibraryExportPackage({
+        products: exportableProducts,
+        scope,
+        tenantId: workspaceId || "",
+        builderId: workspaceId || "",
+        includeImages,
+      });
+      if (result.blob) downloadBlob(result.fileName, result.blob);
+      else downloadText(result.fileName, result.csv, result.contentType);
+      setSuccess(`Exported ${exportableProducts.length} Product Library product${exportableProducts.length === 1 ? "" : "s"} as ${includeImages ? "CSV + images ZIP" : "CSV"}. Missing images: ${result.manifest.totals.missingImages}.`);
+      setExportDialogOpen(false);
+    } catch (exportError) {
+      setError(exportError.message || "Could not export that Product Library package.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function downloadProducts(productsToDownload = [], { includeImages = false, label = "selected", fileName = "" } = {}) {
+    if (!productsToDownload.length) {
+      setError("Select at least one Product Library item before downloading.");
+      return;
+    }
+    try {
+      setSaving(true);
+      const result = await buildProductLibraryExportPackage({
+        products: productsToDownload,
+        scope: {
+          scope: label,
+          sectionId: masterFilters.section,
+          categoryId: masterFilters.category,
+          brand: masterFilters.brand,
+          range: masterFilters.range,
+          activeFilters: masterFilters,
+        },
+        tenantId: workspaceId || "",
+        builderId: workspaceId || "",
+        includeImages,
+      });
+      const outputFileName = fileName || result.fileName;
+      if (result.blob) downloadBlob(outputFileName, result.blob);
+      else downloadText(outputFileName, result.csv, result.contentType);
+      setSuccess(`Downloaded ${productsToDownload.length} Product Library item${productsToDownload.length === 1 ? "" : "s"} as ${includeImages ? "CSV + images ZIP" : "CSV"}.`);
+    } catch (downloadError) {
+      setError(downloadError.message || "Could not download those Product Library items.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleCatalogueItemSelection(product) {
+    const key = catalogueProductSelectionKey(product);
+    if (!key) return;
+    setSelectedCatalogueItemIds((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  }
+
+  function selectAllFilteredCatalogueItems() {
+    const visibleKeys = manageableProducts.map(catalogueProductSelectionKey).filter(Boolean);
+    setSelectedCatalogueItemIds(Array.from(new Set(visibleKeys)));
+  }
+
+  function selectAllVisibleCabinetryItems() {
+    const visibleKeys = cabinetryVisibleProducts.map(catalogueProductSelectionKey).filter(Boolean);
+    setSelectedCatalogueItemIds(Array.from(new Set(visibleKeys)));
+  }
+
+  function selectAllVisibleCatalogueGroupItems() {
+    const visibleKeys = catalogueGroupVisibleProducts.map(catalogueProductSelectionKey).filter(Boolean);
+    setSelectedCatalogueItemIds(Array.from(new Set(visibleKeys)));
+  }
+
+  function setCabinetrySubcategory(subcategoryKey) {
+    pushProductLibraryRoute({ catalogueSection: CABINETRY_SECTION_KEY, cabinetrySubcategory: subcategoryKey === "all" ? "" : subcategoryKey });
+    setSelectedCatalogueItemIds([]);
+  }
+
+  function setCatalogueSubcategory(subcategoryKey) {
+    if (!selectedCatalogueSection) return;
+    pushProductLibraryRoute({ catalogueSection: selectedCatalogueSection.key, catalogueSubcategory: subcategoryKey === "all" ? "" : subcategoryKey });
+    setSelectedCatalogueItemIds([]);
+  }
+
+  function clearCatalogueItemSelection() {
+    setSelectedCatalogueItemIds([]);
+  }
+
+  function openManageCatalogueItems(filterPatch = {}) {
+    setMasterCatalogueOpen(true);
+    setMasterFilters((current) => ({
+      ...current,
+      search: "",
+      ...filterPatch,
+    }));
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.querySelector('[data-testid="manage-catalogue-items"]')?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
+  async function handlePackageImportPreview(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setSaving(true);
+      const parsed = await parseProductLibraryPackageFile(file);
+      const preview = previewProductLibraryPackageImport(parsed, managementCatalogueProducts, { tenantId: workspaceId || "", builderId: workspaceId || "", importMode: packageImportMode });
+      setPackageImportPreview(preview);
+      setMasterImportPreview(null);
+      setMasterCatalogueOpen(true);
+      setSuccess(`Previewed ${preview.totalProducts} Product Library package product${preview.totalProducts === 1 ? "" : "s"} from ${file.name}.`);
+    } catch (previewError) {
+      setError(previewError.message || "Could not parse that Product Library import package.");
+    } finally {
+      setSaving(false);
+      event.target.value = "";
+    }
+  }
+
+  function commitPackageImportPreview() {
+    if (!packageImportPreview) return;
+    const result = commitProductLibraryPackageImport(packageImportPreview, managementCatalogueProducts);
+    result.masterOverrides.forEach((row) => {
+      const price = row.product.clientPrice ?? row.product.normalizedUnitPrice ?? row.product.rrp;
+      const patch = {
+        enabled: row.product.active !== false && row.product.archived !== true,
+        customFields: {
+          description: row.product.description || "",
+          model: row.product.model || "",
+          productName: row.product.productName || "",
+          clientSelectable: row.product.attributes?.clientSelectable !== false,
+          quotationEnabled: row.product.attributes?.quotationEnabled !== false,
+          ...(row.product.attributes?.internalAreasCatalogue ? {productAttributes:row.product.attributes,range:row.product.range,finish:row.product.finish,size:row.product.size,profile:row.product.profile,priceUnit:row.product.priceUnit,priceStatus:row.product.priceStatus,imageStatus:row.product.imageStatus} : {}),
+        },
+      };
+      if (price != null && Number.isFinite(Number(price))) patch.builderPrice = Number(price);
+      if (row.product.primaryImageUrl) patch.imageOverride = row.product.primaryImageUrl;
+      updateBuilderProductOverride(workspaceId || "", row.existingProduct?.productCode || row.product.productCode, patch);
+    });
+    persistMasterCatalogue(result.products);
+    setPackageImportPreview(null);
+    setSelectedCatalogueItemIds([]);
+    setSuccess(`Product Library import committed: ${result.created.length} builder-private products created, ${result.updated.length} updated, ${result.masterOverrides.length} matching master products updated by builder override, ${result.skipped.length} unchanged, ${result.invalid.length} invalid skipped. Client Selections and Quotation Builder will read through getEffectiveProductCatalogue.`);
   }
 
   function toggleBuilderProduct(masterProduct) {
@@ -1118,7 +2276,7 @@ export default function BuilderProductLibraryPage() {
     setSelectedRangeName("");
     setSelectedProductCode("");
     setSelectedVariantIndex(0);
-    router.push("/modules/builders");
+    safeSelectionNavigate(router, "/modules/builders");
   }
 
   return (
@@ -1127,6 +2285,8 @@ export default function BuilderProductLibraryPage() {
         <title>Product Library | Gr8 Result</title>
       </Head>
       <main className="page">
+        {furniturePicker.panel}
+        {furniturePicker.enabled?<div aria-label="Door furniture brands" style={{display:'flex',gap:12,flexWrap:'wrap'}}>{['Lockwood','Gainsborough','Lemaar','Zanda'].map(brand=><button type="button" key={brand} data-testid={`furniture-brand-${brand}`} onClick={()=>setMasterFilters(current=>({...current,brand:current.brand===brand?'':brand}))}>{brand}</button>)}</div>:null}
         <header className="standard-banner">
           <button type="button" className="back-button" onClick={goBack} aria-label="Back">
             <ArrowLeft size={18} />
@@ -1136,10 +2296,10 @@ export default function BuilderProductLibraryPage() {
             <Package size={28} />
           </div>
           <div className="banner-copy">
-            <h1>{bannerTitle}</h1>
-            <p>{bannerSubtitle}</p>
+            <h1>{furniturePicker.enabled ? "Exterior Door Furniture" : bannerTitle}</h1>
+            <p>{furniturePicker.enabled ? "Choose hardware for the active job and entry door." : bannerSubtitle}</p>
           </div>
-          <div className="banner-meta">
+          <div className="banner-meta" style={furniturePicker.enabled ? {display:"none"} : undefined}>
             <span>{workspaceLoading ? "Loading organisation..." : activeWorkspace?.name || "No organisation selected"}</span>
             <span>{loading ? "Loading..." : success || `${Object.keys(selections).length} selection${Object.keys(selections).length === 1 ? "" : "s"} in ${jobFileName}`}</span>
             <div className="file-controls">
@@ -1158,7 +2318,7 @@ export default function BuilderProductLibraryPage() {
         {error ? <div className="alert error">{error}</div> : null}
         {success ? <div className="alert success">{success}</div> : null}
 
-        <section className="master-catalogue" data-admin-surface="master-catalogue">
+        <section className="master-catalogue" data-admin-surface="master-catalogue" style={furniturePicker.enabled ? {display:"none"} : undefined}>
           <div className="section-heading">
             <span>Product Library Management</span>
             <strong>Master Catalogue</strong>
@@ -1167,16 +2327,65 @@ export default function BuilderProductLibraryPage() {
             <button type="button" onClick={() => setMasterCatalogueOpen((current) => !current)}><Boxes size={16} /> Master Catalogue</button>
             <label className="file-button">
               <Upload size={16} />
-              Import Products
-              <input type="file" accept=".csv,text/csv,.json,application/json" onChange={handleMasterImportPreview} />
+              Import Package
+              <input data-testid="product-library-import-catalogue-input" type="file" accept=".zip,application/zip,.csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,.json,application/json" onChange={handlePackageImportPreview} />
             </label>
+            <select aria-label="Product Library import mode" value={packageImportMode} onChange={(event) => setPackageImportMode(event.target.value)}>
+              <option value="update">Update matching products</option>
+              <option value="add">Add as new products</option>
+            </select>
             <button type="button" onClick={exportTemplateCsv}><FileUp size={16} /> Import Template</button>
-            <button type="button" onClick={exportMasterCsv}><FileDown size={16} /> Export Catalogue CSV</button>
+            <button type="button" onClick={() => setExportDialogOpen((current) => !current)}><FileDown size={16} /> Export Package</button>
             <button type="button" onClick={exportMasterJson}><FileDown size={16} /> Export Catalogue JSON</button>
             <button type="button" onClick={() => setSuccess(`Add Product uses the canonical schema from ${MASTER_PRODUCT_CATALOGUE_IMPORT_TEMPLATE}.`)}><Plus size={16} /> Add Product</button>
           </div>
           {masterCatalogueOpen ? (
             <div className="master-body">
+              {exportDialogOpen ? (
+                <div className="import-preview" data-testid="product-library-export-dialog" data-export-preview="product-library-package">
+                  <div className="panel-title">
+                    <FileDown size={18} />
+                    <strong>Export Product Library Package</strong>
+                  </div>
+                  <div className="master-filters">
+                    <select value={exportOptions.scope} onChange={(event) => setExportOptions((current) => ({ ...current, scope: event.target.value }))}>
+                      <option value="current-filtered">Current filtered results</option>
+                      <option value="all">Entire effective catalogue</option>
+                      <option value="builder-private">Builder-private products</option>
+                      <option value="missing-images">Missing images</option>
+                      <option value="missing-prices">Missing prices</option>
+                      <option value="inactive">Inactive/discontinued</option>
+                    </select>
+                    <select value={exportOptions.sectionId} onChange={(event) => setExportOptions((current) => ({ ...current, sectionId: event.target.value }))}>
+                      <option value="">Any section/category</option>
+                      {PRODUCT_LIBRARY_CATALOGUE_SECTIONS.map((section) => <option key={section.key} value={section.key}>{section.displayName}</option>)}
+                    </select>
+                    <select value={exportOptions.categoryId} onChange={(event) => setExportOptions((current) => ({ ...current, categoryId: event.target.value }))}>
+                      <option value="">Any product type</option>
+                      {PRODUCT_LIBRARY_ROOM_CATEGORIES.map((category) => <option key={category.key} value={category.key}>{category.name}</option>)}
+                    </select>
+                    <select value={exportOptions.brand} onChange={(event) => setExportOptions((current) => ({ ...current, brand: event.target.value }))}>
+                      <option value="">Any brand</option>
+                      {masterBrands.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                    <select value={exportOptions.range} onChange={(event) => setExportOptions((current) => ({ ...current, range: event.target.value }))}>
+                      <option value="">Any range</option>
+                      {masterRanges.map((value) => <option key={value} value={value}>{value}</option>)}
+                    </select>
+                    <select value={exportOptions.mode} onChange={(event) => setExportOptions((current) => ({ ...current, mode: event.target.value }))}>
+                      <option value="zip">CSV + Images ZIP</option>
+                      <option value="csv">CSV only</option>
+                    </select>
+                  </div>
+                  <div className="master-summary">
+                    <span>Products: {exportableProducts.length}</span>
+                    <span>Platform/master: {exportableProducts.filter((product) => !product.isCustom && !product.organisationId && !product.builderId).length}</span>
+                    <span>Builder-private: {exportableProducts.filter((product) => product.isCustom || product.organisationId || product.builderId).length}</span>
+                    <span>Schema columns: {PRODUCT_LIBRARY_EXCHANGE_COLUMNS.length}</span>
+                  </div>
+                  <button type="button" onClick={exportProductLibraryPackage} disabled={saving || !exportableProducts.length}><Archive size={16} /> Download</button>
+                </div>
+              ) : null}
               <div className="roofing-admin-sections" data-roofing-admin="systems-profiles-colours-compatibility-builder-availability">
                 <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Roof Systems</button>
                 <button type="button" onClick={() => setMasterFilters((current) => ({ ...current, area: "exterior", family: "roofing" }))}>Profiles</button>
@@ -1191,9 +2400,14 @@ export default function BuilderProductLibraryPage() {
                   <option value="">Area</option>
                   {TOP_LEVEL_AREAS.map((area) => <option key={area.key} value={area.key}>{area.displayName}</option>)}
                 </select>
+                <select value={masterFilters.section} onChange={(event) => setMasterFilters((current) => ({ ...current, section: event.target.value }))}>
+                  <option value="">Section</option>
+                  {PRODUCT_LIBRARY_CATALOGUE_SECTIONS.map((section) => <option key={section.key} value={section.key}>{section.displayName}</option>)}
+                </select>
                 <select value={masterFilters.category} onChange={(event) => setMasterFilters((current) => ({ ...current, category: event.target.value }))}>
                   <option value="">Category</option>
                   {TAXONOMY_CATEGORY_DEFINITIONS.map((categoryItem) => <option key={categoryItem.key} value={categoryItem.key}>{categoryItem.category}</option>)}
+                  {PRODUCT_LIBRARY_ROOM_CATEGORIES.map((categoryItem) => <option key={categoryItem.key} value={categoryItem.key}>{categoryItem.name}</option>)}
                 </select>
                 <select value={masterFilters.family} onChange={(event) => setMasterFilters((current) => ({ ...current, family: event.target.value }))}>
                   <option value="">Product Family</option>
@@ -1215,6 +2429,10 @@ export default function BuilderProductLibraryPage() {
                   <option value="">Range</option>
                   {masterRanges.map((value) => <option key={value} value={value}>{value}</option>)}
                 </select>
+                <select value={masterFilters.room} onChange={(event) => setMasterFilters((current) => ({ ...current, room: event.target.value }))}>
+                  <option value="">Room</option>
+                  {PRODUCT_LIBRARY_ROOMS.map((room) => <option key={room.key} value={room.key}>{room.name}</option>)}
+                </select>
                 <select value={masterFilters.region} onChange={(event) => setMasterFilters((current) => ({ ...current, region: event.target.value }))}>
                   <option value="">Region</option>
                   {AUSTRALIAN_REGIONS.map((region) => <option key={region} value={region}>{region}</option>)}
@@ -1227,22 +2445,101 @@ export default function BuilderProductLibraryPage() {
                   <option value="">Price Status</option>
                   {MASTER_PRICE_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
                 </select>
+                <select value={masterFilters.ownership} onChange={(event) => setMasterFilters((current) => ({ ...current, ownership: event.target.value }))}>
+                  <option value="">Ownership</option>
+                  <option value="platform-master">Platform/master</option>
+                  <option value="builder-private">Builder-private</option>
+                </select>
+                <select value={masterFilters.clientSelectable} onChange={(event) => setMasterFilters((current) => ({ ...current, clientSelectable: event.target.value }))}>
+                  <option value="">Client selectable</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+                <select value={masterFilters.quotationEnabled} onChange={(event) => setMasterFilters((current) => ({ ...current, quotationEnabled: event.target.value }))}>
+                  <option value="">Quotation enabled</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
                 <select value={masterFilters.status} onChange={(event) => setMasterFilters((current) => ({ ...current, status: event.target.value }))}>
                   <option value="">Active/Discontinued</option>
                   <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
                   <option value="discontinued">Discontinued</option>
                 </select>
               </div>
 
               <div className="master-summary">
                 <span>Total: {masterProducts.length}</span>
-                <span>Filtered: {filteredMasterProducts.length}</span>
+                <span>Filtered: {manageableProducts.length}</span>
+                <span>Selected: {selectedCatalogueProducts.length}</span>
                 <span>Builder enabled: {builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled).length}</span>
                 <span data-client-selections-query-proof="enabled-compatible-products">Client Selections query proof: {selectableProof.length} enabled compatible product{selectableProof.length === 1 ? "" : "s"}</span>
               </div>
 
+              <div className="manage-catalogue-items" data-testid="manage-catalogue-items">
+                <div className="panel-title">
+                  <Boxes size={18} />
+                  <strong>Manage Catalogue Items</strong>
+                </div>
+                <div className="admin-actions catalogue-selection-actions">
+                  <button type="button" onClick={selectAllFilteredCatalogueItems} disabled={!manageableProducts.length}><Check size={16} /> Select All Visible</button>
+                  <button type="button" className="secondary" onClick={clearCatalogueItemSelection} disabled={!selectedCatalogueProducts.length}><X size={16} /> Clear Selection</button>
+                  <button type="button" onClick={() => downloadProducts(selectedCatalogueProducts, { includeImages: false, label: "selected" })} disabled={!selectedCatalogueProducts.length || saving}><FileDown size={16} /> Download Selected CSV</button>
+                  <button type="button" onClick={() => downloadProducts(manageableProducts, { includeImages: false, label: "current-filtered" })} disabled={!manageableProducts.length || saving}><FileDown size={16} /> Download Filtered Section CSV</button>
+                  <button type="button" onClick={() => downloadProducts(selectedCatalogueProducts, { includeImages: true, label: "selected" })} disabled={!selectedCatalogueProducts.length || saving}><Archive size={16} /> Download Selected + Images ZIP</button>
+                  <span>{selectedCatalogueProducts.length} selected from {manageableProducts.length} filtered</span>
+                </div>
+                <div className="catalogue-items-table" role="table" aria-label="Manage catalogue items">
+                  <div className="catalogue-items-head" role="row">
+                    <span role="columnheader">Select</span>
+                    <span role="columnheader">Thumbnail</span>
+                    <span role="columnheader">Product name</span>
+                    <span role="columnheader">Brand</span>
+                    <span role="columnheader">Range</span>
+                    <span role="columnheader">Model / SKU</span>
+                    <span role="columnheader">Product Library category</span>
+                    <span role="columnheader">Quotation Builder section</span>
+                    <span role="columnheader">Price</span>
+                    <span role="columnheader">Unit</span>
+                    <span role="columnheader">Status</span>
+                    <span role="columnheader">Client Selections</span>
+                    <span role="columnheader">Quotation Builder</span>
+                  </div>
+                  {manageableProducts.length ? manageableProducts.map((product) => {
+                    const key = catalogueProductSelectionKey(product);
+                    const checked = selectedCatalogueItemSet.has(key);
+                    const familyItem = familyByKey(product.familyKey);
+                    return (
+                      <div key={key} className="catalogue-items-row" role="row" data-catalogue-product-id={key}>
+                        <label className="table-check">
+                          <input type="checkbox" checked={checked} onChange={() => toggleCatalogueItemSelection(product)} />
+                          <span className="sr-only">Select {product.productName}</span>
+                        </label>
+                        <span className="catalogue-thumb"><ProductLibraryProductImage product={product} familyItem={familyItem} /></span>
+                        <strong>{product.productName || "Unnamed product"}</strong>
+                        <span>{product.brand || product.manufacturer || product.supplier || "No brand"}</span>
+                        <span>{product.range || product.collection || "No range"}</span>
+                        <span>{[product.model, product.sku, product.productCode].filter(Boolean).join(" / ") || "No model"}</span>
+                        <span>{productCategoryLabel(product)}</span>
+                        <span>{quotationSectionLabel(product)}</span>
+                        <span>{productPriceLabel(product)}</span>
+                        <span>{productUnitLabel(product)}</span>
+                        <span>{product.active === false || product.archived ? "Inactive" : product.enabled === false ? "Disabled" : product.discontinued ? "Discontinued" : "Active"}</span>
+                        <span>{productEnabledLabel(product, "clientSelectable")}</span>
+                        <span>{productEnabledLabel(product, "quotationEnabled")}</span>
+                      </div>
+                    );
+                  }) : (
+                    <div className="empty-state compact">
+                      <strong>No catalogue items match the current filters.</strong>
+                      <span>Adjust section, product type, brand, range or active status to manage another set.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {masterImportPreview ? (
-                <div className="import-preview" data-import-preview="master-catalogue">
+                <div className="import-preview" data-testid="product-library-import-preview" data-import-preview="master-catalogue">
                   <div className="panel-title">
                     <FileUp size={18} />
                     <strong>Import Preview: {masterImportPreview.fileName}</strong>
@@ -1284,6 +2581,47 @@ export default function BuilderProductLibraryPage() {
                 </div>
               ) : null}
 
+              {packageImportPreview ? (
+                <div className="import-preview" data-testid="product-library-package-import-preview" data-import-preview="product-library-package">
+                  <div className="panel-title">
+                    <Archive size={18} />
+                    <strong>Package Import Preview: {packageImportPreview.fileName}</strong>
+                  </div>
+                  <p>
+                    Total products: {packageImportPreview.totalProducts}.{" "}
+                    New products: {packageImportPreview.newProducts}.{" "}
+                    Updated products: {packageImportPreview.updatedProducts}.{" "}
+                    Master overrides: {packageImportPreview.masterOverrideProducts}.{" "}
+                    Unchanged products: {packageImportPreview.unchangedProducts}.{" "}
+                    Invalid rows: {packageImportPreview.invalidProducts}.{" "}
+                    Duplicate IDs/models: {packageImportPreview.duplicateIdsModels}.{" "}
+                    Missing prices: {packageImportPreview.missingPrices}.{" "}
+                    Missing images: {packageImportPreview.missingImages}.
+                  </p>
+                  {packageImportPreview.manifest ? (
+                    <p>
+                      Manifest schema: {packageImportPreview.manifest.schemaVersion || "unknown"}.{" "}
+                      Exported: {packageImportPreview.manifest.exportDate || "unknown"}.{" "}
+                      Source builder: {packageImportPreview.manifest.builderId || "not supplied"}.
+                    </p>
+                  ) : null}
+                  <div className="preview-list">
+                    {packageImportPreview.rows.slice(0, 16).map((row) => (
+                      <div key={`${row.rowNumber}-${row.product.productCode || row.product.productId}`} className={row.valid ? "preview-row" : "preview-row error"}>
+                        {row.product.primaryImageUrl ? <img src={row.product.primaryImageUrl} alt={`${row.product.productName || "Product"} preview`} /> : <span className="preview-image-empty">No image</span>}
+                        <strong>Row/Product {row.rowNumber}</strong>
+                        <span>
+                          {row.product.productName || row.product.productCode || "Unnamed product"}
+                          <small>{row.product.brand || "No brand"} / {row.product.familyKey || "No family"} / {row.action}</small>
+                        </span>
+                        <small>{row.issues.length ? row.issues.map((issue) => `${issue.field}: ${issue.problem}`).join("; ") : "Ready to commit to builder-private Product Library"}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" onClick={commitPackageImportPreview} disabled={saving || !packageImportPreview.validProducts}><Upload size={16} /> Commit Valid Rows</button>
+                </div>
+              ) : null}
+
               <div className="master-table" data-builder-catalogue="reference-layer">
                 {filteredMasterProducts.length ? filteredMasterProducts.slice(0, 24).map((product) => {
                   const enabled = builderEnablements.some((item) => item.organisationId === workspaceId && item.masterProductCode === product.productCode && item.enabled);
@@ -1308,22 +2646,377 @@ export default function BuilderProductLibraryPage() {
           ) : null}
         </section>
 
-        {!selectedArea ? (
-          <section className="purpose">
+        {applianceMode ? (
+          <section className="appliance-catalogue" data-testid="product-library-appliance-catalogue">
             <div className="section-heading">
-              <span>Catalogue Areas</span>
-              <strong>Choose one area</strong>
+              <span>Appliances</span>
+              <strong>{applianceBrandName ? `${applianceBrandName} Catalogue` : "Browse Appliance Brands"}</strong>
             </div>
-            <div className="tile-grid area-grid">
-              {PRODUCT_LIBRARY_HOME_AREAS.map((area) => {
-                const count = countProductsForArea(area);
+            <div className="appliance-admin-bar">
+              <span>{applianceCatalogueStats.platformMaster} products</span>
+              <span>{applianceCatalogueStats.active} active records</span>
+              <span>{applianceCatalogueStats.clientSelectable} client-selectable</span>
+              <span>{applianceCatalogueStats.legacyCompatible} legacy quotation-compatible</span>
+              <span>{applianceCatalogueStats.requiringVerification} requiring verification</span>
+              <button type="button" onClick={() => setApplianceImportInfoOpen((current) => !current)}><Upload size={16} /> Import Product Catalogue CSV</button>
+            </div>
+            {applianceImportInfoOpen ? (
+              <div className="import-preview" data-testid="appliance-import-placeholder">
+                <div className="panel-title">
+                  <FileUp size={18} />
+                  <strong>Import Product Catalogue CSV</strong>
+                </div>
+                <p>Checkpoint 4 will preview and validate appliance CSV imports into the canonical Product Library schema. This checkpoint only exposes the placeholder action.</p>
+              </div>
+            ) : null}
+
+            <div className="master-filters appliance-filters">
+              <input value={applianceFilters.search} onChange={(event) => setApplianceFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search model, name, family, brand, width, fuel, install, finish" />
+              <select value={applianceFilters.productType || applianceFamilyKey} onChange={(event) => {
+                const nextType = event.target.value;
+                setApplianceFilters((current) => ({ ...current, productType: nextType }));
+                if (nextType) openApplianceCatalogue({ applianceBrand: applianceBrandName, applianceFamily: nextType });
+              }}>
+                <option value="">All product types</option>
+                {applianceFamilies.map((family) => <option key={family.familyId} value={family.familyId}>{family.name}</option>)}
+              </select>
+              <select value={applianceFilters.width} onChange={(event) => setApplianceFilters((current) => ({ ...current, width: event.target.value }))}>
+                <option value="">All widths</option>
+                {applianceFilterOptions.widths.map((width) => <option key={width} value={width}>{width}</option>)}
+              </select>
+              <select value={applianceFilters.fuel} onChange={(event) => setApplianceFilters((current) => ({ ...current, fuel: event.target.value }))}>
+                <option value="">All fuel/config</option>
+                {applianceFilterOptions.fuels.map((fuel) => <option key={fuel} value={fuel}>{fuel}</option>)}
+              </select>
+              <select value={applianceFilters.install} onChange={(event) => setApplianceFilters((current) => ({ ...current, install: event.target.value }))}>
+                <option value="">All install types</option>
+                {applianceFilterOptions.installs.map((install) => <option key={install} value={install}>{install}</option>)}
+              </select>
+              <select value={applianceFilters.finish} onChange={(event) => setApplianceFilters((current) => ({ ...current, finish: event.target.value }))}>
+                <option value="">All finishes</option>
+                {applianceFilterOptions.finishes.map((finish) => <option key={finish} value={finish}>{finish}</option>)}
+              </select>
+              <select value={applianceFilters.status} onChange={(event) => setApplianceFilters((current) => ({ ...current, status: event.target.value }))}>
+                <option value="">Eligibility Status</option>
+                {APPLIANCE_ELIGIBILITY_STATES.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+              <select value={applianceFilters.verification} onChange={(event) => setApplianceFilters((current) => ({ ...current, verification: event.target.value }))}>
+                <option value="">Verification</option>
+                {applianceFilterOptions.verifications.map((status) => <option key={status} value={status}>{status}</option>)}
+              </select>
+              <select value={applianceFilters.selectable} onChange={(event) => setApplianceFilters((current) => ({ ...current, selectable: event.target.value }))}>
+                <option value="">Selectable</option>
+                <option value="client-selectable">Client-selectable</option>
+                <option value="not-client-selectable">Not client-selectable</option>
+              </select>
+              <select value={applianceFilters.sourcePlatform} onChange={(event) => setApplianceFilters((current) => ({ ...current, sourcePlatform: event.target.value }))}>
+                <option value="">Source</option>
+                <option value="platform-master">Platform master</option>
+                <option value="tenant">Tenant-specific</option>
+              </select>
+              <input value={applianceFilters.tenantId} onChange={(event) => setApplianceFilters((current) => ({ ...current, tenantId: event.target.value }))} placeholder="Tenant ID" />
+              <select value={applianceFilters.sort} onChange={(event) => setApplianceFilters((current) => ({ ...current, sort: event.target.value }))}>
+                <option value="name">Sort by name</option>
+                <option value="price-asc">Price low to high</option>
+                <option value="price-desc">Price high to low</option>
+              </select>
+              <button type="button" onClick={clearApplianceFilters}>Clear all</button>
+            </div>
+
+            <div className="catalogue-breadcrumb">
+              <button type="button" onClick={() => openApplianceCatalogue()}>Appliances</button>
+              {applianceBrandName ? <button type="button" onClick={() => openApplianceCatalogue({ applianceBrand: applianceBrandName })}>{applianceBrandName}</button> : null}
+              {applianceFamily ? <button type="button" onClick={() => openApplianceCatalogue({ applianceFamily: applianceFamily.familyId, applianceBrand: applianceBrandName })}>{applianceFamily.name}</button> : null}
+              {selectedApplianceProduct ? <span>{selectedApplianceProduct.model || selectedApplianceProduct.name}</span> : null}
+            </div>
+
+            {!applianceBrandName ? (
+              <div className="tile-grid supplier-grid" data-testid="appliance-brand-list">
+                {applianceBrandCards.map((brand) => {
+                  const brandProducts = getPlatformMasterApplianceRecords().filter((record) => (record.brand || record.brandName) === brand.brandName);
+                  const brandPacks = getApplianceRecordsByFamily("appliance-packs").filter((record) => (record.brand || record.brandName) === brand.brandName);
+                  const selectableCount = brandProducts.filter((record) => record.selectableStatus === "client-selectable").length + brandPacks.filter((record) => record.selectableStatus === "client-selectable").length;
+                  return (
+                    <article key={brand.brandId || brand.brandName} className="visual-tile management-tile appliance-brand-tile" data-appliance-brand={brand.brandName}>
+                      <ApplianceBrandLogo brand={brand} />
+                      <span className="tile-body">
+                        <strong>{brand.brandName}</strong>
+                        <small>{brandProducts.length} individual product{brandProducts.length === 1 ? "" : "s"}</small>
+                        <em>{brandPacks.length} safe package{brandPacks.length === 1 ? "" : "s"} / {selectableCount} selectable</em>
+                        {brand.homepageUrl ? <a href={brand.homepageUrl} target="_blank" rel="noreferrer">Official brand source</a> : null}
+                        <span className="tile-actions">
+                          <button type="button" onClick={() => openApplianceCatalogue({ applianceBrand: brand.brandName })}>Browse Brand</button>
+                        </span>
+                      </span>
+                    </article>
+                  );
+                })}
+                {!applianceBrands.length ? (
+                  <div className="empty-state compact">
+                    <strong>No appliance brands are available.</strong>
+                    <span>Import appliance brands into the Product Library catalogue.</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : applianceBrandName && !applianceProductId ? (
+              <div className="appliance-brand-page" data-testid="appliance-model-list">
+                <section className="appliance-type-picker" data-testid="appliance-product-type-picker">
+                  <div className="section-heading compact-heading">
+                    <span>{applianceBrandName}</span>
+                    <strong>Choose Package or Individual Products</strong>
+                  </div>
+                  <div className="appliance-type-grid">
+                    {[...applianceFamilies].map((family) => {
+                      const count = family.familyId === "appliance-packs"
+                        ? getApplianceRecordsByFamily("appliance-packs").filter((record) => (record.brand || record.brandName) === applianceBrandName).length
+                        : getPlatformMasterApplianceRecords().filter((record) => (record.brand || record.brandName) === applianceBrandName && record.familyId === family.familyId).length;
+                      return (
+                        <button
+                          key={family.familyId}
+                          type="button"
+                          className={applianceFamilyKey === family.familyId ? "selected" : ""}
+                          onClick={() => openApplianceCatalogue({ applianceBrand: applianceBrandName, applianceFamily: family.familyId })}
+                        >
+                          <strong>{family.name}</strong>
+                          <span>{count} {family.familyId === "appliance-packs" ? "package" : "model"}{count === 1 ? "" : "s"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                {(!applianceFamilyKey || applianceFamilyKey === "appliance-packs") ? (
+                <section className="appliance-category-section" data-appliance-category="appliance-packs">
+                  <div className="section-heading compact-heading">
+                    <span>Complete Appliance Packages</span>
+                    <strong>{appliancePacksForBrand.length} package{appliancePacksForBrand.length === 1 ? "" : "s"}</strong>
+                  </div>
+                  <div className="product-grid appliance-model-grid">
+                    {appliancePacksForBrand.map((record) => (
+                      <article key={record.productId} className="product-option management-card appliance-pack-card appliance-visual-card" data-testid="appliance-package-card" data-appliance-product={record.productId}>
+                        <div className="appliance-card-logo">{selectedApplianceBrand ? <ApplianceBrandLogo brand={selectedApplianceBrand} /> : <strong>{record.brand}</strong>}</div>
+                        <div className="appliance-card-copy">
+                          <span>Appliance Package</span>
+                          <strong>{record.name}</strong>
+                          <small>{record.brand} package / {record.components.length} component products</small>
+                          <small>{appliancePriceLabel(record)}</small>
+                        </div>
+                        <span className={applianceStatusClass(record.eligibility)}>{record.eligibility}</span>
+                        <div className="component-mini-list visual-components">
+                          {record.components.slice(0, 5).map((component, componentIndex) => (
+                            <button key={`${record.productId}:${component.productId}:${component.relationshipId || componentIndex}`} type="button" onClick={() => openApplianceCatalogue({ applianceFamily: component.familyId, applianceBrand: applianceBrandName, applianceProduct: component.productId })}>
+                              <ApplianceImage record={component} />
+                              <span>{component.familyName}</span>
+                              <strong>{component.model || component.name}</strong>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="card-actions appliance-card-actions">
+                          <button type="button" onClick={() => openApplianceCatalogue({ applianceFamily: "appliance-packs", applianceBrand: applianceBrandName, applianceProduct: record.productId })}>View Package Details</button>
+                          <button type="button" onClick={() => selectApplianceRecord(record)}><Check size={15} /> Select Package</button>
+                        </div>
+                      </article>
+                    ))}
+                    {!appliancePacksForBrand.length ? <div className="empty-state compact"><strong>No complete packages for this brand.</strong><span>Packages can be imported into Product Library later.</span></div> : null}
+                  </div>
+                </section>
+                ) : null}
+                {visibleApplianceFamilies.map((family) => {
+                  const familyRecords = applianceModels.filter((record) => record.familyId === family.familyId);
+                  const groups = Array.from(groupAppliancesForBrand(familyRecords).values()).sort((left, right) => `${left.size} ${left.configuration}`.localeCompare(`${right.size} ${right.configuration}`));
+                  return (
+                    <section key={family.familyId} className="appliance-category-section" data-appliance-category={family.familyId}>
+                      <div className="section-heading compact-heading">
+                        <span>{family.name}</span>
+                        <strong>{familyRecords.length} product{familyRecords.length === 1 ? "" : "s"}</strong>
+                      </div>
+                      {familyRecords.length ? groups.map((group) => (
+                        <div key={`${group.family}-${group.size}-${group.configuration}`} className="appliance-size-group" data-appliance-size-group={`${group.size} ${group.configuration}`}>
+                          <h3>{group.size} / {group.configuration}</h3>
+                          <div className="product-grid appliance-model-grid">
+                            {group.records.map((record) => (
+                              <ApplianceCard
+                                key={record.productId}
+                                record={record}
+                                brand={selectedApplianceBrand}
+                                onOpen={(nextRecord) => openApplianceCatalogue({ applianceFamily: nextRecord.familyId, applianceBrand: applianceBrandName, applianceProduct: nextRecord.productId })}
+                                onSelect={selectApplianceRecord}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="empty-state compact">
+                          <strong>No {family.name.toLowerCase()} models in the canonical Product Library data for {applianceBrandName}.</strong>
+                          <span>The section is available for future CSV/XLSX imports without code changes.</span>
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+                {!applianceModels.length && !appliancePacksForBrand.length ? (
+                  <div className="empty-state compact">
+                    <strong>No appliance records match the current filters.</strong>
+                    <span>Clear filters or choose another brand.</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <section className="family-layout appliance-detail-layout">
+                <div className="family-main">
+                  {selectedApplianceProduct ? (
+                    <>
+                      <div className="family-hero">
+                        <ApplianceImage record={selectedApplianceProduct} large />
+                        <div className="appliance-detail-summary">
+                          {getApplianceBrandByName(selectedApplianceProduct.brand) ? <ApplianceBrandLogo brand={getApplianceBrandByName(selectedApplianceProduct.brand)} /> : null}
+                          <h2>{selectedApplianceProduct.name}</h2>
+                          <p>{[selectedApplianceProduct.brand, selectedApplianceProduct.model, selectedApplianceProduct.familyName].filter(Boolean).join(" / ")}</p>
+                          <strong className="appliance-detail-price">{appliancePriceLabel(selectedApplianceProduct)}</strong>
+                          <dl className="appliance-detail-quick-specs">
+                            <dt>Product Code</dt>
+                            <dd>{selectedApplianceProduct.model || selectedApplianceProduct.productCode}</dd>
+                            <dt>Finish</dt>
+                            <dd>{applianceValue(selectedApplianceProduct.finish)}</dd>
+                            <dt>Size</dt>
+                            <dd>{applianceValue(applianceDimensionLabel(selectedApplianceProduct), "Partial size data")}</dd>
+                            <dt>Configuration</dt>
+                            <dd>{[selectedApplianceProduct.fuelOrEnergyType, selectedApplianceProduct.installationType, applianceConfigurationBucket(selectedApplianceProduct)].filter(Boolean).join(" / ")}</dd>
+                          </dl>
+                          {applianceFeatureList(selectedApplianceProduct).length ? (
+                            <ul className="appliance-feature-list">
+                              {applianceFeatureList(selectedApplianceProduct).map((feature) => <li key={feature}>{feature}</li>)}
+                            </ul>
+                          ) : null}
+                          <div className="chips">
+                            <span className={applianceStatusClass(selectedApplianceProduct.eligibility)}>{selectedApplianceProduct.eligibility}</span>
+                            <span>{selectedApplianceProduct.verificationStatus}</span>
+                            <span>{selectedApplianceProduct.selectableStatus}</span>
+                          </div>
+                          <div className="card-actions appliance-detail-actions">
+                            <button type="button" onClick={() => selectApplianceRecord(selectedApplianceProduct)}><Check size={16} /> Select {selectedApplianceProduct.recordType === "appliance-pack" ? "Package" : "Product"}</button>
+                            <button type="button" className="secondary" onClick={() => openApplianceCatalogue({ applianceFamily: selectedApplianceProduct.familyId, applianceBrand: selectedApplianceProduct.brand })}><ArrowLeft size={16} /> Back to Product Grid</button>
+                            <button type="button" className="secondary" onClick={() => setSuccess(`${selectedApplianceProduct.name} is ready for comparison from the canonical Product Library record.`)}><Copy size={16} /> Compare</button>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="appliance-description">{selectedApplianceProduct.description}</p>
+                      {selectedApplianceProduct.recordType === "appliance-pack" ? (
+                        <div className="component-list" data-testid="appliance-pack-components">
+                          <strong>Component Products</strong>
+                          <div className="product-grid appliance-model-grid">
+                          {selectedApplianceProduct.components.map((component, componentIndex) => (
+                            <button key={`${selectedApplianceProduct.productId}:${component.productId}:${component.relationshipId || componentIndex}`} type="button" className="component-row visual-component-card" onClick={() => openApplianceCatalogue({ applianceFamily: component.familyId, applianceBrand: applianceBrandName, applianceProduct: component.productId })}>
+                              <ApplianceImage record={component} />
+                              <span>
+                                <strong>{component.name}</strong>
+                                <small>{[component.brand, component.model, component.familyName, component.eligibility].filter(Boolean).join(" / ")}</small>
+                              </span>
+                            </button>
+                          ))}
+                          </div>
+                          {selectedApplianceProduct.componentWarnings.length ? (
+                            <small className="warning-text">{selectedApplianceProduct.componentWarnings.join("; ")}</small>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {selectedApplianceProduct.recordType !== "appliance-pack" && selectedApplianceProductContainers.length ? (
+                        <div className="component-list" data-testid="appliance-product-packages">
+                          <strong>Packages Containing This Product</strong>
+                          {selectedApplianceProductContainers.map((pack) => (
+                            <div key={pack.productId} className="component-row">
+                              <ApplianceImage record={pack} />
+                              <span>
+                                <strong>{pack.name}</strong>
+                                <small>{[pack.brand, appliancePriceLabel(pack), `${pack.components.length} components`].filter(Boolean).join(" / ")}</small>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div className="empty-state compact">
+                      <strong>Appliance product not found.</strong>
+                      <button type="button" onClick={() => openApplianceCatalogue({ applianceBrand: applianceBrandName })}>Back to Models</button>
+                    </div>
+                  )}
+                </div>
+                <aside className="detail-panel">
+                  {selectedApplianceProduct ? (
+                    <div className="selected-product">
+                      <dl>
+                        <dt>Stable Product ID</dt>
+                        <dd>{selectedApplianceProduct.stableProductId}</dd>
+                        <dt>Category / Family</dt>
+                        <dd>{selectedApplianceProduct.categoryId || "category:appliances"} / {selectedApplianceProduct.familyId}</dd>
+                        <dt>Supplier / Brand / Range</dt>
+                        <dd>{[selectedApplianceProduct.supplier, selectedApplianceProduct.brand, selectedApplianceProduct.range].filter(Boolean).join(" / ") || "Not supplied"}</dd>
+                        <dt>Product / Model</dt>
+                        <dd>{[selectedApplianceProduct.name, selectedApplianceProduct.model].filter(Boolean).join(" / ")}</dd>
+                        <dt>Specifications</dt>
+                        <dd>{[
+                          selectedApplianceProduct.width || (selectedApplianceProduct.widthMm ? `${selectedApplianceProduct.widthMm} mm wide` : ""),
+                          selectedApplianceProduct.height || (selectedApplianceProduct.heightMm ? `${selectedApplianceProduct.heightMm} mm high` : ""),
+                          selectedApplianceProduct.depth || (selectedApplianceProduct.depthMm ? `${selectedApplianceProduct.depthMm} mm deep` : ""),
+                          selectedApplianceProduct.finish,
+                          selectedApplianceProduct.fuelOrEnergyType,
+                          selectedApplianceProduct.installationType,
+                        ].filter(Boolean).join(" / ") || "Partial specifications only"}</dd>
+                        <dt>Price / Status</dt>
+                        <dd>{appliancePriceLabel(selectedApplianceProduct)} / {selectedApplianceProduct.priceStatus}</dd>
+                        <dt>Product Page</dt>
+                        <dd>{selectedApplianceProduct.productPageUrl ? <a href={selectedApplianceProduct.productPageUrl} target="_blank" rel="noreferrer">{selectedApplianceProduct.productPageUrl}</a> : "Not supplied"}</dd>
+                        <dt>Documents</dt>
+                        <dd>{selectedApplianceProduct.documentUrls?.length ? selectedApplianceProduct.documentUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{url}</a>) : "Not supplied"}</dd>
+                        <dt>Image Attribution</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.imageAttribution || selectedApplianceProduct.imageFallbackLabel)}</dd>
+                        <dt>Source Checked</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.sourceCheckedAt)}</dd>
+                        <dt>Catalogue Version</dt>
+                        <dd>{selectedApplianceProduct.schemaVersion || "product-library.appliance-catalogue.v1"}</dd>
+                        <dt>Image Status</dt>
+                        <dd>{selectedApplianceProduct.image ? "exact image referenced" : "exact image required - category fallback shown"}</dd>
+                        <dt>Applicable Rooms</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.applicableRooms)}</dd>
+                        <dt>Selectable Status</dt>
+                        <dd>{selectedApplianceProduct.selectableStatus}</dd>
+                        <dt>Admin Non-selectable Reasons</dt>
+                        <dd>{applianceValue(selectedApplianceProduct.eligibilityReasons)}</dd>
+                      </dl>
+                    </div>
+                  ) : null}
+                </aside>
+              </section>
+            )}
+          </section>
+        ) : null}
+
+        {!applianceMode && !selectedCatalogueSection ? (
+          <div className="browse-switch" data-testid="product-library-browse-mode">
+            <button type="button" className={browseMode === "room" ? "selected" : ""} onClick={() => pushProductLibraryRoute({})}>Browse by Room</button>
+            <button type="button" className={browseMode === "all" ? "selected" : ""} onClick={openBrowseAllProducts}>Browse All Products</button>
+          </div>
+        ) : null}
+
+        {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "room" && !selectedRoom ? (
+          <section className="purpose room-landing" data-testid="product-library-room-landing">
+            <div className="section-heading">
+              <span>Browse by Room</span>
+              <strong>Choose a room or area</strong>
+            </div>
+            <div className="tile-grid room-grid">
+              {PRODUCT_LIBRARY_ROOMS.map((roomItem) => {
+                const roomCategories = getProductLibraryRoomCategories(roomItem.key);
+                const count = countProductsForRoom(roomItem);
                 return (
-                  <button key={area.key} type="button" className="visual-tile" onClick={() => openArea(area.key)} data-area-key={area.key}>
-                    <span className="tile-image" style={{ backgroundImage: `url(${area.image})` }} />
+                  <button key={roomItem.key} type="button" className="visual-tile room-tile" onClick={() => openRoom(roomItem.key)} data-room-key={roomItem.key}>
+                    <span className="tile-image" style={{ backgroundImage: `url(${roomItem.heroImage})` }}>
+                      <strong>{roomItem.name}</strong>
+                    </span>
                     <span className="tile-body">
-                      <strong>{area.displayName}</strong>
-                      <small>{count} product{count === 1 ? "" : "s"}</small>
-                      <em>{statusForCount(count)}</em>
+                      <small>{roomCategories.length} product categor{roomCategories.length === 1 ? "y" : "ies"}</small>
+                      <em>{count} active product{count === 1 ? "" : "s"}</em>
+                      <span className="tile-actions"><span className="button-look">Browse Products</span></span>
                     </span>
                   </button>
                 );
@@ -1332,7 +3025,412 @@ export default function BuilderProductLibraryPage() {
           </section>
         ) : null}
 
-        {selectedArea && !selectedCategory ? (
+        {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "room" && selectedRoom && !selectedRoomCategory ? (
+          <section className="purpose room-page" data-testid="product-library-room-page" data-room-key={selectedRoom.key}>
+            <div className="room-hero" style={{ backgroundImage: `url(${selectedRoom.heroImage})` }}>
+              <div>
+                <span>Product Library</span>
+                <h2>{selectedRoom.name}</h2>
+                <p>{selectedRoom.description}</p>
+              </div>
+            </div>
+            <div className="catalogue-breadcrumb">
+              <button type="button" onClick={() => pushProductLibraryRoute({})}>Rooms</button>
+              <span>{selectedRoom.name}</span>
+            </div>
+            {selectedRoom.key === "exterior" ? <small>Entrance hardware photo: <a href="https://pxhere.com/en/photo/653551" target="_blank" rel="noreferrer">PxHere</a>, <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noreferrer">CC0</a>.</small> : null}
+            <div className="master-filters">
+              <input value={masterFilters.search} onChange={(event) => setMasterFilters((current) => ({ ...current, search: event.target.value }))} placeholder={`Search ${selectedRoom.name} categories`} />
+              <select value={masterFilters.brand} onChange={(event) => setMasterFilters((current) => ({ ...current, brand: event.target.value }))}>
+                <option value="">Brand</option>
+                {masterBrands.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+              <select value={masterFilters.imageStatus} onChange={(event) => setMasterFilters((current) => ({ ...current, imageStatus: event.target.value }))}>
+                <option value="">Missing image</option>
+                <option value="missing">Missing</option>
+                <option value="review_required">Review required</option>
+              </select>
+            </div>
+            <div className="tile-grid category-grid">
+              {selectedRoomCategories.map((categoryItem) => {
+                const count = countProductsForRoomCategory(categoryItem, selectedRoom);
+                const search = String(masterFilters.search || "").toLowerCase();
+                if (search && !`${categoryItem.name} ${categoryItem.group}`.toLowerCase().includes(search)) return null;
+                return (
+                  <button key={categoryItem.key} type="button" className="visual-tile category-tile" onClick={() => openRoomCategory(categoryItem.key)} data-room-category={categoryItem.key}>
+                    {['internal-doors','door-furniture','skirting-architraves'].includes(categoryItem.key) ? <VerifiedProductImage className="tile-image contain-image" src={categoryItem.representativeImage} name={categoryItem.name} style={{width:'100%'}}/> : categoryItem.key === "bricks" ? (
+                      <img className="tile-image bricks-category-image" src={categoryItem.representativeImage} alt="Light clay brick exterior wall sample" width="1200" height="784" />
+                    ) : (
+                      <span className="tile-image contain-image" style={{ backgroundImage: `url(${categoryItem.representativeImage})` }} />
+                    )}
+                    <span className="tile-body">
+                      <strong>{categoryItem.name}</strong>
+                      <small>{count} active product{count === 1 ? "" : "s"}</small>
+                      <em>{categoryItem.filterDefinitions.map((filter) => filter.label).slice(0, 4).join(" / ")}</em>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "room" && selectedRoom && selectedRoomCategory && !selectedRoomProduct ? (
+          <section className="purpose category-page" data-testid="product-library-category-page" data-room-category={selectedRoomCategory.key}>
+            <div className="catalogue-breadcrumb">
+              <button type="button" onClick={() => pushProductLibraryRoute({})}>Rooms</button>
+              <button type="button" onClick={() => openRoom(selectedRoom.key)}>{selectedRoom.name}</button>
+              <span>{selectedRoomCategory.name}</span>
+            </div>
+            <div className="section-heading">
+              <span>{selectedRoom.name}</span>
+              <strong>{selectedRoomCategory.name}</strong>
+            </div>
+            {selectedRoomCategory.key === "cabinet-doors-panels" ? (
+              <div className="cabinetry-catalogue-browser" data-testid="product-library-cabinet-doors-panels-browser">
+                {!cabinetrySelectedBrand ? (
+                  <>
+                    <div className="category-toolbar">
+                      <span>{cabinetDoorPanelProducts.length} colour/finish records</span>
+                      <strong>{cabinetryBrandGroups.length} cabinetry brands</strong>
+                      <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "", section: "cabinetry-joinery" })}><Boxes size={16} /> Manage Catalogue Items</button>
+                    </div>
+                    <div className="tile-grid cabinetry-brand-grid" data-testid="cabinetry-brand-page">
+                      {cabinetryBrandGroups.map((brandGroup) => (
+                        <button key={brandGroup.name} type="button" className="visual-tile cabinetry-brand-card" onClick={() => openCabinetryBrand(brandGroup.name)} data-cabinetry-brand={brandGroup.name}>
+                          <span className="tile-image contain-image brand-logo-card" style={{ backgroundImage: brandGroup.logo ? `url(${brandGroup.logo})` : "" }} />
+                          <span className="tile-body">
+                            <strong>{brandGroup.name}</strong>
+                            <small>{brandGroup.products.length} colour/finish record{brandGroup.products.length === 1 ? "" : "s"}</small>
+                            <em>{brandGroup.ranges.length} product range{brandGroup.ranges.length === 1 ? "" : "s"}</em>
+                            <span className="button-look">View Ranges</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {cabinetrySelectedBrand && !cabinetrySelectedRange ? (
+                  <>
+                    <div className="catalogue-breadcrumb">
+                      <button type="button" onClick={() => openRoomCategory(selectedRoomCategory.key)}>{selectedRoomCategory.name}</button>
+                      <span>{cabinetrySelectedBrand.name}</span>
+                    </div>
+                    <div className="category-toolbar">
+                      <span>{cabinetrySelectedBrand.products.length} colour/finish records</span>
+                      <strong>{cabinetrySelectedBrand.ranges.length} ranges</strong>
+                      <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "", section: "cabinetry-joinery", brand: cabinetrySelectedBrand.name })}><Boxes size={16} /> Manage Catalogue Items</button>
+                    </div>
+                    <div className="tile-grid cabinetry-range-grid" data-testid="cabinetry-range-page" data-cabinetry-brand={cabinetrySelectedBrand.name}>
+                      {cabinetrySelectedBrand.ranges.map((rangeGroup) => (
+                        <button key={rangeGroup.name} type="button" className="visual-tile cabinetry-range-card" onClick={() => openCabinetryRange(rangeGroup.name)} data-cabinetry-range={rangeGroup.name}>
+                          <span className="tile-image contain-image swatch-range-card" style={{ backgroundImage: `url(${rangeGroup.image || cabinetrySelectedBrand.logo})` }} />
+                          <span className="tile-body">
+                            <strong>{rangeGroup.name}</strong>
+                            <small>{rangeGroup.products.length} colour/finish record{rangeGroup.products.length === 1 ? "" : "s"}</small>
+                            <em>{uniqueValues(rangeGroup.products.map((product) => product.finish)).slice(0, 4).join(" / ")}</em>
+                            <span className="button-look">View Colours</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {cabinetrySelectedBrand && cabinetrySelectedRange ? (
+                  <>
+                    <div className="catalogue-breadcrumb">
+                      <button type="button" onClick={() => openRoomCategory(selectedRoomCategory.key)}>{selectedRoomCategory.name}</button>
+                      <button type="button" onClick={() => openCabinetryBrand(cabinetrySelectedBrand.name)}>{cabinetrySelectedBrand.name}</button>
+                      <span>{cabinetrySelectedRange.name}</span>
+                    </div>
+                    <div className="category-toolbar">
+                      <span>{cabinetrySelectedRange.products.length} colour/finish records</span>
+                      <strong>{cabinetrySelectedRange.name}</strong>
+                      <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "", section: "cabinetry-joinery", brand: cabinetrySelectedBrand.name, range: cabinetrySelectedRange.name })}><Boxes size={16} /> Manage Catalogue Items</button>
+                    </div>
+                    <div className="product-grid room-product-grid cabinetry-colour-grid" data-testid="cabinetry-colour-grid" data-cabinetry-brand={cabinetrySelectedBrand.name} data-cabinetry-range={cabinetrySelectedRange.name}>
+                      {cabinetryVisibleColourProducts.map((product) => (
+                        <article key={product.productId} className="product-option management-card room-product-card cabinetry-colour-card" data-room-product={product.productId} data-cabinetry-colour-id={product.productCode}>
+                          <div className="product-card-logo">{cabinetrySelectedBrand.logo ? <img src={cabinetrySelectedBrand.logo} alt={`${cabinetrySelectedBrand.name} logo`} /> : <strong>{cabinetrySelectedBrand.name}</strong>}</div>
+                          <button type="button" className="product-pick contain-product swatch-product" onClick={() => openRoomProduct(product.productId)}>
+                            <ProductLibraryProductImage product={product} familyItem={familyByKey(product.familyKey)} />
+                            <strong>{product.colour || product.productName}</strong>
+                          </button>
+                          <small>{product.model || product.sku || product.productCode}</small>
+                          <small>{[product.finish, product.material, product.attributes?.sheetDoorApplicability].filter(Boolean).join(" / ")}</small>
+                          <span>{productPriceLabel(product)}</span>
+                          <div className="card-actions">
+                            <button type="button" onClick={() => openRoomProduct(product.productId)}>Colour Details</button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                {exteriorSections.length ? <>
+                  <div className="cabinetry-subcategory-tabs" data-testid="exterior-section-tabs">
+                    {exteriorSections.map(([key, label]) => <button type="button" key={key} className={exteriorSectionKey === key ? "selected" : ""} onClick={() => pushProductLibraryRoute({ room: selectedRoom.key, roomCategory: selectedRoomCategory.key, exteriorSection: key })}>{label}</button>)}
+                  </div>
+                  <div className="admin-actions catalogue-selection-actions">
+                    <button type="button" onClick={() => setSelectedCatalogueItemIds((current) => [...new Set([...current, ...roomCategoryProducts.map(catalogueProductSelectionKey)])])}>Select All Visible</button>
+                    <button type="button" onClick={() => setSelectedCatalogueItemIds([])}>Clear Selection</button>
+                    <button type="button" disabled={saving || !allRoomCategoryProducts.length} onClick={() => downloadProducts(allRoomCategoryProducts, { label: selectedRoomCategory.key, fileName: `${selectedRoomCategory.key}.csv` })}>Download All {selectedRoomCategory.key === 'roofing' ? 'Roofing' : selectedRoomCategory.key === 'skirting-architraves' ? 'Skirting & Architraves' : 'Entry Doors'} CSV</button>
+                    <button type="button" disabled={saving || !roomCategoryProducts.length} onClick={() => downloadProducts(roomCategoryProducts, { label: exteriorSectionKey, fileName: `${selectedRoomCategory.key}-${exteriorSectionKey}.csv` })}>Download Current Section CSV</button>
+                    <button type="button" disabled={saving || !allRoomCategoryProducts.some((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product)))} onClick={() => downloadProducts(allRoomCategoryProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))), { label: `${selectedRoomCategory.key}-selected` })}>Download Selected CSV</button>
+                    <button type="button" disabled={saving || !allRoomCategoryProducts.some((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product)))} onClick={() => downloadProducts(allRoomCategoryProducts.filter((product) => selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))), { includeImages: true, label: `${selectedRoomCategory.key}-selected` })}>Download Selected + Images ZIP</button>
+                  </div>
+                </> : null}
+                <div className="category-toolbar">
+                  <span>{roomCategoryProducts.length} product{roomCategoryProducts.length === 1 ? "" : "s"}</span>
+                  {!furniturePicker.enabled ? <button type="button" onClick={() => openManageCatalogueItems({ room: selectedRoom?.key || "", category: selectedRoomCategory?.key || "" })}><Boxes size={16} /> Manage Catalogue Items</button> : null}
+                  <label>Sort By <select value={masterFilters.sort || "name"} onChange={(event) => setMasterFilters((current) => ({ ...current, sort: event.target.value }))}><option value="name">Name</option><option value="brand">Brand</option><option value="price">Price</option></select></label>
+                </div>
+                <div className="master-filters product-filter-bar" data-testid="product-category-filters">
+                  <input value={masterFilters.search} onChange={(event) => setMasterFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search products, models, brands or codes" />
+                  <select value={masterFilters.brand} onChange={(event) => setMasterFilters((current) => ({ ...current, brand: event.target.value }))}>
+                    <option value="">Brand</option>
+                    {masterBrands.map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                  <select value={masterFilters.range} onChange={(event) => setMasterFilters((current) => ({ ...current, range: event.target.value }))}>
+                    <option value="">Product range</option>
+                    {masterRanges.map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                  <select value={masterFilters.status} onChange={(event) => setMasterFilters((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="">Active/inactive</option>
+                    <option value="active">Active</option>
+                    <option value="discontinued">Inactive</option>
+                  </select>
+                  <select value={masterFilters.imageStatus} onChange={(event) => setMasterFilters((current) => ({ ...current, imageStatus: event.target.value }))}>
+                    <option value="">Missing image</option>
+                    <option value="missing">Missing</option>
+                    <option value="review_required">Review required</option>
+                    <option value="verified_exact">Verified</option>
+                  </select>
+                </div>
+                <div className="product-grid room-product-grid">
+                  {roomCategoryProducts.slice(0,paginatedInternalCategory?roomVisibleCount:roomCategoryProducts.length).map((product) => {
+                    const brand = getApplianceBrandByName(product.brand || product.manufacturer || "");
+                    return (
+                      <article key={product.productId} className="product-option management-card room-product-card" style={furniturePicker.enabled && furniturePicker.isSelected(product) ? {border:"3px solid #1764d9",background:"#eef6ff"} : undefined} data-room-product={product.productId}>
+                        {exteriorSections.length ? <label><input type="checkbox" aria-label={`Select ${product.productName} for export`} checked={selectedCatalogueItemSet.has(catalogueProductSelectionKey(product))} onChange={() => toggleCatalogueItemSelection(product)} /> Select for export</label> : null}
+                        <div className="product-card-logo">{brand ? <ApplianceBrandLogo brand={brand} /> : <strong>{product.brand || product.manufacturer || "Brand pending"}</strong>}</div>
+                        <button type="button" className="product-pick contain-product" onClick={() => openRoomProduct(product.productId)}>
+                          <ProductLibraryProductImage product={product} familyItem={familyByKey(product.familyKey)} />
+                          <strong>{product.productName}</strong>
+                        </button>
+                        <small>{product.model || product.sku || product.productCode}</small>
+                        <small>{[product.size, product.configuration, product.finish].filter(Boolean).join(" / ") || product.familyKey}</small>
+                        <span>{furniturePicker.enabled && product.clientPrice == null ? "Rate required" : productPriceLabel(product)}</span>
+                        <div className="card-actions">
+                          {furniturePicker.enabled && product.active !== false ? <button type="button" data-testid="select-door-furniture" onClick={() => furniturePicker.open(product)} style={{background:'#1764d9',color:'white',fontWeight:700}}>{furniturePicker.isSelected(product) ? 'Selected (Change Selection)' : 'Select'}</button> : null}
+                          <button type="button" onClick={() => openRoomProduct(product.productId)}>View Details</button>
+                          <button type="button" className="secondary" onClick={furniturePicker.enabled ? () => furniturePicker.compare(product) : undefined}>Compare</button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                  {paginatedInternalCategory&&roomVisibleCount<roomCategoryProducts.length?<button type="button" onClick={()=>setRoomVisibleCount(n=>n+48)}>Show more products ({roomCategoryProducts.length-roomVisibleCount} remaining)</button>:null}
+                  {!roomCategoryProducts.length ? (
+                    <div className="empty-state compact">
+                      <strong>No products match this room/category yet.</strong>
+                      <span>The category is available for Product Library import mapping without creating duplicate room records.</span>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </section>
+        ) : null}
+
+        {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "room" && selectedRoomProduct ? (
+          <section className="family-layout room-product-detail" data-testid="product-library-product-detail" data-room-product={selectedRoomProduct.productId}>
+            <div className="family-main">
+              <div className="catalogue-breadcrumb">
+                <button type="button" onClick={() => pushProductLibraryRoute({})}>Rooms</button>
+                <button type="button" onClick={() => openRoom(selectedRoom.key)}>{selectedRoom.name}</button>
+                <button type="button" onClick={() => openRoomCategory(selectedRoomCategory.key)}>{selectedRoomCategory.name}</button>
+                <span>{selectedRoomProduct.model || selectedRoomProduct.productCode}</span>
+              </div>
+              <div className="product-detail-split">
+                <div className="product-detail-media">
+                  <ProductLibraryProductImage product={selectedRoomProduct} familyItem={familyByKey(selectedRoomProduct.familyKey)} large />
+                </div>
+                <div className="product-detail-info">
+                  {getApplianceBrandByName(selectedRoomProduct.brand || selectedRoomProduct.manufacturer || "") ? <ApplianceBrandLogo brand={getApplianceBrandByName(selectedRoomProduct.brand || selectedRoomProduct.manufacturer || "")} /> : <strong>{selectedRoomProduct.brand || selectedRoomProduct.manufacturer || "Brand pending"}</strong>}
+                  <h2>{selectedRoomProduct.productName}</h2>
+                  <p className="price-line">{productPriceLabel(selectedRoomProduct)}</p>
+                  <dl>
+                    <dt>Model / Product Code</dt>
+                    <dd>{selectedRoomProduct.model || selectedRoomProduct.sku || selectedRoomProduct.productCode}</dd>
+                    <dt>Colour / Finish</dt>
+                    <dd>{[selectedRoomProduct.colour, selectedRoomProduct.finish].filter(Boolean).join(" / ") || "Not supplied"}</dd>
+                    <dt>Dimensions</dt>
+                    <dd>{[selectedRoomProduct.width, selectedRoomProduct.height, selectedRoomProduct.depth, selectedRoomProduct.dimensions].filter((value) => value && typeof value !== "object").join(" x ") || selectedRoomProduct.size || "Not supplied"}</dd>
+                    <dt>Key Specifications</dt>
+                    <dd>{[selectedRoomProduct.familyKey, selectedRoomProduct.configuration, selectedRoomProduct.material, selectedRoomProduct.profile].filter(Boolean).join(" / ") || "Specifications pending"}</dd>
+                    <dt>Availability</dt>
+                    <dd>{selectedRoomProduct.active === false || selectedRoomProduct.archived ? "Inactive" : "Active"}</dd>
+                    <dt>Specification Sheet</dt>
+                    <dd>{selectedRoomProduct.specificationUrl ? <a href={selectedRoomProduct.specificationUrl} target="_blank" rel="noreferrer">Download Specification Sheet</a> : "Not supplied"}</dd>
+                  </dl>
+                  <div className="detail-actions">
+                    <button type="button"><Check size={16} /> Select/Add to Job</button>
+                    <button type="button" className="secondary">Compare</button>
+                    <button type="button" className="secondary" onClick={() => editProduct(selectedRoomProduct)}><Pencil size={16} /> Edit Product</button>
+                    <button type="button" className="secondary"><ImagePlus size={16} /> Replace Image</button>
+                    <button type="button" className="secondary">Assign Rooms</button>
+                    <button type="button" className="secondary">Assign Categories</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <aside className="detail-panel">
+              <div className="selected-product">
+                <h3>Canonical Record</h3>
+                <dl>
+                  <dt>Stable Product ID</dt>
+                  <dd>{selectedRoomProduct.productId}</dd>
+                  <dt>Rooms</dt>
+                  <dd>{PRODUCT_LIBRARY_ROOMS.filter((roomItem) => productBelongsToRoom(selectedRoomProduct, roomItem.key)).map((roomItem) => roomItem.name).join(", ") || "Not assigned"}</dd>
+                  <dt>Categories</dt>
+                  <dd>{PRODUCT_LIBRARY_ROOM_CATEGORIES.filter((categoryItem) => productBelongsToRoomCategory(selectedRoomProduct, categoryItem)).map((categoryItem) => categoryItem.name).slice(0, 8).join(", ") || "Not assigned"}</dd>
+                  <dt>Source</dt>
+                  <dd>{selectedRoomProduct.sourceName || selectedRoomProduct.sourceUrl || "Product Library"}</dd>
+                  <dt>Image Status</dt>
+                  <dd>{selectedRoomProduct.imageStatus || "missing"}</dd>
+                </dl>
+              </div>
+            </aside>
+          </section>
+        ) : null}
+
+        {!selectedArea && !applianceMode && !selectedCatalogueSection && browseMode === "all" ? (
+          <section className="purpose">
+            <div className="section-heading">
+              <span>Browse All Products</span>
+              <strong>Administrative catalogue sections</strong>
+            </div>
+            <div className="tile-grid area-grid catalogue-section-grid" data-testid="product-library-browse-all-grid">
+              {PRODUCT_LIBRARY_CATALOGUE_SECTIONS.map((sectionItem) => {
+                const count = countProductsForSection(sectionItem);
+                const reviewCount = reviewCountForSection(sectionItem);
+                const familyCount = sectionItem.key === "appliances" ? applianceFamilies.length : getProductLibrarySectionFamilies(sectionItem.key).length;
+                const browse = sectionItem.key === "appliances" ? openApplianceCatalogue : () => openCatalogueSection(sectionItem.key);
+                return (
+                  <button key={sectionItem.key} type="button" className="visual-tile catalogue-section-tile" onClick={browse} data-catalogue-section={sectionItem.key}>
+                    <span className="tile-image" style={{ backgroundImage: `url(${sectionItem.image})` }} />
+                    <span className="tile-body">
+                      <strong>{sectionItem.displayName}</strong>
+                      <small>{count} product{count === 1 ? "" : "s"}</small>
+                      <em>{familyCount} product families / {reviewCount} needing image or review</em>
+                      <span className="tile-actions">
+                        <span className="button-look">Browse</span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {selectedCatalogueSection && !applianceMode ? (
+          <section className="purpose" data-testid={selectedCatalogueSection.key === CABINETRY_SECTION_KEY ? "product-library-cabinetry-catalogue" : "product-library-catalogue-section"} data-catalogue-section={selectedCatalogueSection.key}>
+            <div className="section-heading">
+              <span>Product Catalogue</span>
+              <strong>{selectedCatalogueSection.displayName}</strong>
+              <button type="button" onClick={() => openManageCatalogueItems({ section: selectedCatalogueSection.key })}><Boxes size={16} /> Manage Catalogue Items</button>
+            </div>
+            <div className="section-summary-card">
+              <span className="tile-image" style={{ backgroundImage: `url(${selectedCatalogueSection.image})` }} />
+              <div>
+                <p>{selectedCatalogueSection.description}</p>
+                <div className="chips">
+                  <span>{catalogueGroupProducts.length} total records</span>
+                  <span>{selectedCatalogueSubcategories.length ? selectedCatalogueSubcategories.length - 1 : catalogueSectionFamilies.length} section{(selectedCatalogueSubcategories.length ? selectedCatalogueSubcategories.length - 1 : catalogueSectionFamilies.length) === 1 ? "" : "s"}</span>
+                  <span>{catalogueGroupVisibleProducts.length} currently visible</span>
+                  <span>{reviewCountForSection(selectedCatalogueSection)} needing image or review</span>
+                </div>
+              </div>
+            </div>
+            {selectedCatalogueSubcategories.length ? (
+              <div className="cabinetry-subcategory-tabs" data-testid={`${selectedCatalogueSection.key}-subcategory-tabs`}>
+                {selectedCatalogueSubcategories.map((subcategory) => (
+                  <button
+                    key={subcategory.key}
+                    type="button"
+                    className={selectedCatalogueSubcategory?.key === subcategory.key ? "selected" : ""}
+                    onClick={() => setCatalogueSubcategory(subcategory.key)}
+                    data-catalogue-subcategory={subcategory.key}
+                  >
+                    {subcategory.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <div className="admin-actions catalogue-selection-actions cabinetry-export-actions">
+              <button type="button" onClick={selectAllVisibleCatalogueGroupItems} disabled={!catalogueGroupVisibleProducts.length}><Check size={16} /> Select All Visible</button>
+              <button type="button" className="secondary" onClick={clearCatalogueItemSelection} disabled={!selectedCatalogueGroupProducts.length}><X size={16} /> Clear Selection</button>
+              <button type="button" onClick={() => downloadProducts(catalogueGroupProducts, { includeImages: false, label: `${selectedCatalogueSection.key}-complete`, fileName: catalogueSectionExportFileName(selectedCatalogueSection) })} disabled={!catalogueGroupProducts.length || saving}><FileDown size={16} /> {selectedCatalogueSection.key === "roofing" ? "Download All Roofing CSV" : "Download Complete Group CSV"}</button>
+              <button type="button" onClick={() => downloadProducts(catalogueGroupVisibleProducts, { includeImages: false, label: selectedCatalogueSubcategory?.key || selectedCatalogueSection.key, fileName: selectedCatalogueSubcategory?.fileName || catalogueSectionExportFileName(selectedCatalogueSection) })} disabled={!catalogueGroupVisibleProducts.length || saving}><FileDown size={16} /> Download Current Section CSV</button>
+              <button type="button" onClick={() => downloadProducts(selectedCatalogueGroupProducts, { includeImages: false, label: `${selectedCatalogueSection.key}-selected`, fileName: `${slugify(selectedCatalogueSection.displayName)}-selected.csv` })} disabled={!selectedCatalogueGroupProducts.length || saving}><FileDown size={16} /> Download Selected CSV</button>
+              <button type="button" onClick={() => downloadProducts(selectedCatalogueGroupProducts, { includeImages: true, label: `${selectedCatalogueSection.key}-selected`, fileName: `${slugify(selectedCatalogueSection.displayName)}-selected.zip` })} disabled={!selectedCatalogueGroupProducts.length || saving}><Archive size={16} /> Download Selected + Images ZIP</button>
+              <span>{selectedCatalogueGroupProducts.length} selected from {catalogueGroupVisibleProducts.length} visible</span>
+            </div>
+            <div className="catalogue-items-table cabinetry-items-table" role="table" aria-label={`${selectedCatalogueSection.displayName} catalogue items`}>
+              <div className="catalogue-items-head" role="row">
+                <span role="columnheader">Select</span>
+                <span role="columnheader">Thumbnail</span>
+                <span role="columnheader">Product name</span>
+                <span role="columnheader">Brand</span>
+                <span role="columnheader">Range</span>
+                <span role="columnheader">Model / SKU</span>
+                <span role="columnheader">Product Library category</span>
+                <span role="columnheader">Quotation Builder section</span>
+                <span role="columnheader">Price</span>
+                <span role="columnheader">Unit</span>
+                <span role="columnheader">Status</span>
+                <span role="columnheader">Client Selections</span>
+                <span role="columnheader">Quotation Builder</span>
+              </div>
+              {catalogueGroupVisibleProducts.length ? catalogueGroupVisibleProducts.map((product) => {
+                const key = catalogueProductSelectionKey(product);
+                const checked = selectedCatalogueItemSet.has(key);
+                const familyItem = familyByKey(product.familyKey);
+                return (
+                  <div key={key} className="catalogue-items-row" role="row" data-catalogue-product-id={key} data-catalogue-subcategory={catalogueSubcategoryForProduct(product, selectedCatalogueSection.key)} data-cabinetry-product-id={selectedCatalogueSection.key === CABINETRY_SECTION_KEY ? key : undefined} data-cabinetry-subcategory={selectedCatalogueSection.key === CABINETRY_SECTION_KEY ? cabinetrySubcategoryForProduct(product) : undefined}>
+                    <label className="table-check">
+                      <input type="checkbox" checked={checked} onChange={() => toggleCatalogueItemSelection(product)} />
+                      <span className="sr-only">Select {product.productName}</span>
+                    </label>
+                    <span className="catalogue-thumb"><ProductLibraryProductImage product={product} familyItem={familyItem} /></span>
+                    <strong>{product.productName || "Unnamed product"}</strong>
+                    <span>{product.brand || product.manufacturer || product.supplier || "No brand"}</span>
+                    <span>{product.range || product.collection || "No range"}</span>
+                    <span>{[product.model, product.sku, product.productCode].filter(Boolean).join(" / ") || "No model"}</span>
+                    <span>{selectedCatalogueSubcategories.find((item) => item.key === catalogueSubcategoryForProduct(product, selectedCatalogueSection.key))?.label || productCategoryLabel(product)}</span>
+                    <span>{quotationSectionLabel(product)}</span>
+                    <span>{productPriceLabel(product)}</span>
+                    <span>{productUnitLabel(product)}</span>
+                    <span>{product.active === false || product.archived ? "Inactive" : product.enabled === false ? "Disabled" : product.discontinued ? "Discontinued" : "Active"}</span>
+                    <span>{productEnabledLabel(product, "clientSelectable")}</span>
+                    <span>{productEnabledLabel(product, "quotationEnabled")}</span>
+                  </div>
+                );
+              }) : (
+                <div className="empty-state compact">
+                  <strong>No records match this section.</strong>
+                  <span>Choose a different section or import Product Library records before exporting.</span>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+
+        {selectedArea && !selectedCategory && !applianceMode ? (
           <section className="purpose">
             <div className="section-heading">
               <span>{selectedArea.displayName}</span>
@@ -1357,7 +3455,7 @@ export default function BuilderProductLibraryPage() {
           </section>
         ) : null}
 
-        {selectedArea && selectedCategory && !selectedFamily ? (
+        {selectedArea && selectedCategory && !selectedFamily && !applianceMode ? (
           <section className="purpose">
             <div className="section-heading">
               <span>{selectedArea.displayName}</span>
@@ -1396,7 +3494,7 @@ export default function BuilderProductLibraryPage() {
           </section>
         ) : null}
 
-        {selectedFamily ? (
+        {selectedFamily && !applianceMode ? (
           <section className="family-layout">
             <div className="family-main">
               <div className="section-heading">
@@ -1480,7 +3578,7 @@ export default function BuilderProductLibraryPage() {
                         className={selectedProduct?.productId === product.productId ? "product-option selected management-card" : "product-option management-card"}
                       >
                         <button type="button" className="product-pick" onClick={() => setSelectedProductCode(product.productCode || product.productId)}>
-                          <img src={productDisplayImage(product, selectedFamily)} alt={product.productName} />
+                          <ProductLibraryProductImage product={product} familyItem={selectedFamily} />
                           <strong>{product.productName}</strong>
                         </button>
                         <small>Manufacturer: {product.manufacturer || "Not set"}</small>
@@ -1521,9 +3619,9 @@ export default function BuilderProductLibraryPage() {
             <aside className="detail-panel">
               {selectedProduct ? (
                 <div className="selected-product">
-                  <img src={productDisplayImage(selectedProduct, selectedFamily)} alt={selectedProduct.productName} />
+                  <ProductLibraryProductImage product={selectedProduct} familyItem={selectedFamily} large />
                   <div className="gallery" data-gallery-count={(selectedProduct.galleryImages || []).length}>
-                    {((selectedProduct.galleryImageUrls || selectedProduct.galleryImages)?.length ? (selectedProduct.galleryImageUrls || selectedProduct.galleryImages) : [productDisplayImage(selectedProduct, selectedFamily)]).map((image, index) => (
+                    {((selectedProduct.galleryImageUrls || selectedProduct.galleryImages)?.length ? (selectedProduct.galleryImageUrls || selectedProduct.galleryImages) : (productVerifiedImage(selectedProduct) ? [productVerifiedImage(selectedProduct)] : [])).map((image, index) => (
                       <img key={`${image}-${index}`} src={image} alt={`${selectedProduct.productName} gallery ${index + 1}`} />
                     ))}
                   </div>
@@ -1822,6 +3920,17 @@ export default function BuilderProductLibraryPage() {
         .admin-panel {
           margin-top: 16px;
         }
+        .browse-switch {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 16px;
+        }
+        .browse-switch button.selected {
+          border-color: #1f6feb;
+          background: #1f6feb;
+          color: #ffffff;
+        }
         .section-heading {
           display: flex;
           align-items: end;
@@ -1842,6 +3951,10 @@ export default function BuilderProductLibraryPage() {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
           gap: 14px;
+        }
+        .catalogue-section-grid {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+          align-items: stretch;
         }
         .visual-tile {
           display: grid;
@@ -1866,8 +3979,40 @@ export default function BuilderProductLibraryPage() {
           background-position: center;
           background-size: cover;
         }
+        .bricks-category-image {
+          width: 100%;
+          height: 150px;
+          object-fit: cover;
+          object-position: center;
+        }
+        .room-tile .tile-image {
+          position: relative;
+          display: grid;
+          min-height: 190px;
+          align-items: end;
+          padding: 18px;
+          isolation: isolate;
+        }
+        .room-tile .tile-image::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.62));
+          z-index: -1;
+        }
+        .room-tile .tile-image strong {
+          color: #ffffff;
+          font-size: 28px;
+          line-height: 1;
+        }
+        .contain-image {
+          background-color: #f8fafc;
+          background-size: contain;
+          background-repeat: no-repeat;
+        }
         .tile-body {
           display: grid;
+          grid-template-rows: minmax(44px, auto) 22px minmax(46px, 1fr) auto;
           gap: 6px;
           padding: 14px;
         }
@@ -1888,6 +4033,178 @@ export default function BuilderProductLibraryPage() {
           flex-wrap: wrap;
           gap: 8px;
           align-items: center;
+        }
+        .tile-actions {
+          align-self: end;
+        }
+        .catalogue-section-tile {
+          height: 318px;
+          min-height: 318px;
+        }
+        .catalogue-section-tile .tile-image {
+          min-height: 126px;
+          height: 126px;
+          background-color: #f8fafc;
+        }
+        .catalogue-section-tile .tile-body strong {
+          line-height: 1.15;
+        }
+        .button-look {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 34px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #0f172a;
+          color: #ffffff;
+          padding: 7px 11px;
+          font-weight: 900;
+        }
+        .section-summary-card {
+          display: grid;
+          grid-template-columns: 220px minmax(0, 1fr);
+          gap: 16px;
+          align-items: stretch;
+          border: 1px solid #d7deea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 14px;
+          margin-bottom: 14px;
+        }
+        .section-summary-card .tile-image {
+          min-height: 140px;
+          border-radius: 8px;
+          background-color: #e2e8f0;
+        }
+        .section-summary-card p {
+          margin: 0 0 12px;
+          color: #475569;
+          line-height: 1.45;
+        }
+        .room-hero {
+          display: grid;
+          min-height: 300px;
+          align-items: end;
+          border-radius: 8px;
+          overflow: hidden;
+          background-color: #dbe7ef;
+          background-position: center;
+          background-size: cover;
+          margin-bottom: 14px;
+          isolation: isolate;
+          position: relative;
+          padding: 28px;
+        }
+        .room-hero::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(90deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.16));
+          z-index: -1;
+        }
+        .room-hero span {
+          color: #bfdbfe;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .room-hero h2 {
+          margin: 6px 0;
+          color: #ffffff;
+          font-size: 46px;
+          line-height: 1;
+        }
+        .room-hero p {
+          max-width: 640px;
+          margin: 0;
+          color: #e2e8f0;
+          font-size: 18px;
+        }
+        .category-toolbar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+        }
+        .category-toolbar span,
+        .category-toolbar label {
+          color: #475569;
+          font-weight: 900;
+        }
+        .room-product-card .product-card-logo {
+          display: grid;
+          min-height: 56px;
+          align-items: center;
+          justify-items: center;
+        }
+        .cabinetry-brand-card .brand-logo-card,
+        .cabinetry-range-card .swatch-range-card {
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-color: #ffffff;
+        }
+        .cabinetry-colour-card .product-card-logo img {
+          width: min(180px, 80%);
+          max-height: 46px;
+          object-fit: contain;
+        }
+        .cabinetry-colour-card .product-pick img,
+        .swatch-product img {
+          object-fit: contain;
+        }
+        .room-product-card .product-card-logo .appliance-brand-logo {
+          min-height: 56px;
+          border: 0;
+          padding: 4px;
+        }
+        .contain-product img {
+          height: 170px;
+          object-fit: contain;
+          padding: 10px;
+        }
+        .product-detail-split {
+          display: grid;
+          grid-template-columns: minmax(280px, 1fr) minmax(300px, 0.95fr);
+          gap: 24px;
+          align-items: start;
+        }
+        .product-detail-media {
+          display: grid;
+          min-height: 420px;
+          place-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 18px;
+        }
+        .product-detail-media img {
+          width: 100%;
+          max-height: 520px;
+          object-fit: contain;
+        }
+        .product-detail-info {
+          display: grid;
+          gap: 12px;
+        }
+        .product-detail-info .appliance-brand-logo {
+          max-width: 260px;
+          min-height: 76px;
+        }
+        .product-detail-info h2 {
+          margin: 0;
+          font-size: 30px;
+          line-height: 1.1;
+        }
+        .price-line {
+          margin: 0;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 10px 12px;
+          font-weight: 900;
         }
         .catalogue-breadcrumb {
           margin-bottom: 12px;
@@ -1930,6 +4247,49 @@ export default function BuilderProductLibraryPage() {
         .family-hero img {
           height: 160px;
           border-radius: 8px;
+        }
+        .appliance-brand-page,
+        .appliance-category-section {
+          display: grid;
+          gap: 14px;
+        }
+        .appliance-category-section {
+          border: 1px solid #d7deea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 14px;
+        }
+        .compact-heading {
+          margin-bottom: 0;
+        }
+        .compact-heading strong {
+          font-size: 18px;
+        }
+        .appliance-size-group {
+          display: grid;
+          gap: 10px;
+        }
+        .appliance-size-group h3 {
+          margin: 0;
+          color: #334155;
+          font-size: 16px;
+        }
+        .appliance-pack-card {
+          border-color: #b6d5de;
+        }
+        .component-mini-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .component-mini-list span {
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          color: #475569;
+          font-size: 11px;
+          font-weight: 800;
+          padding: 4px 6px;
         }
         .family-hero h2 {
           margin: 0;
@@ -1993,6 +4353,134 @@ export default function BuilderProductLibraryPage() {
           grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
           gap: 12px;
         }
+        .appliance-catalogue {
+          display: grid;
+          gap: 14px;
+          margin-top: 16px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 16px;
+        }
+        .appliance-admin-bar {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          align-items: center;
+        }
+        .appliance-admin-bar span {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: var(--brand-logo-background, #f8fafc);
+          padding: 8px 10px;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .appliance-filters input {
+          grid-column: span 1;
+        }
+        .appliance-card-media {
+          cursor: default;
+        }
+        .appliance-brand-tile {
+          align-content: start;
+        }
+        .appliance-brand-logo {
+          display: grid;
+          min-height: 128px;
+          width: 100%;
+          place-items: center;
+          box-sizing: border-box;
+          border: 1px solid #d7deea;
+          border-radius: 6px;
+          background: #f8fafc;
+          padding: 18px;
+        }
+        .appliance-brand-logo img {
+          display: block;
+          max-width: min(180px, 100%);
+          max-height: 70px;
+          object-fit: contain;
+        }
+        .appliance-brand-logo.text-logo {
+          color: #0f172a;
+          font-size: 22px;
+          font-weight: 900;
+        }
+        .appliance-image-fallback {
+          display: grid;
+          min-height: 140px;
+          width: 100%;
+          align-content: center;
+          gap: 8px;
+          justify-items: center;
+          box-sizing: border-box;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background-color: #eef2f7;
+          color: #0f172a;
+          padding: 14px;
+          text-align: center;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.35;
+        }
+        .appliance-image-fallback strong {
+          color: #0f172a;
+          font-size: 14px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .appliance-image-fallback small {
+          border: 1px solid #cbd5e1;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.92);
+          color: #334155;
+          padding: 5px 8px;
+          font-weight: 900;
+        }
+        .appliance-image-fallback.large {
+          min-height: 160px;
+          border-radius: 8px;
+        }
+        .appliance-description {
+          margin: 0;
+          color: #475569;
+          line-height: 1.55;
+        }
+        .component-list {
+          display: grid;
+          gap: 10px;
+          margin-top: 14px;
+        }
+        .component-row {
+          display: grid;
+          grid-template-columns: 90px minmax(0, 1fr);
+          gap: 10px;
+          align-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 10px;
+        }
+        .component-row .appliance-image-fallback {
+          min-height: 64px;
+          padding: 8px;
+          font-size: 10px;
+        }
+        .component-row span {
+          display: grid;
+          gap: 4px;
+        }
+        .component-row small,
+        .warning-text {
+          color: #64748b;
+          line-height: 1.35;
+        }
+        .warning-text {
+          font-weight: 800;
+        }
         .product-option {
           display: grid;
           gap: 8px;
@@ -2027,6 +4515,39 @@ export default function BuilderProductLibraryPage() {
         }
         .product-option span {
           color: #166534;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .product-option span.appliance-image-fallback {
+          color: #475569;
+        }
+        .product-image-awaiting {
+          display: grid;
+          min-height: 140px;
+          width: 100%;
+          place-items: center;
+          gap: 8px;
+          box-sizing: border-box;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background: #f8fafc;
+          color: #334155;
+          padding: 14px;
+          text-align: center;
+        }
+        .product-image-awaiting.large {
+          min-height: 320px;
+        }
+        .product-image-awaiting strong {
+          color: #0f172a;
+          font-size: 16px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .product-image-awaiting small,
+        .product-option span.product-image-awaiting {
+          color: #64748b;
           font-size: 12px;
           font-weight: 900;
         }
@@ -2208,8 +4729,228 @@ export default function BuilderProductLibraryPage() {
           grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
           gap: 8px;
         }
+        .appliance-type-picker {
+          display: grid;
+          gap: 12px;
+          border: 1px solid #d7deea;
+          background: #ffffff;
+          border-radius: 8px;
+          padding: 14px;
+        }
+        .appliance-type-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 10px;
+        }
+        .appliance-type-grid button {
+          display: grid;
+          gap: 4px;
+          min-height: 74px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #f8fafc;
+          color: #0f172a;
+          padding: 12px;
+          text-align: left;
+          cursor: pointer;
+        }
+        .appliance-type-grid button.selected {
+          border-color: #1f6feb;
+          box-shadow: inset 0 0 0 1px #1f6feb;
+          background: #eff6ff;
+        }
+        .appliance-type-grid span {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .appliance-model-grid {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          align-items: stretch;
+        }
+        .appliance-filters button {
+          min-height: 42px;
+        }
+        .appliance-card-logo .appliance-brand-logo {
+          min-height: 52px;
+          border: 0;
+          background: transparent;
+          padding: 4px;
+        }
+        .appliance-card-logo .appliance-brand-logo img {
+          max-height: 34px;
+        }
+        .appliance-card-media {
+          display: grid;
+          min-height: 164px;
+          place-items: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: #ffffff;
+          cursor: default;
+          overflow: hidden;
+        }
+        .appliance-visual-card {
+          min-height: 460px;
+          grid-template-rows: auto 176px minmax(138px, 1fr) auto auto;
+        }
+        .appliance-visual-card img,
+        .appliance-visual-card .appliance-card-media img,
+        .appliance-detail-layout .family-hero img,
+        .component-mini-list img,
+        .visual-component-card img {
+          width: 100%;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .appliance-visual-card .appliance-card-media img {
+          height: 100%;
+        }
+        .appliance-detail-layout .family-hero img,
+        .appliance-detail-layout .family-hero .appliance-image-fallback.large {
+          height: 320px;
+          min-height: 320px;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .appliance-card-copy {
+          display: grid;
+          gap: 5px;
+          align-content: start;
+        }
+        .appliance-card-copy span {
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .appliance-card-copy strong {
+          color: #0f172a;
+          line-height: 1.25;
+        }
+        .appliance-card-copy small {
+          line-height: 1.35;
+        }
+        .appliance-card-footer {
+          display: grid;
+          gap: 6px;
+        }
+        .appliance-card-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+        .appliance-card-actions button {
+          justify-content: center;
+        }
+        .component-mini-list.visual-components {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+          gap: 6px;
+        }
+        .component-mini-list.visual-components button {
+          display: grid;
+          gap: 4px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 6px;
+          text-align: left;
+          cursor: pointer;
+        }
+        .component-mini-list.visual-components .appliance-image-fallback,
+        .component-mini-list.visual-components img {
+          height: 56px;
+          min-height: 56px;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .component-mini-list.visual-components strong,
+        .component-mini-list.visual-components span {
+          border: 0;
+          background: transparent;
+          color: #0f172a;
+          padding: 0;
+          font-size: 11px;
+          line-height: 1.2;
+        }
+        .component-mini-list.visual-components span {
+          color: #64748b;
+        }
+        .appliance-detail-summary {
+          display: grid;
+          gap: 12px;
+          align-content: start;
+        }
+        .appliance-detail-summary .appliance-brand-logo {
+          max-width: 220px;
+          min-height: 72px;
+        }
+        .appliance-detail-price {
+          display: inline-flex;
+          justify-self: start;
+          border-radius: 8px;
+          background: #fff1f2;
+          color: #334155;
+          padding: 10px 14px;
+          font-size: 18px;
+        }
+        .appliance-detail-quick-specs {
+          display: grid;
+          grid-template-columns: max-content minmax(0, 1fr);
+          gap: 6px 12px;
+          margin: 0;
+        }
+        .appliance-detail-quick-specs dt {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .appliance-detail-quick-specs dd {
+          margin: 0;
+          color: #0f172a;
+          font-weight: 700;
+        }
+        .appliance-feature-list {
+          margin: 0;
+          padding-left: 18px;
+          color: #334155;
+          line-height: 1.45;
+        }
+        .appliance-detail-actions {
+          display: flex;
+          flex-wrap: wrap;
+        }
+        .visual-component-card {
+          width: 100%;
+          min-height: 170px;
+          grid-template-columns: 1fr;
+          text-align: left;
+          cursor: pointer;
+        }
+        .visual-component-card img,
+        .visual-component-card .appliance-image-fallback {
+          height: 96px;
+          min-height: 96px;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .appliance-image-fallback small {
+          border-radius: 8px;
+        }
+        @media (max-width: 1280px) {
+          .appliance-model-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 760px) {
+          .appliance-model-grid {
+            grid-template-columns: 1fr;
+          }
+        }
         .master-filters input,
         .master-filters select,
+        .master-toolbar select,
         .form-grid select {
           min-height: 38px;
           border: 1px solid #cbd5e1;
@@ -2234,6 +4975,120 @@ export default function BuilderProductLibraryPage() {
         .master-table {
           display: grid;
           gap: 8px;
+        }
+        .manage-catalogue-items {
+          display: grid;
+          gap: 12px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 14px;
+        }
+        .catalogue-selection-actions {
+          align-items: center;
+        }
+        .catalogue-selection-actions span {
+          margin-left: auto;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 900;
+        }
+        .cabinetry-subcategory-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .cabinetry-subcategory-tabs button {
+          min-height: 38px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #ffffff;
+          color: #0f172a;
+          padding: 8px 12px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+        .cabinetry-subcategory-tabs button.selected {
+          border-color: #0f766e;
+          background: #ecfdf5;
+          color: #0f766e;
+        }
+        .cabinetry-export-actions {
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 10px;
+        }
+        .catalogue-items-table {
+          display: grid;
+          gap: 6px;
+          overflow-x: auto;
+        }
+        .catalogue-items-head,
+        .catalogue-items-row {
+          display: grid;
+          grid-template-columns: 64px 78px minmax(220px, 1.3fr) minmax(120px, 0.7fr) minmax(130px, 0.7fr) minmax(150px, 0.8fr) minmax(150px, 0.8fr) minmax(190px, 1fr) 110px 80px 100px 110px 120px;
+          gap: 10px;
+          align-items: center;
+          min-width: 1780px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 8px 10px;
+        }
+        .catalogue-items-head {
+          background: #eaf1fb;
+          color: #334155;
+          font-size: 11px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .catalogue-items-row strong,
+        .catalogue-items-row span {
+          overflow-wrap: anywhere;
+        }
+        .catalogue-items-row span {
+          color: #64748b;
+          font-size: 12px;
+        }
+        .table-check {
+          display: flex;
+          justify-content: center;
+        }
+        .table-check input {
+          width: 18px;
+          height: 18px;
+        }
+        .catalogue-thumb {
+          width: 64px;
+          height: 48px;
+          display: grid;
+          place-items: center;
+          border: 1px solid #d7deea;
+          border-radius: 6px;
+          background: #ffffff;
+          overflow: hidden;
+        }
+        .catalogue-thumb img,
+        .catalogue-thumb .product-image-awaiting {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+        .catalogue-thumb .product-image-awaiting {
+          font-size: 9px;
+          padding: 4px;
+        }
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
         }
         .master-row {
           display: grid;
@@ -2342,6 +5197,11 @@ export default function BuilderProductLibraryPage() {
           font-weight: 900;
           text-transform: uppercase;
         }
+        @media (max-width: 1400px) {
+          .catalogue-section-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+        }
         @media (max-width: 980px) {
           .standard-banner,
           .family-layout,
@@ -2349,6 +5209,9 @@ export default function BuilderProductLibraryPage() {
           .product-flow,
           .master-row {
             grid-template-columns: 1fr;
+          }
+          .catalogue-section-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
           .banner-meta {
             justify-items: start;
@@ -2372,12 +5235,219 @@ export default function BuilderProductLibraryPage() {
           .form-grid {
             grid-template-columns: 1fr;
           }
+          .catalogue-section-grid {
+            grid-template-columns: 1fr;
+          }
           .master-filters input {
             grid-column: span 1;
           }
           .preview-row {
             grid-template-columns: 1fr;
           }
+        }
+      `}</style>
+      <style jsx global>{`
+        .appliance-brand-logo {
+          display: grid;
+          min-height: 128px;
+          width: 100%;
+          place-items: center;
+          box-sizing: border-box;
+          border: 1px solid #d7deea;
+          border-radius: 6px;
+          background: #f8fafc;
+          padding: 18px;
+        }
+        .appliance-brand-logo img {
+          display: block;
+          max-width: min(180px, 100%);
+          max-height: 70px;
+          object-fit: contain;
+        }
+        .appliance-brand-logo.text-logo {
+          color: #0f172a;
+          font-size: 22px;
+          font-weight: 900;
+        }
+        .appliance-visual-card {
+          display: grid;
+          gap: 8px;
+          min-height: 460px;
+          grid-template-rows: auto 176px minmax(138px, 1fr) auto auto;
+          align-content: start;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #ffffff;
+          padding: 10px;
+        }
+        .appliance-card-logo {
+          display: grid;
+          min-height: 52px;
+          place-items: center;
+        }
+        .appliance-card-logo .appliance-brand-logo {
+          min-height: 52px;
+          border: 0;
+          background: transparent;
+          padding: 4px;
+        }
+        .appliance-card-logo .appliance-brand-logo img {
+          max-height: 34px;
+        }
+        .appliance-card-media {
+          display: grid;
+          min-height: 164px;
+          place-items: center;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          background: #ffffff;
+          cursor: default;
+          overflow: hidden;
+        }
+        .appliance-card-media img,
+        .appliance-visual-card img,
+        .component-mini-list.visual-components img,
+        .visual-component-card img,
+        .appliance-detail-layout .family-hero img {
+          width: 100%;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .appliance-card-media img {
+          height: 100%;
+        }
+        .appliance-card-copy {
+          display: grid;
+          gap: 5px;
+          align-content: start;
+        }
+        .appliance-card-copy span {
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+        .appliance-card-copy strong {
+          color: #0f172a;
+          line-height: 1.25;
+        }
+        .appliance-card-copy small {
+          color: #64748b;
+          line-height: 1.35;
+        }
+        .appliance-card-footer {
+          display: grid;
+          gap: 6px;
+        }
+        .appliance-card-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+        .appliance-card-actions button,
+        .appliance-detail-actions button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 34px;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #0f172a;
+          color: #ffffff;
+          padding: 7px 11px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+        .appliance-card-actions button.secondary,
+        .appliance-detail-actions button.secondary {
+          background: #ffffff;
+          color: #0f172a;
+        }
+        .appliance-image-fallback {
+          display: grid;
+          min-height: 140px;
+          width: 100%;
+          align-content: center;
+          gap: 8px;
+          justify-items: center;
+          box-sizing: border-box;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          background-color: #eef2f7;
+          color: #0f172a;
+          padding: 14px;
+          text-align: center;
+          font-size: 12px;
+          font-weight: 900;
+          line-height: 1.35;
+        }
+        .appliance-image-fallback strong {
+          color: #0f172a;
+          font-size: 14px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .appliance-image-fallback small {
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.92);
+          color: #334155;
+          padding: 5px 8px;
+          font-weight: 900;
+        }
+        .appliance-detail-layout .family-hero img,
+        .appliance-detail-layout .family-hero .appliance-image-fallback.large {
+          height: 320px;
+          min-height: 320px;
+        }
+        .component-mini-list.visual-components {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+          gap: 6px;
+        }
+        .component-mini-list.visual-components button {
+          display: grid;
+          gap: 4px;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 6px;
+          text-align: left;
+          cursor: pointer;
+        }
+        .component-mini-list.visual-components .appliance-image-fallback,
+        .component-mini-list.visual-components img {
+          height: 56px;
+          min-height: 56px;
+          object-fit: contain;
+          background: #ffffff;
+        }
+        .component-mini-list.visual-components strong,
+        .component-mini-list.visual-components span {
+          border: 0;
+          background: transparent;
+          color: #0f172a;
+          padding: 0;
+          font-size: 11px;
+          line-height: 1.2;
+        }
+        .component-mini-list.visual-components span {
+          color: #64748b;
+        }
+        .visual-component-card {
+          width: 100%;
+          min-height: 170px;
+          grid-template-columns: 1fr;
+          text-align: left;
+          cursor: pointer;
+        }
+        .visual-component-card img,
+        .visual-component-card .appliance-image-fallback {
+          height: 96px;
+          min-height: 96px;
+          object-fit: contain;
+          background: #ffffff;
         }
       `}</style>
     </>

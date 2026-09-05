@@ -1,0 +1,6 @@
+{
+  "passed": false,
+  "error": "Waiting for selector `[data-testid=\"entry-door-supplier-step\"]` failed",
+  "errors": [],
+  "steps": []
+}

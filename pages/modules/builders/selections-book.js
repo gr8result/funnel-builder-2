@@ -1,29 +1,126 @@
+import ExteriorHardwareWizard from '../../../components/estimate-builder/ExteriorHardwareWizard';
+import BuilderProductLibraryPage from './product-library';
+import EntryDoorFurnitureSchedule from '../../../components/estimate-builder/EntryDoorFurnitureSchedule';
+import Router, { useRouter } from "next/router";
+import { exteriorEntryDoors, defaultManualEntryDoor, selectionsFromDoorDetails, patchEntryDoorDraft, entryDoorDetails, entryDoorBookCandidates, upsertEntryDoorSelection, entryDoorSelectionSchedules } from "../../../lib/builders/entryDoorFurnitureSelection.js";
+import InternalCataloguePicker from '../../../components/product-library/InternalCataloguePicker';
+import {INTERNAL_SELECTION_KEYS,internalRequirementMatchesRow} from '../../../lib/product-library/internalSelection.js';
+import { safeSelectionNavigate } from "../../../lib/navigation/selectionNavigation.js";
 import Head from "next/head";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ClipboardList, Upload } from "lucide-react";
+import { ArrowLeft, ArrowUp, CheckCircle2, Upload } from "lucide-react";
 import { useWorkspace } from "../../../hooks/useWorkspace";
 import {
+  APPLIANCE_IMAGE_FALLBACK_LABEL,
+} from "../../../lib/product-library/applianceCatalogueSelectors";
+import {
+  PRODUCT_LIBRARY_CABINETRY_BASE_HANDLE_OPTIONS,
+  PRODUCT_LIBRARY_CABINETRY_FEATURE_OPTIONS,
+  PRODUCT_LIBRARY_CABINETRY_LOCATION_OPTIONS,
+  PRODUCT_LIBRARY_CABINETRY_MATERIAL_OPTIONS,
+  PRODUCT_LIBRARY_CABINETRY_OVERHEAD_HANDLE_OPTIONS,
+  PRODUCT_LIBRARY_WET_AREA_CABINETRY_CONFIG,
+} from "../../../lib/product-library/cabinetryCatalogueSelectors";
+import {
+  appliancePackageSelectionPatches,
+  applianceBrandSummaries,
+  applianceDetailRows,
+  applianceModelsForBrand,
+  applianceProductToGuidedOption,
+  applianceRecordsForRequirement,
+  applianceProductTypesForBrand,
+  applianceSelectionPatch,
+  safeAppliancePackagesForBrand,
+  isApplianceRequirement,
+} from "../../../lib/builders/applianceClientSelectionFlow";
+import {
   ALL_GUIDED_REQUIREMENTS,
+  APPLIANCE_REQUIREMENTS,
+  EXTERNAL_LIGHTING_CATEGORIES,
+  EXTERNAL_LIGHTING_LOCATIONS,
+  EXTERIOR_COLOUR_AREAS,
+  EXTERIOR_COLOUR_AREA_GROUPS,
+  EXTERIOR_COLOUR_FAMILIES,
+  EXTERIOR_COLOUR_PALETTE,
+  EXTERIOR_COLOUR_SCHEMES,
+  EXTERIOR_COLOUR_STATUS_META,
   EXTERIOR_REQUIREMENTS,
+  GARAGE_DOOR_WORKFLOW_STEPS,
   INTERIOR_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
+  PLUMBING_FIXTURE_REQUIREMENTS,
   PRICE_STATES,
   areaTotals as guidedAreaTotals,
   guidedRequirementByKey,
   kitchenRequirementByKey,
-  nextIncompleteRequirement,
   priceStateForProduct,
   productAllowance,
   productClientPrice,
   productsForRequirement,
   projectTotals as guidedProjectTotals,
   classifyApprovedSelectionRow,
+  externalLightingCategory,
+  externalLightingProductMatches,
+  externalLightingScheduleWorkflowProduct,
+  externalLightingSku,
+  exteriorColourAreaComplete,
+  exteriorColourAreaStatus,
+  exteriorColourMatchesFamily,
+  exteriorColourPopularGroups,
+  exteriorColourSearchText,
+  exteriorColourScheduleWorkflowProduct,
+  normaliseExteriorColourArea,
+  garageDoorAccessoryOptions,
+  garageDoorAutomationOptions,
+  garageDoorColourById,
+  garageDoorColourOptionsForProduct,
+  garageDoorEnabledSupplierOptions,
+  garageDoorFinishFamiliesForProduct,
+  garageDoorProductsForSupplier,
+  garageDoorProfileOptions,
+  garageDoorRangeOptions,
+  garageDoorSizeOptions,
+  garageDoorWorkflowProduct,
   requirementImage,
   resolveSelectionImage,
   statusForRequirement,
   statusTone,
   variationFor,
 } from "../../../lib/builders/clientSelectionWorkflow";
+import {
+  CABINETRY_AREA_LABELS,
+  CABINETRY_AREA_KEYS,
+  CABINETRY_BENCHTOPS,
+  CABINETRY_LOCATION_AREA_KEYS,
+  CABINETRY_PRICING_TIERS,
+  CABINETRY_SCHEDULE_TYPE_OPTIONS,
+  CABINETRY_WORKFLOW_STAGES,
+  HANDLE_HOUSE_BASE_CATALOGUE,
+  LAMINEX_CABINETRY_CATALOGUE,
+  POLYTEC_CABINETRY_CATALOGUE,
+  WET_AREA_CABINETRY_ROOM_NAMES,
+  WET_AREA_CABINETRY_SCHEDULE_TYPES,
+  applyKitchenColoursToButlersPantry,
+  buildCabinetrySelectionPayload,
+  cleanIncorrectButlersPantryCopiedScheduleRows,
+  copyCabinetryLocation,
+  defaultCabinetryDraft,
+  kitchenPantryCopiedScheduleLine,
+  normaliseCabinetrySelection,
+  overrideCabinetryArea,
+} from "../../../lib/builders/cabinetryWorkflow";
+import {
+  CUTOUT_OPTIONS,
+  STONE_BENCHTOP_APPLICATIONS,
+  STONE_BENCHTOP_CATALOGUE,
+  STONE_BENCHTOP_DISCLAIMER,
+  STONE_BENCHTOP_EDGE_PROFILES,
+  STONE_BENCHTOP_MATERIAL_LABEL,
+  STONE_BENCHTOP_SUPPLIERS,
+  WATERFALL_END_OPTIONS,
+  activeStoneBenchtopProducts,
+  configureStoneBenchtopSelection,
+} from "../../../lib/builders/stoneBenchtopWorkflow";
 import { DEFAULT_BUILDER_TEMPLATE_BRAND } from "../../../lib/builders/defaultTemplateBrand";
 import { supabase } from "../../../utils/supabase-client";
 import {
@@ -32,21 +129,521 @@ import {
   activeQldBrickMasterProducts,
   commitMasterProductImport,
   masterProductToClientSelectionProduct,
+  normalizeMasterProductRecord,
   parseMasterProductCatalogueImport,
   previewMasterProductImport,
   queryClientSelectableProducts,
 } from "../../../lib/product-library/catalogueModel";
+import windowsDoorsGarageCatalogue from "../../../data/product-library/catalogues/exterior/AU-WINDOWS-ENTRY-DOORS-GARAGE-DOORS-CATALOGUE.json";
+// Kitchen guided selections continue to resolve Product Library records from AU-KITCHEN-PRODUCT-CATALOGUE.json.
 import {
   addBuilderProduct,
   disableProduct,
   enableProduct,
   getBuilderEnablementRefs,
+  getEffectiveApplianceCatalogue,
+  getEffectiveProductCatalogue,
   getMasterProducts,
   updateBuilderProductOverride,
 } from "../../../lib/product-library/catalogueService";
 
+const CABINETRY_SUPPLIER_CONFIG = {
+  Laminex: { label: "Visit Laminex Website", url: "https://www.laminex.com.au/" },
+  Polytec: { label: "Visit Polytec Website", url: "https://www.polytec.com.au/colours/" },
+};
+const CABINETRY_COLOUR_PAGE_SIZE = 60;
+
 const STATUS_OPTIONS = ["pending", "selected", "approved", "ordered"];
 const EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY = "gr8:embedded-selections-book";
+
+const BRADNAMS_COLOUR_SOURCE_URL = "https://www.bradnams.com.au/selecting-window-and-door-colours/";
+const BRADNAMS_SEQ_COLOUR_SOURCE_URL = "https://www.bradnams.com.au/product/windows/sliding-windows/";
+const BRADNAMS_GLASS_SOURCE_URL = "https://www.bradnams.com.au/product/windows/sliding-windows/";
+const TREND_WINDOWS_SOURCE_URL = "https://www.trendwindows.com.au/pages/window-and-door-types";
+const DOWELL_WINDOWS_SOURCE_URL = "https://www.dowell.com.au/windows/";
+const ENTRY_DOORS_DASHBOARD_IMAGE_URL = "/images/product-library/entry-doors/entry-doors-dashboard-contemporary.webp";
+const ENTRY_DOORS_DASHBOARD_IMAGE_ALT = "Contemporary timber entry door installed in a modern brick home";
+const ENTRY_DOORS_SUNBURST_LIFESTYLE_URL = "/images/product-library/entry-doors/entry-doors-sunburst-lifestyle.jpg";
+const ENTRY_DOORS_SUNBURST_LIFESTYLE_ALT = "Sunburst timber entry door installed on a farmhouse-style entrance";
+const ENTRY_DOOR_FURNITURE_FAMILY_KEY = "entry-door-furniture";
+const GARAGE_DOORS_DASHBOARD_IMAGE_URL = "/images/product-library/garage-doors/garage-doors-modern-flatline.webp";
+const GARAGE_DOORS_DASHBOARD_IMAGE_ALT = "Modern black flatline sectional garage door installed on a contemporary home";
+const EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL = "/images/product-library/external-lighting/external-lighting-dashboard-modern-entrance.webp";
+const EXTERNAL_LIGHTING_DASHBOARD_IMAGE_ALT = "Exterior wall lighting illuminating a modern residential entrance";
+const APPLIANCES_DASHBOARD_IMAGE_URL = "/images/client-selections/appliances-kitchen.jpeg";
+const DRIVEWAY_SAMPLE_NOTICE = "On-screen samples are indicative. Concrete colour and aggregate appearance can vary between batches and natural materials. Confirm the final selection using a current physical supplier sample.";
+const ENTRY_DOOR_GLASS_SAMPLE_NOTICE = "On-screen glass samples are indicative. Confirm the final selection using a current physical supplier sample.";
+const SEQ_LOCALITY_PATTERN = /\b(SEQ|SOUTH EAST QUEENSLAND|BRISBANE|GOLD COAST|SUNSHINE COAST|IPSWICH|LOGAN|REDLAND|MORETON BAY|TOOWOOMBA)\b/i;
+const EXTERIOR_WALL_CONSTRUCTION_OPTIONS = [
+  { key: "face_brick", label: "Face brick", brickApplicable: true, brickStatus: "client_required", description: "Brick range, colour and mortar/joint selections are required where exposed brickwork is part of the facade." },
+  { key: "rendered_masonry", label: "Rendered masonry", brickApplicable: false, brickStatus: "not_applicable", description: "Brick selection is not applicable - rendered finish. Common bricks remain an estimating and BOQ component only." },
+  { key: "lightweight_cladding", label: "Lightweight cladding", brickApplicable: false, brickStatus: "not_applicable", description: "Brick selection is not required unless exposed brick is separately nominated." },
+  { key: "mixed_facade", label: "Mixed facade", brickApplicable: true, brickStatus: "nominated_areas", description: "Bricks are required only for nominated exposed-brick areas; render and cladding selections remain separate." },
+];
+const ENTRY_DOOR_FURNITURE_PRODUCTS = [
+  entryDoorFurnitureProduct({
+    code: "GAINSBOROUGH-895TLE",
+    supplier: "Gainsborough",
+    name: "Trilock Traditional Double Cylinder Entrance Lever Set",
+    model: "895TLE",
+    groupKey: "lever_entrance_set",
+    image: "https://images.salsify.com/image/upload/s--hkRrQ3o5--/r3yaqdbq2aebg3xqx1m4.jpg",
+    url: "https://www.gainsboroughhardware.com.au/en/products/895TLE.html",
+    handleStyle: "Traditional lever entrance set",
+    handleLength: "116mm lever",
+    material: "Zinc alloy",
+    finishes: ["Polished Brass", "Satin Chrome", "Bright Chrome"],
+    lockingType: "Trilock 3-in-1 passage, privacy and deadbolt",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Integrated latch and deadbolt",
+    backset: "60mm",
+    compatibleDoorThickness: "35-45mm",
+    handing: "Suitable for left or right handed doors",
+    externalUseSuitability: "Entrance door lockset",
+    compatibilityDetails: "Verified Gainsborough complete entrance lockset.",
+    verificationStatus: "verified_package",
+  }),
+  entryDoorFurnitureProduct({
+    code: "GAINSBOROUGH-8951ANG",
+    supplier: "Gainsborough",
+    name: "Trilock Contemporary Angular Double Cylinder Entrance Set",
+    model: "8951ANG",
+    groupKey: "lever_entrance_set",
+    image: "https://images.salsify.com/image/upload/s--K6lYKs9M--/o3m9p7trvqwzkvadq3tu.jpg",
+    url: "https://www.gainsboroughhardware.com.au/en/products/8951ANG.html",
+    handleStyle: "Angular lever entrance set",
+    handleLength: "199mm lever/backplate assembly",
+    material: "Zinc alloy",
+    finishes: ["Satin Chrome", "Matt Black", "Bright Chrome"],
+    lockingType: "Trilock 3-in-1 passage, privacy and deadbolt",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Integrated latch and deadbolt",
+    backset: "60mm",
+    compatibleDoorThickness: "35-45mm",
+    handing: "Suitable for left or right handed doors",
+    externalUseSuitability: "Entrance door lockset",
+    compatibilityDetails: "Verified Gainsborough complete entrance lockset.",
+    verificationStatus: "verified_package",
+  }),
+  entryDoorFurnitureProduct({
+    code: "GAINSBOROUGH-8951HAR",
+    supplier: "Gainsborough",
+    name: "Trilock Cove Harper Double Cylinder Entrance Lever Set",
+    model: "8951HAR",
+    groupKey: "lever_entrance_set",
+    image: "https://images.salsify.com/image/upload/s--hmnl23tx--/idkpqyd5azlhztcodrqc.jpg",
+    url: "https://www.gainsboroughhardware.com.au/en/products/8951HAR.html",
+    handleStyle: "Harper lever on Cove backplate",
+    handleLength: "186mm lever",
+    material: "Zinc alloy",
+    finishes: ["Satin Chrome", "Matt Black"],
+    lockingType: "Trilock 3-in-1 passage, privacy and deadbolt",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Integrated latch and deadbolt",
+    backset: "60mm",
+    compatibleDoorThickness: "35-45mm",
+    handing: "Suitable for left or right handed doors",
+    externalUseSuitability: "Entrance door lockset",
+    compatibilityDetails: "Verified Gainsborough complete entrance lockset.",
+    verificationStatus: "verified_package",
+  }),
+  entryDoorFurnitureProduct({
+    code: "GAINSBOROUGH-8905ALL",
+    supplier: "Gainsborough",
+    name: "Trilock Omni Allure Double Cylinder Pull Handle Entrance Set",
+    model: "8905ALL",
+    groupKey: "integrated_pull_lockset",
+    image: "https://images.salsify.com/image/upload/s--wDkHW_-g--/jv53zlkr3ovwqt5ab1v9.jpg",
+    url: "https://www.gainsboroughhardware.com.au/en/products/8905ALL.html",
+    handleStyle: "Integrated pull handle entrance set",
+    handleLength: "600mm pull handle",
+    material: "Marine-grade 316 stainless steel pull handle",
+    finishes: ["Satin Brass"],
+    lockingType: "Trilock 3-in-1 with concealed external lever",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Integrated latch and deadbolt",
+    backset: "60mm",
+    compatibleDoorThickness: "35-45mm",
+    handing: "Suitable for left or right handed doors",
+    externalUseSuitability: "Entrance pull handle lockset",
+    coastalSuitability: "316 stainless steel pull handle",
+    compatibilityDetails: "Long pull handle must be checked against horizontal glazing openings.",
+    verificationStatus: "requires_supplier_confirmation",
+  }),
+  entryDoorFurnitureProduct({
+    code: "LOCKWOOD-PARADIGM-PULL-DEADBOLT",
+    supplier: "Lockwood",
+    name: "Lockwood Paradigm Pull Handle Lockset - Deadbolt",
+    model: "Paradigm Pull Handle Lockset - Deadbolt",
+    groupKey: "integrated_pull_lockset",
+    image: "https://gw-assets.assaabloy.com/is/image/assaabloy/005-exterior-view-front",
+    url: "https://www.lockweb.com.au/au/en/products/door-locks/deadbolts/paradigm-pull-handle-lockset-deadbolt",
+    handleStyle: "Paradigm pull handle lockset",
+    lockingType: "Double cylinder deadbolt",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Deadbolt",
+    finish: "Matt black",
+    compatibilityDetails: "Supplier page verifies the Paradigm variants; final door fitout to be confirmed by Lockwood.",
+    verificationStatus: "requires_supplier_confirmation",
+    gallery: [
+      { label: "External furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/005-exterior-view-front" },
+      { label: "External view with key", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/005-exterior-view-with-key-led-green" },
+      { label: "Internal furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/005-interior-view-angled" },
+      { label: "Installed on door", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/005-exterior-view-insitu" },
+      { label: "Dimensions", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/PPH-LD", technical: true },
+    ],
+  }),
+  entryDoorFurnitureProduct({
+    code: "LOCKWOOD-PARADIGM-PULL-SL-SC",
+    supplier: "Lockwood",
+    name: "Lockwood Paradigm Pull Handle Lockset - Self-Latching Single Cylinder",
+    model: "Paradigm Pull Handle Lockset - Self-Latching Single Cylinder",
+    groupKey: "integrated_pull_lockset",
+    image: "https://gw-assets.assaabloy.com/is/image/assaabloy/1b587-i_paradigm_bolt_exteriordummy02",
+    url: "https://www.lockweb.com.au/au/en/products/door-locks/locksets/lockwood-paradigm-pull-handle-lockset-self-latching-single-cylinder",
+    handleStyle: "Paradigm pull handle lockset",
+    lockingType: "Self-latching deadlatch",
+    cylinderConfiguration: "Single cylinder",
+    latchMechanism: "Self-latching",
+    finish: "Matt black",
+    compatibilityDetails: "Supplier page verifies the Paradigm variants; final door fitout to be confirmed by Lockwood.",
+    verificationStatus: "requires_supplier_confirmation",
+    gallery: [
+      { label: "External furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/1b587-i_paradigm_bolt_exteriordummy02" },
+      { label: "Internal furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/b1cde-i_paradigm_bolt_interiorlatch02-1" },
+      { label: "Internal latch detail", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/27b0b-i_paradigm_bolt_interiorlatch03" },
+    ],
+  }),
+  entryDoorFurnitureProduct({
+    code: "LOCKWOOD-PARADIGM-PULL-SL-DC",
+    supplier: "Lockwood",
+    name: "Lockwood Paradigm Pull Handle Lockset - Self-Latching Double Cylinder",
+    model: "Paradigm Pull Handle Lockset - Self-Latching Double Cylinder",
+    groupKey: "integrated_pull_lockset",
+    image: "https://gw-assets.assaabloy.com/is/image/assaabloy/fd64e-c_paradigm_double-doorexterior01",
+    url: "https://www.lockweb.com.au/au/en/products/door-locks/locksets/lockwood-paradigm-pull-handle-lockset-self-latching-double-cylinder",
+    handleStyle: "Paradigm pull handle lockset",
+    lockingType: "Self-latching deadlatch",
+    cylinderConfiguration: "Double cylinder",
+    latchMechanism: "Self-latching",
+    finish: "Matt black",
+    compatibilityDetails: "Supplier page verifies the Paradigm variants; final door fitout to be confirmed by Lockwood.",
+    verificationStatus: "requires_supplier_confirmation",
+    gallery: [
+      { label: "External furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/fd64e-c_paradigm_double-doorexterior01" },
+      { label: "Internal furniture", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/3d74c-c_paradigm_double-doorinterior01-1" },
+      { label: "External detail", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/a125d-i_paradigm_double-doorexterior01" },
+      { label: "Internal detail", url: "https://gw-assets.assaabloy.com/is/image/assaabloy/d81cc-i_paradigm_double-doorinterior01" },
+    ],
+  }),
+  entryDoorFurnitureProduct({
+    code: "ZANDA-ROUND-PULL-SUPPLIER-QUOTE",
+    supplier: "Zanda",
+    name: "Round Profile Straight Pull Handle with compatible roller-lock/deadbolt package",
+    model: "Builder configuration required - supplier quote",
+    groupKey: "pull_handle_deadlock",
+    image: "https://zanda.com.au/wp-content/uploads/2021/07/Round-Profile-Pull-Handle-Satin-Brass.jpg",
+    url: "https://zanda.com.au/product/satin-brass-round-pull-handle-straight/",
+    handleStyle: "Round profile straight pull handle",
+    handleLength: "600mm or 900mm",
+    material: "Supplier verified per selected finish",
+    finishes: ["Satin Brass"],
+    lockingType: "Separate compatible roller lock/deadbolt",
+    cylinderConfiguration: "Builder configuration required - supplier quote",
+    compatibilityDetails: "Builder configuration required - supplier quote",
+    verificationStatus: "requires_supplier_confirmation",
+  }),
+  entryDoorFurnitureProduct({
+    code: "ZANDA-POLO-OFFSET-SUPPLIER-QUOTE",
+    supplier: "Zanda",
+    name: "Polo Offset Pull Handle with compatible roller-lock/deadbolt package",
+    model: "Builder configuration required - supplier quote",
+    groupKey: "pull_handle_deadlock",
+    image: "https://zanda.com.au/wp-content/uploads/2021/07/Square-Profile-Pull-Handles-316SS.jpg",
+    url: "https://zanda.com.au/product/polo-pull-handle/",
+    handleStyle: "Polo offset pull handle",
+    handleLength: "300mm, 450mm, 600mm, 900mm, 1200mm or 1800mm",
+    material: "316 stainless steel where selected finish is stainless steel",
+    finishes: ["316 Stainless Steel", "Matt Black"],
+    lockingType: "Separate compatible roller lock/deadbolt",
+    cylinderConfiguration: "Builder configuration required - supplier quote",
+    compatibilityDetails: "Builder configuration required - supplier quote",
+    verificationStatus: "requires_supplier_confirmation",
+  }),
+  entryDoorFurnitureProduct({
+    code: "ZANDA-STREAMLINE-SUPPLIER-QUOTE",
+    supplier: "Zanda",
+    name: "Streamline Pull Handle with compatible roller-lock/deadbolt package",
+    model: "Builder configuration required - supplier quote",
+    groupKey: "pull_handle_deadlock",
+    image: "https://zanda.com.au/wp-content/uploads/2021/07/Square-Profile-Pull-Handles-316SS.jpg",
+    url: "https://zanda.com.au/product/square-profile-straight/",
+    handleStyle: "Streamline pull handle",
+    material: "Supplier verified per selected finish",
+    finishes: ["316 Stainless Steel", "Matt Black", "Graphite Nickel", "Satin Brass"],
+    lockingType: "Separate compatible roller lock/deadbolt",
+    cylinderConfiguration: "Builder configuration required - supplier quote",
+    compatibilityDetails: "Builder configuration required - supplier quote",
+    verificationStatus: "requires_supplier_confirmation",
+  }),
+];
+const HUME_SAVOY_1200_XS26_GLASS_OPTIONS = [
+  entryDoorGlassOption({
+    name: "Clear",
+    code: "Clear",
+    classification: "Clear",
+    privacy: "Low privacy",
+    lightTransmission: "Highest natural light; transparent view through the glazed openings.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5b8d50a3bcd45bffb0ecfab63583a90f456b49a0-100x100.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/a95122bbfbab09b6665022ca6876d9e4dc9841b2-706x1200.jpg",
+    priceStatus: "Included where specified by supplier quote",
+  }),
+  entryDoorGlassOption({
+    name: "Cathedral",
+    code: "Cathedral",
+    classification: "Patterned",
+    privacy: "Moderate privacy",
+    lightTransmission: "Patterned glass admits light while softening the view through the openings.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/db42cba743202e3ba5ef8ddd7f147c9b9489820b-250x250.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/e22b24dc00c563c6bcd4c0c1489bb9c0d9d41747-706x1200.jpg",
+    priceStatus: "Upgrade / quote required",
+  }),
+  entryDoorGlassOption({
+    name: "Grey Tint",
+    code: "Grey Tint",
+    classification: "Toned",
+    privacy: "Low to moderate privacy",
+    lightTransmission: "Tinted glass reduces glare and darkens the glazed openings.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/66fb235b118e8bc49ad4503032d522cfe4edac59-400x400.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/66801f8222bdeaed4c4f29ba8dfc97b04dd0f595-706x1200.jpg",
+    priceStatus: "Upgrade / quote required",
+  }),
+  entryDoorGlassOption({
+    name: "Translucent",
+    code: "Translucent",
+    classification: "Obscure",
+    privacy: "Higher privacy",
+    lightTransmission: "Diffused light with obscured direct view through the glazed openings.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/f30d19a63c77283990dfec574cb6b6ba5e59097b-100x100.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/333a8278737ef176f62930ee28d3739a58cafa1b-706x1200.jpg",
+    priceStatus: "Upgrade / quote required",
+  }),
+  entryDoorGlassOption({
+    name: "Low E",
+    code: "Low E",
+    classification: "Performance",
+    privacy: "Low privacy",
+    lightTransmission: "Performance glass option; final visible light performance to be confirmed by Hume.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/5b8d50a3bcd45bffb0ecfab63583a90f456b49a0-100x100.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/a95122bbfbab09b6665022ca6876d9e4dc9841b2-706x1200.jpg",
+    priceStatus: "Upgrade / quote required",
+  }),
+  entryDoorGlassOption({
+    name: "Rice Paper",
+    code: "Rice Paper",
+    classification: "Patterned obscure",
+    privacy: "Higher privacy",
+    lightTransmission: "Decorative obscure glass admits light while strongly softening the view.",
+    sampleImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/25c2db8e4c442416bd7a39bb0f2d34212bb842a1-250x250.jpg",
+    previewImage: "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/7bcd8b43cdeff1ffe589729657aaf697ab55854c-706x1200.jpg",
+    priceStatus: "Upgrade / quote required",
+  }),
+];
+const DEFAULT_WINDOW_CONFIGURATION = {
+  supplier: "",
+  systemsByType: {},
+  scope: "all_project_windows",
+  frameColourName: "",
+  frameColourId: "",
+  frameColourCode: "",
+  frameColourClass: "",
+  frameColourFinish: "",
+  frameColourHex: "",
+  frameColourSourceUrl: "",
+  frameColourLastVerified: "",
+  frameColourAudit: [],
+  glassName: "Clear",
+  glassClass: "Clear",
+  screens: "Standard insect screens where scheduled/permitted",
+  hardware: "Black key lockable handles where applicable",
+  exceptions: "",
+  clientNotes: "",
+  overrides: {},
+  selectedWindowIds: [],
+};
+
+const SHARED_GARAGE_DOOR_CATALOGUE_PRODUCTS = (windowsDoorsGarageCatalogue.products || [])
+  .filter((product) => product.family_key === "garage-doors" || product.familyKey === "garage-doors")
+  .map((product) => normalizeMasterProductRecord(product))
+  .filter((product) => product.active !== false && !product.discontinued && !/jamb/i.test(`${product.productName} ${product.category} ${product.subcategory}`));
+
+function supplierColourRecord({
+  supplierId,
+  supplierName,
+  colourId,
+  name,
+  code = "",
+  finish = "",
+  systems = [],
+  hex = "#d8dee8",
+  availability = "Available",
+  regionAvailability = ["National"],
+  sourceUrl = "",
+  lastVerified = "",
+  demo = false,
+}) {
+  return {
+    supplierId,
+    supplierName,
+    colourId,
+    id: colourId,
+    name,
+    officialName: name,
+    code,
+    supplierCode: code,
+    finish,
+    type: /quote|custom|designer|anod/i.test(availability) ? "quote_required" : "standard",
+    systems,
+    compatibleSystems: systems,
+    hex,
+    swatchValue: hex,
+    availability,
+    availabilityStatus: demo ? `${availability} - demo code pending supplier confirmation` : availability,
+    regionAvailability,
+    sourceUrl,
+    officialSourceUrl: sourceUrl,
+    lastVerified,
+    demo,
+  };
+}
+
+const BRADNAMS_REGION_COLOURS = {
+  "South East Queensland": [
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-black", name: "Textura\u00ae Black", code: "GN305A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#101112", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-monument", name: "Textura\u00ae Monument", code: "GL329A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#323436", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-woodland-grey", name: "Textura\u00ae Woodland Grey", code: "GL333A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#4a4d49", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-basalt", name: "Textura\u00ae Basalt", code: "GP316A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#5b5d59", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-silver", name: "Textura\u00ae Silver", code: "GY35LA", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#9b9d9d", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-dune", name: "Textura\u00ae Dune", code: "GL325A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#b7b0a2", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-surfmist", name: "Textura\u00ae Surfmist", code: "GA336A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#d8d4c8", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+    supplierColourRecord({ supplierId: "bradnams", supplierName: "Bradnam's Windows & Doors", colourId: "bradnams-seq-textura-white", name: "Textura\u00ae White", code: "GA330A", finish: "Textura", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#f4f2ea", regionAvailability: ["South East Queensland"], sourceUrl: BRADNAMS_COLOUR_SOURCE_URL, lastVerified: "2026-08-27" }),
+  ],
+};
+
+const BRADNAMS_GLASS_OPTIONS = [
+  { name: "Clear", type: "Clear", privacy: "Low privacy", status: "Included where allowed", sample: "linear-gradient(135deg, rgba(219,234,254,.75), rgba(255,255,255,.92))" },
+  { name: "Grey", type: "Toned", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #8f969a, #d1d5d8)" },
+  { name: "Green", type: "Toned", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #8ea99d, #dbe8df)" },
+  { name: "Blue", type: "Toned", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #8ea8bf, #dbeafe)" },
+  { name: "Spotswood", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "repeating-linear-gradient(45deg, #e5e7eb 0 7px, #cbd5e1 7px 14px)" },
+  { name: "Satinlite", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #cbd5e1)" },
+  { name: "Acid Etched", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "radial-gradient(circle at 30% 30%, #ffffff, #dbe3ea)" },
+  { name: "White Translucent", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "linear-gradient(135deg, #ffffff, #eef2f7)" },
+];
+
+const WINDOW_SCOPE_OPTIONS = [
+  { key: "all_project_windows", label: "All project windows", description: "Applies to every external window in the imported project window schedule." },
+  { key: "by_floor", label: "By floor", description: "Use when upper and lower floors need different finishes." },
+  { key: "by_elevation", label: "By elevation", description: "Use when front, side or rear elevations need exceptions." },
+  { key: "by_room_or_window", label: "By room or window number", description: "Use for builder-approved room or individual-window exceptions." },
+];
+
+const WINDOWS_WORKFLOW_STEPS = ["schedule", "supplier", "systems", "defaults", "windows", "review"];
+const WET_AREA_PATTERN = /\b(bath|bathroom|ensuite|powder|wc|toilet)\b/i;
+const OPENING_WINDOW_PATTERN = /(sliding|awning|louvre|double hung|casement|bi-fold|bifold)/i;
+
+const WINDOW_SUPPLIER_LIBRARY = [
+  {
+    label: "Bradnam's Windows & Doors",
+    key: "bradnams",
+    website: "https://www.bradnams.com.au/product-selection/windows-doors/",
+    logo: "Bradnam's",
+    status: "Included supplier",
+    image: "https://www.bradnams.com.au/wp-content/webp-express/webp-images/uploads/2021/09/2-panel-sliding-window-300x297.jpg.webp",
+    compatibleTypes: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"],
+    source: BRADNAMS_SEQ_COLOUR_SOURCE_URL,
+    systems: {
+      "Sliding Window": { name: "Bradnam's Aluminium Sliding Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/sliding-windows/" },
+      "Awning Window": { name: "Bradnam's Aluminium Awning Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/awning-windows/" },
+      "Fixed Window": { name: "Bradnam's Aluminium Fixed Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/fixed-windows/" },
+      "Louvre Window": { name: "Bradnam's Aluminium Louvre Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/louvres-windows/" },
+      "Double Hung Window": { name: "Bradnam's Aluminium Double Hung Sash Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/double-hung-sash-windows/" },
+      "Casement Window": { name: "Bradnam's Aluminium Casement Windows", status: "Matched", url: "https://www.bradnams.com.au/product/windows/casement-windows/" },
+    },
+    colours: BRADNAMS_REGION_COLOURS["South East Queensland"],
+    glass: BRADNAMS_GLASS_OPTIONS,
+    screens: ["No screen", "Standard insect screen", "Security screen - quote required"],
+    hardware: ["Black key lockable handles where applicable", "Match frame colour where available", "Builder nominated hardware package"],
+  },
+  {
+    label: "Dowell Windows",
+    key: "dowell",
+    website: "https://www.dowell.com.au/windows/",
+    logo: "Dowell",
+    status: "Alternative supplier",
+    image: "https://www.dowell.com.au/wp-content/uploads/2020/10/p-sliding-windows-2.jpg",
+    compatibleTypes: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"],
+    source: DOWELL_WINDOWS_SOURCE_URL,
+    systems: {
+      "Sliding Window": { name: "Dowell UrbanLine Sliding Windows", status: "Matched", url: "https://www.dowell.com.au/windows/" },
+      "Awning Window": { name: "Dowell UrbanLine Awning Windows", status: "Matched", url: "https://www.dowell.com.au/windows/" },
+      "Fixed Window": { name: "Dowell UrbanLine Fixed Windows", status: "Matched", url: "https://www.dowell.com.au/windows/" },
+      "Louvre Window": { name: "Dowell DesignerLine Louvre Windows", status: "Matched", url: "https://www.dowell.com.au/products/designerline-louvre-windows/" },
+      "Double Hung Window": { name: "Dowell UrbanLine Double Hung Windows", status: "Matched", url: "https://www.dowell.com.au/windows/" },
+      "Casement Window": { name: "Dowell UrbanLine Casement Windows", status: "Matched", url: "https://www.dowell.com.au/windows/" },
+    },
+    colours: [
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-black-satin", name: "BLACK", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#101112", availability: "Standard colour", sourceUrl: "https://www.dowell.com.au/products/urbanline-sliding-windows/", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-dune-satin", name: "DUNE\u00ae", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#b7b0a2", availability: "Standard colour", sourceUrl: "https://www.dowell.com.au/products/urbanline-sliding-windows/", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-surfmist-matt", name: "SURFMIST\u00ae", finish: "Matt", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#d8d4c8", availability: "Standard colour", sourceUrl: "https://www.dowell.com.au/products/urbanline-sliding-windows/", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-ultra-silver-gloss", name: "ULTRA SILVER", finish: "Gloss", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#b8bab9", availability: "Standard colour", sourceUrl: "https://www.dowell.com.au/products/urbanline-sliding-windows/", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-woodland-grey-satin", name: "WOODLAND GREY\u00ae", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#4a4d49", availability: "Standard colour", sourceUrl: "https://www.dowell.com.au/products/urbanline-sliding-windows/", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "dowell", supplierName: "Dowell Windows", colourId: "dowell-arl-white-gloss", name: "ARL WHITE", finish: "Gloss", systems: ["Double Hung Window"], hex: "#f4f2ea", availability: "Standard colour on listed systems", sourceUrl: "https://www.dowell.com.au/products/urbanline-double-hung-windows/", lastVerified: "2026-08-27", demo: true }),
+    ],
+    glass: [
+      { name: "Clear", type: "Clear", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, rgba(219,234,254,.75), rgba(255,255,255,.92))" },
+      { name: "Obscure privacy glass", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #cbd5e1)" },
+      { name: "Low-E glass", type: "Low-E", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #c7d2fe, #eef2ff)" },
+    ],
+    screens: ["No screen", "Standard insect screen", "Security screen - quote required"],
+    hardware: ["Black key lockable handles where applicable", "Match frame colour where available"],
+  },
+  {
+    label: "Trend Windows & Doors",
+    key: "trend",
+    website: "https://www.trendwindows.com.au/",
+    logo: "Trend",
+    status: "Upgrade supplier",
+    image: "https://www.trendwindows.com.au/cdn/shop/files/Trend-Windows-Doors-Residential-Windows.jpg",
+    compatibleTypes: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"],
+    source: TREND_WINDOWS_SOURCE_URL,
+    systems: {
+      "Sliding Window": { name: "Trend Synergy Sliding Windows", status: "Matched", url: "https://www.trendwindows.com.au/products/synergy-sliding-windows" },
+      "Awning Window": { name: "Trend Synergy Awning Windows", status: "Matched", url: "https://www.trendwindows.com.au/products/synergy-awning-windows" },
+      "Fixed Window": { name: "Trend Synergy Fixed Windows", status: "Matched", url: "https://www.trendwindows.com.au/collections/all" },
+      "Louvre Window": { name: "Trend Louvre Windows", status: "Requires supplier quote", url: "https://www.trendwindows.com.au/collections/all" },
+      "Double Hung Window": { name: "Trend Synergy Double Hung Windows", status: "Matched", url: "https://www.trendwindows.com.au/products/synergy-double-hung-windows" },
+      "Casement Window": { name: "Trend Quantum Casement Windows", status: "Matched", url: "https://www.trendwindows.com.au/products/quantum-casement-windows" },
+    },
+    colours: [
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-black-matt", name: "Black", finish: "Matt", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#101112", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/collections/colour-range", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-monument-matt", name: "Monument Matt", finish: "Matt", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#323436", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/collections/colour-range", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-surfmist-matt", name: "Surfmist Matt", finish: "Matt", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#d8d4c8", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/collections/colour-range", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-pearl-white-satin", name: "Pearl White", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#f4f2ea", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/products/synergy-sliding-windows", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-silver-pearl-satin", name: "Trend Silver Pearl", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#b9bab8", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/products/synergy-sliding-windows", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-stone-satin", name: "Stone", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#a8a094", availability: "Available range colour", sourceUrl: "https://www.trendwindows.com.au/products/synergy-sliding-windows", lastVerified: "2026-08-27", demo: true }),
+      supplierColourRecord({ supplierId: "trend", supplierName: "Trend Windows & Doors", colourId: "trend-hammersley-brown-satin", name: "Hammersley Brown", finish: "Satin", systems: ["Sliding Window", "Awning Window", "Fixed Window", "Louvre Window", "Double Hung Window", "Casement Window"], hex: "#5b4636", availability: "Designer range - lead time may vary", sourceUrl: "https://www.trendwindows.com.au/products/synergy-sliding-windows", lastVerified: "2026-08-27", demo: true }),
+    ],
+    glass: [
+      { name: "Clear", type: "Clear", privacy: "Low privacy", status: "Included where allowed", sample: "linear-gradient(135deg, rgba(219,234,254,.75), rgba(255,255,255,.92))" },
+      { name: "Obscure privacy glass", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #cbd5e1)" },
+      { name: "Low-E glass", type: "Low-E", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #c7d2fe, #eef2ff)" },
+      { name: "Double glazing", type: "Double glazing", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #bfdbfe, #f8fafc)" },
+    ],
+    screens: ["No screen", "Standard insect screen", "Security screen - quote required"],
+    hardware: ["Black key lockable handles where applicable", "Match frame colour where available", "Architectural hardware - quote required"],
+  },
+];
 
 const DEFAULT_ROOMS = [
   "External Walls",
@@ -241,12 +838,15 @@ const GUIDED_AREA_CARDS = [
 const EXTERIOR_CATEGORY_CARDS = EXTERIOR_REQUIREMENTS.map((requirement) => ({
   key: requirement.requirementKey,
   label: requirement.label,
-  image: requirementImage(requirement),
+  image: requirement.requirementKey === "entry-door" ? ENTRY_DOORS_DASHBOARD_IMAGE_URL : requirement.requirementKey === "garage-door" ? GARAGE_DOORS_DASHBOARD_IMAGE_URL : requirement.requirementKey === "external-lighting" ? EXTERNAL_LIGHTING_DASHBOARD_IMAGE_URL : requirementImage(requirement),
+  imageAlt: requirement.requirementKey === "entry-door" ? ENTRY_DOORS_DASHBOARD_IMAGE_ALT : requirement.requirementKey === "garage-door" ? GARAGE_DOORS_DASHBOARD_IMAGE_ALT : requirement.requirementKey === "external-lighting" ? EXTERNAL_LIGHTING_DASHBOARD_IMAGE_ALT : requirement.label,
   requirementKey: requirement.requirementKey,
 }));
 
 const INTERIOR_CATEGORY_CARDS = [
-  ["kitchen", "Kitchen", GENERIC_IMAGE_URLS.kitchen],
+  ["cabinetry", "Cabinetry", GENERIC_IMAGE_URLS.kitchen, "cabinetry", "Configure cabinetry separately for each applicable room."],
+  ["appliances", "Appliances", APPLIANCES_DASHBOARD_IMAGE_URL],
+  ["plumbing-fixtures", "Plumbing Fixtures", GENERIC_IMAGE_URLS.bathroom, null, "Select sinks, basins, tapware, toilets, baths and other plumbing fixtures by room."],
   ["bathroom", "Bathroom", GENERIC_IMAGE_URLS.bathroom],
   ["ensuite", "Ensuite", GENERIC_IMAGE_URLS.bathroom],
   ["laundry", "Laundry", GENERIC_IMAGE_URLS.laundry],
@@ -254,7 +854,10 @@ const INTERIOR_CATEGORY_CARDS = [
   ["living", "Living", GENERIC_IMAGE_URLS.living],
   ["garage-interior", "Garage Interior", GENERIC_IMAGE_URLS.garage],
   ["internal-doors", "Internal Doors", GENERIC_IMAGE_URLS.internalDoors, "internal-doors"],
-].map(([key, label, image, requirementKey]) => ({ key, label, image, requirementKey }));
+  ["door-hardware", "Internal Door Furniture", "/images/product-library/internal-areas/category-internal-handle.webp", "door-hardware"],
+  ["skirting", "Skirting", "/images/product-library/internal-areas/category-skirting-architraves.webp", "skirting"],
+  ["architraves", "Architraves", "/images/product-library/internal-areas/category-skirting-architraves.webp", "architraves"],
+].map(([key, label, image, requirementKey, description]) => ({ key, label, image, requirementKey, description }));
 
 const REQUIREMENT_OPTION_KEY = {
   cabinetry: "cabinet doors",
@@ -274,6 +877,35 @@ const REQUIREMENT_OPTION_KEY = {
   paint: "wall paint",
 };
 
+const WINDOW_NO_TAKEOFF_SCHEDULE_MESSAGE = "No window schedule is available. Complete the Windows & Doors Schedule in AI Plan Takeoff first.";
+const REQUIRED_WINDOW_GLASS_TYPE_OPTIONS = [
+  { name: "Clear", type: "Clear", privacy: "Low privacy", status: "Included where allowed", sample: "linear-gradient(135deg, rgba(219,234,254,.75), rgba(255,255,255,.92))" },
+  { name: "Obscure", type: "Obscure", privacy: "Higher privacy", status: "Quote required", sample: "repeating-linear-gradient(45deg, #e5e7eb 0 7px, #cbd5e1 7px 14px)" },
+  { name: "Translucent", type: "Translucent", privacy: "Higher privacy", status: "Quote required", sample: "linear-gradient(135deg, #ffffff, #eef2f7)" },
+  { name: "Tinted", type: "Tinted", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #8f969a, #d1d5d8)" },
+  { name: "Low-E", type: "Performance", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #dbeafe, #f8fafc)" },
+  { name: "Toughened", type: "Safety", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #c7d2fe)" },
+  { name: "Laminated", type: "Safety", privacy: "Low privacy", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #bae6fd)" },
+  { name: "Other/Custom", type: "Custom", privacy: "Builder to confirm", status: "Quote required", sample: "linear-gradient(135deg, #f8fafc, #e2e8f0)" },
+];
+
+const CABINETRY_VISIBLE_LOCATION_OPTIONS = PRODUCT_LIBRARY_CABINETRY_LOCATION_OPTIONS;
+const CABINETRY_MATERIAL_OPTIONS = PRODUCT_LIBRARY_CABINETRY_MATERIAL_OPTIONS;
+const CABINETRY_BASE_HANDLE_OPTIONS = PRODUCT_LIBRARY_CABINETRY_BASE_HANDLE_OPTIONS;
+const CABINETRY_OVERHEAD_HANDLE_OPTIONS = PRODUCT_LIBRARY_CABINETRY_OVERHEAD_HANDLE_OPTIONS;
+const CABINETRY_FEATURE_OPTIONS = PRODUCT_LIBRARY_CABINETRY_FEATURE_OPTIONS;
+const WET_AREA_CABINETRY_CONFIG = PRODUCT_LIBRARY_WET_AREA_CABINETRY_CONFIG;
+const BATHROOM_SCOPE_OPTIONS = WET_AREA_CABINETRY_CONFIG.scopeOptions;
+const BATHROOM_SCHEDULE_GROUPS = WET_AREA_CABINETRY_CONFIG.scheduleGroups;
+const BATHROOM_AREA_RULES = WET_AREA_CABINETRY_CONFIG.areaRules;
+const BATHROOM_HANDLE_TARGETS = WET_AREA_CABINETRY_CONFIG.handleTargets;
+const BATHROOM_HANDLE_OPTIONS = WET_AREA_CABINETRY_CONFIG.handleOptions;
+const BATHROOM_BENCHTOP_OPTIONS = WET_AREA_CABINETRY_CONFIG.benchtopOptions;
+const CABINETRY_WORKFLOW_TYPE = "guided_cabinetry";
+const CABINETRY_SELECTION_TYPE = "cabinetry_specification";
+const CABINETRY_SCHEMA_VERSION = 2;
+const CABINETRY_DRAFT_STORAGE_KEY = "gr8:client-selections:guided-cabinetry-draft";
+
 function today() {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
@@ -285,6 +917,16 @@ function money(value) {
     style: "currency",
     currency: "AUD",
     maximumFractionDigits: 0,
+  });
+}
+
+function formatScheduleRevisionDate(value) {
+  if (!value) return "unsaved draft";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "unsaved draft";
+  return date.toLocaleString("en-AU", {
+    dateStyle: "medium",
+    timeStyle: "short",
   });
 }
 
@@ -313,6 +955,18 @@ function titleCase(value) {
     .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
 }
 
+function officialProductImageUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw.startsWith("data:") || raw.startsWith("/") || raw.startsWith("blob:")) return raw;
+  try {
+    const url = new URL(raw);
+    if (/(\.|^)bradnams\.com\.au$/i.test(url.hostname)) {
+      return `/api/product-library/official-image?url=${encodeURIComponent(url.href)}`;
+    }
+  } catch {}
+  return raw;
+}
+
 function slug(value) {
   return String(value || "")
     .toLowerCase()
@@ -322,6 +976,11 @@ function slug(value) {
 
 function normaliseKey(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function uuidOrNull(value) {
+  const next = String(value || "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(next) ? next : null;
 }
 
 function firstText(...values) {
@@ -416,6 +1075,8 @@ function coverValue(value, invalidValues = []) {
   const normalised = normaliseKey(next);
   if (invalidValues.map(normaliseKey).filter(Boolean).includes(normalised)) return "";
   if (/^(client name|site address|quote number|job number|project name)$/i.test(next)) return "";
+  if (/^(undefined|null|not entered|missing|estimator missing|builder missing|address missing)$/i.test(next)) return "";
+  if (/current\s*\.gr8job/i.test(next)) return "";
   if (normalised === "2astreetsomplaceqld4557") return "";
   if (normalised.includes("assetsbuildersgoodbuildlogosvg")) return "";
   return next;
@@ -617,7 +1278,7 @@ function embeddedSelectionsProject({ projectId = "", workbook = null, projectCon
   };
   return {
     id,
-    project_name: firstText(projectContext?.projectName, resolved.projectName, fileName, "Current Job"),
+    project_name: firstText(projectContext?.projectName, resolved.projectName),
     client_name: metadata.clientName,
     job_number: metadata.jobNumber,
     site_address: metadata.siteAddress,
@@ -635,7 +1296,7 @@ function embeddedSelectionsSnapshot({ snapshotId = "", workbook = null, projectC
   const id = firstText(snapshotId, fileName ? `embedded-snapshot:${slug(fileName)}` : "embedded-snapshot:current-job");
   return {
     id,
-    snapshot_label: "Current .gr8job",
+    snapshot_label: firstText(projectContext?.projectName, workbook?.jobFileMeta?.projectName, workbook?.jobFileMeta?.jobName, "Active project selections"),
     snapshot_number: 1,
     workbook_snapshot: workbook,
     workbook_metadata: {
@@ -694,6 +1355,14 @@ function placeholderImage(label, colour = "#c99735") {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
+function colourSwatchImage(colour = {}) {
+  const name = String(colour.officialName || colour.colourName || colour.name || "Exterior colour").replace(/[<>&"]/g, "");
+  const supplier = String(colour.supplier || "Supplier colour").replace(/[<>&"]/g, "");
+  const swatch = /^#[0-9a-f]{3,8}$/i.test(String(colour.swatch || "")) ? colour.swatch : "#d1d5db";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="420" height="280" viewBox="0 0 420 280"><rect width="420" height="280" fill="#ffffff"/><rect x="28" y="28" width="364" height="154" rx="10" fill="${swatch}" stroke="#cbd5e1" stroke-width="2"/><text x="28" y="224" font-family="Arial" font-size="26" font-weight="800" fill="#071827">${name}</text><text x="28" y="252" font-family="Arial" font-size="18" font-weight="700" fill="#475569">${supplier}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 function optionsForItem(itemName, quality = "mid_range") {
   const lower = String(itemName || "").toLowerCase();
   const key = Object.keys(PRODUCT_OPTION_LIBRARY)
@@ -747,9 +1416,18 @@ export default function BuilderSelectionsBookPage({
   workbook: embeddedWorkbook = null,
   projectContext = {},
   fileState = {},
+  embedded = false,
   onEmbeddedMount = null,
   onEmbeddedBack = null,
+  onClientSelectionsSave = null,
 } = {}) {
+  const selectionRouter = useRouter();
+  const selectionRouterRef = useRef(selectionRouter);
+  const bookLoadRequestRef = useRef(0);
+  const bookEditVersionRef = useRef(0);
+  selectionRouterRef.current = selectionRouter;
+  const selectionRoutePath = String(selectionRouter.asPath || '');
+  const selectionRouterReady = Boolean(selectionRouter.isReady);
   const { workspaceId: activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
   const workspaceId = providedWorkspaceId || providedOrganisationId || projectContext?.workspaceId || projectContext?.organisationId || activeWorkspaceId;
   const [projects, setProjects] = useState([]);
@@ -757,6 +1435,7 @@ export default function BuilderSelectionsBookPage({
   const [templates, setTemplates] = useState([]);
   const [templateItems, setTemplateItems] = useState([]);
   const [products, setProducts] = useState([]);
+  const [persistedProjectSelections, setPersistedProjectSelections] = useState([]);
   const [approvedCatalogueProducts, setApprovedCatalogueProducts] = useState([]);
   const [approvedCatalogueAudit, setApprovedCatalogueAudit] = useState(null);
   const [approvedCatalogueError, setApprovedCatalogueError] = useState("");
@@ -782,6 +1461,12 @@ export default function BuilderSelectionsBookPage({
   const [guidedArea, setGuidedArea] = useState("");
   const [guidedRequirementKey, setGuidedRequirementKey] = useState("");
   const [guidedProductDetails, setGuidedProductDetails] = useState(null);
+  const [guidedApplianceStep, setGuidedApplianceStep] = useState("brands");
+  const [guidedApplianceFamilyKey, setGuidedApplianceFamilyKey] = useState("");
+  const [guidedApplianceBrand, setGuidedApplianceBrand] = useState("");
+  const [guidedApplianceProductId, setGuidedApplianceProductId] = useState("");
+  const [guidedApplianceMode, setGuidedApplianceMode] = useState("");
+  const [guidedAppliancePackageId, setGuidedAppliancePackageId] = useState("");
   const [guidedBrickStep, setGuidedBrickStep] = useState("suppliers");
   const [guidedBrickSupplier, setGuidedBrickSupplier] = useState("");
   const [guidedBrickRange, setGuidedBrickRange] = useState("");
@@ -790,8 +1475,14 @@ export default function BuilderSelectionsBookPage({
   const [guidedEntryDoorRange, setGuidedEntryDoorRange] = useState("");
   const [guidedEntryDoorProductCode, setGuidedEntryDoorProductCode] = useState("");
   const [guidedEntryDoorSize, setGuidedEntryDoorSize] = useState("");
+  const [guidedEntryDoorConfiguration, setGuidedEntryDoorConfiguration] = useState("");
   const [guidedEntryDoorFinish, setGuidedEntryDoorFinish] = useState("");
   const [guidedEntryDoorGlazing, setGuidedEntryDoorGlazing] = useState("");
+  const [guidedEntryDoorHardware, setGuidedEntryDoorHardware] = useState("");
+  const [guidedEntryDoorFurnitureFinish, setGuidedEntryDoorFurnitureFinish] = useState("");
+  const [guidedWindowStep, setGuidedWindowStep] = useState("schedule");
+  const [windowConfiguration, setWindowConfiguration] = useState(DEFAULT_WINDOW_CONFIGURATION);
+  const [windowDefaultsApplyResult, setWindowDefaultsApplyResult] = useState("");
   const [guidedRoofingMode, setGuidedRoofingMode] = useState("");
   const [guidedRoofingStep, setGuidedRoofingStep] = useState("landing");
   const [roofingConfiguration, setRoofingConfiguration] = useState({
@@ -826,6 +1517,8 @@ export default function BuilderSelectionsBookPage({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [scheduleGenerating, setScheduleGenerating] = useState("");
+  const [scheduleDocument, setScheduleDocument] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const viewerRef = useRef(null);
@@ -850,16 +1543,73 @@ export default function BuilderSelectionsBookPage({
   const manufacturerById = useMemo(() => new Map(manufacturers.map((manufacturer) => [manufacturer.id, manufacturer.manufacturer_name])), [manufacturers]);
   const supplierById = useMemo(() => new Map(suppliers.map((supplier) => [supplier.id, supplier.supplier_name])), [suppliers]);
   const totals = useMemo(() => selectionTotals(book), [book]);
+  const exteriorWallConstruction = useMemo(() => normaliseExteriorWallConstruction(book?.exteriorWallConstruction), [book?.exteriorWallConstruction]);
+  const reviewablePersistedProjectSelections = useMemo(
+    () => persistedProjectSelections.filter((selection) => !selectionHiddenByExteriorWallConstruction(selection, exteriorWallConstruction)),
+    [persistedProjectSelections, exteriorWallConstruction]
+  );
+  const scheduleReview = useMemo(
+    () => reviewablePersistedProjectSelections.length ? reviewPersistedProjectSelections(reviewablePersistedProjectSelections) : reviewScheduleBook(book),
+    [book, reviewablePersistedProjectSelections]
+  );
+  const effectiveScheduleSections = useMemo(() => scheduleSectionsForEffectiveSelections({
+    persistedSelections: reviewablePersistedProjectSelections,
+    book,
+  }), [book, reviewablePersistedProjectSelections]);
+  const effectiveScheduleItems = useMemo(() => effectiveScheduleSections.flatMap((section) => section.items), [effectiveScheduleSections]);
+  const currentSelectionsRevisionLabel = useMemo(() => {
+    const latest = reviewablePersistedProjectSelections.map((selection) => selection.updated_at || selection.selected_at || "").filter(Boolean).sort().at(-1);
+    return latest ? formatScheduleRevisionDate(latest) : formatScheduleRevisionDate(book.updatedAt);
+  }, [book.updatedAt, reviewablePersistedProjectSelections]);
   const guidedSelections = useMemo(() => guidedSelectionsFromBook(book), [book]);
-  const guidedSelectionMap = useMemo(() => guidedSelectedByRequirement(guidedSelections), [guidedSelections]);
-  const applicableExteriorRequirements = useMemo(() => requirementsForGuidedArea("exterior", book), [book]);
+  const guidedSelectionMap = useMemo(() => {
+    const map = guidedSelectedByRequirement(guidedSelections);
+    if (!exteriorWallConstruction.brickApplicable) {
+      map.set("bricks", notApplicableBrickSelection(exteriorWallConstruction));
+    }
+    return map;
+  }, [exteriorWallConstruction, guidedSelections]);
+  const applicableExteriorRequirements = useMemo(
+    () => requirementsForGuidedArea("exterior", book).filter((item) => item.requirementKey !== "bricks" || exteriorWallConstruction.brickApplicable),
+    [book, exteriorWallConstruction.brickApplicable]
+  );
   const guidedKitchenTotals = useMemo(() => guidedAreaTotals(KITCHEN_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
+  const catalogueRefreshKey = `${builderEnablements.length}:${masterCatalogueProducts.length}`;
+  const effectiveApplianceCatalogue = useMemo(() => {
+    void catalogueRefreshKey;
+    return getEffectiveApplianceCatalogue({
+      organisationId: workspaceId || "",
+    });
+  }, [workspaceId, catalogueRefreshKey]);
+  const clientVisibleApplianceRecords = effectiveApplianceCatalogue.records;
+  const clientVisibleAppliancePacks = effectiveApplianceCatalogue.packs;
+  const visibleApplianceRequirements = useMemo(() => APPLIANCE_REQUIREMENTS.filter((item) => (
+    !["freestanding-cooker", "appliance-pack"].includes(item.requirementKey)
+    || guidedSelectionMap.get(item.requirementKey)
+    || applianceRecordsForRequirement(clientVisibleApplianceRecords, item).length
+  )), [clientVisibleApplianceRecords, guidedSelectionMap]);
+  const guidedApplianceTotals = useMemo(() => guidedAreaTotals(visibleApplianceRequirements, guidedSelectionMap), [guidedSelectionMap, visibleApplianceRequirements]);
   const guidedExteriorTotals = useMemo(() => guidedAreaTotals(applicableExteriorRequirements, guidedSelectionMap), [applicableExteriorRequirements, guidedSelectionMap]);
   const guidedInteriorTotals = useMemo(() => guidedAreaTotals(INTERIOR_REQUIREMENTS, guidedSelectionMap), [guidedSelectionMap]);
-  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedExteriorTotals, guidedInteriorTotals]);
+  const guidedRunningTotals = useMemo(() => guidedProjectTotals([guidedKitchenTotals, guidedApplianceTotals, guidedExteriorTotals, guidedInteriorTotals]), [guidedKitchenTotals, guidedApplianceTotals, guidedExteriorTotals, guidedInteriorTotals]);
   const guidedRequirement = useMemo(() => guidedRequirementByKey(guidedRequirementKey) || kitchenRequirementByKey("oven") || KITCHEN_REQUIREMENTS[0], [guidedRequirementKey]);
-  const activeGuidedRequirements = useMemo(() => requirementsForGuidedArea(guidedRequirement.areaKey, book), [book, guidedRequirement.areaKey]);
+  const activeGuidedRequirements = useMemo(() => {
+    if (guidedScreen === "appliances" || guidedScreen === "appliance-products") return visibleApplianceRequirements;
+    if (guidedScreen === "plumbing-fixtures") return requirementsForGuidedArea("plumbing-fixtures", book);
+    if (guidedScreen === "kitchen") return requirementsForGuidedArea("kitchen", book);
+    return requirementsForGuidedArea(guidedRequirement.areaKey, book);
+  }, [book, guidedRequirement.areaKey, guidedScreen, visibleApplianceRequirements]);
   const guidedAreaTotalsForActive = useMemo(() => guidedAreaTotals(activeGuidedRequirements, guidedSelectionMap), [activeGuidedRequirements, guidedSelectionMap]);
+  useEffect(() => {
+    if (guidedRequirementKey !== "windows") return;
+    const savedSelection = persistedSelectionForRequirement(persistedProjectSelections, "windows") || guidedSelectionMap.get("windows");
+    const saved = savedSelection?.selected_details || savedSelection?.guidedSelection || {};
+    if (!saved?.frameColourName && !saved?.frameColourCode && !saved?.colour) return;
+    setWindowConfiguration((current) => {
+      if (current?.frameColourName || current?.frameColourCode) return current;
+      return windowConfigurationFromSaved(saved);
+    });
+  }, [guidedRequirementKey, guidedSelectionMap, persistedProjectSelections]);
   const projectRegion = useMemo(() => deriveAustralianRegion(selectedProject), [selectedProject]);
   const masterSelectionProducts = useMemo(() => queryClientSelectableProducts({
     organisationId: workspaceId || "",
@@ -899,20 +1649,69 @@ export default function BuilderSelectionsBookPage({
       organisationProducts: [],
     }).map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: roofingRequirement }));
   }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const entryDoorMasterSelectionProducts = useMemo(() => {
+    const entryDoorRequirement = EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "entry-door");
+    if (!entryDoorRequirement) return [];
+    const explicitlyEnabled = queryClientSelectableProducts({
+      organisationId: workspaceId || "",
+      projectId: selectedProjectId || "",
+      familyKey: "entry-doors",
+      region: projectRegion,
+      requirementKey: "entry-door",
+      masterProducts: masterCatalogueProducts,
+      builderProducts: builderEnablements,
+      organisationProducts: [],
+    });
+    const fallbackMaster = masterCatalogueProducts.filter((product) => (
+      product.familyKey === "entry-doors"
+      && product.active !== false
+      && !product.archived
+      && !product.discontinued
+      && regionCompatibleSelectionProduct(product, projectRegion)
+      && (!Array.isArray(product.requirementKeys) || !product.requirementKeys.length || product.requirementKeys.includes("entry-door"))
+    ));
+    const sourceProducts = explicitlyEnabled.length ? explicitlyEnabled : fallbackMaster;
+    return sourceProducts.map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: entryDoorRequirement }));
+  }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
+  const windowMasterSelectionProducts = useMemo(() => {
+    const windowsRequirement = EXTERIOR_REQUIREMENTS.find((requirement) => requirement.requirementKey === "windows");
+    if (!windowsRequirement) return [];
+    const explicitlyEnabled = queryClientSelectableProducts({
+      organisationId: workspaceId || "",
+      projectId: selectedProjectId || "",
+      familyKey: "windows",
+      region: projectRegion,
+      requirementKey: "windows",
+      masterProducts: masterCatalogueProducts,
+      builderProducts: builderEnablements,
+      organisationProducts: [],
+    });
+    const fallbackMaster = masterCatalogueProducts.filter((product) => (
+      product.familyKey === "windows"
+      && product.active !== false
+      && !product.archived
+      && !product.discontinued
+      && regionCompatibleSelectionProduct(product, projectRegion)
+      && (!Array.isArray(product.requirementKeys) || !product.requirementKeys.length || product.requirementKeys.includes("windows"))
+    ));
+    const sourceProducts = explicitlyEnabled.length ? explicitlyEnabled : fallbackMaster;
+    return sourceProducts.map((product) => masterProductToClientSelectionProduct(product, { organisationId: workspaceId || "", requirement: windowsRequirement }));
+  }, [builderEnablements, masterCatalogueProducts, projectRegion, selectedProjectId, workspaceId]);
   const clientSelectionCatalogueProducts = useMemo(() => {
     const byIdentity = new Map();
-    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
+    [...approvedCatalogueProducts, ...brickMasterSelectionProducts, ...roofingMasterSelectionProducts, ...entryDoorMasterSelectionProducts, ...windowMasterSelectionProducts, ...masterSelectionProducts].forEach((product) => {
       const key = product.productCode || product.sku || product.id || `${product.product_name || product.productName}-${byIdentity.size}`;
       byIdentity.set(key, product);
     });
     return Array.from(byIdentity.values());
-  }, [approvedCatalogueProducts, brickMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts]);
+  }, [approvedCatalogueProducts, brickMasterSelectionProducts, entryDoorMasterSelectionProducts, masterSelectionProducts, roofingMasterSelectionProducts, windowMasterSelectionProducts]);
   const masterProductsForGuidedFamily = useMemo(() => masterCatalogueProducts.filter((product) => product.familyKey === guidedRequirement.familyKey && product.active !== false && !product.archived && !product.discontinued), [guidedRequirement.familyKey, masterCatalogueProducts]);
   const builderEnabledForGuidedFamily = useMemo(() => builderEnablements.filter((item) => item.organisationId === workspaceId && item.enabled !== false && item.active !== false && masterCatalogueProducts.some((product) => product.productCode === item.masterProductCode && product.familyKey === guidedRequirement.familyKey)), [builderEnablements, guidedRequirement.familyKey, masterCatalogueProducts, workspaceId]);
   const guidedProducts = useMemo(() => guidedProductsForRequirement(guidedRequirement, clientSelectionCatalogueProducts, {
     brickSupplier: guidedBrickSupplier,
     brickRange: guidedBrickRange,
   }), [guidedRequirement, clientSelectionCatalogueProducts, guidedBrickSupplier, guidedBrickRange]);
+  const entryDoorFurnitureProducts = useMemo(() => entryDoorFurnitureCatalogueProducts([...windowsDoorsGarageCatalogue.products, ...getEffectiveProductCatalogue({ organisationId: workspaceId || '', familyKey: ENTRY_DOOR_FURNITURE_FAMILY_KEY }).products]), [workspaceId]);
   const brickGuidedProducts = useMemo(() => {
     if (guidedRequirement.requirementKey !== "bricks") return guidedProducts;
     const directMasterProducts = guidedProductsForRequirement(guidedRequirement, brickMasterSelectionProducts, {
@@ -930,6 +1729,10 @@ export default function BuilderSelectionsBookPage({
     if (guidedRequirement.requirementKey !== "roofing") return guidedProducts;
     return guidedProductsForRequirement(guidedRequirement, roofingMasterSelectionProducts);
   }, [guidedProducts, guidedRequirement, roofingMasterSelectionProducts]);
+  const garageGuidedProducts = useMemo(() => {
+    if (guidedRequirement.requirementKey !== "garage-door" || guidedProducts.length) return guidedProducts;
+    return SHARED_GARAGE_DOOR_CATALOGUE_PRODUCTS.map((product, index) => guidedProductFromCatalogue(product, guidedRequirement, index));
+  }, [guidedProducts, guidedRequirement]);
   const hasCoverDraftChanges = useMemo(() => JSON.stringify(coverDraft || {}) !== JSON.stringify(book.cover || {}), [book.cover, coverDraft]);
 
   const selectorProducts = useMemo(() => {
@@ -985,6 +1788,13 @@ export default function BuilderSelectionsBookPage({
     issueDate: coverValue(book.projectInfo?.issueDate) || coverDebugFields.datePrepared || coverDebugFields.quoteDate || today(),
     selectionStandard: coverValue(book.projectInfo?.selectionStandard) || coverDebugFields.selectionStandard || "",
   }), [book.projectInfo, coverDebugFields]);
+  const projectPreflight = useMemo(() => scheduleProjectPreflight({
+    cover: displayCover,
+    projectInfo: projectInfoDisplay,
+    selectedProject,
+    items: effectiveScheduleItems,
+    review: scheduleReview,
+  }), [displayCover, effectiveScheduleItems, projectInfoDisplay, scheduleReview, selectedProject]);
 
   useEffect(() => {
     onEmbeddedMount?.();
@@ -1009,11 +1819,106 @@ export default function BuilderSelectionsBookPage({
   useEffect(() => {
     if (!selectedProjectId || !selectedTemplateId) return;
     loadBook();
-  }, [selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length]);
+    return () => { bookLoadRequestRef.current += 1; };
+  }, [workspaceId, selectedProjectId, selectedSnapshotId, selectedTemplateId, templateItems.length]);
+
+  useEffect(() => {
+    if (!workspaceId || !selectedProjectId) {
+      setPersistedProjectSelections([]);
+      return undefined;
+    }
+    let cancelled = false;
+    loadPersistedProjectSelections().then((rows) => {
+      if (!cancelled) setPersistedProjectSelections(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, selectedProjectId]);
 
   useEffect(() => {
     setCoverDraft(book.cover);
   }, [book.cover]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !selectionRouterReady) return;
+    function applyApplianceUrlState() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('selectionArea') === 'interior' && params.get('guided') !== 'appliances' && params.get('room') !== 'exterior') {
+        const key = params.get('selectionRequirement');
+        setGuidedArea('interior');
+        setGuidedRequirementKey(INTERNAL_SELECTION_KEYS.includes(key) ? key : '');
+        setGuidedScreen(INTERNAL_SELECTION_KEYS.includes(key) ? 'product' : 'interior');
+        resetGuidedApplianceFlow();
+        return;
+      }
+      if(params.get('selectionArea') === 'exterior' && !params.get('roomCategory')) { setGuidedArea('exterior');setGuidedScreen('exterior');return; }
+      if (params.get('room') === 'exterior' && ['entry-doors', 'door-furniture'].includes(params.get('roomCategory'))) {
+        setGuidedArea('exterior');
+        setGuidedScreen('product');
+        setGuidedRequirementKey('entry-door');
+        resetGuidedApplianceFlow();
+        return;
+      }
+      if (params.get("guided") !== "appliances") {
+        setGuidedArea("");
+        setGuidedScreen("areas");
+        setGuidedRequirementKey("");
+        resetGuidedApplianceFlow();
+        return;
+      }
+      const familyKey = params.get("applianceFamily") || "";
+      const brand = params.get("applianceBrand") || "";
+      const productId = params.get("applianceProduct") || "";
+      const mode = params.get("applianceMode") || "";
+      const packageId = params.get("appliancePackage") || "";
+      const nextRequirement = APPLIANCE_REQUIREMENTS.find((item) => item.familyKey === familyKey);
+      setGuidedArea("appliances");
+      if (nextRequirement) {
+        setGuidedRequirementKey(nextRequirement.requirementKey);
+        setGuidedScreen("appliance-products");
+        setGuidedApplianceFamilyKey(nextRequirement.familyKey);
+        setGuidedApplianceBrand(brand);
+        setGuidedApplianceProductId(productId);
+        setGuidedApplianceMode(mode);
+        setGuidedAppliancePackageId(packageId);
+        setGuidedApplianceStep(productId ? "details" : brand ? (mode === "package" ? "packages" : mode === "build-your-own" ? "build-your-own" : "brand-summary") : "brands");
+      } else {
+        setGuidedRequirementKey("");
+        setGuidedScreen("appliances");
+        resetGuidedApplianceFlow();
+      }
+    }
+    applyApplianceUrlState();
+  }, [selectionRouterReady, selectionRoutePath]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!["appliances", "appliance-products"].includes(guidedScreen)) return;
+    const url = new URL(window.location.href);
+    if (embedded && url.searchParams.get('page') !== 'clientSelections') return;
+    if (guidedScreen === "appliances") {
+      url.searchParams.set("guided", "appliances");
+      url.searchParams.delete("applianceFamily");
+      url.searchParams.delete("applianceBrand");
+      url.searchParams.delete("applianceProduct");
+      url.searchParams.delete("applianceMode");
+      url.searchParams.delete("appliancePackage");
+    } else {
+      url.searchParams.set("guided", "appliances");
+      url.searchParams.set("applianceFamily", guidedApplianceFamilyKey || guidedRequirement.familyKey || "");
+      if (guidedApplianceBrand) url.searchParams.set("applianceBrand", guidedApplianceBrand);
+      else url.searchParams.delete("applianceBrand");
+      if (guidedApplianceProductId) url.searchParams.set("applianceProduct", guidedApplianceProductId);
+      else url.searchParams.delete("applianceProduct");
+      if (guidedApplianceMode) url.searchParams.set("applianceMode", guidedApplianceMode);
+      else url.searchParams.delete("applianceMode");
+      if (guidedAppliancePackageId) url.searchParams.set("appliancePackage", guidedAppliancePackageId);
+      else url.searchParams.delete("appliancePackage");
+    }
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    safeSelectionNavigate(selectionRouterRef.current, nextUrl, { shallow: true, scroll: false, guidedWorkflow: 'appliances' });
+  }, [embedded, guidedApplianceBrand, guidedApplianceFamilyKey, guidedApplianceMode, guidedAppliancePackageId, guidedApplianceProductId, guidedRequirement.familyKey, guidedScreen]);
 
   async function loadApprovedClientSelectionCatalogue() {
     try {
@@ -1066,37 +1971,39 @@ export default function BuilderSelectionsBookPage({
   function loadEmbeddedBookDraft() {
     if (typeof window === "undefined" || !workspaceId) return null;
     try {
+      const projectPayload = selectedProjectId ? JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null") : null;
+      if (projectPayload?.book && (!selectedProjectId || projectPayload.projectId === selectedProjectId)) return projectPayload.book;
       const latestPayload = JSON.parse(window.localStorage.getItem(latestEmbeddedBookStorageKey()) || "null");
-      if (latestPayload?.book) return latestPayload.book;
-      const payload = JSON.parse(window.localStorage.getItem(embeddedBookStorageKey()) || "null");
-      if (payload?.book) return payload.book;
+      if (latestPayload?.book && (!selectedProjectId || latestPayload.projectId === selectedProjectId)) return latestPayload.book;
       const prefix = `${EMBEDDED_SELECTIONS_BOOK_STORAGE_KEY}:${workspaceId}:`;
       const fallbackKey = Object.keys(window.localStorage)
         .filter((key) => key.startsWith(prefix))
+        .filter((key) => !key.endsWith(":latest"))
         .sort()
         .pop();
       if (!fallbackKey) return null;
       const fallbackPayload = JSON.parse(window.localStorage.getItem(fallbackKey) || "null");
-      return fallbackPayload?.book || null;
+      return fallbackPayload?.projectId === selectedProjectId ? fallbackPayload.book || null : null;
     } catch {
       return null;
     }
   }
 
   function saveEmbeddedBookDraft(nextBook) {
-    if (typeof window === "undefined" || !workspaceId || !nextBook) return;
-    window.localStorage.setItem(embeddedBookStorageKey(), JSON.stringify({
-      workspaceId,
-      projectId: selectedProjectId || "",
-      savedAt: new Date().toISOString(),
-      book: nextBook,
-    }));
-    window.localStorage.setItem(latestEmbeddedBookStorageKey(), JSON.stringify({
-      workspaceId,
-      projectId: selectedProjectId || "",
-      savedAt: new Date().toISOString(),
-      book: nextBook,
-    }));
+    bookEditVersionRef.current += 1;
+    if (typeof window === "undefined" || !workspaceId || !selectedProjectId || !nextBook) return;
+    try {
+      const payload = JSON.stringify({
+        workspaceId,
+        projectId: selectedProjectId || "",
+        savedAt: new Date().toISOString(),
+        book: nextBook,
+      });
+      window.localStorage.setItem(embeddedBookStorageKey(), payload);
+      window.localStorage.setItem(latestEmbeddedBookStorageKey(), payload);
+    } catch (storageError) {
+      console.warn("Client Selections draft cache could not be written. Saved project data was not changed.", storageError);
+    }
   }
 
   async function loadInitialData() {
@@ -1229,36 +2136,95 @@ export default function BuilderSelectionsBookPage({
 
   async function loadBook() {
     if (!workspaceId || !selectedProjectId || !selectedTemplateId) return;
+    const request = ++bookLoadRequestRef.current;
+    const editVersion = bookEditVersionRef.current;
+    const stale = () => {
+      if (request !== bookLoadRequestRef.current) return true;
+      if (editVersion !== bookEditVersionRef.current) { setLoading(false); return true; }
+      return false;
+    };
     setLoading(true);
     setError("");
     const items = templateItems.length ? templateItems : await loadTemplateItems(selectedTemplateId);
+    if (stale()) return;
+    const recoverDoorView = async candidate => {
+      let view=recoverMissingGuidedRowsFromBookHistory(candidate,entryDoorBookCandidates(embeddedWorkbook).map(book=>({book})));
+      const hasDoor=()=>entryDoorDetails(view).some(d=>d.productCode||d.entryDoors?.some(s=>s.productCode));
+      if(hasDoor()||!uuidOrNull(selectedProjectId))return view;
+      try {
+        const {data:history}=await supabase.from('builder_selection_books').select('id,updated_at').eq('workspace_id',workspaceId).eq('project_id',selectedProjectId).order('updated_at',{ascending:false}).limit(20);
+        for(const item of history||[]){
+          if(stale())return view;
+          const {data:record}=await supabase.from('builder_selection_books').select('book_data').eq('workspace_id',workspaceId).eq('project_id',selectedProjectId).eq('id',item.id).single();
+          if(record?.book_data)view=recoverMissingGuidedRowsFromBookHistory(view,[{book:record.book_data,id:item.id,updated_at:item.updated_at}]);
+          if(hasDoor())break;
+        }
+      }catch(error){console.warn('Saved entry-door history could not be read; the loaded selections were retained.',error.message);}
+      return view;
+    };
     const embeddedDraft = loadEmbeddedBookDraft();
     if (embeddedDraft) {
       const next = normaliseDocumentBook(embeddedDraft, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId(embeddedDraft.id || "");
-      setBook(next);
+      const recoveredDoorView=await recoverDoorView(next);
+      if(stale())return;
+      setBook(recoveredDoorView);
       setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
       setLoading(false);
       return;
+    }
+    if (selectedProjectId && !String(selectedProjectId).startsWith("embedded:")) {
+      try {
+        let savedBookQuery = supabase
+          .from("builder_selection_books")
+          .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
+          .eq("workspace_id", workspaceId)
+          .eq("project_id", selectedProjectId)
+          .is("inclusion_template_id", null)
+          .order("updated_at", { ascending: false })
+          .limit(10);
+        const { data: savedBooks, error: savedBookError } = await savedBookQuery;
+        if (stale()) return;
+        if (!savedBookError && savedBooks?.[0]?.book_data) {
+          const next = normaliseDocumentBook(savedBooks[0].book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
+          const recovered = recoverMissingGuidedRowsFromBookHistory(next, savedBooks.slice(1).map((row) => ({
+            id: row.id,
+            updated_at: row.updated_at,
+            book: normaliseDocumentBook(row.book_data, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById }),
+          })));
+          setBookId(savedBooks[0].id);
+          setBook(recovered);
+          setActiveRoomId((current) => recovered.rooms.find((room) => room.id === current)?.id || recovered.rooms[0]?.id || "");
+          setLoading(false);
+          return;
+        }
+      } catch (savedBookLoadError) {
+        if (stale()) return;
+        console.warn("[Client Selections] saved project selection book load failed", savedBookLoadError?.message || savedBookLoadError);
+      }
     }
     const embeddedBook = selectionBookFromEmbeddedWorkbook(embeddedWorkbook);
     if (embeddedBook) {
       const next = normaliseDocumentBook(embeddedBook, { project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId(embeddedBook.id || "");
-      setBook(next);
+      const recoveredDoorView=await recoverDoorView(next);
+      if(stale())return;
+      setBook(recoveredDoorView);
       setActiveRoomId((current) => next.rooms.find((room) => room.id === current)?.id || next.rooms[0]?.id || "");
       setLoading(false);
       return;
     }
     try {
-      const { data, error: loadError } = await supabase
+      let bookQuery = supabase
         .from("builder_selection_books")
         .select("id, book_name, status, book_data, inclusion_template_id, updated_at")
         .eq("workspace_id", workspaceId)
-        .eq("project_id", selectedProjectId)
-        .eq("inclusion_template_id", selectedTemplateId)
+        .eq("project_id", selectedProjectId);
+      bookQuery = bookQuery.is("inclusion_template_id", null);
+      const { data, error: loadError } = await bookQuery
         .order("updated_at", { ascending: false })
         .limit(1);
+      if (stale()) return;
 
       if (loadError) {
         console.error("[Client Selections] file-state error", loadError);
@@ -1281,6 +2247,7 @@ export default function BuilderSelectionsBookPage({
         setActiveRoomId(next.rooms[0]?.id || "");
       }
     } catch (loadError) {
+      if (stale()) return;
       console.error("[Client Selections] parser or book load error", loadError);
       const next = createDocumentBook({ project: selectedProject, snapshot: selectedSnapshot, template: selectedTemplate, templateItems: items, products, manufacturerById, supplierById, categoryById });
       setBookId("");
@@ -1288,6 +2255,22 @@ export default function BuilderSelectionsBookPage({
       setActiveRoomId(next.rooms[0]?.id || "");
     }
     setLoading(false);
+  }
+
+  async function loadPersistedProjectSelections() {
+    if (!workspaceId || !selectedProjectId) return [];
+    const { data, error: selectionLoadError } = await supabase
+      .from("builder_client_selections")
+      .select("id, project_id, snapshot_id, category, subcategory, room, title, selected_product_name, selected_supplier_name, supplier, brand, model_number, image_url, selected_details, status, selection_status, included_allowance, allowance_amount, client_selection_price, calculated_client_selection_price, variation_amount, is_active, metadata, updated_at")
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", selectedProjectId)
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false });
+    if (selectionLoadError) {
+      console.warn("[Selections Book] persisted project selections review load failed", selectionLoadError.message || selectionLoadError);
+      return [];
+    }
+    return data || [];
   }
 
   function updateCoverDraft(field, value) {
@@ -1313,8 +2296,8 @@ export default function BuilderSelectionsBookPage({
       quoteNumber: resolved.quoteNumber || "",
       issueDate: resolved.quoteDate || today(),
       selectionStandard,
-      subtitle: "Luxury Selections Schedule",
-      title: "Inclusions & Selections Schedule",
+      subtitle: "Client selections and project inclusions",
+      title: "INCLUSIONS AND SELECTIONS SCHEDULE",
       version: "1.0",
       footerText: resolved.footerText || "",
       coverEdits: {},
@@ -1444,39 +2427,84 @@ export default function BuilderSelectionsBookPage({
 
   function openGuidedArea(areaKey) {
     setGuidedArea(areaKey);
-    setGuidedScreen(areaKey === "interior" ? "interior" : "exterior");
+    setGuidedScreen(areaKey === "interior" ? "interior" : areaKey === "appliances" ? "appliance-products" : areaKey === "plumbing-fixtures" ? "plumbing-fixtures" : "exterior");
     setGuidedRequirementKey("");
+    resetGuidedApplianceFlow();
     resetGuidedBrickFlow();
     resetGuidedEntryDoorFlow();
+    resetGuidedWindowFlow();
     resetGuidedRoofingFlow();
+    if(['exterior', 'interior'].includes(areaKey) && typeof window !== 'undefined'){
+      const url=new URL(window.location.href);url.searchParams.set('selectionArea',areaKey);url.searchParams.delete('selectionRequirement');
+      for(const key of ['room','roomCategory','roomProduct','mode','returnPage','doorStep','guided'])url.searchParams.delete(key);
+      safeSelectionNavigate(selectionRouterRef.current,url.href,{shallow:true,scroll:false});
+    }
   }
 
   function openGuidedKitchen() {
     setGuidedArea("interior");
     setGuidedScreen("kitchen");
     setGuidedRequirementKey("");
+    resetGuidedApplianceFlow();
     resetGuidedBrickFlow();
     resetGuidedEntryDoorFlow();
+    resetGuidedWindowFlow();
     resetGuidedRoofingFlow();
+  }
+
+  function syncInternalRequirementRoute(key) {
+    if (!INTERNAL_SELECTION_KEYS.includes(key) || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('selectionArea', 'interior');
+    url.searchParams.set('selectionRequirement', key);
+    for (const param of ['room', 'roomCategory', 'roomProduct', 'guided', 'mode', 'returnPage']) url.searchParams.delete(param);
+    safeSelectionNavigate(selectionRouterRef.current, url.href, {shallow:true, scroll:false});
   }
 
   function openGuidedRequirement(requirementKey) {
-    setGuidedArea("interior");
-    setGuidedRequirementKey(requirementKey);
-    setGuidedScreen("product");
+    const resolvedRequirementKey = resolveCabinetryRequirementKey(requirementKey);
+    syncInternalRequirementRoute(resolvedRequirementKey);
+    const next = guidedRequirementByKey(resolvedRequirementKey);
+    setGuidedArea(next?.areaKey || "interior");
+    setGuidedRequirementKey(resolvedRequirementKey);
+    if (isApplianceRequirement(next)) {
+      setGuidedScreen("appliance-products");
+      setGuidedApplianceStep(guidedApplianceBrand ? "models" : "brands");
+      setGuidedApplianceFamilyKey(next.familyKey);
+      setGuidedApplianceProductId("");
+    } else {
+      setGuidedScreen("product");
+      resetGuidedApplianceFlow();
+    }
     resetGuidedBrickFlow();
     resetGuidedEntryDoorFlow();
+    resetGuidedWindowFlow();
     resetGuidedRoofingFlow();
+    if(resolvedRequirementKey === 'entry-door' && typeof window !== 'undefined'){
+      const url=new URL(window.location.href);url.searchParams.set('room','exterior');url.searchParams.set('roomCategory','entry-doors');url.searchParams.delete('mode');url.searchParams.delete('returnPage');url.searchParams.delete('doorStep');
+      safeSelectionNavigate(selectionRouterRef.current,url.href,{shallow:true,scroll:false});
+    }
   }
 
   function openGuidedRequirementKey(requirementKey) {
-    const next = guidedRequirementByKey(requirementKey);
+    const next = guidedRequirementByKey(resolveCabinetryRequirementKey(requirementKey));
     if (!next) return;
-    setGuidedArea(next.areaKey === "exterior" ? "exterior" : "interior");
+    syncInternalRequirementRoute(next.requirementKey);
+    setGuidedArea(next.areaKey);
     setGuidedRequirementKey(next.requirementKey);
-    setGuidedScreen("product");
+    if (isApplianceRequirement(next)) {
+      setGuidedScreen("appliance-products");
+      setGuidedApplianceStep(guidedApplianceBrand ? "models" : "brands");
+      setGuidedApplianceFamilyKey(next.familyKey);
+      setGuidedApplianceProductId("");
+    } else {
+      setGuidedScreen("product");
+      resetGuidedApplianceFlow();
+    }
     if (next.requirementKey !== "bricks") resetGuidedBrickFlow();
     if (next.requirementKey !== "entry-door") resetGuidedEntryDoorFlow();
+    if (next.requirementKey === "windows") openGuidedWindowLanding();
+    else resetGuidedWindowFlow();
     if (next.requirementKey === "roofing") openGuidedRoofingLanding();
     else resetGuidedRoofingFlow();
   }
@@ -1488,84 +2516,348 @@ export default function BuilderSelectionsBookPage({
       setGuidedArea("");
       resetGuidedBrickFlow();
       resetGuidedEntryDoorFlow();
+      resetGuidedWindowFlow();
       resetGuidedRoofingFlow();
       return;
     }
-    setGuidedArea(requirement.areaKey === "exterior" ? "exterior" : "interior");
+    setGuidedArea(requirement.areaKey);
     setGuidedRequirementKey(requirement.requirementKey);
-    setGuidedScreen("product");
+    if (isApplianceRequirement(requirement)) {
+      setGuidedScreen("appliance-products");
+      setGuidedApplianceStep(guidedApplianceBrand ? "models" : "brands");
+      setGuidedApplianceFamilyKey(requirement.familyKey);
+      setGuidedApplianceProductId("");
+    } else {
+      setGuidedScreen("product");
+      resetGuidedApplianceFlow();
+    }
     if (requirement.requirementKey !== "bricks") resetGuidedBrickFlow();
     if (requirement.requirementKey !== "entry-door") resetGuidedEntryDoorFlow();
+    if (requirement.requirementKey === "windows") openGuidedWindowLanding();
+    else resetGuidedWindowFlow();
     if (requirement.requirementKey === "roofing") openGuidedRoofingLanding();
     else resetGuidedRoofingFlow();
   }
 
-  function autoAdvanceAfterGuidedCommit(committedRequirement, nextBook) {
-    const nextRequirement = nextIncompleteGuidedRequirement(nextBook, committedRequirement);
-    const completedSection = !nextRequirement || nextRequirement.areaKey !== committedRequirement.areaKey;
-    const sectionLabel = committedRequirement.areaLabel || titleCase(committedRequirement.areaKey || "Section");
-    setSuccess(`${committedRequirement.label} selected.`);
+  function returnToGuidedDashboard(committedRequirement) {
+    const areaKey = committedRequirement.areaKey;
+    setGuidedArea(areaKey === "exterior" ? "exterior" : "interior");
+    setGuidedRequirementKey("");
+    setGuidedScreen(areaKey === "kitchen" ? "kitchen" : areaKey === "appliances" ? "appliances" : areaKey === "plumbing-fixtures" ? "plumbing-fixtures" : areaKey === "exterior" ? "exterior" : "interior");
+    resetGuidedApplianceFlow();
+    resetGuidedBrickFlow();
+    resetGuidedEntryDoorFlow();
+    resetGuidedWindowFlow();
+    resetGuidedRoofingFlow();
     window.setTimeout(() => {
-      if (nextRequirement) {
-        if (completedSection && committedRequirement.areaKey === "kitchen") {
-          setSuccess("KITCHEN COMPLETE. Opening Interior.");
-          setGuidedScreen("interior");
-          setGuidedArea("interior");
-          setGuidedRequirementKey("");
-          resetGuidedBrickFlow();
-          resetGuidedEntryDoorFlow();
-          resetGuidedRoofingFlow();
-          return;
-        }
-        if (completedSection && committedRequirement.areaKey === "exterior" && nextRequirement.areaKey === "interior") {
-          setSuccess("EXTERIOR COMPLETE. Opening Interior.");
-          setGuidedScreen("interior");
-          setGuidedArea("interior");
-          setGuidedRequirementKey("");
-          resetGuidedBrickFlow();
-          resetGuidedEntryDoorFlow();
-          resetGuidedRoofingFlow();
-          return;
-        }
-        setSuccess(completedSection ? `${sectionLabel} complete. Opening ${nextRequirement.label}.` : `Opening ${nextRequirement.label}.`);
-        navigateToGuidedRequirement(nextRequirement);
-      } else {
-        setSuccess("Selections complete.");
-        navigateToGuidedRequirement(null);
-      }
-    }, 450);
+      highlightGuidedRequirementCard(committedRequirement.requirementKey);
+    }, 80);
   }
 
-  function commitGuidedRequirementPatch(requirement, patch) {
+  function highlightGuidedRequirementCard(requirementKey) {
+    const card = document.querySelector(`[data-requirement-key="${requirementKey}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: "center", behavior: "smooth" });
+    card.classList.add("recentlyCompleted");
+    window.setTimeout(() => card.classList.remove("recentlyCompleted"), 1800);
+  }
+
+  function autoAdvanceAfterGuidedCommit(committedRequirement) {
+    setSuccess(`${committedRequirement.label} selected. Returned to dashboard.`);
+    window.setTimeout(() => returnToGuidedDashboard(committedRequirement), 450);
+  }
+
+  function guidedBookWithRequirementPatch(current, requirement, patch) {
+    const nextRoom = ensureGuidedRoom(current, requirement);
+    const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
+    const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
+      shouldPatchGuidedRow(item, requirement)
+        ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
+        : item
+    ));
+    const updatedRoom = { ...nextRoom, rows: nextRows };
+    return {
+      ...current,
+      rooms: roomExists
+        ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
+        : [...current.rooms, updatedRoom],
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  function commitGuidedRequirementPatch(requirement, patch, options = {}) {
+    const { autoAdvance = true, persist = false, successMessage = "" } = options;
     let committedBook = null;
     setBook((current) => {
-      const nextRoom = ensureGuidedRoom(current, requirement);
-      const roomExists = current.rooms.some((room) => room.id === nextRoom.id);
-      const nextRows = rowsWithGuidedRequirement(nextRoom.rows, requirement).map((item) => (
-        item.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(item, requirement)
-          ? { ...item, guidedRequirementKey: requirement.requirementKey, ...patch }
-          : item
-      ));
-      const updatedRoom = { ...nextRoom, rows: nextRows };
-      committedBook = {
-        ...current,
-        rooms: roomExists
-          ? current.rooms.map((room) => room.id === nextRoom.id ? updatedRoom : room)
-          : [...current.rooms, updatedRoom],
-        updatedAt: new Date().toISOString(),
-      };
+      committedBook = guidedBookWithRequirementPatch(current, requirement, patch);
       saveEmbeddedBookDraft(committedBook);
       return committedBook;
     });
     window.setTimeout(() => {
-      if (committedBook) autoAdvanceAfterGuidedCommit(requirement, committedBook);
+      if (committedBook && persist) persistBookData(committedBook, "in_progress", { successMessage });
+      if (committedBook && autoAdvance) autoAdvanceAfterGuidedCommit(requirement);
     }, 0);
   }
 
+  function selectGuidedAppliancePackage(packageOption) {
+    const patches = appliancePackageSelectionPatches({
+      packageOption,
+      requirements: visibleApplianceRequirements,
+      organisationId: workspaceId || "",
+      projectId: selectedProjectId || selectedProject?.id || "",
+    });
+    if (!patches.length) {
+      setError("This appliance package cannot be selected because its component products are not safely resolved.");
+      return;
+    }
+    let committedBook = null;
+    setBook((current) => {
+      committedBook = patches.reduce((nextBook, item) => guidedBookWithRequirementPatch(nextBook, item.requirement, item.patch), current);
+      saveEmbeddedBookDraft(committedBook);
+      return committedBook;
+    });
+    const packageName = packageOption.packName || packageOption.name || "Appliance package";
+    const brandName = packageOption.brand || packageOption.brandName || guidedApplianceBrand;
+    setGuidedScreen("appliance-products");
+    setGuidedApplianceBrand(brandName);
+    setGuidedApplianceMode("package");
+    setGuidedAppliancePackageId(packageOption.packId || packageOption.productId || "");
+    setGuidedApplianceStep("brand-summary");
+    setGuidedApplianceFamilyKey("");
+    setGuidedApplianceProductId("");
+    setSuccess(`${packageName} selected for ${brandName}.`);
+    window.setTimeout(() => {
+      if (committedBook) persistBookData(committedBook, "in_progress", { successMessage: `${packageName} selected.` });
+    }, 0);
+  }
+
+  function cabinetryRequirementPatch(requirement, selection) {
+    const payload = buildCabinetrySelectionPayload({
+      workspaceId: workspaceId || "",
+      projectId: selectedProjectId || selectedProject?.id || "",
+      requirement,
+      selection,
+    });
+    const details = payload.selected_details || {};
+    return {
+      selectedOptionId: "connected-cabinetry-specification",
+      selectedProduct: payload.selected_product_name,
+      productModel: details.cabinetrySelection?.cabinetScheduleVersion || "Project cabinetry schedule",
+      brand: details.supplier || "",
+      description: `${details.cabinetrySelection?.summary?.locationCount || 0} cabinetry locations, ${details.cabinetrySelection?.summary?.scheduleLineCount || 0} builder-defined components.`,
+      supplier: details.supplier || payload.selected_supplier_name,
+      finishColour: [details.colour, details.finish].filter(Boolean).join(" / "),
+      imageUrl: payload.image_url || requirementImage(requirement),
+      allowanceAmount: payload.included_allowance,
+      selectedCost: payload.client_selection_price,
+      upgradeCost: payload.variation_amount,
+      included: payload.variation_amount === 0,
+      status: payload.selection_status,
+      selectionType: CABINETRY_SELECTION_TYPE,
+      workflowType: CABINETRY_WORKFLOW_TYPE,
+      schemaVersion: CABINETRY_SCHEMA_VERSION,
+      guidedSelection: {
+        ...details,
+        selectionType: CABINETRY_SELECTION_TYPE,
+        workflowType: CABINETRY_WORKFLOW_TYPE,
+        schemaVersion: CABINETRY_SCHEMA_VERSION,
+      },
+    };
+  }
+
+  async function saveGuidedCabinetryAndReturnToInterior(selection, options = {}) {
+    if (!selectedProjectId) {
+      setError("Open or create a job before saving cabinetry selections.");
+      return { ok: false, message: "Open or create a job before saving cabinetry selections." };
+    }
+    const cabinetryRequirement = guidedRequirementByKey("cabinetry");
+    if (!cabinetryRequirement) {
+      setError("Cabinetry selection requirement is not available.");
+      return { ok: false, message: "Cabinetry selection requirement is not available." };
+    }
+    const committedSelection = normaliseCabinetrySelection(selection);
+    const committedBook = guidedBookWithRequirementPatch(book, cabinetryRequirement, cabinetryRequirementPatch(cabinetryRequirement, committedSelection));
+    setBook(committedBook);
+    saveEmbeddedBookDraft(committedBook);
+    const savedId = await persistBookData(committedBook, "in_progress", {
+      successMessage: options.successMessage || "Cabinetry specification saved to the active job.",
+    });
+    if (!savedId) return { ok: false, message: "Cabinetry save verification failed." };
+    setGuidedArea("interior");
+    setGuidedRequirementKey("");
+    setGuidedScreen("interior");
+    resetGuidedBrickFlow();
+    resetGuidedEntryDoorFlow();
+    resetGuidedWindowFlow();
+    resetGuidedRoofingFlow();
+    window.setTimeout(() => highlightGuidedRequirementCard("cabinetry"), 80);
+    return { ok: true, message: "Cabinetry specification saved to the active job." };
+  }
+
+  function selectGuidedWindowConfiguration(requirement, configuration, supplier, scheduleSummary) {
+    if (!scheduleSummary?.isAvailable || !scheduleSummary.items?.length) {
+      setError(WINDOW_NO_TAKEOFF_SCHEDULE_MESSAGE);
+      return;
+    }
+    const selectedSupplier = windowSupplierDefinition(supplier?.label || supplier?.supplier || configuration?.supplier || "");
+    const systemsByType = windowSystemsForSchedule(selectedSupplier.label, scheduleSummary, configuration.systemsByType);
+    const effectiveWindows = effectiveWindowRows(scheduleSummary, selectedSupplier, configuration, systemsByType);
+    const clearWetAreaRows = effectiveWindows.filter((item) => item.isWetArea && /clear/i.test(item.glass || ""));
+    if (!selectedSupplier.label || !configuration?.frameColourName || clearWetAreaRows.length) {
+      setError(clearWetAreaRows.length ? "Confirm privacy glass for bathroom and ensuite windows before completing Windows." : "Choose a window supplier, systems, defaults and frame colour before confirming Windows.");
+      return;
+    }
+    const allowance = numberValue(requirement.defaultAllowance);
+    const now = new Date().toISOString();
+    const selectedCost = configuration.frameColourClass === "quote_required" ? null : 0;
+    const variation = selectedCost == null ? null : variationFor({ selectedPrice: selectedCost, allowance, quantity: 1 });
+    const priceState = selectedCost == null ? PRICE_STATES.quoteRequired : PRICE_STATES.current;
+    const title = `${selectedSupplier.label} project window schedule`;
+    const imageUrl = officialProductImageUrl(selectedSupplier.image || requirementImage(requirement));
+    const procurementSchedule = effectiveWindows.map((windowRow) => ({
+      windowId: windowRow.id,
+      type: windowRow.type,
+      size: windowRow.size,
+      width: windowRow.width,
+      height: windowRow.height,
+      quantity: windowRow.quantity,
+      room: windowRow.location,
+      floor: windowRow.floor,
+      elevation: windowRow.elevation,
+      supplier: selectedSupplier.label,
+      supplierSystem: windowRow.system?.name || "",
+      frameColour: windowRow.frameColourName,
+      frameColourCode: windowRow.frameColourCode,
+      frameColourFinish: windowRow.frameColourFinish,
+      glass: windowRow.glass,
+      screen: windowRow.screen,
+      hardware: windowRow.hardware,
+      requiredDate: "Builder to confirm",
+      notes: [windowRow.notes, windowRow.hasOverride ? "Individual override" : "Project default"].filter(Boolean).join("; "),
+      status: windowRow.priceStatus,
+    }));
+    const guidedSelection = {
+      source: "guided_client_selections",
+      projectId: selectedProjectId || selectedProject?.id || "",
+      organisationId: workspaceId || "",
+      area: requirement.areaKey,
+      room: requirement.areaLabel,
+      requirementKey: requirement.requirementKey,
+      requirementLabel: requirement.label,
+      familyKey: requirement.familyKey,
+      productId: selectedSupplier.key,
+      productCode: `WINDOW-${selectedSupplier.key.toUpperCase()}-PROJECT-SCHEDULE`,
+      manufacturer: selectedSupplier.label,
+      brand: selectedSupplier.logo,
+      supplier: selectedSupplier.label,
+      range: "Project window schedule",
+      productName: title,
+      selectedProduct: title,
+      windowSystem: "Mapped by scheduled window type",
+      windowScheduleVersion: scheduleSummary.version,
+      windowScheduleDisplayVersion: scheduleSummary.displayVersion,
+      scheduleIsDemo: false,
+      applicableWindowIds: scheduleSummary.windowIds,
+      windowCount: scheduleSummary.count,
+      windowTypes: scheduleSummary.types,
+      locationsCovered: scheduleSummary.locations,
+      scope: "all_project_windows",
+      scopeLabel: "All compatible project windows",
+      frameColourName: configuration.frameColourName,
+      frameColourId: configuration.frameColourId,
+      frameColourOfficialName: configuration.frameColourOfficialName || configuration.frameColourName,
+      frameColourCode: configuration.frameColourCode,
+      frameColourClass: configuration.frameColourClass,
+      frameColourFinish: configuration.frameColourFinish,
+      frameColourHex: configuration.frameColourHex,
+      frameColourSourceUrl: configuration.frameColourSourceUrl,
+      frameColourLastVerified: configuration.frameColourLastVerified,
+      frameColourAudit: configuration.frameColourAudit || [],
+      colour: configuration.frameColourName,
+      finish: configuration.frameColourCode ? `${configuration.frameColourName} (${configuration.frameColourCode})` : configuration.frameColourName,
+      glassSelection: configuration.glassName,
+      glassClass: configuration.glassClass,
+      glazing: configuration.glassName,
+      screens: configuration.screens,
+      hardware: configuration.hardware,
+      exceptions: configuration.exceptions,
+      clientNote: configuration.clientNotes,
+      allowance,
+      selectedPrice: selectedCost,
+      variation,
+      variationAmount: variation,
+      variationPending: priceState !== PRICE_STATES.current,
+      priceState,
+      priceStatus: priceState,
+      imageReference: imageUrl,
+      primaryImageUrl: imageUrl,
+      officialImageUrl: selectedSupplier.image || "",
+      officialProductURL: selectedSupplier.website,
+      colourSourceUrl: selectedSupplier.source || selectedSupplier.website,
+      windowWorkflow: {
+        source: "active_job_takeoff_window_schedule",
+        sourceChain: ["AI Plan Takeoff", "saved job master file", "Client Selections window schedule", "Quotation Builder"],
+        importedSchedule: scheduleSummary,
+        projectDefaults: {
+          supplier: selectedSupplier.label,
+          systemsByType,
+          frameColourId: configuration.frameColourId,
+          frameColourName: configuration.frameColourName,
+          frameColourOfficialName: configuration.frameColourOfficialName || configuration.frameColourName,
+          frameColourCode: configuration.frameColourCode,
+          frameColourClass: configuration.frameColourClass,
+          frameColourFinish: configuration.frameColourFinish,
+          frameColourHex: configuration.frameColourHex,
+          frameColourSourceUrl: configuration.frameColourSourceUrl,
+          frameColourLastVerified: configuration.frameColourLastVerified,
+          frameColourAudit: configuration.frameColourAudit || [],
+          glassName: configuration.glassName,
+          glassClass: configuration.glassClass,
+          screens: configuration.screens,
+          hardware: configuration.hardware,
+        },
+        individualOverrides: configuration.overrides || {},
+        effectiveWindows,
+        procurementSchedule,
+        summary: windowWorkflowSummary(effectiveWindows),
+        confirmedAt: now,
+      },
+      procurementSchedule,
+      supplierProcurementStatus: "ready_for_rfq",
+      selectedAt: now,
+      updatedAt: now,
+      selectionTimestamp: now,
+    };
+    commitGuidedRequirementPatch(requirement, {
+      selectedOptionId: selectedSupplier.key,
+      selectedProduct: title,
+      productModel: "Project schedule",
+      brand: selectedSupplier.logo,
+      description: `${scheduleSummary.count} scheduled project windows. ${configuration.glassName}; ${configuration.screens}; ${configuration.hardware}. ${effectiveWindows.filter((row) => row.hasOverride).length} individual override(s).`,
+      supplier: selectedSupplier.label,
+      finishColour: guidedSelection.finish,
+      imageUrl,
+      allowanceAmount: allowance,
+      selectedCost,
+      upgradeCost: variation,
+      included: variation === 0,
+      status: "selected",
+      guidedSelection,
+    });
+  }
   function resetGuidedBrickFlow() {
     setGuidedBrickStep("suppliers");
     setGuidedBrickSupplier("");
     setGuidedBrickRange("");
+  }
+
+  function resetGuidedApplianceFlow() {
+    setGuidedApplianceStep("brands");
+    setGuidedApplianceFamilyKey("");
+    setGuidedApplianceBrand("");
+    setGuidedApplianceProductId("");
+    setGuidedApplianceMode("");
+    setGuidedAppliancePackageId("");
   }
 
   function resetGuidedEntryDoorFlow() {
@@ -1574,8 +2866,43 @@ export default function BuilderSelectionsBookPage({
     setGuidedEntryDoorRange("");
     setGuidedEntryDoorProductCode("");
     setGuidedEntryDoorSize("");
+    setGuidedEntryDoorConfiguration("");
     setGuidedEntryDoorFinish("");
     setGuidedEntryDoorGlazing("");
+    setGuidedEntryDoorHardware("");
+    setGuidedEntryDoorFurnitureFinish("");
+  }
+
+  function setExteriorWallConstruction(nextKey) {
+    const next = normaliseExteriorWallConstruction(nextKey);
+    setBook((current) => ({
+      ...current,
+      exteriorWallConstruction: {
+        key: next.key,
+        label: next.label,
+        brickApplicable: next.brickApplicable,
+        brickStatus: next.brickStatus,
+        updatedAt: new Date().toISOString(),
+      },
+      updatedAt: new Date().toISOString(),
+    }));
+    if (!next.brickApplicable) {
+      setGuidedBrickStep("suppliers");
+      setGuidedBrickSupplier("");
+      setGuidedBrickRange("");
+    }
+  }
+
+  function resetGuidedWindowFlow() {
+    setGuidedWindowStep("schedule");
+    setWindowConfiguration(DEFAULT_WINDOW_CONFIGURATION);
+  }
+
+  function openGuidedWindowLanding() {
+    const savedSelection = persistedSelectionForRequirement(persistedProjectSelections, "windows") || guidedSelectionMap.get("windows");
+    const saved = savedSelection?.selected_details || savedSelection?.guidedSelection || {};
+    setWindowConfiguration(windowConfigurationFromSaved(saved));
+    setGuidedWindowStep("schedule");
   }
 
   function resetGuidedRoofingFlow() {
@@ -1703,11 +3030,73 @@ export default function BuilderSelectionsBookPage({
 
   function selectGuidedProduct(requirement, option) {
     if (!option) return;
+    if (requirement.requirementKey === 'entry-door' && option.entryDoorDraftPatch) {
+      const { doorId, patch: draftPatch } = option.entryDoorDraftPatch;
+      setBook(current => {
+        const next = patchEntryDoorDraft(current, doorId, draftPatch);
+        saveEmbeddedBookDraft(next);
+        return next;
+      });
+      return;
+    }
+    if (isApplianceRequirement(requirement) && (option.applianceSelectionProduct || option.recordType === "appliance-product" || option.recordType === "appliance-pack")) {
+      const record = option.metadata?.applianceCatalogueRecord || option;
+      const patch = applianceSelectionPatch({
+        requirement,
+        record,
+        organisationId: workspaceId || "",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        selectedBrandName: guidedApplianceBrand || record.brand || record.brandName || "",
+        selectedBrandId: record.brandId || "",
+        selectionMode: "build-your-own",
+      });
+      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `${requirement.label} selection saved.` });
+      setGuidedScreen("appliance-products");
+      setGuidedApplianceMode("build-your-own");
+      setGuidedApplianceStep("build-your-own");
+      setGuidedApplianceProductId("");
+      setSuccess(`${requirement.label} selected. Continue your ${guidedApplianceBrand || record.brand || "selected brand"} appliance selection.`);
+      return;
+    }
+    if (requirement?.requirementKey === "cabinetry" || option.cabinetrySelection) {
+      const payload = buildCabinetrySelectionPayload({
+        workspaceId: workspaceId || "",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        requirement,
+        selection: option.cabinetrySelection || option,
+      });
+      const details = payload.selected_details || {};
+      commitGuidedRequirementPatch(requirement, {
+        selectedOptionId: "connected-cabinetry-specification",
+        selectedProduct: payload.selected_product_name,
+        productModel: details.cabinetrySelection?.cabinetScheduleVersion || "Project cabinetry schedule",
+        brand: details.supplier || "",
+        description: `${details.cabinetrySelection?.summary?.locationCount || 0} cabinetry locations, ${details.cabinetrySelection?.summary?.scheduleLineCount || 0} builder-defined components.`,
+        supplier: details.supplier || payload.selected_supplier_name,
+        finishColour: [details.colour, details.finish].filter(Boolean).join(" / "),
+        imageUrl: payload.image_url || requirementImage(requirement),
+        allowanceAmount: payload.included_allowance,
+        selectedCost: payload.client_selection_price,
+        upgradeCost: payload.variation_amount,
+        included: payload.variation_amount === 0,
+        status: payload.selection_status,
+        selectionType: CABINETRY_SELECTION_TYPE,
+        workflowType: CABINETRY_WORKFLOW_TYPE,
+        schemaVersion: CABINETRY_SCHEMA_VERSION,
+        guidedSelection: {
+          ...details,
+          selectionType: CABINETRY_SELECTION_TYPE,
+          workflowType: CABINETRY_WORKFLOW_TYPE,
+          schemaVersion: CABINETRY_SCHEMA_VERSION,
+        },
+      }, { persist: true, successMessage: "Cabinetry specification draft saved." });
+      return;
+    }
     const entity = option.metadata?.productEntity || option;
     const allowance = numberValue(option.allowance ?? entity.allowance ?? requirement.defaultAllowance);
     const priceState = priceStateForGuidedOption(option);
     const selectedCost = priceState === PRICE_STATES.current ? numberValue(option.selectedCost) : null;
-    const quantity = numberValue(requirement.defaultQuantity) || 1;
+    const quantity = numberValue(option.quantity ?? requirement.defaultQuantity) || 1;
     const upgradeCost = priceState === PRICE_STATES.current
       ? variationFor({ selectedPrice: selectedCost, allowance, quantity })
       : null;
@@ -1745,6 +3134,11 @@ export default function BuilderSelectionsBookPage({
         productName: option.productName,
         model: option.model || "",
         selectedProduct: option.productName,
+        description: option.description || "",
+        unit: option.unit || entity.priceUnit || requirement.unit || "EACH",
+        priceIncludesGst: option.priceIncludesGst === true,
+        function: option.function || "",
+        length: option.length || "",
         colour: option.colour || "",
         finish: option.finish || "",
         size: option.size || "",
@@ -1767,7 +3161,313 @@ export default function BuilderSelectionsBookPage({
         selectionTimestamp: now,
       },
     };
-    commitGuidedRequirementPatch(requirement, patch);
+    if (requirement.requirementKey === 'entry-door' && option.door && option.entryDoorFurniture) {
+      const existing = guidedSelectionMap.get('entry-door');
+      const details = existing?.selected_details || existing?.guidedSelection || {};
+      const selection = { ...patch.guidedSelection, door: option.door, quantity: option.door.quantity, entryDoorFurniture: option.entryDoorFurniture, furnitureFinish: option.furnitureFinish, furnitureImageUrl: option.furnitureImageUrl, furnitureCompatibility: option.furnitureCompatibility, glassSelection: option.glassSelection, hardwareOptions: option.hardwareOptions };
+      const entryDoors = upsertEntryDoorSelection(selectionsFromDoorDetails(details), selection);
+      patch.guidedSelection = { ...details, ...selection, entryDoors, ...entryDoorSelectionSchedules(entryDoors) };
+      commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: `Door ${option.door.doorReference} furniture saved.` });
+      return;
+    }
+    commitGuidedRequirementPatch(requirement, patch, option.internalCatalogueSelection ? {autoAdvance:false,persist:true,successMessage:`${requirement.label} selection saved.`} : {});
+  }
+
+  function selectGuidedDrivewayConfiguration(requirement, option, configuration = {}) {
+    if (!option || !configuration?.finish) return;
+    const entity = option.metadata?.productEntity || option;
+    const allowance = numberValue(option.allowance ?? entity.allowance ?? requirement.defaultAllowance);
+    const quantity = numberValue(configuration.areaM2 || requirement.defaultQuantity) || 1;
+    const now = new Date().toISOString();
+    const selectedCost = null;
+    const variation = null;
+    const selectionId = `driveway-${selectedProjectId || selectedProject?.id || "project"}-${now}`;
+    const colourOrMix = configuration.officialColourName || configuration.mixName || configuration.colourTreatmentName || "";
+    const supplierName = configuration.supplierName || configuration.supplier || option.supplier || "";
+    const officialRange = configuration.officialRange || configuration.range || option.range || "";
+    const officialSampleImage = configuration.sampleImage || option.imageUrl || requirementImage(requirement);
+    const verificationDate = configuration.dateVerified || now.slice(0, 10);
+    const surfaceFinish = configuration.surfaceFinish || option.finish || configuration.finish;
+    const quoteStatus = configuration.priceStatus || PRICE_STATES.quoteRequired;
+    const guidedSelection = {
+      source: "guided_client_selections",
+      projectId: selectedProjectId || selectedProject?.id || "",
+      organisationId: workspaceId || "",
+      selectionId,
+      selectionRevision: 1,
+      area: requirement.areaKey,
+      room: requirement.areaLabel,
+      areaLabel: "Driveway",
+      requirementKey: requirement.requirementKey,
+      requirementLabel: requirement.label,
+      familyKey: requirement.familyKey,
+      linkedQuoteItemCode: entity.linkedQuoteItemCode || requirement.linkedQuoteItemCode || "",
+      productId: option.productId || option.id || "",
+      productCode: entity.productCode || option.productCode || option.sku || option.id,
+      manufacturer: entity.manufacturer || option.manufacturer || "",
+      brand: option.brand,
+      supplier: supplierName,
+      supplierId: configuration.supplierId || "",
+      supplierName,
+      range: officialRange,
+      officialRange,
+      productName: option.productName,
+      selectedProduct: option.productName,
+      model: option.model || "",
+      finish: configuration.finish,
+      colour: colourOrMix,
+      naturalGreyOrColoured: configuration.colourTreatment || "",
+      officialColourName: configuration.officialColourName || "",
+      aggregateMixName: configuration.mixName || "",
+      officialMixName: configuration.mixName || "",
+      mixProductId: configuration.mixProductId || "",
+      supplierCode: configuration.supplierCode || "",
+      region: configuration.region || configuration.projectRegion || "",
+      projectRegion: configuration.projectRegion || "",
+      regionalAvailability: configuration.availability || "",
+      surfaceFinish,
+      sealer: configuration.sealer || "Builder configured",
+      quantity,
+      drivewayAreaM2: quantity,
+      approximateAreaM2: quantity,
+      allowance,
+      selectedPrice: selectedCost,
+      priceStatus: quoteStatus,
+      priceState: quoteStatus,
+      variation,
+      variationAmount: variation,
+      variationPending: true,
+      quoteStatus: "Supplier quote required",
+      clientConfirmation: configuration.clientConfirmation || "pending",
+      builderApproval: configuration.builderApproval || "pending",
+      notes: configuration.notes || "",
+      imageReference: officialSampleImage,
+      officialSampleImage: configuration.sampleImage || "",
+      officialProductURL: configuration.officialSourceUrl || entity.officialProductURL || option.productUrl || "",
+      supplierSourceUrl: configuration.officialSourceUrl || "",
+      sourceUrl: configuration.officialSourceUrl || "",
+      sourceVerifiedAt: verificationDate,
+      verificationDate,
+      drivewaySelection: configuration,
+      boqLine: {
+        selectionId,
+        selectionRevision: 1,
+        area: "Driveway",
+        drivewayAreaM2: quantity,
+        concreteStrengthSpecification: configuration.concreteStrengthSpecification || "From estimate/specification",
+        finish: configuration.finish,
+        supplier: supplierName,
+        supplierId: configuration.supplierId || "",
+        supplierName,
+        range: officialRange,
+        officialRange,
+        region: configuration.region || configuration.projectRegion || "",
+        mixProductId: configuration.mixProductId || "",
+        officialMixName: configuration.mixName || "",
+        officialSampleImage: configuration.sampleImage || "",
+        availability: configuration.availability || "",
+        colourOrAggregateMix: colourOrMix,
+        quantity,
+        pumpAccessRequirements: configuration.pumpAccessRequirements || "Confirm with site conditions",
+        sealerAndFinishingRequirements: configuration.sealer || "Builder configured",
+        allowance,
+        sourceUrl: configuration.officialSourceUrl || "",
+        verificationDate,
+        quoteRequired: true,
+      },
+      procurementSchedule: [{
+        selectionId,
+        selectionRevision: 1,
+        trade: "Concrete supplier",
+        area: "Driveway",
+        drivewayAreaM2: quantity,
+        concreteStrengthSpecification: configuration.concreteStrengthSpecification || "From estimate/specification",
+        finish: configuration.finish,
+        supplier: supplierName,
+        supplierId: configuration.supplierId || "",
+        supplierName,
+        range: officialRange,
+        officialRange,
+        region: configuration.region || configuration.projectRegion || "",
+        mixProductId: configuration.mixProductId || "",
+        officialMixName: configuration.mixName || "",
+        officialSampleImage: configuration.sampleImage || "",
+        availability: configuration.availability || "",
+        colourOrAggregateMix: colourOrMix,
+        quantity,
+        pumpAccessRequirements: configuration.pumpAccessRequirements || "Confirm with site conditions",
+        sealerAndFinishingRequirements: configuration.sealer || "Builder configured",
+        allowance,
+        sourceUrl: configuration.officialSourceUrl || "",
+        verificationDate,
+        priceStatus: quoteStatus,
+        quoteRequired: true,
+        status: "ready_for_supplier_quote",
+      }],
+      supplierProcurementStatus: "ready_for_rfq",
+      selectedAt: now,
+      updatedAt: now,
+      selectionTimestamp: now,
+    };
+    commitGuidedRequirementPatch(requirement, {
+      selectedOptionId: option.id,
+      selectedProduct: option.productName,
+      productModel: colourOrMix || option.model,
+      brand: option.brand,
+      description: `${configuration.finish}${colourOrMix ? ` - ${colourOrMix}` : ""}. Supplier quote required.`,
+      supplier: configuration.supplier || option.supplier,
+      finishColour: colourOrMix || surfaceFinish,
+      imageUrl: option.imageUrl || requirementImage(requirement),
+      allowanceAmount: allowance,
+      selectedCost,
+      upgradeCost: variation,
+      included: false,
+      status: "selected",
+      guidedSelection,
+    }, { autoAdvance: false, persist: true });
+    setSuccess("Driveway selection saved. Supplier quote required.");
+  }
+
+  function selectGuidedExternalLightingSchedule(requirement, scheduleProduct, options = {}) {
+    if (!scheduleProduct?.externalLightingSelection) return;
+    const lighting = scheduleProduct.externalLightingSelection;
+    const summary = lighting.summary || {};
+    const now = new Date().toISOString();
+    const priceState = scheduleProduct.priceStatus || PRICE_STATES.current;
+    const selectedCost = priceState === PRICE_STATES.current ? numberValue(summary.selectedPrice ?? scheduleProduct.selectedCost) : null;
+    const variation = priceState === PRICE_STATES.current ? numberValue(summary.variation) : null;
+    const patch = {
+      selectedOptionId: scheduleProduct.productId || "external-lighting-schedule",
+      selectedProduct: scheduleProduct.productName || "External Lighting Schedule",
+      productModel: `${summary.totalProducts || 0} products / ${summary.totalFittings || 0} fittings`,
+      brand: "Beacon Lighting",
+      description: lighting.dashboardSummary || scheduleProduct.description || "",
+      supplier: "Beacon Lighting",
+      finishColour: scheduleProduct.finish || "",
+      imageUrl: scheduleProduct.primaryImage || requirementImage(requirement),
+      allowanceAmount: numberValue(summary.allowance ?? requirement.defaultAllowance),
+      selectedCost,
+      upgradeCost: variation,
+      included: priceState === PRICE_STATES.current && variation === 0,
+      status: "selected",
+      guidedSelection: {
+        source: "guided_client_selections",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        organisationId: workspaceId || "",
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
+        requirementKey: requirement.requirementKey,
+        requirementLabel: requirement.label,
+        familyKey: requirement.familyKey,
+        productId: scheduleProduct.productId,
+        productCode: scheduleProduct.productCode,
+        manufacturer: "Beacon Lighting",
+        brand: "Beacon Lighting",
+        supplier: "Beacon Lighting",
+        productName: scheduleProduct.productName || "External Lighting Schedule",
+        selectedProduct: scheduleProduct.productName || "External Lighting Schedule",
+        model: "Multi-line lighting schedule",
+        finish: scheduleProduct.finish || "",
+        quantity: numberValue(summary.totalFittings),
+        allowance: numberValue(summary.allowance ?? requirement.defaultAllowance),
+        selectedPrice: selectedCost,
+        priceStatus: priceState,
+        priceState,
+        variation,
+        variationAmount: variation,
+        variationPending: priceState !== PRICE_STATES.current,
+        imageReference: scheduleProduct.primaryImage || requirementImage(requirement),
+        externalLightingSelection: {
+          ...lighting,
+          scheduleId: lighting.scheduleId || `external-lighting-${selectedProjectId || "project"}`,
+          status: options.confirm ? "confirmed" : "in_progress",
+          lines: lighting.scheduleLines || lighting.lines || [],
+          updatedAt: now,
+        },
+        lightingSchedule: scheduleProduct.lightingSchedule || [],
+        electricalContractorSchedule: scheduleProduct.electricalContractorSchedule || [],
+        procurementSchedule: scheduleProduct.procurementSchedule || [],
+        supplierProcurementStatus: scheduleProduct.supplierProcurementStatus || "ready_for_rfq",
+        configurationComplete: Boolean(options.confirm && summary.complete),
+        selectedAt: now,
+        updatedAt: now,
+        selectionTimestamp: now,
+      },
+    };
+    commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true });
+    setSuccess(options.confirm ? "External Lighting schedule confirmed." : "External Lighting schedule saved.");
+    if (options.confirm) {
+      window.setTimeout(() => returnToGuidedDashboard(requirement), 250);
+    }
+  }
+
+  function selectGuidedExteriorColourSchedule(requirement, scheduleProduct, options = {}) {
+    if (!scheduleProduct?.exteriorColourSelection) return;
+    const colourSchedule = scheduleProduct.exteriorColourSelection;
+    const summary = colourSchedule.summary || {};
+    const now = new Date().toISOString();
+    const patch = {
+      selectedOptionId: scheduleProduct.productId || "exterior-colour-schedule",
+      selectedProduct: scheduleProduct.productName || "Exterior Colour Schedule",
+      productModel: `${summary.selectedAreas || 0}/${summary.applicableAreas || 0} areas`,
+      brand: "Project colour schedule",
+      description: colourSchedule.dashboardSummary || scheduleProduct.description || "",
+      supplier: "Builder/client nominated suppliers",
+      finishColour: `${summary.uniqueColours || 0} unique colours`,
+      imageUrl: scheduleProduct.primaryImage || requirementImage(requirement),
+      allowanceAmount: 0,
+      selectedCost: 0,
+      upgradeCost: 0,
+      included: true,
+      status: options.confirm ? "approved" : "selected",
+      guidedSelection: {
+        source: "guided_client_selections",
+        projectId: selectedProjectId || selectedProject?.id || "",
+        organisationId: workspaceId || "",
+        area: requirement.areaKey,
+        room: requirement.areaLabel,
+        requirementKey: requirement.requirementKey,
+        requirementLabel: "Exterior Colours",
+        familyKey: requirement.familyKey,
+        productId: scheduleProduct.productId,
+        productCode: scheduleProduct.productCode,
+        manufacturer: "Project colour schedule",
+        brand: "Project colour schedule",
+        supplier: "Builder/client nominated suppliers",
+        productName: scheduleProduct.productName || "Exterior Colour Schedule",
+        selectedProduct: scheduleProduct.productName || "Exterior Colour Schedule",
+        model: "Area-based exterior colour schedule",
+        finish: `${summary.uniqueColours || 0} unique colours`,
+        quantity: numberValue(summary.applicableAreas),
+        allowance: 0,
+        selectedPrice: 0,
+        priceStatus: PRICE_STATES.allowanceOnly,
+        priceState: PRICE_STATES.allowanceOnly,
+        variation: 0,
+        variationAmount: 0,
+        variationPending: false,
+        imageReference: scheduleProduct.primaryImage || requirementImage(requirement),
+        exteriorColourSelection: {
+          ...colourSchedule,
+          scheduleId: colourSchedule.scheduleId || `exterior-colours-${selectedProjectId || "project"}`,
+          status: options.confirm ? "confirmed" : "in_progress",
+          updatedAt: now,
+        },
+        clientColourSchedule: scheduleProduct.clientColourSchedule || [],
+        painterTradeSchedule: scheduleProduct.painterTradeSchedule || [],
+        technicalCoatingRecords: scheduleProduct.technicalCoatingRecords || [],
+        supplierProcurementStatus: scheduleProduct.supplierProcurementStatus || "draft",
+        configurationComplete: Boolean(options.confirm && summary.complete),
+        selectedAt: now,
+        updatedAt: now,
+        selectionTimestamp: now,
+      },
+    };
+    commitGuidedRequirementPatch(requirement, patch, { autoAdvance: false, persist: true, successMessage: options.successMessage || "" });
+    if (options.confirm) setSuccess("Exterior Colours schedule confirmed.");
+    if (options.confirm) {
+      window.setTimeout(() => returnToGuidedDashboard(requirement), 250);
+    }
   }
 
   function selectGuidedRoofingConfiguration(requirement, configuration) {
@@ -2126,12 +3826,30 @@ export default function BuilderSelectionsBookPage({
       projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
       updatedAt: new Date().toISOString(),
     };
+    return persistBookData(bookForSave, status);
+  }
+
+  async function persistBookData(bookForSave, status = "in_progress", options = {}) {
     saveEmbeddedBookDraft(bookForSave);
+    let embeddedSaveResult = null;
+    if (embedded && typeof onClientSelectionsSave === "function") {
+      embeddedSaveResult = await onClientSelectionsSave(bookForSave, {
+        status,
+        successMessage: options.successMessage,
+      });
+      if (embeddedSaveResult?.ok === false) {
+        setBook(bookForSave);
+        setCoverDraft(bookForSave.cover);
+        setError(embeddedSaveResult.message || "Open or create a job before saving client selections.");
+        setSaving(false);
+        return null;
+      }
+    }
     if (!workspaceId || !selectedProjectId) {
       setBook(bookForSave);
       setCoverDraft(bookForSave.cover);
-      setSuccess("Selections Book saved.");
-      return "embedded-local";
+      setError("Open or create a job before saving client selections.");
+      return null;
     }
     setSaving(true);
     setError("");
@@ -2141,8 +3859,8 @@ export default function BuilderSelectionsBookPage({
     const payload = {
       workspace_id: workspaceId,
       project_id: selectedProjectId,
-      estimate_snapshot_id: selectedSnapshotId || null,
-      inclusion_template_id: selectedTemplateId || null,
+      estimate_snapshot_id: uuidOrNull(selectedSnapshotId),
+      inclusion_template_id: null,
       book_name: `${bookForSave.cover.projectName || selectedProject?.project_name || "Project"} Selections Book`,
       status,
       book_data: bookForSave,
@@ -2154,12 +3872,12 @@ export default function BuilderSelectionsBookPage({
       : supabase.from("builder_selection_books").insert({ ...payload, created_by: userId });
     const { data, error: saveError } = await query.select("id, book_data").single();
     if (saveError) {
-      if (String(selectedProjectId).startsWith("embedded:")) {
+      if (embeddedSaveResult?.ok || String(selectedProjectId).startsWith("embedded:")) {
         setBook(bookForSave);
         setCoverDraft(bookForSave.cover);
-        setSuccess("Selections Book saved.");
+        setSuccess(embeddedSaveResult?.message || "Selections Book saved to the active job.");
         setSaving(false);
-        return "embedded-local";
+        return embeddedSaveResult?.selectionRevision || "embedded-local";
       }
       setError(saveError.message || "Could not save the Selections Book.");
       setSaving(false);
@@ -2168,20 +3886,23 @@ export default function BuilderSelectionsBookPage({
     setBookId(data.id);
     setBook(data.book_data || bookForSave);
     setCoverDraft((data.book_data || bookForSave).cover);
-    setSuccess("Selections Book saved.");
+    const syncResult = await syncBookToProjectSelections({ bookForSync: data.book_data || bookForSave, savedBookId: data.id, userId });
+    if (syncResult.error) {
+      setError(syncResult.error);
+      setSaving(false);
+      return null;
+    }
+    const refreshedSelections = await loadPersistedProjectSelections();
+    setPersistedProjectSelections(refreshedSelections);
+    const projectLabel = projectInfoDisplay.jobNumber || selectedProject?.job_number || selectedProject?.project_name || "the active project";
+    setSuccess(embeddedSaveResult?.message || options.successMessage || `Selections Book saved to ${projectLabel}.${syncResult.message ? ` ${syncResult.message}` : ""}`);
     setSaving(false);
     return data.id;
   }
 
-  async function importToProject() {
-    const savedBookId = bookId || await saveBook("ready_to_import");
-    if (!savedBookId) return;
-    setImporting(true);
-    setError("");
-    setSuccess("");
-    const { data: authData } = await supabase.auth.getUser();
-    const userId = authData?.user?.id || null;
-    const rows = book.rooms.flatMap((room) => room.rows.map((row) => ({ room, row })));
+  async function syncBookToProjectSelections({ bookForSync, savedBookId, userId }) {
+    const rows = (bookForSync.rooms || []).flatMap((room) => (room.rows || []).map((row) => ({ room, row })));
+    const syncRows = rows.filter(({ row }) => isProjectSelectionSyncCandidate(row));
     const { data: existingRows } = await supabase
       .from("builder_client_selections")
       .select("id, metadata")
@@ -2193,7 +3914,7 @@ export default function BuilderSelectionsBookPage({
 
     const inserts = [];
     const updates = [];
-    rows.forEach(({ room, row }) => {
+    syncRows.forEach(({ room, row }) => {
       const payload = selectionRecordPayload({
         workspaceId,
         projectId: selectedProjectId,
@@ -2208,6 +3929,18 @@ export default function BuilderSelectionsBookPage({
       if (existingId) updates.push({ id: existingId, payload });
       else inserts.push(payload);
     });
+    const activeRowIds = new Set(syncRows.map(({ row }) => row.id));
+    const staleIds = (existingRows || [])
+      .filter((item) => item.metadata?.selection_book_id === savedBookId && item.metadata?.selection_book_row_id && !activeRowIds.has(item.metadata.selection_book_row_id))
+      .map((item) => item.id);
+    if (staleIds.length) {
+      const { error: staleError } = await supabase
+        .from("builder_client_selections")
+        .update({ is_active: false, selection_status: "removed", status: "removed", updated_by: userId, updated_at: new Date().toISOString() })
+        .eq("workspace_id", workspaceId)
+        .in("id", staleIds);
+      if (staleError) return { inserted: 0, updated: 0, message: "", error: staleError.message || "Could not deactivate stale selection records." };
+    }
 
     for (const update of updates) {
       const { error: updateError } = await supabase
@@ -2215,30 +3948,298 @@ export default function BuilderSelectionsBookPage({
         .update({ ...update.payload, updated_by: userId, updated_at: new Date().toISOString() })
         .eq("workspace_id", workspaceId)
         .eq("id", update.id);
-      if (updateError) {
-        setError(updateError.message || "Could not update imported selection records.");
-        setImporting(false);
-        return;
-      }
+      if (updateError) return { inserted: 0, updated: 0, message: "", error: updateError.message || "Could not update imported selection records." };
     }
     if (inserts.length) {
       const { error: insertError } = await supabase.from("builder_client_selections").insert(inserts);
-      if (insertError) {
-        setError(insertError.message || "Could not import selection records.");
-        setImporting(false);
-        return;
-      }
+      if (insertError) return { inserted: 0, updated: 0, message: "", error: insertError.message || "Could not import selection records." };
+    }
+    const syncResult = await syncImportedWindowSelectionToProcurement({ projectId: selectedProjectId, snapshotId: selectedSnapshotId, userId });
+    if (syncResult.error) return { inserted: inserts.length, updated: updates.length, message: "", error: syncResult.error };
+    const staleMessage = staleIds.length ? `${staleIds.length} stale selection records deactivated.` : "";
+    return { inserted: inserts.length, updated: updates.length, message: [syncResult.message, staleMessage].filter(Boolean).join(" "), error: "" };
+  }
+
+  async function importToProject() {
+    const savedBookId = bookId || await saveBook("ready_to_import");
+    if (!savedBookId) return;
+    setImporting(true);
+    setError("");
+    setSuccess("");
+    const { data: authData } = await supabase.auth.getUser();
+    const userId = authData?.user?.id || null;
+    const syncResult = await syncBookToProjectSelections({ bookForSync: book, savedBookId, userId });
+    if (syncResult.error) {
+      setError(syncResult.error);
+      setImporting(false);
+      return;
     }
     await saveBook("imported");
-    setSuccess(`Imported ${inserts.length} new and updated ${updates.length} selection records.`);
+    setSuccess(`Imported ${syncResult.inserted} new and updated ${syncResult.updated} selection records.${syncResult.message ? ` ${syncResult.message}` : ""}`);
     setImporting(false);
   }
 
-  const documentPages = useMemo(() => [
-    { value: "cover", label: "Cover", type: "cover", pageNumber: 1 },
-    { value: "project", label: "Project Info", type: "project", pageNumber: 2 },
-    ...book.rooms.map((room, index) => ({ value: `room:${room.id}`, label: room.name, type: "room", room, pageNumber: index + 3 })),
-  ], [book.rooms]);
+  async function syncImportedWindowSelectionToProcurement({ projectId, snapshotId, userId }) {
+    if (!workspaceId || !projectId) return { message: "", error: "" };
+    const { data: selections, error: selectionError } = await supabase
+      .from("builder_client_selections")
+      .select("id, selected_details")
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", projectId)
+      .order("updated_at", { ascending: false })
+      .limit(250);
+    if (selectionError) return { message: "", error: selectionError.message || "Could not load imported Windows selection." };
+    const windowSelection = (selections || []).find((row) => row.selected_details?.requirementKey === "windows" && row.selected_details?.windowWorkflow?.procurementSchedule?.length);
+    if (!windowSelection) return { message: "", error: "" };
+    const workflow = windowSelection.selected_details.windowWorkflow;
+    const procurementRows = workflow.procurementSchedule || [];
+    const sourceKeys = procurementRows.map((row) => `windows:${windowSelection.id}:${row.windowId}`);
+    const { data: existingProcurement, error: procurementLoadError } = await supabase
+      .from("builder_procurement_items")
+      .select("id, source_procurement_item_id")
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", projectId)
+      .in("source_procurement_item_id", sourceKeys);
+    if (procurementLoadError) return { message: "", error: procurementLoadError.message || "Could not load existing procurement rows." };
+    const existingProcurementByKey = new Map((existingProcurement || []).map((row) => [row.source_procurement_item_id, row.id]));
+    let insertedProcurement = 0;
+    let updatedProcurement = 0;
+    for (const row of procurementRows) {
+      const sourceKey = `windows:${windowSelection.id}:${row.windowId}`;
+      const payload = {
+        workspace_id: workspaceId,
+        project_id: projectId,
+        snapshot_id: uuidOrNull(snapshotId),
+        source_quote_row_id: sourceKey,
+        source_procurement_item_id: sourceKey,
+        item_name: `${row.windowId} ${row.type}`,
+        description: `${row.room} - ${row.size} - ${row.supplierSystem} - ${row.frameColour} ${row.frameColourCode || ""} ${row.frameColourFinish || ""} - ${row.glass} - ${row.screen} - ${row.hardware}`,
+        section_name: "Windows",
+        procurement_category: "Windows & Doors",
+        quantity: Number(row.quantity || 1),
+        unit: "each",
+        estimated_rate: 0,
+        estimated_total: 0,
+        order_status: "quote_required",
+        delivery_status: "not_required_yet",
+        status: "active",
+        source_item: row,
+        metadata: {
+          generatedFrom: "client_selections_windows",
+          sourceSelectionId: windowSelection.id,
+          windowId: row.windowId,
+          scheduleVersion: workflow.importedSchedule?.version || "",
+          supplier: row.supplier,
+          frameColour: row.frameColour,
+          frameColourCode: row.frameColourCode,
+          frameColourFinish: row.frameColourFinish,
+          pricingStatus: row.status,
+        },
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      };
+      const existingId = existingProcurementByKey.get(sourceKey);
+      if (existingId) {
+        const { error } = await supabase.from("builder_procurement_items").update(payload).eq("workspace_id", workspaceId).eq("id", existingId);
+        if (error) return { message: "", error: error.message || "Could not update Windows procurement rows." };
+        updatedProcurement += 1;
+      } else {
+        const { error } = await supabase.from("builder_procurement_items").insert({ ...payload, created_by: userId });
+        if (error) return { message: "", error: error.message || "Could not create Windows procurement rows." };
+        insertedProcurement += 1;
+      }
+    }
+
+    const boqMessage = await syncWindowSelectionToBoq({ windowSelection, workflow, procurementRows, projectId, snapshotId, userId });
+    if (boqMessage.error) return boqMessage;
+    return { message: `Windows procurement synced: ${insertedProcurement} created, ${updatedProcurement} updated.${boqMessage.message ? ` ${boqMessage.message}` : ""}`, error: "" };
+  }
+
+  async function syncWindowSelectionToBoq({ windowSelection, workflow, procurementRows, projectId, snapshotId, userId }) {
+    const snapshotUuid = uuidOrNull(snapshotId);
+    if (!snapshotUuid) return { message: "BOQ sync skipped until this job has an estimate snapshot.", error: "" };
+    const sourceKeys = procurementRows.map((row) => `windows:${windowSelection.id}:${row.windowId}`);
+    const { data: existingBoq, error: boqLoadError } = await supabase
+      .from("builder_boq_items")
+      .select("id, source_quote_row_id")
+      .eq("workspace_id", workspaceId)
+      .eq("project_id", projectId)
+      .in("source_quote_row_id", sourceKeys);
+    if (boqLoadError) return { message: "", error: boqLoadError.message || "Could not load existing BOQ rows." };
+    const existingBoqByKey = new Map((existingBoq || []).map((row) => [row.source_quote_row_id, row.id]));
+    let insertedBoq = 0;
+    let updatedBoq = 0;
+    for (const row of procurementRows) {
+      const sourceKey = `windows:${windowSelection.id}:${row.windowId}`;
+      const payload = {
+        workspace_id: workspaceId,
+        project_id: projectId,
+        snapshot_id: snapshotUuid,
+        source_quote_row_id: sourceKey,
+        source_section_key: "windows",
+        source_section_name: "Windows",
+        item_name: `${row.windowId} ${row.type}`,
+        description: `${row.room} - ${row.size} - ${row.supplierSystem} - ${row.frameColour} ${row.frameColourCode || ""} ${row.frameColourFinish || ""} - ${row.glass} - ${row.screen} - ${row.hardware}`,
+        quantity: Number(row.quantity || 1),
+        unit: "each",
+        unit_rate: 0,
+        line_total: 0,
+        rate_source: "supplier_quote_required",
+        line_type: "client_selection_window",
+        cost_code: "WINDOWS",
+        status: "quote_required",
+        source_row: row,
+        metadata: {
+          generatedFrom: "client_selections_windows",
+          sourceSelectionId: windowSelection.id,
+          windowId: row.windowId,
+          scheduleVersion: workflow.importedSchedule?.version || "",
+          supplier: row.supplier,
+          frameColour: row.frameColour,
+          frameColourCode: row.frameColourCode,
+          frameColourFinish: row.frameColourFinish,
+          pricingStatus: row.status,
+          revision: workflow.confirmedAt || "",
+        },
+        updated_at: new Date().toISOString(),
+      };
+      const existingId = existingBoqByKey.get(sourceKey);
+      if (existingId) {
+        const { error } = await supabase.from("builder_boq_items").update(payload).eq("workspace_id", workspaceId).eq("id", existingId);
+        if (error) return { message: "", error: error.message || "Could not update Windows BOQ rows." };
+        updatedBoq += 1;
+      } else {
+        const { error } = await supabase.from("builder_boq_items").insert({ ...payload, created_by: userId });
+        if (error) return { message: "", error: error.message || "Could not create Windows BOQ rows." };
+        insertedBoq += 1;
+      }
+    }
+    return { message: `BOQ synced: ${insertedBoq} created, ${updatedBoq} updated.`, error: "" };
+  }
+
+  async function generateFinalSchedule(documentStatus = "draft") {
+    if (!selectedProjectId) {
+      setError("Select a project before generating the schedule.");
+      return;
+    }
+    if (!projectPreflight.canGenerateDraft) {
+      setError("The active project details could not be loaded. Reconnect the Johnson job before generating this schedule.");
+      return;
+    }
+    if (documentStatus === "contract" && !scheduleReview.canIssueFinal) {
+      setError("Resolve missing, unconfirmed, pricing and image review items before issuing the final contract schedule.");
+      return;
+    }
+    setScheduleGenerating(documentStatus);
+    setError("");
+    setSuccess("");
+    try {
+      const bookForGeneration = {
+        ...book,
+        cover: { ...book.cover, ...displayCover },
+        projectInfo: { ...(book.projectInfo || {}), ...projectInfoDisplay },
+        updatedAt: new Date().toISOString(),
+      };
+      const savedBookId = await persistBookData(bookForGeneration, "in_progress");
+      if (!savedBookId || savedBookId === "embedded-local") {
+        throw new Error("Save the Client Selections book to the active job before generating the schedule PDF.");
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      const { data: authData } = await supabase.auth.getUser();
+      const syncResult = await syncBookToProjectSelections({ bookForSync: bookForGeneration, savedBookId, userId: authData?.user?.id || null });
+      if (syncResult.error) throw new Error(syncResult.error);
+      const response = await fetch("/api/builders/final-inclusions-schedule/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          projectId: selectedProjectId,
+          snapshotId: selectedSnapshotId,
+          documentStatus,
+          standaloneClientSelectionsSchedule: true,
+          projectDetails: {
+            projectName: displayCover.projectName || selectedProject?.project_name || "",
+            clientName: displayCover.clientName || selectedProject?.client_name || "",
+            siteAddress: projectInfoDisplay.fullSiteAddress || projectInfoDisplay.siteAddress || selectedProject?.site_address || "",
+            jobNumber: projectInfoDisplay.jobNumber || displayCover.jobNumber || displayCover.quoteNumber || "",
+            builderName: displayCover.builderName || "",
+            builderLogo: displayCover.logoUrl || "",
+            builderPhone: displayCover.builderPhone || "",
+            builderEmail: displayCover.builderEmail || "",
+            scheduleVersion: displayCover.version || "1.0",
+            scheduleStatus: displayCover.status || "Draft",
+            datePrepared: displayCover.issueDate || today(),
+          },
+          previewSchedule: {
+            documentType: "inclusions_and_selections_schedule",
+            title: "INCLUSIONS AND SELECTIONS SCHEDULE",
+            cover: displayCover,
+            pageCount: totalPageCount,
+            itemCount: effectiveScheduleItems.length,
+            imageCount: effectiveScheduleItems.filter((item) => item.imageUrl && !isPlaceholderSelectionImage(item.imageUrl)).length,
+            missingImages: effectiveScheduleItems.filter((item) => !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl)).map((item) => ({
+              id: item.selectionId || item.id,
+              category: item.category,
+              title: item.title,
+            })),
+            items: effectiveScheduleItems.map((item) => ({
+              id: item.id,
+              sourceRowId: item.sourceRowId,
+              selectionId: item.selectionId,
+              category: item.category,
+              area: item.area,
+              title: item.title,
+              imageUrl: item.imageUrl,
+              statusLabel: item.statusLabel,
+              priceLabel: item.priceLabel,
+              fields: item.fields,
+            })),
+          },
+          preparedBy: projectInfoDisplay.estimatorName || displayCover.preparedBy || "",
+          builderProfile: {
+            name: displayCover.builderName || "",
+            licenceNumber: displayCover.licenceNumber || "",
+            phone: displayCover.builderPhone || "",
+            email: displayCover.builderEmail || "",
+          },
+          approval: {
+            clientName: displayCover.clientName || selectedProject?.client_name || "",
+            builderName: displayCover.builderName || "",
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload?.ok) throw new Error(payload?.error || payload?.details?.reason || "Could not generate the schedule PDF.");
+      setScheduleDocument(payload.document || null);
+      setSuccess(`${documentStatus === "contract" ? "Final contract schedule issued" : documentStatus === "for_approval" ? "Approval schedule generated" : "Draft schedule generated"}: ${payload.document?.fileName || payload.document?.file_name || "PDF"}`);
+    } catch (generationError) {
+      setError(generationError?.message || "Could not generate the schedule PDF.");
+    } finally {
+      setScheduleGenerating("");
+    }
+  }
+
+  const documentPages = useMemo(() => {
+    const sectionPages = paginateScheduleSections(effectiveScheduleSections).map((section, index) => ({
+      value: `section:${section.key}:page-${section.pageIndex}`,
+      label: section.pageCount > 1 ? `${section.title} (${section.pageIndex} of ${section.pageCount})` : section.title,
+      type: "schedule-section",
+      section,
+      pageNumber: index + 3,
+    }));
+    return [
+      { value: "cover", label: "Cover", type: "cover", pageNumber: 1 },
+      { value: "project", label: "Project Summary", type: "project", pageNumber: 2 },
+      ...sectionPages,
+      { value: "outstanding", label: "Outstanding Client Decisions", type: "outstanding", pageNumber: sectionPages.length + 3 },
+      { value: "acknowledgement", label: "Review", type: "acknowledgement", pageNumber: sectionPages.length + 4 },
+    ];
+  }, [effectiveScheduleSections]);
   const sectionOptions = documentPages.map((page) => ({ value: page.value, label: page.label }));
   const activeSectionValue = activePage === "room" ? `room:${activeRoomId}` : activePage;
   const activePageIndex = Math.max(0, documentPages.findIndex((page) => page.value === activeSectionValue));
@@ -2279,12 +4280,7 @@ export default function BuilderSelectionsBookPage({
         .map((page) => ({ page, ratio: ratios.get(page.value) || 0 }))
         .sort((a, b) => b.ratio - a.ratio)[0];
       if (!mostVisible?.page || mostVisible.ratio <= 0) return;
-      if (mostVisible.page.type === "room") {
-        setActivePage("room");
-        setActiveRoomId(mostVisible.page.room?.id || "");
-      } else {
-        setActivePage(mostVisible.page.value);
-      }
+      setActivePage(mostVisible.page.value);
     }, {
       root: null,
       rootMargin: "-18% 0px -55% 0px",
@@ -2310,7 +4306,7 @@ export default function BuilderSelectionsBookPage({
   }
 
   function openSection(value, options = {}) {
-    if (value === "cover" || value === "project") {
+    if (value === "cover" || value === "project" || value === "exterior-divider" || value === "outstanding" || value === "acknowledgement" || value.startsWith("section:")) {
       setActivePage(value);
       if (options.scroll !== false) scrollPageIntoView(value);
       return;
@@ -2325,6 +4321,11 @@ export default function BuilderSelectionsBookPage({
   function movePage(direction) {
     const nextIndex = clamp(activePageIndex + direction, 0, documentPages.length - 1, activePageIndex);
     openSection(documentPages[nextIndex]?.value || activeSectionValue);
+  }
+
+  function openScheduleItemSource(sourceRowId) {
+    const room = (book.rooms || []).find((candidate) => (candidate.rows || []).some((row) => row.id === sourceRowId));
+    if (room && sourceRowId) openSelector(room.id, sourceRowId);
   }
 
   function renderDocumentPage(page) {
@@ -2345,7 +4346,11 @@ export default function BuilderSelectionsBookPage({
         </>
       );
     }
-    if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} onChange={updateProjectInfo} />;
+    if (page.type === "project") return <ProjectInfoPage book={{ ...book, cover: displayCover }} details={projectInfoDisplay} scheduleItems={effectiveScheduleItems} review={scheduleReview} />;
+    if (page.type === "divider") return <ScheduleSectionDividerPage book={{ ...book, cover: displayCover }} title="Exterior" subtitle="External envelope, street-facing finishes, colours, openings, lighting and driveway selections." pageNumber={page.pageNumber} />;
+    if (page.type === "schedule-section" && page.section) return <ScheduleSectionPage book={{ ...book, cover: displayCover }} section={page.section} pageNumber={page.pageNumber} onPreviewImage={setImagePreview} onSelectProduct={openScheduleItemSource} />;
+    if (page.type === "outstanding") return <ScheduleOutstandingPage book={{ ...book, cover: displayCover }} review={scheduleReview} pageNumber={page.pageNumber} />;
+    if (page.type === "acknowledgement") return <ScheduleAcknowledgementPage book={{ ...book, cover: displayCover }} review={scheduleReview} pageNumber={page.pageNumber} />;
     if (page.type === "room" && page.room) {
       return (
         <RoomPage
@@ -2379,13 +4384,14 @@ export default function BuilderSelectionsBookPage({
       </Head>
       <main className="screen">
         <section className="workspace">
-          <header className="standardBanner">
+          <div className="standardActions">
             <button type="button" className="standardBack" onClick={() => handleGuidedBack({
               guidedScreen,
               guidedArea,
               guidedRequirement,
               guidedBrickStep,
               guidedEntryDoorStep,
+              guidedApplianceStep,
               guidedRoofingMode,
               guidedRoofingStep,
               roofingConfiguration,
@@ -2397,8 +4403,14 @@ export default function BuilderSelectionsBookPage({
               setGuidedEntryDoorRange,
               setGuidedEntryDoorProductCode,
               setGuidedEntryDoorSize,
+              setGuidedEntryDoorConfiguration,
               setGuidedEntryDoorFinish,
               setGuidedEntryDoorGlazing,
+              setGuidedEntryDoorHardware,
+              setGuidedEntryDoorFurnitureFinish,
+              setGuidedApplianceStep,
+              setGuidedApplianceBrand,
+              setGuidedApplianceProductId,
               setGuidedRoofingMode,
               setGuidedRoofingStep,
               setRoofingConfiguration,
@@ -2411,31 +4423,19 @@ export default function BuilderSelectionsBookPage({
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
-            <div className="standardIcon">
-              <ClipboardList size={28} />
-            </div>
-            <div className="standardCopy">
-              <h1>Inclusions & Selections</h1>
-              <p>Project: {selectedProject?.project_name || book.cover.projectName || "Not selected"} · Current Section: {activePage === "room" ? activeRoom?.name : activePage === "project" ? "Project Info" : "Cover"}</p>
-            </div>
-            <div className="standardMeta">
-              <span>Job Number: {displayCover.jobNumber || displayCover.quoteNumber || ""}</span>
-              <span>{saving ? "Saving..." : success || "Changes saved when you press Save Progress"}</span>
-              <div className="bannerActions">
-                <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
-                <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
-                <button type="button" onClick={() => setGuidedScreen(guidedScreen === "review" ? "areas" : "review")}>
-                  {guidedScreen === "review" ? "Guided Selections" : "Review Schedule"}
+            <div className="bannerActions">
+              <button onClick={() => saveBook()} disabled={saving}>{saving ? "Saving..." : "Save Progress"}</button>
+              <button onClick={importToProject} disabled={importing}>{importing ? "Importing..." : "Import to Project"}</button>
+              <button type="button" onClick={() => setGuidedScreen(guidedScreen === "review" ? "areas" : "review")}>
+                {guidedScreen === "review" ? "Guided Selections" : "Review Schedule"}
+              </button>
+              {activePage === "cover" && (
+                <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
+                  {coverSettingsOpen ? "Hide Cover Settings" : "Edit Cover Settings"}
                 </button>
-                {activePage === "cover" && (
-                  <button type="button" onClick={() => setCoverSettingsOpen((current) => !current)}>
-                    {coverSettingsOpen ? "Hide Cover Settings" : "Edit Cover Settings"}
-                  </button>
-                )}
-              </div>
+              )}
             </div>
-          </header>
-
+          </div>
           {approvedCatalogueError ? (
             <div className="alert warning" role="status">
               Approved catalogue feed is temporarily unavailable. Existing master catalogue products remain available.
@@ -2444,7 +4444,58 @@ export default function BuilderSelectionsBookPage({
 
           {guidedScreen === "review" ? (
             <>
+          <EntryDoorFurnitureSchedule workbook={embeddedWorkbook} review title="Exterior Door Furniture - Review Schedule" />
+          <section className="contractSchedulePanel" aria-label="Contract schedule output">
+            <div>
+              <span className="panelKicker">Final output</span>
+              <h2>Inclusions and Selections Schedule</h2>
+              <p>{scheduleReview.canIssueFinal ? "All visible selections are ready to issue as a final contract schedule." : "Resolve the builder review items before issuing the final contract schedule."}</p>
+              <div className="currentSavedSelectionsIndicator" role="status">Showing current saved selections - revised {currentSelectionsRevisionLabel}</div>
+            </div>
+            <div className="scheduleReviewStats">
+              <span><strong>{effectiveScheduleItems.length}</strong> Items</span>
+              <span><strong>{scheduleReview.complete}</strong> Complete</span>
+              <span><strong>{scheduleReview.unconfirmed}</strong> Unconfirmed</span>
+              <span><strong>{scheduleReview.pricing}</strong> Pricing</span>
+              <span><strong>{scheduleReview.images}</strong> Images</span>
+            </div>
+            <div className="scheduleIssueActions">
+              <button type="button" onClick={() => generateFinalSchedule("draft")} disabled={Boolean(scheduleGenerating)}>
+                {scheduleGenerating === "draft" ? "Generating..." : "Generate Draft PDF"}
+              </button>
+              <button type="button" onClick={() => generateFinalSchedule("for_approval")} disabled={Boolean(scheduleGenerating)}>
+                {scheduleGenerating === "for_approval" ? "Generating..." : "Send for Approval"}
+              </button>
+              <button type="button" className="primary" onClick={() => generateFinalSchedule("contract")} disabled={Boolean(scheduleGenerating) || !scheduleReview.canIssueFinal}>
+                {scheduleGenerating === "contract" ? "Issuing..." : "Issue Final Contract Schedule"}
+              </button>
+            </div>
+            {scheduleReview.items.length ? (
+              <div className="scheduleReviewList">
+                {scheduleReview.items.slice(0, 6).map((item) => (
+                  <span key={`${item.id}-${item.reason}`}>{item.label}: {item.reason}</span>
+                ))}
+                {scheduleReview.items.length > 6 ? <span>{scheduleReview.items.length - 6} more review items</span> : null}
+              </div>
+            ) : null}
+            {scheduleDocument ? (
+              <a className="scheduleDocumentLink" href={scheduleDocument.publicUrl || scheduleDocument.public_url || "#"} target="_blank" rel="noreferrer">
+                Open latest generated PDF
+              </a>
+            ) : null}
+          </section>
+          <BuilderSchedulePreflight
+            preflight={projectPreflight}
+            generating={scheduleGenerating}
+            onFixProjectData={() => setCoverSettingsOpen(true)}
+            onFixImages={() => setGuidedScreen("home")}
+            onGenerateDraft={() => generateFinalSchedule("draft")}
+          />
           <section className="scheduleControls" aria-label="Schedule navigation">
+            <div className="currentSectionBadge">
+              <span>Current Section:</span>
+              <strong>{activeDocumentPage?.label || "Cover"}</strong>
+            </div>
             <label>
               Project
               <select value={selectedProjectId} onChange={(event) => setSelectedProjectId(event.target.value)}>
@@ -2550,10 +4601,21 @@ export default function BuilderSelectionsBookPage({
               requirement={guidedRequirement}
               requirements={activeGuidedRequirements}
               book={book}
+              exteriorWallConstruction={exteriorWallConstruction}
               selections={guidedSelectionMap}
+              persistedSelections={persistedProjectSelections}
               areaTotals={guidedAreaTotalsForActive}
               runningTotals={guidedRunningTotals}
-              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedProducts}
+              products={guidedRequirement.requirementKey === "bricks" ? brickGuidedProducts : guidedRequirement.requirementKey === "roofing" ? roofingGuidedProducts : guidedRequirement.requirementKey === "garage-door" ? garageGuidedProducts : guidedProducts}
+              applianceRecords={clientVisibleApplianceRecords}
+              appliancePacks={clientVisibleAppliancePacks}
+              applianceStep={guidedApplianceStep}
+              applianceFamilyKey={guidedApplianceFamilyKey}
+              applianceBrand={guidedApplianceBrand}
+              applianceProductId={guidedApplianceProductId}
+              applianceMode={guidedApplianceMode}
+              appliancePackageId={guidedAppliancePackageId}
+              entryDoorFurnitureProducts={entryDoorFurnitureProducts}
               masterProductCount={masterProductsForGuidedFamily.length}
               enabledProductCount={builderEnabledForGuidedFamily.length}
               brickStep={guidedBrickStep}
@@ -2564,8 +4626,19 @@ export default function BuilderSelectionsBookPage({
               entryDoorRange={guidedEntryDoorRange}
               entryDoorProductCode={guidedEntryDoorProductCode}
               entryDoorSize={guidedEntryDoorSize}
+              entryDoorConfiguration={guidedEntryDoorConfiguration}
               entryDoorFinish={guidedEntryDoorFinish}
               entryDoorGlazing={guidedEntryDoorGlazing}
+              entryDoorHardware={guidedEntryDoorHardware}
+              entryDoorFurnitureFinish={guidedEntryDoorFurnitureFinish}
+              windowStep={guidedWindowStep}
+              windowConfiguration={windowConfiguration}
+              windowDefaultsApplyResult={windowDefaultsApplyResult}
+              projectId={selectedProjectId}
+              project={selectedProject}
+              projectInfo={projectInfoDisplay}
+              workbook={embeddedWorkbook}
+              snapshot={selectedSnapshot}
               roofingMode={guidedRoofingMode}
               roofingStep={guidedRoofingStep}
               roofingConfiguration={roofingConfiguration}
@@ -2573,21 +4646,44 @@ export default function BuilderSelectionsBookPage({
               onOpenKitchen={openGuidedKitchen}
               onOpenRequirementKey={openGuidedRequirementKey}
               onOpenRequirement={openGuidedRequirement}
+              onFinishCabinetry={saveGuidedCabinetryAndReturnToInterior}
               onBrickStepChange={setGuidedBrickStep}
               onBrickSupplierChange={setGuidedBrickSupplier}
               onBrickRangeChange={setGuidedBrickRange}
+              onExteriorWallConstructionChange={setExteriorWallConstruction}
               onEntryDoorStepChange={setGuidedEntryDoorStep}
               onEntryDoorSupplierChange={setGuidedEntryDoorSupplier}
               onEntryDoorRangeChange={setGuidedEntryDoorRange}
               onEntryDoorProductCodeChange={setGuidedEntryDoorProductCode}
               onEntryDoorSizeChange={setGuidedEntryDoorSize}
+              onEntryDoorConfigurationChange={setGuidedEntryDoorConfiguration}
               onEntryDoorFinishChange={setGuidedEntryDoorFinish}
               onEntryDoorGlazingChange={setGuidedEntryDoorGlazing}
+              onEntryDoorHardwareChange={setGuidedEntryDoorHardware}
+              onEntryDoorFurnitureFinishChange={setGuidedEntryDoorFurnitureFinish}
+              onWindowStepChange={setGuidedWindowStep}
+              onWindowConfigurationChange={setWindowConfiguration}
+              onWindowDefaultsApplyResult={setWindowDefaultsApplyResult}
               onRoofingModeChange={setGuidedRoofingMode}
               onRoofingStepChange={setGuidedRoofingStep}
               onRoofingConfigurationChange={setRoofingConfiguration}
+              onApplianceStepChange={setGuidedApplianceStep}
+              onApplianceFamilyChange={setGuidedApplianceFamilyKey}
+              onApplianceBrandChange={setGuidedApplianceBrand}
+              onApplianceProductChange={setGuidedApplianceProductId}
+              onApplianceModeChange={setGuidedApplianceMode}
+              onAppliancePackageChange={setGuidedAppliancePackageId}
+              onReturnToAppliances={() => {
+                setGuidedScreen("appliance-products");
+                resetGuidedApplianceFlow();
+              }}
               onSelectRoofingConfiguration={selectGuidedRoofingConfiguration}
+              onSelectWindowConfiguration={selectGuidedWindowConfiguration}
+              onSelectExternalLightingSchedule={selectGuidedExternalLightingSchedule}
+              onSelectExteriorColourSchedule={selectGuidedExteriorColourSchedule}
+              onSelectDrivewayConfiguration={selectGuidedDrivewayConfiguration}
               onSelectProduct={selectGuidedProduct}
+              onSelectAppliancePackage={selectGuidedAppliancePackage}
               onViewDetails={(product) => setGuidedProductDetails(product)}
               onOpenImport={openBrickImportModal}
               onSaveProgress={() => saveBook()}
@@ -2663,10 +4759,22 @@ function GuidedSelectionsWorkflow({
   requirement,
   requirements,
   book,
+  exteriorWallConstruction,
   selections,
+  persistedSelections = [],
   areaTotals,
   runningTotals,
   products,
+  applianceRecords = [],
+  appliancePacks = [],
+  applianceStep = "brands",
+  applianceFamilyKey = "",
+  applianceBrand = "",
+  applianceProductId = "",
+  applianceMode = "",
+  appliancePackageId = "",
+  projectId = "",
+  entryDoorFurnitureProducts = [],
   masterProductCount,
   enabledProductCount,
   brickStep,
@@ -2677,8 +4785,18 @@ function GuidedSelectionsWorkflow({
   entryDoorRange,
   entryDoorProductCode,
   entryDoorSize,
+  entryDoorConfiguration,
   entryDoorFinish,
   entryDoorGlazing,
+  entryDoorHardware,
+  entryDoorFurnitureFinish,
+  windowStep,
+  windowConfiguration,
+  windowDefaultsApplyResult,
+  project,
+  projectInfo,
+  workbook,
+  snapshot,
   roofingMode,
   roofingStep,
   roofingConfiguration,
@@ -2686,26 +4804,49 @@ function GuidedSelectionsWorkflow({
   onOpenKitchen,
   onOpenRequirementKey,
   onOpenRequirement,
+  onFinishCabinetry,
   onBrickStepChange,
   onBrickSupplierChange,
   onBrickRangeChange,
+  onExteriorWallConstructionChange,
   onEntryDoorStepChange,
   onEntryDoorSupplierChange,
   onEntryDoorRangeChange,
   onEntryDoorProductCodeChange,
   onEntryDoorSizeChange,
+  onEntryDoorConfigurationChange,
   onEntryDoorFinishChange,
   onEntryDoorGlazingChange,
+  onEntryDoorHardwareChange,
+  onEntryDoorFurnitureFinishChange,
+  onWindowStepChange,
+  onWindowConfigurationChange,
+  onWindowDefaultsApplyResult,
   onRoofingModeChange,
   onRoofingStepChange,
   onRoofingConfigurationChange,
+  onApplianceStepChange,
+  onApplianceFamilyChange,
+  onApplianceBrandChange,
+  onApplianceProductChange,
+  onApplianceModeChange,
+  onAppliancePackageChange,
+  onReturnToAppliances,
   onSelectRoofingConfiguration,
+  onSelectWindowConfiguration,
+  onSelectExternalLightingSchedule,
+  onSelectExteriorColourSchedule,
+  onSelectDrivewayConfiguration,
   onSelectProduct,
+  onSelectAppliancePackage,
   onViewDetails,
   onOpenImport,
   onSaveProgress,
   onReviewSchedule,
 }) {
+  const persistedWindowsSelection = persistedSelectionForRequirement(persistedSelections, "windows");
+  // KITCHEN COMPLETE. Opening Interior.
+
   if (screen === "complete") {
     const pendingPrices = pendingPriceSelections(selections);
     return (
@@ -2740,13 +4881,7 @@ function GuidedSelectionsWorkflow({
           <strong>Start with the part of the home the client is selecting.</strong>
         </div>
         <div className="guidedAreaGrid">
-          {GUIDED_AREA_CARDS.map((card) => (
-            <button key={card.key} type="button" className="guidedImageCard" onClick={() => onOpenArea(card.key)}>
-              <img src={card.image} alt={card.label} />
-              <span>{card.label}</span>
-              <small>{card.description}</small>
-            </button>
-          ))}
+          {GUIDED_AREA_CARDS.map((card) => <GuidedImageCard key={card.key} category={card} status="not-started" actionLabel="Open" onOpen={() => onOpenArea(card.key)} />)}
         </div>
       </section>
     );
@@ -2756,16 +4891,24 @@ function GuidedSelectionsWorkflow({
     const applicableKeys = new Set(requirementsForGuidedArea("exterior", book).map((item) => item.requirementKey));
     const exteriorCards = EXTERIOR_CATEGORY_CARDS.filter((card) => !card.requirementKey || applicableKeys.has(card.requirementKey)).map((card) => {
       const selection = card.requirementKey ? selections.get(card.requirementKey) : null;
+      const brickNotApplicable = card.requirementKey === "bricks" && exteriorWallConstruction?.brickApplicable === false;
       return {
         ...card,
-        selectedLabel: selection?.selected_product_name || selection?.selectedProduct || selection?.selected_product || "",
+        selectedLabel: brickNotApplicable ? "Not applicable - rendered finish" : selection?.selected_product_name || selection?.selectedProduct || selection?.selected_product || "",
+        disabled: brickNotApplicable,
+        actionLabel: brickNotApplicable ? "Resolved" : card.actionLabel,
       };
     });
     return (
       <section className="guidedShell" data-testid="guided-exterior-categories">
         <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Exterior" cards={exteriorCards} onOpen={(key) => {
+        <ExteriorWallConstructionSelector
+          value={exteriorWallConstruction?.key}
+          onChange={onExteriorWallConstructionChange}
+        />
+        <GuidedCardGrid title="Exterior" cards={exteriorCards} selections={selections} onOpen={(key) => {
           const card = exteriorCards.find((item) => item.key === key);
+          if (card?.disabled) return;
           if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
         }} />
       </section>
@@ -2773,19 +4916,104 @@ function GuidedSelectionsWorkflow({
   }
 
   if (screen === "interior") {
+    const kitchenTotals = guidedAreaTotals(KITCHEN_REQUIREMENTS, selections);
+    const applianceTotals = guidedAreaTotals(APPLIANCE_REQUIREMENTS, selections);
+    const plumbingTotals = guidedAreaTotals(PLUMBING_FIXTURE_REQUIREMENTS, selections);
+    const interiorCards = INTERIOR_CATEGORY_CARDS.map((card) => {
+      if (card.key === "cabinetry") {
+        const cabinetrySelection = selections.get("cabinetry")?.selected_details?.cabinetrySelection || null;
+        const summary = cabinetrySelection ? normaliseCabinetrySelection(cabinetrySelection).summary : null;
+        return {
+          ...card,
+          selectedLabel: summary ? `${summary.completeRoomCount || 0} of ${summary.includedRoomCount || 0} rooms complete` : "No cabinetry rooms added",
+          status: summary?.status || (kitchenTotals.completed === kitchenTotals.total && kitchenTotals.total ? "complete" : kitchenTotals.completed ? "in_progress" : "not_started"),
+        };
+      }
+      if (card.key === "appliances") {
+        return {
+          ...card,
+          selectedLabel: `${applianceTotals.completed} / ${applianceTotals.total} complete`,
+          status: applianceTotals.completed === applianceTotals.total ? "complete" : applianceTotals.completed ? "in_progress" : "not_started",
+        };
+      }
+      if (card.key === "plumbing-fixtures") {
+        return {
+          ...card,
+          selectedLabel: `${plumbingTotals.completed} / ${plumbingTotals.total} complete`,
+          status: plumbingTotals.completed === plumbingTotals.total && plumbingTotals.total ? "complete" : plumbingTotals.completed ? "in_progress" : "not_started",
+        };
+      }
+      return card;
+    });
     return (
       <section className="guidedShell" data-testid="guided-interior-categories">
         <GuidedBudgetDock totals={runningTotals} />
-        <GuidedCardGrid title="Interior" cards={INTERIOR_CATEGORY_CARDS} onOpen={(key) => {
-          if (key === "kitchen") onOpenKitchen();
-          const card = INTERIOR_CATEGORY_CARDS.find((item) => item.key === key);
+        <GuidedCardGrid title="Interior" cards={interiorCards} selections={selections} onOpen={(key) => {
+          if (key === "cabinetry") {
+            onOpenRequirementKey("cabinetry");
+            return;
+          }
+          if (key === "appliances") {
+            onOpenArea("appliances");
+            return;
+          }
+          if (key === "plumbing-fixtures") {
+            onOpenArea("plumbing-fixtures");
+            return;
+          }
+          const card = interiorCards.find((item) => item.key === key);
           if (card?.requirementKey) onOpenRequirementKey(card.requirementKey);
         }} />
       </section>
     );
   }
 
+  if (screen === "appliances" || screen === "appliance-products") {
+    return (
+      <GuidedApplianceWorkflow
+        requirement={requirement}
+        requirements={requirements}
+        records={applianceRecords}
+        packs={appliancePacks}
+        selections={selections}
+        runningTotals={runningTotals}
+        step={applianceStep}
+        familyKey={applianceFamilyKey || requirement.familyKey}
+        brand={applianceBrand}
+        productId={applianceProductId}
+        mode={applianceMode}
+        packageId={appliancePackageId}
+        onStepChange={onApplianceStepChange}
+        onFamilyChange={onApplianceFamilyChange}
+        onBrandChange={onApplianceBrandChange}
+        onProductChange={onApplianceProductChange}
+        onModeChange={onApplianceModeChange}
+        onPackageChange={onAppliancePackageChange}
+        onReturnToAppliances={onReturnToAppliances}
+        onOpenRequirement={onOpenRequirement}
+        onSelectProduct={onSelectProduct}
+        onSelectAppliancePackage={onSelectAppliancePackage}
+      />
+    );
+  }
+
   if (screen === "product") {
+    if (requirement.requirementKey === "cabinetry") {
+      return (
+        <GuidedCabinetryWorkflow
+          requirement={requirement}
+          projectId={projectId}
+          requirements={requirements}
+          selections={selections}
+          runningTotals={runningTotals}
+          onOpenRequirement={onOpenRequirement}
+          onSelectProduct={onSelectProduct}
+          onFinishCabinetry={onFinishCabinetry}
+          onSaveProgress={onSaveProgress}
+          onReturnToDashboard={() => onOpenArea("interior")}
+        />
+      );
+    }
     if (requirement.requirementKey === "bricks") {
       return (
           <GuidedBrickWorkflow
@@ -2808,7 +5036,9 @@ function GuidedSelectionsWorkflow({
     }
     if (requirement.requirementKey === "entry-door") {
       return (
-        <GuidedEntryDoorWorkflow
+        <ScheduledEntryDoorWorkflow
+          project={project} projectInfo={projectInfo} workbook={workbook} snapshot={snapshot}
+          savedSelection={selections.get('entry-door')}
           requirement={requirement}
           products={products}
           masterProductCount={masterProductCount}
@@ -2819,17 +5049,45 @@ function GuidedSelectionsWorkflow({
           entryDoorRange={entryDoorRange}
           entryDoorProductCode={entryDoorProductCode}
           entryDoorSize={entryDoorSize}
+          entryDoorConfiguration={entryDoorConfiguration}
           entryDoorFinish={entryDoorFinish}
           entryDoorGlazing={entryDoorGlazing}
+          entryDoorHardware={entryDoorHardware}
+          entryDoorFurnitureFinish={entryDoorFurnitureFinish}
+          furnitureProducts={entryDoorFurnitureProducts}
           onEntryDoorStepChange={onEntryDoorStepChange}
           onEntryDoorSupplierChange={onEntryDoorSupplierChange}
           onEntryDoorRangeChange={onEntryDoorRangeChange}
           onEntryDoorProductCodeChange={onEntryDoorProductCodeChange}
           onEntryDoorSizeChange={onEntryDoorSizeChange}
+          onEntryDoorConfigurationChange={onEntryDoorConfigurationChange}
           onEntryDoorFinishChange={onEntryDoorFinishChange}
           onEntryDoorGlazingChange={onEntryDoorGlazingChange}
+          onEntryDoorHardwareChange={onEntryDoorHardwareChange}
+          onEntryDoorFurnitureFinishChange={onEntryDoorFurnitureFinishChange}
           onSelectProduct={onSelectProduct}
           onViewDetails={onViewDetails}
+        />
+      );
+    }
+    if (requirement.requirementKey === "windows") {
+      return (
+        <GuidedWindowsWorkflow
+          requirement={requirement}
+          products={products}
+          runningTotals={runningTotals}
+          windowStep={windowStep}
+          configuration={windowConfiguration}
+          project={project}
+          projectInfo={projectInfo}
+          workbook={workbook}
+          snapshot={snapshot}
+          selectedSelection={persistedWindowsSelection || selections.get("windows")}
+          defaultsApplyResult={windowDefaultsApplyResult}
+          onWindowStepChange={onWindowStepChange}
+          onWindowConfigurationChange={onWindowConfigurationChange}
+          onWindowDefaultsApplyResult={onWindowDefaultsApplyResult}
+          onSelectWindowConfiguration={onSelectWindowConfiguration}
         />
       );
     }
@@ -2848,6 +5106,65 @@ function GuidedSelectionsWorkflow({
           onRoofingStepChange={onRoofingStepChange}
           onRoofingConfigurationChange={onRoofingConfigurationChange}
           onSelectRoofingConfiguration={onSelectRoofingConfiguration}
+        />
+      );
+    }
+    if (requirement.requirementKey === "garage-door") {
+      return (
+        <GuidedGarageDoorWorkflow
+          requirement={requirement}
+          requirements={requirements}
+          products={products}
+          selections={selections}
+          masterProductCount={masterProductCount}
+          enabledProductCount={enabledProductCount}
+          runningTotals={runningTotals}
+          onOpenRequirement={onOpenRequirement}
+          onSelectProduct={onSelectProduct}
+          onSaveProgress={onSaveProgress}
+        />
+      );
+    }
+    if (requirement.requirementKey === "driveway") {
+      return (
+        <GuidedDrivewayWorkflow
+          requirement={requirement}
+          products={products}
+          selections={selections}
+          runningTotals={runningTotals}
+          project={project}
+          onSelectDrivewayConfiguration={onSelectDrivewayConfiguration}
+        />
+      );
+    }
+    if (requirement.requirementKey === "external-lighting") {
+      return (
+        <GuidedExternalLightingWorkflow
+          requirement={requirement}
+          requirements={requirements}
+          products={products}
+          selections={selections}
+          runningTotals={runningTotals}
+          onOpenRequirement={onOpenRequirement}
+          onReturnToDashboard={() => onOpenArea("exterior")}
+          onSelectExternalLightingSchedule={onSelectExternalLightingSchedule}
+          onSaveProgress={onSaveProgress}
+        />
+      );
+    }
+    if (requirement.requirementKey === "exterior-paint") {
+      return (
+        <GuidedExteriorColourWorkflow
+          requirement={requirement}
+          requirements={requirements}
+          selections={selections}
+          runningTotals={runningTotals}
+          project={project}
+          projectInfo={projectInfo}
+          onOpenRequirement={onOpenRequirement}
+          onReturnToDashboard={() => onOpenArea("exterior")}
+          onSelectExteriorColourSchedule={onSelectExteriorColourSchedule}
+          onSaveProgress={onSaveProgress}
         />
       );
     }
@@ -2878,10 +5195,10 @@ function GuidedSelectionsWorkflow({
               <span>{requirement.areaLabel} / {requirement.label}</span>
               <strong>{products.length ? `${products.length} ${requirement.label} product option${products.length === 1 ? "" : "s"}` : `No products have been added for ${requirement.label}.`}</strong>
             </div>
-            {products.length ? (
+            {INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? <InternalCataloguePicker key={requirement.requirementKey} products={products} requirement={requirement} selection={selections.get(requirement.requirementKey)} onSelect={onSelectProduct} onBack={()=>onOpenArea('interior')} onSave={onSaveProgress}/> : products.length ? (
               <div className="guidedProductGrid">
                 {products.map((product) => (
-                  <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} />
+                  <GuidedProductCard key={product.id} requirement={requirement} product={product} onSelect={() => onSelectProduct(requirement, product)} onViewDetails={() => onViewDetails(product)} onSaveProgress={onSaveProgress} />
                 ))}
               </div>
             ) : <GuidedEmptyCatalogue requirement={requirement} />}
@@ -2891,12 +5208,16 @@ function GuidedSelectionsWorkflow({
     );
   }
 
+  const checklistTitle = screen === "appliances" ? "Appliances" : screen === "plumbing-fixtures" ? "Plumbing Fixtures" : "Cabinetry";
+  const visibleRequirements = screen === "appliances"
+    ? requirements.filter((item) => !["freestanding-cooker", "appliance-pack"].includes(item.requirementKey) || selections.get(item.requirementKey) || applianceRecordsForRequirement(applianceRecords, item).length)
+    : requirements;
   return (
-    <section className="guidedShell" data-testid="guided-kitchen-checklist">
+    <section className="guidedShell" data-testid={screen === "appliances" ? "guided-appliances-checklist" : screen === "plumbing-fixtures" ? "guided-plumbing-fixtures-checklist" : "guided-kitchen-checklist"}>
       <GuidedBudgetDock totals={runningTotals} />
       <div className="guidedChecklistHeader">
         <div>
-          <span>Kitchen</span>
+          <span>{checklistTitle}</span>
           <strong>{areaTotals.completed} of {areaTotals.total} complete</strong>
         </div>
         <div className="guidedTotals">
@@ -2906,7 +5227,7 @@ function GuidedSelectionsWorkflow({
         </div>
       </div>
       <div className="guidedChecklistRows">
-        {requirements.map((item) => (
+        {visibleRequirements.map((item) => (
           <GuidedRequirementRow
             key={item.requirementKey}
             requirement={item}
@@ -2919,7 +5240,1976 @@ function GuidedSelectionsWorkflow({
   );
 }
 
-function GuidedCardGrid({ title, cards, onOpen }) {
+function GuidedApplianceWorkflow({
+  requirement,
+  requirements = [],
+  records = [],
+  packs = [],
+  selections,
+  runningTotals,
+  step = "brands",
+  familyKey = "",
+  brand = "",
+  productId = "",
+  mode = "",
+  packageId = "",
+  onStepChange,
+  onFamilyChange,
+  onBrandChange,
+  onProductChange,
+  onModeChange,
+  onPackageChange,
+  onReturnToAppliances,
+  onOpenRequirement,
+  onSelectProduct,
+  onSelectAppliancePackage,
+}) {
+  const safePackages = safeAppliancePackagesForBrand({ packs, records, requirements });
+  const brandSummaries = applianceBrandSummaries(records, safePackages);
+  const productTypeRows = applianceProductTypesForBrand(records, requirements, brand);
+  const safeBrandPackages = safeAppliancePackagesForBrand({ packs, records, requirements, brand });
+  const familyRequirement = requirements.find((item) => item.familyKey === familyKey) || productTypeRows.find((item) => item.available)?.requirement || requirement;
+  const familyRecords = applianceRecordsForRequirement(records, familyRequirement);
+  const models = applianceModelsForBrand(familyRecords, familyRequirement.familyKey, brand).map((record) => applianceProductToGuidedOption(record, familyRequirement));
+  const selectedRecord = familyRecords.find((record) => record.productId === productId || record.stableProductId === productId);
+  const selectedOption = selectedRecord ? applianceProductToGuidedOption(selectedRecord, familyRequirement) : null;
+  const selectedSelection = selections.get(familyRequirement.requirementKey);
+  const hasSelections = requirements.some((item) => selections.get(item.requirementKey));
+  const selectedPackage = safeBrandPackages.find((item) => [item.packId, item.productId].includes(packageId)) || null;
+  const brandTotals = guidedAreaTotals(requirements, selections);
+
+  function chooseBrand(nextBrand) {
+    onBrandChange?.(nextBrand);
+    onModeChange?.("");
+    onPackageChange?.("");
+    onFamilyChange?.("");
+    onProductChange?.("");
+    onStepChange?.("brand-summary");
+  }
+
+  function changeBrand() {
+    if (hasSelections && typeof window !== "undefined" && !window.confirm("Changing appliance brand will not silently clear existing selections. New selections may replace matching appliance rows. Continue?")) return;
+    onBrandChange?.("");
+    onModeChange?.("");
+    onPackageChange?.("");
+    onFamilyChange?.("");
+    onProductChange?.("");
+    onStepChange?.("brands");
+  }
+
+  function chooseMode(nextMode) {
+    if (mode && mode !== nextMode && hasSelections && typeof window !== "undefined" && !window.confirm("Switching appliance selection mode may replace existing appliance selections when you choose new products. Continue?")) return;
+    onModeChange?.(nextMode);
+    onProductChange?.("");
+    onFamilyChange?.("");
+    onStepChange?.(nextMode === "package" ? "packages" : "build-your-own");
+  }
+
+  function openType(row) {
+    if (!row.available) return;
+    onFamilyChange?.(row.requirement.familyKey);
+    onProductChange?.("");
+    onStepChange?.("models");
+    onOpenRequirement?.(row.requirement.requirementKey);
+  }
+
+  return (
+    <section className="guidedShell" data-testid="guided-appliance-catalogue-flow" data-family-key={familyRequirement.familyKey} data-brand={brand || ""} data-mode={mode || ""}>
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-appliance-family-menu">
+          <h2>Appliances</h2>
+          <button type="button" className={`guidedProgressItem ${step === "brands" ? "active" : ""}`} onClick={changeBrand}><GuidedStatusDot status={brand ? "complete" : "not_started"} /><span>Choose Brand</span></button>
+          <button type="button" className={`guidedProgressItem ${["brand-summary", "packages", "build-your-own"].includes(step) ? "active" : ""}`} disabled={!brand} onClick={() => onStepChange?.("brand-summary")}><GuidedStatusDot status={mode ? "in_progress" : "not_started"} /><span>{brand || "Brand"} Options</span></button>
+          {productTypeRows.map((row) => (
+            <button key={row.requirement.requirementKey} type="button" className={`guidedProgressItem ${row.requirement.familyKey === familyRequirement.familyKey && ["models", "details"].includes(step) ? "active" : ""}`} disabled={!brand || !row.available} onClick={() => openType(row)} data-family-key={row.requirement.familyKey}>
+              <GuidedStatusDot status={statusForRequirement(row.requirement, selections.get(row.requirement.requirementKey))} />
+              <span>{row.requirement.label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel">
+          <div className="guidedSectionHeader">
+            <span>Interior / Appliances</span>
+            <strong>{step === "brands" ? "Which appliance brand would you like to view?" : `${brand} Appliance Selection`}</strong>
+            <em>{brand ? `${brandTotals.completed} of ${brandTotals.total} appliance selections complete` : `${brandSummaries.length} appliance brand${brandSummaries.length === 1 ? "" : "s"} available`}</em>
+          </div>
+
+          {step === "brands" ? (
+            <>
+              <div className="applianceNavActions">
+                <button type="button" onClick={onReturnToAppliances}>Back to Interior</button>
+              </div>
+              <div className="applianceBrandGrid" data-testid="appliance-brand-selection">
+                {brandSummaries.map((item) => (
+                  <article key={item.brand} className="applianceBrandCard" data-brand={item.brand}>
+                    {item.logo ? <img src={item.logo} alt={`${item.brand} logo`} /> : <span className="applianceBrandLogoText">{item.brand.slice(0, 2).toUpperCase()}</span>}
+                    <strong>{item.brand}</strong>
+                    <em>{item.productCount} individual product{item.productCount === 1 ? "" : "s"}</em>
+                    <small>{item.packageCount} safe package{item.packageCount === 1 ? "" : "s"}</small>
+                    <button type="button" className="primary" onClick={() => chooseBrand(item.brand)}>View Brand</button>
+                  </article>
+                ))}
+              </div>
+              {!brandSummaries.length ? <GuidedApplianceEmpty message="No client-selectable appliance brands are currently enabled." /> : null}
+            </>
+          ) : null}
+
+          {brand && step === "brand-summary" ? (
+            <div className="applianceBrandSummary" data-testid="appliance-brand-summary" data-brand={brand}>
+              <div className="applianceNavActions">
+                <button type="button" onClick={changeBrand}>Change Brand</button>
+                <button type="button" onClick={onReturnToAppliances}>Back to Appliances</button>
+              </div>
+              <div className="applianceModeGrid">
+                <button type="button" className={mode === "package" ? "selected" : ""} onClick={() => chooseMode("package")} data-testid="appliance-package-mode"><strong>Select an Appliance Package</strong><span>{safeBrandPackages.length} safe package{safeBrandPackages.length === 1 ? "" : "s"} available</span></button>
+                <button type="button" className={mode === "build-your-own" ? "selected" : ""} onClick={() => chooseMode("build-your-own")} data-testid="appliance-build-mode"><strong>Build Your Own Appliance Package</strong><span>{productTypeRows.filter((row) => row.available).length} product categor{productTypeRows.filter((row) => row.available).length === 1 ? "y" : "ies"} available</span></button>
+              </div>
+              <ApplianceSelectionSummary brand={brand} requirements={requirements} selections={selections} selectedPackage={selectedPackage} />
+            </div>
+          ) : null}
+
+          {brand && step === "packages" ? (
+            <div className="appliancePackageList" data-testid="appliance-package-list" data-brand={brand}>
+              <div className="applianceNavActions">
+                <button type="button" onClick={() => onStepChange?.("brand-summary")}>Back to {brand}</button>
+                <button type="button" onClick={changeBrand}>Change Brand</button>
+              </div>
+              {selectedPackage ? (
+                <AppliancePackageDetails
+                  packageOption={selectedPackage}
+                  onClose={() => onPackageChange?.("")}
+                  onSelect={() => onSelectAppliancePackage?.(selectedPackage)}
+                />
+              ) : null}
+              {safeBrandPackages.map((pack) => (
+                <article key={pack.packId || pack.productId} className="appliancePackageCard" data-brand={pack.brand} data-package-id={pack.packId || pack.productId}>
+                  <div className="appliancePackageHeader">
+                    {pack.brandLogo || pack.logo ? <img src={pack.brandLogo || pack.logo} alt={`${pack.brand} logo`} /> : <span>{pack.brand}</span>}
+                    <div>
+                      <strong>{pack.packName || pack.name}</strong>
+                      <em>{appliancePackageDescriptor(pack)}</em>
+                    </div>
+                  </div>
+                  <div className="appliancePackageComponents">
+                    {pack.componentRecords.map((record) => <AppliancePackageComponent key={record.productId} record={record} />)}
+                  </div>
+                  <div className="guidedProductMoney">
+                    <GuidedMiniTotal label="Package Price" value={pack.price == null ? "Quote Required" : money(numberValue(pack.price))} tone={pack.price == null ? "warn" : ""} />
+                  </div>
+                  <div className="guidedProductActions">
+                    <button type="button" onClick={() => onPackageChange?.(pack.packId || pack.productId)}>View Package Details</button>
+                    <button type="button" className="primary" onClick={() => onSelectAppliancePackage?.(pack)}>Select Package</button>
+                  </div>
+                </article>
+              ))}
+              {!safeBrandPackages.length ? <GuidedApplianceEmpty message={`No ${brand} appliance packages are currently safe to select. Build your own from enabled ${brand} products instead.`} /> : null}
+            </div>
+          ) : null}
+
+          {brand && step === "build-your-own" ? (
+            <div className="applianceBuildFlow" data-testid="appliance-build-your-own" data-brand={brand}>
+              <div className="applianceNavActions">
+                <button type="button" onClick={() => onStepChange?.("brand-summary")}>Back to {brand}</button>
+                <button type="button" onClick={changeBrand}>Change Brand</button>
+              </div>
+              <ApplianceSelectionSummary brand={brand} requirements={requirements} selections={selections} />
+              <div className="applianceTypeGrid">
+                {productTypeRows.map((row) => row.available ? (
+                  <button key={row.requirement.requirementKey} type="button" className="applianceTypeCard" onClick={() => openType(row)} data-family-key={row.requirement.familyKey}>
+                    <span className="applianceTypeIcon">{row.requirement.label.slice(0, 1)}</span>
+                    <strong>{row.requirement.label}</strong>
+                    <em>{row.productCount} {brand} model{row.productCount === 1 ? "" : "s"}</em>
+                  </button>
+                ) : (
+                  <div key={row.requirement.requirementKey} className="applianceTypeCard disabled" data-family-key={row.requirement.familyKey}>
+                    <span className="applianceTypeIcon">{row.requirement.label.slice(0, 1)}</span>
+                    <strong>{row.requirement.label}</strong>
+                    <em>No {brand} products are currently enabled for this category.</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {step === "models" ? (
+            <>
+              <div className="applianceNavActions">
+                <button type="button" onClick={() => onStepChange?.("build-your-own")}>Back to Build Your Own</button>
+                <button type="button" onClick={changeBrand}>Change Brand</button>
+              </div>
+              <div className="guidedProductGrid" data-testid="appliance-model-grid" data-brand={brand}>
+                {models.length ? models.map((product) => (
+                  <GuidedApplianceModelCard
+                    key={product.id}
+                    requirement={familyRequirement}
+                    product={product}
+                    selected={selectedSelection?.selected_details?.canonicalProductId === product.canonicalProductId}
+                    onDetails={() => {
+                      onProductChange?.(product.canonicalProductId);
+                      onStepChange?.("details");
+                    }}
+                    onSelect={() => onSelectProduct(familyRequirement, product)}
+                  />
+                )) : <GuidedApplianceEmpty message={`No ${brand} products are currently available in this category.`} />}
+              </div>
+            </>
+          ) : null}
+
+          {step === "details" && selectedOption ? (
+            <GuidedApplianceDetails
+              requirement={familyRequirement}
+              product={selectedOption}
+              onBackToAppliances={onReturnToAppliances}
+              onBackToBrands={() => onStepChange?.("brand-summary")}
+              onBackToModels={() => onStepChange?.("models")}
+              onCancel={() => onStepChange?.("build-your-own")}
+              onSelect={() => onSelectProduct(familyRequirement, selectedOption)}
+            />
+          ) : null}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function appliancePackageDescriptor(pack = {}) {
+  const name = `${pack.packName || pack.name || ""} ${pack.description || ""}`;
+  const size = name.match(/\b(600|900)\s*mm\b/i)?.[0]?.replace(/\s+/g, " ") || "";
+  const fuel = /gas/i.test(name) ? "Gas" : /electric|ceramic|induction/i.test(name) ? "Electric" : "";
+  return [size, fuel, `${pack.componentRecords?.length || pack.safeComponentCount || 0} products`].filter(Boolean).join(" / ");
+}
+
+function AppliancePackageComponent({ record = {} }) {
+  return (
+    <div data-product-id={record.productId || record.stableProductId || ""} data-family-key={record.familyId || ""}>
+      <b>{record.familyName || record.familyId}</b>
+      {record.image ? <img src={record.image} alt={record.name || record.model || "Appliance"} /> : <small>{record.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL}</small>}
+      <span>{record.model || "Model to be confirmed"}</span>
+      <em>{record.name || record.productName || ""}</em>
+    </div>
+  );
+}
+
+function AppliancePackageDetails({ packageOption = {}, onClose, onSelect }) {
+  return (
+    <section className="appliancePackageDetails" data-testid="appliance-package-details" data-package-id={packageOption.packId || packageOption.productId || ""}>
+      <div>
+        <span>Package Details</span>
+        <strong>{packageOption.packName || packageOption.name}</strong>
+        <em>{appliancePackageDescriptor(packageOption)}</em>
+      </div>
+      <div className="appliancePackageComponents">
+        {(packageOption.componentRecords || []).map((record) => <AppliancePackageComponent key={record.productId} record={record} />)}
+      </div>
+      <div className="guidedProductActions">
+        <button type="button" onClick={onClose}>Close Details</button>
+        <button type="button" className="primary" onClick={onSelect}>Select Package</button>
+      </div>
+    </section>
+  );
+}
+
+function GuidedApplianceEmpty({ message }) {
+  return (
+    <div className="guidedEmptyCatalogue applianceEmptyCatalogue" data-testid="appliance-empty-category">
+      <strong>{message}</strong>
+    </div>
+  );
+}
+
+function ApplianceSelectionSummary({ brand, requirements = [], selections, selectedPackage = null }) {
+  const rows = requirements
+    .filter((requirement) => isApplianceRequirement(requirement) && requirement.familyKey !== "appliance-packs")
+    .map((requirement) => {
+      const selection = selections.get(requirement.requirementKey);
+      const details = selection?.selected_details || selection?.guidedSelection || {};
+      return { requirement, selection, details };
+    });
+  const totals = guidedAreaTotals(requirements, selections);
+  return (
+    <section className="applianceSelectionSummary" data-testid="appliance-selection-summary" data-brand={brand}>
+      <h3>{brand} Appliance Selection</h3>
+      {selectedPackage ? <p>Package: {selectedPackage.packName || selectedPackage.name}</p> : null}
+      <div className="applianceSummaryRows">
+        {rows.map(({ requirement, selection, details }) => (
+          <div key={requirement.requirementKey} className={selection ? "selected" : ""} data-family-key={requirement.familyKey}>
+            <strong>{requirement.label}</strong>
+            <span>{selection ? [details.brand || selection.brand, details.model || selection.productModel, details.productName || selection.selectedProduct].filter(Boolean).join(" - ") : "Not selected"}</span>
+            <em>{selection?.upgradeCost == null && selection?.variation_amount == null ? "Variation pending" : signedMoney(numberValue(selection.upgradeCost ?? selection.variation_amount))}</em>
+          </div>
+        ))}
+      </div>
+      <div className="guidedTotals">
+        <GuidedMiniTotal label="Allowance" value={money(totals.allowance)} />
+        <GuidedMiniTotal label="Selected" value={money(totals.selected)} />
+        <GuidedMiniTotal label={totals.variation < 0 ? "Credit" : "Variation"} value={signedMoney(totals.variation)} tone={totals.variation > 0 ? "bad" : totals.variation < 0 ? "good" : ""} />
+      </div>
+    </section>
+  );
+}
+
+function GuidedApplianceModelCard({ requirement, product, selected, onDetails, onSelect }) {
+  const selectedPrice = product.selectedCost == null ? null : numberValue(product.selectedCost);
+  const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
+  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 });
+  return (
+    <article className={`guidedProductCard applianceModelCard ${selected ? "selected" : ""}`} data-testid={`appliance-model-${slug(product.model || product.productName)}`} data-product-id={product.canonicalProductId} data-family-key={requirement.familyKey} data-brand={product.brand} data-price={selectedPrice ?? ""} data-image-url={product.imageUrl || ""}>
+      <div className="applianceModelLogo">{product.brandLogo || product.logo ? <img src={product.brandLogo || product.logo} alt={`${product.brand} logo`} /> : <span>{product.brand}</span>}</div>
+      {product.imageUrl ? <img src={product.imageUrl} alt={product.productName} /> : <div className="applianceImageFallback">{product.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL}</div>}
+      <div>
+        <span>{product.brand}</span>
+        <strong>{product.model || product.productName}</strong>
+        <em>{product.productName}</em>
+        <p>{[product.dimensions || product.size, product.fuelOrEnergyType, product.finish].filter(Boolean).join(" / ") || "Product details to be confirmed"}</p>
+      </div>
+      <div className="guidedProductMoney">
+        <GuidedMiniTotal label="Price" value={selectedPrice == null ? "Quote Required" : money(selectedPrice)} tone={selectedPrice == null ? "warn" : ""} />
+        <GuidedMiniTotal label="Allowance" value={money(allowance)} />
+        <GuidedMiniTotal label={variation < 0 ? "Credit" : "Variation"} value={variation == null ? "Pending" : signedMoney(variation)} tone={variation > 0 ? "bad" : variation < 0 ? "good" : "warn"} />
+      </div>
+      <div className="guidedProductActions">
+        <button type="button" onClick={onDetails}>View Details</button>
+        <button type="button" className="primary" onClick={onSelect}>{selected ? "Change Selection" : "Select Product"}</button>
+      </div>
+    </article>
+  );
+}
+
+function GuidedApplianceDetails({ requirement, product, onBackToAppliances, onBackToBrands, onBackToModels, onCancel, onSelect }) {
+  const selectedPrice = product.selectedCost == null ? null : numberValue(product.selectedCost);
+  const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
+  const variation = selectedPrice == null ? null : variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 });
+  return (
+    <div className="applianceDetailsPanel" data-testid="appliance-product-details">
+      <div className="applianceNavActions">
+        <button type="button" onClick={onBackToAppliances}>Back to Appliances</button>
+        <button type="button" onClick={onBackToBrands}>Back to Brands</button>
+        <button type="button" onClick={onBackToModels}>Back to Models</button>
+      </div>
+      <div className="applianceDetailsHero">
+        {product.imageUrl ? <img src={product.imageUrl} alt={product.productName} /> : <div className="applianceImageFallback large">{product.imageFallbackLabel || APPLIANCE_IMAGE_FALLBACK_LABEL}</div>}
+        <div>
+          <span>{product.brand}</span>
+          <h2>{product.model || product.productName}</h2>
+          <p>{product.description}</p>
+          <dl>
+            {applianceDetailRows(product).map(([label, value]) => (
+              <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+            ))}
+            <div><dt>Selected Price</dt><dd>{selectedPrice == null ? "Quote Required" : money(selectedPrice)}</dd></div>
+            <div><dt>Allowance Impact</dt><dd>{variation == null ? "Pending" : signedMoney(variation)}</dd></div>
+          </dl>
+          <div className="guidedProductActions">
+            <button type="button" onClick={onCancel}>Cancel</button>
+            <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>View Product Website</button>
+            <button type="button" className="primary" onClick={onSelect}>Select Product</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GuidedCabinetryWorkflow({ requirement, projectId = "", selections, runningTotals, onSelectProduct, onFinishCabinetry, onReturnToDashboard }) {
+  const saved = selections.get("cabinetry")?.selected_details?.cabinetrySelection || null;
+  const [draft, setDraft] = useState(() => defaultCabinetryDraft(saved || {}));
+  const [editingLocationName, setEditingLocationName] = useState("");
+  const [stageIndex, setStageIndex] = useState(0);
+  const [customLocationName, setCustomLocationName] = useState("");
+  const [copyFromLocation, setCopyFromLocation] = useState("");
+  const [kitchenPantryCopyOpen, setKitchenPantryCopyOpen] = useState(false);
+  const [kitchenPantryColourAreaKeys, setKitchenPantryColourAreaKeys] = useState([]);
+  const [kitchenPantryOverwriteColours, setKitchenPantryOverwriteColours] = useState(false);
+  const [cabinetryColourSearch, setCabinetryColourSearch] = useState("");
+  const [cabinetryFamilyFilter, setCabinetryFamilyFilter] = useState("All");
+  const [cabinetryRangeFilter, setCabinetryRangeFilter] = useState("All");
+  const [cabinetryFinishFilter, setCabinetryFinishFilter] = useState("All");
+  const [cabinetryPricingFilter, setCabinetryPricingFilter] = useState("All");
+  const [cabinetryVisibleColourCount, setCabinetryVisibleColourCount] = useState(CABINETRY_COLOUR_PAGE_SIZE);
+  const [pendingCabinetryColourKey, setPendingCabinetryColourKey] = useState("");
+  const [pendingCabinetryRecordId, setPendingCabinetryRecordId] = useState("");
+  const [cabinetryInspectRecord, setCabinetryInspectRecord] = useState(null);
+  const [cabinetryApplyAreas, setCabinetryApplyAreas] = useState(["lowerDoorsDrawers"]);
+  const [activeColourTargetKeys, setActiveColourTargetKeys] = useState(["lowerDoorsDrawers"]);
+  const cabinetryCatalogueRef = useRef(null);
+  const [cabinetrySelectionMessage, setCabinetrySelectionMessage] = useState("");
+  const [cabinetryBackStack, setCabinetryBackStack] = useState([]);
+  const [showCabinetryBackToTop, setShowCabinetryBackToTop] = useState(false);
+  const cabinetryPanelRef = useRef(null);
+  const cabinetryTopRef = useRef(null);
+  const [benchtopMaterialChoice, setBenchtopMaterialChoice] = useState("stone");
+  const [stoneSupplierFilter, setStoneSupplierFilter] = useState("Neolith");
+  const [stoneSearch, setStoneSearch] = useState("");
+  const [stoneCollectionFilter, setStoneCollectionFilter] = useState("All");
+  const [stoneMaterialFilter, setStoneMaterialFilter] = useState("All");
+  const [stoneColourFilter, setStoneColourFilter] = useState("All");
+  const [stonePatternFilter, setStonePatternFilter] = useState("All");
+  const [stoneFinishFilter, setStoneFinishFilter] = useState("All");
+  const [stoneThicknessFilter, setStoneThicknessFilter] = useState("All");
+  const [stonePriceGroupFilter, setStonePriceGroupFilter] = useState("All");
+  const [stonePricingFilter, setStonePricingFilter] = useState("All");
+  const [stoneInspectProduct, setStoneInspectProduct] = useState(null);
+  const [stonePendingProductId, setStonePendingProductId] = useState("");
+  const [stoneCompareIds, setStoneCompareIds] = useState([]);
+  const [stoneConfig, setStoneConfig] = useState({ application: "Main benchtop", finish: "", slabThickness: "", finishedEdgeThickness: "", edgeProfile: "Square arris", waterfallEnds: "None", upstand: "", dimensions: "", approximateAreaSqm: "", cutouts: [], notes: "", templateRequired: true, supplierQuoteRequired: true, physicalSampleConfirmed: false, fullSlabViewed: false });
+  const [bathroomStoneTargetKey, setBathroomStoneTargetKey] = useState("floorMountedVanity");
+  const normalisedDraft = normaliseCabinetrySelection(draft);
+  const summary = normalisedDraft.summary;
+  const activeLocation = normalisedDraft.locations.find((location) => location.location === editingLocationName);
+  const safeActiveLocation = createSafeCabinetryActiveLocation(activeLocation, editingLocationName);
+  const safeAreaSelections = safeActiveLocation.areaSelections;
+  const safeDefaultColour = safeActiveLocation.defaultColour;
+  const safeSupplier = safeActiveLocation.supplier || "Polytec";
+  const activeIsBathroomCabinetry = isBathroomCabinetryLocation(safeActiveLocation.location);
+  const activeSchedule = activeLocation ? normalisedDraft.schedule.filter((line) => line.location === activeLocation.location && (!activeIsBathroomCabinetry || wetAreaScheduleType(line))) : [];
+  const activeCabinetryAreaKeys = cabinetryAreaKeysForLocation(safeActiveLocation, activeSchedule);
+  const activeCabinetryAreaKeySet = new Set(activeCabinetryAreaKeys);
+  const colourCatalogue = safeSupplier === "Laminex" ? LAMINEX_CABINETRY_CATALOGUE : POLYTEC_CABINETRY_CATALOGUE;
+  const activeColourRecords = useMemo(() => colourCatalogue.filter((record) => record.availabilityStatus !== "inactive" && record.status !== "inactive"), [colourCatalogue]);
+  const activeSupplierAreaRecords = useMemo(() => Object.values(safeAreaSelections).filter((record) => record?.id && (!safeSupplier || record.supplier === safeSupplier)), [safeAreaSelections, safeSupplier]);
+  const selectedCabinetryRecordIds = useMemo(() => new Set(Object.values(safeAreaSelections).map((record) => record?.id).filter(Boolean)), [safeAreaSelections]);
+  const mainColour = activeSupplierAreaRecords[0] || safeDefaultColour || null;
+  const enabledCabinetryAreaKeys = safeActiveLocation.enabledAreaKeys?.length ? safeActiveLocation.enabledAreaKeys : [];
+  const incompleteColourAreaKeys = enabledCabinetryAreaKeys.filter((areaKey) => !cabinetryAreaRecordComplete(safeAreaSelections[areaKey]));
+  const coloursAndFinishesComplete = Boolean(enabledCabinetryAreaKeys.length) && !incompleteColourAreaKeys.length;
+  const cabinetryRanges = useMemo(() => cabinetryUniqueValues(activeColourRecords.map((record) => record.productRange || record.productFamily)), [activeColourRecords]);
+  const cabinetryFinishes = useMemo(() => cabinetryUniqueValues(activeColourRecords.filter((record) => cabinetryRangeFilter === "All" || (record.productRange || record.productFamily) === cabinetryRangeFilter).map((record) => record.finish)), [activeColourRecords, cabinetryRangeFilter]);
+  const cabinetryFilteredRecords = useMemo(() => activeColourRecords.filter((record) => {
+    const search = cabinetryColourSearch.trim().toLowerCase();
+    if (search && !cabinetryRecordSearchText(record).includes(search)) return false;
+    if (cabinetryFamilyFilter !== "All" && record.colourFamily !== cabinetryFamilyFilter) return false;
+    if (cabinetryRangeFilter !== "All" && (record.productRange || record.productFamily) !== cabinetryRangeFilter) return false;
+    if (cabinetryFinishFilter !== "All" && record.finish !== cabinetryFinishFilter) return false;
+    if (cabinetryPricingFilter !== "All" && cabinetryPriceStatusLabel(record.priceStatus) !== cabinetryPricingFilter) return false;
+    return true;
+  }), [activeColourRecords, cabinetryColourSearch, cabinetryFamilyFilter, cabinetryFinishFilter, cabinetryPricingFilter, cabinetryRangeFilter]);
+  const cabinetryColourGroups = useMemo(() => groupCabinetryColourRecords(cabinetryFilteredRecords, mainColour), [cabinetryFilteredRecords, mainColour]);
+  const allActiveCabinetryColourGroups = useMemo(() => groupCabinetryColourRecords(activeColourRecords, mainColour), [activeColourRecords, mainColour]);
+  const visibleCabinetryColourGroups = useMemo(() => cabinetryColourGroups.slice(0, cabinetryVisibleColourCount), [cabinetryColourGroups, cabinetryVisibleColourCount]);
+  const pendingCabinetryGroup = allActiveCabinetryColourGroups.find((group) => group.key === pendingCabinetryColourKey) || null;
+  const pendingCabinetryRecord = activeColourRecords.find((record) => record.id === pendingCabinetryRecordId) || pendingCabinetryGroup?.primary || null;
+  const selectedDecorativeBoardAreaKeys = activeColourTargetKeys.filter((areaKey) => activeCabinetryAreaKeySet.has(areaKey) && cabinetryAreaRequiresDecorativeBoard(areaKey, safeAreaSelections[areaKey]));
+  const showCabinetryColourCatalogue = activeLocation?.doorMaterialGroup === "Standard colourboard" && (selectedDecorativeBoardAreaKeys.length > 0 || Boolean(pendingCabinetryColourKey));
+  const activeEnabledAreaKeySignature = (safeActiveLocation.enabledAreaKeys || []).join("|");
+  const activeCabinetryAreaKeySignature = activeCabinetryAreaKeys.join("|");
+  const cabinetryRecentRecords = useMemo(() => {
+    const byId = new Map();
+    normalisedDraft.locations.forEach((location) => Object.values(location.areaSelections || {}).forEach((record) => {
+      if (record?.id && record.supplier === safeSupplier) byId.set(record.id, record);
+    }));
+    return Array.from(byId.values()).slice(0, 6);
+  }, [safeSupplier, normalisedDraft.locations]);
+  const activeStoneProducts = useMemo(() => activeStoneBenchtopProducts(STONE_BENCHTOP_CATALOGUE), []);
+  const selectedStoneSupplierProducts = useMemo(() => activeStoneProducts.filter((product) => product.supplier === stoneSupplierFilter), [activeStoneProducts, stoneSupplierFilter]);
+  const stoneCollections = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.collection)), [selectedStoneSupplierProducts]);
+  const stoneMaterialTypes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.materialType)), [selectedStoneSupplierProducts]);
+  const stoneColourFamilies = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.colourFamily)), [selectedStoneSupplierProducts]);
+  const stonePatternTypes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.patternType)), [selectedStoneSupplierProducts]);
+  const stoneFinishes = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.flatMap((product) => product.finishOptions || [])), [selectedStoneSupplierProducts]);
+  const stoneThicknesses = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.flatMap((product) => product.thicknessOptions || [])), [selectedStoneSupplierProducts]);
+  const stonePriceGroups = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => product.priceGroup)), [selectedStoneSupplierProducts]);
+  const stonePricingStatuses = useMemo(() => cabinetryUniqueValues(selectedStoneSupplierProducts.map((product) => cabinetryPriceStatusLabel(product.priceStatus))), [selectedStoneSupplierProducts]);
+  const filteredStoneProducts = useMemo(() => selectedStoneSupplierProducts.filter((product) => {
+    const search = stoneSearch.trim().toLowerCase();
+    if (search && !stoneProductSearchText(product).includes(search)) return false;
+    if (stoneCollectionFilter !== "All" && product.collection !== stoneCollectionFilter) return false;
+    if (stoneMaterialFilter !== "All" && product.materialType !== stoneMaterialFilter) return false;
+    if (stoneColourFilter !== "All" && product.colourFamily !== stoneColourFilter) return false;
+    if (stonePatternFilter !== "All" && product.patternType !== stonePatternFilter) return false;
+    if (stoneFinishFilter !== "All" && !(product.finishOptions || []).includes(stoneFinishFilter)) return false;
+    if (stoneThicknessFilter !== "All" && !(product.thicknessOptions || []).includes(stoneThicknessFilter)) return false;
+    if (stonePriceGroupFilter !== "All" && product.priceGroup !== stonePriceGroupFilter) return false;
+    if (stonePricingFilter !== "All" && cabinetryPriceStatusLabel(product.priceStatus) !== stonePricingFilter) return false;
+    return true;
+  }), [selectedStoneSupplierProducts, stoneCollectionFilter, stoneColourFilter, stoneFinishFilter, stoneMaterialFilter, stonePatternFilter, stonePriceGroupFilter, stonePricingFilter, stoneSearch, stoneThicknessFilter]);
+  const pendingStoneProduct = activeStoneProducts.find((product) => product.id === stonePendingProductId) || null;
+  const comparedStoneProducts = stoneCompareIds.map((id) => activeStoneProducts.find((product) => product.id === id)).filter(Boolean);
+
+  useEffect(() => {
+    setCabinetryColourSearch("");
+    setCabinetryFamilyFilter("All");
+    setCabinetryRangeFilter("All");
+    setCabinetryFinishFilter("All");
+    setCabinetryPricingFilter("All");
+    setCabinetryVisibleColourCount(CABINETRY_COLOUR_PAGE_SIZE);
+    setPendingCabinetryColourKey("");
+    setPendingCabinetryRecordId("");
+  }, [activeLocation?.supplier]);
+
+  useEffect(() => {
+    setCabinetryVisibleColourCount(CABINETRY_COLOUR_PAGE_SIZE);
+  }, [cabinetryColourSearch, cabinetryFamilyFilter, cabinetryRangeFilter, cabinetryFinishFilter, cabinetryPricingFilter, activeLocation?.supplier]);
+
+  useEffect(() => {
+    if (!activeLocation || !cabinetryPanelRef.current) return undefined;
+    const scrollTarget = cabinetryScrollableElement(cabinetryPanelRef.current);
+    const measureScroll = () => {
+      const top = scrollTarget === window
+        ? window.scrollY || document.documentElement.scrollTop || 0
+        : scrollTarget.scrollTop || 0;
+      setShowCabinetryBackToTop(top > 500);
+    };
+    measureScroll();
+    scrollTarget.addEventListener("scroll", measureScroll, { passive: true });
+    return () => scrollTarget.removeEventListener("scroll", measureScroll);
+  }, [activeLocation?.location, stageIndex]);
+
+  useEffect(() => {
+    if (!activeLocation) return;
+    setCabinetryApplyAreas((current) => current.filter((key) => activeCabinetryAreaKeys.includes(key)));
+    setActiveColourTargetKeys((current) => current.filter((key) => activeCabinetryAreaKeys.includes(key)));
+  }, [activeLocation?.location, activeEnabledAreaKeySignature, activeCabinetryAreaKeySignature]);
+
+  useEffect(() => {
+    function onCabinetryBack(event) {
+      event.detail.handled = true;
+      handleCabinetryBack();
+    }
+    window.addEventListener("clientSelections:cabinetryBack", onCabinetryBack);
+    return () => window.removeEventListener("clientSelections:cabinetryBack", onCabinetryBack);
+  }, [activeLocation?.location, cabinetryInspectRecord, editingLocationName, pendingCabinetryColourKey, stageIndex, cabinetryBackStack]);
+
+  useEffect(() => {
+    if (!cabinetryInspectRecord) return;
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setCabinetryInspectRecord(null);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [cabinetryInspectRecord]);
+
+  useEffect(() => {
+    setStoneSearch("");
+    setStoneCollectionFilter("All");
+    setStoneMaterialFilter("All");
+    setStoneColourFilter("All");
+    setStonePatternFilter("All");
+    setStoneFinishFilter("All");
+    setStoneThicknessFilter("All");
+    setStonePriceGroupFilter("All");
+    setStonePricingFilter("All");
+  }, [stoneSupplierFilter]);
+
+  useEffect(() => {
+    if (!stoneInspectProduct) return;
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setStoneInspectProduct(null);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [stoneInspectProduct]);
+
+  function persistCabinetry(next, options = {}) {
+    const { commitRequirement = true } = options;
+    const normalised = normaliseCabinetrySelection(next);
+    setDraft(normalised);
+    saveLatestCabinetryDraftToStorage(normalised, projectId);
+    if (commitRequirement) onSelectProduct(requirement, normalised);
+    return normalised;
+  }
+
+  function updateDraft(patch, persist = false) {
+    setDraft((current) => {
+      const next = normaliseCabinetrySelection({ ...current, ...patch, confirmed: false });
+      if (persist) {
+        saveLatestCabinetryDraftToStorage(next, projectId);
+        onSelectProduct(requirement, next);
+      }
+      return next;
+    });
+  }
+
+  function updateLocation(locationName, patch) {
+    updateDraft({
+      locations: normalisedDraft.locations.map((location) => location.location === locationName ? { ...location, ...patch, status: patch.status || "in_progress" } : location),
+    });
+  }
+
+  function addLocation(locationName) {
+    const cleanName = String(locationName || "").trim();
+    if (!cleanName) return;
+    const existing = normalisedDraft.locations.find((location) => location.location === cleanName);
+    if (existing) {
+      openCabinetryLocation(existing.location);
+      return;
+    }
+    const nextLocation = {
+      id: `cabinetry-${slug(cleanName)}`,
+      name: cleanName,
+      location: cleanName,
+      locationType: cleanName,
+      included: true,
+      status: "in_progress",
+      scope: [],
+      enabledAreaKeys: [],
+      cabinetSchedule: [],
+      doorMaterialGroup: "Standard colourboard",
+      supplier: "Polytec",
+      productRange: "",
+      defaultColour: null,
+      areaSelections: {},
+      benchtop: null,
+      bathroomScopeKeys: [],
+      bathroomBenchtops: {},
+      bathroomHandles: {},
+      handles: {},
+      featureOptions: [],
+      notes: "",
+    };
+    const next = normaliseCabinetrySelection({
+      ...normalisedDraft,
+      locations: [...normalisedDraft.locations, nextLocation],
+      activeLocation: cleanName,
+      confirmed: false,
+    });
+    setDraft(next);
+    openCabinetryLocation(cleanName);
+  }
+
+  function removeLocation(locationName) {
+    updateDraft({
+      locations: normalisedDraft.locations.filter((location) => location.location !== locationName),
+      schedule: normalisedDraft.schedule.filter((line) => line.location !== locationName),
+      activeLocation: "",
+    }, true);
+    if (editingLocationName === locationName) setEditingLocationName("");
+  }
+
+  function toggleActiveLocationArea(areaKey) {
+    if (!activeLocation) return;
+    if (!activeCabinetryAreaKeys.includes(areaKey)) return;
+    const current = new Set(activeLocation.enabledAreaKeys || []);
+    if (current.has(areaKey)) {
+      current.delete(areaKey);
+      setCabinetryApplyAreas((items) => items.filter((key) => key !== areaKey));
+      setActiveColourTargetKeys((items) => items.filter((key) => key !== areaKey));
+    } else {
+      current.add(areaKey);
+      setCabinetryApplyAreas((items) => items.includes(areaKey) ? items : [...items, areaKey]);
+      setActiveColourTargetKeys((items) => items.includes(areaKey) ? items : [...items, areaKey]);
+    }
+    setCabinetrySelectionMessage("");
+    updateLocation(activeLocation.location, { enabledAreaKeys: Array.from(current), scope: Array.from(current) });
+  }
+
+  function updateActiveArea(areaKey, colour) {
+    if (!activeLocation) return;
+    setDraft((current) => normaliseCabinetrySelection({
+      ...overrideCabinetryArea(current, activeLocation.location, areaKey, colour),
+      confirmed: false,
+      locations: current.locations.map((location) => location.location === activeLocation.location ? { ...location, defaultColour: colour, supplier: colour.supplier || location.supplier, productRange: colour.productRange || colour.productFamily || location.productRange } : location),
+    }));
+  }
+
+  function toggleCabinetryApplyArea(areaKey) {
+    setCabinetrySelectionMessage("");
+    setCabinetryApplyAreas((current) => {
+      if (current.includes(areaKey)) return current.filter((key) => key !== areaKey);
+      return [...current, areaKey];
+    });
+    setActiveColourTargetKeys((current) => {
+      if (current.includes(areaKey)) return current.filter((key) => key !== areaKey);
+      return [...current, areaKey];
+    });
+  }
+
+  function selectCabinetryApplyAreaOnly(areaKey) {
+    setCabinetryApplyAreas([areaKey]);
+    setActiveColourTargetKeys([areaKey]);
+    setCabinetrySelectionMessage("");
+    window.setTimeout(() => cabinetryCatalogueRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }), 80);
+  }
+
+  function cabinetryAreaAssignment(areaKey) {
+    const record = activeLocation?.areaSelections?.[areaKey];
+    if (record) return record;
+    if (areaKey === "bulkheads" && activeLocation?.bulkheadFinishMode) return createBulkheadFinishRecord(activeLocation.bulkheadFinishMode);
+    if (areaKey === "kickPanels" && activeLocation?.kickPanelFinishMode) return createKickPanelFinishRecord(activeLocation.kickPanelFinishMode);
+    if (areaKey === "linenBulkhead" && activeLocation?.bathroomLinenBulkheadMode) return createBathroomLinenBulkheadRecord(activeLocation.bathroomLinenBulkheadMode);
+    return null;
+  }
+
+  function cabinetryAreaAssignmentText(areaKey) {
+    const record = cabinetryAreaAssignment(areaKey);
+    if (!record) return "Colour not selected.";
+    if (record.finishMode === "raw_mdf_wall_paint") return cabinetryAreaColourFinishText(record, cabinetryLinkedPaintSelection("wall"));
+    if (record.finishMode === "raw_mdf_ceiling_paint") return cabinetryAreaColourFinishText(record, cabinetryLinkedPaintSelection("ceiling"));
+    if (record.finishMode === "raw_mdf_custom_paint") return cabinetryAreaColourFinishText(record);
+    if (record.finishMode === "brushed_aluminium") return "Brushed aluminium.";
+    if (record.finishMode === "stainless_steel_look") return "Stainless-steel look.";
+    if (record.finishMode === "black_aluminium") return "Black aluminium.";
+  if (record.finishMode === "match_cabinet_doors") return "Match cabinet doors.";
+  if (record.finishMode === "match_floor_vanity") return "Match floor-mounted vanity.";
+  if (record.finishMode === "match_wall_vanity") return "Match wall-mounted vanity.";
+  if (record.finishMode === "match_tall_linen") return "Match tall linen cupboard.";
+  if (record.finishMode === "other_custom") return record.customFinish || "Other/custom finish.";
+    if (record.finishMode === "wall_paint") return "Painted to match the wall.";
+    if (record.finishMode === "ceiling_paint") return "Painted to match the ceiling.";
+    if (record.finishMode === "custom_finish") return record.customFinish || "Custom finish.";
+    return [record.supplier, record.colourName, record.finish].filter(Boolean).join(" / ") || "Colour not selected.";
+  }
+
+  function updateAreaFinishRecord(areaKey, record, extraPatch = {}) {
+    if (!activeLocation) return;
+    const nextSelections = { ...(activeLocation.areaSelections || {}), [areaKey]: record };
+    const nextColoursAndFinishes = {
+      ...(activeLocation.coloursAndFinishes || {}),
+      areaSelections: nextSelections,
+      ...extraPatch.coloursAndFinishes,
+    };
+    updateLocation(activeLocation.location, {
+      ...extraPatch,
+      areaSelections: nextSelections,
+      coloursAndFinishes: nextColoursAndFinishes,
+    });
+  }
+
+  function updateBulkheadFinishMode(mode) {
+    if (!activeLocation) return;
+    if (mode === "cabinetry_colour" || mode === "laminex_colour" || mode === "polytec_colour") {
+      const nextSelections = { ...(activeLocation.areaSelections || {}) };
+      if (nextSelections.bulkheads?.finishMode && nextSelections.bulkheads.finishMode !== "cabinetry_colour") delete nextSelections.bulkheads;
+      const supplier = mode === "laminex_colour" ? "Laminex" : mode === "polytec_colour" ? "Polytec" : activeLocation.supplier;
+      updateLocation(activeLocation.location, {
+        bulkheadFinishMode: mode,
+        supplier,
+        areaSelections: nextSelections,
+        coloursAndFinishes: {
+          ...(activeLocation.coloursAndFinishes || {}),
+          bulkheadFinishMode: mode,
+          supplier,
+          areaSelections: nextSelections,
+        },
+      });
+      selectCabinetryApplyAreaOnly("bulkheads");
+      return;
+    }
+    const record = createBulkheadFinishRecord(mode, {
+      ...(activeLocation.areaSelections?.bulkheads || {}),
+      linkedPaintSelection: mode === "raw_mdf_wall_paint" ? cabinetryLinkedPaintSelection("wall") : mode === "raw_mdf_ceiling_paint" ? cabinetryLinkedPaintSelection("ceiling") : null,
+    });
+    updateAreaFinishRecord("bulkheads", record, {
+      bulkheadFinishMode: mode,
+      coloursAndFinishes: {
+        bulkheadFinishMode: mode,
+      },
+    });
+  }
+
+  function updateBulkheadCustomPaint(field, value) {
+    const current = activeLocation?.areaSelections?.bulkheads || {};
+    updateAreaFinishRecord("bulkheads", createBulkheadFinishRecord("raw_mdf_custom_paint", { ...current, [field]: value }), {
+      bulkheadFinishMode: "raw_mdf_custom_paint",
+      coloursAndFinishes: { bulkheadFinishMode: "raw_mdf_custom_paint" },
+    });
+  }
+
+  function updateKickPanelFinishMode(mode) {
+    if (!activeLocation) return;
+    if (mode === "laminex_colour" || mode === "polytec_colour") {
+      const nextSelections = { ...(activeLocation.areaSelections || {}) };
+      if (nextSelections.kickPanels?.finishMode && nextSelections.kickPanels.finishMode !== "cabinetry_colour") delete nextSelections.kickPanels;
+      const supplier = mode === "laminex_colour" ? "Laminex" : "Polytec";
+      updateLocation(activeLocation.location, {
+        kickPanelFinishMode: mode,
+        supplier,
+        areaSelections: nextSelections,
+        coloursAndFinishes: {
+          ...(activeLocation.coloursAndFinishes || {}),
+          kickPanelFinishMode: mode,
+          supplier,
+          areaSelections: nextSelections,
+        },
+      });
+      selectCabinetryApplyAreaOnly("kickPanels");
+      return;
+    }
+    const record = createKickPanelFinishRecord(mode, activeLocation.areaSelections?.kickPanels);
+    updateAreaFinishRecord("kickPanels", record, {
+      kickPanelFinishMode: mode,
+      coloursAndFinishes: { kickPanelFinishMode: mode },
+    });
+  }
+
+  function updateKickPanelField(field, value) {
+    const current = activeLocation?.areaSelections?.kickPanels || {};
+    const mode = current.finishMode || activeLocation?.kickPanelFinishMode || "brushed_aluminium";
+    updateAreaFinishRecord("kickPanels", createKickPanelFinishRecord(mode, { ...current, [field]: value }), {
+      kickPanelFinishMode: mode,
+      coloursAndFinishes: { kickPanelFinishMode: mode },
+    });
+  }
+
+  function cabinetryLinkedPaintSelection(paintTarget) {
+    const savedPaint = selections.get("interior-paint")?.selected_details || selections.get("paint")?.selected_details || {};
+    const targetPattern = paintTarget === "ceiling" ? /ceiling/i : /wall/i;
+    const directKeys = paintTarget === "ceiling"
+      ? ["ceilingColour", "ceilingColor", "selectedCeilingColour", "selectedCeilingColor"]
+      : ["wallColour", "wallColor", "internalWallColour", "internalWallColor", "selectedWallColour", "selectedWallColor"];
+    for (const key of directKeys) {
+      if (cabinetryPlainObject(savedPaint[key])) return savedPaint[key];
+      if (typeof savedPaint[key] === "string" && savedPaint[key].trim()) return { colourName: savedPaint[key].trim() };
+    }
+    const nestedSources = [savedPaint.paintSelection, savedPaint.colourSelection, savedPaint.selectedColour, savedPaint.selectedProduct, savedPaint.guidedSelection, savedPaint];
+    for (const source of nestedSources) {
+      if (!cabinetryPlainObject(source)) continue;
+      const label = [source.area, source.location, source.category, source.finishType, source.application, source.requirementKey, source.title].filter(Boolean).join(" ");
+      if (targetPattern.test(label) || !label) {
+        const colourName = source.colourName || source.colour || source.officialColourName || source.selected_product_name || source.selectedProductName;
+        const supplier = source.supplier || source.brand || source.selected_supplier_name || source.selectedSupplierName;
+        const colourCode = source.colourCode || source.code || source.productCode || source.model_number;
+        if (colourName || colourCode || supplier) return { supplier, colourName, colourCode };
+      }
+    }
+    return null;
+  }
+
+  function cabinetryWorkflowStageStatus(index) {
+    if (index === stageIndex) return "incomplete";
+    if (index > stageIndex) return "not_started";
+    if (index === 3 && !coloursAndFinishesComplete) return "incomplete";
+    return "complete";
+  }
+
+  function pushCabinetryBackState() {
+    setCabinetryBackStack((current) => [...current, {
+      editingLocationName,
+      stageIndex,
+      pendingCabinetryColourKey,
+      pendingCabinetryRecordId,
+    }].slice(-30));
+  }
+
+  function openCabinetryLocation(locationName) {
+    if (locationName === "Butler's Pantry") {
+      setDraft((current) => cleanIncorrectButlersPantryCopiedScheduleRows(current));
+    }
+    setCabinetryBackStack([]);
+    setEditingLocationName(locationName);
+    setStageIndex(0);
+    setPendingCabinetryColourKey("");
+    setPendingCabinetryRecordId("");
+    setCabinetrySelectionMessage("");
+  }
+
+  function navigateCabinetryStage(nextStageIndex) {
+    const bounded = Math.max(0, Math.min(CABINETRY_WORKFLOW_STAGES.length - 1, nextStageIndex));
+    if (bounded === stageIndex) return;
+    pushCabinetryBackState();
+    setStageIndex(bounded);
+    setPendingCabinetryColourKey("");
+    setPendingCabinetryRecordId("");
+    setCabinetrySelectionMessage("");
+  }
+
+  function handleCabinetryBack() {
+    if (cabinetryInspectRecord) {
+      setCabinetryInspectRecord(null);
+      return;
+    }
+    if (pendingCabinetryColourKey) {
+      setPendingCabinetryColourKey("");
+      setPendingCabinetryRecordId("");
+      return;
+    }
+    if (cabinetryBackStack.length) {
+      const previous = cabinetryBackStack[cabinetryBackStack.length - 1];
+      setCabinetryBackStack((current) => current.slice(0, -1));
+      if (previous.editingLocationName) {
+        setEditingLocationName(previous.editingLocationName);
+        setStageIndex(previous.stageIndex);
+        setPendingCabinetryColourKey(previous.pendingCabinetryColourKey || "");
+        setPendingCabinetryRecordId(previous.pendingCabinetryRecordId || "");
+        return;
+      }
+    }
+    if (stageIndex > 0) {
+      setStageIndex(stageIndex - 1);
+      return;
+    }
+    onReturnToDashboard?.();
+  }
+
+  function handleSelectCabinetryColour(supplier, colourRecord) {
+    if (!activeLocation) {
+      setCabinetrySelectionMessage("Open a cabinetry room before choosing a colour.");
+      return;
+    }
+    const selectedRecord = normaliseCabinetryColourSelectionRecord({ ...colourRecord, supplier: supplier || colourRecord?.supplier });
+    if (!selectedRecord.colourId || !selectedRecord.colourName) {
+      setCabinetrySelectionMessage("This colour record is missing the required supplier colour identifier.");
+      return;
+    }
+    const compatibleRecords = activeColourRecords.filter((record) => {
+      const candidate = normaliseCabinetryColourSelectionRecord(record);
+      return candidate.supplier === selectedRecord.supplier && cabinetryColourKey(candidate) === cabinetryColourKey(selectedRecord);
+    });
+    if (!compatibleRecords.length) {
+      setCabinetrySelectionMessage(`${selectedRecord.supplier} ${selectedRecord.colourName} is not compatible with the current cabinetry door/panel catalogue filters.`);
+      return;
+    }
+    const selectedAreaKeys = activeColourTargetKeys.filter((key) => activeCabinetryAreaKeys.includes(key));
+    setPendingCabinetryColourKey(cabinetryColourKey(selectedRecord));
+    setPendingCabinetryRecordId(compatibleRecords.find((record) => record.id === mainColour?.id)?.id || selectedRecord.colourId || compatibleRecords[0].id);
+    setCabinetryApplyAreas(selectedAreaKeys);
+    setActiveColourTargetKeys(selectedAreaKeys);
+    if (!selectedAreaKeys.length) {
+      setCabinetrySelectionMessage("Choose where this colour will be used.");
+      return;
+    }
+    setCabinetrySelectionMessage("");
+  }
+
+  function selectCabinetryColourGroup(group) {
+    const activeAreas = activeColourTargetKeys.filter((key) => activeCabinetryAreaKeys.includes(key));
+    const selected = group.records.find((record) => record.id === mainColour?.id) || group.primary;
+    setCabinetryApplyAreas(activeAreas);
+    setActiveColourTargetKeys(activeAreas);
+    handleSelectCabinetryColour(group.supplier, selected);
+  }
+
+  function applyCabinetryRecordToAreas(record, areaKeys = activeColourTargetKeys) {
+    if (!activeLocation || !record) return;
+    const appliedKeys = areaKeys.filter((key) => activeCabinetryAreaKeys.includes(key));
+    if (!appliedKeys.length) {
+      setCabinetrySelectionMessage("Select at least one cabinetry area before applying this colour.");
+      return;
+    }
+    const finalAreaKeys = appliedKeys;
+    setDraft((current) => normaliseCabinetrySelection({
+      ...current,
+      confirmed: false,
+      locations: current.locations.map((location) => {
+        if (location.location !== activeLocation.location) return location;
+        const areaSelections = { ...(location.areaSelections || {}) };
+        finalAreaKeys.forEach((areaKey) => {
+          areaSelections[areaKey] = record;
+        });
+        return {
+          ...location,
+          status: "in_progress",
+          enabledAreaKeys: Array.from(new Set([...(location.enabledAreaKeys || []), ...finalAreaKeys])),
+          scope: Array.from(new Set([...(location.scope || []), ...finalAreaKeys])),
+          supplier: record.supplier || location.supplier,
+          productRange: record.productRange || record.productFamily || location.productRange,
+          finish: record.finish || location.finish,
+          defaultColour: record,
+          areaSelections,
+          coloursAndFinishes: {
+            ...(location.coloursAndFinishes || {}),
+            supplier: record.supplier || location.supplier,
+            productRange: record.productRange || record.productFamily || location.productRange,
+            finish: record.finish || location.finish,
+            selectedColour: record,
+            appliedAreaKeys: finalAreaKeys,
+            areaSelections,
+          },
+        };
+      }),
+    }));
+    setCabinetrySelectionMessage("");
+    setPendingCabinetryColourKey("");
+    setPendingCabinetryRecordId("");
+  }
+
+  function applyCabinetryRecordToAllCompatibleAreas(record) {
+    if (!activeLocation || !record) return;
+    const enabled = activeLocation.enabledAreaKeys?.length ? activeLocation.enabledAreaKeys.filter((key) => activeCabinetryAreaKeys.includes(key)) : activeCabinetryAreaKeys;
+    setCabinetryApplyAreas(enabled);
+    setActiveColourTargetKeys(enabled);
+    applyCabinetryRecordToAreas(record, enabled);
+  }
+
+  function clearCabinetryFilters() {
+    setCabinetryColourSearch("");
+    setCabinetryFamilyFilter("All");
+    setCabinetryRangeFilter("All");
+    setCabinetryFinishFilter("All");
+    setCabinetryPricingFilter("All");
+    setCabinetryVisibleColourCount(CABINETRY_COLOUR_PAGE_SIZE);
+  }
+
+  function newScheduleLine(unitType = CABINETRY_SCHEDULE_TYPE_OPTIONS[0]) {
+    return {
+      componentId: `CAB-${slug(activeLocation?.location || "room")}-${Date.now()}`,
+      location: activeLocation?.location || "",
+      unitType,
+      quantity: 1,
+      clientSelectableSurfaces: ["lowerDoorsDrawers"],
+      handleQuantity: 1,
+      notes: "",
+    };
+  }
+
+  function updateScheduleLine(componentId, patch) {
+    updateDraft({
+      schedule: normalisedDraft.schedule.map((line) => line.componentId === componentId ? { ...line, ...patch, location: activeLocation.location } : line),
+    });
+  }
+
+  function addScheduleLine(unitType) {
+    updateDraft({ schedule: [...normalisedDraft.schedule, newScheduleLine(unitType)] });
+  }
+
+  function removeScheduleLine(componentId) {
+    updateDraft({ schedule: normalisedDraft.schedule.filter((line) => line.componentId !== componentId) });
+  }
+
+  function toggleBathroomScope(scopeKey) {
+    if (!activeLocation) return;
+    const current = new Set(bathroomScopeKeysForLocation(activeLocation));
+    if (current.has(scopeKey)) current.delete(scopeKey);
+    else current.add(scopeKey);
+    if (!current.has("tallLinenCupboard")) current.delete("linenBulkhead");
+    const nextScope = Array.from(current);
+    const nextAreaKeys = bathroomColourAreaKeysForLocation({ ...activeLocation, bathroomScopeKeys: nextScope }, activeSchedule);
+    const nextSchedule = normalisedDraft.schedule.filter((line) => (
+      line.location !== activeLocation.location ||
+      !wetAreaScheduleType(line) ||
+      wetAreaScheduleTypeAllowedForScope(line.type || line.unitType, nextScope)
+    ));
+    updateDraft({
+      locations: normalisedDraft.locations.map((location) => location.location === activeLocation.location ? {
+        ...location,
+        status: "in_progress",
+        bathroomScopeKeys: nextScope,
+        bathroomScope: nextScope,
+        enabledAreaKeys: (location.enabledAreaKeys || []).filter((key) => nextAreaKeys.includes(key)),
+        scope: (location.enabledAreaKeys || []).filter((key) => nextAreaKeys.includes(key)),
+      } : location),
+      schedule: nextSchedule,
+    });
+  }
+
+  function newBathroomScheduleLine(type, unitType) {
+    return {
+      componentId: `CAB-${slug(activeLocation?.location || "bathroom")}-${slug(type)}-${Date.now()}`,
+      location: activeLocation?.location || "Bathroom",
+      type,
+      unitType,
+      quantity: 1,
+      width: "",
+      notes: "",
+      clientSelectableSurfaces: BATHROOM_AREA_RULES.filter((rule) => (rule.schedules || []).includes(type)).map((rule) => rule.key),
+      handleQuantity: 1,
+    };
+  }
+
+  function toggleBathroomScheduleLine(type, unitType) {
+    const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
+    if (item) {
+      removeScheduleLine(item.componentId);
+      return;
+    }
+    updateDraft({ schedule: [...normalisedDraft.schedule, newBathroomScheduleLine(type, unitType)] });
+  }
+
+  function updateBathroomScheduleLine(type, patch) {
+    const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
+    if (item) {
+      updateScheduleLine(item.componentId, patch);
+      return;
+    }
+    updateDraft({ schedule: [...normalisedDraft.schedule, { ...newBathroomScheduleLine(type, BATHROOM_SCHEDULE_GROUPS.flatMap((group) => group.items).find(([id]) => id === type)?.[1] || type), ...patch }] });
+  }
+
+  function toggleBathroomColourShortcut(areaKey, mode) {
+    const labels = {
+      match_floor_vanity: "Match floor-mounted vanity",
+      match_wall_vanity: "Match wall-mounted vanity",
+      match_tall_linen: "Match tall linen cupboard",
+      other_custom: "Other/custom bathroom cabinetry finish",
+    };
+    updateAreaFinishRecord(areaKey, {
+      id: `${areaKey}-${mode}`,
+      areaKey,
+      material: mode === "other_custom" ? "Custom" : labels[mode],
+      finalFinish: labels[mode],
+      colourName: labels[mode],
+      finish: labels[mode],
+      supplier: "",
+      productRange: "Bathroom cabinetry finish",
+      priceStatus: mode === "other_custom" ? "supplier_quote_required" : "included",
+      finishMode: mode,
+    });
+  }
+
+  function createBathroomLinenBulkheadRecord(mode, prior = {}) {
+    if (mode === "no_bulkhead") return null;
+    if (mode === "match_tall_linen") return {
+      id: "linen-bulkhead-match-tall-linen",
+      areaKey: "linenBulkhead",
+      material: "Match tall linen cupboard",
+      finalFinish: "Match tall linen cupboard",
+      colourName: "Match tall linen cupboard",
+      finish: "Match tall linen cupboard",
+      supplier: "",
+      productRange: "Bathroom cabinetry finish",
+      priceStatus: "included",
+      finishMode: mode,
+      linkedAreaKey: "tallLinenDoors",
+      scheduleDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
+      procurementDescription: "Supply and install bulkhead over tall linen cupboard to match tall linen cupboard.",
+    };
+    const baseMode = mode === "raw_mdf_wall_paint" || mode === "raw_mdf_ceiling_paint" ? mode : "other_custom";
+    const baseRecord = createBulkheadFinishRecord(baseMode, prior);
+    return { ...baseRecord, id: `linen-${baseRecord.id}`, areaKey: "linenBulkhead" };
+  }
+
+  function updateBathroomLinenBulkheadMode(mode) {
+    if (!activeLocation) return;
+    const prior = activeLocation.areaSelections?.linenBulkhead || {};
+    const record = createBathroomLinenBulkheadRecord(mode, prior);
+    if (!record) {
+      const nextSelections = { ...(activeLocation.areaSelections || {}) };
+      delete nextSelections.linenBulkhead;
+      updateLocation(activeLocation.location, {
+        bathroomLinenBulkheadMode: mode,
+        areaSelections: nextSelections,
+        enabledAreaKeys: (activeLocation.enabledAreaKeys || []).filter((key) => key !== "linenBulkhead"),
+        scope: (activeLocation.enabledAreaKeys || []).filter((key) => key !== "linenBulkhead"),
+      });
+      return;
+    }
+    updateAreaFinishRecord("linenBulkhead", record, { bathroomLinenBulkheadMode: mode });
+  }
+
+  function updateBathroomBenchtop(targetKey, patch) {
+    if (!activeLocation) return;
+    const current = cabinetryPlainObject(activeLocation.bathroomBenchtops) ? activeLocation.bathroomBenchtops : {};
+    const nextRecord = {
+      ...(current[targetKey] || {}),
+      targetKey,
+      targetLabel: targetKey === "floorMountedVanity" ? "Floor-mounted vanity benchtop" : "Wall-mounted vanity benchtop",
+      priceStatus: "supplier_quote_required",
+      ...patch,
+    };
+    updateLocation(activeLocation.location, {
+      bathroomBenchtops: { ...current, [targetKey]: nextRecord },
+      benchtops: { ...(activeLocation.benchtops && typeof activeLocation.benchtops === "object" ? activeLocation.benchtops : {}), bathroom: { ...current, [targetKey]: nextRecord } },
+    });
+  }
+
+  function updateBathroomHandle(targetKey, patch) {
+    if (!activeLocation) return;
+    const current = cabinetryPlainObject(activeLocation.bathroomHandles) ? activeLocation.bathroomHandles : {};
+    updateLocation(activeLocation.location, { bathroomHandles: { ...current, [targetKey]: { ...(current[targetKey] || {}), targetKey, ...patch } } });
+  }
+
+  function applyBathroomHandleToAll(sourceKey) {
+    const source = activeLocation?.bathroomHandles?.[sourceKey];
+    if (!source) return;
+    const next = {};
+    BATHROOM_HANDLE_TARGETS.forEach(([targetKey]) => {
+      if (bathroomScopeHasCabinetry(activeLocation, targetKey)) next[targetKey] = { ...source, targetKey };
+    });
+    updateLocation(activeLocation.location, { bathroomHandles: next });
+  }
+
+  function applyActiveLocationToCompatibleAreas() {
+    if (!activeLocation) return;
+    if (!mainColour) {
+      setCabinetrySelectionMessage("Choose a cabinetry colour before applying it to selected areas.");
+      return;
+    }
+    updateLocation(activeLocation.location, {
+      areaSelections: Object.fromEntries((activeLocation.enabledAreaKeys || []).filter((areaKey) => activeCabinetryAreaKeys.includes(areaKey)).map((areaKey) => [areaKey, mainColour])),
+      defaultColour: mainColour,
+    });
+  }
+
+  function updateFeatureOption(featureName, patch = {}) {
+    if (!activeLocation) return;
+    const featureOptions = Array.isArray(activeLocation.featureOptions) ? activeLocation.featureOptions : [];
+    const current = featureOptions.find((item) => featureOptionName(item) === featureName);
+    const next = current
+      ? featureOptions.map((item) => featureOptionName(item) === featureName ? { ...(typeof item === "string" ? { type: item } : item), ...patch, type: featureName } : item)
+      : [...featureOptions, { type: featureName, enabled: true, quantity: 1, materialFinish: mainColour?.colourName || "", notes: "", imageUrl: "", priceStatus: "quote_required", ...patch }];
+    updateLocation(activeLocation.location, { featureOptions: next, features: next });
+  }
+
+  function copySelectionsIntoActiveRoom() {
+    if (!activeLocation || !copyFromLocation) return;
+    const copied = copyCabinetryLocation(normalisedDraft, copyFromLocation, [activeLocation.location]);
+    setDraft(copied);
+  }
+
+  async function saveCabinetryDraft(confirmRoom = false) {
+    if (!activeLocation) return persistCabinetry(normalisedDraft);
+    if (confirmRoom) {
+      const preConfirmLocations = normalisedDraft.locations.map((location) => location.location === activeLocation.location
+        ? { ...location, status: location.status || "in_progress", confirmedAt: "" }
+        : location);
+      const preConfirm = normaliseCabinetrySelection({ ...normalisedDraft, locations: preConfirmLocations, activeLocation: activeLocation.location });
+      if (preConfirm.summary?.unresolvedLocations?.includes(activeLocation.location)) {
+        setCabinetrySelectionMessage(`Complete required cabinetry fields for ${activeLocation.location} before finishing.`);
+        persistCabinetry(preConfirm, { commitRequirement: false });
+        return null;
+      }
+    }
+    const modifiedAt = new Date().toISOString();
+    const nextLocations = normalisedDraft.locations.map((location) => location.location === activeLocation.location
+      ? { ...location, status: confirmRoom ? "complete" : location.status || "in_progress", confirmedAt: confirmRoom ? modifiedAt : location.confirmedAt, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }
+      : location);
+    const next = persistCabinetry({ ...normalisedDraft, locations: nextLocations, activeLocation: activeLocation.location, confirmed: false, scheduleApproved: confirmRoom ? true : normalisedDraft.scheduleApproved, lastModifiedAt: modifiedAt, updatedAt: modifiedAt }, { commitRequirement: !confirmRoom });
+    if (!confirmRoom) return next;
+    if (typeof onFinishCabinetry !== "function") return next;
+    const result = await onFinishCabinetry(next, { successMessage: "Cabinetry specification saved to the active job." });
+    if (result?.ok === false) setCabinetrySelectionMessage(result.message || "Cabinetry save verification failed.");
+    else setCabinetrySelectionMessage(result?.message || "");
+    return result;
+  }
+
+  function clearStoneFilters() {
+    setStoneSearch("");
+    setStoneCollectionFilter("All");
+    setStoneMaterialFilter("All");
+    setStoneColourFilter("All");
+    setStonePatternFilter("All");
+    setStoneFinishFilter("All");
+    setStoneThicknessFilter("All");
+    setStonePriceGroupFilter("All");
+    setStonePricingFilter("All");
+  }
+
+  function selectStoneProduct(product) {
+    setStonePendingProductId(product.id);
+    setStoneConfig((current) => ({
+      ...current,
+      application: activeIsBathroomCabinetry ? "Vanity benchtop" : current.application || defaultStoneApplicationForLocation(activeLocation?.location),
+      finish: product.finishOptions?.[0] || "",
+      slabThickness: product.thicknessOptions?.[0] || "",
+      finishedEdgeThickness: current.finishedEdgeThickness || product.thicknessOptions?.[0] || "",
+    }));
+  }
+
+  function toggleStoneCompare(productId) {
+    setStoneCompareIds((current) => {
+      if (current.includes(productId)) return current.filter((id) => id !== productId);
+      if (current.length >= 3) return current;
+      return [...current, productId];
+    });
+  }
+
+  function updateStoneConfig(patch) {
+    setStoneConfig((current) => ({ ...current, ...patch }));
+  }
+
+  function toggleStoneCutout(cutout) {
+    setStoneConfig((current) => {
+      const currentCutouts = Array.isArray(current.cutouts) ? current.cutouts : [];
+      return { ...current, cutouts: currentCutouts.includes(cutout) ? currentCutouts.filter((item) => item !== cutout) : [...currentCutouts, cutout] };
+    });
+  }
+
+  function applyStoneBenchtopSelection() {
+    if (!activeLocation || !pendingStoneProduct) return;
+    const configured = {
+      ...configureStoneBenchtopSelection(pendingStoneProduct, {
+        ...stoneConfig,
+        room: activeLocation.location,
+        applications: [activeIsBathroomCabinetry ? "Vanity benchtop" : stoneConfig.application || defaultStoneApplicationForLocation(activeLocation.location)],
+        pricingStatus: pendingStoneProduct.priceStatus,
+      }),
+      materialChoice: "stone",
+      category: "Stone, Porcelain & Sintered Benchtops",
+      range: pendingStoneProduct.collection,
+      colour: pendingStoneProduct.colourName,
+      thickness: stoneConfig.slabThickness || pendingStoneProduct.thicknessOptions?.[0] || "",
+      finish: stoneConfig.finish || pendingStoneProduct.finishOptions?.[0] || "",
+    };
+    if (activeIsBathroomCabinetry) {
+      updateBathroomBenchtop(bathroomStoneTargetKey, configured);
+      setStonePendingProductId("");
+      return;
+    }
+    updateLocation(activeLocation.location, { benchtop: configured, benchtops: configured });
+  }
+
+  function cabinetryNavigationActions(position = "bottom") {
+    return (
+      <CabinetryWorkflowActions
+        position={position}
+        stageIndex={stageIndex}
+        finalStageIndex={CABINETRY_WORKFLOW_STAGES.length - 1}
+        onPrevious={() => navigateCabinetryStage(stageIndex - 1)}
+        onSave={() => saveCabinetryDraft(false)}
+        onNext={() => stageIndex === CABINETRY_WORKFLOW_STAGES.length - 1 ? saveCabinetryDraft(true) : navigateCabinetryStage(stageIndex + 1)}
+      />
+    );
+  }
+
+  function renderBathroomBenchtops() {
+    const floorEnabled = bathroomScopeHasCabinetry(activeLocation, "floorMountedVanity");
+    const wallEnabled = bathroomScopeHasCabinetry(activeLocation, "wallMountedVanity");
+    const renderTarget = (targetKey, title) => {
+      const current = activeLocation.bathroomBenchtops?.[targetKey] || {};
+      const options = BATHROOM_BENCHTOP_OPTIONS[targetKey] || [];
+      const selectedStoneTarget = bathroomStoneTargetKey === targetKey;
+      return (
+        <section key={targetKey} className="cabinetryScheduleGroup" data-testid={`bathroom-${targetKey}-benchtop`}>
+          <h3>{title}</h3>
+          <CabinetrySelectionList items={options.map((option) => ({
+            id: `${targetKey}-${option}`,
+            name: option,
+            description: option.includes("mitred") ? "Retain mitred drop-front details for this vanity." : "Configure this vanity top only.",
+            selected: current.materialChoice === option || (current.materialChoice === "stone" && /stone/i.test(option)),
+            onToggle: () => {
+              setBathroomStoneTargetKey(targetKey);
+              setStoneConfig((existing) => ({ ...existing, application: "Vanity benchtop" }));
+              updateBathroomBenchtop(targetKey, { materialChoice: option, dropFrontDetail: option.includes("mitred") ? "Mitred drop front required" : current.dropFrontDetail || "" });
+            },
+          }))} />
+          {/laminated/i.test(current.materialChoice || "") ? <CabinetrySelectionList items={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated").map((bench) => ({
+            id: `${targetKey}-${bench.id}`,
+            name: `${bench.supplier} ${bench.category}`,
+            description: `${bench.range} / ${bench.colour} / ${bench.finish || "Finish to confirm"} / ${bench.thickness}`,
+            selected: current.id === bench.id,
+            onToggle: () => updateBathroomBenchtop(targetKey, {
+              ...bench,
+              targetKey,
+              targetLabel: title,
+              materialChoice: current.materialChoice,
+              productRange: bench.range,
+              colourName: bench.colour,
+              priceStatus: bench.priceStatus || "included",
+            }),
+          }))} /> : null}
+          {/stone/i.test(current.materialChoice || "") ? (
+            <>
+              <div className="cabinetryColourActions">
+                <button type="button" className={selectedStoneTarget ? "primary" : ""} onClick={() => setBathroomStoneTargetKey(targetKey)}>
+                  {selectedStoneTarget ? "Selecting for this vanity" : "Select stone for this vanity"}
+                </button>
+              </div>
+              {selectedStoneTarget ? renderBathroomStoneBenchtopCatalogue(targetKey, title, current) : null}
+            </>
+          ) : null}
+          {/other|custom/i.test(current.materialChoice || "") ? <div className="cabinetryCustomFields">
+            <label><span>Custom specification</span><input value={current.notes || ""} onChange={(event) => updateBathroomBenchtop(targetKey, { notes: event.target.value, targetLabel: title })} /></label>
+          </div> : null}
+          {current.supplier || current.colourName || current.colour ? <section className="stoneAppliedSummary"><h3>Selected vanity benchtop</h3><dl><div><dt>Supplier</dt><dd>{current.supplier || "Not selected"}</dd></div><div><dt>Product</dt><dd>{[current.productCode, current.colourName || current.colour].filter(Boolean).join(" ") || current.range || current.productRange || "Not selected"}</dd></div><div><dt>Finish</dt><dd>{current.finish || "Not selected"}</dd></div><div><dt>Thickness</dt><dd>{current.slabThickness || current.thickness || "Not selected"}</dd></div><div><dt>Edge</dt><dd>{current.finishedEdgeThickness || current.edgeProfile || "Not selected"}</dd></div></dl></section> : null}
+        </section>
+      );
+    };
+    return (
+      <>
+        {floorEnabled ? renderTarget("floorMountedVanity", "Floor-mounted vanity benchtop") : null}
+        {wallEnabled ? renderTarget("wallMountedVanity", "Wall-mounted vanity benchtop") : null}
+        {!floorEnabled && !wallEnabled ? <p className="clientNotice">No {activeLocation.location} vanity benchtop is required until a floor-mounted or wall-mounted vanity is enabled.</p> : null}
+      </>
+    );
+  }
+
+  function renderBathroomStoneBenchtopCatalogue(targetKey, title, current = {}) {
+    return (
+      <div className="stoneBenchtopSelector" data-testid={`bathroom-${targetKey}-stone-benchtop-selector`}>
+        <div className="cabinetrySupplierButtons stoneSupplierButtons" data-testid="stone-supplier-buttons">{STONE_BENCHTOP_SUPPLIERS.map((supplier) => <button key={supplier} type="button" aria-pressed={stoneSupplierFilter === supplier} className={stoneSupplierFilter === supplier ? "selected" : ""} onClick={() => setStoneSupplierFilter(supplier)}><strong>{supplier}</strong><span>{activeStoneProducts.filter((product) => product.supplier === supplier).length} active</span></button>)}</div>
+        <div className="cabinetryCatalogueToolbar stoneFilters" data-testid="stone-benchtop-filters">
+          <label><span>Search</span><input value={stoneSearch} onChange={(event) => setStoneSearch(event.target.value)} placeholder="Colour, product code or collection" /></label>
+          <label><span>Collection/range</span><select value={stoneCollectionFilter} onChange={(event) => setStoneCollectionFilter(event.target.value)}><option>All</option>{stoneCollections.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Material type</span><select value={stoneMaterialFilter} onChange={(event) => setStoneMaterialFilter(event.target.value)}><option>All</option>{stoneMaterialTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Colour family</span><select value={stoneColourFilter} onChange={(event) => setStoneColourFilter(event.target.value)}><option>All</option>{stoneColourFamilies.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Finish</span><select value={stoneFinishFilter} onChange={(event) => setStoneFinishFilter(event.target.value)}><option>All</option>{stoneFinishes.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <label><span>Thickness</span><select value={stoneThicknessFilter} onChange={(event) => setStoneThicknessFilter(event.target.value)}><option>All</option>{stoneThicknesses.map((value) => <option key={value}>{value}</option>)}</select></label>
+          <button type="button" onClick={clearStoneFilters}>Clear Filters</button><strong>{filteredStoneProducts.length} results</strong>
+        </div>
+        <div className="stoneProductGrid" data-testid="stone-product-grid">{filteredStoneProducts.map((product) => {
+          const selected = current.productId === product.id || stonePendingProductId === product.id;
+          return <article key={product.id} className={`stoneProductCard ${selected ? "selected" : ""}`} data-supplier={product.supplier} data-product-code={product.productCode} data-product-name={product.colourName}>{product.primarySwatchImage ? <button type="button" className="stoneProductImageButton" onClick={() => setStoneInspectProduct(product)}><img src={product.primarySwatchImage} alt={`${product.supplier} ${product.colourName} slab swatch`} /></button> : <button type="button" className="stoneSwatchUnavailable" onClick={() => setStoneInspectProduct(product)}>Official slab image unavailable locally</button>}<div className="stoneProductBody"><span>{product.supplier} / {product.productCode}</span><strong>{product.colourName}</strong><small>{product.collection} / {product.materialType}</small><em>{(product.finishOptions || []).join(", ")} / {(product.thicknessOptions || []).join(", ")}</em><i>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)} / {product.availabilityRegion}</i><div className="cabinetryColourActions"><button type="button" onClick={() => setStoneInspectProduct(product)}>View Details</button><button type="button" className="primary" onClick={() => selectStoneProduct(product)}>Select Surface</button></div>{selected ? <b>Selected</b> : null}</div></article>;
+        })}</div>
+        {pendingStoneProduct ? <section className="stoneSelectionComposer" data-testid="stone-benchtop-configurator"><h3>{pendingStoneProduct.supplier} {pendingStoneProduct.colourName}</h3><p>Applying to {title}.</p><div className="cabinetryCustomFields"><label><span>Selected finish</span><select value={stoneConfig.finish} onChange={(event) => updateStoneConfig({ finish: event.target.value })}>{pendingStoneProduct.finishOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Actual slab thickness</span><select value={stoneConfig.slabThickness} onChange={(event) => updateStoneConfig({ slabThickness: event.target.value })}>{pendingStoneProduct.thicknessOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Finished edge thickness</span><input value={stoneConfig.finishedEdgeThickness} onChange={(event) => updateStoneConfig({ finishedEdgeThickness: event.target.value })} placeholder="e.g. 40 mm mitred edge" /></label><label><span>Edge profile</span><select value={stoneConfig.edgeProfile} onChange={(event) => updateStoneConfig({ edgeProfile: event.target.value })}>{STONE_BENCHTOP_EDGE_PROFILES.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Approx. sqm</span><input type="number" min="0" step="0.1" value={stoneConfig.approximateAreaSqm} onChange={(event) => updateStoneConfig({ approximateAreaSqm: event.target.value })} /></label><label><span>Notes</span><input value={stoneConfig.notes} onChange={(event) => updateStoneConfig({ notes: event.target.value })} /></label></div><div className="stoneChecklist">{CUTOUT_OPTIONS.map((value) => <label key={value}><input type="checkbox" checked={(stoneConfig.cutouts || []).includes(value)} onChange={() => toggleStoneCutout(value)} /><span>{value} cut-out</span></label>)}{["templateRequired", "supplierQuoteRequired", "physicalSampleConfirmed", "fullSlabViewed"].map((key) => <label key={key}><input type="checkbox" checked={Boolean(stoneConfig[key])} onChange={(event) => updateStoneConfig({ [key]: event.target.checked })} /><span>{stoneConfigLabel(key)}</span></label>)}</div><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={applyStoneBenchtopSelection}>Apply to {title}</button>{pendingStoneProduct.officialProductUrl ? <a href={pendingStoneProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></section> : null}
+        {stoneInspectProduct ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="stone-benchtop-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setStoneInspectProduct(null); }}><section className="cabinetryInspectModal stoneInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setStoneInspectProduct(null)}>Close</button>{stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage ? <img src={stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage} alt={`${stoneInspectProduct.supplier} ${stoneInspectProduct.colourName} large slab`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<div><span>{stoneInspectProduct.supplier}</span><h3>{stoneInspectProduct.productCode} {stoneInspectProduct.colourName}</h3><dl><div><dt>Collection</dt><dd>{stoneInspectProduct.collection}</dd></div><div><dt>Material type</dt><dd>{stoneInspectProduct.materialType}</dd></div><div><dt>Colour/pattern</dt><dd>{stoneInspectProduct.colourFamily} / {stoneInspectProduct.patternType}</dd></div><div><dt>Finish options</dt><dd>{stoneInspectProduct.finishOptions.join(", ")}</dd></div><div><dt>Thickness options</dt><dd>{stoneInspectProduct.thicknessOptions.join(", ")}</dd></div><div><dt>Slab dimensions</dt><dd>{stoneInspectProduct.slabSizes.join(", ")}</dd></div><div><dt>Pricing</dt><dd>{stoneInspectProduct.priceGroup || cabinetryPriceStatusLabel(stoneInspectProduct.priceStatus)}</dd></div></dl><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { selectStoneProduct(stoneInspectProduct); setStoneInspectProduct(null); }}>Select This Surface</button>{stoneInspectProduct.officialProductUrl ? <a href={stoneInspectProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></div></section></div> : null}
+      </div>
+    );
+  }
+
+  function renderBathroomHandles() {
+    const targets = BATHROOM_HANDLE_TARGETS.filter(([key]) => bathroomScopeHasCabinetry(activeLocation, key));
+    return (
+      <div className="cabinetryStage" data-testid="cabinetry-bathroom-handles">
+        {targets.length ? targets.map(([targetKey, label]) => {
+          const current = activeLocation.bathroomHandles?.[targetKey] || {};
+          return (
+            <section key={targetKey} className="cabinetryScheduleGroup">
+              <h3>{label}</h3>
+              <CabinetrySelectionList items={BATHROOM_HANDLE_OPTIONS.map((option) => ({
+                id: `${targetKey}-${option}`,
+                name: option,
+                description: option === "Other/custom" ? "Record a custom bathroom handle/opening method." : `Apply to this ${activeLocation.location} cabinet type only.`,
+                selected: current.openingMethod === option,
+                onToggle: () => updateBathroomHandle(targetKey, { openingMethod: option, productName: option, priceStatus: option === "Other/custom" ? "supplier_quote_required" : "price_pending" }),
+              }))} />
+              <div className="cabinetryCustomFields">
+                <label><span>Product / code</span><input value={current.productCode || ""} onChange={(event) => updateBathroomHandle(targetKey, { productCode: event.target.value })} /></label>
+                <label><span>Finish</span><input value={current.selectedFinish || ""} onChange={(event) => updateBathroomHandle(targetKey, { selectedFinish: event.target.value })} /></label>
+                <label><span>Notes</span><input value={current.notes || ""} onChange={(event) => updateBathroomHandle(targetKey, { notes: event.target.value })} /></label>
+              </div>
+              <div className="cabinetryColourActions"><button type="button" onClick={() => applyBathroomHandleToAll(targetKey)}>Apply same to all {activeLocation.location} cabinets</button></div>
+            </section>
+          );
+        }) : <p className="clientNotice">No {activeLocation.location} handle groups are required until {activeLocation.location} cabinetry is enabled in Scope.</p>}
+      </div>
+    );
+  }
+
+  function renderBathroomReviewSummary() {
+    const scheduleByType = new Map(activeSchedule.map((line) => [line.type || line.unitType, line]));
+    const sectionItems = [
+      ["Floor-mounted vanity", ["bath-floor-two-door", "bath-floor-one-door", "bath-floor-four-drawers", "bath-floor-towel-rack"]],
+      ["Wall-mounted vanity", ["bath-wall-two-door", "bath-wall-one-door", "bath-wall-three-drawer", "bath-wall-two-drawer", "bath-wall-towel-display"]],
+      ["Tall linen cupboard", ["bath-tall-linen"]],
+      ["Mirrored shaving cabinet", ["bath-shaving-two-door", "bath-shaving-one-door"]],
+      ["Other/custom", ["bath-other-custom"]],
+    ];
+    return (
+      <section className="cabinetryReviewLocation" data-testid="bathroom-cabinetry-review-summary">
+        <h3>{activeLocation.location}</h3>
+        <dl>
+          {sectionItems.map(([label, types]) => <><dt key={`${label}-dt`}>{label}</dt><dd key={`${label}-dd`}>{types.map((type) => scheduleByType.get(type)).filter(Boolean).map((line) => `${line.unitType} x ${line.quantity}${line.width ? ` / ${line.width} mm` : ""}${line.notes ? ` / ${line.notes}` : ""}`).join(", ") || "Not selected"}</dd></>)}
+          <dt>Colours/finishes</dt>
+          <dd>{activeCabinetryAreaKeys.map((areaKey) => `${CABINETRY_AREA_LABELS[areaKey]}: ${cabinetryAreaColourFinishText(cabinetryAreaAssignment(areaKey), ["linenBulkhead", "bulkheads"].includes(areaKey) ? cabinetryLinkedPaintSelection("wall") : null)}`).join("; ") || "Not selected"}</dd>
+          <dt>Benchtops</dt>
+          <dd>{["floorMountedVanity", "wallMountedVanity"].map((key) => bathroomBenchtopSelectionText(activeLocation.bathroomBenchtops?.[key])).filter((value) => value !== "Not selected").join("; ") || "Not selected"}</dd>
+          <dt>Bulkhead</dt>
+          <dd>{cabinetryAreaColourFinishText(cabinetryAreaAssignment("linenBulkhead"), cabinetryLinkedPaintSelection("wall"))}</dd>
+          <dt>Handles</dt>
+          <dd>{BATHROOM_HANDLE_TARGETS.filter(([key]) => bathroomScopeHasCabinetry(activeLocation, key)).map(([key, label]) => `${label}: ${bathroomHandleSelectionText(activeLocation.bathroomHandles?.[key])}`).join("; ") || "Not selected"}</dd>
+          <dt>Features</dt>
+          <dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd>
+          <dt>Notes</dt>
+          <dd>{activeLocation.notes || "None"}</dd>
+          <dt>Status</dt>
+          <dd>{activeLocation.status === "complete" || activeLocation.confirmedAt ? "Complete" : "In progress"}</dd>
+        </dl>
+      </section>
+    );
+  }
+
+  function kitchenHasSelections() {
+    const kitchen = normalisedDraft.locations.find((location) => location.location === "Kitchen");
+    if (!kitchen) return false;
+    return Boolean(
+      kitchen.enabledAreaKeys?.length ||
+      normalisedDraft.schedule.some((line) => line.location === "Kitchen") ||
+      Object.values(kitchen.areaSelections || {}).some(Boolean) ||
+      kitchen.benchtop ||
+      kitchen.handles?.base ||
+      kitchen.handles?.overhead ||
+      kitchen.featureOptions?.length ||
+      kitchen.notes
+    );
+  }
+
+  function pantryHasSelections() {
+    const pantry = normalisedDraft.locations.find((location) => location.location === "Butler's Pantry");
+    if (!pantry) return false;
+    return Boolean(
+      pantry.enabledAreaKeys?.length ||
+      normalisedDraft.schedule.some((line) => line.location === "Butler's Pantry") ||
+      Object.values(pantry.areaSelections || {}).some(Boolean) ||
+      pantry.benchtop ||
+      pantry.handles?.base ||
+      pantry.handles?.overhead ||
+      pantry.featureOptions?.length ||
+      pantry.notes
+    );
+  }
+
+  function kitchenPantryColourRows() {
+    const kitchen = normalisedDraft.locations.find((location) => location.location === "Kitchen");
+    const pantry = normalisedDraft.locations.find((location) => location.location === "Butler's Pantry");
+    if (!kitchen || !pantry) return [];
+    const pantryEnabled = new Set(pantry.enabledAreaKeys || []);
+    return CABINETRY_LOCATION_AREA_KEYS.map((areaKey) => {
+      const sourceRecord = kitchen.areaSelections?.[areaKey];
+      const pantryRecord = pantry.areaSelections?.[areaKey];
+      return {
+        areaKey,
+        label: CABINETRY_AREA_LABELS[areaKey],
+        available: pantryEnabled.has(areaKey),
+        sourceRecord,
+        pantryRecord,
+        canApply: pantryEnabled.has(areaKey) && cabinetryAreaRecordComplete(sourceRecord),
+      };
+    });
+  }
+
+  function toggleKitchenPantryColourArea(areaKey) {
+    setKitchenPantryColourAreaKeys((current) => current.includes(areaKey) ? current.filter((key) => key !== areaKey) : [...current, areaKey]);
+  }
+
+  function openKitchenPantryCopyModal() {
+    const rows = kitchenPantryColourRows();
+    setKitchenPantryOverwriteColours(false);
+    setKitchenPantryColourAreaKeys(rows.filter((row) => row.canApply && !cabinetryAreaRecordComplete(row.pantryRecord)).map((row) => row.areaKey));
+    setKitchenPantryCopyOpen(true);
+  }
+
+  function applyKitchenColoursToPantry() {
+    const cleaned = cleanIncorrectButlersPantryCopiedScheduleRows(normalisedDraft);
+    const copied = applyKitchenColoursToButlersPantry(cleaned, {
+      areaKeys: kitchenPantryColourAreaKeys,
+      overwrite: kitchenPantryOverwriteColours,
+    });
+    setDraft(copied);
+    setKitchenPantryCopyOpen(false);
+    setEditingLocationName("Butler's Pantry");
+    setStageIndex(3);
+    setCabinetrySelectionMessage("Kitchen colours applied to compatible Butler's Pantry areas only.");
+  }
+
+  function renderKitchenPantryColourModal() {
+    const rows = kitchenPantryColourRows();
+    const copiedScheduleRows = normalisedDraft.schedule.filter(kitchenPantryCopiedScheduleLine);
+    return (
+      <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-copy-kitchen-pantry-modal">
+        <section className="cabinetryCopyModal">
+          <h3>APPLY KITCHEN COLOURS TO BUTLER'S PANTRY</h3>
+          <p>Only existing Butler's Pantry cabinetry areas are shown. Scope, cabinet schedule, quantities, benchtops, handles, features and notes stay independent.</p>
+          {copiedScheduleRows.length ? <p className="cabinetrySelectionMessage">Found {copiedScheduleRows.length} Butler's Pantry schedule row{copiedScheduleRows.length === 1 ? "" : "s"} marked Copied from Kitchen. These will be removed without touching Kitchen data.</p> : null}
+          <CabinetrySelectionList items={rows.map((row) => {
+            const sourceText = cabinetryAreaColourFinishText(row.sourceRecord);
+            const pantryText = cabinetryAreaColourFinishText(row.pantryRecord);
+            return {
+              id: row.areaKey,
+              name: `${row.label} - ${sourceText}`,
+              description: row.available ? `Apply to Butler's Pantry ${row.label}. Current Pantry: ${pantryText}.` : "Not available in Pantry",
+              selected: kitchenPantryColourAreaKeys.includes(row.areaKey),
+              disabled: !row.canApply,
+              onToggle: () => toggleKitchenPantryColourArea(row.areaKey),
+              actions: row.available ? <span>{`-> ${row.label}`}</span> : <span>{"-> Not available in Pantry"}</span>,
+            };
+          })} />
+          <div className="cabinetryCopyMode">
+            <label><input type="checkbox" checked={!kitchenPantryOverwriteColours} onChange={(event) => setKitchenPantryOverwriteColours(!event.target.checked)} /> Keep any existing Butler's Pantry colour where already selected</label>
+          </div>
+          <div className="cabinetryColourActions"><button type="button" onClick={() => setKitchenPantryCopyOpen(false)}>Cancel</button><button type="button" className="primary" onClick={applyKitchenColoursToPantry}>Apply Colours</button></div>
+        </section>
+      </div>
+    );
+  }
+
+  function scrollCabinetryToTop() {
+    const scrollTarget = cabinetryPanelRef.current ? cabinetryScrollableElement(cabinetryPanelRef.current) : window;
+    const topElement = cabinetryTopRef.current || cabinetryPanelRef.current;
+    if (scrollTarget === window) {
+      topElement?.scrollIntoView({ block: "start", behavior: "smooth" });
+    } else {
+      scrollTarget.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  if (!activeLocation) {
+    const includedByName = new Map(normalisedDraft.locations.map((location) => [location.location, location]));
+    const roomNames = [...CABINETRY_VISIBLE_LOCATION_OPTIONS, ...normalisedDraft.locations.map((location) => location.location)].filter((value, index, array) => value && array.indexOf(value) === index);
+    return (
+      <section className="guidedShell cabinetryWorkflow" data-testid="guided-cabinetry-workflow" data-workflow-type={CABINETRY_WORKFLOW_TYPE}>
+        <GuidedBudgetDock totals={runningTotals} />
+        <div className="guidedSectionHeader cabinetryBanner">
+          <div>
+            <span>Cabinetry</span>
+            <strong>Cabinetry Selections</strong>
+            <p>Create a separate cabinetry specification for every applicable room.</p>
+          </div>
+          <div className="guidedTotals">
+            <GuidedMiniTotal label="Rooms complete" value={`${summary.completeRoomCount || 0} / ${summary.includedRoomCount || 0}`} />
+            <GuidedMiniTotal label="Allowance" value={money(summary.allowance)} />
+          </div>
+        </div>
+        <div className="cabinetryRoomGrid" data-testid="cabinetry-room-landing">
+          {roomNames.map((roomName) => {
+            const room = includedByName.get(roomName);
+            const status = room ? room.status === "complete" || room.confirmedAt ? "complete" : "in_progress" : "not_started";
+            return (
+            <button key={roomName} type="button" className={`cabinetryRoomCard ${status}`} data-testid={`cabinetry-room-${slug(roomName)}`} onClick={() => room ? openCabinetryLocation(room.location) : addLocation(roomName)}>
+                <strong>{roomName}</strong>
+                <span>{status === "complete" ? "Complete" : status === "in_progress" ? "In progress" : "Not added"}</span>
+                <em>{status === "complete" ? "Review" : status === "in_progress" ? "Continue" : "Add Cabinetry"}</em>
+              </button>
+            );
+          })}
+        </div>
+        {!normalisedDraft.locations.length ? <p className="clientNotice">No cabinetry rooms added.</p> : null}
+        <div className="cabinetryInlineEditor">
+          <label><span>Add Custom Location</span><input value={customLocationName} onChange={(event) => setCustomLocationName(event.target.value)} placeholder="e.g. Mudroom" /></label>
+          <button type="button" onClick={() => addLocation(customLocationName)}>Add Custom Location</button>
+        </div>
+        {kitchenPantryCopyOpen ? renderKitchenPantryColourModal() : null}
+      </section>
+    );
+  }
+
+  return (
+    <section className="guidedShell cabinetryWorkflow" data-testid="guided-cabinetry-workflow" data-workflow-type={CABINETRY_WORKFLOW_TYPE}>
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedSectionHeader cabinetryBanner" ref={cabinetryTopRef}>
+        <div>
+          <span>CABINETRY / {activeLocation.location.toUpperCase()}</span>
+          <strong>{activeLocation.location} Cabinetry Specification</strong>
+          <p>{activeSchedule.length} schedule row{activeSchedule.length === 1 ? "" : "s"} for this room only.</p>
+        </div>
+        <button type="button" onClick={handleCabinetryBack}>Back</button>
+      </div>
+      {cabinetryNavigationActions("top")}
+      <div className="guidedProductLayout cabinetryLayout">
+        <aside className="guidedProgressMenu cabinetryStepMenu" data-testid="cabinetry-progress-menu">
+          <h2>{activeLocation.location}</h2>
+          {CABINETRY_WORKFLOW_STAGES.map((stage, index) => (
+            <button key={stage} type="button" className={`guidedProgressItem ${index === stageIndex ? "active" : ""}`} onClick={() => navigateCabinetryStage(index)}>
+              <GuidedStatusDot status={cabinetryWorkflowStageStatus(index)} />
+              <span>{index + 1}. {stage}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel cabinetryPanel" ref={cabinetryPanelRef}>
+          {stageIndex === 0 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-location-stage">
+              <div className="cabinetryStageContext"><strong>{activeIsBathroomCabinetry ? "SCOPE" : "Scope"}</strong><span>{activeIsBathroomCabinetry ? `Select the vanity cabinetry required in the ${activeLocation.location}.` : `Enable only the cabinetry areas that exist in ${activeLocation.location}.`}</span></div>
+              {activeIsBathroomCabinetry ? (
+                <CabinetrySelectionList items={BATHROOM_SCOPE_OPTIONS.filter(([key]) => key !== "linenBulkhead" || bathroomScopeHasCabinetry(activeLocation, "tallLinenCupboard")).map(([key, name, description]) => ({
+                  id: key,
+                  name,
+                  description: bathroomScopeHasCabinetry(activeLocation, key) ? "Included in this room" : description,
+                  selected: bathroomScopeHasCabinetry(activeLocation, key),
+                  onToggle: () => toggleBathroomScope(key),
+                }))} />
+              ) : (
+              <CabinetrySelectionList items={CABINETRY_LOCATION_AREA_KEYS.map((areaKey) => {
+                const enabled = activeLocation.enabledAreaKeys?.includes(areaKey);
+                return { id: areaKey, name: CABINETRY_AREA_LABELS[areaKey], description: enabled ? "Included in this room" : "Not required", selected: enabled, onToggle: () => toggleActiveLocationArea(areaKey) };
+              })} />)}
+              <div className="cabinetryInlineEditor"><button type="button" onClick={() => removeLocation(activeLocation.location)}>Remove this room from Cabinetry</button></div>
+            </div>
+          ) : null}
+          {stageIndex === 1 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-builder-schedule">
+              <div className="clientNotice">This schedule defines {activeLocation.location} cabinetry only. Appliance cabinets are openings or panels, not appliance product selections.</div>
+              {activeIsBathroomCabinetry ? (
+                bathroomScheduleGroupsForLocation(activeLocation).length ? bathroomScheduleGroupsForLocation(activeLocation).map((group) => (
+                  <section key={group.title} className="cabinetryScheduleGroup">
+                    <h3>{group.title}</h3>
+                    <CabinetrySelectionList items={group.items.map(([type, label, scopeKey]) => {
+                      if (scopeKey && !bathroomScopeHasCabinetry(activeLocation, scopeKey)) return null;
+                      const item = activeSchedule.find((line) => (line.type || line.unitType) === type);
+                      return {
+                        id: type,
+                        name: label,
+                        description: item ? `Included in this ${activeLocation.location} schedule` : "Not included",
+                        selected: Boolean(item),
+                        onToggle: () => toggleBathroomScheduleLine(type, label),
+                        quantity: item?.quantity ?? 0,
+                        onQuantityChange: (event) => updateBathroomScheduleLine(type, { quantity: Number(event.target.value), handleQuantity: Number(event.target.value) }),
+                        widthValue: item?.width || "",
+                        onWidthChange: (event) => updateBathroomScheduleLine(type, { width: event.target.value }),
+                        notesValue: item?.notes || "",
+                        onNotesChange: (event) => updateBathroomScheduleLine(type, { notes: event.target.value }),
+                      };
+                    }).filter(Boolean)} />
+                  </section>
+                )) : <p className="clientNotice">Select {activeLocation.location} cabinetry in Scope before building the schedule.</p>
+              ) : (
+              <CabinetrySelectionList items={CABINETRY_SCHEDULE_TYPE_OPTIONS.map((type) => {
+                const item = activeSchedule.find((line) => line.unitType === type);
+                return {
+                  id: type,
+                  name: type,
+                  description: item ? "Included in this room schedule" : "Not included",
+                  selected: Boolean(item),
+                  onToggle: () => item ? removeScheduleLine(item.componentId) : addScheduleLine(type),
+                  quantity: item?.quantity ?? 0,
+                  onQuantityChange: (event) => item ? updateScheduleLine(item.componentId, { quantity: Number(event.target.value), handleQuantity: Number(event.target.value) }) : addScheduleLine(type),
+                  notesValue: item?.notes || "",
+                  onNotesChange: (event) => item ? updateScheduleLine(item.componentId, { notes: event.target.value }) : addScheduleLine(type),
+                  actions: item ? <button type="button" className="cabinetrySelectionReset" onClick={(event) => { event.preventDefault(); removeScheduleLine(item.componentId); }}>Reset</button> : null,
+                };
+              })} />)}
+            </div>
+          ) : null}
+          {stageIndex === 2 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-material-stage">
+              <CabinetrySelectionList items={CABINETRY_MATERIAL_OPTIONS.map((item) => ({
+                id: item,
+                name: item,
+                description: item === "Standard colourboard" ? "Laminex or Polytec cabinetry-compatible colourboard" : "Supplier quote fields available",
+                selected: activeLocation.doorMaterialGroup === item,
+                onToggle: () => updateLocation(activeLocation.location, { doorMaterialGroup: item, doorAndPanelSelections: { material: item } }),
+              }))} />
+              {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="alert">{cabinetrySelectionMessage}</p> : null}
+              <CabinetrySelectionList items={activeCabinetryAreaKeys.map((areaKey) => ({
+                id: areaKey,
+                name: CABINETRY_AREA_LABELS[areaKey],
+                description: activeLocation.areaSelections?.[areaKey] ? `Current colour: ${cabinetryAreaAssignmentText(areaKey)}` : "Colour not selected.",
+                selected: Boolean(activeLocation.enabledAreaKeys?.includes(areaKey)),
+                onToggle: () => toggleActiveLocationArea(areaKey),
+              }))} />
+            </div>
+          ) : null}
+          {stageIndex === 3 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-colour-selector">
+              <div className="cabinetryStageContext"><strong>{activeLocation.doorMaterialGroup}</strong><span>Supplier, product range, colour, finish, swatch and price status.</span></div>
+              {activeLocation.location === "Kitchen" && kitchenHasSelections() ? <button type="button" className="cabinetryCopyPantryButton" onClick={openKitchenPantryCopyModal}>Apply Kitchen Colours to Butler's Pantry</button> : null}
+              <section className="cabinetryApplyPanel" data-testid="cabinetry-apply-colour-to">
+                <div className="cabinetryStageContext"><strong>Apply colour to</strong><span>Choose one or more enabled cabinetry areas before selecting a catalogue colour.</span></div>
+                <CabinetrySelectionList items={(activeLocation.enabledAreaKeys?.length ? activeLocation.enabledAreaKeys.filter((areaKey) => activeCabinetryAreaKeys.includes(areaKey)) : activeCabinetryAreaKeys).map((areaKey) => ({
+                  id: areaKey,
+                  name: CABINETRY_AREA_LABELS[areaKey],
+                  description: cabinetryAreaAssignmentText(areaKey),
+                  selected: activeColourTargetKeys.includes(areaKey),
+                  onToggle: () => toggleCabinetryApplyArea(areaKey),
+                }))} />
+                {activeLocation.enabledAreaKeys?.includes("bulkheads") ? (
+                  <div className="bulkheadFinishPanel" data-testid="cabinetry-bulkhead-finish-options">
+                    <strong>Bulkhead finish</strong>
+                    <CabinetrySelectionList items={[
+                      ["raw_mdf_wall_paint", "Raw MDF - painted to match walls", "Links this bulkhead finish to the room's internal wall paint selection."],
+                      ["raw_mdf_ceiling_paint", "Raw MDF - painted to match ceiling", "Links this bulkhead finish to the room's ceiling paint selection."],
+                      ["raw_mdf_custom_paint", "Raw MDF - custom paint colour", "Record paint brand, range, colour, code and sheen."],
+                      ["laminex_colour", "Laminex decorative board", "Use the Laminex decorative board catalogue below."],
+                      ["polytec_colour", "Polytec decorative board", "Use the Polytec decorative board catalogue below."],
+                      ["match_overheads", "Match overhead cabinetry", "Link bulkheads to the overhead cabinetry selection."],
+                      ["other_custom", "Other/custom", "Record a non-standard bulkhead finish for builder confirmation."],
+                    ].map(([id, name, description]) => ({
+                      id,
+                      name,
+                      description,
+                      selected: (activeLocation.bulkheadFinishMode || activeLocation.coloursAndFinishes?.bulkheadFinishMode || activeLocation.areaSelections?.bulkheads?.finishMode || "") === id,
+                      onToggle: () => updateBulkheadFinishMode(id),
+                    }))} />
+                    {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_wall_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.bulkheads, cabinetryLinkedPaintSelection("wall"))}</p> : null}
+                    {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_ceiling_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.bulkheads, cabinetryLinkedPaintSelection("ceiling"))}</p> : null}
+                    {activeLocation.areaSelections?.bulkheads?.finishMode === "raw_mdf_custom_paint" ? (
+                      <div className="cabinetryCustomFields" data-testid="cabinetry-bulkhead-custom-paint-fields">
+                        <label><span>Paint brand</span><input value={activeLocation.areaSelections.bulkheads.paintBrand || ""} onChange={(event) => updateBulkheadCustomPaint("paintBrand", event.target.value)} /></label>
+                        <label><span>Paint range</span><input value={activeLocation.areaSelections.bulkheads.paintRange || ""} onChange={(event) => updateBulkheadCustomPaint("paintRange", event.target.value)} /></label>
+                        <label><span>Colour name</span><input value={activeLocation.areaSelections.bulkheads.paintColourName || ""} onChange={(event) => updateBulkheadCustomPaint("paintColourName", event.target.value)} /></label>
+                        <label><span>Colour code</span><input value={activeLocation.areaSelections.bulkheads.paintColourCode || ""} onChange={(event) => updateBulkheadCustomPaint("paintColourCode", event.target.value)} /></label>
+                        <label><span>Finish / sheen</span><input value={activeLocation.areaSelections.bulkheads.paintSheen || ""} onChange={(event) => updateBulkheadCustomPaint("paintSheen", event.target.value)} /></label>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                {activeLocation.enabledAreaKeys?.includes("linenBulkhead") ? (
+                  <div className="bulkheadFinishPanel" data-testid="cabinetry-bathroom-linen-bulkhead-finish-options">
+                    <strong>Bulkhead over tall cupboard</strong>
+                    <CabinetrySelectionList items={[
+                      ["no_bulkhead", "No bulkhead", `Remove the bulkhead finish from this ${activeLocation.location}.`],
+                      ["raw_mdf_wall_paint", "Raw MDF - painted to match walls", `Links this bulkhead to the ${activeLocation.location} wall paint selection.`],
+                      ["raw_mdf_ceiling_paint", "Raw MDF - painted to match ceiling", `Links this bulkhead to the ${activeLocation.location} ceiling paint selection.`],
+                      ["match_tall_linen", "Match tall linen cupboard", "Use the tall linen cupboard cabinetry finish."],
+                      ["other_custom", "Other/custom", "Record a non-standard bulkhead finish for builder confirmation."],
+                    ].map(([id, name, description]) => ({
+                      id,
+                      name,
+                      description,
+                      selected: (activeLocation.bathroomLinenBulkheadMode || activeLocation.areaSelections?.linenBulkhead?.finishMode || "") === id,
+                      onToggle: () => updateBathroomLinenBulkheadMode(id),
+                    }))} />
+                    {activeLocation.areaSelections?.linenBulkhead?.finishMode === "raw_mdf_wall_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.linenBulkhead, cabinetryLinkedPaintSelection("wall"))}</p> : null}
+                    {activeLocation.areaSelections?.linenBulkhead?.finishMode === "raw_mdf_ceiling_paint" ? <p className="cabinetrySelectionMessage" role="status">{cabinetryAreaColourFinishText(activeLocation.areaSelections.linenBulkhead, cabinetryLinkedPaintSelection("ceiling"))}</p> : null}
+                  </div>
+                ) : null}
+                {activeLocation.enabledAreaKeys?.includes("kickPanels") ? (
+                  <div className="bulkheadFinishPanel" data-testid="cabinetry-kick-panel-finish-options">
+                    <strong>Kick-panel finish</strong>
+                    <CabinetrySelectionList items={[
+                      ["brushed_aluminium", "Brushed aluminium", "Save aluminium kick panels directly without a board colour."],
+                      ["stainless_steel_look", "Stainless-steel look", "Save a stainless-look metal kick-panel finish."],
+                      ["black_aluminium", "Black aluminium", "Save black aluminium kick panels directly."],
+                      ["laminex_colour", "Laminex colour", "Use the Laminex decorative board catalogue below."],
+                      ["polytec_colour", "Polytec colour", "Use the Polytec decorative board catalogue below."],
+                      ["match_cabinet_doors", "Match cabinet doors", "Link kick panels to the cabinet-door colour selection."],
+                      ["other_custom", "Other/custom", "Record a non-standard kick-panel finish for builder confirmation."],
+                    ].map(([id, name, description]) => ({
+                      id,
+                      name,
+                      description,
+                      selected: (activeLocation.kickPanelFinishMode || activeLocation.coloursAndFinishes?.kickPanelFinishMode || activeLocation.areaSelections?.kickPanels?.finishMode || "") === id,
+                      onToggle: () => updateKickPanelFinishMode(id),
+                    }))} />
+                    {["brushed_aluminium", "stainless_steel_look", "black_aluminium"].includes(activeLocation.areaSelections?.kickPanels?.finishMode) ? (
+                      <div className="cabinetryCustomFields" data-testid="cabinetry-kick-panel-metal-fields">
+                        <label><span>Price status</span><select value={activeLocation.areaSelections.kickPanels.priceStatus || "included"} onChange={(event) => updateKickPanelField("priceStatus", event.target.value)}><option value="included">Included</option><option value="upgrade">Upgrade</option><option value="supplier_quote_required">Supplier quote required</option></select></label>
+                        <label><span>Supplier</span><input value={activeLocation.areaSelections.kickPanels.supplier || ""} onChange={(event) => updateKickPanelField("supplier", event.target.value)} placeholder="Not specified" /></label>
+                        <label><span>Height mm</span><input type="number" min="0" value={activeLocation.areaSelections.kickPanels.heightMm || ""} onChange={(event) => updateKickPanelField("heightMm", event.target.value)} /></label>
+                        <label><span>Notes</span><input value={activeLocation.areaSelections.kickPanels.notes || ""} onChange={(event) => updateKickPanelField("notes", event.target.value)} /></label>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </section>
+              <section className="cabinetryAreaSummary" data-testid="cabinetry-area-colour-summary">
+                <h3>Current colour summary</h3>
+                <div role="table" className="cabinetryAreaSummaryTable">
+                  <div role="row"><strong>Cabinetry area</strong><strong>Material</strong><strong>Colour/finish</strong><strong>Supplier</strong><strong>Change</strong></div>
+                  {activeCabinetryAreaKeys.map((areaKey) => {
+                    const record = cabinetryAreaAssignment(areaKey);
+                    const linkedPaint = ["bulkheads", "linenBulkhead"].includes(areaKey) && record?.finishMode === "raw_mdf_wall_paint" ? cabinetryLinkedPaintSelection("wall") : ["bulkheads", "linenBulkhead"].includes(areaKey) && record?.finishMode === "raw_mdf_ceiling_paint" ? cabinetryLinkedPaintSelection("ceiling") : null;
+                    return <div key={areaKey} role="row"><span>{CABINETRY_AREA_LABELS[areaKey]}</span><span>{cabinetryAreaMaterialText(record)}</span><span>{cabinetryAreaColourFinishText(record, linkedPaint)}</span><span>{cabinetryAreaSupplierText(record)}</span><span className="cabinetrySummaryActions">{activeIsBathroomCabinetry && !record ? <><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_floor_vanity")}>Match floor vanity</button><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_wall_vanity")}>Match wall vanity</button><button type="button" onClick={() => toggleBathroomColourShortcut(areaKey, "match_tall_linen")}>Match tall linen</button></> : null}<button type="button" onClick={() => selectCabinetryApplyAreaOnly(areaKey)}>{record ? "Change" : "Select"}</button></span></div>;
+                  })}
+                </div>
+                {incompleteColourAreaKeys.length ? <p className="cabinetrySelectionMessage" role="status">Incomplete areas: {incompleteColourAreaKeys.map((areaKey) => CABINETRY_AREA_LABELS[areaKey]).join(", ")}</p> : null}
+              </section>
+              {showCabinetryColourCatalogue ? <div className="cabinetrySupplierButtons" data-testid="cabinetry-supplier-buttons">{["Laminex", "Polytec"].map((supplier) => {
+                const selected = activeLocation.supplier === supplier;
+                return <button key={supplier} type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => updateLocation(activeLocation.location, { supplier, coloursAndFinishes: { ...(activeLocation.coloursAndFinishes || {}), supplier } })}><span>{selected ? "Selected" : "Supplier"}</span><strong>{supplier}</strong></button>;
+              })}</div> : null}
+              {showCabinetryColourCatalogue ? (() => {
+                const supplierConfig = CABINETRY_SUPPLIER_CONFIG[activeLocation.supplier] || CABINETRY_SUPPLIER_CONFIG.Polytec;
+                return <div className="cabinetrySupplierWebsite"><a href={supplierConfig.url} target="_blank" rel="noopener noreferrer">{supplierConfig.label}</a></div>;
+              })() : null}
+              {showCabinetryColourCatalogue ? (
+                <>
+                  <div className="cabinetryCatalogueToolbar" data-testid="cabinetry-colour-filters">
+                    <label><span>Search</span><input value={cabinetryColourSearch} onChange={(event) => setCabinetryColourSearch(event.target.value)} placeholder="Search by colour, range or finish" /></label>
+                    <label><span>Colour family</span><select value={cabinetryFamilyFilter} onChange={(event) => setCabinetryFamilyFilter(event.target.value)}><option>All</option>{cabinetryUniqueValues(activeColourRecords.map((record) => record.colourFamily)).map((family) => <option key={family}>{family}</option>)}</select></label>
+                    <label><span>Product range</span><select value={cabinetryRangeFilter} onChange={(event) => { setCabinetryRangeFilter(event.target.value); setCabinetryFinishFilter("All"); }}><option>All</option>{cabinetryRanges.map((range) => <option key={range}>{range}</option>)}</select></label>
+                    <label><span>Finish</span><select value={cabinetryFinishFilter} onChange={(event) => setCabinetryFinishFilter(event.target.value)}><option>All</option>{cabinetryFinishes.map((finish) => <option key={finish}>{finish}</option>)}</select></label>
+                    <label><span>Pricing</span><select value={cabinetryPricingFilter} onChange={(event) => setCabinetryPricingFilter(event.target.value)}><option>All</option>{["Included", "Upgrade", "Supplier quote required", "Price pending"].map((status) => <option key={status}>{status}</option>)}</select></label>
+                    <button type="button" onClick={clearCabinetryFilters}>Clear Filters</button>
+                    <strong>{activeLocation.supplier === "Laminex" ? `${cabinetryColourGroups.length} Laminex colours available for cabinetry` : `${cabinetryColourGroups.length} Polytec colours available for cabinetry`}</strong>
+                  </div>
+                  <div ref={cabinetryCatalogueRef} />
+                  {cabinetryRecentRecords.length ? <div className="cabinetryRecentStrip" data-testid="cabinetry-recent-colours"><strong>Recently used project colours</strong>{cabinetryRecentRecords.map((record) => <button key={record.id} type="button" onClick={() => handleSelectCabinetryColour(record.supplier, record)}>{record.swatchThumbnail || record.swatchImage ? <CabinetrySwatchImage src={record.swatchThumbnail || record.swatchImage} alt="" compact /> : null}<span>{record.colourName}</span><small>{record.productRange || record.productFamily} / {record.finish}</small></button>)}</div> : null}
+                  {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="alert">{cabinetrySelectionMessage}</p> : null}
+                  <div className="cabinetrySwatchGrid cabinetryColourCardGrid" data-testid="cabinetry-swatch-grid">{visibleCabinetryColourGroups.map((group) => {
+                    const selected = group.records.some((record) => selectedCabinetryRecordIds.has(record.id));
+                    return (
+                      <article key={group.key} className={`cabinetryColourCard ${selected ? "selected" : ""}`} data-colour-name={group.colourName} data-supplier={group.supplier} role="button" tabIndex={0} onClick={(event) => { if (event.target.closest("button,a")) return; selectCabinetryColourGroup(group); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectCabinetryColourGroup(group); } }}>
+                        <button type="button" className="cabinetrySwatchButton" onClick={() => selectCabinetryColourGroup(group)}>{group.swatchImage ? <CabinetrySwatchImage src={group.swatchImage} alt={`${group.supplier} ${group.colourName} swatch`} /> : <span>Official swatch unavailable locally</span>}</button>
+                        {selected ? <b>Selected</b> : null}
+                        <div className="cabinetryColourCardBody">
+                          <span>{group.supplier}</span>
+                          <strong>{group.colourName}</strong>
+                          <small>{group.colourFamily || "Colour family pending"}</small>
+                          <em>{group.finishes.length === 1 ? group.finishes[0] : `${group.finishes.length} compatible finishes`} / {group.ranges.join(", ")}</em>
+                          <i>{group.priceStatuses.join(", ")}</i>
+                          <div className="cabinetryColourActions"><button type="button" onClick={() => setCabinetryInspectRecord(group.primary)}>View Details</button><button type="button" className="primary" onClick={() => selectCabinetryColourGroup(group)}>Select Colour</button></div>
+                        </div>
+                      </article>
+                    );
+                  })}</div>
+                  {visibleCabinetryColourGroups.length < cabinetryColourGroups.length ? <button type="button" className="cabinetryLoadMore" onClick={() => setCabinetryVisibleColourCount((count) => count + CABINETRY_COLOUR_PAGE_SIZE)}>Load more colours ({visibleCabinetryColourGroups.length} of {cabinetryColourGroups.length})</button> : null}
+                  {pendingCabinetryGroup ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-colour-selection-modal"><section className="cabinetrySelectionComposer cabinetrySelectionModal" data-testid="cabinetry-finish-selector"><button type="button" className="cabinetryInspectClose" aria-label="Cancel colour selection" onClick={() => { setPendingCabinetryColourKey(""); setPendingCabinetryRecordId(""); setCabinetrySelectionMessage(""); }}>Cancel</button>{pendingCabinetryGroup.swatchImage ? <CabinetrySwatchImage src={pendingCabinetryGroup.swatchImage} alt={`${pendingCabinetryGroup.supplier} ${pendingCabinetryGroup.colourName} swatch`} /> : <div className="cabinetrySwatchUnavailable">Swatch unavailable</div>}<div><span>{pendingCabinetryGroup.supplier}</span><h3>{pendingCabinetryGroup.colourName}</h3><p>{cabinetrySelectionMessage || "Choose where this colour will be used."}</p><dl><div><dt>Supplier</dt><dd>{pendingCabinetryGroup.supplier}</dd></div><div><dt>Colour</dt><dd>{pendingCabinetryGroup.colourName}</dd></div><div><dt>Family</dt><dd>{pendingCabinetryGroup.colourFamily || "Not classified"}</dd></div><div><dt>Price status</dt><dd>{pendingCabinetryGroup.priceStatuses.join(", ")}</dd></div></dl><CabinetrySelectionList items={pendingCabinetryGroup.records.map((record) => ({
+                    id: record.id,
+                    name: `${record.productRange || record.productFamily} / ${record.finish}`,
+                    description: `${record.application || "Cabinetry door/panel"} / ${cabinetryPriceStatusLabel(record.priceStatus)}`,
+                    selected: pendingCabinetryRecordId === record.id,
+                    onToggle: () => setPendingCabinetryRecordId(record.id),
+                  }))} /><div className="cabinetryModalAreaList"><strong>Apply {pendingCabinetryGroup.supplier} {pendingCabinetryGroup.colourName} to:</strong><CabinetrySelectionList items={cabinetryColourTargetOptionKeys(activeLocation, activeColourTargetKeys, activeCabinetryAreaKeys).map((areaKey) => ({
+                    id: areaKey,
+                    name: CABINETRY_AREA_LABELS[areaKey],
+                    description: activeColourTargetKeys.includes(areaKey) ? "This area will receive this colour" : "Leave this area unchanged",
+                    selected: activeColourTargetKeys.includes(areaKey),
+                    onToggle: () => toggleCabinetryApplyArea(areaKey),
+                  }))} /></div><div className="cabinetryColourActions"><button type="button" onClick={() => { setPendingCabinetryColourKey(""); setPendingCabinetryRecordId(""); setCabinetrySelectionMessage(""); }}>Cancel</button><button type="button" className="primary" disabled={!pendingCabinetryRecord} onClick={() => applyCabinetryRecordToAreas(pendingCabinetryRecord)}>Apply Colour</button></div></div></section></div> : null}
+                  {mainColour ? <section className="cabinetryAppliedSummary" data-testid="cabinetry-applied-summary"><h3>Current selected colour</h3><dl><div><dt>Supplier</dt><dd>{mainColour.supplier || activeLocation.supplier}</dd></div><div><dt>Colour</dt><dd>{mainColour.colourName}</dd></div><div><dt>Family</dt><dd>{mainColour.colourFamily || "Not classified"}</dd></div><div><dt>Range</dt><dd>{mainColour.productRange || mainColour.productFamily || activeLocation.productRange}</dd></div><div><dt>Finish</dt><dd>{mainColour.finish || "Not selected"}</dd></div><div><dt>Applied to</dt><dd>{Object.entries(activeLocation.areaSelections || {}).filter(([, record]) => record?.id === mainColour.id).map(([key]) => CABINETRY_AREA_LABELS[key]).join(", ") || "Lower base-unit doors"}</dd></div><div><dt>Room</dt><dd>{activeLocation.location}</dd></div><div><dt>Price status</dt><dd>{cabinetryPriceStatusLabel(mainColour.priceStatus)}</dd></div></dl><div className="cabinetryColourActions"><button type="button" onClick={() => setPendingCabinetryColourKey(cabinetryColourKey(mainColour))}>Change Colour</button><button type="button" onClick={() => setCabinetryInspectRecord(mainColour)}>Inspect</button>{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier] ? <a href={CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].url} target="_blank" rel="noopener noreferrer">{CABINETRY_SUPPLIER_CONFIG[mainColour.supplier || activeLocation.supplier].label}</a> : null}</div></section> : null}
+                  {cabinetryInspectRecord ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="cabinetry-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setCabinetryInspectRecord(null); }}><section className="cabinetryInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setCabinetryInspectRecord(null)}>Close</button>{cabinetryInspectRecord.fullSheetImage || cabinetryInspectRecord.swatchImage || cabinetryInspectRecord.swatchThumbnail ? <CabinetrySwatchImage src={cabinetryInspectRecord.fullSheetImage || cabinetryInspectRecord.swatchImage || cabinetryInspectRecord.swatchThumbnail} alt={`${cabinetryInspectRecord.supplier} ${cabinetryInspectRecord.colourName} large swatch`} /> : <div className="cabinetrySwatchUnavailable">Official swatch unavailable locally</div>}<div><span>{cabinetryInspectRecord.supplier}</span><h3>{cabinetryInspectRecord.colourName}</h3><dl><div><dt>Colour family</dt><dd>{cabinetryInspectRecord.colourFamily}</dd></div><div><dt>Product range</dt><dd>{cabinetryInspectRecord.productRange || cabinetryInspectRecord.productFamily}</dd></div><div><dt>Available finishes</dt><dd>{activeColourRecords.filter((record) => cabinetryColourKey(record) === cabinetryColourKey(cabinetryInspectRecord)).map((record) => record.finish).filter((value, index, array) => array.indexOf(value) === index).join(", ")}</dd></div><div><dt>Applications</dt><dd>{cabinetryInspectRecord.application}</dd></div><div><dt>Pricing</dt><dd>{cabinetryPriceStatusLabel(cabinetryInspectRecord.priceStatus)}</dd></div><div><dt>Availability</dt><dd>{cabinetryInspectRecord.availabilityStatus || cabinetryInspectRecord.status}</dd></div><div><dt>Verified</dt><dd>{cabinetryInspectRecord.verifiedAt || cabinetryInspectRecord.lastVerifiedDate}</dd></div></dl><p>On-screen colours are indicative only. Confirm final selections against physical {cabinetryInspectRecord.supplier || "supplier"} samples and the current supplier availability guide.</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { applyCabinetryRecordToAreas(cabinetryInspectRecord); setCabinetryInspectRecord(null); }}>Select This Colour</button>{cabinetryInspectRecord.officialProductUrl || cabinetryInspectRecord.sourceUrl ? <a href={cabinetryInspectRecord.officialProductUrl || cabinetryInspectRecord.sourceUrl} target="_blank" rel="noopener noreferrer">Visit Official Colour</a> : null}</div></div></section></div> : null}
+                </>
+              ) : activeLocation.doorMaterialGroup === "Standard colourboard" ? <p className="cabinetrySelectionMessage" role="status">Select an area that requires a Laminex or Polytec colour to open the catalogue.</p> : <div className="cabinetryCustomFields"><label><span>Supplier</span><input value={activeLocation.customSupplier || ""} onChange={(event) => updateLocation(activeLocation.location, { customSupplier: event.target.value })} /></label><label><span>Product range</span><input value={activeLocation.customRange || ""} onChange={(event) => updateLocation(activeLocation.location, { customRange: event.target.value })} /></label><label><span>Colour</span><input value={activeLocation.customColour || ""} onChange={(event) => updateLocation(activeLocation.location, { customColour: event.target.value })} /></label><label><span>Finish</span><input value={activeLocation.customFinish || ""} onChange={(event) => updateLocation(activeLocation.location, { customFinish: event.target.value })} /></label></div>}
+            </div>
+          ) : null}
+          {stageIndex === 4 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-benchtop-stage">
+              {activeIsBathroomCabinetry ? renderBathroomBenchtops() : (
+              <>
+              <div data-testid="stone-material-choice">
+                <CabinetrySelectionList items={["Laminated benchtop", STONE_BENCHTOP_MATERIAL_LABEL, "Other/custom"].map((choice) => {
+                  const value = choice === STONE_BENCHTOP_MATERIAL_LABEL ? "stone" : choice === "Other/custom" ? "custom" : "laminate";
+                  return { id: value, name: choice, description: value === "stone" ? "Open the multi-supplier stone, porcelain and sintered catalogue" : "Configure this room's benchtop type", selected: benchtopMaterialChoice === value, onToggle: () => setBenchtopMaterialChoice(value) };
+                })} />
+              </div>
+              {benchtopMaterialChoice === "laminate" ? <CabinetrySelectionList items={CABINETRY_BENCHTOPS.filter((bench) => bench.category === "Laminated").map((bench) => ({
+                id: bench.id,
+                name: `${bench.supplier} ${bench.category}`,
+                description: `${bench.range} / ${bench.colour} / ${bench.finish || "Finish to confirm"} / ${bench.thickness}`,
+                selected: activeLocation.benchtop?.id === bench.id,
+                onToggle: () => updateLocation(activeLocation.location, { benchtop: bench, benchtops: bench }),
+              }))} /> : null}
+              {benchtopMaterialChoice === "custom" ? <div className="cabinetryCustomFields"><label><span>Supplier</span><input value={activeLocation.benchtop?.supplier || ""} onChange={(event) => updateLocation(activeLocation.location, { benchtop: { ...(activeLocation.benchtop || {}), supplier: event.target.value, materialChoice: "custom" } })} /></label><label><span>Product/range</span><input value={activeLocation.benchtop?.range || ""} onChange={(event) => updateLocation(activeLocation.location, { benchtop: { ...(activeLocation.benchtop || {}), range: event.target.value, materialChoice: "custom" } })} /></label><label><span>Notes</span><input value={activeLocation.notes || ""} onChange={(event) => updateLocation(activeLocation.location, { notes: event.target.value })} /></label></div> : null}
+              {benchtopMaterialChoice === "stone" ? (
+                <div className="stoneBenchtopSelector" data-testid="stone-benchtop-selector">
+                  <div className="cabinetrySupplierButtons stoneSupplierButtons" data-testid="stone-supplier-buttons">{STONE_BENCHTOP_SUPPLIERS.map((supplier) => <button key={supplier} type="button" aria-pressed={stoneSupplierFilter === supplier} className={stoneSupplierFilter === supplier ? "selected" : ""} onClick={() => setStoneSupplierFilter(supplier)}><strong>{supplier}</strong><span>{activeStoneProducts.filter((product) => product.supplier === supplier).length} active</span></button>)}</div>
+                  <div className="cabinetryCatalogueToolbar stoneFilters" data-testid="stone-benchtop-filters">
+                    <label><span>Search</span><input value={stoneSearch} onChange={(event) => setStoneSearch(event.target.value)} placeholder="Colour, product code or collection" /></label>
+                    <label><span>Collection/range</span><select value={stoneCollectionFilter} onChange={(event) => setStoneCollectionFilter(event.target.value)}><option>All</option>{stoneCollections.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Material type</span><select value={stoneMaterialFilter} onChange={(event) => setStoneMaterialFilter(event.target.value)}><option>All</option>{stoneMaterialTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Colour family</span><select value={stoneColourFilter} onChange={(event) => setStoneColourFilter(event.target.value)}><option>All</option>{stoneColourFamilies.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Veins</span><select value={stonePatternFilter} onChange={(event) => setStonePatternFilter(event.target.value)}><option>All</option>{stonePatternTypes.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Finish</span><select value={stoneFinishFilter} onChange={(event) => setStoneFinishFilter(event.target.value)}><option>All</option>{stoneFinishes.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Actual slab thickness</span><select value={stoneThicknessFilter} onChange={(event) => setStoneThicknessFilter(event.target.value)}><option>All</option>{stoneThicknesses.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Price group/category</span><select value={stonePriceGroupFilter} onChange={(event) => setStonePriceGroupFilter(event.target.value)}><option>All</option>{stonePriceGroups.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <label><span>Pricing</span><select value={stonePricingFilter} onChange={(event) => setStonePricingFilter(event.target.value)}><option>All</option>{stonePricingStatuses.map((value) => <option key={value}>{value}</option>)}</select></label>
+                    <button type="button" onClick={clearStoneFilters}>Clear Filters</button><strong>{filteredStoneProducts.length} results</strong>
+                  </div>
+                  <div className="stoneProductGrid" data-testid="stone-product-grid">{filteredStoneProducts.map((product) => {
+                    const selected = activeLocation.benchtop?.productId === product.id || stonePendingProductId === product.id;
+                    const compared = stoneCompareIds.includes(product.id);
+                    return <article key={product.id} className={`stoneProductCard ${selected ? "selected" : ""}`} data-supplier={product.supplier} data-product-code={product.productCode} data-product-name={product.colourName}>{product.primarySwatchImage ? <button type="button" className="stoneProductImageButton" onClick={() => setStoneInspectProduct(product)}><img src={product.primarySwatchImage} alt={`${product.supplier} ${product.colourName} slab swatch`} /></button> : <button type="button" className="stoneSwatchUnavailable" onClick={() => setStoneInspectProduct(product)}>Official slab image unavailable locally</button>}<div className="stoneProductBody"><span>{product.supplier} / {product.productCode}</span><strong>{product.colourName}</strong><small>{product.collection} / {product.materialType}</small><em>{(product.finishOptions || []).join(", ")} / {(product.thicknessOptions || []).join(", ")}</em><i>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)} / {product.availabilityRegion}</i><div className="cabinetryColourActions"><button type="button" onClick={() => setStoneInspectProduct(product)}>View Details</button><button type="button" onClick={() => toggleStoneCompare(product.id)} disabled={!compared && stoneCompareIds.length >= 3}>{compared ? "Remove Compare" : "Compare"}</button><button type="button" className="primary" onClick={() => selectStoneProduct(product)}>Select Surface</button></div>{selected ? <b>Selected</b> : null}</div></article>;
+                  })}</div>
+                  {comparedStoneProducts.length ? <section className="stoneComparison" data-testid="stone-benchtop-comparison"><h3>Compare surfaces</h3><div>{comparedStoneProducts.map((product) => <article key={product.id}>{product.primarySwatchImage ? <img src={product.primarySwatchImage} alt={`${product.colourName} comparison swatch`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<strong>{product.supplier} {product.colourName}</strong><dl><div><dt>Code</dt><dd>{product.productCode}</dd></div><div><dt>Collection</dt><dd>{product.collection}</dd></div><div><dt>Material</dt><dd>{product.materialType}</dd></div><div><dt>Finish</dt><dd>{product.finishOptions.join(", ")}</dd></div><div><dt>Thickness</dt><dd>{product.thicknessOptions.join(", ")}</dd></div><div><dt>Slab</dt><dd>{product.slabSizes.join(", ")}</dd></div><div><dt>Pattern</dt><dd>{product.patternType}</dd></div><div><dt>Indoor/outdoor</dt><dd>{String(product.indoorSuitable)} / {String(product.outdoorSuitable)}</dd></div><div><dt>Price</dt><dd>{product.priceGroup || cabinetryPriceStatusLabel(product.priceStatus)}</dd></div></dl></article>)}</div></section> : null}
+                  {pendingStoneProduct ? <section className="stoneSelectionComposer" data-testid="stone-benchtop-configurator"><h3>{pendingStoneProduct.supplier} {pendingStoneProduct.colourName}</h3><div className="cabinetryCustomFields"><label><span>Application</span><select value={stoneConfig.application} onChange={(event) => updateStoneConfig({ application: event.target.value })}>{STONE_BENCHTOP_APPLICATIONS.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Selected finish</span><select value={stoneConfig.finish} onChange={(event) => updateStoneConfig({ finish: event.target.value })}>{pendingStoneProduct.finishOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Actual slab thickness</span><select value={stoneConfig.slabThickness} onChange={(event) => updateStoneConfig({ slabThickness: event.target.value })}>{pendingStoneProduct.thicknessOptions.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Finished edge thickness</span><input value={stoneConfig.finishedEdgeThickness} onChange={(event) => updateStoneConfig({ finishedEdgeThickness: event.target.value })} placeholder="e.g. 40 mm mitred edge" /></label><label><span>Edge profile</span><select value={stoneConfig.edgeProfile} onChange={(event) => updateStoneConfig({ edgeProfile: event.target.value })}>{STONE_BENCHTOP_EDGE_PROFILES.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Waterfall ends</span><select value={stoneConfig.waterfallEnds} onChange={(event) => updateStoneConfig({ waterfallEnds: event.target.value })}>{WATERFALL_END_OPTIONS.map((value) => <option key={value}>{value}</option>)}</select></label><label><span>Upstand height</span><input value={stoneConfig.upstand} onChange={(event) => updateStoneConfig({ upstand: event.target.value })} placeholder="e.g. none, 100 mm" /></label><label><span>Approx. area / dimensions</span><input value={stoneConfig.dimensions} onChange={(event) => updateStoneConfig({ dimensions: event.target.value })} placeholder="e.g. 3.2m x 0.9m island" /></label><label><span>Approx. sqm</span><input type="number" min="0" step="0.1" value={stoneConfig.approximateAreaSqm} onChange={(event) => updateStoneConfig({ approximateAreaSqm: event.target.value })} /></label><label><span>Notes</span><input value={stoneConfig.notes} onChange={(event) => updateStoneConfig({ notes: event.target.value })} /></label></div><div className="stoneChecklist">{CUTOUT_OPTIONS.map((value) => <label key={value}><input type="checkbox" checked={(stoneConfig.cutouts || []).includes(value)} onChange={() => toggleStoneCutout(value)} /><span>{value} cut-out</span></label>)}{["templateRequired", "supplierQuoteRequired", "physicalSampleConfirmed", "fullSlabViewed"].map((key) => <label key={key}><input type="checkbox" checked={Boolean(stoneConfig[key])} onChange={(event) => updateStoneConfig({ [key]: event.target.checked })} /><span>{stoneConfigLabel(key)}</span></label>)}</div><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={applyStoneBenchtopSelection}>Apply to {activeLocation.location}</button>{pendingStoneProduct.officialProductUrl ? <a href={pendingStoneProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></section> : null}
+                  {activeLocation.benchtop?.materialChoice === "stone" ? <section className="stoneAppliedSummary" data-testid="stone-benchtop-applied-summary"><h3>Completed benchtop specification</h3><dl><div><dt>Supplier</dt><dd>{activeLocation.benchtop.supplier}</dd></div><div><dt>Product</dt><dd>{activeLocation.benchtop.productCode} {activeLocation.benchtop.colourName}</dd></div><div><dt>Collection</dt><dd>{activeLocation.benchtop.collection}</dd></div><div><dt>Material</dt><dd>{activeLocation.benchtop.materialType}</dd></div><div><dt>Finish</dt><dd>{activeLocation.benchtop.finish}</dd></div><div><dt>Actual thickness</dt><dd>{activeLocation.benchtop.slabThickness}</dd></div><div><dt>Finished edge</dt><dd>{activeLocation.benchtop.finishedEdgeThickness}</dd></div><div><dt>Edge profile</dt><dd>{activeLocation.benchtop.edgeProfile}</dd></div><div><dt>Room/application</dt><dd>{activeLocation.location} / {(activeLocation.benchtop.applications || []).join(", ")}</dd></div><div><dt>Waterfall ends</dt><dd>{activeLocation.benchtop.waterfallEnds}</dd></div><div><dt>Cut-outs</dt><dd>{(activeLocation.benchtop.cutouts || []).join(", ") || "None selected"}</dd></div><div><dt>Status</dt><dd>{cabinetryPriceStatusLabel(activeLocation.benchtop.pricingStatus)}</dd></div></dl></section> : null}
+                  {stoneInspectProduct ? <div className="cabinetryInspectOverlay" role="dialog" aria-modal="true" data-testid="stone-benchtop-inspection-modal" onMouseDown={(event) => { if (event.target === event.currentTarget) setStoneInspectProduct(null); }}><section className="cabinetryInspectModal stoneInspectModal"><button type="button" className="cabinetryInspectClose" aria-label="Close inspection" onClick={() => setStoneInspectProduct(null)}>Close</button>{stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage ? <img src={stoneInspectProduct.slabImage || stoneInspectProduct.primarySwatchImage} alt={`${stoneInspectProduct.supplier} ${stoneInspectProduct.colourName} large slab`} /> : <div className="stoneSwatchUnavailable">Official slab image unavailable locally</div>}<div><span>{stoneInspectProduct.supplier}</span><h3>{stoneInspectProduct.productCode} {stoneInspectProduct.colourName}</h3><dl><div><dt>Collection</dt><dd>{stoneInspectProduct.collection}</dd></div><div><dt>Material type</dt><dd>{stoneInspectProduct.materialType}</dd></div><div><dt>Colour/pattern</dt><dd>{stoneInspectProduct.colourFamily} / {stoneInspectProduct.patternType}</dd></div><div><dt>Finish options</dt><dd>{stoneInspectProduct.finishOptions.join(", ")}</dd></div><div><dt>Thickness options</dt><dd>{stoneInspectProduct.thicknessOptions.join(", ")}</dd></div><div><dt>Slab dimensions</dt><dd>{stoneInspectProduct.slabSizes.join(", ")}</dd></div><div><dt>Indoor/outdoor</dt><dd>{String(stoneInspectProduct.indoorSuitable)} / {String(stoneInspectProduct.outdoorSuitable)}</dd></div><div><dt>Bookmatch</dt><dd>{String(stoneInspectProduct.bookmatchAvailable)}</dd></div><div><dt>Through-body veining</dt><dd>{String(stoneInspectProduct.throughBodyVeining)}</dd></div><div><dt>Warranty</dt><dd>{stoneInspectProduct.warrantySummary}</dd></div><div><dt>Availability</dt><dd>{stoneInspectProduct.availabilityRegion}</dd></div><div><dt>Pricing</dt><dd>{stoneInspectProduct.priceGroup || cabinetryPriceStatusLabel(stoneInspectProduct.priceStatus)}</dd></div></dl><p>{STONE_BENCHTOP_DISCLAIMER}</p><div className="cabinetryColourActions"><button type="button" className="primary" onClick={() => { selectStoneProduct(stoneInspectProduct); setStoneInspectProduct(null); }}>Select This Surface</button>{stoneInspectProduct.sampleOrderUrl ? <a href={stoneInspectProduct.sampleOrderUrl} target="_blank" rel="noopener noreferrer">Order Sample</a> : null}{stoneInspectProduct.officialProductUrl ? <a href={stoneInspectProduct.officialProductUrl} target="_blank" rel="noopener noreferrer">Visit Official Website</a> : null}</div></div></section></div> : null}
+                </div>
+              ) : null}
+              </>
+              )}
+            </div>
+          ) : null}
+          {stageIndex === 5 ? (
+            activeIsBathroomCabinetry ? renderBathroomHandles() : (
+            <div className="cabinetryStage" data-testid="cabinetry-handle-house-catalogue">
+              <CabinetrySelectionList items={[...CABINETRY_BASE_HANDLE_OPTIONS.map((option) => ({
+                id: `base-${option}`,
+                name: `Base units: ${option}`,
+                description: option.includes("Handle House") ? "Select a Handle House pull below if required" : "Opening method for base units",
+                selected: activeLocation.handles?.base?.openingMethod === option,
+                onToggle: () => updateLocation(activeLocation.location, { handles: { ...(activeLocation.handles || {}), base: { ...(activeLocation.handles?.base || {}), openingMethod: option, productName: option, priceStatus: option.includes("Handle House") ? "price_pending" : "quote_required" } } }),
+              })), ...CABINETRY_OVERHEAD_HANDLE_OPTIONS.map((option) => ({
+                id: `overhead-${option}`,
+                name: `Overheads: ${option}`,
+                description: "Opening method for overhead cabinetry",
+                selected: activeLocation.handles?.overhead?.openingMethod === option,
+                onToggle: () => updateLocation(activeLocation.location, { handles: { ...(activeLocation.handles || {}), overhead: { ...(activeLocation.handles?.overhead || {}), productName: option, openingMethod: option, productCode: option === "Handleless" ? "HANDLELESS" : "", priceStatus: option === "Handleless" ? "quote_required" : "price_pending" } } }),
+              }))]} />
+              <div className="cabinetryHandleGrid">{HANDLE_HOUSE_BASE_CATALOGUE.map((handle) => <button key={handle.id} type="button" className={activeLocation.handles?.base?.id === handle.id ? "selected" : ""} onClick={() => updateLocation(activeLocation.location, { handles: { ...(activeLocation.handles || {}), base: { ...handle, openingMethod: "Pull handle from Handle House builder range", quantity: activeSchedule.reduce((sum, line) => sum + numberValue(line.handleQuantity), 0) || 1 } } })}>{handle.imageUrl ? <img src={handle.imageUrl} alt={handle.productName} /> : null}<strong>{handle.productName}</strong><span>{handle.productCode}</span><small>{handle.sizes.join(", ")} / {handle.finishes.join(", ")}</small></button>)}</div>
+            </div>
+            )
+          ) : null}
+          {stageIndex === 6 ? (
+            <div className="cabinetryStage" data-testid="cabinetry-feature-stage"><CabinetrySelectionList items={(activeIsBathroomCabinetry ? WET_AREA_CABINETRY_CONFIG.featureOptions : CABINETRY_FEATURE_OPTIONS).map((item) => { const feature = (activeLocation.featureOptions || []).find((entry) => featureOptionName(entry) === item); return {
+              id: item,
+              name: item,
+              description: feature ? "Enabled for this room" : "Not required",
+              selected: Boolean(feature),
+              onToggle: () => feature ? updateLocation(activeLocation.location, { featureOptions: (activeLocation.featureOptions || []).filter((entry) => featureOptionName(entry) !== item) }) : updateFeatureOption(item),
+              quantity: feature?.quantity || 1,
+              onQuantityChange: (event) => updateFeatureOption(item, { quantity: Number(event.target.value) || 1 }),
+              notesValue: feature?.notes || "",
+              onNotesChange: (event) => updateFeatureOption(item, { notes: event.target.value }),
+            }; })} /></div>
+          ) : null}
+          {stageIndex === 7 ? (
+            <div className="cabinetryStage cabinetryReview" data-testid="cabinetry-review-confirm">
+              {activeLocation.location === "Kitchen" && kitchenHasSelections() ? <button type="button" className="cabinetryCopyPantryButton" onClick={openKitchenPantryCopyModal}>Apply Kitchen Colours to Butler's Pantry</button> : null}
+              <div className="cabinetryInlineEditor"><label><span>Copy selections from another room</span><select value={copyFromLocation} onChange={(event) => setCopyFromLocation(event.target.value)}><option value="">Select room</option>{normalisedDraft.locations.filter((location) => location.location !== activeLocation.location).map((location) => <option key={location.location} value={location.location}>{location.location}</option>)}</select></label><button type="button" disabled={!copyFromLocation} onClick={copySelectionsIntoActiveRoom}>Copy selections</button></div>
+              {activeLocation.copiedSelectionsEditable ? <p className="clientNotice">Copied from {activeLocation.copiedFromLocation || "another room"}. These are editable {activeLocation.location} selections.</p> : null}
+              {activeIsBathroomCabinetry ? renderBathroomReviewSummary() : <section className="cabinetryReviewLocation"><h3>{activeLocation.location}</h3><dl><dt>Cabinet areas</dt><dd>{(activeLocation.enabledAreaKeys || []).map((key) => CABINETRY_AREA_LABELS[key]).join(", ") || "Not selected"}</dd><dt>Cabinet schedule and quantities</dt><dd>{activeSchedule.map((line) => `${line.unitType} x ${line.quantity}`).join(", ") || "No rows added"}</dd><dt>Door and panel material</dt><dd>{activeLocation.doorMaterialGroup}</dd><dt>Supplier</dt><dd>{activeLocation.supplier}</dd><dt>Product range</dt><dd>{activeLocation.defaultColour?.productFamily || activeLocation.productRange || activeLocation.customRange || "Not selected"}</dd><dt>Colour</dt><dd>{activeLocation.defaultColour?.colourName || activeLocation.customColour || "Not selected"}</dd><dt>Finish</dt><dd>{activeLocation.defaultColour?.finish || activeLocation.customFinish || "Not selected"}</dd><dt>Benchtop</dt><dd>{activeLocation.benchtop ? `${activeLocation.benchtop.category} / ${activeLocation.benchtop.thickness}` : "Not selected"}</dd><dt>Handles</dt><dd>{activeLocation.handles?.base?.productName || "Not selected"} / {activeLocation.handles?.overhead?.openingMethod || "Not selected"}</dd><dt>Features</dt><dd>{(activeLocation.featureOptions || []).map(featureOptionName).join(", ") || "Not required"}</dd><dt>Status</dt><dd>{activeLocation.status === "complete" || activeLocation.confirmedAt ? "Complete" : "In progress"}</dd></dl></section>}
+              {cabinetrySelectionMessage ? <p className="cabinetrySelectionMessage" role="status">{cabinetrySelectionMessage}</p> : null}
+            </div>
+          ) : null}
+          {cabinetryNavigationActions("bottom")}
+        </main>
+      </div>
+      {showCabinetryBackToTop ? <button type="button" className="cabinetryBackToTop" aria-label="Back to top of cabinetry workflow" onClick={scrollCabinetryToTop}><ArrowUp size={16} aria-hidden="true" />Back to top</button> : null}
+      {kitchenPantryCopyOpen ? renderKitchenPantryColourModal() : null}
+    </section>
+  );
+}
+
+function GuidedCardGrid({ title, cards, selections = new Map(), onOpen }) {
   return (
     <>
       <div className="guidedIntro">
@@ -2927,16 +7217,2579 @@ function GuidedCardGrid({ title, cards, onOpen }) {
         <strong>Choose a selection category.</strong>
       </div>
       <div className="guidedCategoryGrid">
-        {cards.map((card) => (
-          <button key={card.key} type="button" className="guidedImageCard" onClick={() => onOpen(card.key)}>
-            <img src={card.image} alt={card.label} />
-            <span>{card.label}</span>
-            {card.selectedLabel ? <small>Selected: {card.selectedLabel}</small> : null}
-          </button>
-        ))}
+        {cards.map((card) => {
+          const selection = card.requirementKey ? selections.get(card.requirementKey) : null;
+          const status = card.status || (card.requirementKey ? statusForRequirement(card, selection) : "not-started");
+          return (
+            <GuidedImageCard
+              key={card.key}
+              category={card}
+              status={status}
+              selectedLabel={card.selectedLabel}
+              actionLabel={card.actionLabel || (selection ? "Continue" : "Open")}
+              disabled={card.disabled}
+              onOpen={() => onOpen(card.key)}
+            />
+          );
+        })}
       </div>
     </>
   );
+}
+
+function CabinetrySelectionList({ items = [] }) {
+  return (
+    <div className="cabinetrySelectionList">
+      {items.map((item) => (
+        <label key={item.id || item.name} className={`cabinetrySelectionRow ${item.selected ? "selected" : ""} ${item.disabled ? "disabled" : ""}`}>
+          <input type="checkbox" checked={Boolean(item.selected)} disabled={Boolean(item.disabled)} onChange={item.onToggle} />
+          <span className="cabinetrySelectionMain">
+            <strong>{item.name}</strong>
+            {item.description ? <small>{item.description}</small> : null}
+          </span>
+          {item.quantity != null ? <span className="cabinetrySelectionQuantity"><span>Qty</span><input type="number" min="0" value={item.quantity} onChange={item.onQuantityChange} /></span> : null}
+          {item.widthValue != null ? <span className="cabinetrySelectionWidth"><span>Width mm</span><input type="number" min="0" value={item.widthValue} onChange={item.onWidthChange} /></span> : null}
+          {item.notesValue != null ? <span className="cabinetrySelectionNotes"><span>Notes</span><input value={item.notesValue} onChange={item.onNotesChange} /></span> : null}
+          {item.actions || null}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function CabinetryWorkflowActions({ position = "bottom", stageIndex, finalStageIndex, onPrevious, onSave, onNext }) {
+  const isFinal = stageIndex === finalStageIndex;
+  return (
+    <div className={`guidedCompletionActions cabinetryWorkflowActions ${position}`} data-testid={`cabinetry-${position}-workflow-actions`}>
+      <button type="button" onClick={onPrevious} disabled={stageIndex <= 0}>Previous</button>
+      <button type="button" onClick={onSave}>Save Draft</button>
+      <button type="button" className={isFinal ? "primary" : ""} onClick={onNext}>{isFinal ? "Finish Cabinetry" : "Next"}</button>
+    </div>
+  );
+}
+
+function CabinetrySwatchImage({ src, alt, compact = false }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <span className={compact ? "cabinetrySwatchFallback compact" : "cabinetrySwatchFallback"}>Swatch unavailable</span>;
+  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
+}
+
+function cabinetryScrollableElement(element) {
+  let current = element;
+  while (current && current !== document.body && current !== document.documentElement) {
+    const styles = window.getComputedStyle(current);
+    const scrollable = /(auto|scroll)/.test(`${styles.overflowY} ${styles.overflow}`);
+    if (scrollable && current.scrollHeight > current.clientHeight + 20) return current;
+    current = current.parentElement;
+  }
+  return window;
+}
+
+function createSafeCabinetryActiveLocation(location, fallbackName = "") {
+  const source = cabinetryPlainObject(location) ? location : {};
+  const sourceAreaSelections = cabinetryPlainObject(source.areaSelections) ? source.areaSelections : {};
+  const coloursAndFinishes = cabinetryPlainObject(source.coloursAndFinishes) ? source.coloursAndFinishes : {};
+  const colourAreaSelections = cabinetryPlainObject(coloursAndFinishes.areaSelections) ? coloursAndFinishes.areaSelections : {};
+  const defaultColour = cabinetryPlainObject(source.defaultColour)
+    ? source.defaultColour
+    : cabinetryPlainObject(coloursAndFinishes.defaultColour)
+      ? coloursAndFinishes.defaultColour
+      : null;
+  const areaSelections = Object.fromEntries(CABINETRY_AREA_KEYS.map((areaKey) => {
+    const selected = cabinetryPlainObject(sourceAreaSelections[areaKey])
+      ? sourceAreaSelections[areaKey]
+      : cabinetryPlainObject(colourAreaSelections[areaKey])
+        ? colourAreaSelections[areaKey]
+        : areaKey === "bulkheads" && source.bulkheadFinishMode
+          ? createBulkheadFinishRecord(source.bulkheadFinishMode)
+        : areaKey === "kickPanels" && source.kickPanelFinishMode
+            ? createKickPanelFinishRecord(source.kickPanelFinishMode)
+          : areaKey === "linenBulkhead" && source.bathroomLinenBulkheadMode
+            ? createBathroomLinenBulkheadRecord(source.bathroomLinenBulkheadMode)
+            : null;
+    return [areaKey, selected];
+  }));
+  const enabledAreaKeys = Array.isArray(source.enabledAreaKeys)
+    ? source.enabledAreaKeys.filter((areaKey) => CABINETRY_AREA_KEYS.includes(areaKey))
+    : Array.isArray(source.scope)
+      ? source.scope.filter((areaKey) => CABINETRY_AREA_KEYS.includes(areaKey))
+      : [];
+  const supplier = source.supplier || coloursAndFinishes.supplier || defaultColour?.supplier || "Polytec";
+  return {
+    ...source,
+    id: source.id || `cabinetry-${slug(source.location || fallbackName || "room")}`,
+    name: source.name || source.location || fallbackName || "",
+    location: source.location || source.name || fallbackName || "",
+    supplier,
+    productRange: source.productRange || coloursAndFinishes.productRange || defaultColour?.productRange || defaultColour?.productFamily || "",
+    finish: source.finish || coloursAndFinishes.finish || defaultColour?.finish || "",
+    defaultColour,
+    areaSelections,
+    enabledAreaKeys,
+    scope: enabledAreaKeys,
+    bathroomScopeKeys: bathroomScopeKeysForLocation(source),
+    bathroomScope: bathroomScopeKeysForLocation(source),
+    bathroomBenchtops: cabinetryPlainObject(source.bathroomBenchtops) ? source.bathroomBenchtops : {},
+    bathroomHandles: cabinetryPlainObject(source.bathroomHandles) ? source.bathroomHandles : {},
+    coloursAndFinishes: {
+      ...coloursAndFinishes,
+      supplier,
+      areaSelections,
+    },
+  };
+}
+
+function cabinetryPlainObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function isBathroomCabinetryLocation(locationName = "") {
+  return WET_AREA_CABINETRY_ROOM_NAMES.includes(String(locationName || "").trim().toLowerCase());
+}
+
+function bathroomScopeKeysForLocation(location = {}) {
+  if (Array.isArray(location.bathroomScopeKeys)) return location.bathroomScopeKeys.filter(Boolean);
+  if (Array.isArray(location.bathroomScope)) return location.bathroomScope.filter(Boolean);
+  return [];
+}
+
+function bathroomScheduleGroupsForLocation(location = {}) {
+  const scopeKeys = bathroomScopeKeysForLocation(location);
+  return BATHROOM_SCHEDULE_GROUPS.filter((group) => (group.scopeKeys || [group.scopeKey]).some((scopeKey) => scopeKeys.includes(scopeKey)));
+}
+
+function bathroomScheduleSelectedTypes(schedule = []) {
+  return new Set(schedule.map((line) => line.type || line.unitType).filter(Boolean));
+}
+
+function wetAreaScheduleType(line = {}) {
+  return WET_AREA_CABINETRY_SCHEDULE_TYPES.includes(line.type || line.unitType || "");
+}
+
+function wetAreaScheduleTypeAllowedForScope(type = "", scopeKeys = []) {
+  if (!type) return false;
+  const enabledScope = new Set(scopeKeys);
+  for (const group of BATHROOM_SCHEDULE_GROUPS) {
+    for (const [itemType, , itemScopeKey] of group.items) {
+      if (itemType !== type) continue;
+      const requiredScopeKeys = itemScopeKey ? [itemScopeKey] : group.scopeKeys || [group.scopeKey];
+      return requiredScopeKeys.some((scopeKey) => enabledScope.has(scopeKey));
+    }
+  }
+  return false;
+}
+
+function bathroomColourAreaKeysForLocation(location = {}, schedule = []) {
+  const selectedTypes = bathroomScheduleSelectedTypes(schedule);
+  const scopeKeys = bathroomScopeKeysForLocation(location);
+  const keys = BATHROOM_AREA_RULES
+    .filter((rule) => {
+      const scheduleMatch = (rule.schedules || []).some((type) => selectedTypes.has(type));
+      const scopeMatch = (rule.scopeKeys || []).some((key) => scopeKeys.includes(key));
+      return scheduleMatch || scopeMatch;
+    })
+    .map((rule) => rule.key);
+  return keys.length ? keys : BATHROOM_AREA_RULES.filter((rule) => (rule.scopeKeys || []).some((key) => scopeKeys.includes(key))).map((rule) => rule.key);
+}
+
+function cabinetryAreaKeysForLocation(location = {}, schedule = []) {
+  return isBathroomCabinetryLocation(location.location || location.name)
+    ? bathroomColourAreaKeysForLocation(location, schedule)
+    : CABINETRY_LOCATION_AREA_KEYS;
+}
+
+function bathroomScopeHasCabinetry(location = {}, key) {
+  return bathroomScopeKeysForLocation(location).includes(key);
+}
+
+function bathroomBenchtopSelectionText(record = {}) {
+  if (!cabinetryPlainObject(record)) return "Not selected";
+  return [record.materialChoice, record.supplier, record.productRange || record.range, record.colourName || record.colour, record.finish, record.dropFrontDetail].filter(Boolean).join(" / ") || "Not selected";
+}
+
+function bathroomHandleSelectionText(record = {}) {
+  if (!cabinetryPlainObject(record)) return "Not selected";
+  return [record.openingMethod, record.productName, record.productCode, record.selectedFinish, record.notes].filter(Boolean).join(" / ") || "Not selected";
+}
+
+function cabinetryAreaRecordComplete(record) {
+  if (!cabinetryPlainObject(record)) return false;
+  if (record.finishMode && record.finishMode !== "cabinetry_colour") return true;
+  return Boolean(record.id || record.colourId || record.colourName || record.finish || record.productRange || record.productFamily);
+}
+
+function defaultCabinetryAreasForLocation(locationName = "") {
+  const areas = ["lowerDoorsDrawers", "endPanels"];
+  if (/island/i.test(locationName)) areas.push("islandBenchBack");
+  if (/kitchen|pantry|laundry/i.test(locationName)) areas.push("overheadDoors", "kickPanels");
+  if (/kitchen|pantry/i.test(locationName)) areas.push("bulkheads");
+  return areas.filter((key) => CABINETRY_LOCATION_AREA_KEYS.includes(key));
+}
+
+function cabinetryPriceTierLabel(tierKey = "") {
+  const tier = CABINETRY_PRICING_TIERS.find((item) => item.key === tierKey);
+  if (!tier) return "Price pending";
+  if (tier.status === "included") return "Included / standard colourboard";
+  if (tier.status === "upgrade") return "Upgrade range";
+  if (tier.status === "quote_required") return tier.label.includes("Premium") ? "Premium/specialty range - supplier quote required" : "Supplier quote required";
+  return tier.label;
+}
+
+function cabinetryPriceStatusLabel(value = "") {
+  if (/included|standard/i.test(value)) return "Included";
+  if (/upgrade/i.test(value)) return "Upgrade";
+  if (/premium|quote_required|quote required/i.test(value)) return "Supplier quote required";
+  return "Price pending";
+}
+
+function createBulkheadFinishRecord(mode, prior = {}) {
+  if (mode === "raw_mdf_wall_paint") {
+    return {
+      id: "bulkheads-raw-mdf-wall-paint",
+      areaKey: "bulkheads",
+      material: "Raw MDF",
+      finalFinish: "Painted",
+      paintSource: "match_wall_colour",
+      linkedPaintSelection: cabinetryPlainObject(prior.linkedPaintSelection) ? prior.linkedPaintSelection : null,
+      colourName: "Painted to match walls",
+      finish: "Painted to match walls",
+      supplier: "",
+      productRange: "Painted bulkhead",
+      priceStatus: "supplier_quote_required",
+      finishMode: mode,
+      scheduleDescription: "Supply and install Raw MDF bulkheads, prepared and painted to match internal wall colour.",
+      procurementDescription: "Supply and install Raw MDF bulkheads, prepared and painted to match internal wall colour.",
+    };
+  }
+  if (mode === "raw_mdf_ceiling_paint") {
+    return {
+      id: "bulkheads-raw-mdf-ceiling-paint",
+      areaKey: "bulkheads",
+      material: "Raw MDF",
+      finalFinish: "Painted",
+      paintSource: "match_ceiling_colour",
+      linkedPaintSelection: cabinetryPlainObject(prior.linkedPaintSelection) ? prior.linkedPaintSelection : null,
+      colourName: "Painted to match ceiling",
+      finish: "Painted to match ceiling",
+      supplier: "",
+      productRange: "Painted bulkhead",
+      priceStatus: "supplier_quote_required",
+      finishMode: mode,
+      scheduleDescription: "Supply and install Raw MDF bulkheads, prepared and painted to match ceiling colour.",
+      procurementDescription: "Supply and install Raw MDF bulkheads, prepared and painted to match ceiling colour.",
+    };
+  }
+  if (mode === "raw_mdf_custom_paint") {
+    return {
+      id: "bulkheads-raw-mdf-custom-paint",
+      areaKey: "bulkheads",
+      material: "Raw MDF",
+      finalFinish: "Painted",
+      paintSource: "custom_paint_colour",
+      paintBrand: prior.paintBrand || "",
+      paintRange: prior.paintRange || "",
+      paintColourName: prior.paintColourName || "",
+      paintColourCode: prior.paintColourCode || "",
+      paintSheen: prior.paintSheen || "",
+      colourName: prior.paintColourName || "Custom paint colour",
+      finish: prior.paintSheen || "Custom paint finish",
+      supplier: prior.paintBrand || "",
+      productRange: prior.paintRange || "Painted bulkhead",
+      priceStatus: "supplier_quote_required",
+      finishMode: mode,
+      customFinish: [prior.paintBrand, prior.paintRange, prior.paintColourName, prior.paintColourCode, prior.paintSheen].filter(Boolean).join(" "),
+      scheduleDescription: "Supply and install Raw MDF bulkheads, prepared and painted to custom selected paint colour.",
+      procurementDescription: "Supply and install Raw MDF bulkheads, prepared and painted to custom selected paint colour.",
+    };
+  }
+  if (mode === "match_overheads") {
+    return {
+      id: "bulkheads-match-overhead-cabinetry",
+      areaKey: "bulkheads",
+      material: "Match overhead cabinetry",
+      finalFinish: "Match overhead cabinetry",
+      colourName: "Match overhead cabinetry",
+      finish: "Match overhead cabinetry",
+      supplier: prior.supplier || "",
+      productRange: "Cabinetry finish",
+      priceStatus: prior.priceStatus || "price_pending",
+      finishMode: mode,
+      linkedAreaKey: "overheadDoors",
+      scheduleDescription: "Supply and install bulkheads to match overhead cabinetry.",
+      procurementDescription: "Supply and install bulkheads to match overhead cabinetry.",
+    };
+  }
+  return {
+    id: "bulkheads-other-custom",
+    areaKey: "bulkheads",
+    material: prior.material || "Custom",
+    finalFinish: prior.finalFinish || "Other/custom",
+    colourName: prior.colourName || "Other/custom bulkhead finish",
+    finish: prior.finish || "Other/custom",
+    supplier: prior.supplier || "",
+    productRange: prior.productRange || "Bulkhead finish",
+    priceStatus: prior.priceStatus || "supplier_quote_required",
+    finishMode: "other_custom",
+    customFinish: prior.customFinish || "Other/custom bulkhead finish",
+    scheduleDescription: prior.scheduleDescription || "Supply and install custom bulkhead finish as selected.",
+    procurementDescription: prior.procurementDescription || "Supply and install custom bulkhead finish as selected.",
+  };
+}
+
+function createKickPanelFinishRecord(mode, prior = {}) {
+  prior = cabinetryPlainObject(prior) ? prior : {};
+  const common = {
+    areaKey: "kickPanels",
+    priceStatus: prior.priceStatus || "included",
+    supplier: prior.supplier || "",
+    heightMm: prior.heightMm || "",
+    notes: prior.notes || "",
+  };
+  if (mode === "brushed_aluminium") {
+    return {
+      ...common,
+      id: "kick-panels-brushed-aluminium",
+      material: "Aluminium",
+      finalFinish: "Brushed aluminium",
+      colourName: "Natural aluminium",
+      finish: "Brushed aluminium",
+      productRange: "Metal kick panel",
+      finishMode: mode,
+      scheduleDescription: "Supply and install brushed aluminium kick panels.",
+      procurementDescription: "Supply and install brushed aluminium kick panels.",
+    };
+  }
+  if (mode === "stainless_steel_look") {
+    return {
+      ...common,
+      id: "kick-panels-stainless-steel-look",
+      material: "Aluminium",
+      finalFinish: "Stainless-steel look",
+      colourName: "Stainless-steel look",
+      finish: "Stainless-steel look",
+      productRange: "Metal kick panel",
+      finishMode: mode,
+      scheduleDescription: "Supply and install stainless-steel look kick panels.",
+      procurementDescription: "Supply and install stainless-steel look kick panels.",
+    };
+  }
+  if (mode === "black_aluminium") {
+    return {
+      ...common,
+      id: "kick-panels-black-aluminium",
+      material: "Aluminium",
+      finalFinish: "Black aluminium",
+      colourName: "Black aluminium",
+      finish: "Black aluminium",
+      productRange: "Metal kick panel",
+      finishMode: mode,
+      scheduleDescription: "Supply and install black aluminium kick panels.",
+      procurementDescription: "Supply and install black aluminium kick panels.",
+    };
+  }
+  if (mode === "match_cabinet_doors") {
+    return {
+      ...common,
+      id: "kick-panels-match-cabinet-doors",
+      material: "Match cabinet doors",
+      finalFinish: "Match cabinet doors",
+      colourName: "Match cabinet doors",
+      finish: "Match cabinet doors",
+      productRange: "Cabinetry finish",
+      finishMode: mode,
+      linkedAreaKey: "lowerDoorsDrawers",
+      scheduleDescription: "Supply and install kick panels to match cabinet doors.",
+      procurementDescription: "Supply and install kick panels to match cabinet doors.",
+    };
+  }
+  return {
+    ...common,
+    id: "kick-panels-other-custom",
+    material: prior.material || "Custom",
+    finalFinish: prior.finalFinish || "Other/custom",
+    colourName: prior.colourName || "Other/custom kick-panel finish",
+    finish: prior.finish || "Other/custom",
+    productRange: prior.productRange || "Kick-panel finish",
+    finishMode: "other_custom",
+    customFinish: prior.customFinish || "Other/custom kick-panel finish",
+    scheduleDescription: prior.scheduleDescription || "Supply and install custom kick-panel finish as selected.",
+    procurementDescription: prior.procurementDescription || "Supply and install custom kick-panel finish as selected.",
+  };
+}
+
+function cabinetryAreaRequiresDecorativeBoard(areaKey, record) {
+  if (!["bulkheads", "kickPanels", "linenBulkhead"].includes(areaKey)) return true;
+  if (!cabinetryPlainObject(record)) return true;
+  if (record.finishMode === "cabinetry_colour") return true;
+  return ["laminex_colour", "polytec_colour"].includes(record.finishMode);
+}
+
+function cabinetryColourTargetOptionKeys(location, targetKeys = [], validAreaKeys = CABINETRY_LOCATION_AREA_KEYS) {
+  const enabled = Array.isArray(location?.enabledAreaKeys) ? location.enabledAreaKeys : [];
+  const areaSelectionKeys = cabinetryPlainObject(location?.areaSelections)
+    ? Object.entries(location.areaSelections).filter(([, record]) => cabinetryPlainObject(record)).map(([key]) => key)
+    : [];
+  const valid = validAreaKeys.length ? validAreaKeys : CABINETRY_LOCATION_AREA_KEYS;
+  const keys = Array.from(new Set([...enabled, ...areaSelectionKeys, ...targetKeys])).filter((key) => valid.includes(key));
+  return keys.length ? keys : valid;
+}
+
+function cabinetryAreaMaterialText(record) {
+  if (!cabinetryPlainObject(record)) return "-";
+  if (record.material) return record.material;
+  if (record.supplier) return "Decorative board";
+  return "-";
+}
+
+function cabinetryAreaSupplierText(record) {
+  if (!cabinetryPlainObject(record)) return "-";
+  return record.supplier || "-";
+}
+
+function cabinetryAreaColourFinishText(record, currentLinkedPaint = null) {
+  if (!cabinetryPlainObject(record)) return "Colour not selected";
+  if (record.finishMode === "raw_mdf_wall_paint") {
+    const paint = linkedCabinetryPaintSelection(record, currentLinkedPaint);
+    return paint ? `Raw MDF - painted ${paint} to match walls` : "Painted to match walls - Awaiting wall colour selection.";
+  }
+  if (record.finishMode === "raw_mdf_ceiling_paint") {
+    const paint = linkedCabinetryPaintSelection(record, currentLinkedPaint);
+    return paint ? `Raw MDF - painted ${paint} to match ceiling` : "Painted to match ceiling - Awaiting ceiling colour selection.";
+  }
+  if (record.finishMode === "raw_mdf_custom_paint") {
+    const paint = [record.paintBrand, record.paintRange, record.paintColourName, record.paintColourCode, record.paintSheen].filter(Boolean).join(" ");
+    return paint || "Raw MDF - custom paint colour";
+  }
+  if (record.finishMode === "brushed_aluminium") return "Brushed aluminium";
+  if (record.finishMode === "stainless_steel_look") return "Stainless-steel look";
+  if (record.finishMode === "black_aluminium") return "Black aluminium";
+  if (record.finishMode === "match_cabinet_doors") return "Match cabinet doors";
+  if (record.finishMode === "match_overheads") return "Match overhead cabinetry";
+  if (record.finishMode === "match_floor_vanity") return "Match floor-mounted vanity";
+  if (record.finishMode === "match_wall_vanity") return "Match wall-mounted vanity";
+  if (record.finishMode === "match_tall_linen") return "Match tall linen cupboard";
+  if (record.finishMode === "other_custom") return record.customFinish || record.finish || "Other/custom";
+  return [record.colourName, record.finish].filter(Boolean).join(" / ") || "Colour not selected";
+}
+
+function linkedCabinetryPaintSelection(record, currentLinkedPaint = null) {
+  const linked = currentLinkedPaint || record?.linkedPaintSelection;
+  if (cabinetryPlainObject(linked)) {
+    const name = [linked.supplier || linked.brand, linked.colourName || linked.colour, linked.colourCode || linked.code].filter(Boolean).join(" ");
+    if (name) return name;
+  }
+  return "";
+}
+
+function cabinetryUniqueValues(values = []) {
+  return Array.from(new Set(values.filter(Boolean))).sort((left, right) => left.localeCompare(right));
+}
+
+function cabinetryColourKey(record = {}) {
+  return `${record.supplier || ""}|${record.colourName || ""}`;
+}
+
+function normaliseCabinetryColourSelectionRecord(record = {}) {
+  return {
+    ...record,
+    supplier: record.supplier || record.brand || "",
+    colourId: record.id || record.colourId || record.productCode || record.code || "",
+    colourName: record.colourName || record.colour || record.name || "",
+    swatchUrl: record.swatchThumbnail || record.swatchImage || record.fullSheetImage || record.imageUrl || "",
+    family: record.colourFamily || record.family || "",
+    productRange: record.productRange || record.productFamily || record.range || "",
+    finish: record.finish || record.surfaceFinish || "",
+    compatibleApplications: record.compatibleApplications || record.applications || [record.application || record.productApplication].filter(Boolean),
+    priceStatus: record.priceStatus || record.pricingStatus || "",
+  };
+}
+
+function cabinetryRecordSearchText(record = {}) {
+  return [record.supplier, record.colourName, record.colourFamily, record.productRange, record.productFamily, record.finish, record.priceStatus, record.pricingTier].filter(Boolean).join(" ").toLowerCase();
+}
+
+function stoneProductSearchText(product = {}) {
+  return [product.supplier, product.productCode, product.colourName, product.collection, product.priceGroup, product.materialType, product.colourFamily, product.patternType, ...(product.finishOptions || []), ...(product.thicknessOptions || [])].filter(Boolean).join(" ").toLowerCase();
+}
+
+function defaultStoneApplicationForLocation(locationName = "") {
+  if (/laundry/i.test(locationName)) return "Laundry benchtop";
+  if (/bath|ensuite|powder/i.test(locationName)) return "Vanity benchtop";
+  if (/pantry/i.test(locationName)) return "Butler's Pantry benchtop";
+  return "Main benchtop";
+}
+
+function stoneConfigLabel(key = "") {
+  if (key === "templateRequired") return "Template required";
+  if (key === "supplierQuoteRequired") return "Supplier quote required";
+  if (key === "physicalSampleConfirmed") return "Physical sample confirmed";
+  if (key === "fullSlabViewed") return "Full slab viewed";
+  return key;
+}
+
+function groupCabinetryColourRecords(records = [], selectedRecord = null) {
+  const grouped = new Map();
+  records.filter((record) => record.availabilityStatus !== "inactive" && record.status !== "inactive").forEach((record) => {
+    const key = cabinetryColourKey(record);
+    if (!grouped.has(key)) grouped.set(key, { key, colourName: record.colourName, supplier: record.supplier, colourFamily: record.colourFamily, records: [] });
+    grouped.get(key).records.push(record);
+  });
+  return Array.from(grouped.values()).map((group) => {
+    const selected = group.records.find((record) => record.id === selectedRecord?.id);
+    const primary = selected || group.records[0];
+    return {
+      ...group,
+      primary,
+      finishes: cabinetryUniqueValues(group.records.map((record) => record.finish)),
+      ranges: cabinetryUniqueValues(group.records.map((record) => record.productRange || record.productFamily)),
+      priceStatuses: cabinetryUniqueValues(group.records.map((record) => cabinetryPriceStatusLabel(record.priceStatus))),
+      swatchImage: primary.swatchThumbnail || primary.swatchImage || "",
+    };
+  }).sort((left, right) => left.colourName.localeCompare(right.colourName));
+}
+
+function featureOptionName(option) {
+  return typeof option === "string" ? option : option?.type || option?.name || "";
+}
+
+function ExteriorWallConstructionSelector({ value = "", onChange }) {
+  const current = normaliseExteriorWallConstruction(value);
+  return (
+    <div className="exteriorWallConstruction" data-testid="exterior-wall-construction">
+      <div>
+        <span>Exterior wall construction</span>
+        <strong>{current.label}</strong>
+      </div>
+      <div className="exteriorWallConstructionOptions">
+        {EXTERIOR_WALL_CONSTRUCTION_OPTIONS.map((option) => (
+          <button
+            key={option.key}
+            type="button"
+            className={current.key === option.key ? "selected" : ""}
+            onClick={() => onChange?.(option.key)}
+          >
+            <strong>{option.label}</strong>
+            <small>{option.description}</small>
+          </button>
+        ))}
+      </div>
+      {!current.brickApplicable ? (
+        <p>Brick selection is not applicable - rendered finish. Common bricks remain in estimating, BOQ and procurement only.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function GuidedImageCard({ category, status, disabled = false, onOpen }) {
+  const displayStatus = guidedCategoryStatus(status);
+  return (
+    <button
+      type="button"
+      className={`guidedImageCard ${displayStatus.className} ${disabled ? "disabled" : ""} ${category.requirementKey === "entry-door" ? "entryDoorCategoryCard" : ""} ${category.requirementKey === "garage-door" ? "garageDoorCategoryCard" : ""} ${category.requirementKey === "external-lighting" ? "externalLightingCategoryCard" : ""}`}
+      data-requirement-key={category.requirementKey || category.key}
+      aria-label={`Open ${category.label} selections`}
+      disabled={disabled}
+      onClick={onOpen}
+    >
+      <img src={category.image} alt={category.imageAlt || category.label} />
+      <span className="guidedImageCardInfo">
+        <span className="guidedImageCardTitle">{category.label}</span>
+      </span>
+    </button>
+  );
+}
+
+function guidedCategoryStatus(status = "") {
+  const value = String(status || "").replace("-", "_").toLowerCase();
+  if (value === "complete") return { label: "Complete", className: "complete", complete: true };
+  if (value === "incomplete" || value === "in_progress") return { label: "In progress", className: "inProgress" };
+  if (value === "problem") return { label: "Decisions required", className: "decisionsRequired" };
+  return { label: "Not started", className: "notStarted" };
+}
+
+function GuidedExteriorColourWorkflow({
+  requirement,
+  requirements,
+  selections,
+  runningTotals,
+  project,
+  projectInfo,
+  onOpenRequirement,
+  onReturnToDashboard,
+  onSelectExteriorColourSchedule,
+  onSaveProgress,
+}) {
+  const savedDetails = selections.get(requirement.requirementKey)?.selected_details || {};
+  const savedSchedule = savedDetails.exteriorColourSelection || {};
+  const savedAreas = useMemo(() => Array.isArray(savedSchedule.areas) ? savedSchedule.areas : [], [savedSchedule.areas]);
+  const linkedExteriorSelections = useMemo(() => ({
+    roofing: selections.get("roofing")?.selected_details || selections.get("roofing")?.guidedSelection || {},
+    garageDoor: selections.get("garage-door")?.selected_details || selections.get("garage-door")?.guidedSelection || {},
+    windows: selections.get("windows")?.selected_details || selections.get("windows")?.guidedSelection || {},
+    cladding: selections.get("external-cladding")?.selected_details || selections.get("external-cladding")?.guidedSelection || {},
+  }), [selections]);
+  const [areas, setAreas] = useState(() => buildExteriorColourAreas(savedAreas, project, projectInfo, linkedExteriorSelections));
+  const [activeAreaId, setActiveAreaId] = useState("");
+  const [search, setSearch] = useState("");
+  const [family, setFamily] = useState("");
+  const [selectedApplyAreas, setSelectedApplyAreas] = useState([]);
+  const [stagedColour, setStagedColour] = useState(null);
+  const [bulkApplyMessage, setBulkApplyMessage] = useState("");
+  const [pendingColourApply, setPendingColourApply] = useState(null);
+  const [showBulkTip, setShowBulkTip] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("clientSelections.exteriorColours.bulkTipDismissed") !== "true";
+  });
+  const committedKeyRef = useRef("");
+  const areaKey = useMemo(() => exteriorColourAreasKey(savedAreas), [savedAreas]);
+
+  useEffect(() => {
+    if (!savedAreas.length || areaKey === committedKeyRef.current) return;
+    const nextAreas = buildExteriorColourAreas(savedAreas, project, projectInfo, linkedExteriorSelections);
+    setAreas(nextAreas);
+  }, [areaKey, savedAreas, project, projectInfo, linkedExteriorSelections]);
+
+  const scheduleProduct = useMemo(() => exteriorColourScheduleWorkflowProduct(areas, requirement, {
+    projectId: project?.id || projectInfo?.projectId || "",
+    dashboardImage: requirementImage(requirement),
+    scheduleId: savedSchedule.scheduleId,
+  }), [areas, requirement, project, projectInfo, savedSchedule.scheduleId]);
+  const schedule = scheduleProduct.exteriorColourSelection;
+  const summary = schedule.summary || {};
+  const scheduleStatusLabel = schedule.status === "confirmed" ? "Confirmed" : "In Progress";
+  const activeArea = areas.find((area) => area.areaId === activeAreaId) || null;
+  const recentlyUsed = uniqueExteriorColours(areas);
+  const popularColourGroups = exteriorColourPopularGroups(EXTERIOR_COLOUR_PALETTE);
+  const selectedBulkCount = selectedApplyAreas.length;
+  const selectedBulkAreas = areas.filter((area) => selectedApplyAreas.includes(area.areaId));
+  const selectedBulkLabel = selectedBulkCount === 1 ? "1 area selected" : `${selectedBulkCount} areas selected`;
+  const visibleColours = EXTERIOR_COLOUR_PALETTE.filter((colour) => {
+    const q = search.trim().toLowerCase();
+    const haystack = exteriorColourSearchText(colour);
+    return (!q || haystack.includes(q)) && exteriorColourMatchesFamily(colour, family);
+  });
+
+  function commitAreas(nextAreas, options = {}) {
+    committedKeyRef.current = exteriorColourAreasKey(nextAreas);
+    setAreas(nextAreas);
+    onSelectExteriorColourSchedule(requirement, exteriorColourScheduleWorkflowProduct(nextAreas, requirement, {
+      projectId: project?.id || projectInfo?.projectId || "",
+      dashboardImage: requirementImage(requirement),
+      scheduleId: savedSchedule.scheduleId,
+      confirmed: options.confirm,
+    }), options);
+  }
+
+  function updateArea(areaId, patch) {
+    const current = areas.find((area) => area.areaId === areaId);
+    if (!current) return;
+    if (patch.applicable === false && current.colourSelection?.colourName && !window.confirm(`Remove ${current.areaName} from the applicable colour schedule? Its saved colour will remain in history but will not be part of this schedule.`)) return;
+    commitAreas(areas.map((area) => area.areaId === areaId ? normaliseExteriorColourArea({ ...area, ...patch, updatedAt: new Date().toISOString() }, { projectId: project?.id || "" }) : area));
+  }
+
+  function stageColour(colour) {
+    setStagedColour(colour);
+    setBulkApplyMessage(`${colour.colourName} chosen - not yet applied`);
+  }
+
+  function dismissBulkTip() {
+    setShowBulkTip(false);
+    if (typeof window !== "undefined") window.localStorage.setItem("clientSelections.exteriorColours.bulkTipDismissed", "true");
+  }
+
+  function applyStagedColour(mode = "this") {
+    const colour = stagedColour;
+    if (!colour || (!activeArea && mode !== "selected")) return;
+    const targetIds = exteriorColourApplyTargets(mode, activeArea, areas, selectedApplyAreas);
+    const targetAreas = areas.filter((area) => targetIds.includes(area.areaId));
+    const compatibleAreas = targetAreas.filter((area) => exteriorAreaColourCompatible(area, colour));
+    const incompatibleAreas = targetAreas.filter((area) => !exteriorAreaColourCompatible(area, colour));
+    if (mode === "selected" && !selectedApplyAreas.length) {
+      setBulkApplyMessage("Select at least one area using the checkboxes on the left.");
+      return;
+    }
+    if (!compatibleAreas.length) {
+      setBulkApplyMessage(`${colour.colourName} was not applied because no selected areas are compatible.`);
+      return;
+    }
+    setPendingColourApply({ mode, colour, compatibleAreas, incompatibleAreas });
+  }
+
+  function completePendingColourApply(plan = pendingColourApply) {
+    if (!plan?.colour) return;
+    const targetIds = plan.compatibleAreas.map((area) => area.areaId);
+    const nextAreas = areas.map((area) => targetIds.includes(area.areaId)
+      && exteriorAreaColourCompatible(area, plan.colour)
+      ? normaliseExteriorColourArea({
+          ...area,
+          colourSelection: { ...plan.colour, status: "applied", applicationMethod: plan.mode === "selected" ? "bulk_selected_areas" : `bulk_${plan.mode}` },
+          confirmationStatus: area.finishType === "factory_finished" ? "factory_finished" : "applied",
+          colourSource: "client-override",
+          linkedComponentId: "",
+          isOverride: true,
+          defaultStatus: plan.mode === "this" ? "override" : "applied",
+          updatedAt: new Date().toISOString(),
+        }, { projectId: project?.id || "" })
+      : area);
+    const affectedNames = plan.compatibleAreas.map((area) => area.areaName);
+    const affectedLabel = joinHumanList(affectedNames);
+    const projectLabel = projectInfo?.jobNumber || projectInfo?.projectName || project?.job_number || project?.project_name || "the active project";
+    commitAreas(nextAreas, {
+      successMessage: `${plan.colour.colourName} was applied to ${affectedLabel}. Saved to ${projectLabel}.`,
+    });
+    if (plan.mode === "selected") setSelectedApplyAreas([]);
+    setPendingColourApply(null);
+    setBulkApplyMessage(`${plan.colour.colourName} applied to ${plan.compatibleAreas.length} area${plan.compatibleAreas.length === 1 ? "" : "s"}.${plan.incompatibleAreas.length ? ` ${plan.incompatibleAreas.map((area) => `${area.areaName} was not changed`).join("; ")} because this colour is unavailable for that selection.` : ""}`);
+  }
+
+  function applyScheme(schemeId) {
+    const scheme = EXTERIOR_COLOUR_SCHEMES.find((item) => item.schemeId === schemeId);
+    if (!scheme) return;
+    const affected = areas.filter((area) => area.applicable !== false && scheme.coloursByArea[area.areaId]);
+    const replacing = affected.filter((area) => area.colourSelection?.colourName);
+    if (replacing.length && !window.confirm(`This will replace colours already selected for ${replacing.length} areas.`)) return;
+    const nextAreas = areas.map((area) => {
+      const colour = EXTERIOR_COLOUR_PALETTE.find((item) => item.colourId === scheme.coloursByArea[area.areaId]);
+      return colour ? normaliseExteriorColourArea({ ...area, colourSelection: { ...colour, status: "selected" }, confirmationStatus: area.finishType === "factory_finished" ? "factory_finished" : "selected", colourSource: "builder-default", isOverride: false, defaultStatus: scheme.name }, { projectId: project?.id || "" }) : area;
+    });
+    commitAreas(nextAreas);
+    setStagedColour(null);
+  }
+
+  function addArea() {
+    const count = areas.filter((area) => area.areaId.startsWith("custom-exterior-area")).length + 1;
+    const next = normaliseExteriorColourArea({
+      areaId: `custom-exterior-area-${count}`,
+      areaName: `Custom exterior area ${count}`,
+      areaGroup: "Other items",
+      material: "Custom exterior surface",
+      source: "Builder-added area",
+      finishType: "painted",
+      applicable: true,
+    }, { projectId: project?.id || "" });
+    commitAreas([...areas, next]);
+    setActiveAreaId(next.areaId);
+  }
+
+  function saveScheduleProgress(options = {}) {
+    commitAreas(areas);
+    if (options.returnToDashboard) {
+      window.setTimeout(() => onReturnToDashboard(), 250);
+    }
+  }
+
+  function confirmSchedule() {
+    if (!summary.complete) return;
+    commitAreas(areas, { confirm: true });
+  }
+
+  return (
+    <section className="guidedShell exteriorColourGuided" data-testid="guided-exterior-colour-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
+          <h2>Exterior</h2>
+          {requirements.map((item) => <button key={item.requirementKey} type="button" className={`guidedProgressItem ${item.requirementKey === requirement.requirementKey ? "active" : ""}`} onClick={() => onOpenRequirement(item.requirementKey)}><GuidedStatusDot status={statusForRequirement(item, selections.get(item.requirementKey))} /><span>{item.label}</span></button>)}
+        </aside>
+        <main className="guidedProductPanel">
+          <section className="exteriorColourSummary" data-testid="exterior-colour-summary">
+            <div><span>Exterior Colour Schedule</span><strong>{schedule.status === "confirmed" ? `${summary.applicableAreas} of ${summary.applicableAreas} areas confirmed` : `${summary.selectedAreas} of ${summary.applicableAreas} applicable areas selected`} / Status: {scheduleStatusLabel}</strong><p>{summary.incompleteAreas ? `${summary.incompleteAreas} areas need a colour, linkage, note or not-painted decision.` : `${summary.uniqueColours} unique colours are ready for review.`}</p></div>
+            <div className="guidedCompletionActions">
+              <select aria-label="Apply colour scheme" defaultValue="" onChange={(event) => { applyScheme(event.target.value); event.target.value = ""; }}><option value="">Apply Colour Scheme</option>{EXTERIOR_COLOUR_SCHEMES.map((scheme) => <option key={scheme.schemeId} value={scheme.schemeId}>{scheme.name}</option>)}</select>
+              <button type="button" onClick={addArea}>Add Area</button>
+              <button type="button" onClick={() => saveScheduleProgress()}>Save Progress</button>
+              <button type="button" onClick={() => saveScheduleProgress({ returnToDashboard: true })}>Save and Return to Dashboard</button>
+              <button type="button" className="primary" disabled={!summary.complete} onClick={confirmSchedule}>Confirm Exterior Colour Schedule</button>
+            </div>
+          </section>
+          <ExteriorColourStatusLegend />
+          <div className="exteriorColourLayout">
+            <section className="exteriorColourAreaPanel" data-testid="exterior-colour-area-schedule">
+              {showBulkTip ? <div className="exteriorBulkTip"><span>Want several areas to match?</span><p>Tick them here, choose one colour and apply it to all selected areas.</p><button type="button" onClick={dismissBulkTip}>Got it</button></div> : null}
+              <div className="exteriorBulkInstructions">
+                <span>Bulk colour application</span>
+                <ol><li>Select the areas to change.</li><li>Choose a colour.</li><li>Click Apply colour to selected areas.</li></ol>
+              </div>
+              <div className="exteriorBulkActionBar" role="region" aria-label="Bulk colour action">
+                <div><span>Selected areas:</span><strong>{selectedBulkCount}</strong></div>
+                <div><span>Colour chosen:</span><strong>{stagedColour?.colourName || "None"}</strong></div>
+                <button type="button" className="primary" disabled={!stagedColour || !selectedBulkCount} onClick={() => applyStagedColour("selected")}>{selectedBulkCount ? `Apply to ${selectedBulkCount} selected area${selectedBulkCount === 1 ? "" : "s"}` : "Apply colour to selected areas"}</button>
+                <button type="button" onClick={() => setSelectedApplyAreas([])} disabled={!selectedBulkCount}>Clear selection</button>
+              </div>
+              {selectedBulkCount ? <div className="exteriorBulkAreaNames" role="status"><strong>{selectedBulkLabel}</strong><ul>{selectedBulkAreas.map((area) => <li key={area.areaId}>{area.areaName}</li>)}</ul></div> : null}
+              {bulkApplyMessage ? <div className="exteriorBulkApplyMessage" role="status">{bulkApplyMessage}</div> : null}
+              <div className="exteriorAreaColumnHeader" aria-hidden="true"><span>Select</span><span>Area, material, colour and source</span><span>Action</span></div>
+              {EXTERIOR_COLOUR_AREA_GROUPS.map((group) => {
+                const groupAreas = areas.filter((area) => area.areaGroup === group && area.applicable !== false);
+                if (!groupAreas.length) return null;
+                return <div key={group} className="exteriorColourGroup"><h3>{group}</h3>{groupAreas.map((area) => <ExteriorColourAreaRow key={area.areaId} area={area} scheduleConfirmed={schedule.status === "confirmed"} active={area.areaId === activeAreaId} selectedForApply={selectedApplyAreas.includes(area.areaId)} onOpen={() => setActiveAreaId(area.areaId)} onToggleApply={() => setSelectedApplyAreas((current) => current.includes(area.areaId) ? current.filter((id) => id !== area.areaId) : [...current, area.areaId])} onUpdate={updateArea} />)}</div>;
+              })}
+            </section>
+            <section className="exteriorColourSelector" data-testid="exterior-colour-selector">
+              {activeArea ? (
+                <>
+                  <div className="exteriorColourSelectorHeader">
+                    <span>Editing: {activeArea.areaName}</span>
+                    <strong>{activeArea.material}</strong>
+                    <small>Current colour: {activeArea.colourSelection?.colourName ? `${activeArea.colourSelection.supplier} ${activeArea.colourSelection.colourName}` : "None selected"} / Source: {activeArea.source}</small>
+                  </div>
+                  <div className="exteriorColourSpecialActions">
+                    <button type="button" onClick={() => updateArea(activeArea.areaId, { finishType: "not_painted", confirmationStatus: "not_painted", colourSelection: null })}>Mark Not Painted</button>
+                    <button type="button" onClick={() => updateArea(activeArea.areaId, { confirmationStatus: "confirm_with_note", notes: activeArea.notes || "Colour to be confirmed from approved physical sample." })}>Confirm With Note</button>
+                    <button type="button" onClick={() => updateArea(activeArea.areaId, { applicable: false })}>Remove Area</button>
+                  </div>
+                  <ExteriorColourLinkControls activeArea={activeArea} areas={areas} onLink={(patch) => updateArea(activeArea.areaId, patch)} />
+                  <div className="lightingFilters exteriorColourFilters">
+                    <label><span>Search colour</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Dieskau, SW1E1, Monument..." /></label>
+                    <label><span>Colour family</span><select value={family} onChange={(event) => setFamily(event.target.value)}><option value="">All families</option>{EXTERIOR_COLOUR_FAMILIES.map((item) => <option key={item}>{item}</option>)}</select></label>
+                  </div>
+                  {stagedColour ? <div className="exteriorStagedColour" role="status"><i style={{ background: stagedColour.swatch }} /><span>Colour chosen</span><strong>{stagedColour.colourName} chosen - not yet applied</strong><small>The schedule is not changed until you apply it to an area.</small></div> : <div className="exteriorStagedColour muted">Choose a colour swatch, then apply it to this area or to checked areas.</div>}
+                  {recentlyUsed.length ? <div className="exteriorRecentlyUsed"><span>Recently used project colours</span>{recentlyUsed.map((colour) => <button key={`${colour.supplier}-${colour.colourName}`} type="button" onClick={() => stageColour(colour)} title={`Select ${colour.colourName} for applying`}><i style={{ background: colour.swatch }} />{colour.colourName}</button>)}</div> : null}
+                  <div className="exteriorPopularColours" data-testid="exterior-popular-colours">
+                    {popularColourGroups.map((group) => <section key={group.id}><span>{group.label}</span><small>{group.source}</small><div>{group.colours.slice(0, 8).map((colour) => <ExteriorColourSwatch key={`${group.id}-${colour.colourId}`} colour={colour} compact selected={stagedColour?.colourId === colour.colourId} onChoose={() => stageColour(colour)} />)}</div></section>)}
+                  </div>
+                  <div className="exteriorColourPalette">
+                    {visibleColours.map((colour) => <ExteriorColourSwatch key={colour.colourId} colour={colour} selected={stagedColour?.colourId === colour.colourId} onChoose={() => stageColour(colour)} />)}
+                  </div>
+                  <div className="exteriorColourApplyActions">
+                    <button type="button" disabled={!stagedColour} onClick={() => applyStagedColour("this")}>Apply to this area</button>
+                    <button type="button" disabled={!stagedColour || !selectedBulkCount} title={!selectedBulkCount ? "Select at least one area using the checkboxes on the left." : ""} onClick={() => applyStagedColour("selected")}>Apply to selected areas</button>
+                    <button type="button" disabled={!stagedColour} onClick={() => applyStagedColour("trim")}>Apply to all trim areas</button>
+                    <button type="button" disabled={!stagedColour} onClick={() => applyStagedColour("render")}>Apply to all rendered walls</button>
+                    <button type="button" disabled={!stagedColour} onClick={() => applyStagedColour("timber")}>Apply to timber posts and beams</button>
+                    <button type="button" disabled={!stagedColour} onClick={() => applyStagedColour("material")}>Apply to matching material areas</button>
+                    <button type="button" disabled={!stagedColour} onClick={() => setStagedColour(null)}>Cancel</button>
+                  </div>
+                  <details className="exteriorTechnicalSpec" data-testid="exterior-colour-technical-spec">
+                    <summary>Painter's technical coating specification</summary>
+                    <dl>
+                      <div><dt>Preparation</dt><dd>{activeArea.coatingSpecification?.preparation || "Painter to confirm"}</dd></div>
+                      <div><dt>Primer/sealer</dt><dd>{activeArea.coatingSpecification?.primer || "Painter to confirm"}</dd></div>
+                      <div><dt>Topcoat</dt><dd>{activeArea.coatingSpecification?.topcoat || "Painter to confirm"}</dd></div>
+                      <div><dt>Sheen</dt><dd>{activeArea.coatingSpecification?.sheen || "Painter to confirm"}</dd></div>
+                      <div><dt>Coats</dt><dd>{activeArea.coatingSpecification?.coats || "Painter to confirm"}</dd></div>
+                    </dl>
+                  </details>
+                  <label className="exteriorColourNotes"><span>Notes</span><textarea value={activeArea.notes || ""} onChange={(event) => updateArea(activeArea.areaId, { notes: event.target.value })} /></label>
+                  <p className="exteriorColourDisclaimer">On-screen colours are indicative. Confirm final colours using the supplier's current physical colour sample before ordering.</p>
+                </>
+              ) : <div className="clientNotice">Select an exterior area to choose its colour.</div>}
+            </section>
+          </div>
+        </main>
+      </div>
+      {pendingColourApply ? <ExteriorColourApplyDialog plan={pendingColourApply} onApply={() => completePendingColourApply(pendingColourApply)} onReview={(areaId) => { setActiveAreaId(areaId); setPendingColourApply(null); }} onCancel={() => setPendingColourApply(null)} /> : null}
+    </section>
+  );
+}
+
+function ExteriorColourStatusLegend() {
+  const statusKeys = ["not_selected", "selection_required", "colour_selected", "linked_roofing", "linked_windows", "linked_garage_door", "linked_cladding", "not_painted", "material_finish", "needs_client_confirmation", "confirmed", "quote_required", "incompatible_selection"];
+  return (
+    <div className="exteriorColourLegend" data-testid="exterior-colour-status-legend">
+      {statusKeys.map((key) => {
+        const meta = EXTERIOR_COLOUR_STATUS_META[key];
+        if (!meta) return null;
+        return <span key={key} className={`exteriorStatusPill ${meta.tone}`}><i>{meta.icon}</i>{meta.label}</span>;
+      })}
+    </div>
+  );
+}
+
+function ExteriorColourLinkControls({ activeArea, areas, onLink }) {
+  const options = exteriorColourLinkOptions(activeArea, areas);
+  if (!options.length) return null;
+  return (
+    <div className="exteriorColourLinkControls">
+      <span>Colour source</span>
+      {options.map((option) => <button key={option.id} type="button" disabled={!option.patch} onClick={() => option.patch && onLink(option.patch)}>{option.label}</button>)}
+    </div>
+  );
+}
+
+function ExteriorColourApplyDialog({ plan, onApply, onReview, onCancel }) {
+  const colourName = plan.colour?.colourName || "Selected colour";
+  const totalCount = plan.compatibleAreas.length + plan.incompatibleAreas.length;
+  return (
+    <div className="modalBackdrop">
+      <section className="exteriorApplyDialog" role="dialog" aria-modal="true" aria-labelledby="exterior-apply-dialog-title">
+        <h3 id="exterior-apply-dialog-title">{plan.incompatibleAreas.length ? `${colourName} can be applied to ${plan.compatibleAreas.length} of the ${totalCount} selected areas.` : `Apply ${colourName} to these ${plan.compatibleAreas.length} area${plan.compatibleAreas.length === 1 ? "" : "s"}?`}</h3>
+        <ul>{plan.compatibleAreas.map((area) => <li key={area.areaId}>{area.areaName}</li>)}</ul>
+        {plan.incompatibleAreas.length ? <div className="exteriorIncompatibleNotice"><strong>Needs review</strong><p>{plan.incompatibleAreas.map((area) => area.areaName).join(", ")} {plan.incompatibleAreas.length === 1 ? "uses" : "use"} a supplier-specific or incompatible colour range.</p></div> : null}
+        <div className="exteriorApplyDialogActions">
+          <button type="button" className="primary" onClick={onApply}>{plan.incompatibleAreas.length ? "Apply to compatible areas" : "Apply Colour"}</button>
+          {plan.incompatibleAreas[0] ? <button type="button" onClick={() => onReview(plan.incompatibleAreas[0].areaId)}>Review incompatible area</button> : null}
+          <button type="button" onClick={onCancel}>Cancel</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ExteriorColourAreaRow({ area, scheduleConfirmed, active, selectedForApply, onOpen, onToggleApply, onUpdate }) {
+  const colour = area.colourSelection || {};
+  const statusKey = exteriorColourAreaStatus(area, { scheduleConfirmed });
+  const statusMeta = EXTERIOR_COLOUR_STATUS_META[statusKey] || EXTERIOR_COLOUR_STATUS_META.selection_required;
+  const actionLabel = exteriorColourRowActionLabel(area, statusKey);
+  const colourSourceLabel = area.linkedComponentId && colour.colourName
+    ? `Linked to ${area.source || "source"} - ${colour.colourName}`
+    : area.source;
+  return (
+    <article className={`exteriorColourAreaRow ${active ? "active" : ""} ${selectedForApply ? "bulkSelected" : ""}`} data-area-id={area.areaId}>
+      <input type="checkbox" checked={selectedForApply} onChange={onToggleApply} title="Select this area to apply a colour together with other selected areas." aria-label={`Select ${area.areaName} for bulk colour application`} />
+      <button type="button" onClick={() => { onOpen(); onToggleApply(); }}>
+        <i style={{ background: colour.swatch || "#e5e7eb" }} />
+        <span><strong>{area.areaName}</strong><small>{area.material}</small>{selectedForApply ? <b>Selected for colour application</b> : null}</span>
+        <span>{colour.colourName ? `${colour.supplier} ${colour.colourName}${colour.colourCode ? ` (${colour.colourCode})` : ""}` : "No colour applied"}<small>{colourSourceLabel}</small></span>
+        <em className={`exteriorStatusPill ${statusMeta.tone}`}>{statusMeta.label}</em>
+      </button>
+      <button type="button" aria-label={`${actionLabel} for ${area.areaName}`} title={`${actionLabel} for ${area.areaName}`} onClick={onOpen}>{actionLabel}</button>
+      {area.areaId.startsWith("custom-exterior-area") ? <button type="button" onClick={() => onUpdate(area.areaId, { areaName: window.prompt("Rename exterior area", area.areaName) || area.areaName })}>Rename</button> : null}
+    </article>
+  );
+}
+
+function ExteriorColourSwatch({ colour, selected, onChoose, compact = false }) {
+  return (
+    <button type="button" className={`exteriorColourSwatch ${compact ? "compact" : ""} ${selected ? "selected" : ""}`} onClick={onChoose}>
+      <i style={{ background: colour.swatch }} />
+      <strong>{colour.colourName}</strong>
+      <span>{colour.supplier} / {colour.range}</span>
+      <small>{colour.colourCode} {colour.lrv != null ? `/ LRV ${colour.lrv}` : ""}</small>
+      {selected ? <b>Selected</b> : null}
+    </button>
+  );
+}
+
+function GuidedExternalLightingWorkflow({
+  requirement,
+  requirements,
+  products,
+  selections,
+  runningTotals,
+  onOpenRequirement,
+  onReturnToDashboard,
+  onSelectExternalLightingSchedule,
+  onSaveProgress,
+}) {
+  const savedDetails = selections.get(requirement.requirementKey)?.selected_details || {};
+  const savedLighting = savedDetails.externalLightingSelection || {};
+  const initialLines = useMemo(() => (
+    Array.isArray(savedLighting.lines) ? savedLighting.lines : Array.isArray(savedLighting.scheduleLines) ? savedLighting.scheduleLines : []
+  ), [savedLighting.lines, savedLighting.scheduleLines]);
+  const [mode, setMode] = useState(initialLines.length ? "review" : "catalogue");
+  const [activeCategory, setActiveCategory] = useState("Wall Lights");
+  const [filters, setFilters] = useState({ search: "", sensor: "", installationType: "", voltage: "" });
+  const [lines, setLines] = useState(() => initialLines.map((line, index) => hydrateGuidedExternalLightingLine(line, products, index)));
+  const [draft, setDraft] = useState(null);
+  const committedLightingLinesKeyRef = useRef("");
+  const categories = useMemo(() => EXTERNAL_LIGHTING_CATEGORIES.map((category) => ({ category, count: products.filter((product) => externalLightingCategory(product) === category).length })), [products]);
+  const visibleProducts = useMemo(() => products.filter((product) => externalLightingProductMatches(product, { ...filters, category: activeCategory })), [products, filters, activeCategory]);
+  const scheduleDashboardImage = "/images/product-library/external-lighting/external-lighting-dashboard-modern-entrance.webp";
+  const scheduleId = savedLighting.scheduleId || `external-lighting-${savedDetails.projectId || "project"}`;
+  const scheduleOptions = { dashboardImage: scheduleDashboardImage, scheduleId };
+  const scheduleProduct = useMemo(() => externalLightingScheduleWorkflowProduct(lines, requirement, { dashboardImage: scheduleDashboardImage, scheduleId }), [lines, requirement, scheduleDashboardImage, scheduleId]);
+  const summary = scheduleProduct.externalLightingSelection.summary;
+  const savedLinesKey = useMemo(() => guidedLightingLinesKey(initialLines), [initialLines]);
+
+  useEffect(() => {
+    if (!initialLines.length || draft) return;
+    if (savedLinesKey && savedLinesKey === committedLightingLinesKeyRef.current) return;
+    const hydrated = initialLines.map((line, index) => hydrateGuidedExternalLightingLine(line, products, index));
+    setLines((current) => guidedLightingLinesKey(current) === guidedLightingLinesKey(hydrated) ? current : hydrated);
+    setMode((current) => current === "add" ? current : "review");
+  }, [savedLinesKey, products, draft, initialLines]);
+
+  function commitLines(nextLines, options = {}) {
+    committedLightingLinesKeyRef.current = guidedLightingLinesKey(nextLines);
+    setLines(nextLines);
+    onSelectExternalLightingSchedule(requirement, externalLightingScheduleWorkflowProduct(nextLines, requirement, scheduleOptions), options);
+  }
+
+  function openDraft(product, line = null) {
+    const attrs = product?.attributes || product?.metadata?.productEntity?.attributes || {};
+    const quantity = Math.max(1, Math.trunc(numberValue(line?.quantity) || 1));
+    setDraft({
+      lineId: line?.lineId || line?.scheduleLineId || uid("lighting-line"),
+      editingLineId: line?.lineId || line?.scheduleLineId || "",
+      product,
+      productId: product?.productId || product?.id || "",
+      productCode: product?.productCode || product?.product_code || "",
+      supplierId: product?.supplierId || "beacon-lighting",
+      supplierName: "Beacon Lighting",
+      sku: externalLightingSku(product),
+      productName: product?.productName || product?.product_name || "",
+      imageUrl: product?.imageUrl || product?.primaryImage || product?.primary_image_url || requirementImage(requirement, product),
+      category: externalLightingCategory(product),
+      colour: product?.colour || "",
+      finish: product?.finish || product?.colour || "",
+      ipRating: attrs.ipRating || "",
+      voltage: attrs.voltage || "",
+      installationType: attrs.installationType || attrs.constructionSuitability || "",
+      unitPrice: productClientPrice(product),
+      quantity,
+      locations: reconcileGuidedLightingLocations(line?.locations || defaultGuidedLightingLocations(quantity, attrs), quantity, attrs),
+      switching: line?.switching || "",
+      sensorDetails: line?.sensorDetails || attrs.sensorType || "",
+      notes: line?.notes || "",
+      pricingStatus: line?.pricingStatus || priceStateForProduct(product),
+      allowance: numberValue(line?.allowance),
+    });
+    setMode("add");
+  }
+
+  function updateDraft(patch) {
+    setDraft((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      if (patch.quantity != null) {
+        const quantity = Math.max(1, Math.trunc(numberValue(patch.quantity) || 1));
+        next.quantity = quantity;
+        next.locations = reconcileGuidedLightingLocations(current.locations, quantity, { sensorIncluded: Boolean(current.sensorDetails), sensorType: current.sensorDetails });
+      }
+      return next;
+    });
+  }
+
+  function updateDraftLocation(index, patch) {
+    setDraft((current) => current ? { ...current, locations: current.locations.map((location, itemIndex) => itemIndex === index ? { ...location, ...patch } : location) } : current);
+  }
+
+  function addDraft(reviewAfter = false) {
+    if (!draft) return;
+    const now = new Date().toISOString();
+    const nextLine = normaliseGuidedExternalLightingDraft(draft, now);
+    const existingIndex = lines.findIndex((line) => line.lineId === (draft.editingLineId || draft.lineId) || line.scheduleLineId === (draft.editingLineId || draft.lineId));
+    let nextLines = existingIndex >= 0 ? replaceAt(lines, existingIndex, nextLine) : [...lines, nextLine];
+    if (existingIndex < 0) {
+      const identicalIndex = lines.findIndex((line) => guidedLightingLineSignature(line) === guidedLightingLineSignature(nextLine));
+      if (identicalIndex >= 0) {
+        const choice = window.prompt("This product is already in the schedule. Type 1 to add to its quantity, 2 to create a separate location line, or Cancel to stop.");
+        if (choice == null || choice === "") return;
+        if (choice.trim() === "1") {
+          const existingLine = lines[identicalIndex];
+          const combinedQuantity = numberValue(existingLine.quantity) + numberValue(nextLine.quantity);
+          const combinedLocations = reconcileGuidedLightingLocations([...existingLine.locations, ...nextLine.locations], combinedQuantity, { sensorIncluded: Boolean(existingLine.sensorDetails), sensorType: existingLine.sensorDetails });
+          nextLines = replaceAt(lines, identicalIndex, normaliseGuidedExternalLightingDraft({ ...existingLine, quantity: combinedQuantity, locations: combinedLocations }, now));
+        } else if (choice.trim() !== "2") {
+          return;
+        }
+      }
+    }
+    commitLines(nextLines, { confirm: false });
+    setDraft(null);
+    setMode(reviewAfter ? "review" : "catalogue");
+  }
+
+  function updateLineQuantity(line, quantity) {
+    const nextQuantity = Math.max(1, Math.trunc(numberValue(quantity) || 1));
+    const nextLines = lines.map((item) => {
+      if (item.lineId !== line.lineId) return item;
+      const product = item.product || products.find((candidate) => externalLightingSku(candidate) === item.sku) || item;
+      const attrs = product?.attributes || product?.metadata?.productEntity?.attributes || {};
+      const locations = reconcileGuidedLightingLocations(item.locations, nextQuantity, attrs);
+      return normaliseGuidedExternalLightingDraft({ ...item, product, quantity: nextQuantity, locations }, new Date().toISOString());
+    });
+    commitLines(nextLines, { confirm: false });
+  }
+
+  function duplicateLine(line) {
+    const nextLine = normaliseGuidedExternalLightingDraft({ ...line, lineId: uid("lighting-line"), locations: line.locations.map((location, index) => ({ ...location, lightingPointId: `EL${String(lines.length + index + 1).padStart(2, "0")}` })) }, new Date().toISOString());
+    commitLines([...lines, nextLine], { confirm: false });
+  }
+
+  function removeLine(line) {
+    if (!window.confirm(`Remove ${line.productName} from the External Lighting schedule?`)) return;
+    commitLines(lines.filter((item) => item.lineId !== line.lineId), { confirm: false });
+  }
+
+  function confirmSchedule() {
+    if (!summary.complete) return;
+    onSelectExternalLightingSchedule(requirement, scheduleProduct, { confirm: true });
+  }
+
+  return (
+    <section className="guidedShell externalLightingGuided" data-testid="guided-external-lighting-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
+          <h2>Exterior</h2>
+          {requirements.map((item) => <button key={item.requirementKey} type="button" className={`guidedProgressItem ${item.requirementKey === requirement.requirementKey ? "active" : ""}`} onClick={() => onOpenRequirement(item.requirementKey)}><GuidedStatusDot status={statusForRequirement(item, selections.get(item.requirementKey))} /><span>{item.label}</span></button>)}
+        </aside>
+        <main className="guidedProductPanel">
+          <GuidedExternalLightingSummary summary={summary} onCatalogue={() => setMode("catalogue")} onReview={() => setMode("review")} onSaveProgress={onSaveProgress} />
+          {mode === "catalogue" ? (
+            <>
+              <div className="guidedSectionHeader"><span>Exterior / External Lighting</span><strong>{products.length} Beacon exterior lighting products</strong></div>
+              <div className="lightingCategoryGrid">{categories.map((item) => <button key={item.category} type="button" className={activeCategory === item.category ? "selected" : ""} onClick={() => setActiveCategory(item.category)}><strong>{item.category}</strong><span>{item.count} products</span></button>)}</div>
+              <div className="lightingFilters">
+                <label><span>Search name or SKU</span><input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Sentinel, flood, 2303181..." /></label>
+                <label><span>Sensor</span><select value={filters.sensor} onChange={(event) => setFilters((current) => ({ ...current, sensor: event.target.value }))}><option value="">All</option><option value="sensor">Sensor included</option><option value="no-sensor">No sensor</option></select></label>
+                <label><span>Installation</span><select value={filters.installationType} onChange={(event) => setFilters((current) => ({ ...current, installationType: event.target.value }))}><option value="">All</option><option>Fixed hardwired fitting</option><option>Low-voltage wired fitting</option><option>Solar fitting</option><option>Plug-in fitting</option></select></label>
+                <label><span>Voltage</span><select value={filters.voltage} onChange={(event) => setFilters((current) => ({ ...current, voltage: event.target.value }))}><option value="">All</option><option>240V</option><option>12V</option><option>12/24V</option><option>Solar</option><option>Not published by supplier</option></select></label>
+              </div>
+              <div className="lightingProductGrid" data-testid="external-lighting-catalogue">
+                {visibleProducts.map((product) => <GuidedLightingProductCard key={product.productId || product.id || product.productCode} product={product} requirement={requirement} onAdd={() => openDraft(product)} />)}
+              </div>
+            </>
+          ) : null}
+          {mode === "add" && draft ? <GuidedExternalLightingDraft draft={draft} requirement={requirement} onUpdate={updateDraft} onUpdateLocation={updateDraftLocation} onCancel={() => { setDraft(null); setMode("catalogue"); }} onContinue={() => addDraft(false)} onReview={() => addDraft(true)} /> : null}
+          {mode === "review" ? <GuidedExternalLightingReview lines={lines} summary={summary} onAddAnother={() => setMode("catalogue")} onEdit={(line) => openDraft(line.product || line, line)} onDuplicate={duplicateLine} onRemove={removeLine} onQuantity={updateLineQuantity} onSaveProgress={onSaveProgress} onReturnToDashboard={onReturnToDashboard} onConfirm={confirmSchedule} /> : null}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function GuidedExternalLightingSummary({ summary, onCatalogue, onReview, onSaveProgress }) {
+  return (
+    <section className="externalLightingScheduleSummary" data-testid="external-lighting-schedule-summary">
+      <div><span>External Lighting Schedule</span><strong>{summary.totalProducts} products | {summary.totalFittings} fittings | {summary.locationsAssigned} locations</strong></div>
+      <div className="guidedTotals">
+        <GuidedMiniTotal label="Incomplete" value={`${summary.missingLocations}`} tone={summary.missingLocations ? "warn" : "good"} />
+        <GuidedMiniTotal label="Product Total" value={money(summary.selectedPrice)} />
+        <GuidedMiniTotal label="Allowance" value={money(summary.allowance)} />
+        <GuidedMiniTotal label="Variation" value={signedMoney(summary.variation)} tone={summary.variation > 0 ? "bad" : summary.variation < 0 ? "good" : ""} />
+      </div>
+      <div className="guidedCompletionActions"><button type="button" onClick={onReview}>View Schedule</button><button type="button" onClick={onCatalogue}>Add Another Light</button><button type="button" onClick={onSaveProgress}>Save Progress</button></div>
+    </section>
+  );
+}
+
+function GuidedLightingProductCard({ product, requirement, onAdd }) {
+  const attrs = product.attributes || {};
+  return (
+    <article className="lightingProductCard">
+      <button type="button" className="lightingImageButton" onClick={onAdd}><img src={product.imageUrl || requirementImage(requirement, product)} alt={product.productName || "Beacon exterior light"} /></button>
+      <div><strong>{product.productName}</strong><span>SKU {externalLightingSku(product)}</span><span>{externalLightingCategory(product)} / {product.finish || product.colour}</span></div>
+      <div className="lightingBadges"><span>{attrs.ipRating || "IP not published"}</span><span>{attrs.sensorIncluded ? "Sensor" : "No sensor"}</span><span>{money(productClientPrice(product))}</span></div>
+      <a href={product.productUrl || product.officialProductURL || "#"} target="_blank" rel="noreferrer">View Details</a>
+      <button type="button" className="primary" onClick={onAdd}>Add to Schedule</button>
+    </article>
+  );
+}
+
+function GuidedExternalLightingDraft({ draft, requirement, onUpdate, onUpdateLocation, onCancel, onContinue, onReview }) {
+  const total = (numberValue(draft.unitPrice) || 0) * (numberValue(draft.quantity) || 1);
+  return (
+    <section className="lightingAssignment" data-testid="external-lighting-add-panel">
+      <div className="lightingSelectedProduct">
+        <img src={draft.imageUrl || requirementImage(requirement, draft.product)} alt={draft.productName || "Selected Beacon exterior light"} />
+        <dl>
+          <div><dt>Product</dt><dd>{draft.productName}</dd></div>
+          <div><dt>SKU</dt><dd>{draft.sku}</dd></div>
+          <div><dt>Category</dt><dd>{draft.category}</dd></div>
+          <div><dt>Finish</dt><dd>{draft.finish || "Not published"}</dd></div>
+          <div><dt>IP Rating</dt><dd>{draft.ipRating || "Not published by supplier"}</dd></div>
+          <div><dt>Voltage</dt><dd>{draft.voltage || "Not published by supplier"}</dd></div>
+          <div><dt>Installation</dt><dd>{draft.installationType || "Not published by supplier"}</dd></div>
+          <div><dt>Unit Price</dt><dd>{money(draft.unitPrice)}</dd></div>
+        </dl>
+      </div>
+      <div className="lightingQuantityPanel" data-testid="external-lighting-quantity">
+        <span>Quantity</span>
+        <button type="button" onClick={() => onUpdate({ quantity: Math.max(1, numberValue(draft.quantity) - 1) })}>-</button>
+        <input type="number" min="1" step="1" value={draft.quantity} onChange={(event) => onUpdate({ quantity: event.target.value })} />
+        <button type="button" onClick={() => onUpdate({ quantity: numberValue(draft.quantity) + 1 })}>+</button>
+        <strong>{money(total)}</strong>
+      </div>
+      <div className="lightingLocationRows">
+        {draft.locations.map((location, index) => (
+          <div key={`${location.lightingPointId}-${index}`} className="lightingLocationRow">
+            <label><span>Point ID</span><input value={location.lightingPointId} onChange={(event) => onUpdateLocation(index, { lightingPointId: event.target.value })} /></label>
+            <label><span>Location</span><select value={location.location} onChange={(event) => onUpdateLocation(index, { location: event.target.value })}>{EXTERNAL_LIGHTING_LOCATIONS.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label><span>Position</span><input value={location.notes} onChange={(event) => onUpdateLocation(index, { notes: event.target.value })} placeholder="left side, right side..." /></label>
+            <label><span>Switching</span><input value={location.switching} onChange={(event) => onUpdateLocation(index, { switching: event.target.value })} /></label>
+          </div>
+        ))}
+      </div>
+      <div className="guidedCompletionActions"><button type="button" onClick={onCancel}>Cancel</button><button type="button" onClick={onContinue}>Add Light and Continue Shopping</button><button type="button" className="primary" onClick={onReview}>Add Light and Review Schedule</button></div>
+    </section>
+  );
+}
+
+function GuidedExternalLightingReview({ lines, summary, onAddAnother, onEdit, onDuplicate, onRemove, onQuantity, onSaveProgress, onReturnToDashboard, onConfirm }) {
+  return (
+    <section className="lightingSchedulePanel" data-testid="external-lighting-review-schedule">
+      <div className="lightingScheduleHeader"><div><span>Review Schedule</span><h3>{summary.totalProducts} products / {summary.totalFittings} fittings</h3></div></div>
+      {lines.length ? <div className="lightingScheduleRows">{lines.map((line) => <GuidedExternalLightingLine key={line.lineId} line={line} onEdit={() => onEdit(line)} onDuplicate={() => onDuplicate(line)} onRemove={() => onRemove(line)} onQuantity={(quantity) => onQuantity(line, quantity)} />)}</div> : <div className="clientNotice">No external lighting products have been added yet.</div>}
+      <div className="guidedCompletionActions"><button type="button" onClick={onAddAnother}>Add Another Light</button><button type="button" onClick={onSaveProgress}>Save Progress</button><button type="button" onClick={() => { onSaveProgress(); onReturnToDashboard(); }}>Save and Return to Dashboard</button><button type="button" className="primary" disabled={!summary.complete} onClick={onConfirm}>Confirm External Lighting</button></div>
+    </section>
+  );
+}
+
+function GuidedExternalLightingLine({ line, onEdit, onDuplicate, onRemove, onQuantity }) {
+  return (
+    <article className="lightingScheduleLine" data-line-id={line.lineId}>
+      <img src={line.imageUrl} alt={line.productName || "Beacon exterior light"} />
+      <div>
+        <strong>{line.productName}</strong>
+        <span>SKU {line.sku} / {line.category} / {line.finish}</span>
+        <small>{line.locations.map((location) => `${location.lightingPointId} ${location.location}${location.notes ? `, ${location.notes}` : ""}`).join("; ")}</small>
+      </div>
+      <div className="lightingQuantityPanel compact">
+        <button type="button" onClick={() => onQuantity(Math.max(1, line.quantity - 1))}>-</button>
+        <input type="number" min="1" step="1" value={line.quantity} onChange={(event) => onQuantity(event.target.value)} />
+        <button type="button" onClick={() => onQuantity(line.quantity + 1)}>+</button>
+      </div>
+      <div className="lightingLineTotals"><span>{money(line.unitPrice)} each</span><strong>{money(line.selectedTotal)}</strong></div>
+      <div className="lightingLineActions"><button type="button" onClick={onEdit}>Edit</button><button type="button" onClick={onDuplicate}>Duplicate</button><button type="button" onClick={onRemove}>Remove</button></div>
+    </article>
+  );
+}
+
+function hydrateGuidedExternalLightingLine(line = {}, products = [], index = 0) {
+  const product = products.find((item) => [item.productId, item.id, item.productCode, externalLightingSku(item)].includes(line.productId || line.productCode || line.sku)) || line.product || line;
+  const attrs = product.attributes || product.metadata?.productEntity?.attributes || {};
+  const quantity = Math.max(1, Math.trunc(numberValue(line.quantity) || 1));
+  return normaliseGuidedExternalLightingDraft({
+    ...line,
+    lineId: line.lineId || line.scheduleLineId || `lighting-line-${index + 1}`,
+    scheduleLineId: line.scheduleLineId || line.lineId || `lighting-line-${index + 1}`,
+    product,
+    productId: product.productId || product.id || line.productId || "",
+    productCode: product.productCode || line.productCode || "",
+    supplierId: line.supplierId || "beacon-lighting",
+    supplierName: line.supplierName || "Beacon Lighting",
+    sku: line.sku || externalLightingSku(product),
+    productName: line.productName || product.productName || "",
+    imageUrl: line.imageUrl || product.imageUrl || requirementImage({ familyKey: "external-lighting", requirementKey: "external-lighting" }, product),
+    category: line.category || externalLightingCategory(product),
+    colour: line.colour || product.colour || "",
+    finish: line.finish || product.finish || product.colour || "",
+    ipRating: line.ipRating || attrs.ipRating || "",
+    voltage: line.voltage || attrs.voltage || "",
+    installationType: line.installationType || attrs.installationType || attrs.constructionSuitability || "",
+    unitPrice: numberValue(line.unitPrice ?? line.unitCost ?? productClientPrice(product)),
+    quantity,
+    locations: reconcileGuidedLightingLocations(line.locations || [], quantity, attrs),
+    switching: line.switching || "",
+    sensorDetails: line.sensorDetails || line.sensorType || attrs.sensorType || "",
+    notes: line.notes || "",
+    pricingStatus: line.pricingStatus || line.priceStatus || priceStateForProduct(product),
+    allowance: numberValue(line.allowance),
+    createdAt: line.createdAt || new Date().toISOString(),
+  }, line.updatedAt || new Date().toISOString());
+}
+
+function normaliseGuidedExternalLightingDraft(line = {}, timestamp = new Date().toISOString()) {
+  const quantity = Math.max(1, Math.trunc(numberValue(line.quantity) || 1));
+  const unitPrice = numberValue(line.unitPrice ?? line.unitCost);
+  const selectedTotal = Math.round(unitPrice * quantity * 100) / 100;
+  const allowance = numberValue(line.allowance);
+  const locations = reconcileGuidedLightingLocations(line.locations || [], quantity, { sensorIncluded: Boolean(line.sensorDetails), sensorType: line.sensorDetails });
+  const stableLineId = line.lineId || line.scheduleLineId || uid("lighting-line");
+  return {
+    lineId: stableLineId,
+    scheduleLineId: stableLineId,
+    product: line.product || null,
+    productId: line.productId || "",
+    productCode: line.productCode || "",
+    supplierId: line.supplierId || "beacon-lighting",
+    supplierName: line.supplierName || "Beacon Lighting",
+    supplier: "Beacon Lighting",
+    brand: "Beacon Lighting",
+    sku: line.sku || "",
+    productName: line.productName || "",
+    imageUrl: line.imageUrl || "",
+    category: line.category || "External Lighting",
+    colour: line.colour || "",
+    finish: line.finish || "",
+    ipRating: line.ipRating || "",
+    voltage: line.voltage || "",
+    installationType: line.installationType || "",
+    unitPrice,
+    unitCost: unitPrice,
+    quantity,
+    locations,
+    switching: line.switching || "",
+    sensorDetails: line.sensorDetails || "",
+    notes: line.notes || "",
+    pricingStatus: line.pricingStatus || PRICE_STATES.current,
+    priceStatus: line.pricingStatus || PRICE_STATES.current,
+    allowance,
+    selectedTotal,
+    productTotal: selectedTotal,
+    variation: Math.round((selectedTotal - allowance) * 100) / 100,
+    createdAt: line.createdAt || timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+function reconcileGuidedLightingLocations(locations = [], quantity = 1, attrs = {}) {
+  const count = Math.max(1, Math.trunc(numberValue(quantity) || 1));
+  const defaults = defaultGuidedLightingLocations(count, attrs);
+  const source = [...locations, ...defaults.slice(locations.length)];
+  return source.slice(0, count).map((location, index) => ({
+    lightingPointId: location.lightingPointId || `EL${String(index + 1).padStart(2, "0")}`,
+    floor: location.floor || "Ground",
+    elevation: location.elevation || "",
+    location: location.location || location.exactLocation || "Other custom location",
+    quantity: 1,
+    switching: location.switching || (attrs.sensorIncluded ? "Sensor/manual override" : "Entry switch"),
+    sensorRequirement: location.sensorRequirement || attrs.sensorType || "",
+    notes: location.notes || "",
+  }));
+}
+
+function defaultGuidedLightingLocations(quantity, attrs = {}) {
+  const count = Math.max(1, Math.trunc(numberValue(quantity) || 1));
+  const base = attrs.sensorIncluded
+    ? [{ lightingPointId: "EL03", location: "Garage exterior", switching: "Sensor/manual override", sensorRequirement: attrs.sensorType || "Sensor included" }]
+    : [
+        { lightingPointId: "EL01", location: "Front entry", notes: "left side", switching: "Entry switch" },
+        { lightingPointId: "EL02", location: "Front entry", notes: "right side", switching: "Entry switch" },
+      ];
+  while (base.length < count) {
+    const index = base.length;
+    base.push({ lightingPointId: `EL${String(index + 1).padStart(2, "0")}`, location: attrs.sensorIncluded ? "Garage exterior" : "Front entry", notes: "", switching: attrs.sensorIncluded ? "Sensor/manual override" : "Entry switch", sensorRequirement: attrs.sensorType || "" });
+  }
+  return base.slice(0, count);
+}
+
+function guidedLightingLineSignature(line = {}) {
+  return [
+    line.sku,
+    line.colour,
+    line.finish,
+    line.voltage,
+    line.sensorDetails,
+    line.switching,
+    line.installationType,
+  ].map((value) => String(value || "").trim().toLowerCase()).join("|");
+}
+
+function guidedLightingLinesKey(lines = []) {
+  return JSON.stringify((lines || []).map((line) => ({
+    id: line.lineId || line.scheduleLineId || "",
+    sku: line.sku || line.productCode || line.productId || "",
+    quantity: numberValue(line.quantity),
+    locations: (line.locations || []).map((location) => [location.lightingPointId, location.location, location.notes, location.switching].join("|")),
+    updatedAt: line.updatedAt || "",
+  })));
+}
+
+function buildExteriorColourAreas(savedAreas = [], project = {}, projectInfo = {}, linkedSelections = {}) {
+  const projectId = project?.id || projectInfo?.projectId || "";
+  const linkedAreas = buildLinkedExteriorColourAreas(linkedSelections, projectId);
+  if (savedAreas.length) return mergeExteriorColourAreas(savedAreas.map((area, index) => normaliseExteriorColourArea(area, { index, projectId })), linkedAreas, projectId);
+  const metadata = project?.metadata || project?.project_metadata || {};
+  const haystack = [
+    project?.project_name,
+    project?.description,
+    projectInfo?.projectName,
+    projectInfo?.siteAddress,
+    JSON.stringify(metadata),
+  ].filter(Boolean).join(" ").toLowerCase();
+  const baseAreas = EXTERIOR_COLOUR_AREAS
+    .filter((area) => area.defaultApplicable || exteriorAreaAppearsInProject(area, haystack))
+    .map((area, index) => normaliseExteriorColourArea({ ...area, applicable: true }, { index, projectId }));
+  return mergeExteriorColourAreas(baseAreas, linkedAreas, projectId);
+}
+
+function mergeExteriorColourAreas(baseAreas = [], linkedAreas = [], projectId = "") {
+  const byId = new Map(baseAreas.map((area) => [area.areaId, area]));
+  linkedAreas.forEach((linkedArea) => {
+    const current = byId.get(linkedArea.areaId);
+    if (!current || (!current.isOverride && current.colourSource !== "client-override")) {
+      byId.set(linkedArea.areaId, normaliseExteriorColourArea({ ...current, ...linkedArea, applicable: true }, { projectId }));
+    }
+  });
+  return Array.from(byId.values());
+}
+
+function buildLinkedExteriorColourAreas(linkedSelections = {}, projectId = "") {
+  const roofing = linkedSelections.roofing?.roofingSelection || linkedSelections.roofing || {};
+  const roofingConfiguration = roofing.roofingConfiguration || roofing.configuration || {};
+  const roofPackage = roofing.roofPackage || {};
+  const garage = linkedSelections.garageDoor?.garageDoorSelection || linkedSelections.garageDoor || {};
+  const areas = [];
+  const pushLinked = (areaId, colourValue, patch = {}) => {
+    const base = EXTERIOR_COLOUR_AREAS.find((area) => area.areaId === areaId);
+    if (!base || !colourValue) return;
+    const colourSelection = exteriorColourRecordFromName(colourValue, patch.supplier || "COLORBOND");
+    areas.push(normaliseExteriorColourArea({
+      ...base,
+      ...patch,
+      applicable: true,
+      colourSelection,
+      confirmationStatus: base.finishType === "factory_finished" ? "factory_finished" : "selected",
+      colourSource: patch.colourSource || "roofing-selection",
+      isOverride: false,
+    }, { projectId }));
+  };
+  pushLinked("roof", roofingConfiguration.colour || roofingConfiguration.roofColour || roofing.colour || roofing.colourName, { material: roofingConfiguration.profile || roofing.profile || "COLORBOND roofing", source: "Roofing", linkedComponentId: "" });
+  pushLinked("fascia", roofingConfiguration.fasciaColour || roofPackage.fascia?.colour || roofing.fasciaColour, { source: "Roofing", linkedComponentId: "roof" });
+  pushLinked("gutters", roofingConfiguration.gutterColour || roofPackage.gutter?.colour || roofing.gutterColour, { source: "Roofing", linkedComponentId: "roof" });
+  pushLinked("downpipes", roofingConfiguration.downpipeColour || roofPackage.downpipe?.colour || roofing.downpipeColour, { source: "Roofing", linkedComponentId: roofingConfiguration.downpipeColourMode === "matchGutters" ? "gutters" : "roof" });
+  const garageColour = garage.selectedColour || garage.colour || garage.colourSelection || {};
+  pushLinked("garage-door-surround", garageColour.colourName || garageColour.name || garageColour, { source: "Garage door selection", colourSource: "garage-door-selection", linkedComponentId: "" });
+  return areas;
+}
+
+function exteriorColourRecordFromName(colourValue, supplier = "COLORBOND") {
+  if (typeof colourValue === "object" && colourValue.colourName) return colourValue;
+  if (typeof colourValue === "object" && colourValue.name) return { ...colourValue, colourName: colourValue.name };
+  const name = String(colourValue || "").replace(/^colorbond\s+/i, "").trim();
+  const match = EXTERIOR_COLOUR_PALETTE.find((colour) => [colour.colourName, `${colour.supplier} ${colour.colourName}`, colour.colourCode].some((value) => String(value || "").toLowerCase() === name.toLowerCase()));
+  return match || {
+    colourId: `linked-${String(supplier || "supplier").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    supplier,
+    range: supplier === "COLORBOND" ? "COLORBOND steel" : "Linked supplier colour",
+    colourName: name,
+    colourCode: "Manufacturer colour",
+    colourFamily: "Other",
+    colourFamilies: ["Other"],
+    paletteSources: [],
+    searchTerms: [supplier, name],
+    swatch: "#d1d5db",
+    suitability: "Linked exterior material colour",
+    officialSource: "",
+    verifiedDate: "",
+    status: "selected",
+  };
+}
+
+function exteriorColourLinkOptions(activeArea = {}, areas = []) {
+  const findArea = (areaId) => areas.find((area) => area.areaId === areaId && area.colourSelection?.colourName);
+  const toPatch = (sourceArea, sourceLabel) => sourceArea ? {
+    colourSelection: sourceArea.colourSelection,
+    confirmationStatus: activeArea.finishType === "factory_finished" ? "factory_finished" : "selected",
+    colourSource: sourceArea.colourSource || "exterior-colour-schedule",
+    linkedComponentId: sourceArea.areaId,
+    isOverride: false,
+    defaultStatus: `Linked to ${sourceLabel}`,
+  } : null;
+  const options = [];
+  if (["fascia", "gutters", "downpipes"].includes(activeArea.areaId)) {
+    options.push({ id: "match-roof", label: "Keep linked to Roofing", patch: toPatch(findArea("roof"), "Roofing") });
+  }
+  if (activeArea.areaId === "downpipes") {
+    options.push({ id: "match-gutters", label: "Keep linked to Gutters", patch: toPatch(findArea("gutters"), "Gutters") });
+  }
+  if (activeArea.areaId === "garage-door-surround") {
+    options.push({ id: "match-garage", label: "Keep linked to Garage Door", patch: toPatch(findArea("garage-door"), "Garage Door") });
+    options.push({ id: "match-roof", label: "Keep linked to Roofing", patch: toPatch(findArea("roof"), "Roofing") });
+  }
+  options.push({ id: "choose-separately", label: "Choose separately", patch: { colourSource: "client-override", linkedComponentId: "", isOverride: true, defaultStatus: "override" } });
+  return options;
+}
+
+function exteriorColourRowActionLabel(area = {}, statusKey = "") {
+  if (statusKey === "not_painted") return "Edit Status";
+  if (String(statusKey || "").startsWith("linked_") || area.linkedComponentId) return "Review Link";
+  if (!area.colourSelection?.colourName) return "Choose Colour";
+  return "Change Colour";
+}
+
+function exteriorAreaColourCompatible(area = {}, colour = {}) {
+  if (!colour?.colourName && !colour?.colourId) return true;
+  if (area.finishType === "not_painted" || area.confirmationStatus === "not_painted") return false;
+  const colourSupplier = String(colour.supplier || "").toLowerCase();
+  const currentSupplier = String(area.colourSelection?.supplier || "").toLowerCase();
+  const areaText = `${area.areaId || ""} ${area.areaName || ""} ${area.source || ""} ${area.colourSource || ""}`.toLowerCase();
+  if (areaText.includes("garage") && areaText.includes("selection") && currentSupplier && colourSupplier && currentSupplier !== colourSupplier) return false;
+  if (/timber|stain/i.test(`${area.finishType || ""} ${area.material || ""}`) && !/timber|stain|painter|custom/i.test(`${colour.supplier || ""} ${colour.range || ""} ${colour.colourFamily || ""} ${colour.colourName || ""}`)) return false;
+  return true;
+}
+
+function exteriorAreaAppearsInProject(area, haystack = "") {
+  if (!haystack) return false;
+  return [area.areaName, area.material, area.areaGroup].some((value) => haystack.includes(String(value || "").toLowerCase().split("/")[0]));
+}
+
+function exteriorColourApplyTargets(mode, activeArea, areas, selectedApplyAreas = []) {
+  const applicable = areas.filter((area) => area.applicable !== false);
+  if (mode === "selected") return selectedApplyAreas.length ? selectedApplyAreas : [activeArea.areaId];
+  if (mode === "trim") return applicable.filter((area) => /surround|trim|fascia|eaves|soffit/i.test(`${area.areaName} ${area.material}`)).map((area) => area.areaId);
+  if (mode === "render") return applicable.filter((area) => /render/i.test(`${area.areaName} ${area.material}`)).map((area) => area.areaId);
+  if (mode === "timber") return applicable.filter((area) => /timber|post|beam|batten|screen/i.test(`${area.areaName} ${area.material}`)).map((area) => area.areaId);
+  if (mode === "material") return applicable.filter((area) => area.material === activeArea.material).map((area) => area.areaId);
+  return [activeArea.areaId];
+}
+
+function uniqueExteriorColours(areas = []) {
+  const seen = new Set();
+  return areas.map((area) => area.colourSelection).filter((colour) => {
+    if (!colour?.colourName) return false;
+    const key = `${colour.supplier}|${colour.colourName}|${colour.colourCode}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function exteriorColourAreasKey(areas = []) {
+  return JSON.stringify((areas || []).map((area) => ({
+    id: area.areaId,
+    name: area.areaName,
+    material: area.material,
+    applicable: area.applicable !== false,
+    finishType: area.finishType,
+    colour: area.colourSelection ? `${area.colourSelection.supplier}|${area.colourSelection.colourName}|${area.colourSelection.colourCode}` : "",
+    status: area.confirmationStatus,
+    notes: area.notes || "",
+  })));
+}
+
+function GuidedDrivewayWorkflow({ requirement, products, selections, runningTotals, project, onSelectDrivewayConfiguration }) {
+  const savedDetails = selections.get(requirement.requirementKey)?.selected_details || selections.get(requirement.requirementKey)?.guidedSelection || {};
+  const plainProduct = products.find((product) => drivewayFinishType(product) === "Plain Concrete") || products[0];
+  const exposedProduct = products.find((product) => drivewayFinishType(product) === "Exposed Aggregate") || products[1] || products[0];
+  const [finishType, setFinishType] = useState(savedDetails.finish || drivewayFinishType(plainProduct) || "Plain Concrete");
+  const [colourTreatment, setColourTreatment] = useState(savedDetails.naturalGreyOrColoured || savedDetails.drivewaySelection?.colourTreatment || "natural_grey");
+  const [supplier, setSupplier] = useState(savedDetails.supplier || "Boral");
+  const [colourFamily, setColourFamily] = useState("all");
+  const [search, setSearch] = useState("");
+  const [mixAppearance, setMixAppearance] = useState("all");
+  const [availableOnly, setAvailableOnly] = useState(false);
+  const [compareMixes, setCompareMixes] = useState(false);
+  const [selectedColour, setSelectedColour] = useState(savedDetails.officialColourName || "");
+  const [selectedMix, setSelectedMix] = useState(savedDetails.aggregateMixName || savedDetails.drivewaySelection?.mixName || "");
+  const [mixSupplierId, setMixSupplierId] = useState(savedDetails.supplierId || savedDetails.drivewaySelection?.supplierId || "boral");
+  const initialArea = drivewayAreaSource(savedDetails, requirement, project);
+  const [areaM2, setAreaM2] = useState(initialArea.value);
+  const [areaSourceLabel, setAreaSourceLabel] = useState(initialArea.label);
+  const product = finishType === "Exposed Aggregate" ? exposedProduct : plainProduct;
+  const attrs = product?.attributes || product?.metadata?.productEntity?.attributes || {};
+  const colourRanges = attrs.supplierColourRanges || [];
+  const selectedColourRange = colourRanges.find((range) => range.supplier === supplier) || colourRanges[0] || {};
+  const colourOptions = selectedColourRange.colours || [];
+  const families = ["all", ...Array.from(new Set(colourOptions.map((item) => item.colourFamily).filter(Boolean)))];
+  const visibleColours = colourOptions.filter((colour) => {
+    const matchesFamily = colourFamily === "all" || colour.colourFamily === colourFamily;
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || `${colour.officialColourName} ${colour.colourFamily}`.toLowerCase().includes(term);
+    return matchesFamily && matchesSearch;
+  });
+  const regionKey = drivewayProjectRegionKey(project) || "QLD-SEQ";
+  const mixRanges = attrs.supplierMixRanges || [];
+  const defaultCatalogueRegion = attrs.defaultCatalogueRegion || "Brisbane, Queensland";
+  const regionLabel = regionKey === "QLD-SEQ" ? "Brisbane" : (deriveAustralianRegion(project) || defaultCatalogueRegion);
+  const supplierMixRanges = mixRanges.filter((range) => !range.projectRegion || range.projectRegion === regionKey || (regionKey === "QLD-SEQ" && range.region === "Brisbane"));
+  const selectedMixRange = supplierMixRanges.find((range) => (range.supplierId || slug(range.supplier)) === mixSupplierId) || supplierMixRanges[0] || null;
+  const mixSupplier = selectedMixRange?.supplierDisplayName || selectedMixRange?.supplier || "Concrete supplier";
+  const mixOptions = selectedMixRange?.mixes || [];
+  const visibleMixOptions = mixOptions.filter((mix) => {
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || `${mix.mixName} ${mix.colourFamily} ${mix.availability} ${selectedMixRange?.supplierDisplayName || selectedMixRange?.supplier} ${selectedMixRange?.range}`.toLowerCase().includes(term);
+    const matchesAppearance = mixAppearance === "all" || drivewayMixMatchesAppearance(mix, mixAppearance);
+    const matchesAvailability = !availableOnly || drivewayAvailabilityLabel(mix.availability || mix.status).toLowerCase() === "available";
+    return matchesSearch && matchesAppearance && matchesAvailability;
+  });
+  const comparedMixOptions = compareMixes
+    ? visibleMixOptions.filter((mix) => mix.mixName === selectedMix || drivewayMixMatchesAppearance(mix, mixAppearance)).slice(0, 4)
+    : [];
+  const canSavePlain = finishType === "Plain Concrete" && (colourTreatment === "natural_grey" || selectedColour || supplier === "Builder-specified/custom mix");
+  const canSaveExposed = finishType === "Exposed Aggregate" && Boolean(selectedMixRange && selectedMix);
+  const canSave = product && numberValue(areaM2) > 0 && (canSavePlain || canSaveExposed);
+  const areaSource = { value: areaM2, label: areaSourceLabel };
+  const areaLocked = areaSourceLabel === "Imported from BOQ";
+  const selectedMixItem = mixOptions.find((item) => item.mixName === selectedMix) || null;
+  const selectedColourItem = colourOptions.find((item) => item.officialColourName === selectedColour) || null;
+  const selectedFinishName = finishType === "Exposed Aggregate"
+    ? selectedMixItem?.mixName || "No aggregate mix selected"
+    : colourTreatment === "coloured_concrete"
+      ? selectedColourItem?.officialColourName || "No concrete colour selected"
+      : "Natural grey concrete";
+
+  function finishConfig() {
+    if (finishType === "Plain Concrete" && colourTreatment === "natural_grey") {
+      return {
+        finish: "Plain Concrete",
+        colourTreatment,
+        colourTreatmentName: "Natural grey concrete",
+        supplier: "Builder concrete supplier",
+        range: "Plain concrete",
+        officialColourName: "Natural grey concrete",
+        surfaceFinish: "Broom finish",
+        supplierCode: "",
+        projectRegion: regionKey || deriveAustralianRegion(project),
+        areaM2,
+        areaSource: areaSource.label,
+        priceStatus: PRICE_STATES.quoteRequired,
+      };
+    }
+    if (finishType === "Plain Concrete") {
+      const colour = colourOptions.find((item) => item.officialColourName === selectedColour) || {};
+      return {
+        finish: "Plain Concrete",
+        colourTreatment,
+        colourTreatmentName: "Coloured concrete",
+        supplier,
+        range: selectedColourRange.range || "Colori",
+        officialColourName: colour.officialColourName || "Builder-specified/custom mix",
+        supplierCode: colour.supplierCode || "",
+        colourFamily: colour.colourFamily || "",
+        surfaceFinish: "Broom finish",
+        officialSourceUrl: selectedColourRange.officialSourceUrl || "",
+        dateVerified: selectedColourRange.dateVerified || "",
+        projectRegion: regionKey || deriveAustralianRegion(project),
+        areaM2,
+        areaSource: areaSource.label,
+        priceStatus: PRICE_STATES.quoteRequired,
+      };
+    }
+    const mix = mixOptions.find((item) => item.mixName === selectedMix) || {};
+    return {
+      finish: "Exposed Aggregate",
+      supplierId: selectedMixRange?.supplierId || "",
+      supplier: selectedMixRange?.supplier || mixSupplier,
+      supplierName: selectedMixRange?.supplierDisplayName || selectedMixRange?.supplier || "",
+      officialRange: selectedMixRange?.range || "",
+      range: selectedMixRange?.range || "",
+      region: selectedMixRange?.region || regionLabel || "Brisbane",
+      mixProductId: mix.mixId || "",
+      mixName: mix.mixName || "",
+      supplierCode: mix.supplierCode || "",
+      colourFamily: mix.colourFamily || "",
+      appearance: mix.appearance || [],
+      baseConcreteColour: mix.baseConcreteColour || "",
+      sampleImage: mix.sampleImage || "",
+      availability: mix.availability || drivewayAvailabilityLabel(mix.status),
+      surfaceFinish: "Exposed aggregate",
+      sealer: mix.sealerFinish || "Builder configured",
+      productUrl: mix.productUrl || selectedMixRange?.officialSourceUrl || "",
+      officialSourceUrl: mix.productUrl || selectedMixRange?.officialSourceUrl || "",
+      dateVerified: selectedMixRange?.dateVerified || "",
+      projectRegion: regionKey || deriveAustralianRegion(project),
+      areaM2,
+      areaSource: areaSource.label,
+      priceStatus: PRICE_STATES.quoteRequired,
+    };
+  }
+
+  function chooseFinish(type) {
+    setFinishType(type);
+    setColourTreatment(type === "Plain Concrete" ? "natural_grey" : "");
+  }
+
+  return (
+    <section className="guidedShell" data-testid="guided-driveway-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout drivewayWorkflow">
+        <main className="guidedProductPanel">
+          <div className="guidedSectionHeader">
+            <span>Driveway</span>
+            <strong>Choose the driveway finish, then configure its colour or aggregate mix.</strong>
+          </div>
+          <div className="drivewayFinishGrid">
+            {[plainProduct, exposedProduct].filter(Boolean).map((item) => {
+              const type = drivewayFinishType(item);
+              const selected = finishType === type;
+              return (
+                <article key={item.id} className={`drivewayFinishCard ${selected ? "selected" : ""}`}>
+                  <img src={item.imageUrl || requirementImage(requirement)} alt={item.imageAltText || item.productName} />
+                  <div className="drivewayFinishBody">
+                    <span>{type}</span>
+                    <strong>{item.productName || type}</strong>
+                    <em>{type === "Exposed Aggregate" ? "Decorative aggregate mix selected by supplier range and project region." : "Standard concrete finish with natural grey or coloured concrete options."}</em>
+                    <small>{drivewayPriceStatusLabel(type === "Exposed Aggregate" ? PRICE_STATES.quoteRequired : item.priceStatus || item.status || PRICE_STATES.allowanceOnly)}</small>
+                    {selected ? <b>Selected</b> : null}
+                    <div className="drivewayFinishActions">
+                      <button type="button" onClick={() => chooseFinish(type)}>View Details</button>
+                      <button type="button" className="primary" onClick={() => chooseFinish(type)}>Choose Finish</button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <section className="drivewayConfigBlock">
+            <div className="drivewayConfigHeader">
+              <div>
+                <span>{finishType}</span>
+                <h3>{finishType === "Exposed Aggregate" ? "Configure aggregate mix" : "Configure concrete finish"}</h3>
+              </div>
+              <label className="drivewayAreaInput">
+                <span>Approximate driveway area (m&sup2;)</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Enter area"
+                  value={areaM2}
+                  disabled={areaLocked}
+                  onChange={(event) => {
+                    setAreaM2(event.target.value);
+                    if (areaSourceLabel !== "Imported from BOQ") {
+                      setAreaSourceLabel("Builder entered");
+                    }
+                  }}
+                />
+                <small>{areaSource.label}</small>
+              </label>
+            </div>
+            {finishType === "Plain Concrete" ? (
+              <>
+              <h4>Concrete type</h4>
+              <div className="drivewaySegment">
+                <button type="button" className={colourTreatment === "natural_grey" ? "selected" : ""} onClick={() => setColourTreatment("natural_grey")}>Natural grey concrete<span>No added colour</span></button>
+                <button type="button" className={colourTreatment === "coloured_concrete" ? "selected" : ""} onClick={() => setColourTreatment("coloured_concrete")}>Coloured concrete<span>Choose supplier and colour</span></button>
+              </div>
+              {colourTreatment === "natural_grey" ? (
+                <div className="drivewayNaturalPanel">
+                  <strong>Natural grey concrete</strong>
+                  <span>Broom finish where applicable. No colour selection is required.</span>
+                  <em>{drivewayPriceStatusLabel(PRICE_STATES.quoteRequired)}</em>
+                </div>
+              ) : null}
+              {colourTreatment === "coloured_concrete" ? (
+                <>
+                  <div className="drivewaySupplierRow">
+                    {["Boral", "Builder-specified/custom mix"].map((item) => <button key={item} type="button" className={supplier === item ? "selected" : ""} onClick={() => { setSupplier(item); setSelectedColour(""); }}>{item}</button>)}
+                  </div>
+                  {supplier === "Boral" ? (
+                    <>
+                      <div className="drivewayFilters">
+                        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search colours" />
+                        <select value={colourFamily} onChange={(event) => setColourFamily(event.target.value)}>
+                          {families.map((family) => <option key={family} value={family}>{family === "all" ? "All families" : family}</option>)}
+                        </select>
+                      </div>
+                      <div className="drivewayOptionGrid">
+                        {visibleColours.map((colour) => <DrivewaySwatchOption key={colour.officialColourName} option={colour} selected={selectedColour === colour.officialColourName} onSelect={() => setSelectedColour(colour.officialColourName)} />)}
+                      </div>
+                    </>
+                  ) : <div className="clientNotice">Supplier range not yet verified for this project region - request supplier quote.</div>}
+                </>
+              ) : null}
+              </>
+            ) : (
+              <>
+              <div className="drivewaySupplierRangeHeader">
+                <h4>Supplier</h4>
+                <span>{regionLabel || "Brisbane"} catalogue shown. Missing project addresses use Brisbane, Queensland as the demonstration fallback.</span>
+              </div>
+              <div className="drivewaySupplierRow">
+                {supplierMixRanges.map((range) => {
+                  const key = range.supplierId || slug(range.supplier);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={mixSupplierId === key ? "selected" : ""}
+                      onClick={() => {
+                        setMixSupplierId(key);
+                        setSelectedMix("");
+                      }}
+                    >
+                      {range.supplierDisplayName || range.supplier}
+                      <span>{range.range} / {range.region || regionLabel}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="drivewaySupplierRangeHeader">
+                <h4>{selectedMixRange ? `${selectedMixRange.supplierDisplayName || selectedMixRange.supplier} - ${selectedMixRange.range} ${selectedMixRange.region || regionLabel} range` : "Exposed aggregate supplier range"}</h4>
+                <span>{selectedMixRange ? `${mixOptions.length} verified mixes available for ${selectedMixRange.region || regionLabel}.` : "Brisbane, Queensland fallback catalogue is available when no project address is recorded."}</span>
+              </div>
+              {selectedMixRange ? (
+                <>
+                  <div className="drivewayFilters">
+                    <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search mixes" />
+                    <select value={mixAppearance} onChange={(event) => setMixAppearance(event.target.value)}>
+                      {["all", "light", "medium", "dark", "warm", "cool"].map((appearance) => <option key={appearance} value={appearance}>{appearance === "all" ? "All appearances" : appearance}</option>)}
+                    </select>
+                    <label className="drivewayFilterToggle">
+                      <input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} />
+                      <span>Show available only</span>
+                    </label>
+                    <button type="button" onClick={() => setCompareMixes((current) => !current)}>{compareMixes ? "Hide comparison" : "Compare selected samples"}</button>
+                    <button type="button" onClick={() => window.open(selectedMixRange.officialSourceUrl, "_blank", "noopener,noreferrer")}>Open official supplier range</button>
+                  </div>
+                  {compareMixes ? (
+                    <div className="drivewayCompareStrip">
+                      {(comparedMixOptions.length ? comparedMixOptions : visibleMixOptions.slice(0, 4)).map((mix) => (
+                        <DrivewaySwatchOption key={`compare-${mix.mixName}`} option={mix} supplierRange={selectedMixRange} selected={selectedMix === mix.mixName} onSelect={() => setSelectedMix(mix.mixName)} aggregate compact />
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="drivewayOptionGrid aggregateGrid">
+                    {visibleMixOptions.map((mix) => <DrivewaySwatchOption key={mix.mixName} option={mix} supplierRange={selectedMixRange} selected={selectedMix === mix.mixName} onSelect={() => setSelectedMix(mix.mixName)} aggregate />)}
+                  </div>
+                </>
+              ) : <div className="clientNotice">Brisbane, Queensland fallback catalogue could not be loaded for this supplier.</div>}
+              </>
+            )}
+          </section>
+          <section className="drivewaySelectionSummary" data-testid="driveway-selection-summary">
+            <h3>Selection Summary</h3>
+            <dl>
+              <div><dt>Driveway finish</dt><dd>{finishType}</dd></div>
+              <div><dt>Supplier</dt><dd>{finishType === "Exposed Aggregate" ? mixSupplier : colourTreatment === "natural_grey" ? "Builder concrete supplier" : supplier}</dd></div>
+              <div><dt>Range</dt><dd>{finishType === "Exposed Aggregate" ? selectedMixRange?.range || "Brisbane fallback" : colourTreatment === "coloured_concrete" ? selectedColourRange.range || "Supplier colour range" : "Plain concrete"}</dd></div>
+              <div><dt>Region</dt><dd>{finishType === "Exposed Aggregate" ? selectedMixRange?.region || regionLabel || "Brisbane" : regionKey || "Brisbane"}</dd></div>
+              <div><dt>{finishType === "Exposed Aggregate" ? "Mix" : "Colour"}</dt><dd>{selectedFinishName}</dd></div>
+              <div><dt>Area</dt><dd>{numberValue(areaM2) > 0 ? `${numberValue(areaM2)}m2` : "Not entered"}</dd></div>
+              <div><dt>Price status</dt><dd>{drivewayPriceStatusLabel(finishType === "Exposed Aggregate" ? selectedMixItem?.status || selectedMixRange?.pricingStatus : PRICE_STATES.quoteRequired)}</dd></div>
+            </dl>
+          </section>
+          <p className="drivewaySampleNotice">{DRIVEWAY_SAMPLE_NOTICE}</p>
+          <div className="guidedProductActions">
+            <button type="button" className="primary" disabled={!canSave} onClick={() => onSelectDrivewayConfiguration(requirement, product, finishConfig())}>Save Driveway Selection</button>
+          </div>
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function DrivewaySwatchOption({ option, supplierRange = {}, selected, onSelect, aggregate = false, compact = false }) {
+  const name = option.officialColourName || option.mixName;
+  const productUrl = option.productUrl || supplierRange.officialSourceUrl || "";
+  return (
+    <button type="button" className={`drivewayOptionCard ${selected ? "selected" : ""} ${compact ? "compact" : ""}`} onClick={onSelect}>
+      {aggregate ? (
+        <span className="drivewayAggregateSample">
+          {option.sampleImage ? <img src={option.sampleImage} alt={`${supplierRange.supplierDisplayName || supplierRange.supplier || "Supplier"} ${name} exposed aggregate sample`} /> : <em>Official image unavailable</em>}
+          {selected ? <i aria-label="Selected">Selected</i> : null}
+        </span>
+      ) : (
+        <span className="drivewayColourSample" style={{ background: option.swatch }}>{selected ? "Selected" : ""}</span>
+      )}
+      <strong>{name}</strong>
+      <em>{aggregate ? `${supplierRange.supplierDisplayName || supplierRange.supplier || "Supplier"} / ${supplierRange.range || "Range"}` : option.colourFamily || "Supplier range"}</em>
+      <small>{option.supplierCode || "Supplier code not published"}</small>
+      <small>{option.regionalAvailability || supplierRange.region || "Project region"} / {drivewayAvailabilityLabel(option.availability || option.status)}</small>
+      <small>{drivewayPriceStatusLabel(option.status || supplierRange.pricingStatus || PRICE_STATES.quoteRequired)}</small>
+      {option.baseConcreteColour ? <small>Base: {option.baseConcreteColour}</small> : null}
+      {selected ? <b>Chosen</b> : null}
+      {productUrl ? <a href={productUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>View supplier product</a> : null}
+    </button>
+  );
+}
+
+function drivewayAreaSource(savedDetails = {}, requirement = {}, project = {}) {
+  const saved = savedDetails.drivewayAreaM2 || savedDetails.approximateAreaM2 || savedDetails.quantity || "";
+  if (numberValue(saved) > 0) return { value: String(saved), label: savedDetails.areaSource || "Builder entered" };
+  const metadata = project?.metadata || project?.project_metadata || project?.source_metadata || {};
+  const takeoff = firstDrivewayAreaValue(metadata.takeoff, metadata.takeoffSummary, metadata.aiTakeoff, project?.takeoffSummary, project?.takeoff);
+  if (numberValue(takeoff) > 0) return { value: String(takeoff), label: "Imported from Takeoff" };
+  const boq = firstDrivewayAreaValue(metadata.boq, metadata.boqSummary, metadata.billOfQuantities, project?.boq, project?.boqSummary);
+  if (numberValue(boq) > 0) return { value: String(boq), label: "Imported from BOQ" };
+  const estimate = firstDrivewayAreaValue(metadata.estimate, metadata.estimateSummary, metadata.workbook, project?.estimate, project?.workbook);
+  if (numberValue(estimate) > 0) return { value: String(estimate), label: "Client estimate only" };
+  const defaultQuantity = numberValue(requirement.defaultQuantity);
+  if (defaultQuantity > 1) return { value: String(defaultQuantity), label: "Client estimate only" };
+  return { value: "", label: "Builder entered" };
+}
+
+function firstDrivewayAreaValue(...sources) {
+  for (const source of sources) {
+    const direct = findDrivewayAreaValue(source);
+    if (numberValue(direct) > 0) return direct;
+  }
+  return "";
+}
+
+function findDrivewayAreaValue(source, seen = new Set()) {
+  if (!source || typeof source !== "object" || seen.has(source)) return "";
+  seen.add(source);
+  if (Array.isArray(source)) {
+    for (const item of source) {
+      const value = findDrivewayAreaValue(item, seen);
+      if (numberValue(value) > 0) return value;
+    }
+    return "";
+  }
+  for (const [key, value] of Object.entries(source)) {
+    if (/driveway.*(m2|m²|area|quantity|qty)|drivewaym2/i.test(key) && numberValue(value) > 0) return value;
+  }
+  for (const value of Object.values(source)) {
+    const nested = findDrivewayAreaValue(value, seen);
+    if (numberValue(nested) > 0) return nested;
+  }
+  return "";
+}
+
+function drivewayPriceStatusLabel(status = "") {
+  const value = String(status || "").replace(/_/g, " ");
+  if (/quote/i.test(value)) return "Supplier quote required";
+  if (/upgrade/i.test(value)) return "Upgrade";
+  if (/allowance|included|current/i.test(value)) return "Included";
+  return value || "Supplier quote required";
+}
+
+function drivewayAvailabilityLabel(status = "") {
+  const value = String(status || "").replace(/_/g, " ").toLowerCase();
+  if (value.includes("limited")) return "Limited availability";
+  if (value.includes("quote")) return "Quote required";
+  if (value.includes("available")) return "Available";
+  return status || "Available";
+}
+
+function drivewayMixMatchesAppearance(mix = {}, appearance = "all") {
+  if (appearance === "all") return true;
+  const tags = Array.isArray(mix.appearance) ? mix.appearance : [];
+  const text = `${tags.join(" ")} ${mix.colourFamily || ""}`.toLowerCase();
+  return text.includes(appearance);
+}
+
+function drivewayFinishType(product = {}) {
+  const attrs = product?.attributes || product?.metadata?.productEntity?.attributes || {};
+  return attrs.finishType || product.model || product.finish || "";
+}
+
+function drivewayProjectRegionKey(project = {}) {
+  const text = [
+    project?.site_state,
+    project?.state,
+    project?.site_address,
+    project?.address,
+    project?.suburb_postcode,
+    project?.postcode,
+  ].filter(Boolean).join(" ");
+  const postcode = String(text).match(/\b(4\d{3})\b/)?.[1];
+  if (SEQ_LOCALITY_PATTERN.test(text) || (postcode && Number(postcode) >= 4000 && Number(postcode) <= 4999)) return "QLD-SEQ";
+  return deriveAustralianRegion(project);
+}
+
+function GuidedGarageDoorWorkflow({ requirement, requirements, products, selections, masterProductCount, enabledProductCount, runningTotals, onOpenRequirement, onSelectProduct, onSaveProgress }) {
+  const savedDetails = selections.get(requirement.requirementKey)?.selected_details || selections.get(requirement.requirementKey)?.guidedSelection || {};
+  const savedGarage = savedDetails.garageDoorSelection || {};
+  const suppliers = useMemo(() => garageDoorEnabledSupplierOptions(products), [products]);
+  const [step, setStep] = useState("supplier");
+  const [supplierId, setSupplierId] = useState(savedGarage.supplierId || suppliers[0]?.supplierId || "");
+  const supplierProducts = useMemo(() => garageDoorProductsForSupplier(products, supplierId), [products, supplierId]);
+  const ranges = useMemo(() => garageDoorRangeOptions(products, supplierId), [products, supplierId]);
+  const [range, setRange] = useState(savedGarage.range || ranges[0] || "");
+  const rangeProducts = useMemo(() => supplierProducts.filter((product) => !range || product.range === range || product.model === range), [supplierProducts, range]);
+  const [productId, setProductId] = useState(savedDetails.productId || rangeProducts[0]?.id || rangeProducts[0]?.productId || "");
+  const selectedProduct = useMemo(() => rangeProducts.find((product) => [product.id, product.productId, product.productCode].includes(productId)) || rangeProducts[0] || supplierProducts[0] || products[0] || null, [rangeProducts, supplierProducts, products, productId]);
+  const profiles = useMemo(() => selectedProduct ? garageDoorProfileOptions(selectedProduct) : [], [selectedProduct]);
+  const [profile, setProfile] = useState(savedGarage.profile || profiles[0] || "");
+  const sizes = useMemo(() => selectedProduct ? garageDoorSizeOptions(selectedProduct) : [], [selectedProduct]);
+  const [size, setSize] = useState(savedGarage.size || sizes[0] || "Project garage opening");
+  const [location, setLocation] = useState(savedGarage.location || "GD01");
+  const [openingWidth, setOpeningWidth] = useState(savedGarage.openingWidth || "");
+  const [openingHeight, setOpeningHeight] = useState(savedGarage.openingHeight || "");
+  const [colourSearch, setColourSearch] = useState("");
+  const [finishFamily, setFinishFamily] = useState("");
+  const colourOptions = useMemo(() => selectedProduct ? garageDoorColourOptionsForProduct(selectedProduct, { profile, search: colourSearch, family: finishFamily }) : [], [selectedProduct, profile, colourSearch, finishFamily]);
+  const finishFamilies = useMemo(() => selectedProduct ? garageDoorFinishFamiliesForProduct(selectedProduct, profile) : [], [selectedProduct, profile]);
+  const [colourId, setColourId] = useState(savedGarage.colourId || "");
+  const selectedColour = garageDoorColourById(colourId);
+  const automationOptions = useMemo(() => selectedProduct ? garageDoorAutomationOptions(selectedProduct) : [], [selectedProduct]);
+  const accessoryOptions = useMemo(() => selectedProduct ? garageDoorAccessoryOptions(selectedProduct) : [], [selectedProduct]);
+  const [automation, setAutomation] = useState(savedGarage.operation || automationOptions[0] || "");
+  const [accessories, setAccessories] = useState(Array.isArray(savedGarage.accessories) ? savedGarage.accessories : ["Two remote controls"]);
+  const [compatibilityNotice, setCompatibilityNotice] = useState("");
+  const canConfirm = Boolean(selectedProduct && profile && size && automation && selectedColour && colourOptions.some((colour) => colour.colourId === selectedColour.colourId));
+  const previewProduct = useMemo(() => selectedProduct ? garageDoorWorkflowProduct(selectedProduct, requirement, { colourId, profile, size, location, openingWidth, openingHeight, automation, accessories }) : null, [selectedProduct, requirement, colourId, profile, size, location, openingWidth, openingHeight, automation, accessories]);
+
+  useEffect(() => {
+    if (!suppliers.some((supplier) => supplier.supplierId === supplierId)) setSupplierId(suppliers[0]?.supplierId || "");
+  }, [supplierId, suppliers]);
+
+  useEffect(() => {
+    if (!ranges.includes(range)) setRange(ranges[0] || "");
+  }, [range, ranges]);
+
+  useEffect(() => {
+    const nextProduct = rangeProducts.find((product) => [product.id, product.productId, product.productCode].includes(productId));
+    if (!nextProduct && rangeProducts[0]) setProductId(rangeProducts[0].id || rangeProducts[0].productId || rangeProducts[0].productCode);
+  }, [productId, rangeProducts]);
+
+  useEffect(() => {
+    if (!profiles.includes(profile)) setProfile(profiles[0] || "");
+  }, [profile, profiles]);
+
+  useEffect(() => {
+    if (!sizes.includes(size)) setSize(sizes[0] || "Project garage opening");
+  }, [size, sizes]);
+
+  useEffect(() => {
+    if (!selectedColour || !selectedProduct) return;
+    if (!colourOptions.some((colour) => colour.colourId === selectedColour.colourId)) {
+      setColourId("");
+      setCompatibilityNotice(`${selectedColour.officialName} was removed because it is not compatible with ${selectedProduct.range || selectedProduct.productName} ${profile}. Select a compatible colour.`);
+    }
+  }, [selectedColour, selectedProduct, profile, colourOptions]);
+
+  return (
+    <section className="guidedShell garageDoorWorkflow" data-testid="guided-garage-door-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-left-progress-menu">
+          <h2>{requirement.areaLabel}</h2>
+          {requirements.map((item) => (
+            <button key={item.requirementKey} type="button" className={`guidedProgressItem ${item.requirementKey === requirement.requirementKey ? "active" : ""}`} onClick={() => onOpenRequirement(item.requirementKey)}>
+              <GuidedStatusDot status={statusForRequirement(item, selections.get(item.requirementKey))} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Garage Doors</span>
+            <strong>Supplier-specific garage-door selection</strong>
+            <em>{enabledProductCount || masterProductCount || products.length} enabled product option{(enabledProductCount || masterProductCount || products.length) === 1 ? "" : "s"}. Colour must be selected before confirmation.</em>
+          </div>
+          <div className="garageSteps">{GARAGE_DOOR_WORKFLOW_STEPS.map((item) => <button key={item.key} type="button" className={step === item.key ? "active" : ""} onClick={() => setStep(item.key)}>{item.label}</button>)}</div>
+          {compatibilityNotice ? <div className="windowApplyNotice">{compatibilityNotice}</div> : null}
+          {step === "supplier" ? <GuidedGarageChoiceGrid title="Supplier" items={suppliers.map((supplier) => ({ key: supplier.supplierId, title: supplier.label, meta: `${supplier.count} enabled product${supplier.count === 1 ? "" : "s"}` }))} selected={supplierId} onSelect={(key) => { setSupplierId(key); setColourId(""); setStep("range"); }} /> : null}
+          {step === "range" ? <GuidedGarageChoiceGrid title="Door Type / Range" items={ranges.map((item) => ({ key: item, title: item, meta: supplierProducts.find((product) => product.range === item)?.configuration || "Garage door range" }))} selected={range} onSelect={(key) => { setRange(key); setColourId(""); setStep("profile"); }} /> : null}
+          {step === "profile" ? <GuidedGarageChoiceGrid title="Profile / Design" items={profiles.map((item) => ({ key: item, title: item, meta: selectedProduct?.range || "" }))} selected={profile} onSelect={(key) => { setProfile(key); setStep("size"); }} /> : null}
+          {step === "size" ? (
+            <div className="garageFormPanel">
+              <label><span>Garage door ID / location</span><input value={location} onChange={(event) => setLocation(event.target.value)} /></label>
+              <label><span>Opening width</span><input value={openingWidth} onChange={(event) => setOpeningWidth(event.target.value)} placeholder="e.g. 4800" /></label>
+              <label><span>Opening height</span><input value={openingHeight} onChange={(event) => setOpeningHeight(event.target.value)} placeholder="e.g. 2400" /></label>
+              <label><span>Configuration</span><select value={size} onChange={(event) => setSize(event.target.value)}>{sizes.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+              <button type="button" className="primary" onClick={() => setStep("colour")}>Open Colour / Finish</button>
+            </div>
+          ) : null}
+          {step === "colour" ? <GuidedGarageColourSelector product={selectedProduct} profile={profile} colourOptions={colourOptions} finishFamilies={finishFamilies} finishFamily={finishFamily} search={colourSearch} selectedColour={selectedColour} onFamilyChange={setFinishFamily} onSearchChange={setColourSearch} onSelect={(colour) => setColourId(colour.colourId)} onClear={() => setColourId("")} onConfirm={() => setStep("automation")} /> : null}
+          {step === "automation" ? <GuidedGarageChoiceGrid title="Automation" items={automationOptions.map((item) => ({ key: item, title: item, meta: /quote/i.test(item) ? "Quote required" : "Included/manual" }))} selected={automation} onSelect={(key) => { setAutomation(key); setStep("accessories"); }} /> : null}
+          {step === "accessories" ? (
+            <div className="garageAccessoryGrid">{accessoryOptions.map((item) => {
+              const selected = accessories.includes(item);
+              return <button key={item} type="button" className={selected ? "selected" : ""} onClick={() => setAccessories((current) => selected ? current.filter((value) => value !== item) : [...current, item])}><strong>{item}</strong><span>{selected ? "Selected" : /quote/i.test(item) ? "Quote required" : "Select"}</span></button>;
+            })}<button type="button" className="primary" onClick={() => setStep("review")}>Review and Confirm</button></div>
+          ) : null}
+          {step === "review" ? (
+            <div className="garageReview" data-testid="garage-door-review">
+              <img src={GARAGE_DOORS_DASHBOARD_IMAGE_URL} alt={previewProduct?.productName || "Garage door selection"} />
+              <dl>
+                <div><dt>Supplier</dt><dd>{previewProduct?.garageDoorSelection.supplier || "Select supplier"}</dd></div>
+                <div><dt>Range</dt><dd>{previewProduct?.garageDoorSelection.range || "Select range"}</dd></div>
+                <div><dt>Profile</dt><dd>{profile || "Select profile"}</dd></div>
+                <div><dt>Colour</dt><dd>{selectedColour ? `${selectedColour.officialName} / ${selectedColour.finishFamily}` : "Colour required"}</dd></div>
+                <div><dt>Size</dt><dd>{[openingWidth && `${openingWidth} wide`, openingHeight && `${openingHeight} high`, size].filter(Boolean).join(" / ")}</dd></div>
+                <div><dt>Automation</dt><dd>{automation || "Select automation"}</dd></div>
+                <div><dt>Accessories</dt><dd>{accessories.join(", ") || "None selected"}</dd></div>
+                <div><dt>Pricing</dt><dd>{previewProduct?.priceStatus === PRICE_STATES.quoteRequired ? "Supplier quote required" : "Included / no variation"}</dd></div>
+              </dl>
+              <div className="guidedProductActions"><button type="button" onClick={onSaveProgress}>Save Progress</button><button type="button" className="primary" disabled={!canConfirm} onClick={() => onSelectProduct(requirement, previewProduct)}>Save and Return to Dashboard</button></div>
+            </div>
+          ) : null}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function GuidedGarageChoiceGrid({ title, items, selected, onSelect }) {
+  return <div className="garageChoiceBlock"><h3>{title}</h3><div className="garageChoiceGrid">{items.map((item) => <button key={item.key} type="button" className={selected === item.key ? "selected" : ""} onClick={() => onSelect(item.key)}><strong>{item.title}</strong><span>{item.meta}</span>{selected === item.key ? <b>Selected</b> : null}</button>)}</div></div>;
+}
+
+function GuidedGarageColourSelector({ product, profile, colourOptions, finishFamilies, finishFamily, search, selectedColour, onFamilyChange, onSearchChange, onSelect, onClear, onConfirm }) {
+  const sourceUrl = product?.officialProductURL || product?.productUrl || "";
+  const grouped = finishFamilies.map((family) => ({ family, colours: colourOptions.filter((colour) => colour.finishFamily === family) })).filter((group) => group.colours.length);
+  return (
+    <div className="garageColourPanel" data-testid="garage-door-colour-selector">
+      <div className="garageColourToolbar">
+        <label><span>Search colour</span><input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Monument, Surfmist, timber..." /></label>
+        <label><span>Finish family</span><select value={finishFamily} onChange={(event) => onFamilyChange(event.target.value)}><option value="">All compatible</option>{finishFamilies.map((family) => <option key={family} value={family}>{family}</option>)}</select></label>
+        {sourceUrl ? <a href={sourceUrl} target="_blank" rel="noreferrer">View official supplier colour chart</a> : null}
+        <button type="button" onClick={onClear}>Clear selection</button>
+      </div>
+      <p className="garageColourWarning">On-screen colours are indicative. Confirm the final colour using the supplier's current physical sample before ordering.</p>
+      <div className="garageColourGroups">
+        {grouped.map((group) => <section key={group.family}><h3>{group.family}</h3><div className="garageColourGrid">{group.colours.map((colour) => {
+          const selected = selectedColour?.colourId === colour.colourId;
+          return <button key={colour.colourId} type="button" className={selected ? "selected" : ""} onClick={() => onSelect(colour)}><span className="garageSwatch" style={{ background: colour.swatchValue }}>{selected ? "Selected" : ""}</span><strong>{colour.officialName}</strong><em>{colour.finishType}</em><small>{colour.supplierCode || "Supplier code not published"} / {colour.priceStatus}</small><small>{colour.compatibleProfiles.join(", ")}</small>{selected ? <b>Selected</b> : null}</button>;
+        })}</div></section>)}
+      </div>
+      {selectedColour ? <div className="garageSelectedColour"><span className="garageSwatch" style={{ background: selectedColour.swatchValue }} /><div><strong>{selectedColour.officialName}</strong><small>{selectedColour.finishFamily} / {selectedColour.supplierName} / {selectedColour.priceStatus}</small></div><button type="button" className="primary" onClick={onConfirm}>Confirm colour</button></div> : <div className="windowApplyNotice">Select a compatible colour for {profile || "the selected profile"} before continuing.</div>}
+    </div>
+  );
+}
+
+function GuidedWindowsWorkflow({
+  requirement,
+  products,
+  runningTotals,
+  windowStep = "schedule",
+  configuration = DEFAULT_WINDOW_CONFIGURATION,
+  project,
+  projectInfo,
+  workbook,
+  snapshot,
+  selectedSelection,
+  defaultsApplyResult,
+  onWindowStepChange,
+  onWindowConfigurationChange,
+  onWindowDefaultsApplyResult,
+  onSelectWindowConfiguration,
+}) {
+  const schedule = projectWindowScheduleSummary({ project, projectInfo, workbook, snapshot });
+  const region = bradnamsRegionForProject(project, projectInfo);
+  const savedDetails = selectedSelection?.selected_details || selectedSelection?.guidedSelection || {};
+  if (!configuration?.supplier && !configuration?.frameColourName && !configuration?.frameColourCode && (savedDetails.frameColourName || savedDetails.frameColourCode || savedDetails.colour || savedDetails.windowWorkflow)) {
+    configuration = windowConfigurationFromSaved(savedDetails);
+  }
+  const suppliers = windowSupplierOptions(products);
+  const selectedSupplier = windowSupplierDefinition(configuration.supplier || suppliers[0]?.label || "");
+  const colours = windowColoursForSupplier(selectedSupplier.label, region);
+  const selectedColour = colours.find((colour) => {
+    const colourId = colour.colourId || colour.id || "";
+    const configColourId = configuration.frameColourId || "";
+    const colourCode = colour.supplierCode || colour.code || "";
+    const configColourCode = configuration.frameColourCode || "";
+    return (configColourId && colourId === configColourId)
+      || (configuration.frameColourName && colour.name === configuration.frameColourName)
+      || (configColourCode && colourCode === configColourCode);
+  }) || null;
+  const glassOptions = windowGlassOptionsForSupplier(selectedSupplier.label);
+  const selectedGlass = glassOptions.find((glass) => glass.name === configuration.glassName) || glassOptions[0];
+  const screenOptions = windowScreenOptionsForSupplier(selectedSupplier.label);
+  const hardwareOptions = windowHardwareOptionsForSupplier(selectedSupplier.label);
+  const systemsByType = schedule.isAvailable ? windowSystemsForSchedule(selectedSupplier.label, schedule, configuration.systemsByType) : {};
+  const effectiveWindows = schedule.isAvailable ? effectiveWindowRows(schedule, selectedSupplier, configuration, systemsByType) : [];
+  const wetAreaRows = effectiveWindows.filter((item) => item.isWetArea);
+  const incomplete = effectiveWindows.filter((item) => !item.system?.name || !item.frameColourName || !item.glass || (!item.screen && item.screenApplicable) || !item.hardware);
+  const quoteRequired = effectiveWindows.filter((item) => /quote/i.test([item.system?.status, item.priceStatus, item.glassStatus, item.screenStatus].filter(Boolean).join(" ")));
+  const overrideCount = effectiveWindows.filter((item) => item.hasOverride).length;
+  const clearWetAreaRows = wetAreaRows.filter((item) => /clear/i.test(item.glass || ""));
+  const canConfirm = Boolean(schedule.isAvailable && selectedSupplier.label && selectedColour && configuration.glassName && configuration.screens && configuration.hardware && !incomplete.length && !clearWetAreaRows.length);
+  const selectedWindowIds = Array.isArray(configuration.selectedWindowIds) ? configuration.selectedWindowIds : [];
+  const patchConfig = (patch) => onWindowConfigurationChange((current) => ({ ...(current || DEFAULT_WINDOW_CONFIGURATION), ...patch }));
+  const go = (step) => {
+    if (!schedule.isAvailable && step !== "schedule") return;
+    onWindowStepChange(step);
+  };
+  const applyWetAreaPrivacy = () => {
+    const privacyGlass = glassOptions.find((glass) => /obscure|privacy/i.test(`${glass.name} ${glass.type}`));
+    if (!privacyGlass) return;
+    patchConfig({
+      overrides: {
+        ...(configuration.overrides || {}),
+        ...Object.fromEntries(wetAreaRows.map((row) => [row.id, { ...(configuration.overrides?.[row.id] || {}), glassName: privacyGlass.name, glassClass: privacyGlass.type, glassOrigin: "privacy_override" }])),
+      },
+    });
+  };
+  const currentWindowStep = schedule.isAvailable ? windowStep : "schedule";
+  const steps = WINDOWS_WORKFLOW_STEPS.map((step) => [step, windowHeaderForStep(step), windowStepStatus(step, { schedule, selectedSupplier, selectedColour, configuration, effectiveWindows, incomplete, canConfirm })]);
+  return (
+    <section className="guidedShell" data-testid="guided-windows-workflow">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout windowsLayout">
+        <aside className="guidedProgressMenu" data-testid="windows-progress-menu">
+          <h2>Windows</h2>
+          {steps.map(([step, label, value]) => (
+            <button key={step} type="button" disabled={!schedule.isAvailable && step !== "schedule"} className={`guidedProgressItem ${currentWindowStep === step ? "active" : ""} ${value ? "complete" : ""}`} onClick={() => go(step)}>
+              <GuidedStatusDot status={value ? "complete" : "not_started"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel windowsWorkflowPanel">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Windows</span>
+            <strong>{windowHeaderForStep(currentWindowStep)}</strong>
+            <em>{schedule.label}</em>
+          </div>
+          {currentWindowStep === "schedule" ? (
+            <WindowScheduleSummary schedule={schedule} onNext={() => go("supplier")} />
+          ) : currentWindowStep === "supplier" ? (
+            <div className="windowSupplierGrid" data-testid="windows-supplier-selection">
+              {suppliers.map((supplier) => (
+                <button key={supplier.key} type="button" className={selectedSupplier.label === supplier.label ? "selected" : ""} onClick={() => {
+                  const nextSupplier = windowSupplierDefinition(supplier.label);
+                  const previousColour = configuration.frameColourName || configuration.frameColourCode
+                    ? {
+                      supplier: selectedSupplier.label,
+                      colourId: configuration.frameColourId || "",
+                      name: configuration.frameColourName || "",
+                      code: configuration.frameColourCode || "",
+                      finish: configuration.frameColourFinish || "",
+                      clearedAt: new Date().toISOString(),
+                      reason: `Supplier changed to ${nextSupplier.label}; colour must be reselected from the new supplier range.`,
+                    }
+                    : null;
+                  patchConfig({
+                    supplier: nextSupplier.label,
+                    systemsByType: defaultSystemsByType(schedule, nextSupplier.label),
+                    frameColourName: "",
+                    frameColourId: "",
+                    frameColourCode: "",
+                    frameColourClass: "",
+                    frameColourFinish: "",
+                    frameColourHex: "",
+                    frameColourSourceUrl: "",
+                    frameColourLastVerified: "",
+                    frameColourAudit: previousColour ? [...(configuration.frameColourAudit || []), previousColour] : (configuration.frameColourAudit || []),
+                    overrides: {},
+                    selectedWindowIds: [],
+                  });
+                  go("systems");
+                }}>
+                  <div className="windowSupplierLogo">{supplier.logo}</div>
+                  {supplier.image ? <img src={officialProductImageUrl(supplier.image)} alt={`${supplier.label} representative window`} /> : null}
+                  <strong>{supplier.label}</strong>
+                  <span>{supplier.compatibleTypes.join(", ")}</span>
+                  <em>{supplier.status}</em>
+                  <small>{supplier.website}</small>
+                </button>
+              ))}
+            </div>
+          ) : currentWindowStep === "systems" ? (
+            <WindowSystemMappingStep schedule={schedule} supplier={selectedSupplier} systemsByType={systemsByType} onChange={(type, system) => patchConfig({ systemsByType: { ...(configuration.systemsByType || {}), [type]: system } })} onNext={() => go("defaults")} />
+          ) : currentWindowStep === "defaults" ? (
+            <WindowDefaultsStep supplier={selectedSupplier} region={region} configuration={configuration} selectedColour={selectedColour} colours={colours} glassOptions={glassOptions} screenOptions={screenOptions} hardwareOptions={hardwareOptions} schedule={schedule} effectiveWindows={effectiveWindows} applyResult={defaultsApplyResult} onChange={(patch) => { onWindowDefaultsApplyResult(""); patchConfig(patch); }} onApply={(message) => onWindowDefaultsApplyResult(message)} onNext={() => go("windows")} />
+          ) : currentWindowStep === "windows" ? (
+            <IndividualWindowsStep supplier={selectedSupplier} schedule={schedule} configuration={configuration} effectiveWindows={effectiveWindows} selectedWindowIds={selectedWindowIds} clearWetAreaRows={clearWetAreaRows} colours={colours} glassOptions={glassOptions} screenOptions={screenOptions} hardwareOptions={hardwareOptions} onChange={patchConfig} onApplyWetAreaPrivacy={applyWetAreaPrivacy} onNext={() => go("review")} />
+          ) : (
+            <div className="windowsReviewGrid" data-testid="windows-confirmation-summary">
+              <WindowReviewSummary schedule={schedule} supplier={selectedSupplier} systemsByType={systemsByType} configuration={configuration} effectiveWindows={effectiveWindows} incomplete={incomplete} quoteRequired={quoteRequired} overrideCount={overrideCount} clearWetAreaRows={clearWetAreaRows} />
+              <YourWindowSelectionPanel schedule={schedule} region={region} product={selectedSupplier} colour={selectedColour} glass={selectedGlass} scope={WINDOW_SCOPE_OPTIONS[0]} configuration={configuration} selectedSelection={selectedSelection} />
+              <label className="windowsExceptions">
+                <span>Builder-approved exceptions</span>
+                <textarea value={configuration.exceptions || ""} onChange={(event) => patchConfig({ exceptions: event.target.value })} placeholder="Example: Front elevation windows to be Monument; wet-area windows to use obscure glass." />
+              </label>
+              <button type="button" className="primary" disabled={!canConfirm} onClick={() => onSelectWindowConfiguration(requirement, configuration, selectedSupplier, schedule)}>
+                Confirm Complete Window Selection
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}
+
+function WindowScheduleSummary({ schedule, onNext }) {
+  if (!schedule?.isAvailable) {
+    return (
+      <div className="windowScheduleSummary noSchedule" data-testid="windows-schedule-summary">
+        <div className="windowSourceChain">AI Plan Takeoff -&gt; saved job master file -&gt; Client Selections window schedule -&gt; Quotation Builder</div>
+        <strong>{WINDOW_NO_TAKEOFF_SCHEDULE_MESSAGE}</strong>
+      </div>
+    );
+  }
+  return (
+    <div className="windowScheduleSummary" data-testid="windows-schedule-summary">
+      <div className="windowSourceChain">AI Plan Takeoff -&gt; saved job master file -&gt; Client Selections window schedule -&gt; Quotation Builder</div>
+      <strong>{schedule.label}</strong>
+      <div><span>Total quantity</span><b>{schedule.count}</b></div>
+      <div><span>Grouped rows</span><b>{schedule.scheduledRowCount}</b></div>
+      <div><span>Schedule source</span><b>{schedule.sourceLabel}</b></div>
+      <WindowStateLegend />
+      <div className="windowScheduleTableWrap">
+        <table className="windowScheduleTable">
+          <thead><tr><th>Window ID</th><th>Room/location</th><th>Floor</th><th>Elevation</th><th>Type</th><th>Width</th><th>Height</th><th>Qty</th><th>Glass Type</th><th>Obscure/translucent</th><th>Takeoff notes</th><th>Plan ref</th><th>Schedule version</th></tr></thead>
+          <tbody>{schedule.items.map((item) => <tr key={item.id}><td>{item.id}</td><td>{item.location}</td><td>{item.floor}</td><td>{item.elevation}</td><td>{item.type}</td><td>{item.width}</td><td>{item.height}</td><td>{item.quantity}</td><td>{item.glassType || item.glazing || item.glass || ""}</td><td>{item.obscureRequirement || "Not specified"}</td><td>{item.takeoffNotes || item.notes || ""}</td><td>{item.planReference}</td><td>{schedule.displayVersion}</td></tr>)}</tbody>
+        </table>
+      </div>
+      <button type="button" onClick={onNext}>Choose Supplier</button>
+    </div>
+  );
+}
+
+function WindowSystemMappingStep({ schedule, supplier, systemsByType, onChange, onNext }) {
+  const counts = windowTypeCounts(schedule);
+  return (
+    <div className="windowStagePanel" data-testid="windows-system-mapping">
+      <WindowStateLegend />
+      <div className="windowScheduleTableWrap">
+        <table className="windowScheduleTable systemMap">
+          <thead><tr><th>Scheduled type</th><th>Quantity</th><th>Selected supplier system</th><th>Status</th><th>Official page</th></tr></thead>
+          <tbody>{Object.entries(counts).map(([type, quantity]) => {
+            const system = systemsByType[type] || supplier.systems?.[type] || { name: "Requires selection", status: "Selection required", url: supplier.website };
+            return <tr key={type}><td>{type}</td><td>{quantity}</td><td><select value={system.name} onChange={(event) => onChange(type, { ...system, name: event.target.value })}><option>{system.name}</option></select></td><td><WindowBadge tone={/quote/i.test(system.status) ? "amber" : "green"}>{system.status}</WindowBadge></td><td><a href={system.url} target="_blank" rel="noreferrer">Official product page</a></td></tr>;
+          })}</tbody>
+        </table>
+      </div>
+      <button type="button" onClick={onNext}>Continue to Project Defaults</button>
+    </div>
+  );
+}
+
+function WindowDefaultsStep({ supplier, region, configuration, selectedColour, colours, glassOptions, screenOptions, hardwareOptions, schedule, effectiveWindows, applyResult, onChange, onApply, onNext }) {
+  const [colourPanelOpen, setColourPanelOpen] = useState(false);
+  const [colourSearch, setColourSearch] = useState("");
+  const [finishFilter, setFinishFilter] = useState("all");
+  const [systemFilter, setSystemFilter] = useState("all");
+  const [applyLevel, setApplyLevel] = useState("all");
+  const [applyRoom, setApplyRoom] = useState("all");
+  const [applyType, setApplyType] = useState("all");
+  const selectedSystemNames = Array.from(new Set(effectiveWindows.map((row) => row.type).filter(Boolean)));
+  const finishOptions = Array.from(new Set(colours.map((colour) => colour.finish || "Finish not specified"))).filter(Boolean);
+  const levelOptions = Array.from(new Set(effectiveWindows.map((row) => row.floor || "Ground").filter(Boolean)));
+  const roomOptions = Array.from(new Set(effectiveWindows.map((row) => row.location || row.room).filter(Boolean)));
+  const typeOptions = Array.from(new Set(effectiveWindows.map((row) => row.type).filter(Boolean)));
+  const recentlyUsed = (configuration.frameColourAudit || []).slice(-3).reverse();
+  const filteredColours = colours.filter((colour) => {
+    const text = `${colour.officialName} ${colour.name} ${colour.code} ${colour.finish} ${colour.availabilityStatus}`.toLowerCase();
+    const matchSearch = !colourSearch || text.includes(colourSearch.toLowerCase());
+    const matchFinish = finishFilter === "all" || (colour.finish || "Finish not specified") === finishFilter;
+    const matchSystem = systemFilter === "all" || windowColourMatchesSystem(colour, systemFilter, systemFilter);
+    return matchSearch && matchFinish && matchSystem;
+  });
+  const missing = [
+    !configuration.frameColourName ? "frame colour" : "",
+    !configuration.glassName ? "glass" : "",
+    !configuration.screens ? "screen" : "",
+    !configuration.hardware ? "hardware" : "",
+  ].filter(Boolean);
+  const applyDefaults = () => {
+    if (missing.length) {
+      onApply(`Select ${missing.join(", ")} before applying project defaults.`);
+      return;
+    }
+    const retainedOverrides = sumWindowScheduleQuantity(effectiveWindows.filter((row) => row.hasOverride));
+    const compatible = sumWindowScheduleQuantity(effectiveWindows.filter((row) => row.system?.name));
+    const updated = Math.max(0, compatible - retainedOverrides);
+    const skipped = schedule.count - compatible;
+    const retainedText = retainedOverrides ? ` ${retainedOverrides} individual override${retainedOverrides === 1 ? "" : "s"} retained.` : " No individual overrides were present.";
+    const skippedText = skipped ? ` ${skipped} incompatible window${skipped === 1 ? "" : "s"} skipped.` : "";
+    onApply(`Defaults applied to ${updated} compatible window${updated === 1 ? "" : "s"}.${retainedText}${skippedText}`);
+    onNext();
+  };
+  const chooseColour = (colour) => onChange(windowColourPatch(colour));
+  const applyColourToWindows = (predicate, label) => {
+    if (!selectedColour) {
+      onApply("Select a frame colour before applying it to windows.");
+      return;
+    }
+    const colourPatch = { ...windowColourPatch(selectedColour), colourOrigin: "manual_override" };
+    const nextOverrides = { ...(configuration.overrides || {}) };
+    const targets = effectiveWindows.filter((row) => predicate(row) && windowColourMatchesSystem(selectedColour, row.system?.name, row.type));
+    targets.forEach((row) => {
+      nextOverrides[row.id] = { ...(nextOverrides[row.id] || {}), ...colourPatch };
+    });
+    onChange({ overrides: nextOverrides });
+    onApply(`${selectedColour.officialName || selectedColour.name} applied to ${targets.length} ${label}.`);
+  };
+  return (
+    <div className="windowStagePanel" data-testid="windows-project-defaults">
+      <div className="windowsColourNotice"><strong>Project Window Defaults</strong><span>On-screen colours are indicative. Confirm the final colour using an official physical sample before ordering.</span><a href={supplier.source || supplier.website} target="_blank" rel="noreferrer">Official supplier information</a></div>
+      <section className="windowCurrentSelectionPanel" data-testid="windows-current-frame-colour">
+        <div>
+          <span>Choose Default Frame Colour</span>
+          <strong>{selectedColour?.officialName || configuration.frameColourName || "No frame colour selected"}</strong>
+          <small>{selectedColour ? `${supplier.label}${selectedColour.code ? ` / ${selectedColour.code}` : ""}${selectedColour.finish ? ` / ${selectedColour.finish}` : ""}` : `Open ${supplier.label}'s supplier colour range.`}</small>
+        </div>
+        <button type="button" className={`windowCurrentColourCard ${selectedColour ? "selected" : ""}`} aria-label="Choose default frame colour" onClick={() => setColourPanelOpen(true)}>
+          <span className="windowsSwatch" style={{ background: selectedColour?.hex || configuration.frameColourHex || "#d8dee8" }}>{selectedColour ? <CheckCircle2 size={14} aria-hidden="true" /> : null}</span>
+          <b>{selectedColour ? "Selected" : "Choose colour"}</b>
+        </button>
+        <button type="button" onClick={() => setColourPanelOpen(true)}>View All Colours</button>
+      </section>
+      {recentlyUsed.length ? <div className="windowRecentColours"><span>Recently used colours</span>{recentlyUsed.map((item) => <button key={`${item.supplier}-${item.name}-${item.clearedAt}`} type="button" disabled>{item.supplier}: {item.name}{item.code ? ` (${item.code})` : ""}</button>)}</div> : null}
+      {colourPanelOpen ? (
+        <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setColourPanelOpen(false); }}>
+          <div className="windowColourModal" role="dialog" aria-modal="true" aria-label={`Choose ${supplier.label} default frame colour`}>
+            <div className="windowColourModalHeader">
+              <div><span>Choose Default Frame Colour</span><strong>{supplier.label}</strong><small>Physical sample confirmation required before ordering.</small></div>
+              <button type="button" onClick={() => setColourPanelOpen(false)}>Close</button>
+            </div>
+            <div className="windowColourFilters">
+              <label><span>Search</span><input value={colourSearch} onChange={(event) => setColourSearch(event.target.value)} placeholder="Search colour, code or finish" /></label>
+              <label><span>Finish</span><select value={finishFilter} onChange={(event) => setFinishFilter(event.target.value)}><option value="all">All finishes</option>{finishOptions.map((finish) => <option key={finish} value={finish}>{finish}</option>)}</select></label>
+              <label><span>Compatible system</span><select value={systemFilter} onChange={(event) => setSystemFilter(event.target.value)}><option value="all">All selected systems</option>{selectedSystemNames.map((system) => <option key={system} value={system}>{system}</option>)}</select></label>
+              <a href={supplier.source || supplier.website} target="_blank" rel="noreferrer">View official colour chart</a>
+            </div>
+            <div className="windowsSwatchGrid supplierColourGrid" role="radiogroup" aria-label="Supplier frame colours">
+              {filteredColours.map((colour) => {
+                const selected = selectedColour?.colourId === colour.colourId || selectedColour?.name === colour.name;
+                const incompatible = systemFilter !== "all" && !windowColourMatchesSystem(colour, systemFilter, systemFilter);
+                return <button key={colour.colourId || `${colour.name}-${colour.code}`} type="button" role="radio" aria-checked={selected} disabled={incompatible} aria-label={`Select frame colour ${colour.officialName}${colour.code ? ` ${colour.code}` : ""}`} className={`windowOptionCard ${selected ? "selected" : ""}`} onClick={() => chooseColour(colour)}>
+                  <span className="windowsSwatch" style={{ background: colour.swatchValue || colour.hex }}>{selected ? <CheckCircle2 size={14} aria-hidden="true" /> : null}</span>
+                  <strong>{colour.officialName}</strong>
+                  <em>{colour.code ? `Supplier code ${colour.code}` : "Supplier code to be confirmed"}</em>
+                  <small>{colour.finish || "Finish to confirm"} / {colour.availabilityStatus || colour.availability} / {colour.regionAvailability?.join(", ") || region}</small>
+                  <small>Compatible: {(colour.compatibleSystems || colour.systems || []).join(", ") || "All selected systems"}</small>
+                  {selected ? <b className="windowSelectedBadge">Selected</b> : null}
+                </button>;
+              })}
+            </div>
+            <div className="windowColourModalFooter">
+              <span>{filteredColours.length} colour option{filteredColours.length === 1 ? "" : "s"} shown.</span>
+              <button type="button" className="primary" disabled={!selectedColour} onClick={() => setColourPanelOpen(false)}>Confirm Selection</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <div className="windowDefaultGrid">
+        <WindowOptionGroup title="Default glass" options={glassOptions} selected={configuration.glassName} onSelect={(glass) => onChange({ glassName: glass.name, glassClass: glass.type })} />
+        <WindowTextOptionGroup title="Default screen" options={screenOptions} selected={configuration.screens} onSelect={(screens) => onChange({ screens })} />
+        <WindowTextOptionGroup title="Default hardware" options={hardwareOptions} selected={configuration.hardware} onSelect={(hardware) => onChange({ hardware })} />
+      </div>
+      <div className="windowApplyNotice"><strong>Apply Project Defaults to All Compatible Windows</strong><span>{missing.length ? `Missing: ${missing.join(", ")}.` : `This will apply these choices to ${sumWindowScheduleQuantity(effectiveWindows)} compatible windows. Existing individual overrides will be preserved.`}</span></div>
+      {applyResult ? <div className={missing.length ? "windowApplyResult warning" : "windowApplyResult success"}>{applyResult}</div> : null}
+      <div className="windowApplyControls">
+        <button type="button" aria-label="Apply project defaults to all compatible windows" onClick={applyDefaults}>Apply Project Defaults to All Compatible Windows</button>
+        <button type="button" disabled={!configuration.selectedWindowIds?.length} onClick={() => applyColourToWindows((row) => configuration.selectedWindowIds.includes(row.id), "selected windows")}>Apply to Selected Windows</button>
+        <label><span>Apply by level</span><select value={applyLevel} onChange={(event) => setApplyLevel(event.target.value)}><option value="all">Choose level</option>{levelOptions.map((level) => <option key={level} value={level}>{level}</option>)}</select></label>
+        <button type="button" disabled={applyLevel === "all"} onClick={() => applyColourToWindows((row) => (row.floor || "Ground") === applyLevel, `${applyLevel} windows`)}>Apply Level</button>
+        <label><span>Apply by room/group</span><select value={applyRoom} onChange={(event) => setApplyRoom(event.target.value)}><option value="all">Choose room</option>{roomOptions.map((room) => <option key={room} value={room}>{room}</option>)}</select></label>
+        <button type="button" disabled={applyRoom === "all"} onClick={() => applyColourToWindows((row) => (row.location || row.room) === applyRoom, `${applyRoom} windows`)}>Apply Room</button>
+        <label><span>Apply by window type</span><select value={applyType} onChange={(event) => setApplyType(event.target.value)}><option value="all">Choose type</option>{typeOptions.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
+        <button type="button" disabled={applyType === "all"} onClick={() => applyColourToWindows((row) => row.type === applyType, `${applyType} windows`)}>Apply Type</button>
+      </div>
+    </div>
+  );
+}
+
+function IndividualWindowsStep({ configuration, effectiveWindows, selectedWindowIds, clearWetAreaRows, colours, glassOptions, onChange, onApplyWetAreaPrivacy, onNext }) {
+  const selectedSet = new Set(selectedWindowIds);
+  const updateOverride = (id, patch) => onChange({ overrides: { ...(configuration.overrides || {}), [id]: { ...(configuration.overrides?.[id] || {}), ...patch } } });
+  const restoreOverride = (id) => {
+    const nextOverrides = { ...(configuration.overrides || {}) };
+    delete nextOverrides[id];
+    onChange({ overrides: nextOverrides });
+  };
+  const toggle = (id) => onChange({ selectedWindowIds: selectedSet.has(id) ? selectedWindowIds.filter((item) => item !== id) : [...selectedWindowIds, id] });
+  const applyToSelected = (patch) => onChange({ overrides: { ...(configuration.overrides || {}), ...Object.fromEntries(selectedWindowIds.map((id) => [id, { ...(configuration.overrides?.[id] || {}), ...patch }])) } });
+  return (
+    <div className="windowStagePanel" data-testid="windows-individual-schedule">
+      <WindowStateLegend />
+      <div className={`privacyCheck ${clearWetAreaRows.length ? "needsReview" : "complete"}`} data-testid="windows-privacy-check"><strong>Bathroom privacy check</strong><span>{clearWetAreaRows.length ? `We found ${clearWetAreaRows.length} private wet-area windows still using clear glass.` : "Wet-area privacy glass exceptions are recorded."}</span><button type="button" onClick={onApplyWetAreaPrivacy}>Yes - apply selected obscure glass to all identified wet-area windows</button></div>
+      <div className="windowBulkBar"><button type="button" onClick={() => onChange({ selectedWindowIds: effectiveWindows.map((row) => row.id) })}>Select all</button><button type="button" onClick={() => onChange({ selectedWindowIds: effectiveWindows.filter((row) => row.isWetArea).map((row) => row.id) })}>Select all in wet areas</button><button type="button" disabled={!selectedWindowIds.length} onClick={() => applyToSelected({ glassName: glassOptions.find((glass) => /obscure|privacy/i.test(`${glass.name} ${glass.type}`))?.name || configuration.glassName, glassClass: "Obscure", glassOrigin: "manual_override" })}>Apply privacy glass</button><button type="button" disabled={!selectedWindowIds.length} onClick={() => onChange({ selectedWindowIds: [] })}>Clear selection</button></div>
+      <div className="windowScheduleTableWrap"><table className="windowScheduleTable individual"><thead><tr><th></th><th>ID</th><th>Room</th><th>Type</th><th>Size</th><th>Qty</th><th>Supplier system</th><th>Frame colour</th><th>Glass Type</th><th>Screen</th><th>Hardware</th><th>Status</th><th>Edit Window</th></tr></thead><tbody>{effectiveWindows.map((row) => <tr key={row.id} className={row.hasOverride ? "overrideRow" : row.isWetArea ? "wetAreaRow" : "defaultRow"}><td><input type="checkbox" checked={selectedSet.has(row.id)} onChange={() => toggle(row.id)} /></td><td>{row.id}</td><td>{row.location}</td><td>{row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.system?.name}</td><td><span className="roofingSummarySwatch" style={{ background: row.frameColourHex }} /> {row.frameColourName} {row.frameColourCode ? `(${row.frameColourCode})` : ""} {row.frameColourFinish || ""}</td><td>{row.glass}</td><td>{row.screen}</td><td>{row.hardware}</td><td><WindowBadge tone={row.hasOverride ? "purple" : "teal"}>{row.hasOverride ? "Override" : "Default"}</WindowBadge></td><td><div className="windowEditControls"><select value={configuration.overrides?.[row.id]?.frameColourId || ""} onChange={(event) => {
+        const colour = colours.find((item) => (item.colourId || item.id) === event.target.value);
+        if (colour) updateOverride(row.id, { ...windowColourPatch(colour), colourOrigin: "manual_override" });
+        else updateOverride(row.id, { frameColourId: undefined, frameColourName: undefined, frameColourOfficialName: undefined, frameColourCode: undefined, frameColourClass: undefined, frameColourFinish: undefined, frameColourHex: undefined, frameColourSourceUrl: undefined, colourOrigin: undefined });
+      }}><option value="">Use default colour</option>{colours.filter((colour) => windowColourMatchesSystem(colour, row.system?.name, row.type)).map((colour) => <option key={colour.colourId || colour.id} value={colour.colourId || colour.id}>{colour.officialName || colour.name}{colour.code ? ` (${colour.code})` : ""}</option>)}</select><select value={configuration.overrides?.[row.id]?.glassName || ""} onChange={(event) => updateOverride(row.id, { glassName: event.target.value || undefined, glassClass: glassOptions.find((glass) => glass.name === event.target.value)?.type || "", glassOrigin: event.target.value ? "manual_override" : undefined })}><option value="">Use default glass</option>{glassOptions.map((glass) => <option key={glass.name} value={glass.name}>{glass.name}</option>)}</select><button type="button" onClick={() => restoreOverride(row.id)}>Restore Project Defaults</button></div></td></tr>)}</tbody></table></div>
+      <button type="button" onClick={onNext}>Review and Confirm</button>
+    </div>
+  );
+}
+
+function WindowReviewSummary({ schedule, supplier, systemsByType, configuration, effectiveWindows, incomplete, quoteRequired, overrideCount, clearWetAreaRows }) {
+  const defaultCount = sumWindowScheduleQuantity(effectiveWindows.filter((row) => !row.hasOverride));
+  return (
+    <div className="windowReviewSummary" data-testid="windows-review-summary">
+      <h3>Window Selection Summary</h3>
+      <div className="windowCountTiles"><span><b>{schedule.count}</b>Total windows</span><span><b>{defaultCount}</b>Using project defaults</span><span><b>{overrideCount}</b>Individual overrides</span><span><b>{incomplete.length}</b>Incomplete</span><span><b>{quoteRequired.length}</b>Quote required</span></div>
+      <dl><div><dt>Schedule version</dt><dd>{schedule.displayVersion}</dd></div><div><dt>Supplier</dt><dd>{supplier.label}</dd></div><div><dt>Systems selected</dt><dd>{Object.entries(systemsByType).map(([type, system]) => `${type}: ${system.name}`).join("; ")}</dd></div><div><dt>Default frame colour</dt><dd>{configuration.frameColourName} {configuration.frameColourCode ? `(${configuration.frameColourCode})` : ""}</dd></div><div><dt>Default glass</dt><dd>{configuration.glassName}</dd></div><div><dt>Default screen</dt><dd>{configuration.screens}</dd></div><div><dt>Default hardware</dt><dd>{configuration.hardware}</dd></div><div><dt>Wet-area privacy exceptions</dt><dd>{effectiveWindows.filter((row) => row.isWetArea && row.hasOverride).map((row) => `${row.id} ${row.location}: ${row.glass}`).join(", ") || "None"}</dd></div><div><dt>Missing selections</dt><dd>{incomplete.length}</dd></div><div><dt>Clear glass in wet areas</dt><dd>{clearWetAreaRows.length}</dd></div></dl>
+      <div className="windowScheduleTableWrap">
+        <table className="windowScheduleTable review">
+          <thead><tr><th>Window ID</th><th>Room</th><th>Floor</th><th>Elevation</th><th>Type</th><th>Size</th><th>Qty</th><th>Glass Type</th><th>Obscure/translucent</th></tr></thead>
+          <tbody>{effectiveWindows.map((row) => <tr key={row.id}><td>{row.id}</td><td>{row.location}</td><td>{row.floor}</td><td>{row.elevation}</td><td>{row.type}</td><td>{row.size}</td><td>{row.quantity}</td><td>{row.glass}</td><td>{row.obscureRequirement || "Not specified"}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function WindowOptionGroup({ title, options = [], selected, onSelect }) {
+  return <div className="windowsGlassGrid" data-testid="windows-glass-options" role="radiogroup" aria-label={title}><h3>{title}</h3>{options.map((option) => {
+    const isSelected = selected === option.name;
+    return <button key={option.name} type="button" role="radio" aria-checked={isSelected} aria-label={`Select ${title.toLowerCase()} ${option.name}`} className={`windowOptionCard ${isSelected ? "selected" : ""}`} onClick={() => onSelect(option)}><span className="windowsGlassSample" style={{ background: option.sample }}>{isSelected ? <CheckCircle2 size={14} aria-hidden="true" /> : null}</span><strong>{option.name}</strong><em>{option.type} / {option.privacy}</em><small>{option.status}</small>{isSelected ? <b className="windowSelectedBadge">Selected</b> : null}</button>;
+  })}</div>;
+}
+
+function WindowTextOptionGroup({ title, options = [], selected, onSelect }) {
+  return <div className="windowTextOptions" role="radiogroup" aria-label={title}><h3>{title}</h3>{options.map((option) => {
+    const isSelected = selected === option;
+    return <button key={option} type="button" role="radio" aria-checked={isSelected} aria-label={`Select ${title.toLowerCase()} ${option}`} className={`windowOptionCard ${isSelected ? "selected" : ""}`} onClick={() => onSelect(option)}><strong>{option}</strong><span>{isSelected ? "Selected" : "Select"}</span>{isSelected ? <b className="windowSelectedBadge">Selected</b> : null}</button>;
+  })}</div>;
+}
+
+function WindowStateLegend() {
+  return <div className="windowLegend"><WindowBadge tone="blue">Imported plan</WindowBadge><WindowBadge tone="teal">Default applied</WindowBadge><WindowBadge tone="purple">Override</WindowBadge><WindowBadge tone="amber">Quote required</WindowBadge><WindowBadge tone="green">Confirmed</WindowBadge><WindowBadge tone="red">Missing</WindowBadge><WindowBadge tone="grey">Not applicable</WindowBadge></div>;
+}
+
+function WindowBadge({ tone = "grey", children }) {
+  return <span className={`windowBadge ${tone}`}>{children}</span>;
+}
+
+function WindowChoiceStep({ testId, options = [], selected, onSelect, onNext }) {
+  return (
+    <div className="roofingChoiceGrid" data-testid={testId}>
+      {options.map((option) => (
+        <button key={option} type="button" className={selected === option ? "selected" : ""} onClick={() => onSelect(option)}>
+          <strong>{option}</strong>
+          <span>{selected === option ? "Selected" : "Select"}</span>
+        </button>
+      ))}
+      <button type="button" disabled={!selected} onClick={onNext}>Continue</button>
+    </div>
+  );
+}
+
+function WindowScopeSelector({ configuration, schedule, onChange }) {
+  return (
+    <div className="windowsScopeGrid" data-testid="windows-scope-selection">
+      {WINDOW_SCOPE_OPTIONS.map((scope) => (
+        <button key={scope.key} type="button" className={configuration.scope === scope.key ? "selected" : ""} onClick={() => onChange({ scope: scope.key })}>
+          <strong>{scope.label}</strong>
+          <span>{scope.description}</span>
+          <em>{scope.key === "all_project_windows" ? `${schedule.count} windows covered` : "Builder approval required"}</em>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function YourWindowSelectionPanel({ schedule, region, product, colour, glass, scope, configuration, selectedSelection }) {
+  return (
+    <div className="yourWindowSelection" data-testid="your-window-selection-panel">
+      <h3>Your Window Selection</h3>
+      <dl>
+        <div><dt>Supplier</dt><dd>{product?.supplier || product?.label || "Select supplier"}</dd></div>
+        <div><dt>System/range</dt><dd>{product?.range || product?.productName || "Mapped by scheduled window type"}</dd></div>
+        <div><dt>Project windows covered</dt><dd>{schedule.count}</dd></div>
+        <div><dt>Locations covered</dt><dd>{schedule.locations.join(", ")}</dd></div>
+        <div><dt>Scope</dt><dd>{scope.label}</dd></div>
+        <div><dt>Frame colour</dt><dd>{colour ? <><span className="roofingSummarySwatch" style={{ background: colour.hex }} /> {colour.officialName} ({colour.code})</> : "Select colour"}</dd></div>
+        <div><dt>Region</dt><dd>{region}</dd></div>
+        <div><dt>Glass</dt><dd>{glass?.name || configuration.glassName}</dd></div>
+        <div><dt>Screens</dt><dd>{configuration.screens}</dd></div>
+        <div><dt>Hardware</dt><dd>{configuration.hardware}</dd></div>
+        <div><dt>Exceptions</dt><dd>{configuration.exceptions || "None recorded"}</dd></div>
+        <div><dt>Status</dt><dd>{selectedSelection ? "Saved" : "Ready to confirm"}</dd></div>
+      </dl>
+    </div>
+  );
+}
+
+function ScheduledEntryDoorWorkflow({ project, projectInfo, workbook, snapshot, savedSelection, ...props }) {
+  const router = useRouter();
+  const route = String(router.asPath || '');
+  const params = new URLSearchParams(route.split('?')[1] || '');
+  const currentDetails = savedSelection?.selected_details || savedSelection?.guidedSelection || {};
+  const storedDetails = entryDoorBookCandidates(workbook).flatMap(entryDoorDetails);
+  const details = {...(storedDetails.find(d=>d.productCode||d.entryDoors?.length)||{}),...currentDetails};
+  const resolved = exteriorEntryDoors({ project, projectInfo, workbook, snapshot, details });
+  const doors = resolved.length ? resolved : [defaultManualEntryDoor()];
+  const [localDoorId, setLocalDoorId] = useState('');
+  const door = doors.find(d => d.id === (params.get('door') || localDoorId || details.activeEntryDoorId)) || doors[0];
+  const saved = selectionsFromDoorDetails(details).find(s => s.door.id === door.id);
+  const draft = details.entryDoorDrafts?.[door.id] || {};
+  const values = { Supplier: draft.Supplier ?? saved?.supplier ?? '', Range: draft.Range ?? saved?.range ?? '', ProductCode: draft.ProductCode ?? saved?.productCode ?? '', Size: draft.Size ?? saved?.size ?? '', Configuration: draft.Configuration ?? saved?.configuration ?? '', Finish: draft.Finish ?? saved?.finish ?? '', Glazing: draft.Glazing ?? saved?.glazing ?? '', Hardware: draft.Hardware ?? saved?.entryDoorFurniture?.productCode ?? '', FurnitureFinish: draft.FurnitureFinish ?? saved?.furnitureFinish ?? '' };
+  const update = patch => {
+    if(patch.ProductCode){const selected = (props.products||[]).find(p=>(p.productCode||p.metadata?.productEntity?.productCode)===patch.ProductCode);if(selected) patch={...patch,ProductName:selected.productName||selected.product_name,ImageReference:selected.imageUrl||selected.primary_image_url||selected.metadata?.productEntity?.primaryImage||''};}
+    props.onSelectProduct(props.requirement, { entryDoorDraftPatch: { doorId: door.id, patch: { Door: door, ...patch } } });
+  };
+  const navigate = (id, step) => {
+    setLocalDoorId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', 'exterior'); url.searchParams.set('roomCategory', step === 'hardware' ? 'door-furniture' : 'entry-doors');
+    url.searchParams.set('door', id); url.searchParams.set('doorStep', step);
+    if (step === 'hardware') { url.searchParams.set('page', 'clientSelections'); url.searchParams.set('mode', 'client-selection'); url.searchParams.set('returnPage', 'clientSelections'); const jobId = workbook?.projectId || workbook?.jobFileMeta?.projectId; if(jobId) url.searchParams.set('projectId', jobId); }
+    safeSelectionNavigate(router, url.href, { shallow: true, scroll: false });
+  };
+  const controlled = {};
+  for (const [key, value] of Object.entries(values)) { controlled[`entryDoor${key}`] = value; controlled[`onEntryDoor${key}Change`] = value => update({ [key]: value }); }
+  const requestedStep = params.get('roomCategory') === 'door-furniture' ? 'hardware' : params.get('doorStep');
+  const restoredStep = ['hardware','review'].includes(draft.Step) ? 'design' : draft.Step;
+  const step = values.ProductCode ? (requestedStep || restoredStep || (saved ? 'design' : 'supplier')) : (restoredStep || 'supplier');
+  const addDoor = () => { const next={...defaultManualEntryDoor(),id:`manual-entry-door:${globalThis.crypto.randomUUID()}`,doorReference:`Entry Door ${doors.length+1}`,location:`Entry ${doors.length+1}`};props.onSelectProduct(props.requirement,{entryDoorDraftPatch:{doorId:next.id,patch:{Door:next,Step:'application'}}});navigate(next.id,'application'); };
+  return <section data-testid="scheduled-entry-doors" data-wizard-source="9fe8fbc">
+    <div style={{display:'flex',gap:12,alignItems:'center',flexWrap:'wrap',marginBottom:12}}>
+      <label>Exterior door <select aria-label="Exterior entry door" value={door.id} onChange={e=>navigate(e.target.value,'application')}>{doors.map(d=><option key={d.id} value={d.id}>{d.doorReference} ? {d.location}</option>)}</select></label>
+      <button type="button" onClick={()=>navigate(door.id,'application')}>Location / application</button>
+      <button type="button" onClick={addDoor}>Add Another Exterior Door</button>
+    </div>
+    {values.ProductCode?<p data-testid="existing-entry-door-selection">Selected exterior door: {draft.ProductName || saved?.productName || values.ProductCode}{saved?.entryDoorFurniture?' ? '+saved.entryDoorFurniture.productName:''}</p>:null}
+    {step==='application'?<section className="guidedShell" data-testid="entry-door-application-step">
+      <h2>Choose door location / application</h2>
+      <div className="guidedSupplierGrid">{doors.map(d=><button className="guidedSupplierCard" key={d.id} type="button" onClick={()=>{update({Door:d,Step:'supplier'});navigate(d.id,'supplier');}}><strong>{d.doorReference}</strong><span>{d.location} {d.level}</span><span>{d.quantity} exterior entry door{d.quantity===1?'':'s'}</span></button>)}</div>
+      <details><summary>Edit this door location</summary><label>Location <input aria-label="Door location" value={door.location} onChange={e=>update({Door:{...door,location:e.target.value}})}/></label><label>Level <input aria-label="Door level" value={door.level} onChange={e=>update({Door:{...door,level:e.target.value}})}/></label><label>Quantity <input aria-label="Door quantity" type="number" min="1" value={door.quantity} onChange={e=>update({Door:{...door,quantity:Math.max(1,Number(e.target.value))}})}/></label></details>
+      {saved?.entryDoorFurniture?<button type="button" onClick={()=>navigate(door.id,'review')}>Review saved door and furniture</button>:null}
+    </section>:<GuidedEntryDoorWorkflow {...props} {...controlled} key={door.id} entryDoorStep={step}
+      door={door} hardwareOptions={draft.HardwareOptions || saved?.hardwareOptions || {quantity:door.quantity}}
+      hardwareUi={draft.HardwareUi || {}}
+      onHardwareUiChange={HardwareUi=>update({HardwareUi})}
+      onHardwareOptionsChange={HardwareOptions=>update({HardwareOptions})}
+      onDoorLocationChange={location=>update({Door:{...door,location}})}
+      onEntryDoorStepChange={next=>{update({Step:next});navigate(door.id,next);}}
+      onSelectProduct={(requirement,option)=>props.onSelectProduct(requirement,{...option,door,hardwareOptions:draft.HardwareOptions||saved?.hardwareOptions||{quantity:door.quantity}})}/>
+  </section>;
 }
 
 function GuidedEntryDoorWorkflow({
@@ -2950,85 +9803,201 @@ function GuidedEntryDoorWorkflow({
   entryDoorRange,
   entryDoorProductCode,
   entryDoorSize,
+  entryDoorConfiguration,
   entryDoorFinish,
   entryDoorGlazing,
+  entryDoorHardware,
+  entryDoorFurnitureFinish,
+  furnitureProducts = [],
   onEntryDoorStepChange,
   onEntryDoorSupplierChange,
   onEntryDoorRangeChange,
   onEntryDoorProductCodeChange,
   onEntryDoorSizeChange,
+  onEntryDoorConfigurationChange,
   onEntryDoorFinishChange,
   onEntryDoorGlazingChange,
+  onEntryDoorHardwareChange,
+  onEntryDoorFurnitureFinishChange,
   onSelectProduct,
+  onViewDetails,
 }) {
+  const [finishReviewPrompt, setFinishReviewPrompt] = useState(false);
+  const [entryDoorSearch, setEntryDoorSearch] = useState("");
+  const [entryDoorMaterialFilter, setEntryDoorMaterialFilter] = useState("");
+  const [entryDoorConfigurationFilter, setEntryDoorConfigurationFilter] = useState("");
+  const [entryDoorGlazingFilter, setEntryDoorGlazingFilter] = useState("");
+  const [entryDoorBalFilter, setEntryDoorBalFilter] = useState("");
+  const [entryDoorWidthFilter, setEntryDoorWidthFilter] = useState("");
+  const [entryDoorPriceFilter, setEntryDoorPriceFilter] = useState("");
   const suppliers = entryDoorSupplierOptions(products);
   const ranges = entryDoorRangeOptions(products, entryDoorSupplier);
-  const designs = entryDoorDesignOptions(products, entryDoorSupplier, entryDoorRange);
-  const selectedProduct = products.find((product) => entryDoorProductCodeFor(product) === entryDoorProductCode) || null;
+  const designs = entryDoorDesignOptions(products, entryDoorSupplier, entryDoorRange, {
+    search: entryDoorSearch,
+    material: entryDoorMaterialFilter,
+    configuration: entryDoorConfigurationFilter,
+    glazing: entryDoorGlazingFilter,
+    bal: entryDoorBalFilter,
+    width: entryDoorWidthFilter,
+    priceState: entryDoorPriceFilter,
+  });
+  const designFilterOptions = entryDoorDesignFilterOptions(products, entryDoorSupplier, entryDoorRange);
+  const selectedProduct = products.find((product) => {
+    const entity = product?.metadata?.productEntity || product || {};
+    const identity = [entryDoorProductCodeFor(product), product.model, entity.model, product.sku, entity.sku, product.id].filter(Boolean).map((value) => String(value).toLowerCase());
+    return identity.includes(String(entryDoorProductCode || "").toLowerCase());
+  }) || null;
   const sizes = entryDoorAttributeOptions(selectedProduct, "sizes", selectedProduct?.size);
+  const configurations = entryDoorAttributeOptions(selectedProduct, "configurations", selectedProduct?.configuration);
   const finishes = entryDoorAttributeOptions(selectedProduct, "finishOptions", selectedProduct?.finish || selectedProduct?.colour);
-  const glazings = entryDoorAttributeOptions(selectedProduct, "glazingOptions", "");
+  const glazings = entryDoorGlassOptions(selectedProduct);
+  const selectedGlass = entryDoorGlassByName(selectedProduct, entryDoorGlazing);
+  const furnitureOptions = entryDoorFurnitureOptions(furnitureProducts);
+  const selectedFurniture = entryDoorFurnitureByCode(furnitureOptions, entryDoorHardware);
+  const furnitureFinishes = entryDoorFurnitureFinishOptions(selectedFurniture);
+  const selectedFurnitureFinish = entryDoorFurnitureFinish || furnitureFinishes[0] || "";
   const currentStep = entryDoorStep || "supplier";
   const progressSteps = [
     ["supplier", "Supplier", entryDoorSupplier],
     ["range", "Range", entryDoorRange],
     ["design", "Door / Design", entryDoorProductCode],
     ["size", "Size", entryDoorSize],
+    ["configuration", "Configuration", entryDoorConfiguration],
     ["finish", "Colour / Finish", entryDoorFinish],
-    ...(glazings.length ? [["glazing", "Glass", entryDoorGlazing]] : []),
+    ...(glazings.length ? [["glazing", "Glazing", entryDoorGlazing], ["glass-type", "Glass type", entryDoorGlazing]] : []),
+    ["hardware", "Door Furniture & Locking", entryDoorHardware],
+    ["review", "Review & Confirm", entryDoorHardware],
   ];
   const resetAfterSupplier = () => {
     onEntryDoorRangeChange("");
     onEntryDoorProductCodeChange("");
     onEntryDoorSizeChange("");
+    onEntryDoorConfigurationChange("");
     onEntryDoorFinishChange("");
     onEntryDoorGlazingChange("");
+    onEntryDoorHardwareChange("");
+    onEntryDoorFurnitureFinishChange("");
   };
   const resetAfterRange = () => {
     onEntryDoorProductCodeChange("");
     onEntryDoorSizeChange("");
+    onEntryDoorConfigurationChange("");
     onEntryDoorFinishChange("");
     onEntryDoorGlazingChange("");
+    onEntryDoorHardwareChange("");
+    onEntryDoorFurnitureFinishChange("");
   };
   const nextAfterDesign = (product) => {
     const nextSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const nextConfigurations = entryDoorAttributeOptions(product, "configurations", product?.configuration);
     const nextFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
-    const nextGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
+    const nextGlazings = entryDoorGlassOptions(product);
     if (nextSizes.length) return "size";
+    if (nextConfigurations.length) return "configuration";
     if (nextFinishes.length) return "finish";
     if (nextGlazings.length) return "glazing";
-    return "finish";
+    return "hardware";
   };
   const saveSelection = (patch = {}) => {
     const product = patch.product || selectedProduct;
     if (!product) return;
     const nextSize = patch.size ?? entryDoorSize;
+    const nextConfiguration = patch.configuration ?? entryDoorConfiguration;
     const nextFinish = patch.finish ?? entryDoorFinish;
     const nextGlazing = patch.glazing ?? entryDoorGlazing;
+    const nextGlass = patch.glassOption || entryDoorGlassByName(product, nextGlazing);
+    const nextHardware = patch.hardware ?? entryDoorHardware;
+    const nextFurniture = patch.furniture || entryDoorFurnitureByCode(furnitureOptions, nextHardware);
+    const nextFurnitureFinish = patch.furnitureFinish ?? entryDoorFurnitureFinish ?? entryDoorFurnitureFinishOptions(nextFurniture)[0] ?? "";
+    const nextFurnitureImage = entryDoorFurnitureImageForFinish(nextFurniture, nextFurnitureFinish);
     const requiredSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const requiredConfigurations = entryDoorAttributeOptions(product, "configurations", product?.configuration);
     const requiredFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
-    const requiredGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
-    if ((requiredSizes.length && !nextSize) || (requiredFinishes.length && !nextFinish) || (requiredGlazings.length && !nextGlazing)) return;
+    const requiredGlazings = entryDoorGlassOptions(product);
+    if ((requiredSizes.length && !nextSize) || (requiredConfigurations.length && !nextConfiguration) || (requiredFinishes.length && !nextFinish) || (requiredGlazings.length && !nextGlazing) || !nextFurniture || (nextFurniture.finishOptions.length && !nextFurnitureFinish)) return;
+    const compatibility = entryDoorFurnitureCompatibility(product, nextFurniture, {
+      size: nextSize,
+      configuration: nextConfiguration,
+      finish: nextFinish,
+      glazing: nextGlazing,
+      glassSelection: nextGlass,
+    });
     const entity = product.metadata?.productEntity || product;
     const patchedEntity = {
       ...entity,
       size: nextSize,
+      configuration: nextConfiguration,
       finish: nextFinish,
       colour: nextFinish,
       glazing: nextGlazing,
+      hardwareCompatibility: nextFurniture.productName,
+      entryDoorFurniture: nextFurniture,
+      furnitureFinish: nextFurnitureFinish,
       attributes: {
         ...(entity.attributes || {}),
         selectedSize: nextSize,
+        selectedConfiguration: nextConfiguration,
         selectedFinish: nextFinish,
         selectedGlazing: nextGlazing,
+        selectedGlassName: nextGlass?.name || nextGlazing,
+        selectedGlassCode: nextGlass?.code || nextGlazing,
+        selectedGlassClassification: nextGlass?.classification || "",
+        selectedGlassPrivacy: nextGlass?.privacy || "",
+        selectedGlassImageUrl: nextGlass?.sampleImage || "",
+        selectedGlassPreviewUrl: nextGlass?.previewImage || "",
+        selectedHardware: nextFurniture.productName,
+        selectedFurnitureProductCode: nextFurniture.productCode,
+        selectedFurnitureFinish: nextFurnitureFinish,
+        selectedFurnitureImageUrl: nextFurnitureImage,
       },
     };
     onSelectProduct(requirement, {
       ...product,
       size: nextSize,
+      configuration: nextConfiguration,
       finish: nextFinish,
       colour: nextFinish,
       glazing: nextGlazing,
+      glassSelection: nextGlass,
+      glassImageUrl: nextGlass?.sampleImage || "",
+      glassPreviewImageUrl: nextGlass?.previewImage || "",
+      hardwareCompatibility: nextFurniture.productName,
+      entryDoorFurniture: nextFurniture,
+      furnitureFinish: nextFurnitureFinish,
+      furnitureImageUrl: nextFurnitureImage,
+      furnitureCompatibility: compatibility,
+      procurementSchedule: [{
+        lineType: "entry_door_furniture",
+        doorScheduleId: entryDoorScheduleId(product, nextSize, nextConfiguration),
+        doorSupplier: product.supplier || "",
+        doorRange: product.range || "",
+        doorDesign: product.productName || "",
+        doorSize: nextSize,
+        doorConfiguration: nextConfiguration,
+        doorColourFinish: nextFinish,
+        glass: nextGlazing,
+        glassCode: nextGlass?.code || nextGlazing,
+        glassClassification: nextGlass?.classification || "",
+        glassPrivacy: nextGlass?.privacy || "",
+        glassImageUrl: nextGlass?.sampleImage || "",
+        glassPreviewImageUrl: nextGlass?.previewImage || "",
+        furnitureSupplier: nextFurniture.supplier,
+        furnitureModel: nextFurniture.model,
+        productCode: nextFurniture.productCode,
+        handleType: nextFurniture.handleStyle,
+        handleSize: nextFurniture.handleLength,
+        lockType: nextFurniture.lockingType,
+        cylinderConfiguration: nextFurniture.cylinderConfiguration,
+        furnitureFinish: nextFurnitureFinish,
+        furnitureImageUrl: nextFurnitureImage,
+        compatibilityStatus: compatibility.status,
+        includedStatus: nextFurniture.includedStatus,
+        allowance: nextFurniture.allowance,
+        selectedCost: nextFurniture.selectedCost,
+        variation: nextFurniture.variation,
+        officialSource: nextFurniture.productUrl,
+        confirmationStatus: compatibility.contractFinal ? "ready_for_builder_confirmation" : "supplier_confirmation_required",
+      }],
       metadata: {
         ...(product.metadata || {}),
         productEntity: patchedEntity,
@@ -3037,7 +10006,7 @@ function GuidedEntryDoorWorkflow({
   };
 
   return (
-    <section className="guidedShell" data-testid="guided-entry-door-workflow" data-entry-door-flow="supplier-range-design-size-finish-glazing-save">
+    <section className="guidedShell" data-testid="guided-entry-door-workflow" data-entry-door-flow="supplier-range-design-size-configuration-finish-glazing-hardware-save">
       <GuidedBudgetDock totals={runningTotals} />
       <div className="guidedProductLayout entryDoorLayout">
         <aside className="guidedProgressMenu" data-testid="guided-entry-door-hierarchy">
@@ -3047,7 +10016,7 @@ function GuidedEntryDoorWorkflow({
               key={step}
               type="button"
               className={`guidedProgressItem ${currentStep === step ? "active" : ""} ${value ? "complete" : ""}`}
-              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "finish", "glazing"].includes(step) && !selectedProduct)}
+              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "configuration", "finish", "glazing", "hardware", "review"].includes(step) && !selectedProduct) || (step === "review" && !entryDoorHardware)}
               onClick={() => onEntryDoorStepChange(step)}
             >
               <GuidedStatusDot status={value ? "complete" : "not_started"} />
@@ -3097,6 +10066,7 @@ function GuidedEntryDoorWorkflow({
                 <button key={product.id} type="button" className="guidedProductCard entryDoorDesignCard" onClick={() => {
                   onEntryDoorProductCodeChange(entryDoorProductCodeFor(product));
                   onEntryDoorSizeChange("");
+                  onEntryDoorConfigurationChange("");
                   onEntryDoorFinishChange("");
                   onEntryDoorGlazingChange("");
                   onEntryDoorStepChange(nextAfterDesign(product));
@@ -3120,7 +10090,19 @@ function GuidedEntryDoorWorkflow({
               labelFor={(value) => value}
               onSelect={(value) => {
                 onEntryDoorSizeChange(value);
-                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glazing" : "finish");
+                onEntryDoorStepChange(configurations.length ? "configuration" : finishes.length ? "finish" : glazings.length ? "glazing" : "hardware");
+              }}
+            />
+          ) : currentStep === "configuration" ? (
+            <EntryDoorOptionStep
+              testId="entry-door-configuration-step"
+              product={selectedProduct}
+              options={configurations}
+              selectedValue={entryDoorConfiguration}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorConfigurationChange(value);
+                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glazing" : "hardware");
               }}
             />
           ) : currentStep === "finish" ? (
@@ -3131,23 +10113,41 @@ function GuidedEntryDoorWorkflow({
               selectedValue={entryDoorFinish}
               labelFor={(value) => value}
               onSelect={(value) => {
+                if (entryDoorHardware && value !== entryDoorFinish) setFinishReviewPrompt(true);
                 onEntryDoorFinishChange(value);
                 if (glazings.length) onEntryDoorStepChange("glazing");
-                else saveSelection({ finish: value });
+                else onEntryDoorStepChange("hardware");
               }}
             />
-          ) : (
-            <EntryDoorOptionStep
+          ) : currentStep === "glazing" ? (
+            <div className="entryDoorOptionPanel" data-testid="entry-door-glazing-choice"><h2>Glazing</h2><p>Choose the glass for this exterior door design.</p><button type="button" className="primary" onClick={()=>onEntryDoorStepChange("glass-type")}>Choose glass type</button></div>
+          ) : currentStep === "glass-type" ? (
+            <EntryDoorGlassStep
               testId="entry-door-glazing-step"
               product={selectedProduct}
               options={glazings}
               selectedValue={entryDoorGlazing}
-              labelFor={(value) => value}
-              onSelect={(value) => {
-                onEntryDoorGlazingChange(value);
-                saveSelection({ glazing: value });
+              selectedGlass={selectedGlass}
+              onSelect={(option) => {
+                onEntryDoorGlazingChange(option.name);
+                onEntryDoorStepChange("hardware");
               }}
             />
+          ) : currentStep === "hardware" ? (
+            <ExteriorHardwareWizard options={furnitureOptions} selectedCode={entryDoorHardware} finish={selectedFurnitureFinish} door={door} values={hardwareOptions} ui={hardwareUi} onUiChange={onHardwareUiChange} onOptionsChange={onHardwareOptionsChange} onLocationChange={onDoorLocationChange}
+              onSelect={item=>{onEntryDoorHardwareChange(item.productCode);onEntryDoorFurnitureFinishChange(item.finishOptions?.[0]||'');}}
+              onFinishChange={onEntryDoorFurnitureFinishChange} onDetails={item=>onViewDetails?.(item)} onContinue={()=>onEntryDoorStepChange('review')}/>
+          ) : (
+            <div className="entryDoorOptionPanel" data-testid="entry-door-review-step">
+              <EntryDoorSelectionSummary product={{...selectedProduct,size:entryDoorSize,configuration:entryDoorConfiguration,finish:entryDoorFinish}} glass={selectedGlass} furniture={selectedFurniture} furnitureFinish={selectedFurnitureFinish} /><p>{door?.doorReference} ? {door?.location} ? {door?.level} ? Hardware quantity {hardwareOptions?.quantity || door?.quantity}</p><p>{hardwareOptions?.lockType || selectedFurniture?.lockingType}</p>
+              <div className="entryDoorCompatibility warning" data-testid="entry-door-review-compatibility">
+                <strong>Review & Confirm</strong>
+                <span>Confirm the selected door, glass, furniture finish and locking compatibility before saving this job selection.</span>
+              </div>
+              <button type="button" className="primary" disabled={!selectedFurniture || (selectedFurniture.finishOptions.length > 0 && !selectedFurnitureFinish)} onClick={() => saveSelection({ hardware: selectedFurniture?.productCode, furniture: selectedFurniture, furnitureFinish: selectedFurnitureFinish })}>
+                Save door furniture
+              </button>
+            </div>
           )}
         </main>
       </div>
@@ -3155,22 +10155,121 @@ function GuidedEntryDoorWorkflow({
   );
 }
 
+function EntryDoorGlassStep({ testId, product, options = [], selectedValue = "", selectedGlass = null, onSelect }) {
+  const [galleryItem, setGalleryItem] = useState(null);
+  const glassLoadFailed = entryDoorGlassMetadataMissing(product);
+  if (!options.length) {
+    return (
+      <div className="entryDoorOptionPanel" data-testid={testId}>
+        <EntryDoorSelectionSummary product={product} glass={selectedGlass} />
+        {glassLoadFailed ? (
+          <div className="entryDoorGlassEmpty warning">
+            <span>Unable to load the compatible Hume glass range</span>
+            <button type="button" onClick={() => window.location.reload()}>Retry</button>
+          </div>
+        ) : (
+          <div className="entryDoorGlassEmpty">No glass selection required</div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="entryDoorOptionPanel" data-testid={testId}>
+      <EntryDoorSelectionSummary product={product} glass={selectedGlass} />
+      <div className="entryDoorGlassNotice" role="note">{ENTRY_DOOR_GLASS_SAMPLE_NOTICE}</div>
+      <div className="entryDoorGlassGrid" data-testid="entry-door-glass-options">
+        {options.map((option) => {
+          const selected = selectedValue === option.name;
+          return (
+            <article key={option.name} className={`entryDoorGlassCard ${selected ? "selected" : ""}`}>
+              <button type="button" className="entryDoorGlassPreview" onClick={() => setGalleryItem(option)}>
+                <img src={option.previewImage || option.sampleImage} alt={`${option.name} glass preview in ${product?.model || "entry door"}`} />
+              </button>
+              <div className="entryDoorGlassBody">
+                <span>{option.classification}</span>
+                <strong>{option.name}</strong>
+                <em>{option.code ? `Code: ${option.code}` : "Supplier code not published"}</em>
+                <dl>
+                  <div><dt>Privacy</dt><dd>{option.privacy}</dd></div>
+                  <div><dt>Light</dt><dd>{option.lightTransmission}</dd></div>
+                  <div><dt>Status</dt><dd>{option.priceStatus}</dd></div>
+                  <div><dt>BAL / safety</dt><dd>{option.limitations}</dd></div>
+                </dl>
+              </div>
+              <div className="entryDoorGlassActions">
+                <button type="button" onClick={() => setGalleryItem(option)}>View Larger</button>
+                <button type="button" className="primary" onClick={() => onSelect(option)}>{selected ? "Selected" : "Select Glass"}</button>
+              </div>
+              {selected ? <b className="entryDoorSelectedBadge">Selected</b> : null}
+            </article>
+          );
+        })}
+      </div>
+      {galleryItem ? (
+        <EntryDoorGlassGallery option={galleryItem} product={product} onClose={() => setGalleryItem(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+function EntryDoorSelectionSummary({ product, glass = null, furniture = null, furnitureFinish = "" }) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const attrs = entity.attributes || {};
+  return (
+    <div className="roofingSelectionSummary entryDoorSelectionSummary">
+      {product?.imageUrl ? (
+        <img src={product.imageUrl} alt={product.productName} />
+      ) : (
+        <div className="entryDoorImageUnavailable">Full product image unavailable.</div>
+      )}
+      <div className="roofingSummaryDetails">
+        <strong>{product?.productName || "Entry door"}</strong>
+        <dl>
+          <div><dt>Door</dt><dd>{[product?.supplier, product?.range, product?.model].filter(Boolean).join(" / ") || "Selected entry door"}</dd></div>
+          <div><dt>Size</dt><dd>{displayCatalogueValue(product?.size) || displayCatalogueValue(attrs.selectedSize) || "Project selected size"}</dd></div>
+          <div><dt>Configuration</dt><dd>{displayCatalogueValue(product?.configuration) || displayCatalogueValue(attrs.selectedConfiguration) || "Project selected configuration"}</dd></div>
+          <div><dt>Glass</dt><dd>{glass?.name || attrs.selectedGlazing || product?.glazing || "Select glass"}</dd></div>
+          <div><dt>Furniture</dt><dd>{furniture ? [furniture.supplier, furniture.productName, furnitureFinish].filter(Boolean).join(" / ") : "Select door furniture"}</dd></div>
+          <div><dt>BAL</dt><dd>{displayCatalogueValue(attrs.balRating) || "Not specified by supplier"}</dd></div>
+        </dl>
+        {glass?.sampleImage ? <img className="entryDoorSummaryThumb" src={glass.sampleImage} alt={`${glass.name} glass sample`} /> : null}
+        {furniture?.imageUrl ? <img className="entryDoorSummaryThumb" src={entryDoorFurnitureImageForFinish(furniture, furnitureFinish)} alt={furniture.productName} /> : null}
+      </div>
+    </div>
+  );
+}
+
+function EntryDoorGlassGallery({ option, product, onClose }) {
+  return (
+    <div className="modalBackdrop" role="presentation" onMouseDown={onClose}>
+      <div className="entryDoorGalleryModal" role="dialog" aria-modal="true" aria-label={`${option.name} glass comparison`} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="entryDoorGalleryHeader">
+          <div>
+            <span>Hume glass option</span>
+            <strong>{option.name}</strong>
+          </div>
+          <button type="button" onClick={onClose}>Close</button>
+        </div>
+        <div className="entryDoorGalleryGrid">
+          <figure>
+            <img src={option.sampleImage} alt={`${option.name} glass sample`} />
+            <figcaption>Glass sample</figcaption>
+          </figure>
+          <figure>
+            <img src={option.previewImage || product?.imageUrl} alt={`${option.name} shown in ${product?.model || "selected door"}`} />
+            <figcaption>Preview in selected door</figcaption>
+          </figure>
+        </div>
+        <p>{ENTRY_DOOR_GLASS_SAMPLE_NOTICE}</p>
+      </div>
+    </div>
+  );
+}
+
 function EntryDoorOptionStep({ testId, product, options = [], selectedValue = "", labelFor, onSelect }) {
   return (
     <div className="entryDoorOptionPanel" data-testid={testId}>
-      {product ? (
-        <div className="roofingSelectionSummary entryDoorSelectionSummary">
-          <img src={product.imageUrl} alt={product.productName} />
-          <div className="roofingSummaryDetails">
-            <strong>{product.productName}</strong>
-            <dl>
-              <div><dt>Supplier</dt><dd>{product.supplier || "To be confirmed"}</dd></div>
-              <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
-              <div><dt>Design</dt><dd>{product.model || "To be confirmed"}</dd></div>
-            </dl>
-          </div>
-        </div>
-      ) : null}
+      {product ? <EntryDoorSelectionSummary product={product} /> : null}
       <div className="roofingChoiceGrid">
         {options.map((option) => (
           <button key={option} type="button" className={selectedValue === option ? "selected" : ""} onClick={() => onSelect(option)}>
@@ -3183,13 +10282,236 @@ function EntryDoorOptionStep({ testId, product, options = [], selectedValue = ""
   );
 }
 
+function EntryDoorFurnitureStep({
+  testId,
+  product,
+  options = [],
+  selectedProductCode = "",
+  selectedFinish = "",
+  selectedGlass = null,
+  finishReviewPrompt = false,
+  onFinishReviewPromptDismiss,
+  onSelect,
+  onFinishSelect,
+  onContinue,
+}) {
+  const [galleryItem, setGalleryItem] = useState(null);
+  const [detailsItem, setDetailsItem] = useState(null);
+  const [furnitureBrand, setFurnitureBrand] = useState('');
+  const [furnitureSearch, setFurnitureSearch] = useState('');
+  const [visibleFurnitureCount, setVisibleFurnitureCount] = useState(24);
+  const selected = entryDoorFurnitureByCode(options, selectedProductCode);
+  const finishes = entryDoorFurnitureFinishOptions(selected);
+  const compatibility = selected ? entryDoorFurnitureCompatibility(product, selected) : null;
+  const matchingFurniture = options.filter(item => item.brand === furnitureBrand && `${item.productName} ${item.model}`.toLowerCase().includes(furnitureSearch.toLowerCase()));
+  const grouped = entryDoorFurnitureGroups(matchingFurniture.slice(0, visibleFurnitureCount));
+  if (!options.length) {
+    return (
+      <div className="entryDoorFurniturePanel" data-testid={testId}>
+        {product ? <EntryDoorSelectionSummary product={product} glass={selectedGlass} /> : null}
+        <div className="entryDoorGlassEmpty warning">
+          <span>No active Client Selections door furniture products are available from Product Library.</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="entryDoorFurniturePanel" data-testid={testId}>
+      {finishReviewPrompt ? (
+        <div className="entryDoorFurniturePrompt" role="status">
+          <span>Would you like to review the entrance-door furniture finish?</span>
+          <button type="button" onClick={onFinishReviewPromptDismiss}>Dismiss</button>
+        </div>
+      ) : null}
+      {product ? <EntryDoorSelectionSummary product={product} glass={selectedGlass} furniture={selected} furnitureFinish={selectedFinish} /> : null}
+      {selected && compatibility ? (
+        <div className={`entryDoorCompatibility ${compatibility.contractFinal ? "confirmed" : "warning"}`} data-testid="entry-door-furniture-compatibility">
+          <strong>{compatibility.statusLabel}</strong>
+          <span>{compatibility.message}</span>
+        </div>
+      ) : null}
+      {!furnitureBrand ? <div className="guidedProductGrid" data-testid="entry-door-furniture-brands">{['Lockwood', 'Gainsborough', 'Lemaar', 'Zanda'].map(brand => <button type="button" className="guidedProductCard" key={brand} data-furniture-brand={brand} onClick={() => setFurnitureBrand(brand)}><strong>{brand}</strong><span>{options.filter(p => p.brand === brand).length} entry-door furniture products</span></button>)}</div> : <div><button type="button" onClick={() => { setFurnitureBrand(''); setFurnitureSearch(''); }}>Back to brands</button><h2>{furnitureBrand} door furniture</h2><label>Search products <input value={furnitureSearch} onChange={e => setFurnitureSearch(e.target.value)} /></label></div>}
+      {grouped.map((group) => (
+        <section key={group.key} className="entryDoorFurnitureGroup">
+          <h3>{group.label}</h3>
+          <p>{group.description}</p>
+          <div className="guidedProductGrid">
+            {group.items.map((item) => {
+              const itemCompatibility = entryDoorFurnitureCompatibility(product, item);
+              const isSelected = selectedProductCode === item.productCode;
+              const finishForImage = isSelected ? selectedFinish : entryDoorFurnitureFinishOptions(item)[0] || "";
+              const imageUrl = entryDoorFurnitureImageForFinish(item, finishForImage);
+              return (
+                <article key={item.productCode} data-furniture-product={item.productCode} className={`guidedProductCard entryDoorFurnitureCard ${isSelected ? "selected" : ""} ${itemCompatibility.status === "not_compatible" ? "notCompatible" : ""}`}>
+                  <button type="button" className="entryDoorFurnitureImageButton" onClick={() => setGalleryItem(item)}>
+                    {imageUrl ? <img loading="lazy" src={imageUrl} alt={item.productName} /> : <div className="entryDoorImageUnavailable">Product image requires review</div>}
+                  </button>
+                  <div className="entryDoorFurnitureBody">
+                    <span>{item.supplier}</span>
+                    <strong>{item.productName}</strong>
+                    <span>{item.range}</span>
+                    <p>{item.clientExplanation}</p>
+                    <span>{item.finishOptions.join(' / ') || 'Finish not published'}</span>
+                    <em>{finishForImage || item.finishOptions?.[0] || "Finish by supplier sample"}</em>
+                    <dl className="entryDoorFurnitureClientSpecs">
+                      <div><dt>Model/SKU</dt><dd>{item.model || item.productCode || "Supplier code to confirm"}</dd></div>
+                      <div><dt>Finish/colour</dt><dd>{finishForImage || item.finishOptions?.[0] || "Finish by supplier sample"}</dd></div>
+                      <div><dt>Price</dt><dd>{item.selectedCost == null ? 'Rate required' : entryDoorPriceStatusLabel(item)}</dd></div>
+                      <div><dt>Type</dt><dd>{item.handleStyle || "Entrance furniture"}</dd></div>
+                      <div><dt>Locking</dt><dd>{item.lockingType}</dd></div>
+                      <div><dt>Compatibility</dt><dd>{itemCompatibility.statusLabel}</dd></div>
+                    </dl>
+                    {isSelected ? <b className="entryDoorSelectedBadge">Selected</b> : null}
+                  </div>
+                  <div className="guidedProductActions">
+                    <button type="button" onClick={() => setDetailsItem(item)}>View Details</button>
+                    <button type="button" className="primary" disabled={itemCompatibility.status === "not_compatible"} onClick={() => onSelect(item)}>{isSelected ? "Selected" : "Select Product"}</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+      {matchingFurniture.length > visibleFurnitureCount ? <button type="button" onClick={() => setVisibleFurnitureCount(n => n + 24)}>Show more products ({matchingFurniture.length - visibleFurnitureCount} remaining)</button> : null}
+      {selected && finishes.length ? (
+        <div className="entryDoorFurnitureFinishes" data-testid="entry-door-furniture-finishes">
+          <strong>Finish for {selected.productName}</strong>
+          <div className="roofingChoiceGrid">
+            {finishes.map((finish) => (
+              <button key={finish} type="button" className={selectedFinish === finish ? "selected" : ""} onClick={() => onFinishSelect(finish)}>
+                <strong>{finish}</strong>
+                <span>{selectedFinish === finish ? "Selected" : "Select"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <button type="button" className="primary" disabled={!selected} onClick={onContinue}>Continue to Review & Confirm</button>
+      {galleryItem ? (
+        <EntryDoorFurnitureGallery item={galleryItem} selectedFinish={selectedFinish} onClose={() => setGalleryItem(null)} />
+      ) : null}
+      {detailsItem ? (
+        <EntryDoorFurnitureDetails item={detailsItem} onClose={() => setDetailsItem(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+function EntryDoorFurnitureGallery({ item, selectedFinish = "", onClose }) {
+  const gallery = entryDoorFurnitureGalleryItems(item, selectedFinish);
+  return (
+    <div className="modalBackdrop" role="presentation" onMouseDown={onClose}>
+      <div className="entryDoorGalleryModal" role="dialog" aria-modal="true" aria-label={`${item.productName} gallery`} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="entryDoorGalleryHeader">
+          <div>
+            <span>{item.supplier}</span>
+            <strong>{item.productName}</strong>
+          </div>
+          <button type="button" onClick={onClose}>Close</button>
+        </div>
+        <div className="entryDoorGalleryGrid">
+          {gallery.map((entry) => (
+            <figure key={`${entry.label}-${entry.url}`} className={entry.technical ? "technical" : ""}>
+              <img src={entry.url} alt={entry.label} />
+              <figcaption>{entry.technical ? "Dimensions only - not the product selection image" : entry.label}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EntryDoorFurnitureDetails({ item, onClose }) {
+  return (
+    <div className="modalBackdrop" role="presentation" onMouseDown={onClose}>
+      <div className="entryDoorDetailsModal" role="dialog" aria-modal="true" aria-label={`${item.productName} details`} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="entryDoorGalleryHeader">
+          <div>
+            <span>Dimensions & installation</span>
+            <strong>{item.productName}</strong>
+          </div>
+          <button type="button" onClick={onClose}>Close</button>
+        </div>
+        <dl className="entryDoorFurnitureSpecs">
+          <div><dt>Model code</dt><dd>{item.model || item.productCode}</dd></div>
+          <div><dt>Range</dt><dd>{item.range || 'Not published'}</dd></div>
+          <div><dt>Dimensions</dt><dd>{item.dimensions || 'Not published'}</dd></div>
+          <div><dt>Material</dt><dd>{item.material || 'Not published'}</dd></div>
+          <div><dt>Keyed / keyless / smart</dt><dd>{item.entryClassification || 'Not published'}</dd></div>
+          <div><dt>Door compatibility</dt><dd>{item.doorCompatibility || 'Not published'}</dd></div>
+          <div><dt>Coastal suitability</dt><dd>{item.coastalSuitability || 'Not published'}</dd></div>
+          <div><dt>Fire rating</dt><dd>{item.fireRating || 'Not published'}</dd></div>
+          <div><dt>Accessibility</dt><dd>{item.accessibilityCompliance || 'Not published'}</dd></div>
+          <div><dt>Backset</dt><dd>{item.backset}</dd></div>
+          <div><dt>Door thickness</dt><dd>{item.compatibleDoorThickness}</dd></div>
+          <div><dt>Cylinder</dt><dd>{item.cylinderConfiguration}</dd></div>
+          <div><dt>Handle centres</dt><dd>{item.centres}</dd></div>
+          <div><dt>Fixing type</dt><dd>{item.fixings}</dd></div>
+          <div><dt>Handing</dt><dd>{item.handing}</dd></div>
+          <div><dt>External use</dt><dd>{item.externalUseSuitability}</dd></div>
+          <div><dt>BAL / fire</dt><dd>{item.balFireLimitations}</dd></div>
+          <div><dt>Compatibility notes</dt><dd>{item.compatibilityDetails}</dd></div>
+        </dl>
+        {item.productUrl ? <button type="button" onClick={() => window.open(item.productUrl, "_blank", "noopener,noreferrer")}>Official Product Link</button> : null}
+      </div>
+    </div>
+  );
+}
+
+function EntryDoorDesignFilters({
+  search,
+  material,
+  configuration,
+  glazing,
+  bal,
+  width,
+  priceState,
+  options,
+  onSearchChange,
+  onMaterialChange,
+  onConfigurationChange,
+  onGlazingChange,
+  onBalChange,
+  onWidthChange,
+  onPriceStateChange,
+}) {
+  return (
+    <div className="entryDoorFilters" data-testid="entry-door-filters">
+      <label>
+        <span>Search</span>
+        <input value={search} placeholder="Product name or code" onChange={(event) => onSearchChange(event.target.value)} />
+      </label>
+      <EntryDoorFilterSelect label="Material" value={material} values={options.materials} onChange={onMaterialChange} />
+      <EntryDoorFilterSelect label="Configuration" value={configuration} values={options.configurations} onChange={onConfigurationChange} />
+      <EntryDoorFilterSelect label="Glazing" value={glazing} values={options.glazings} onChange={onGlazingChange} />
+      <EntryDoorFilterSelect label="BAL" value={bal} values={options.balRatings} onChange={onBalChange} />
+      <EntryDoorFilterSelect label="Width" value={width} values={options.widths} onChange={onWidthChange} />
+      <EntryDoorFilterSelect label="Price" value={priceState} values={options.priceStates} onChange={onPriceStateChange} />
+    </div>
+  );
+}
+
+function EntryDoorFilterSelect({ label, value, values = [], onChange }) {
+  return (
+    <label>
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        <option value="">All</option>
+        {values.map((item) => <option key={item} value={item}>{item}</option>)}
+      </select>
+    </label>
+  );
+}
+
 function GuidedEntryDoorEmptyCatalogue({ masterProductCount = 0, enabledProductCount = 0 }) {
   return (
     <div className="guidedEmptyCatalogue" data-testid="guided-entry-door-empty-catalogue">
       <strong>{masterProductCount && !enabledProductCount ? "No entry door products are enabled for this builder." : "Entry door catalogue awaiting product data"}</strong>
       <span>Product Library needs real exterior Hume and Corinthian entry door products before Client Selections can continue.</span>
       <div>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?area=exterior&category=Entry%20Doors&family=entry-doors"; }}>Manage Entry Doors</button>
+        <button type="button" onClick={() => { safeSelectionNavigate(Router, "/modules/builders/product-library?area=exterior&category=Entry%20Doors&family=entry-doors"); }}>Manage Entry Doors</button>
       </div>
     </div>
   );
@@ -3310,7 +10632,7 @@ function GuidedBrickEmptyCatalogue({ message = "Brick catalogue awaiting product
       <strong>{message}</strong>
       <span>{masterProductCount ? "Master Catalogue has brick products, but this builder has not enabled them yet." : "No products have been added to this catalogue yet."}</span>
       <div>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
+        <button type="button" onClick={() => { safeSelectionNavigate(Router, "/modules/builders/product-library"); }}>Add Products</button>
         <button type="button" onClick={() => onOpenImport ? onOpenImport() : null}>Import Products</button>
         {masterProductCount ? <button type="button" onClick={() => onOpenImport ? onOpenImport() : null}>Manage Builder Catalogue</button> : null}
       </div>
@@ -3747,7 +11069,7 @@ function GuidedRoofingEmptyCatalogue({ message = "Metal roofing catalogue awaiti
       <strong>{message}</strong>
       <span>{masterProductCount ? "Master Catalogue has roofing products, but this builder has not enabled them yet." : "Import official roofing catalogue records before client selection."}</span>
       <div>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library?area=exterior&category=exterior-roofing&family=roofing"; }}>Manage Roofing Catalogue</button>
+        <button type="button" onClick={() => { safeSelectionNavigate(Router, "/modules/builders/product-library?area=exterior&category=exterior-roofing&family=roofing"); }}>Manage Roofing Catalogue</button>
       </div>
     </div>
   );
@@ -3855,8 +11177,8 @@ function GuidedEmptyCatalogue({ requirement }) {
       <strong>No products have been added to this catalogue yet.</strong>
       <span>{requirement.label} will appear here once genuine catalogue records are imported.</span>
       <div>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Add Products</button>
-        <button type="button" onClick={() => { window.location.href = "/modules/builders/product-library"; }}>Import Products</button>
+        <button type="button" onClick={() => { safeSelectionNavigate(Router, "/modules/builders/product-library"); }}>Add Products</button>
+        <button type="button" onClick={() => { safeSelectionNavigate(Router, "/modules/builders/product-library"); }}>Import Products</button>
       </div>
     </div>
   );
@@ -3891,17 +11213,18 @@ function GuidedRequirementRow({ requirement, selection, onOpen }) {
   );
 }
 
-function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
+function GuidedProductCard({ requirement, product, onSelect, onViewDetails, onSaveProgress }) {
   const priceState = priceStateForGuidedOption(product);
   const selectedPrice = priceState === PRICE_STATES.current ? numberValue(product.selectedCost) : 0;
   const allowance = numberValue(product.allowance ?? requirement.defaultAllowance);
   const variation = priceState === PRICE_STATES.current ? variationFor({ selectedPrice, allowance, quantity: requirement.defaultQuantity || 1 }) : 0;
   const isBrick = requirement.requirementKey === "bricks";
+  const isGarageDoor = requirement.requirementKey === "garage-door";
   const finishLabel = displayCatalogueValue(product.finish) || "Finish to be confirmed";
   const brickFinishLabel = [product.colour, product.texture, product.finish].map(displayCatalogueValue).filter(Boolean).join(" / ") || "Brick colour and texture to be confirmed";
   return (
     <article className={`guidedProductCard ${isBrick ? "brickCard" : ""}`} data-testid={`guided-product-${slug(product.productName)}`} data-family-key={requirement.familyKey}>
-      <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
+      <img src={product.imageUrl || requirementImage(requirement)} alt={product.imageAltText || product.productName} />
       <div>
         <span>{product.brand || product.supplier}</span>
         <strong>{product.productName}</strong>
@@ -3918,7 +11241,8 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
       <div className="guidedProductActions">
         <button type="button" onClick={onViewDetails}>View Details</button>
         <button type="button" disabled={!product.productUrl} onClick={() => product.productUrl && window.open(product.productUrl, "_blank", "noopener,noreferrer")}>View Product Website</button>
-        <button type="button" className="primary" onClick={onSelect}>{isBrick ? "Select This Brick" : "Select"}</button>
+        {isGarageDoor ? <button type="button" onClick={onSaveProgress}>Save Progress</button> : null}
+        <button type="button" className="primary" onClick={onSelect}>{isGarageDoor ? "Save and Return to Dashboard" : isBrick ? "Select This Brick" : "Select"}</button>
       </div>
     </article>
   );
@@ -3927,6 +11251,8 @@ function GuidedProductCard({ requirement, product, onSelect, onViewDetails }) {
 function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) {
   const priceState = priceStateForGuidedOption(product);
   const isBrick = requirement?.requirementKey === "bricks";
+  const isEntryDoor = requirement?.requirementKey === "entry-door";
+  const attrs = product?.attributes || product?.metadata?.productEntity?.attributes || {};
   const gallery = Array.from(new Set([product.imageUrl, ...(product.galleryImages || [])].filter(Boolean)));
   const dimensionsLabel = displayCatalogueValue(product.dimensions || product.size) || "To be confirmed";
   const textureLabel = displayCatalogueValue(product.texture) || "To be confirmed";
@@ -3935,7 +11261,11 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
     <div className="modalBackdrop" onClick={onClose}>
       <div className="guidedDetailsModal" onClick={(event) => event.stopPropagation()} data-testid="guided-product-details">
         <button type="button" onClick={onClose}>{isBrick ? "Back to Bricks" : "Close"}</button>
-        <img src={product.imageUrl} alt={product.productName} />
+        {product.imageUrl ? (
+          <img className={isEntryDoor ? "entryDoorDetailHero" : ""} src={product.imageUrl} alt={product.productName} />
+        ) : (
+          <div className="entryDoorImageUnavailable entryDoorDetailHero">Full product image unavailable.</div>
+        )}
         {gallery.length > 1 ? (
           <div className="guidedDetailsGallery">
             {gallery.map((image) => <img key={image} src={image} alt="" />)}
@@ -3945,12 +11275,20 @@ function GuidedProductDetailsModal({ requirement, product, onClose, onSelect }) 
         <h2>{product.productName}</h2>
         <p>{product.description}</p>
         <dl>
+          <div><dt>Product Code</dt><dd>{product.productCode || entryDoorProductCodeFor(product) || "To be confirmed"}</dd></div>
           <div><dt>Model</dt><dd>{product.model || "To be confirmed"}</dd></div>
           <div><dt>Range</dt><dd>{product.range || "To be confirmed"}</dd></div>
           <div><dt>Dimensions</dt><dd>{dimensionsLabel}</dd></div>
           <div><dt>Texture</dt><dd>{textureLabel}</dd></div>
           <div><dt>Colour / Finish</dt><dd>{finishLabel}</dd></div>
           <div><dt>Supplier</dt><dd>{product.supplier || "To be confirmed"}</dd></div>
+          {isEntryDoor ? <div><dt>Configuration</dt><dd>{entryDoorAttributeOptions(product, "configurations", product.configuration).join(", ") || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>Glazing</dt><dd>{entryDoorAttributeOptions(product, "glazingOptions", product.glazing).join(", ") || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>Door Thickness</dt><dd>{displayCatalogueValue(attrs.doorThickness) || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>Construction</dt><dd>{displayCatalogueValue(attrs.materialConstruction || product.material) || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>BAL Rating</dt><dd>{displayCatalogueValue(attrs.balRating) || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>Warranty</dt><dd>{displayCatalogueValue(attrs.warrantyInformation) || "Not specified by supplier"}</dd></div> : null}
+          {isEntryDoor ? <div><dt>Door Furniture & Locking</dt><dd>{entryDoorAttributeOptions(product, "hardwareOptions", attrs.compatibleEntryHardware).join(", ") || "Selected after door design"}</dd></div> : null}
           <div><dt>Price</dt><dd>{priceState === PRICE_STATES.current ? money(product.selectedCost) : priceState}</dd></div>
           <div><dt>Allowance</dt><dd>{money(product.allowance)}</dd></div>
         </dl>
@@ -4143,7 +11481,7 @@ function GuidedMiniTotal({ label, value, tone = "" }) {
 }
 
 function GuidedStatusDot({ status }) {
-  return <span className={`guidedStatusDot ${statusTone(status)}`}>{status === "complete" ? "✓" : ""}</span>;
+  return <span className={`guidedStatusDot ${statusTone(status)}`}>{status === "complete" ? <CheckCircle2 size={13} aria-hidden="true" /> : null}</span>;
 }
 
 function CoverPage({ cover, onLogoChange }) {
@@ -4189,6 +11527,8 @@ function CoverPage({ cover, onLogoChange }) {
         <CoverMeta label="Date" value={issueDate} />
         <CoverMeta label="Selection Level" value={selectionStandard || "Builder standard"} />
         <CoverMeta label="Version" value={version} />
+        <CoverMeta label="Status" value={cover.status || "Draft"} />
+        <CoverMeta label="Document ID" value={cover.documentIdentifier || `${quoteNumber || "JOB"}-ISS-v${version}`} />
       </div>
       <footer>
         <span>{cover.footerText || builderName}</span>
@@ -4229,9 +11569,10 @@ function LogoBox({ src, builderName, onLogoChange }) {
 }
 
 function CoverMeta({ label, value }) {
+  if (!coverValue(value)) return null;
   return (
     <div className="coverMetaItem">
-      <strong>{label}: {value || "Not entered"}</strong>
+      <strong>{label}: {coverValue(value)}</strong>
     </div>
   );
 }
@@ -4309,6 +11650,39 @@ function CoverSettingsPanel({ cover, dirty, onChange, onReset, onResetFromProjec
           <input value={cover.version || ""} onChange={(event) => onChange("version", event.target.value)} />
         </label>
       </div>
+      <div className="coverSettingsGrid">
+        <label>
+          Schedule status
+          <select value={cover.status || "Draft"} onChange={(event) => onChange("status", event.target.value)}>
+            <option value="Draft">Draft</option>
+            <option value="For Approval">For Approval</option>
+            <option value="Approved">Approved</option>
+            <option value="Contract">Contract</option>
+          </select>
+        </label>
+        <label>
+          Document identifier
+          <input value={cover.documentIdentifier || ""} onChange={(event) => onChange("documentIdentifier", event.target.value)} />
+        </label>
+      </div>
+      <div className="coverSettingsGrid">
+        <label>
+          Prepared by
+          <input value={cover.preparedBy || ""} onChange={(event) => onChange("preparedBy", event.target.value)} />
+        </label>
+        <label>
+          Builder email
+          <input value={cover.builderEmail || ""} onChange={(event) => onChange("builderEmail", event.target.value)} />
+        </label>
+      </div>
+      <label>
+        Builder phone
+        <input value={cover.builderPhone || ""} onChange={(event) => onChange("builderPhone", event.target.value)} />
+      </label>
+      <label>
+        Introductory note
+        <textarea value={cover.introductoryNote || ""} onChange={(event) => onChange("introductoryNote", event.target.value)} />
+      </label>
       <label>
         Footer text
         <input value={cover.footerText || ""} onChange={(event) => onChange("footerText", event.target.value)} />
@@ -4333,46 +11707,103 @@ function CoverSettingsPanel({ cover, dirty, onChange, onReset, onResetFromProjec
   );
 }
 
-function ProjectInfoPage({ book, details, onChange }) {
+function ProjectInfoPage({ book, details, scheduleItems = [], review = null }) {
   const info = details || book.projectInfo;
+  const selectedCount = scheduleItems.length;
+  const outstandingCount = review?.items?.length || 0;
+  const summaryRows = [
+    ["Client", info.clientName],
+    ["Full site address", info.fullSiteAddress || info.siteAddress],
+    ["Job number", info.jobNumber || info.quoteNumber],
+    ["Builder / company", info.builderName || book.cover?.builderName],
+    ["Schedule version", info.scheduleVersion || book.cover?.version],
+    ["Schedule status", book.cover?.status || "Draft"],
+    ["Date prepared", info.issueDate || book.cover?.issueDate],
+    ["Selected items", selectedCount ? String(selectedCount) : ""],
+    ["Outstanding decisions", String(outstandingCount)],
+  ].filter(([, value]) => coverValue(value));
   return (
     <section className="page infoPage">
-      <HeaderLogo book={book} title="Project Information" page={2} />
+      <HeaderLogo book={book} title="Project Summary" page={2} />
       <div className="projectInfoHero">
-        <span>Selections package</span>
-        <strong>{info.selectionStandard || missingCoverField("selectionStandard")}</strong>
+        <span>Inclusions and Selections Schedule</span>
+        <strong>{info.selectionStandard || book.cover?.selectionStandard || "Draft client selections"}</strong>
       </div>
-      <div className="infoGrid">
-        <InfoField label="Client" value={info.clientName || missingCoverField("clientName")} onChange={(value) => onChange("clientName", value)} />
-        <InfoField label="Full site address" multiline value={info.fullSiteAddress || info.siteAddress || missingCoverField("fullSiteAddress")} onChange={(value) => onChange("siteAddress", value)} />
-        <InfoField label="Suburb / state / postcode" value={info.suburbPostcode || missingCoverField("suburbPostcode")} onChange={(value) => onChange("suburbPostcode", value)} />
-        <InfoField label="Estimator" value={info.estimatorName || "Estimator missing"} onChange={(value) => onChange("estimatorName", value)} />
-        <InfoField label="Quote number" value={info.quoteNumber || missingCoverField("quoteNumber")} onChange={(value) => onChange("quoteNumber", value)} />
-        <InfoField label="Job number" value={info.jobNumber || missingCoverField("jobNumber")} onChange={(value) => onChange("jobNumber", value)} />
-        <InfoField label="Builder / company" value={info.builderName || missingCoverField("builderName")} onChange={(value) => onChange("builderName", value)} />
-        <InfoField label="Date prepared" type="date" value={info.issueDate || today()} onChange={(value) => onChange("issueDate", value)} />
-      </div>
-      <div className="aboutBox">
+      <dl className="infoGrid readonlyInfoGrid">
+        {summaryRows.map(([label, value]) => (
+          <div className="infoField readonlyInfoField" key={label}>
+            <dt>{label}</dt>
+            <dd>{coverValue(value)}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="aboutBox readonlyAboutBox">
         <strong>About This Document</strong>
-        <textarea value={info.aboutDocument} onChange={(event) => onChange("aboutDocument", event.target.value)} />
-      </div>
-      <h3>Revision History</h3>
-      <table className="revisionTable">
-        <thead><tr><th>Version</th><th>Date</th><th>Description</th></tr></thead>
-        <tbody>{info.revisionHistory.map((row, index) => (
-          <tr key={index}>
-            <td><input value={row.version} onChange={(event) => onChange("revisionHistory", replaceAt(info.revisionHistory, index, { ...row, version: event.target.value }))} /></td>
-            <td><input type="date" value={row.date} onChange={(event) => onChange("revisionHistory", replaceAt(info.revisionHistory, index, { ...row, date: event.target.value }))} /></td>
-            <td><input value={row.description} onChange={(event) => onChange("revisionHistory", replaceAt(info.revisionHistory, index, { ...row, description: event.target.value }))} /></td>
-          </tr>
-        ))}</tbody>
-      </table>
-      <h3>Client Approval</h3>
-      <div className="signatureGrid">
-        <span>Client Signature</span><span>Date</span>
-        <span>Builder Representative</span><span>Date</span>
+        <p>{info.aboutDocument || "This schedule records the current client-facing selections for review with the builder before approval."}</p>
       </div>
       <PageFooter book={book} page={2} />
+    </section>
+  );
+}
+
+function ScheduleSectionDividerPage({ book, title, subtitle, pageNumber }) {
+  return (
+    <section className="page scheduleDividerPage">
+      <HeaderLogo book={book} title={title} page={pageNumber} />
+      <div className="scheduleDividerContent">
+        <span>Document section</span>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+      </div>
+      <PageFooter book={book} page={pageNumber} />
+    </section>
+  );
+}
+
+function ScheduleOutstandingPage({ book, review, pageNumber }) {
+  return (
+    <section className="page scheduleOutstandingPage">
+      <HeaderLogo book={book} title="Outstanding Selection Items" page={pageNumber} />
+      <div className="scheduleReviewHero">
+        <span>Draft review</span>
+        <strong>{review.complete} of {review.total} selections have product data</strong>
+        <p>{review.items.length ? "Outstanding decisions and catalogue corrections are listed below. Draft PDFs remain available without inventing missing selections." : "No outstanding review items are currently recorded."}</p>
+      </div>
+      <div className="scheduleOutstandingList">
+        {review.items.length ? review.items.map((item) => (
+          <article key={`${item.id}-${item.reason}`}>
+            <strong>{item.label}</strong>
+            <span>{item.reason}</span>
+            <em>{titleCase(item.type)}</em>
+          </article>
+        )) : <article><strong>Ready for approval review</strong><span>No outstanding items detected in the working schedule.</span><em>Draft</em></article>}
+      </div>
+      <PageFooter book={book} page={pageNumber} />
+    </section>
+  );
+}
+
+function ScheduleAcknowledgementPage({ book, review, pageNumber }) {
+  return (
+    <section className="page scheduleAcknowledgementPage">
+      <HeaderLogo book={book} title="Review and Acknowledgement" page={pageNumber} />
+      <div className="acknowledgementCopy">
+        <h2>Client Review</h2>
+        <p>This schedule records the current project selections for review. Draft schedules may include selections awaiting confirmation, supplier quote items and catalogue image corrections.</p>
+        <p>Approved and contract schedules are versioned attachments. Later changes should be issued as a new revision or variation.</p>
+      </div>
+      <div className="acknowledgementGrid">
+        <span>Owner / client signature</span><span>Date</span>
+        <span>Builder representative</span><span>Date</span>
+      </div>
+      <div className="scheduleReviewStats printed">
+        <span><strong>{review.total}</strong> Selection items</span>
+        <span><strong>{review.complete}</strong> Complete</span>
+        <span><strong>{review.unconfirmed}</strong> Unconfirmed</span>
+        <span><strong>{review.pricing}</strong> Pricing review</span>
+        <span><strong>{review.images}</strong> Image review</span>
+      </div>
+      <PageFooter book={book} page={pageNumber} />
     </section>
   );
 }
@@ -4403,8 +11834,91 @@ function InfoField({ label, value, type = "text", multiline = false, onChange })
   );
 }
 
+function ScheduleSectionPage({ book, section, pageNumber, onPreviewImage, onSelectProduct }) {
+  const items = section.items || [];
+  return (
+    <section className="page roomPage contractPage scheduleSectionPage">
+      <main className="roomSheet">
+        <header className="scheduleTableHeader">
+          <div>
+            <span>Exterior selections</span>
+            <h2>{section.title}</h2>
+            {section.pageCount > 1 ? <p>Continued page {section.pageIndex} of {section.pageCount}</p> : <p>{section.subtitle}</p>}
+          </div>
+          <div className="builderLogoBox">
+            <img src={book.cover.logoUrl} alt="Builder logo" />
+            <b>{book.cover.builderName}</b>
+          </div>
+        </header>
+
+        <ScheduleRowTable items={items} sectionKey={section.key} onPreviewImage={onPreviewImage} onSelectProduct={onSelectProduct} />
+      </main>
+
+      <footer className="contractFooter">
+        <span>{book.cover.builderName} Pty Ltd</span>
+        <span>{book.cover.footerText}</span>
+        <strong>Page {pageNumber}</strong>
+      </footer>
+    </section>
+  );
+}
+
+function ScheduleRowTable({ items = [], sectionKey = "", onPreviewImage, onSelectProduct }) {
+  return (
+    <table className="scheduleRowTable" data-selection-section={sectionKey} data-selection-item-count={items.length}>
+      <thead>
+        <tr>
+          <th className="scheduleImageColumn">Image</th>
+          <th>Area / Category</th>
+          <th className="scheduleProductColumn">Selected Product</th>
+          <th>Brand / Supplier</th>
+          <th>Model / Code</th>
+          <th>Colour / Finish</th>
+          <th>Qty / Location</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <ScheduleRow key={item.id} item={item} onPreviewImage={onPreviewImage} onSelectProduct={onSelectProduct} />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ScheduleRow({ item, onPreviewImage, onSelectProduct }) {
+  const missingImage = !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl);
+  const field = (label) => item.fields?.find((entry) => entry.label === label)?.value || "";
+  const brandSupplier = [field("Brand"), field("Supplier")].filter(Boolean).join(" / ");
+  const modelCode = field("Model / product code") || field("Product ID");
+  const qtyLocation = [field("Quantity"), field("Unit"), field("Area / location")].filter(Boolean).join(" ");
+  return (
+    <tr data-selection-id={item.selectionId || item.sourceRowId}>
+      <td>
+        <button
+          type="button"
+          className={`scheduleRowImage ${missingImage ? "empty" : ""}`}
+          onClick={() => missingImage ? onSelectProduct?.(item.sourceRowId) : onPreviewImage?.({ url: item.imageUrl, alt: item.title })}
+          aria-label={missingImage ? "Image pending" : `Preview ${item.title}`}
+        >
+          {missingImage ? <span aria-hidden="true" /> : <img src={item.imageUrl} alt={item.title} />}
+        </button>
+      </td>
+      <td><strong>{item.category}</strong><span>{item.area}</span></td>
+      <td className="scheduleProductCell"><strong>{item.title || "Selection outstanding"}</strong>{item.notes ? <span>{item.notes}</span> : null}</td>
+      <td>{brandSupplier}</td>
+      <td>{modelCode}</td>
+      <td>{item.colourSwatch ? <span className="scheduleColourDot" style={{ background: item.colourSwatch }} /> : null}{[item.colourName, item.finish].filter(Boolean).join(" / ")}</td>
+      <td>{qtyLocation}</td>
+      <td><strong>{item.statusLabel}</strong><span>{item.priceLabel}</span>{item.confirmationStatus ? <span>{item.confirmationStatus}</span> : null}</td>
+    </tr>
+  );
+}
+
 function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenRoom, onRoomChange, onRowChange, onApplyOption, onSelectProduct, onPreviewImage, onDuplicate, onRemove }) {
   const roomUpgrade = room.rows.reduce((sum, row) => sum + numberValue(row.upgradeCost), 0);
+  const scheduleItems = scheduleItemsForRoom(room);
   return (
     <section className="page roomPage contractPage">
       <main className="roomSheet">
@@ -4423,80 +11937,11 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
           </div>
         </header>
 
-      <div className="selectionTableWrap">
-        <table className="selectionTable">
-          <colgroup>
-            <col className="colItem" />
-            <col className="colDescription" />
-            <col className="colBrand" />
-            <col className="colProduct" />
-            <col className="colFinish" />
-            <col className="colSupplier" />
-            <col className="colImage" />
-            <col className="colIncluded" />
-            <col className="colUpgrade" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Description</th>
-              <th>Brand</th>
-              <th>Product / Model</th>
-              <th>Finish / Colour</th>
-              <th>Supplier</th>
-              <th>Image</th>
-              <th>Included</th>
-              <th>Upgrade Options</th>
-            </tr>
-          </thead>
-          <tbody>
-            {room.rows.map((row) => (
-              <tr key={row.id}>
-                <td className="itemCell"><span className="itemIcon">{selectionIcon(row.item)}</span><input value={row.item} onChange={(event) => onRowChange(row.id, { item: event.target.value })} /></td>
-                <td><textarea value={row.description} onChange={(event) => onRowChange(row.id, { description: event.target.value })} /></td>
-                <td><input value={row.brand} onChange={(event) => onRowChange(row.id, { brand: event.target.value })} /></td>
-                <td>
-                  <div className="productChoice">
-                    <select value={row.selectedOptionId || ""} onChange={(event) => onApplyOption(row.id, event.target.value)}>
-                      {(row.options?.length ? row.options : []).map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.brand} - {option.productName} {option.upgradeCost > 0 ? `+${money(option.upgradeCost)}` : "Included"}
-                        </option>
-                      ))}
-                      {!row.options?.length && <option value="">Select product</option>}
-                    </select>
-                    <button className="libraryButton" onClick={() => onSelectProduct(row.id)}>Product Library</button>
-                    <strong>{row.productModel || row.selectedProduct}</strong>
-                  </div>
-                </td>
-                <td><input value={row.finishColour} onChange={(event) => onRowChange(row.id, { finishColour: event.target.value })} /></td>
-                <td><input value={row.supplier} onChange={(event) => onRowChange(row.id, { supplier: event.target.value })} /></td>
-                <td>
-                  {row.imageUrl ? (
-                    <button className="thumbButton" onClick={() => onPreviewImage({ url: row.imageUrl, alt: row.selectedProduct || row.item })}>
-                      <img src={row.imageUrl} alt={row.item} />
-                    </button>
-                  ) : <button className="thumbButton empty" onClick={() => onSelectProduct(row.id)}>Image</button>}
-                </td>
-                <td>
-                  <button className={`includedTick ${row.included ? "yes" : "no"}`} onClick={() => onRowChange(row.id, { included: !row.included })}>
-                    {row.included ? "✓" : "-"}
-                  </button>
-                </td>
-                <td>
-                  <div className="upgradeCell">
-                    <select value={row.status} onChange={(event) => onRowChange(row.id, { status: event.target.value })}>
-                      {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
-                    </select>
-                    <span>{money(row.upgradeCost)}</span>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="selectionCardGrid" data-selection-item-count={scheduleItems.length}>
+        {scheduleItems.map((item) => (
+          <ScheduleSelectionCard key={item.id} item={item} onPreviewImage={onPreviewImage} onSelectProduct={() => onSelectProduct(item.sourceRowId)} />
+        ))}
       </div>
-
       <div className="notesRow">
         <div><strong>Builder Notes</strong><textarea value={room.builderNotes || ""} onChange={(event) => onRoomChange({ builderNotes: event.target.value })} /></div>
         <div><strong>Client Notes</strong><textarea value={room.clientNotes || ""} onChange={(event) => onRoomChange({ clientNotes: event.target.value })} /></div>
@@ -4513,6 +11958,484 @@ function RoomPage({ room, rooms, activeRoomId, book, pageNumber, totals, onOpenR
   );
 }
 
+function ScheduleSelectionCard({ item, onPreviewImage, onSelectProduct }) {
+  const missingImage = !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl);
+  return (
+    <article className={`scheduleSelectionCard ${item.compact ? "compact" : ""} ${missingImage ? "missingImage" : ""}`} data-selection-id={item.selectionId || item.sourceRowId}>
+      <button
+        type="button"
+        className={`scheduleSelectionImage ${missingImage ? "empty" : ""}`}
+        onClick={() => missingImage ? onSelectProduct?.() : onPreviewImage?.({ url: item.imageUrl, alt: item.title })}
+      >
+        {missingImage ? <span aria-hidden="true" /> : <img src={item.imageUrl} alt={item.title} />}
+      </button>
+      <div className="scheduleSelectionDetails">
+        <div className="scheduleSelectionTitle">
+          <span>{item.category}</span>
+          <strong>{item.title || "Selection outstanding"}</strong>
+        </div>
+        <ScheduleFieldList fields={item.fields} />
+        {item.colourSwatch ? <span className="scheduleColourSwatch" style={{ background: item.colourSwatch }}>{item.colourName || item.finish || "Colour"}</span> : null}
+        <div className="scheduleBadges">
+          <span>{item.statusLabel}</span>
+          <span>{item.priceLabel}</span>
+          {item.confirmationStatus ? <span>{item.confirmationStatus}</span> : null}
+        </div>
+        {item.notes ? <p>{item.notes}</p> : null}
+      </div>
+    </article>
+  );
+}
+
+function ScheduleFieldList({ fields = [] }) {
+  const visibleFields = fields.filter((field) => field?.value !== undefined && field?.value !== null && String(field.value).trim() !== "" && String(field.value).trim() !== "$0.00");
+  return (
+    <dl className="scheduleFieldList">
+      {visibleFields.map((field) => (
+        <div key={`${field.label}-${field.value}`}>
+          <dt>{field.label}</dt>
+          <dd>{field.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const EXTERIOR_SCHEDULE_SECTIONS = [
+  { key: "roofing", title: "Roofing", subtitle: "Roof material, profile, roof colour and visible roof accessory colour decisions." },
+  { key: "bricks-render-cladding", title: "Bricks, Render and Cladding", subtitle: "Visible facade masonry, render, cladding and location decisions." },
+  { key: "windows-external-doors", title: "Windows and External Doors", subtitle: "Window systems, frame colour, glass exceptions, screens, entry doors and external door selections." },
+  { key: "garage-door", title: "Garage Door", subtitle: "Garage door supplier, profile, finish, colour and visible glazing decisions." },
+  { key: "external-lighting", title: "External Lighting", subtitle: "Distinct exterior light products, quantities, locations and selected functions." },
+  { key: "exterior-paint-colours", title: "Exterior Paint and Colours", subtitle: "Exterior colour decisions grouped by visible area, finish and source." },
+  { key: "driveway", title: "Driveway", subtitle: "Driveway finish, concrete or exposed aggregate range, colour mix, area and quote status." },
+];
+
+const SCHEDULE_ROWS_PER_PAGE = 5;
+const TECHNICAL_SCHEDULE_ROW_PATTERN = /\b(wall\s*wrap|sarking|timber\s*framing|framing|insulation|fixing|fixings|structural\s*steel|beam|post|flashing|concealed|waterproofing|adhesive|mortar|sealant|substrate|batten|anticon|labou?r|garage.?door\s*motor|motor\s*\/\s*operator|tracks?|springs?|remotes?|installation\s*component)\b/i;
+const GENERIC_SCHEDULE_ROW_PATTERN = /\b(builder\s*)?(included|standard)\s*selection\b|builder\s*standard|generic\s*selection/i;
+
+function scheduleSectionsForEffectiveSelections({ persistedSelections = [], book = {} } = {}) {
+  const exteriorConstruction = normaliseExteriorWallConstruction(book?.exteriorWallConstruction);
+  const persistedItems = (persistedSelections || [])
+    .filter((selection) => !selectionHiddenByExteriorWallConstruction(selection, exteriorConstruction))
+    .filter(isSelectionsSchedulePersistedRow)
+    .flatMap(scheduleItemsForPersistedSelection);
+  const sourceSections = persistedItems.length ? sectionsFromScheduleItems(persistedItems) : scheduleSectionsForBook(book);
+  return sourceSections.filter((section) => section.items.length);
+}
+
+function sectionsFromScheduleItems(items = []) {
+  const buckets = new Map(EXTERIOR_SCHEDULE_SECTIONS.map((section) => [section.key, { ...section, items: [] }]));
+  const interiorBuckets = new Map();
+  items.forEach((item) => {
+    const sectionKey = scheduleSectionKeyForItem(item);
+    if (buckets.has(sectionKey)) {
+      buckets.get(sectionKey).items.push(item);
+      return;
+    }
+    const title = titleCase(sectionKey || item.category || item.area || "Interior");
+    if (!interiorBuckets.has(title)) interiorBuckets.set(title, { key: slug(title), title, subtitle: "Interior client selections and outstanding decisions.", items: [] });
+    interiorBuckets.get(title).items.push(item);
+  });
+  return [
+    ...EXTERIOR_SCHEDULE_SECTIONS.map((section) => buckets.get(section.key)),
+    ...Array.from(interiorBuckets.values()).sort((left, right) => left.title.localeCompare(right.title)),
+  ];
+}
+
+function scheduleItemsForPersistedSelection(selection = {}, index = 0) {
+  const details = selection.selected_details || {};
+  const guided = details.guidedSelection || details;
+  const row = {
+    id: selection.id || guided.selectionId || `persisted-${index}`,
+    item: details.item || selection.subcategory || selection.title || selection.selected_product_name,
+    category: selection.subcategory || details.requirementLabel || selection.category,
+    room: selection.room || details.room || details.areaLabel,
+    description: selection.description || details.description,
+    selectedProduct: selection.selected_product_name || selection.product_name || details.selectedProduct || details.productName,
+    selectedOptionId: details.selectedOptionId || details.productId || selection.selected_product_id,
+    brand: selection.brand || details.brand,
+    productModel: selection.model_number || details.model || details.productCode,
+    finishColour: selection.colour || selection.finish || details.colour || details.finish,
+    supplier: selection.selected_supplier_name || selection.supplier || details.supplierName || details.supplier,
+    imageUrl: selection.image_url || details.exactImageUrl || details.imageUrl || details.imageReference,
+    allowanceAmount: selection.included_allowance ?? selection.allowance_amount ?? details.allowance,
+    selectedCost: selection.client_selection_price ?? selection.calculated_client_selection_price ?? details.selectedPrice,
+    upgradeCost: selection.variation_amount ?? details.variationAmount ?? details.variation,
+    status: selection.status || selection.selection_status || details.status,
+    notes: selection.notes || details.notes,
+    guidedSelection: {
+      ...guided,
+      selectionId: selection.id || guided.selectionId,
+      area: guided.area || selection.category,
+      areaLabel: guided.areaLabel || selection.room,
+      requirementLabel: guided.requirementLabel || selection.subcategory || selection.title,
+      selectedProduct: guided.selectedProduct || selection.selected_product_name || selection.product_name,
+      productName: guided.productName || selection.selected_product_name || selection.product_name,
+      supplier: guided.supplier || selection.selected_supplier_name || selection.supplier,
+      brand: guided.brand || selection.brand,
+      model: guided.model || selection.model_number,
+      colour: guided.colour || selection.colour,
+      finish: guided.finish || selection.finish,
+      imageReference: guided.exactImageUrl || guided.imageReference || selection.image_url,
+      allowance: guided.allowance ?? selection.included_allowance ?? selection.allowance_amount,
+      selectedPrice: guided.selectedPrice ?? selection.client_selection_price ?? selection.calculated_client_selection_price,
+      variationAmount: guided.variationAmount ?? selection.variation_amount,
+      priceStatus: guided.priceStatus || guided.priceState || "",
+    },
+  };
+  return scheduleItemsForRow(row, { id: row.room || "project", name: row.room || "Project", rows: [row] }, index);
+}
+
+function paginateScheduleSections(sections = []) {
+  return sections.flatMap((section) => {
+    const items = section.items || [];
+    const pageCount = Math.max(1, Math.ceil(items.length / SCHEDULE_ROWS_PER_PAGE));
+    return Array.from({ length: pageCount }, (_, index) => ({
+      ...section,
+      key: `${section.key}-${index + 1}`,
+      baseKey: section.key,
+      items: items.slice(index * SCHEDULE_ROWS_PER_PAGE, (index + 1) * SCHEDULE_ROWS_PER_PAGE),
+      pageIndex: index + 1,
+      pageCount,
+    }));
+  });
+}
+
+function scheduleSectionsForBook(book = {}) {
+  const exteriorConstruction = normaliseExteriorWallConstruction(book?.exteriorWallConstruction);
+  const buckets = new Map(EXTERIOR_SCHEDULE_SECTIONS.map((section) => [section.key, { ...section, items: [] }]));
+  const interiorBuckets = new Map();
+  (book.rooms || []).forEach((room) => {
+    scheduleItemsForRoom(room).filter((item) => !scheduleItemHiddenByExteriorWallConstruction(item, exteriorConstruction)).forEach((item) => {
+      const sectionKey = scheduleSectionKeyForItem(item);
+      if (buckets.has(sectionKey)) {
+        buckets.get(sectionKey).items.push(item);
+        return;
+      }
+      const title = titleCase(sectionKey || item.category || room.name || "Interior");
+      if (!interiorBuckets.has(title)) interiorBuckets.set(title, { key: slug(title), title, subtitle: "Interior client selections and outstanding decisions.", items: [] });
+      interiorBuckets.get(title).items.push(item);
+    });
+  });
+  return [
+    ...EXTERIOR_SCHEDULE_SECTIONS.map((section) => buckets.get(section.key)),
+    ...Array.from(interiorBuckets.values()).sort((left, right) => left.title.localeCompare(right.title)),
+  ].filter((section) => section.items.length);
+}
+
+function scheduleItemsForRoom(room = {}) {
+  return (room.rows || []).filter(isSelectionsScheduleBookRow).flatMap((row, index) => scheduleItemsForRow(row, room, index));
+}
+
+function selectionHiddenByExteriorWallConstruction(selection = {}, construction = {}) {
+  if (construction?.brickApplicable !== false) return false;
+  const details = selection.selected_details || {};
+  const metadata = selection.metadata || {};
+  const text = [
+    metadata.requirementKey,
+    details.requirementKey,
+    metadata.familyKey,
+    details.familyKey,
+    selection.subcategory,
+    selection.title,
+    selection.selected_product_name,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return /\bbrick/.test(text) && !/\bexposed\b/.test(text);
+}
+
+function scheduleItemHiddenByExteriorWallConstruction(item = {}, construction = {}) {
+  if (construction?.brickApplicable !== false) return false;
+  const fieldText = (item.fields || []).map((field) => `${field.label || ""} ${field.value || ""}`).join(" ");
+  const text = [item.category, item.area, item.title, item.item, item.selectedProduct, fieldText].filter(Boolean).join(" ").toLowerCase();
+  return /\bbrick/.test(text) && !/\bexposed\b/.test(text);
+}
+
+function scheduleItemsForRow(row = {}, room = {}, index = 0) {
+  const guided = row.guidedSelection || row.selected_details?.guidedSelection || row.selected_details || {};
+  const requirementKey = row.guidedRequirementKey || guided.requirementKey || slug(row.item || "");
+  if (requirementKey === 'entry-door' && guided.entryDoors?.length) return guided.entryDoors.flatMap((selection, i) => entryDoorScheduleItems({ ...row, id: `${row.id}:${selection.door.id}` }, room, selection, i * 3));
+  if (requirementKey === "windows" && guided.windowWorkflow?.effectiveWindows?.length) return windowScheduleItems(row, room, guided);
+  if (requirementKey === "external-lighting" && guided.externalLightingSelection) return externalLightingScheduleItems(row, room, guided);
+  if (requirementKey === "exterior-paint" && guided.exteriorColourSelection) return exteriorColourScheduleItems(row, room, guided);
+  if (requirementKey === "cabinetry" && guided.cabinetrySelection) return cabinetryScheduleItems(row, room, guided);
+  if (requirementKey === "roofing" && guided.roofPackage) return roofingScheduleItems(row, room, guided);
+  if (requirementKey === "entry-door" && guided.entryDoorFurniture) return entryDoorScheduleItems(row, room, guided, index);
+  return [baseScheduleItem(row, room, guided, index)];
+}
+
+function isSelectionsScheduleBookRow(row = {}) {
+  const guided = row.guidedSelection || row.selected_details?.guidedSelection || row.selected_details || {};
+  const scope = String(guided.selectionScope || "").trim();
+  if (guided.displayInSelectionsSchedule === false) return false;
+  if (["technical_inclusion", "boq_only", "procurement_only"].includes(scope)) return false;
+  if (scope === "informational" && !guided.clientDecisionRequired) return false;
+  const text = [row.item, row.category, row.description, row.selectedProduct, guided.requirementLabel, guided.productName].filter(Boolean).join(" ");
+  if (TECHNICAL_SCHEDULE_ROW_PATTERN.test(text)) return false;
+  if (GENERIC_SCHEDULE_ROW_PATTERN.test(text) && !guided.clientDecisionRequired) return false;
+  return Boolean(row.selectedProduct || row.guidedSelection || guided.clientDecisionRequired);
+}
+
+function scheduleSectionKeyForItem(item = {}) {
+  const text = `${item.category || ""} ${item.area || ""} ${item.title || ""}`.toLowerCase();
+  if (/roof|fascia|gutter|downpipe|eaves|soffit/.test(text)) return "roofing";
+  if (/brick|render|cladding|mortar|facade/.test(text)) return "bricks-render-cladding";
+  if (/window|entry\s*door|front\s*door|external\s*door/.test(text)) return "windows-external-doors";
+  if (/garage\s*door/.test(text)) return "garage-door";
+  if (/external\s*lighting|outdoor\s*light|sensor\s*spotlight|wall\s*light/.test(text)) return "external-lighting";
+  if (/exterior colours|exterior paint|painted cladding|surround|colour/.test(text) && /exterior|external|facade|render|cladding|eaves|soffit|fascia|gutter|downpipe|surround/.test(text)) return "exterior-paint-colours";
+  if (/driveway|concrete|exposed\s*aggregate/.test(text)) return "driveway";
+  if (/\b(appliances?|oven|cooktop|rangehood|dishwasher|microwave)\b/.test(text)) return "appliances";
+  return slug(item.category || item.area || "interior");
+}
+
+function baseScheduleItem(row = {}, room = {}, guided = {}, index = 0, overrides = {}) {
+  const title = overrides.title || guided.selectedProduct || guided.productName || row.selectedProduct || row.item || "Selection outstanding";
+  const allowance = overrides.allowance ?? guided.allowance ?? row.allowanceAmount;
+  const selectedPrice = overrides.selectedPrice ?? guided.selectedPrice ?? row.selectedCost;
+  const variation = overrides.variation ?? guided.variationAmount ?? guided.variation ?? row.upgradeCost;
+  const imageUrl = trustedScheduleImage(overrides.imageUrl || guided.exactImageUrl || guided.selectedProductImageUrl || guided.officialSampleImage || guided.imageReference || guided.imageUrl || "");
+  return {
+    id: overrides.id || `${row.id || "row"}-${index}`,
+    sourceRowId: row.id,
+    selectionId: guided.selectionId || row.selectedOptionId || row.id,
+    category: overrides.category || guided.requirementLabel || row.category || row.item || room.name || "Selection",
+    area: overrides.area || guided.areaLabel || guided.room || row.room || room.name || "",
+    title,
+    imageUrl,
+    colourSwatch: overrides.colourSwatch || guided.swatchHex || guided.frameColourHex || "",
+    colourName: overrides.colourName || guided.officialColourName || guided.colour || row.finishColour || "",
+    finish: overrides.finish || guided.finish || row.finishColour || "",
+    statusLabel: scheduleSelectionStatusLabel(overrides.status || guided.selectionStatus || row.status),
+    priceLabel: schedulePriceLabel({ allowance, selectedPrice, variation, priceStatus: overrides.priceStatus || guided.priceStatus || guided.priceState }),
+    confirmationStatus: title === "Selection outstanding" ? "Selection outstanding" : (overrides.confirmationStatus || guided.clientConfirmation || guided.builderApproval || ""),
+    compact: overrides.compact || false,
+    notes: overrides.notes || guided.notes || row.notes || "",
+    fields: [
+      { label: "Area / location", value: overrides.area || guided.areaLabel || guided.room || row.room || room.name },
+      { label: "Supplier", value: overrides.supplier || guided.supplierName || guided.supplier || row.supplier },
+      { label: "Brand", value: overrides.brand || guided.brand || row.brand },
+      { label: "Range", value: overrides.range || guided.officialRange || guided.range },
+      { label: "Model / product code", value: overrides.productCode || guided.productCode || guided.model || row.productModel },
+      { label: "Product ID", value: overrides.productId || guided.mixProductId || guided.productId || row.productId },
+      { label: "Colour / finish", value: overrides.finish || guided.officialColourName || guided.colour || row.finishColour },
+      { label: "Quantity", value: overrides.quantity ?? guided.quantity },
+      { label: "Unit", value: overrides.unit || guided.unit },
+      { label: "Price", value: schedulePriceLabel({ allowance, selectedPrice, variation, priceStatus: overrides.priceStatus || guided.priceStatus || guided.priceState }) },
+      { label: "Source", value: overrides.sourceUrl || guided.sourceUrl || guided.supplierSourceUrl || guided.officialProductURL },
+      { label: "Verified", value: overrides.verificationDate || guided.verificationDate || guided.sourceVerifiedAt },
+    ],
+  };
+}
+
+function cabinetryScheduleItems(row, room, guided) {
+  const selection = normaliseCabinetrySelection(guided.cabinetrySelection || {});
+  return selection.locations.map((location, index) => {
+    const main = location.areaSelections?.lowerDoorsDrawers || location.defaultColour || {};
+    const feature = location.areaSelections?.islandBenchBack || location.areaSelections?.featurePanels || {};
+    const handle = location.handles?.base || {};
+    const overhead = location.handles?.overhead || {};
+    const areaSpecifications = CABINETRY_AREA_KEYS
+      .map((areaKey) => {
+        const record = location.areaSelections?.[areaKey];
+        if (!record || !record.finishMode || record.finishMode === "cabinetry_colour") return "";
+        return `${CABINETRY_AREA_LABELS[areaKey]}: ${cabinetryAreaMaterialText(record)} / ${cabinetryAreaColourFinishText(record)}`;
+      })
+      .filter(Boolean);
+    return baseScheduleItem(row, room, guided, index, {
+      id: `${row.id || "cabinetry"}-${slug(location.location)}`,
+      category: "Cabinetry",
+      area: location.location,
+      title: `${location.location} cabinetry specification`,
+      imageUrl: main.swatchImage || handle.imageUrl || row.imageUrl,
+      colourSwatch: main.swatchImage || "",
+      colourName: [main.supplier, main.colourName, main.colourCode].filter(Boolean).join(" "),
+      finish: [location.doorMaterialGroup, main.productFamily, main.finish].filter(Boolean).join(" / "),
+      supplier: main.supplier || location.supplier,
+      brand: main.supplier || location.supplier,
+      range: main.productFamily || location.productRange,
+      productCode: main.colourCode,
+      quantity: selection.schedule.filter((item) => item.location === location.location).reduce((sum, item) => sum + numberValue(item.quantity), 0),
+      unit: "location",
+      priceStatus: selection.summary.quoteRequiredItems.length ? PRICE_STATES.quoteRequired : PRICE_STATES.pending,
+      confirmationStatus: selection.summary.complete ? "Confirmed cabinetry selection" : "Draft cabinetry selection",
+      notes: [
+        ...areaSpecifications,
+        `Feature: ${feature?.colourName || "None"}`,
+        `Benchtop: ${location.benchtop?.supplier || ""} ${location.benchtop?.range || ""} ${location.benchtop?.colour || ""} ${location.benchtop?.thickness || ""}`.trim(),
+        `Base handles: ${handle.productName || "Not selected"} ${handle.productCode || ""} ${handle.selectedFinish || ""}`.trim(),
+        `Overheads: ${overhead.openingMethod || "Not selected"}`,
+        location.integratedAppliances?.length ? `Integrated: ${location.integratedAppliances.map((item) => item.type).join(", ")}` : "",
+      ].filter(Boolean).join("; "),
+    });
+  });
+}
+
+function entryDoorScheduleItems(row, room, guided, index = 0) {
+  const furniture = guided.entryDoorFurniture || {};
+  const glass = guided.glassSelection || {};
+  return [
+    baseScheduleItem(row, room, guided, index, {
+      id: `${row.id || "entry-door"}-door`,
+      category: "Entry Door",
+      title: guided.productName || guided.selectedProduct || row.selectedProduct,
+      imageUrl: guided.imageReference || row.imageUrl,
+      supplier: guided.supplier,
+      brand: guided.brand,
+      range: guided.range,
+      productCode: guided.productCode,
+      finish: [guided.size, guided.configuration, guided.finish, guided.glazing].filter(Boolean).join(" / "),
+      notes: "Selected entry door, size, finish and glass.",
+    }),
+    baseScheduleItem(row, room, guided, index + 1, {
+      id: `${row.id || "entry-door"}-glass`,
+      category: "Entry Door Glass",
+      title: glass.name || guided.glazing,
+      imageUrl: glass.sampleImage || guided.glassImageUrl || guided.glassPreviewImageUrl,
+      supplier: glass.supplier || guided.supplier,
+      brand: "Hume Doors",
+      range: glass.classification || "",
+      productCode: glass.code || guided.glazing,
+      finish: [glass.privacy, glass.lightTransmission].filter(Boolean).join(" / "),
+      priceStatus: /quote|upgrade/i.test(glass.priceStatus || "") ? PRICE_STATES.quoteRequired : guided.priceStatus,
+      confirmationStatus: glass.limitations || "Confirm final glass using a current physical supplier sample.",
+      notes: ENTRY_DOOR_GLASS_SAMPLE_NOTICE,
+    }),
+    baseScheduleItem(row, room, guided, index + 1, {
+      id: `${row.id || "entry-door"}-furniture`,
+      category: "Entry Door Furniture & Locking",
+      title: [guided.door?.doorReference, furniture.productName || guided.hardwareCompatibility].filter(Boolean).join(' — '),
+      area: [guided.door?.level, guided.door?.location].filter(Boolean).join(' / '),
+      quantity: guided.hardwareOptions?.quantity || guided.door?.quantity || guided.quantity || 1,
+      imageUrl: entryDoorFurnitureImageForFinish(furniture, guided.furnitureFinish),
+      supplier: furniture.supplier,
+      brand: furniture.brand,
+      range: furniture.groupKey ? titleCase(String(furniture.groupKey).replace(/_/g, " ")) : "",
+      productCode: furniture.productCode,
+      finish: [guided.furnitureFinish, furniture.lockingType, furniture.cylinderConfiguration].filter(Boolean).join(" / "),
+      priceStatus: furniture.selectedCost == null ? 'Rate required' : PRICE_STATES.current,
+      confirmationStatus: guided.furnitureCompatibility?.statusLabel || "",
+      notes: guided.furnitureCompatibility?.message || furniture.compatibilityDetails || "",
+    }),
+  ].filter(item => item.category !== "Entry Door Furniture & Locking" || furniture.productCode);
+}
+
+function windowScheduleItems(row, room, guided) {
+  const defaults = guided.windowWorkflow?.projectDefaults || {};
+  return guided.windowWorkflow.effectiveWindows.map((windowRow, index) => baseScheduleItem(row, room, guided, index, {
+    id: `${row.id}-window-${windowRow.id || index}`,
+    category: "Windows",
+    area: windowRow.location,
+    title: `${windowRow.id || `Window ${index + 1}`} - ${windowRow.type || "Window"}`,
+    imageUrl: guided.imageReference || row.imageUrl,
+    supplier: windowRow.supplier || guided.supplier,
+    brand: guided.brand,
+    range: windowRow.system?.name || guided.range,
+    productCode: windowRow.id,
+    productId: windowRow.windowId || windowRow.id,
+    finish: [windowRow.frameColourName, windowRow.frameColourCode, windowRow.glass, windowRow.screen, windowRow.hardware].filter(Boolean).join(" / "),
+    colourSwatch: windowRow.frameColourHex || defaults.frameColourHex,
+    colourName: windowRow.frameColourName || defaults.frameColourName,
+    quantity: windowRow.quantity || 1,
+    unit: "each",
+    status: windowRow.hasOverride ? "selected" : row.status,
+    priceStatus: windowRow.priceStatus || guided.priceStatus,
+    confirmationStatus: windowRow.hasOverride ? "Individual exception" : "Project default",
+    notes: [windowRow.size, windowRow.floor, windowRow.elevation, windowRow.notes].filter(Boolean).join("; "),
+  }));
+}
+
+function externalLightingScheduleItems(row, room, guided) {
+  const lines = guided.externalLightingSelection.lines || guided.externalLightingSelection.scheduleLines || guided.lightingSchedule || [];
+  return (lines.length ? lines : [null]).map((line, index) => baseScheduleItem(row, room, guided, index, {
+    id: `${row.id}-lighting-${line?.lineId || index}`,
+    category: "External Lighting",
+    area: line?.location || line?.locations?.join(", ") || "Exterior",
+    title: line?.productName || line?.product?.productName || guided.selectedProduct,
+    imageUrl: line?.imageUrl || line?.product?.imageUrl || guided.imageReference || row.imageUrl,
+    supplier: line?.supplier || line?.product?.supplier || guided.supplier,
+    brand: line?.brand || line?.product?.brand || guided.brand,
+    range: line?.range || line?.product?.range || guided.range,
+    productCode: line?.productCode || line?.product?.productCode || guided.productCode,
+    productId: line?.productId || line?.product?.productId || guided.productId,
+    finish: [line?.finish, line?.colour, line?.mounting].filter(Boolean).join(" / ") || guided.finish,
+    quantity: line?.quantity || 1,
+    unit: "each",
+    notes: line?.notes || line?.assignmentNotes || "",
+  }));
+}
+
+function exteriorColourScheduleItems(row, room, guided) {
+  const areas = guided.exteriorColourSelection.areas || guided.clientColourSchedule || [];
+  return (areas.length ? areas : [null]).map((area, index) => {
+    const colour = area?.colourSelection || area?.colour || {};
+    return baseScheduleItem(row, room, guided, index, {
+      id: `${row.id}-colour-${area?.areaId || index}`,
+      category: "Exterior Colours",
+      area: area?.areaName || area?.location || "Exterior area",
+      title: colour.officialName || colour.colourName || colour.name || area?.colourName || "Selection outstanding",
+      imageUrl: colour.imageUrl || colour.swatchImageUrl || area?.imageUrl || colourSwatchImage(colour),
+      supplier: colour.supplier || colour.manufacturer || area?.supplier || guided.supplier,
+      brand: colour.brand || colour.manufacturer || guided.brand,
+      range: colour.range || area?.system || "",
+      productCode: colour.code || colour.supplierCode || area?.supplierCode || "",
+      productId: colour.colourId || area?.areaId || "",
+      finish: [area?.material || area?.substrate, area?.finishType, area?.coatingSpecification?.topcoat].filter(Boolean).join(" / "),
+      colourSwatch: colour.hex || colour.swatchValue || area?.hex || "",
+      colourName: colour.officialName || colour.colourName || colour.name || "",
+      quantity: area?.quantity || "",
+      unit: area?.unit || "",
+      confirmationStatus: area?.confirmationStatus || guided.exteriorColourSelection.status,
+      notes: area?.notes || area?.source || "",
+      compact: true,
+    });
+  });
+}
+
+function roofingScheduleItems(row, room, guided) {
+  const items = [baseScheduleItem(row, room, guided, 0)];
+  Object.entries(guided.roofPackage || {}).forEach(([key, part], index) => {
+    items.push(baseScheduleItem(row, room, guided, index + 1, {
+      id: `${row.id}-roof-${key}`,
+      category: titleCase(key),
+      title: part.productName || titleCase(key),
+      productCode: part.productCode,
+      finish: [part.profile, part.colour].filter(Boolean).join(" / "),
+      colourName: part.colour,
+      confirmationStatus: part.selectionMethod,
+      compact: true,
+    }));
+  });
+  return items;
+}
+
+function scheduleSelectionStatusLabel(status = "") {
+  const value = String(status || "").replace(/_/g, " ").toLowerCase();
+  if (!value) return "Selection outstanding";
+  if (["approved", "confirmed", "selected"].includes(value)) return titleCase(value);
+  return titleCase(value);
+}
+
+function schedulePriceLabel({ allowance, selectedPrice, variation, priceStatus } = {}) {
+  if (String(priceStatus || "").toLowerCase().includes("quote")) return "Supplier quote required";
+  const numericVariation = Number(variation);
+  if (Number.isFinite(numericVariation) && numericVariation !== 0) return `Variation ${signedMoney(numericVariation)}`;
+  const numericAllowance = Number(allowance);
+  const numericSelected = Number(selectedPrice);
+  if (Number.isFinite(numericAllowance) && numericAllowance > 0 && Number.isFinite(numericSelected) && numericSelected > 0 && numericAllowance !== numericSelected) {
+    return `Allowance ${money(numericAllowance)} / Selected ${money(numericSelected)}`;
+  }
+  if (Number.isFinite(numericAllowance) && numericAllowance > 0) return `Allowance ${money(numericAllowance)}`;
+  return "Included";
+}
+
+function trustedScheduleImage(value = "") {
+  const imageUrl = String(value || "").trim();
+  if (!imageUrl || isPlaceholderSelectionImage(imageUrl)) return "";
+  return imageUrl;
+}
+
 function isRoomLike(name) {
   return /kitchen|laundry|bath|ensuite|powder|bedroom|living|pantry/i.test(String(name || ""));
 }
@@ -4526,14 +12449,14 @@ function aboutTextForRoom(name) {
 
 function selectionIcon(value) {
   const lower = String(value || "").toLowerCase();
-  if (lower.includes("tile") || lower.includes("floor")) return "▦";
-  if (lower.includes("tap") || lower.includes("outlet")) return "⌁";
-  if (lower.includes("toilet")) return "▱";
-  if (lower.includes("light") || lower.includes("fan")) return "✧";
-  if (lower.includes("door")) return "▯";
-  if (lower.includes("paint")) return "◒";
-  if (lower.includes("roof")) return "⌂";
-  return "◇";
+  if (lower.includes("tile") || lower.includes("floor")) return "Floor";
+  if (lower.includes("tap") || lower.includes("outlet")) return "Tap";
+  if (lower.includes("toilet")) return "WC";
+  if (lower.includes("light") || lower.includes("fan")) return "Light";
+  if (lower.includes("door")) return "Door";
+  if (lower.includes("paint")) return "Paint";
+  if (lower.includes("roof")) return "Roof";
+  return "Item";
 }
 
 function PageFooter({ book, page, total = "" }) {
@@ -4552,6 +12475,70 @@ function Metric({ label, value, tone = "" }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function scheduleProjectPreflight({ cover = {}, projectInfo = {}, selectedProject = null, items = [], review = null } = {}) {
+  const projectName = coverValue(cover.projectName || selectedProject?.project_name);
+  const clientName = coverValue(projectInfo.clientName || cover.clientName || selectedProject?.client_name);
+  const siteAddress = coverValue(projectInfo.fullSiteAddress || projectInfo.siteAddress || cover.siteAddress || selectedProject?.site_address);
+  const jobNumber = coverValue(projectInfo.jobNumber || cover.jobNumber || cover.quoteNumber || selectedProject?.job_number);
+  const builderName = coverValue(projectInfo.builderName || cover.builderName || selectedProject?.builder_name);
+  const builderLogo = coverValue(cover.logoUrl || selectedProject?.builder_logo_url);
+  const missingImages = items.filter((item) => !item.imageUrl || isPlaceholderSelectionImage(item.imageUrl));
+  const checks = [
+    { label: "Client loaded", ok: Boolean(clientName) },
+    { label: "Address loaded", ok: Boolean(siteAddress) },
+    { label: "Job number loaded", ok: Boolean(jobNumber) },
+    { label: "Builder/company loaded", ok: Boolean(builderName) },
+    { label: "Builder logo loaded", ok: Boolean(builderLogo) },
+  ];
+  return {
+    projectName,
+    clientName,
+    siteAddress,
+    jobNumber,
+    builderName,
+    builderLogo,
+    checks,
+    selectedCount: items.length,
+    outstandingCount: review?.items?.length || 0,
+    missingImageCount: missingImages.length,
+    canGenerateDraft: Boolean(projectName && clientName && siteAddress && jobNumber && builderName && builderLogo),
+  };
+}
+
+function BuilderSchedulePreflight({ preflight, onFixProjectData, onFixImages, onGenerateDraft, generating = "" }) {
+  return (
+    <section className={`builderPreflight ${preflight.canGenerateDraft ? "ready" : "blocked"}`} aria-label="Builder preflight before schedule preview">
+      <header>
+        <div>
+          <span>Builder preflight</span>
+          <strong>{preflight.canGenerateDraft ? "Ready to generate draft preview" : "Project data required before preview"}</strong>
+        </div>
+        {!preflight.canGenerateDraft ? <p>The active project details could not be loaded. Reconnect the Johnson job before generating this schedule.</p> : null}
+      </header>
+      <div className="builderPreflightGrid">
+        <div>
+          <h3>Project data</h3>
+          {preflight.checks.map((check) => <span key={check.label} className={check.ok ? "ok" : "bad"}>{check.label}</span>)}
+        </div>
+        <div>
+          <h3>Selection data</h3>
+          <span className="ok">Completed client selections: {preflight.selectedCount}</span>
+          <span className={preflight.outstandingCount ? "bad" : "ok"}>Outstanding client selections: {preflight.outstandingCount}</span>
+          <span className="ok">Images available: {Math.max(0, preflight.selectedCount - preflight.missingImageCount)}</span>
+          <span className={preflight.missingImageCount ? "bad" : "ok"}>Images requiring correction: {preflight.missingImageCount}</span>
+        </div>
+      </div>
+      <div className="builderPreflightActions">
+        <button type="button" onClick={onFixProjectData}>Fix Project Data</button>
+        <button type="button" onClick={onFixImages}>Fix Catalogue Images</button>
+        <button type="button" className="primary" onClick={onGenerateDraft} disabled={Boolean(generating) || !preflight.canGenerateDraft}>
+          {generating === "draft" ? "Generating..." : "Generate Draft Preview"}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -4604,14 +12591,21 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
     documentType: "luxury_selections_book",
     templateId: template?.id || "",
     templateName: template?.template_name || template?.specification_name || "",
+    exteriorWallConstruction: {
+      key: "face_brick",
+      label: "Face brick",
+      brickApplicable: true,
+      brickStatus: "client_required",
+      updatedAt: new Date().toISOString(),
+    },
     cover: {
       backgroundImageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80",
       logoUrl: resolved.builderLogo || "",
       builderName: resolved.builderName || "",
       tagline: resolved.tagline || COVER_BRAND_FALLBACK.tagline,
-      kicker: "Luxury",
-      subtitle: "Luxury Selections Schedule",
-      title: "Inclusions & Selections Schedule",
+      kicker: "Selections",
+      subtitle: "Client selections and project inclusions",
+      title: "INCLUSIONS AND SELECTIONS SCHEDULE",
       projectName,
       clientName,
       siteAddress,
@@ -4620,6 +12614,9 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
       issueDate,
       selectionStandard,
       version: "1.0",
+      status: "Draft",
+      documentIdentifier: "",
+      preparedBy: resolved.estimatorName || "",
       accentColor: DEFAULT_BUILDER_TEMPLATE_BRAND.accentColor,
       textColor: "#ffffff",
       overlayOpacity: "0.72",
@@ -4636,7 +12633,7 @@ function createDocumentBook({ project = null, snapshot = null, template = null, 
       estimatorName: resolved.estimatorName || "",
       quoteNumber,
       revisionNumber: "1.0",
-      aboutDocument: "This Inclusions & Selections Schedule forms part of the quotation and building documentation for this project. It records the products, finishes, fixtures, fittings, allowances and selections included within the contract at the time of issue. Any changes after approval may result in a variation to the contract price.",
+      aboutDocument: "This schedule records the products, materials, colours, finishes and options selected for this project. It should be read together with the approved plans, Project Estimate or Formal Building Quotation, and the applicable Standard Inclusions Schedule.",
       revisionHistory: [{ version: "1.0", date: issueDate, description: "Original issue" }],
     },
     rooms: createRooms({ templateItems, products, manufacturerById, supplierById, categoryById, quality }),
@@ -4650,6 +12647,7 @@ function normaliseDocumentBook(value, context) {
     const resolved = resolveProjectFields(context?.project, context?.snapshot);
     const quality = context?.template?.quality_level || context?.template?.price_band || context?.template?.template_key || "mid_range";
     const selectionStandard = resolved.selectionStandard || context?.template?.template_name || context?.template?.specification_name || quality || "";
+    const defaultRoomSlugs = new Set(DEFAULT_ROOMS.map((roomName) => slug(roomName)));
     const rooms = DEFAULT_ROOMS.map((roomName) => {
       const existing = value.rooms.find((room) => room.name === roomName) || value.rooms.find((room) => slug(room.name) === slug(roomName));
       const templateRows = rowsForRoomTemplate(roomName, quality, context || {});
@@ -4678,11 +12676,30 @@ function normaliseDocumentBook(value, context) {
         rows,
       };
     });
+    const extraRooms = value.rooms
+      .filter((room) => room?.name && !defaultRoomSlugs.has(slug(room.name)))
+      .map((room) => ({
+        id: room.id || uid("room"),
+        name: room.name,
+        subtitle: room.subtitle || `${room.name} selections and inclusions`,
+        completed: room.completed || false,
+        builderNotes: room.builderNotes || "",
+        clientNotes: room.clientNotes || "",
+        about: room.about || "",
+        imageUrl: room.imageUrl || "",
+        rows: Array.isArray(room.rows) ? room.rows : [],
+      }));
     const coverEdits = value.cover?.coverEdits || {};
     const editedCoverValue = (field, invalidValues = []) => coverEdits[field] ? coverValue(value.cover?.[field], invalidValues) : "";
     return {
       ...value,
       version: 3,
+      exteriorWallConstruction: value.exteriorWallConstruction || {
+        key: "face_brick",
+        label: "Face brick",
+        brickApplicable: true,
+        brickStatus: "client_required",
+      },
       cover: {
         ...value.cover,
         logoUrl: editedCoverValue("logoUrl") || resolved.builderLogo || coverValue(value.cover?.logoUrl) || "",
@@ -4695,9 +12712,12 @@ function normaliseDocumentBook(value, context) {
         quoteNumber: editedCoverValue("quoteNumber") || resolved.quoteNumber || coverValue(value.cover?.quoteNumber) || "",
         issueDate: editedCoverValue("issueDate") || resolved.quoteDate || coverValue(value.cover?.issueDate) || today(),
         selectionStandard: editedCoverValue("selectionStandard") || selectionStandard || coverValue(value.cover?.selectionStandard) || "",
-        subtitle: editedCoverValue("subtitle") || "Luxury Selections Schedule",
-        title: editedCoverValue("title") || coverValue(value.cover?.title) || "Inclusions & Selections Schedule",
+        subtitle: editedCoverValue("subtitle") || coverValue(value.cover?.subtitle) || "Client selections and project inclusions",
+        title: editedCoverValue("title") || coverValue(value.cover?.title) || "INCLUSIONS AND SELECTIONS SCHEDULE",
         version: editedCoverValue("version") || coverValue(value.cover?.version) || "1.0",
+        status: editedCoverValue("status") || coverValue(value.cover?.status) || "Draft",
+        documentIdentifier: editedCoverValue("documentIdentifier") || coverValue(value.cover?.documentIdentifier) || "",
+        preparedBy: editedCoverValue("preparedBy") || resolved.estimatorName || coverValue(value.cover?.preparedBy) || "",
         footerText: editedCoverValue("footerText") || resolved.footerText || coverValue(value.cover?.footerText) || "",
         textColor: editedCoverValue("textColor") || coverValue(value.cover?.textColor) || "#ffffff",
         coverEdits,
@@ -4713,16 +12733,73 @@ function normaliseDocumentBook(value, context) {
         quoteNumber: resolved.quoteNumber || value.projectInfo?.quoteNumber || "",
         revisionNumber: value.projectInfo?.revisionNumber || "1.0",
         scheduleVersion: value.projectInfo?.scheduleVersion || "Version 1.0",
-        aboutDocument: value.projectInfo?.aboutDocument || "This Inclusions & Selections Schedule forms part of the quotation and building documentation for this project. It records the products, finishes, fixtures, fittings, allowances and selections included within the contract at the time of issue. Any changes after approval may result in a variation to the contract price.",
+        aboutDocument: value.projectInfo?.aboutDocument || "This schedule records the products, materials, colours, finishes and options selected for this project. It should be read together with the approved plans, Project Estimate or Formal Building Quotation, and the applicable Standard Inclusions Schedule.",
         revisionHistory: Array.isArray(value.projectInfo?.revisionHistory) && value.projectInfo.revisionHistory.length
           ? value.projectInfo.revisionHistory
           : [{ version: "1.0", date: resolved.quoteDate || today(), description: "Original issue" }],
       },
-      rooms,
+      rooms: [...rooms, ...extraRooms],
       updatedAt: new Date().toISOString(),
     };
   }
   return createDocumentBook(context);
+}
+
+function recoverMissingGuidedRowsFromBookHistory(currentBook, historicalBooks = []) {
+  if (!currentBook || !Array.isArray(currentBook.rooms) || !historicalBooks.length) return currentBook;
+  let recoveredBook = currentBook;
+  // A template's "Included Selection" is not a chosen door. Read a populated
+  // historical row without writing back, replacing, or migrating any stored book.
+  if(!entryDoorDetails(currentBook).some(d=>d.productCode||d.entryDoors?.some(s=>s.productCode))){
+    const prior=historicalBooks.flatMap(h=>(h.book?.rooms||[]).flatMap(r=>r.rows||[])).find(r=>r.guidedSelection?.requirementKey==='entry-door'&&(r.guidedSelection.productCode||r.guidedSelection.entryDoors?.some(s=>s.productCode)));
+    if(prior){const exterior=recoveredBook.rooms.find(r=>/^exterior$/i.test(r.name||''));recoveredBook={...recoveredBook,rooms:exterior?recoveredBook.rooms.map(r=>r===exterior?{...r,rows:[...(r.rows||[]),prior]}:r):[...recoveredBook.rooms,{id:'recovered-exterior-view',name:'Exterior',rows:[prior]}]};}
+  }
+  EXTERIOR_REQUIREMENTS.forEach((requirement) => {
+    const currentRoom = ensureGuidedRoom(recoveredBook, requirement);
+    const currentRow = rowForRequirement(currentRoom, requirement);
+    if (rowHasRecoverableGuidedSelection(currentRow, requirement)) return;
+    const historicalMatch = historicalBooks
+      .map((entry) => ({
+        sourceBookId: entry.id || "",
+        sourceUpdatedAt: entry.updated_at || "",
+        sourceRow: rowForRequirement(ensureGuidedRoom(entry.book, requirement), requirement),
+      }))
+      .find((entry) => rowHasRecoverableGuidedSelection(entry.sourceRow, requirement));
+    if (!historicalMatch) return;
+    const recoveredRow = deepClone({
+      ...historicalMatch.sourceRow,
+      recoveredFromSelectionBookId: historicalMatch.sourceBookId,
+      recoveredFromSelectionBookUpdatedAt: historicalMatch.sourceUpdatedAt,
+    });
+    const targetExists = recoveredBook.rooms.some((room) => room.id === currentRoom.id);
+    const updatedRoom = {
+      ...currentRoom,
+      rows: replaceGuidedRequirementRow(currentRoom.rows || [], requirement, recoveredRow),
+    };
+    recoveredBook = {
+      ...recoveredBook,
+      rooms: targetExists
+        ? recoveredBook.rooms.map((room) => room.id === currentRoom.id ? updatedRoom : room)
+        : [...recoveredBook.rooms, updatedRoom],
+    };
+  });
+  return recoveredBook;
+}
+
+function rowHasRecoverableGuidedSelection(row = {}, requirement = {}) {
+  if (!row) return false;
+  const guided = row.guidedSelection || {};
+  if (row.selectedProduct || row.productModel || row.supplier) return true;
+  if (guided.productName || guided.selectedProduct || guided.configurationComplete) return true;
+  if (requirement.requirementKey === "exterior-paint" && guided.exteriorColourSelection?.areas?.length) return true;
+  if (requirement.requirementKey === "external-lighting" && guided.externalLightingSelection?.lineItems?.length) return true;
+  return false;
+}
+
+function replaceGuidedRequirementRow(rows = [], requirement, recoveredRow) {
+  const index = rows.findIndex((row) => shouldPatchGuidedRow(row, requirement));
+  if (index >= 0) return replaceAt(rows, index, recoveredRow);
+  return [...rows, recoveredRow];
 }
 
 function createRooms({ templateItems = [], products = [], manufacturerById, supplierById, categoryById, quality }) {
@@ -4890,6 +12967,99 @@ function fallbackStandardItems(quality = "mid_range") {
   }));
 }
 
+function reviewScheduleBook(book) {
+  const rows = book.rooms.flatMap((room) => (room.rows || []).filter(isSelectionsScheduleBookRow).map((row) => ({ room, row })));
+  const items = [];
+  rows.forEach(({ room, row }) => {
+    const label = row.selectedProduct || row.item || room.name || "Selection";
+    const status = String(row.status || "").toLowerCase();
+    const hasProduct = Boolean(row.selectedProduct || row.productModel || row.brand);
+    const hasSupplier = Boolean(row.supplier || row.guidedSelection?.supplier);
+    const pricePending = row.guidedSelection?.variationPending || row.guidedSelection?.priceState === "quote_required" || row.guidedSelection?.priceStatus === "quote_required";
+    if (!hasProduct) items.push({ id: row.id, label, reason: "Product selection missing", type: "missing" });
+    if (!hasSupplier) items.push({ id: row.id, label, reason: "Supplier not recorded", type: "missing" });
+    if (!["approved", "confirmed", "selected"].includes(status)) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
+    if (pricePending || row.selectedCost == null || row.upgradeCost == null) items.push({ id: row.id, label, reason: "Price or variation requires confirmation", type: "pricing" });
+    if (isPlaceholderSelectionImage(row.imageUrl)) items.push({ id: row.id, label, reason: "Product image requires review", type: "image" });
+  });
+  return {
+    total: rows.length,
+    complete: rows.length - items.filter((item) => item.reason === "Product selection missing").length,
+    missing: items.filter((item) => item.type === "missing").length,
+    unconfirmed: items.filter((item) => item.type === "unconfirmed").length,
+    pricing: items.filter((item) => item.type === "pricing").length,
+    images: items.filter((item) => item.type === "image").length,
+    items,
+    canIssueFinal: rows.length > 0 && items.length === 0,
+  };
+}
+
+function reviewPersistedProjectSelections(selections = []) {
+  const activeRows = selections
+    .filter((row) => row?.is_active !== false && !["replaced", "removed"].includes(String(row.selection_status || row.status || "").toLowerCase()))
+    .filter(isSelectionsSchedulePersistedRow);
+  const items = [];
+  activeRows.forEach((row) => {
+    const details = row.selected_details || {};
+    const label = row.selected_product_name || row.product_name || row.title || row.category || "Selection";
+    const status = String(row.selection_status || row.status || "").toLowerCase();
+    const supplier = row.selected_supplier_name || row.supplier || details.supplier || "";
+    const selectedPrice = row.client_selection_price ?? row.calculated_client_selection_price ?? details.selectedPrice ?? details.clientPrice;
+    const variation = row.variation_amount ?? details.variation;
+    if (!row.selected_product_name && !row.product_name && !details.productName) items.push({ id: row.id, label, reason: "Product selection missing", type: "missing" });
+    if (!supplier) items.push({ id: row.id, label, reason: "Supplier not recorded", type: "missing" });
+    if (!["approved", "confirmed", "selected"].includes(status)) items.push({ id: row.id, label, reason: "Selection is not confirmed", type: "unconfirmed" });
+    if (selectedPrice === null || selectedPrice === undefined || selectedPrice === "" || variation === null || variation === undefined || variation === "") items.push({ id: row.id, label, reason: "Price or variation requires confirmation", type: "pricing" });
+    if (isPlaceholderSelectionImage(selectionImageForReview(row, details))) items.push({ id: row.id, label, reason: "Product image requires review", type: "image" });
+  });
+  return {
+    total: activeRows.length,
+    complete: activeRows.length - items.filter((item) => item.reason === "Product selection missing").length,
+    missing: items.filter((item) => item.type === "missing").length,
+    unconfirmed: items.filter((item) => item.type === "unconfirmed").length,
+    pricing: items.filter((item) => item.type === "pricing").length,
+    images: items.filter((item) => item.type === "image").length,
+    items,
+    canIssueFinal: activeRows.length > 0 && items.length === 0,
+  };
+}
+
+function isSelectionsSchedulePersistedRow(row = {}) {
+  const details = row.selected_details || {};
+  const metadata = row.metadata || {};
+  const scope = String(metadata.selectionScope || details.selectionScope || "").trim();
+  if (metadata.displayInSelectionsSchedule === false || details.displayInSelectionsSchedule === false) return false;
+  if (["technical_inclusion", "boq_only", "procurement_only"].includes(scope)) return false;
+  if (scope === "informational" && !metadata.clientDecisionRequired && !details.clientDecisionRequired) return false;
+  const text = [row.category, row.subcategory, row.room, row.title, row.description, row.selected_product_name, row.product_name, details.item, details.productName, details.requirementLabel].filter(Boolean).join(" ");
+  if (TECHNICAL_SCHEDULE_ROW_PATTERN.test(text)) return false;
+  if (GENERIC_SCHEDULE_ROW_PATTERN.test(text) && !metadata.clientDecisionRequired && !details.clientDecisionRequired) return false;
+  return scope === "client_choice" || scope === "builder_choice" || metadata.displayInSelectionsSchedule === true || details.displayInSelectionsSchedule === true || Boolean(details.requirementKey || metadata.requirementKey || metadata.clientDecisionRequired || details.clientDecisionRequired);
+}
+
+const PLACEHOLDER_SELECTION_IMAGE_PATTERN = /placeholder|missing|example/i;
+
+function isPlaceholderSelectionImage(value) {
+  const url = String(value || "").trim();
+  return !url || PLACEHOLDER_SELECTION_IMAGE_PATTERN.test(url);
+}
+
+function selectionImageForReview(row = {}, details = {}) {
+  const candidates = [
+    details.primaryImage,
+    details.primaryImageUrl,
+    details.primary_image_url,
+    details.exactImageURL,
+    details.exactImageUrl,
+    details.exact_image_url,
+    details.imageReference,
+    details.imageUrl,
+    row.image_url,
+    row.imageUrl,
+  ].filter(Boolean);
+  return candidates.find((value) => !isPlaceholderSelectionImage(value)) || candidates[0] || "";
+}
+
 function selectionTotals(book) {
   const rows = book.rooms.flatMap((room) => room.rows || []);
   return rows.reduce((total, row) => ({
@@ -4907,18 +13077,31 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
   const variationPending = Boolean(guided.variationPending || (priceState && priceState !== PRICE_STATES.current));
   const selectedPrice = variationPending ? null : numberValue(guided.selectedPrice ?? row.selectedCost);
   const variation = variationPending ? null : numberValue(guided.variation ?? row.upgradeCost);
+  const resolvedImageUrl = selectionImageForReview(row, guided);
+  const selectionScope = guided.selectionScope || "client_choice";
+  const clientDecisionRequired = !row.selectedProduct || row.status !== "approved";
   const selectedDetails = {
     room: room.name,
     item: row.item,
     brand: row.brand,
     model: row.productModel,
+    productId: guided.productId || guided.selectedProductId || row.selectedProductId || row.productId || "",
     finishColour: row.finishColour,
     selectedCost: selectedPrice,
     upgradeCost: variation,
-    imageUrl: row.imageUrl,
+    imageUrl: resolvedImageUrl,
+    primaryImageUrl: resolvedImageUrl,
+    exactImageUrl: resolvedImageUrl,
+    imageReference: resolvedImageUrl,
     datasheetUrl: row.datasheetUrl,
     warrantyUrl: row.warrantyUrl,
     productUrl: row.productUrl,
+    selectionScope,
+    clientDecisionRequired,
+    displayInSelectionsSchedule: true,
+    displayInStandardInclusions: false,
+    displayInBOQ: false,
+    displayInPurchaseOrder: false,
     ...guided,
     selectedPrice,
     variation,
@@ -4930,7 +13113,7 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
   return {
     workspace_id: workspaceId,
     project_id: projectId,
-    snapshot_id: snapshotId || null,
+    snapshot_id: uuidOrNull(snapshotId),
     source_quote_row_id: guided.linkedQuoteItemCode || row.sourceQuoteRowId || null,
     category: guided.area || slug(room.name) || "other",
     subcategory: guided.requirementLabel || row.item || "",
@@ -4949,11 +13132,17 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
       source: "luxury_selections_book",
       selection_book_id: bookId,
       selection_book_row_id: row.id,
-      inclusion_template_id: templateId || null,
+      inclusion_template_id: uuidOrNull(templateId),
       uiStatus: row.status,
       area: guided.area,
       requirementKey: guided.requirementKey,
       familyKey: guided.familyKey,
+      selectionScope,
+      clientDecisionRequired,
+      displayInSelectionsSchedule: true,
+      displayInStandardInclusions: false,
+      displayInBOQ: false,
+      displayInPurchaseOrder: false,
       priceState,
       priceStatus: priceState,
       variationPending,
@@ -4963,7 +13152,7 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
     brand: guided.brand || row.brand || "",
     product_name: guided.productName || row.selectedProduct || "",
     model_number: guided.model || row.productModel || "",
-    image_url: guided.imageReference || row.imageUrl || "",
+    image_url: resolvedImageUrl,
     specification_url: guided.specificationUrl || guided.specificationURL || row.datasheetUrl || "",
     finish: guided.finish || row.finishColour || "",
     colour: guided.colour || "",
@@ -4977,6 +13166,18 @@ function selectionRecordPayload({ workspaceId, projectId, snapshotId, bookId, te
   };
 }
 
+function isProjectSelectionSyncCandidate(row = {}) {
+  const guided = row.guidedSelection || {};
+  if (guided.displayInSelectionsSchedule === false || row.selected_details?.displayInSelectionsSchedule === false) return false;
+  if (guided.notApplicable && guided.clientDecisionRequired === false) return false;
+  if (row.selectedProduct || row.productModel || row.supplier || row.imageUrl) return true;
+  if (guided.productName || guided.selectedProduct || guided.configurationComplete) return true;
+  if (guided.exteriorColourSelection?.areas?.some((area) => area?.applicable !== false && (area.colourSelection?.colourName || area.linkedComponentId || area.confirmationStatus))) return true;
+  if (guided.externalLightingSelection?.lineItems?.length) return true;
+  if (guided.windowWorkflow?.effectiveWindows?.length) return true;
+  return false;
+}
+
 function replaceAt(rows, index, next) {
   return rows.map((row, rowIndex) => rowIndex === index ? next : row);
 }
@@ -4987,9 +13188,17 @@ function signedMoney(value) {
   return `${amount > 0 ? "+" : "-"}${money(Math.abs(amount))}`;
 }
 
+function joinHumanList(items = []) {
+  const values = items.filter(Boolean);
+  if (values.length <= 1) return values[0] || "";
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
+}
+
 function guidedSelectionsFromBook(book) {
   return ALL_GUIDED_REQUIREMENTS.map((requirement) => {
     const room = ensureGuidedRoom(book, requirement);
+    if (requirement.requirementKey === "cabinetry") return cabinetryGuidedSelectionFromBook(book, room, requirement);
     const row = rowForRequirement(room, requirement);
     if (!row?.selectedProduct && !row?.guidedSelection) return null;
     const guided = row.guidedSelection || {};
@@ -5043,13 +13252,170 @@ function guidedSelectionsFromBook(book) {
   }).filter(Boolean);
 }
 
+function cabinetryGuidedSelectionFromBook(book, room, requirement) {
+  const row = rowForRequirement(room, requirement);
+  const legacyRows = legacyCabinetryRowsForRoom(room);
+  const guided = row?.guidedSelection || {};
+  const savedCabinetry = guided?.cabinetrySelection || guided?.selected_details?.cabinetrySelection || null;
+  if (!row?.selectedProduct && !row?.guidedSelection && !legacyRows.length && !savedCabinetry) return null;
+  const allowance = numberValue(guided.allowance ?? row?.allowanceAmount ?? requirement.defaultAllowance);
+  const cabinetrySelection = savedCabinetry
+    ? normaliseCabinetrySelection(savedCabinetry)
+    : legacyRows.length
+      ? migratedCabinetrySelectionFromRows(legacyRows, allowance)
+      : null;
+  const selectedPrice = cabinetrySelection?.summary?.selectedPrice ?? null;
+  const priceState = cabinetrySelection?.summary?.quoteRequiredItems?.length ? "Quote Required" : (guided.priceState || PRICE_STATES.pending);
+  const complete = Boolean(cabinetrySelection?.summary?.complete || guided.configurationComplete);
+  const migratedRows = legacyRows.map((legacyRow) => ({
+    id: legacyRow.id || "",
+    item: legacyRow.item || "",
+    selectedProduct: legacyRow.selectedProduct || "",
+    productModel: legacyRow.productModel || "",
+    supplier: legacyRow.supplier || "",
+    finishColour: legacyRow.finishColour || "",
+    allowanceAmount: legacyRow.allowanceAmount ?? null,
+    selectedCost: legacyRow.selectedCost ?? null,
+    upgradeCost: legacyRow.upgradeCost ?? null,
+    notes: legacyRow.notes || "",
+    status: legacyRow.status || "",
+    selectedOptionId: legacyRow.selectedOptionId || "",
+  }));
+  const selectedName = cabinetryProgressLabel(cabinetrySelection, legacyRows);
+  return {
+    id: row?.id || "cabinetry-guided-migration",
+    category: requirement.areaKey,
+    room: requirement.areaLabel,
+    title: requirement.label,
+    selected_product_name: selectedName,
+    product_name: selectedName,
+    model_number: row?.productModel || "",
+    brand: row?.brand || cabinetrySelection?.summary?.supplier || "",
+    selected_supplier_name: row?.supplier || cabinetrySelection?.summary?.supplier || "",
+    image_url: row?.imageUrl || requirementImage(requirement),
+    included_allowance: allowance,
+    allowance_amount: allowance,
+    client_selection_price: selectedPrice,
+    variation_amount: selectedPrice == null ? null : roundMoney(selectedPrice - allowance),
+    selection_status: complete ? "selected" : "in_progress",
+    status: complete ? "selected" : "in_progress",
+    is_active: true,
+    selectionType: CABINETRY_SELECTION_TYPE,
+    workflowType: CABINETRY_WORKFLOW_TYPE,
+    schemaVersion: CABINETRY_SCHEMA_VERSION,
+    selected_details: {
+      ...guided,
+      selectionType: CABINETRY_SELECTION_TYPE,
+      workflowType: CABINETRY_WORKFLOW_TYPE,
+      schemaVersion: CABINETRY_SCHEMA_VERSION,
+      area: requirement.areaKey,
+      room: requirement.areaLabel,
+      requirementKey: requirement.requirementKey,
+      requirementLabel: requirement.label,
+      familyKey: requirement.familyKey,
+      quantity: 1,
+      allowance,
+      selectedPrice,
+      variationAmount: selectedPrice == null ? null : roundMoney(selectedPrice - allowance),
+      variationPending: selectedPrice == null,
+      priceState,
+      configurationComplete: complete,
+      cabinetrySelection,
+      previousCabinetrySelectionsForReview: migratedRows,
+    },
+    metadata: {
+      source: "guided_client_selections",
+      selectionType: CABINETRY_SELECTION_TYPE,
+      workflowType: CABINETRY_WORKFLOW_TYPE,
+      schemaVersion: CABINETRY_SCHEMA_VERSION,
+      area: requirement.areaKey,
+      requirementKey: requirement.requirementKey,
+      familyKey: requirement.familyKey,
+      legacyMigration: legacyRows.length > 0,
+      approvedCsv: APPROVED_SELECTIONS_CSV_PATH,
+    },
+  };
+}
+
+function cabinetryProgressLabel(cabinetrySelection, legacyRows = []) {
+  if (!cabinetrySelection) {
+    return legacyRows.length ? "Cabinetry selections recorded - finish workflow" : "Cabinetry not configured";
+  }
+  const locations = cabinetrySelection.locations || [];
+  const suppliers = Array.from(new Set(locations.flatMap((location) => [
+    location.areaSelections?.lowerDoorsDrawers?.supplier,
+    location.defaultColour?.supplier,
+  ]).filter(Boolean)));
+  const pending = [];
+  if (cabinetrySelection.summary?.unresolvedLocations?.length) pending.push("required fields pending");
+  if ((cabinetrySelection.summary?.quoteRequiredItems || []).some((item) => /bench/i.test(item))) pending.push("benchtops pending");
+  if ((cabinetrySelection.summary?.quoteRequiredItems || []).some((item) => /handle|opening/i.test(item))) pending.push("handles pending");
+  const status = pending.length ? pending.join(" and ") : cabinetrySelection.summary?.complete ? "confirmed" : "ready to confirm";
+  return `${locations.length || 0} locations configured - ${suppliers.join("/") || "finishes"} selected - ${status}`;
+}
+
+function latestCabinetryDraftFromStorage(projectId = "") {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = JSON.parse(window.localStorage.getItem(CABINETRY_DRAFT_STORAGE_KEY) || "null");
+    if (payload?.selectionType !== CABINETRY_SELECTION_TYPE || payload?.workflowType !== CABINETRY_WORKFLOW_TYPE) return null;
+    if (!projectId || payload.projectId !== projectId) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function saveLatestCabinetryDraftToStorage(selection, projectId = "") {
+  if (typeof window === "undefined" || !selection || !projectId) return;
+  try {
+    window.localStorage.setItem(CABINETRY_DRAFT_STORAGE_KEY, JSON.stringify({
+      ...selection,
+      projectId,
+      selectionType: CABINETRY_SELECTION_TYPE,
+      workflowType: CABINETRY_WORKFLOW_TYPE,
+      schemaVersion: CABINETRY_SCHEMA_VERSION,
+      cachedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.warn("Cabinetry draft cache could not be written.", error);
+  }
+}
+
+function migratedCabinetrySelectionFromRows(rows = [], allowance = 2500) {
+  const draft = defaultCabinetryDraft({ allowance, confirmed: false });
+  const reviewRows = rows.map((row) => ({
+    item: row.item || "",
+    selectedProduct: row.selectedProduct || "",
+    productModel: row.productModel || "",
+    supplier: row.supplier || "",
+    finishColour: row.finishColour || "",
+    allowanceAmount: row.allowanceAmount ?? null,
+    selectedCost: row.selectedCost ?? null,
+    upgradeCost: row.upgradeCost ?? null,
+    notes: row.notes || "",
+  }));
+  return normaliseCabinetrySelection({
+    ...draft,
+    allowance,
+    confirmed: false,
+    audit: [
+      ...(draft.audit || []),
+      { action: "migrated_prior_cabinetry_rows_for_review", rowCount: rows.length, at: new Date().toISOString() },
+    ],
+    previousCabinetrySelectionsForReview: reviewRows,
+  });
+}
+
 function guidedSelectedByRequirement(selections) {
   return new Map(selections.map((selection) => [selection.selected_details.requirementKey, selection]));
 }
 
-function nextIncompleteGuidedRequirement(book, currentRequirement = null) {
-  const selections = guidedSelectedByRequirement(guidedSelectionsFromBook(book));
-  return nextIncompleteRequirement(applicableGuidedRequirementsForBook(book), selections, currentRequirement);
+function persistedSelectionForRequirement(selections = [], requirementKey = "") {
+  return selections.find((selection) => {
+    const details = selection?.selected_details || {};
+    return details.requirementKey === requirementKey || selection?.metadata?.requirementKey === requirementKey;
+  }) || null;
 }
 
 function pendingPriceSelections(selectionMap = new Map()) {
@@ -5073,6 +13439,10 @@ function guidedProductsForRequirement(requirement, catalogueProducts = [], filte
     .filter((product) => {
       const entity = product.metadata?.productEntity || product;
       return (entity.rowClassification || product.rowClassification || product.metadata?.rowClassification || classifyApprovedSelectionRow(entity)) === "actual_product";
+    })
+    .filter((product) => {
+      if (requirement?.requirementKey !== "entry-door") return true;
+      return isValidActiveEntryDoorProduct(product);
     });
   return approvedProducts
     .map((product, index) => guidedProductFromCatalogue(product, requirement, index))
@@ -5084,19 +13454,42 @@ function guidedProductsForRequirement(requirement, catalogueProducts = [], filte
     });
 }
 
+function regionCompatibleSelectionProduct(product = {}, region = "") {
+  const regions = Array.isArray(product.regions)
+    ? product.regions
+    : String(product.regions || "").split(/[;,\s]+/).map((item) => item.trim()).filter(Boolean);
+  if (!regions.length || !region) return true;
+  return regions.includes("AU") || regions.includes(region);
+}
+
+function isValidActiveEntryDoorProduct(product = {}) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const supplier = entryDoorSupplierLabel(product);
+  if (!/^(Hume Doors & Timber|Corinthian Doors)$/i.test(supplier)) return false;
+  const code = entryDoorProductCodeFor(product);
+  const name = entity.productName || product.productName || product.product_name || "";
+  if (/^CSV-\d+$/i.test(code)) return false;
+  if (/pull\s*handle|handle/i.test(name) && !/door/i.test(name)) return false;
+  if (entity.active === false || product.active === false || entity.archived || product.archived || entity.discontinued || product.discontinued) return false;
+  return Boolean(name && code);
+}
+
 function guidedProductFromCatalogue(product, requirement, index = 0) {
   const entity = product.metadata?.productEntity || product;
   const priceState = priceStateForProduct(entity);
   const selectedCost = priceState === PRICE_STATES.current ? productClientPrice(entity) : 0;
   const attributes = entity.attributes || {};
   const galleryImages = normaliseGalleryImages(entity.galleryImages || entity.gallery_image_urls || product.galleryImages);
-  const imageUrl = requirement?.requirementKey === "roofing"
-    ? galleryImages[0] || resolveSelectionImage({ product, requirement })
-    : resolveSelectionImage({ product, requirement });
+  const imageUrl = requirement?.requirementKey === "entry-door"
+    ? entryDoorOfficialImage(product, galleryImages)
+    : requirement?.requirementKey === "roofing"
+      ? galleryImages[0] || resolveSelectionImage({ product, requirement })
+      : resolveSelectionImage({ product, requirement });
   return {
     ...product,
     id: product.productId || product.id || `${requirement.requirementKey}-${slug(entity.productName || entity.model || String(index))}`,
     productName: entity.productName || product.product_name || "",
+    productCode: entity.productCode || product.productCode || product.sku || "",
     brand: entity.brand || "",
     supplier: entity.supplier || "",
     model: entity.model || "",
@@ -5108,6 +13501,7 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     finish: displayCatalogueValue(entity.finish || entity.colour),
     profile: displayCatalogueValue(entity.profile || attributes.profile),
     material: displayCatalogueValue(entity.material || attributes.material),
+    attributes,
     roofType: attributes.roofType || entity.configuration || "",
     coverWidth: attributes.coverWidth || "",
     ribHeight: attributes.ribHeight || "",
@@ -5118,16 +13512,389 @@ function guidedProductFromCatalogue(product, requirement, index = 0) {
     selectedCost,
     priceState,
     imageUrl,
+    imageAltText: entity.imageAltText || attributes.imageAltText || entity.productName || product.product_name || "",
     productUrl: entity.officialProductURL || entity.officialProductUrl || "",
     specificationUrl: entity.specificationURL || entity.specificationUrl || "",
     galleryImages,
     rowClassification: classifyApprovedSelectionRow(entity),
     imageReviewRequired: Boolean(entity.imageReviewRequired),
+    imageUnavailable: requirement?.requirementKey === "entry-door" && !imageUrl,
     metadata: {
       ...(product.metadata || {}),
       productEntity: entity,
     },
   };
+}
+
+function entryDoorOfficialImage(product = {}, galleryImages = []) {
+  const entity = product?.metadata?.productEntity || product || {};
+  return entity.primaryImage
+    || entity.primaryImageUrl
+    || entity.primary_image_url
+    || entity.exactImageURL
+    || entity.exact_image_url
+    || product.primaryImageUrl
+    || product.primary_image_url
+    || product.imageUrl
+    || galleryImages[0]
+    || "";
+}
+
+function entryDoorFurnitureCatalogueProducts(products = []) {
+  const catalogueProducts = (products || [])
+    .filter((product) => {
+      const attrs = product.attributes || product.metadata?.productEntity?.attributes || {};
+      const handleUse = String(attrs.handleUse || attrs.choiceType || product.categoryKey || product.category_key || "").toLowerCase();
+      const clientSelectionsEnabled = product.clientSelectionsEnabled ?? product.client_selections_enabled ?? attrs.clientSelectionsEnabled ?? attrs.client_selections_enabled ?? true;
+      return product.active !== false
+        && product.is_active !== false
+        && product.enabled !== false
+        && clientSelectionsEnabled !== false
+        && (product.family_key === ENTRY_DOOR_FURNITURE_FAMILY_KEY
+        || product.familyKey === ENTRY_DOOR_FURNITURE_FAMILY_KEY
+        || (product.familyKey === "handles" && /entry|external-door/.test(handleUse)));
+    })
+    .map((product) => {
+      const attrs = product.attributes || {};
+      const finishes = Array.isArray(attrs.finishOptions)
+        ? attrs.finishOptions
+        : String(product.finish || "").split(/[;,]/).map((item) => item.trim()).filter(Boolean);
+      return {
+        id: product.product_code || product.productCode,
+        productCode: product.product_code || product.productCode || "",
+        supplier: product.supplier || product.manufacturer || "",
+        brand: product.brand || product.supplier || "",
+        productName: product.product_name || product.productName || "",
+        model: product.model || "",
+        manufacturerSku: product.manufacturer_sku || "",
+        range: product.range || "",
+        dimensions: attrs.dimensions || "",
+        fireRating: attrs.fireRating || "",
+        accessibilityCompliance: attrs.accessibilityCompliance || "",
+        doorCompatibility: attrs.doorCompatibility || "",
+        entryClassification: attrs.entryClassification || "",
+        groupKey: entryDoorFurnitureGroupKey(product, attrs),
+        handleStyle: attrs.handleStyle || attrs.hardwareType || product.profile || "",
+        handleLength: attrs.handleLength || "",
+        centres: attrs.centres || "",
+        material: attrs.material || product.material || "",
+        finishOptions: finishes,
+        lockingType: attrs.lockingType || "",
+        cylinderConfiguration: attrs.cylinderConfiguration || "",
+        latchMechanism: attrs.latchMechanism || "",
+        backset: attrs.backset || "",
+        compatibleDoorThickness: attrs.compatibleDoorThickness || "",
+        timberDoorCompatibility: attrs.timberDoorCompatibility || "",
+        handing: attrs.handing || "",
+        externalUseSuitability: attrs.externalUseSuitability || "",
+        coastalSuitability: attrs.coastalSuitability || "",
+        balFireLimitations: attrs.balFireLimitations || "",
+        fixings: attrs.fixings || "",
+        compatibilityDetails: attrs.compatibilityDetails || "",
+        clientExplanation: attrs.clientExplanation || product.description || "",
+        includedStatus: product.price_status === PRICE_STATES.quoteRequired ? "quote_required" : (attrs.includedStatus || "builder_configurable"),
+        allowance: numberValue(product.allowance_amount || product.allowance),
+        selectedCost: product.rate_status === 'Rate required' || product.attributes?.rateStatus === 'Rate required' ? null : productClientPrice(product),
+        variation: null,
+        imageUrl: product.primaryImageUrl || product.primary_image_url || product.imageUrl || "",
+        imageQualityStatus: /logo|manifest|drawing|diagram/i.test(`${product.primaryImageUrl || product.primary_image_url || product.imageUrl || ""}`) ? "requires_review" : "verified_product_photo",
+        gallery: Array.isArray(attrs.gallery) ? attrs.gallery : [],
+        finishImages: attrs.finishImages || {},
+        productUrl: product.officialProductUrl || product.official_product_url || product.source_url || "",
+        specificationUrl: product.specificationUrl || product.specification_url || "",
+        verificationStatus: attrs.verificationStatus || "verified_product",
+        sourceName: product.source_name || "",
+      };
+    });
+  return catalogueProducts;
+}
+
+function entryDoorFurnitureGroupKey(product = {}, attrs = {}) {
+  const text = [
+    attrs.choiceType,
+    attrs.handleStyle,
+    attrs.lockingType,
+    product.category,
+    product.subcategory,
+    product.product_name,
+    product.productName,
+    product.model,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/smart/.test(text)) return "smart_locks";
+  if (/digital|keypad|electronic/.test(text)) return "digital_locks";
+  if (/pull/.test(text)) return "entrance_pull_handles";
+  if (/lever|trilock|knob|entrance set|security set/.test(text)) return "lever_handles";
+  if (/deadbolt|deadlock/.test(text)) return "deadbolts";
+  if (/mortice|mortise/.test(text)) return "mortice_locks";
+  if (/smart/.test(text)) return "smart_locks";
+  if (/digital|keypad|electronic/.test(text)) return "digital_locks";
+  if (/closer/.test(text)) return "door_closers";
+  if (/hinge|accessor/.test(text)) return "hinges_accessories";
+  return attrs.choiceType || "entrance_pull_handles";
+}
+
+function entryDoorFurnitureProduct({
+  code,
+  supplier,
+  name,
+  model,
+  groupKey,
+  image,
+  url,
+  handleStyle = "",
+  handleLength = "",
+  centres = "Supplier confirmation required",
+  material = "Supplier specified",
+  finishes = [],
+  finish = "",
+  lockingType = "",
+  cylinderConfiguration = "",
+  latchMechanism = "",
+  backset = "Supplier confirmation required",
+  compatibleDoorThickness = "Supplier confirmation required",
+  timberDoorCompatibility = "Timber-door compatibility requires supplier confirmation",
+  handing = "Left/right handing to be confirmed with supplier",
+  externalUseSuitability = "Entrance door use",
+  coastalSuitability = "Not stated by supplier",
+  balFireLimitations = "BAL/fire-door limitations require supplier confirmation",
+  fixings = "Supplier supplied fixing pack / builder confirmation required",
+  compatibilityDetails = "",
+  verificationStatus = "requires_supplier_confirmation",
+  gallery = [],
+  finishImages = {},
+}) {
+  const finishOptions = finishes.length ? finishes : String(finish || "").split(/[;,]/).map((item) => item.trim()).filter(Boolean);
+  return {
+    id: code,
+    productCode: code,
+    supplier,
+    brand: supplier,
+    productName: name,
+    model,
+    groupKey,
+    imageUrl: image,
+    imageQualityStatus: image && !/logo|manifest|drawing|diagram/i.test(image) ? "verified_product_photo" : "requires_review",
+    gallery,
+    finishImages,
+    productUrl: url,
+    specificationUrl: url,
+    handleStyle,
+    handleLength,
+    centres,
+    material,
+    finishOptions,
+    lockingType,
+    cylinderConfiguration,
+    latchMechanism,
+    backset,
+    compatibleDoorThickness,
+    timberDoorCompatibility,
+    handing,
+    externalUseSuitability,
+    coastalSuitability,
+    balFireLimitations,
+    fixings,
+    compatibilityDetails,
+    clientExplanation: entryDoorFurnitureExplanation(groupKey),
+    includedStatus: verificationStatus === "verified_package" ? "builder_configurable" : "quote_required",
+    allowance: 0,
+    selectedCost: null,
+    variation: null,
+    verificationStatus,
+    sourceName: `${supplier} official product page`,
+  };
+}
+
+function entryDoorGlassOption({
+  name,
+  code = "",
+  classification = "",
+  privacy = "",
+  lightTransmission = "",
+  sampleImage = "",
+  previewImage = "",
+  priceStatus = "Quote required",
+  limitations = "Confirm safety glazing, BAL and regional availability with Hume before ordering.",
+  sourceUrl = "https://www.humedoors.com.au/ranges/entrance/savoy-1200?model=XS26-1200",
+}) {
+  return {
+    name,
+    code,
+    classification,
+    privacy,
+    lightTransmission,
+    sampleImage,
+    previewImage,
+    priceStatus,
+    limitations,
+    sourceUrl,
+    officialSource: sourceUrl,
+    supplier: "Hume Doors & Timber",
+    imageQualityStatus: sampleImage && previewImage ? "verified_supplier_visual" : "requires_review",
+  };
+}
+
+function entryDoorGlassOptions(product = null) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const attrs = entity.attributes || {};
+  const supplier = entryDoorSupplierLabel(product || entity);
+  const model = entity.model || product?.model || attrs.design || "";
+  const range = entity.range || product?.range || "";
+  if (/hume/i.test(supplier) && /savoy 1200/i.test(range) && /^XS26-1200$/i.test(model)) {
+    return getEffectiveProductCatalogue({ familyKey: "entry-doors" })
+      .products
+      .filter((row) => row.attributes?.optionType === "entry-door-glass"
+        && /hume/i.test(`${row.supplier} ${row.brand}`)
+        && /savoy 1200/i.test(`${row.range} ${row.productName}`))
+      .map((row) => entryDoorGlassOption({
+        name: row.colour || row.model || row.productName || "",
+        code: row.model || row.productCode || "",
+        classification: row.attributes?.classification || row.finish || "Supplier glass",
+        privacy: row.attributes?.privacy || "Supplier confirmation required",
+        lightTransmission: row.attributes?.lightTransmission || row.description || "Refer to supplier sample.",
+        sampleImage: row.primaryImageUrl || "",
+        previewImage: row.thumbnailUrl || row.primaryImageUrl || "",
+        priceStatus: row.priceStatus || "Quote required",
+        limitations: "Confirm safety glazing, BAL and regional availability before ordering.",
+        sourceUrl: row.officialProductUrl || row.sourceUrl || "",
+      }))
+      .filter((option) => option.name && !/^none$/i.test(option.name));
+  }
+  const detailed = attrs.glazingOptionDetails || attrs.glassOptionsDetailed || [];
+  if (Array.isArray(detailed) && detailed.length) {
+    return detailed.map((option) => entryDoorGlassOption({
+      name: option.name || option.title || "",
+      code: option.code || option.supplierCode || option.name || "",
+      classification: option.classification || option.type || "Supplier glass",
+      privacy: option.privacy || "Supplier confirmation required",
+      lightTransmission: option.lightTransmission || option.light || "Refer to supplier sample.",
+      sampleImage: option.sampleImage || option.imageUrl || option.image || "",
+      previewImage: option.previewImage || option.doorPreviewImage || option.imageUrl || "",
+      priceStatus: option.priceStatus || option.status || "Quote required",
+      limitations: option.limitations || "Confirm safety glazing, BAL and regional availability before ordering.",
+      sourceUrl: option.sourceUrl || entity.sourceUrl || entity.officialProductUrl || "",
+    })).filter((option) => option.name && !/^none$/i.test(option.name));
+  }
+  return entryDoorAttributeOptions(product, "glazingOptions", "")
+    .filter((option) => !/^none$/i.test(option) && !/glass options/i.test(option))
+    .map((option) => entryDoorGlassOption({
+      name: option,
+      code: option,
+      classification: "Supplier glass",
+      privacy: "Supplier confirmation required",
+      lightTransmission: "Refer to supplier sample.",
+      sampleImage: "",
+      previewImage: product?.imageUrl || "",
+      priceStatus: "Quote required",
+      limitations: "Unable to load the compatible supplier glass range - Retry",
+      sourceUrl: entity.sourceUrl || entity.officialProductUrl || "",
+    }));
+}
+
+function entryDoorGlassByName(product = null, name = "") {
+  return entryDoorGlassOptions(product).find((option) => option.name === name) || null;
+}
+
+function entryDoorGlassMetadataMissing(product = null) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const rawOptions = Array.isArray(entity.attributes?.glazingOptions) ? entity.attributes.glazingOptions : [];
+  return rawOptions.some((option) => /glass options/i.test(String(option || "")));
+}
+
+function entryDoorPriceStatusLabel(item = {}) {
+  if (Number.isFinite(Number(item.selectedCost)) && Number(item.selectedCost) > 0) return money(Number(item.selectedCost));
+  if (item.includedStatus === "quote_required") return "Quote required";
+  if (item.includedStatus === "builder_configurable") return "Builder configurable";
+  return item.includedStatus || "Builder configurable";
+}
+
+function entryDoorFurnitureImageForFinish(item = {}, finish = "") {
+  const finishKey = String(finish || "").toLowerCase();
+  const match = Object.entries(item.finishImages || {}).find(([key]) => finishKey && key.toLowerCase() === finishKey);
+  return match?.[1] || item.imageUrl || "";
+}
+
+function entryDoorFurnitureGalleryItems(item = {}, selectedFinish = "") {
+  const main = entryDoorFurnitureImageForFinish(item, selectedFinish);
+  const rows = [
+    main ? { label: selectedFinish ? `${selectedFinish} product photograph` : "Product photograph", url: main } : null,
+    ...(item.gallery || []),
+  ].filter(Boolean);
+  const seen = new Set();
+  return rows.filter((row) => {
+    if (!row.url || seen.has(row.url)) return false;
+    seen.add(row.url);
+    return true;
+  });
+}
+
+function entryDoorFurnitureExplanation(groupKey) {
+  if (groupKey === "lever_entrance_set") return "Trilock - passage, privacy and deadbolt functions in one entrance set.";
+  if (groupKey === "integrated_pull_lockset") return "Self-latching pull-handle lockset - the door latches automatically when closed where that function is selected.";
+  if (groupKey === "pull_handle_deadlock") return "Pull handle with deadlock - pull the door closed, then lock it separately.";
+  return "Builder configured entrance furniture package.";
+}
+
+function entryDoorFurnitureOptions(products = []) {
+  return products.filter((product) => product.productCode && product.productName && product.supplier);
+}
+
+function entryDoorFurnitureByCode(products = [], code = "") {
+  return products.find((product) => product.productCode === code) || null;
+}
+
+function entryDoorFurnitureFinishOptions(product = null) {
+  return Array.from(new Set((product?.finishOptions || []).filter(Boolean)));
+}
+
+function entryDoorFurnitureGroups(products = []) {
+  const meta = {
+    entrance_pull_handles: { key: "entrance_pull_handles", label: "Entrance pull handles", description: "Pull handles suitable for external entry doors." },
+    lever_handles: { key: "lever_handles", label: "Lever handles", description: "Lever handle sets and entrance lever furniture." },
+    deadbolts: { key: "deadbolts", label: "Deadbolts", description: "Separate deadbolts and deadlocking products." },
+    mortice_locks: { key: "mortice_locks", label: "Mortice locks", description: "Mortice lock bodies and compatible entrance locking sets." },
+    smart_locks: { key: "smart_locks", label: "Smart locks", description: "Connected smart locks enabled by the builder." },
+    digital_locks: { key: "digital_locks", label: "Digital locks", description: "Keypad and electronic digital locking options." },
+    door_closers: { key: "door_closers", label: "Door closers", description: "Door closer hardware and compatible accessories." },
+    hinges_accessories: { key: "hinges_accessories", label: "Hinges and accessories", description: "Hinges, plates, stops and other entry-door hardware accessories." },
+    lever_entrance_set: { key: "lever_handles", label: "Lever handles", description: "Lever handle sets and entrance lever furniture." },
+    integrated_pull_lockset: { key: "entrance_pull_handles", label: "Entrance pull handles", description: "Pull handles suitable for external entry doors." },
+    pull_handle_deadlock: { key: "entrance_pull_handles", label: "Entrance pull handles", description: "Pull handles suitable for external entry doors." },
+    smart_entrance_lock: { key: "smart_locks", label: "Smart locks", description: "Connected smart locks enabled by the builder." },
+  };
+  const map = new Map();
+  products.forEach((product) => {
+    const group = meta[product.groupKey] || meta.entrance_pull_handles;
+    if (!map.has(group.key)) map.set(group.key, { ...group, items: [] });
+    map.get(group.key).items.push(product);
+  });
+  return Array.from(map.values()).filter((group) => group.items.length);
+}
+
+function entryDoorFurnitureCompatibility(door = {}, furniture = {}, selection = {}) {
+  const doorText = `${door?.productName || ""} ${door?.model || ""} ${selection.size || door?.size || ""} ${selection.configuration || door?.configuration || ""} ${selection.glazing || door?.glazing || ""}`;
+  const furnitureText = `${furniture.productName || ""} ${furniture.handleLength || ""} ${furniture.compatibilityDetails || ""}`;
+  const requiresSupplierConfirmation = furniture.verificationStatus !== "verified_package"
+    || /supplier quote|builder configuration required/i.test(furniture.compatibilityDetails || "")
+    || (/XS26-1200/i.test(doorText) && /600|625|900|1200|1800/i.test(furnitureText));
+  if (requiresSupplierConfirmation) {
+    return {
+      status: "requires_confirmation",
+      statusLabel: "Supplier confirmation required",
+      contractFinal: false,
+      message: "Confirm pull-handle fixings, stile clearance, backset, lock body and warranty requirements with Hume and the hardware supplier.",
+    };
+  }
+  return {
+    status: "compatible",
+    statusLabel: "Compatible",
+    contractFinal: true,
+    message: "Door thickness, handing and lock/backset details match the selected package subject to normal builder confirmation.",
+  };
+}
+
+function entryDoorScheduleId(product = {}, size = "", configuration = "") {
+  return [entryDoorProductCodeFor(product), size, configuration].filter(Boolean).map(slug).join("-") || "entry-door";
 }
 
 function entryDoorProductCodeFor(product) {
@@ -5165,7 +13932,14 @@ function entryDoorRangeOptions(products = [], supplier = "") {
   const map = new Map();
   products.filter((product) => !supplier || entryDoorSupplierLabel(product) === supplier).forEach((product) => {
     const label = product.range || "Range not recorded";
-    const existing = map.get(label) || { key: slug(label), label, count: 0, image: product.imageUrl || "" };
+    const sunburstLifestyle = /sunburst/i.test(label);
+    const existing = map.get(label) || {
+      key: slug(label),
+      label,
+      count: 0,
+      image: sunburstLifestyle ? ENTRY_DOORS_SUNBURST_LIFESTYLE_URL : product.imageUrl || "",
+      imageAlt: sunburstLifestyle ? ENTRY_DOORS_SUNBURST_LIFESTYLE_ALT : "",
+    };
     existing.count += 1;
     if (!existing.image) existing.image = product.imageUrl || "";
     map.set(label, existing);
@@ -5173,11 +13947,484 @@ function entryDoorRangeOptions(products = [], supplier = "") {
   return Array.from(map.values()).sort((left, right) => left.label.localeCompare(right.label));
 }
 
-function entryDoorDesignOptions(products = [], supplier = "", range = "") {
+function entryDoorDesignOptions(products = [], supplier = "", range = "", filters = {}) {
+  const search = normaliseKey(filters.search || "");
   return products
     .filter((product) => !supplier || entryDoorSupplierLabel(product) === supplier)
     .filter((product) => !range || product.range === range)
+    .filter((product) => {
+      if (!search) return true;
+      const entity = product.metadata?.productEntity || product || {};
+      const haystack = normaliseKey([
+        product.productName,
+        product.model,
+        product.range,
+        product.supplier,
+        entryDoorProductCodeFor(product),
+        entity.productCode,
+      ].join(" "));
+      return haystack.includes(search);
+    })
+    .filter((product) => !filters.material || entryDoorFilterValues(product, "material").includes(filters.material))
+    .filter((product) => !filters.configuration || entryDoorFilterValues(product, "configuration").includes(filters.configuration))
+    .filter((product) => !filters.glazing || entryDoorFilterValues(product, "glazing").includes(filters.glazing))
+    .filter((product) => !filters.bal || entryDoorFilterValues(product, "bal").includes(filters.bal))
+    .filter((product) => !filters.width || entryDoorFilterValues(product, "width").includes(filters.width))
+    .filter((product) => !filters.priceState || entryDoorFilterValues(product, "priceState").includes(filters.priceState))
     .sort((left, right) => `${left.range || ""} ${left.model || ""}`.localeCompare(`${right.range || ""} ${right.model || ""}`));
+}
+
+function entryDoorDesignFilterOptions(products = [], supplier = "", range = "") {
+  const scoped = products
+    .filter((product) => !supplier || entryDoorSupplierLabel(product) === supplier)
+    .filter((product) => !range || product.range === range);
+  return {
+    materials: uniqueEntryDoorFilterValues(scoped, "material"),
+    configurations: uniqueEntryDoorFilterValues(scoped, "configuration"),
+    glazings: uniqueEntryDoorFilterValues(scoped, "glazing"),
+    balRatings: uniqueEntryDoorFilterValues(scoped, "bal"),
+    widths: uniqueEntryDoorFilterValues(scoped, "width"),
+    priceStates: uniqueEntryDoorFilterValues(scoped, "priceState"),
+  };
+}
+
+function uniqueEntryDoorFilterValues(products = [], key) {
+  return Array.from(new Set(products.flatMap((product) => entryDoorFilterValues(product, key)).filter(Boolean))).sort();
+}
+
+function entryDoorFilterValues(product, key) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const attrs = entity.attributes || {};
+  if (key === "material") return [displayCatalogueValue(attrs.materialConstruction || entity.material || product.material)].filter(Boolean);
+  if (key === "configuration") return entryDoorAttributeOptions(product, "configurations", entity.configuration || product.configuration);
+  if (key === "glazing") return entryDoorAttributeOptions(product, "glazingOptions", entity.glazing || product.glazing);
+  if (key === "bal") return [displayCatalogueValue(attrs.balRating)].filter(Boolean);
+  if (key === "width") return entryDoorAttributeOptions(product, "sizes", entity.size || product.size).map(entryDoorWidthLabel).filter(Boolean);
+  if (key === "priceState") return [product.priceState || priceStateForProduct(entity)].filter(Boolean);
+  return [];
+}
+
+function entryDoorWidthLabel(value = "") {
+  const text = String(value || "");
+  const width = text.match(/\b(820|920|1020|1200)\s*mm\b/i)?.[1] || text.match(/\b(820|920|1020|1200)\b/)?.[1];
+  return width ? `${width}mm` : displayCatalogueValue(text);
+}
+
+function entryDoorShortSpec(product) {
+  const entity = product?.metadata?.productEntity || product || {};
+  const attrs = entity.attributes || {};
+  return [
+    displayCatalogueValue(attrs.doorType),
+    displayCatalogueValue(attrs.materialConstruction || product.material),
+    displayCatalogueValue(attrs.balRating),
+  ].filter(Boolean).join(" / ") || "Specifications in detail view";
+}
+
+function entryDoorWidthSummary(product) {
+  const widths = entryDoorFilterValues(product, "width");
+  const range = product?.range || product?.metadata?.productEntity?.range || "";
+  return [range, widths.length ? `Width: ${widths.join(", ")}` : ""].filter(Boolean).join(" / ");
+}
+
+function windowHeaderForStep(step) {
+  return {
+    schedule: "Project Schedule",
+    supplier: "Supplier",
+    systems: "Window Systems",
+    defaults: "Project Defaults",
+    windows: "Individual Windows",
+    review: "Review & Confirm",
+  }[step] || "Windows";
+}
+
+function windowStepStatus(step, { schedule, selectedSupplier, selectedColour, configuration, effectiveWindows, incomplete, canConfirm } = {}) {
+  if (step === "schedule") return schedule?.isAvailable && schedule.count ? `${schedule.count} windows` : "";
+  if (step === "supplier") return selectedSupplier?.label || "";
+  if (step === "systems") return effectiveWindows?.every((row) => row.system?.name) ? "Mapped" : "";
+  if (step === "defaults") return selectedColour && configuration?.glassName && configuration?.screens && configuration?.hardware ? "Defaults set" : "";
+  if (step === "windows") return effectiveWindows?.length ? `${effectiveWindows.filter((row) => row.hasOverride).length} overrides` : "";
+  if (step === "review") return canConfirm && !incomplete?.length ? "Ready" : "";
+  return "";
+}
+
+function bradnamsRegionForProject(project = {}, projectInfo = {}) {
+  const text = [project?.site_address, project?.address, projectInfo?.siteAddress, projectInfo?.fullSiteAddress, projectInfo?.suburbPostcode].filter(Boolean).join(" ").toLowerCase();
+  if (/bundaberg|wide bay|hervey bay|maryborough/.test(text)) return "Wide Bay | Bundaberg";
+  if (/cairns|far north|port douglas|atherton/.test(text)) return "Far North Queensland";
+  if (/townsville|mackay|north queensland/.test(text)) return "North Queensland";
+  if (/roma|toowoomba|dalby|south west/.test(text)) return "South West Queensland";
+  if (/victoria| vic\b|melbourne|geelong|ballarat/.test(text)) return "Victoria";
+  return "South East Queensland";
+}
+
+function windowSupplierDefinition(label = "") {
+  const normalised = String(label || "").toLowerCase();
+  return WINDOW_SUPPLIER_LIBRARY.find((supplier) => normalised.includes(supplier.key) || normalised === supplier.label.toLowerCase()) || WINDOW_SUPPLIER_LIBRARY[0];
+}
+
+function windowColoursForSupplier(supplier = "", region = "") {
+  const definition = windowSupplierDefinition(supplier);
+  if (/bradnam/i.test(definition.label)) return BRADNAMS_REGION_COLOURS[region] || BRADNAMS_REGION_COLOURS["South East Queensland"];
+  return definition.colours || [];
+}
+
+function windowColourPatch(colour = {}) {
+  return {
+    frameColourId: colour.colourId || colour.id || "",
+    frameColourName: colour.name || colour.officialName || "",
+    frameColourOfficialName: colour.officialName || colour.name || "",
+    frameColourCode: colour.supplierCode || colour.code || "",
+    frameColourClass: colour.type || "",
+    frameColourFinish: colour.finish || "",
+    frameColourHex: colour.swatchValue || colour.hex || "",
+    frameColourSourceUrl: colour.officialSourceUrl || colour.sourceUrl || "",
+    frameColourLastVerified: colour.lastVerified || "",
+  };
+}
+
+function windowColourMatchesSystem(colour = {}, systemName = "", type = "") {
+  const compatible = colour.compatibleSystems || colour.systems || [];
+  if (!compatible.length) return true;
+  const haystack = `${systemName} ${type}`.toLowerCase();
+  return compatible.some((item) => haystack.includes(String(item).toLowerCase()) || String(item).toLowerCase().includes(String(type).toLowerCase()));
+}
+
+function windowGlassOptionsForSupplier(supplier = "") {
+  const supplierOptions = windowSupplierDefinition(supplier).glass || BRADNAMS_GLASS_OPTIONS;
+  const byName = new Map();
+  [...supplierOptions, ...REQUIRED_WINDOW_GLASS_TYPE_OPTIONS].forEach((option) => {
+    if (!option?.name) return;
+    const key = normaliseKey(option.name);
+    if (!byName.has(key)) byName.set(key, option);
+  });
+  return Array.from(byName.values());
+}
+
+function windowScreenOptionsForSupplier(supplier = "") {
+  return windowSupplierDefinition(supplier).screens || ["No screen", "Standard insect screen"];
+}
+
+function windowHardwareOptionsForSupplier(supplier = "") {
+  return windowSupplierDefinition(supplier).hardware || ["Black key lockable handles where applicable"];
+}
+
+function windowConfigurationFromSaved(saved = {}) {
+  const workflow = saved.windowWorkflow || {};
+  const defaults = workflow.projectDefaults || {};
+  return {
+    ...DEFAULT_WINDOW_CONFIGURATION,
+    supplier: defaults.supplier || saved.supplier || DEFAULT_WINDOW_CONFIGURATION.supplier,
+    systemsByType: defaults.systemsByType || saved.systemsByType || DEFAULT_WINDOW_CONFIGURATION.systemsByType,
+    scope: saved.scope || DEFAULT_WINDOW_CONFIGURATION.scope,
+    frameColourName: defaults.frameColourName || saved.frameColourName || saved.colour || DEFAULT_WINDOW_CONFIGURATION.frameColourName,
+    frameColourId: defaults.frameColourId || saved.frameColourId || "",
+    frameColourOfficialName: defaults.frameColourOfficialName || saved.frameColourOfficialName || saved.frameColourName || saved.colour || "",
+    frameColourCode: defaults.frameColourCode || saved.frameColourCode || "",
+    frameColourClass: defaults.frameColourClass || saved.frameColourClass || "",
+    frameColourFinish: defaults.frameColourFinish || saved.frameColourFinish || "",
+    frameColourHex: defaults.frameColourHex || saved.frameColourHex || "",
+    frameColourSourceUrl: defaults.frameColourSourceUrl || saved.frameColourSourceUrl || "",
+    frameColourLastVerified: defaults.frameColourLastVerified || saved.frameColourLastVerified || "",
+    frameColourAudit: defaults.frameColourAudit || saved.frameColourAudit || [],
+    glassName: defaults.glassName || saved.glassSelection || saved.glazing || DEFAULT_WINDOW_CONFIGURATION.glassName,
+    glassClass: defaults.glassClass || saved.glassClass || DEFAULT_WINDOW_CONFIGURATION.glassClass,
+    screens: defaults.screens || saved.screens || DEFAULT_WINDOW_CONFIGURATION.screens,
+    hardware: defaults.hardware || saved.hardware || DEFAULT_WINDOW_CONFIGURATION.hardware,
+    exceptions: saved.exceptions || "",
+    clientNotes: saved.clientNote || "",
+    overrides: workflow.individualOverrides || saved.overrides || {},
+    selectedWindowIds: [],
+  };
+}
+
+function windowSupplierOptions(products = []) {
+  const configured = new Set(products.map((product) => product.supplier || product.manufacturer).filter(Boolean));
+  return WINDOW_SUPPLIER_LIBRARY.map((supplier) => ({ ...supplier, enabled: configured.size ? configured.has(supplier.label) || /trend|dowell/i.test(supplier.label) : true }));
+}
+
+function windowCardImage(product = {}) {
+  const entity = product?.metadata?.productEntity || product || {};
+  return entity.thumbnailUrl
+    || entity.thumbnail_url
+    || product.thumbnailUrl
+    || product.thumbnail_url
+    || product.imageUrl
+    || entity.primaryImageUrl
+    || entity.primary_image_url
+    || "";
+}
+
+function windowTypesLabel(product = {}) {
+  const types = product.attributes?.windowTypes || product.metadata?.productEntity?.attributes?.windowTypes || [];
+  return types.length ? types.join(", ") : product.configuration || "Window schedule driven";
+}
+
+function defaultSystemsByType(schedule = {}, supplierLabel = "") {
+  const supplier = windowSupplierDefinition(supplierLabel);
+  return Object.fromEntries((schedule.types || []).map((type) => [type, supplier.systems?.[type] || { name: "Requires selection", status: "Selection required", url: supplier.website }]));
+}
+
+function windowSystemsForSchedule(supplierLabel = "", schedule = {}, existing = {}) {
+  const defaults = defaultSystemsByType(schedule, supplierLabel);
+  return Object.fromEntries(Object.entries(defaults).map(([type, system]) => [type, { ...system, ...(existing?.[type] || {}) }]));
+}
+
+function windowTypeCounts(schedule = {}) {
+  return (schedule.items || []).reduce((counts, item) => ({ ...counts, [item.type]: (counts[item.type] || 0) + Number(item.quantity || 1) }), {});
+}
+
+function sumWindowScheduleQuantity(items = []) {
+  return (items || []).reduce((sum, item) => sum + Math.max(0, Number(item.quantity || 0)), 0);
+}
+
+function effectiveWindowRows(schedule = {}, supplier = {}, configuration = {}, systemsByType = {}) {
+  return (schedule.items || []).map((item) => {
+    const override = configuration.overrides?.[item.id] || {};
+    const screenApplicable = OPENING_WINDOW_PATTERN.test(item.type || "");
+    const screen = override.screens || (screenApplicable ? configuration.screens : "Not applicable - fixed window");
+    const glass = override.glassName || configuration.glassName || "";
+    const glassOption = windowGlassOptionsForSupplier(supplier.label).find((option) => option.name === glass) || {};
+    const system = override.system || systemsByType[item.type] || supplier.systems?.[item.type] || {};
+    return {
+      ...item,
+      supplier: supplier.label,
+      system,
+      frameColourName: override.frameColourName || configuration.frameColourName || "",
+      frameColourId: override.frameColourId || configuration.frameColourId || "",
+      frameColourOfficialName: override.frameColourOfficialName || configuration.frameColourOfficialName || configuration.frameColourName || "",
+      frameColourCode: override.frameColourCode || configuration.frameColourCode || "",
+      frameColourClass: override.frameColourClass || configuration.frameColourClass || "",
+      frameColourFinish: override.frameColourFinish || configuration.frameColourFinish || "",
+      frameColourHex: override.frameColourHex || configuration.frameColourHex || "#cbd5e1",
+      frameColourSourceUrl: override.frameColourSourceUrl || configuration.frameColourSourceUrl || "",
+      glass,
+      glassClass: override.glassClass || glassOption.type || configuration.glassClass || "",
+      glassStatus: glassOption.status || "",
+      screen,
+      screenApplicable,
+      screenStatus: /quote/i.test(screen) ? "Quote required" : "Included where applicable",
+      hardware: override.hardware || configuration.hardware || "",
+      notes: [item.takeoffNotes || item.notes, override.notes].filter(Boolean).join("; "),
+      hasOverride: Boolean(Object.keys(override).filter((key) => override[key] !== undefined && override[key] !== "").length),
+      isWetArea: WET_AREA_PATTERN.test(`${item.location} ${item.room || ""}`),
+      origin: Object.keys(override).length ? "individual_override" : "project_default",
+      priceStatus: /quote/i.test(system.status || "") ? "Quote required" : "Current Price",
+      confirmationStatus: "confirmed",
+    };
+  });
+}
+
+function windowWorkflowSummary(effectiveWindows = []) {
+  const overrideRows = effectiveWindows.filter((row) => row.hasOverride);
+  return {
+    totalWindows: sumWindowScheduleQuantity(effectiveWindows),
+    scheduledRows: effectiveWindows.length,
+    projectDefaultWindows: sumWindowScheduleQuantity(effectiveWindows.filter((row) => !row.hasOverride)),
+    individualOverrides: overrideRows.length,
+    individualOverrideQuantity: sumWindowScheduleQuantity(overrideRows),
+    privacyGlassOverrides: effectiveWindows.filter((row) => row.isWetArea && /obscure|privacy|satin|acid|translucent/i.test(row.glass || "")).length,
+    incomplete: effectiveWindows.filter((row) => !row.system?.name || !row.frameColourName || !row.glass || !row.hardware).length,
+    quoteRequired: effectiveWindows.filter((row) => /quote/i.test([row.system?.status, row.priceStatus, row.glassStatus, row.screenStatus].filter(Boolean).join(" "))).length,
+  };
+}
+
+function projectWindowScheduleSummary(input = {}, maybeProjectInfo = {}) {
+  const options = arguments.length > 1 ? { project: input, projectInfo: maybeProjectInfo } : (input || {});
+  const candidates = windowScheduleSourceCandidates(options);
+  const selected = candidates.find((candidate) => candidate.rows.length);
+  if (!selected) {
+    return {
+      label: WINDOW_NO_TAKEOFF_SCHEDULE_MESSAGE,
+      version: "",
+      displayVersion: "",
+      isDemo: false,
+      isAvailable: false,
+      count: 0,
+      scheduledRowCount: 0,
+      source: "missing",
+      sourceLabel: "No saved AI Plan Takeoff window schedule",
+      items: [],
+      windowIds: [],
+      types: [],
+      locations: [],
+    };
+  }
+  const normalisedItems = selected.rows
+    .map((item, index) => normaliseWindowScheduleItem(item, index))
+    .filter((item) => item.quantity > 0);
+  const items = groupWindowScheduleItems(normalisedItems);
+  const totalQuantity = sumWindowScheduleQuantity(items);
+  const version = selected.version || "active-job-ai-plan-takeoff-window-schedule";
+  return {
+    label: `Saved AI Plan Takeoff window schedule: ${totalQuantity} windows`,
+    version,
+    displayVersion: version,
+    isDemo: false,
+    isAvailable: true,
+    count: totalQuantity,
+    scheduledRowCount: items.length,
+    source: selected.source,
+    sourceLabel: selected.label,
+    items,
+    windowIds: items.map((item) => item.id),
+    types: Array.from(new Set(items.map((item) => item.type))).filter(Boolean),
+    locations: Array.from(new Set(items.map((item) => item.location))).filter(Boolean),
+  };
+}
+
+function normaliseWindowScheduleItem(item = {}, index = 0) {
+  const codeSize = parseWindowSizeText(item.size || item.dimensions || item.code || item.description || "");
+  const widthMm = windowDimensionToMm(item.widthMm ?? item.width_mm ?? item.width ?? item.Width ?? codeSize.widthMm);
+  const heightMm = windowDimensionToMm(item.heightMm ?? item.height_mm ?? item.height ?? item.Height ?? codeSize.heightMm);
+  const width = widthMm ? `${widthMm} mm` : "As documented";
+  const height = heightMm ? `${heightMm} mm` : "As documented";
+  const location = item.location || item.room || item.Room || item.area || "Project schedule";
+  const glass = item.glazing || item.glassType || item.glass || item.glassRequirement || "";
+  const obscureRequirement = windowObscureRequirement(item, glass, location);
+  const stableOpeningId = item.stableOpeningId || item.openingId || item.opening_id || item.itemId || item.item_id || item.windowId || item.id || item.mark || `W${String(index + 1).padStart(2, "0")}`;
+  const notes = item.takeoffNotes || item.notes || item.note || item.takeoff_note || "";
+  return {
+    id: stableOpeningId,
+    stableOpeningId,
+    sourceOpeningIds: [stableOpeningId],
+    type: item.windowStyle || item.windowType || item.type || item.configuration || item.category || "Scheduled window",
+    location,
+    room: item.room || item.location || location,
+    floor: item.floor || item.level || item.storey || "Unspecified",
+    elevation: item.elevation || "As documented",
+    width,
+    height,
+    widthMm,
+    heightMm,
+    quantity: Number(item.quantity || item.qty || 1),
+    size: widthMm && heightMm ? `${widthMm} x ${heightMm}` : (item.size || item.dimensions || "As documented"),
+    glazing: glass,
+    glass,
+    glassType: glass,
+    obscureRequirement,
+    takeoffNotes: notes,
+    notes,
+    planReference: item.planReference || item.plan_ref || item.reference || item.mark || item.itemId || "AI Plan Takeoff",
+  };
+}
+
+function windowScheduleSourceCandidates({ project = {}, projectInfo = {}, workbook = {}, snapshot = {} } = {}) {
+  const metadata = project?.source_metadata || project?.metadata || project?.project_metadata || {};
+  const candidates = [];
+  const add = (source, label, schedule, version) => {
+    const rows = windowScheduleRowsFromSource(schedule).filter(isTakeoffWindowScheduleRow);
+    if (rows.length) candidates.push({ source, label, rows, version: version || schedule?.version || schedule?.generatedAt || metadata.windowScheduleVersion || projectInfo?.windowScheduleVersion || "" });
+  };
+  add("project_metadata", "Project metadata window schedule", metadata.windowSchedule || metadata.windowsSchedule);
+  add("project_info", "Project info window schedule", projectInfo?.windowSchedule || projectInfo?.windowsSchedule);
+  add("project_info_measurements", "AI Plan Takeoff exported project measurements", projectInfo?.basicProjectMeasurements);
+  [
+    workbook?.aiPlanTakeoffJob,
+    workbook?.takeoffEngine?.aiPlanTakeoffJob,
+    workbook?.takeoffSchedule,
+    workbook?.takeoffEngine?.takeoffSchedule,
+    workbook?.jobSetupPayload?.takeoffSchedule,
+    workbook?.jobSetup?.takeoffSchedule,
+    workbook?.projectSetup?.takeoffSchedule,
+    snapshot?.aiPlanTakeoffJob,
+    snapshot?.takeoffSchedule,
+    snapshot?.metadata?.aiPlanTakeoffJob,
+    snapshot?.metadata?.takeoffSchedule,
+  ].filter(Boolean).forEach((source, index) => {
+    const schedule = source?.takeoffSchedule || source?.schedule || source;
+    add(`takeoff_schedule_${index + 1}`, "Saved AI Plan Takeoff schedule", schedule, schedule?.generatedAt || source?.updatedAt || source?.savedAt || "");
+  });
+  return candidates;
+}
+
+function windowScheduleRowsFromSource(source = {}) {
+  if (Array.isArray(source)) return source;
+  if (!source || typeof source !== "object") return [];
+  if (Array.isArray(source.items)) return source.items;
+  if (Array.isArray(source.windows)) return source.windows;
+  if (Array.isArray(source.rows)) return source.rows;
+  if (Array.isArray(source.openings)) return source.openings;
+  if (Array.isArray(source.projectTotals?.windows)) return source.projectTotals.windows;
+  if (Array.isArray(source.currentSheet?.windows)) return source.currentSheet.windows;
+  return [];
+}
+
+function isTakeoffWindowScheduleRow(item = {}) {
+  const text = [item.section, item.category, item.type, item.windowType, item.windowStyle, item.mark, item.itemId, item.code].filter(Boolean).join(" ").toLowerCase();
+  if (!text) return false;
+  if (/door|garage|entry|brick\s*sill|subtotal|total\s*brick/.test(text)) return false;
+  return /\bwindow\b/.test(text) || /^w\d+/i.test(String(item.mark || item.id || item.windowId || ""));
+}
+
+function parseWindowSizeText(value = "") {
+  const match = String(value || "").match(/(\d+(?:\.\d+)?)\s*(?:mm|m)?\s*[xX]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return { widthMm: 0, heightMm: 0 };
+  return { widthMm: windowDimensionToMm(match[1]), heightMm: windowDimensionToMm(match[2]) };
+}
+
+function windowDimensionToMm(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  const text = String(value).replace(/,/g, "").trim().toLowerCase();
+  const number = Number(text.replace(/[^\d.:-]/g, "").split(":").pop());
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  if (text.includes("mm")) return Math.round(number);
+  if (text.includes("m") || number < 20) return Math.round(number * 1000);
+  return Math.round(number);
+}
+
+function windowObscureRequirement(item = {}, glass = "", location = "") {
+  const explicit = item.obscureRequirement || item.obscureGlassRequirement || item.privacyRequirement || item.translucentGlassRequirement;
+  if (explicit) return String(explicit);
+  if (item.obscureGlassRequired === true || item.translucentGlassRequired === true || item.privacyGlassRequired === true) return "Required";
+  if (/obscure|privacy|translucent|satin|acid/i.test(String(glass || ""))) return "Required";
+  if (item.obscureGlassRequired === false || item.translucentGlassRequired === false || item.privacyGlassRequired === false) return "Not required";
+  if (WET_AREA_PATTERN.test(String(location || ""))) return "Review wet area";
+  return "Not specified";
+}
+
+function groupWindowScheduleItems(items = []) {
+  const groups = new Map();
+  items.forEach((item, index) => {
+    const wetAreaIdentity = WET_AREA_PATTERN.test(`${item.location} ${item.room || ""} ${item.obscureRequirement || ""}`)
+      ? normaliseKey([item.room, item.location, item.elevation, item.stableOpeningId || item.id].filter(Boolean).join("-"))
+      : "";
+    const key = [
+      normaliseKey(item.type || ""),
+      item.widthMm || normaliseKey(item.width || ""),
+      item.heightMm || normaliseKey(item.height || ""),
+      normaliseKey(item.glazing || item.glass || ""),
+      normaliseKey(item.obscureRequirement || ""),
+      wetAreaIdentity,
+    ].join("|");
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        ...item,
+        sourceOpeningIds: [...(item.sourceOpeningIds || [item.stableOpeningId || item.id])].filter(Boolean),
+        sourceWindowRows: [item],
+      });
+      return;
+    }
+    existing.quantity += Number(item.quantity || 1);
+    existing.location = uniqueJoined([existing.location, item.location]);
+    existing.room = uniqueJoined([existing.room, item.room]);
+    existing.floor = uniqueJoined([existing.floor, item.floor]);
+    existing.elevation = uniqueJoined([existing.elevation, item.elevation]);
+    existing.planReference = uniqueJoined([existing.planReference, item.planReference]);
+    existing.takeoffNotes = uniqueJoined([existing.takeoffNotes, item.takeoffNotes || item.notes], "; ");
+    existing.notes = existing.takeoffNotes;
+    existing.sourceOpeningIds = Array.from(new Set([...(existing.sourceOpeningIds || []), ...(item.sourceOpeningIds || [item.stableOpeningId || item.id])].filter(Boolean)));
+    existing.sourceWindowRows.push(item);
+    existing.glassType = existing.glassType || existing.glass || existing.glazing || "";
+    existing.id = existing.sourceOpeningIds.length === 1
+      ? existing.sourceOpeningIds[0]
+      : `W-GROUP-${slug([existing.type, existing.widthMm || existing.width, existing.heightMm || existing.height, existing.glazing || existing.glass, existing.obscureRequirement].filter(Boolean).join("-"))}`;
+  });
+  return Array.from(groups.values()).sort((left, right) => `${left.type} ${left.widthMm} ${left.heightMm} ${left.id}`.localeCompare(`${right.type} ${right.widthMm} ${right.heightMm} ${right.id}`));
+}
+
+function uniqueJoined(values = [], separator = ", ") {
+  return Array.from(new Set(values.flatMap((value) => String(value || "").split(separator)).map((value) => value.trim()).filter(Boolean))).join(separator);
 }
 
 function entryDoorAttributeOptions(product, key, fallback = "") {
@@ -5191,6 +14438,8 @@ function entryDoorAttributeOptions(product, key, fallback = "") {
 }
 
 function entryDoorHeaderForStep(step) {
+  if (step === "review") return "Review & Confirm";
+  if (step === "hardware") return "Choose door furniture & locking";
   if (step === "glazing") return "Choose glass option";
   if (step === "finish") return "Choose colour / finish";
   if (step === "size") return "Choose size / variant";
@@ -5485,6 +14734,12 @@ function priceStatusLabel(status) {
   return status || "Price Pending";
 }
 
+function resolveCabinetryRequirementKey(requirementKey = "") {
+  return ["cabinet-finish", "handles", "benchtop", "benchtops", "cabinet-doors", "cabinet-handles"].includes(String(requirementKey || "").toLowerCase())
+    ? "cabinetry"
+    : requirementKey;
+}
+
 function deriveAustralianRegion(project = {}) {
   const textValue = [
     project?.site_state,
@@ -5518,6 +14773,8 @@ function ensureGuidedRoom(book, requirement) {
 function applicableGuidedRequirementsForBook(book = null) {
   return [
     ...requirementsForGuidedArea("kitchen", book),
+    ...requirementsForGuidedArea("appliances", book),
+    ...requirementsForGuidedArea("plumbing-fixtures", book),
     ...requirementsForGuidedArea("exterior", book),
     ...requirementsForGuidedArea("interior", book),
   ];
@@ -5527,10 +14784,13 @@ function requirementsForGuidedArea(areaKey, book = null) {
   if (areaKey === "exterior") return EXTERIOR_REQUIREMENTS.filter((requirement) => requirementAppliesToBook(requirement, book));
   if (areaKey === "interior") return INTERIOR_REQUIREMENTS;
   if (areaKey === "kitchen") return KITCHEN_REQUIREMENTS;
+  if (areaKey === "appliances") return APPLIANCE_REQUIREMENTS;
+  if (areaKey === "plumbing-fixtures") return PLUMBING_FIXTURE_REQUIREMENTS;
   return ALL_GUIDED_REQUIREMENTS.filter((requirement) => requirement.areaKey === areaKey);
 }
 
 function requirementAppliesToBook(requirement, book = null) {
+  if (requirement?.requirementKey === "bricks") return true;
   if (!requirement?.optionalWhenProjectMissing) return true;
   const rooms = Array.isArray(book?.rooms) ? book.rooms : [];
   if (!rooms.length) return false;
@@ -5558,19 +14818,104 @@ function requirementAppliesToBook(requirement, book = null) {
   return textFields.some((value) => aliases.some((alias) => value.includes(alias)));
 }
 
+function normaliseExteriorWallConstruction(value) {
+  const key = typeof value === "string" ? value : value?.key;
+  return EXTERIOR_WALL_CONSTRUCTION_OPTIONS.find((option) => option.key === key) || EXTERIOR_WALL_CONSTRUCTION_OPTIONS[0];
+}
+
+function notApplicableBrickSelection(construction) {
+  return {
+    id: `bricks-${construction?.key || "not-applicable"}`,
+    category: "exterior",
+    room: "Exterior",
+    title: "Bricks",
+    selected_product_name: "Not applicable - rendered finish",
+    selection_status: "not_applicable",
+    status: "approved",
+    is_active: true,
+    selected_details: {
+      source: "guided_client_selections",
+      area: "exterior",
+      room: "Exterior",
+      requirementKey: "bricks",
+      requirementLabel: "Bricks",
+      familyKey: "bricks",
+      notApplicable: true,
+      selectionScope: "boq_only",
+      displayInSelectionsSchedule: false,
+      displayInBOQ: true,
+      displayInPurchaseOrder: true,
+      clientDecisionRequired: false,
+      reason: "Not applicable - rendered finish",
+      exteriorWallConstruction: construction?.key || "rendered_masonry",
+    },
+    metadata: {
+      requirementKey: "bricks",
+      familyKey: "bricks",
+      selectionScope: "boq_only",
+      displayInSelectionsSchedule: false,
+      displayInBOQ: true,
+      displayInPurchaseOrder: true,
+      clientDecisionRequired: false,
+    },
+  };
+}
+
 function rowForRequirement(room, requirement) {
-  return rowsWithGuidedRequirement(room?.rows || [], requirement).find((row) => row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement));
+  const rows = rowsWithGuidedRequirement(room?.rows || [], requirement);
+  if (requirement?.requirementKey === 'entry-door') {
+    return rows.find(r=>r.guidedSelection?.requirementKey==='entry-door'&&(r.guidedSelection.productCode||r.guidedSelection.entryDoors?.some(d=>d.productCode)))
+      || rows.find(r=>r.guidedSelection?.entryDoorDrafts&&Object.keys(r.guidedSelection.entryDoorDrafts).length)
+      || rows.find(r=>r.guidedRequirementKey==='entry-door') || rows.find(r=>rowMatchesRequirement(r,requirement));
+  }
+  if (requirement?.requirementKey === "cabinetry") {
+    return rows.find((row) => row.guidedRequirementKey === requirement.requirementKey && isCanonicalCabinetryRow(row))
+      || rows.find((row) => isCanonicalCabinetryRow(row));
+  }
+  return rows.find((row) => row.guidedRequirementKey === requirement.requirementKey) || rows.find((row) => rowMatchesRequirement(row, requirement));
 }
 
 function rowsWithGuidedRequirement(rows, requirement) {
-  const hasMatch = rows.some((row) => row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement));
-  if (hasMatch) {
-    return rows.map((row) => row.guidedRequirementKey || !rowMatchesRequirement(row, requirement) ? row : { ...row, guidedRequirementKey: requirement.requirementKey });
+  if (requirement?.requirementKey === "cabinetry") {
+    const canonicalIndex = rows.findIndex((row) => isCanonicalCabinetryRow(row));
+    if (canonicalIndex >= 0) {
+      return rows.map((row, index) => {
+        if (index === canonicalIndex) return { ...row, guidedRequirementKey: requirement.requirementKey };
+        if (row.guidedRequirementKey === requirement.requirementKey && !isCanonicalCabinetryRow(row)) {
+          const { guidedRequirementKey, ...rest } = row;
+          return rest;
+        }
+        return row;
+      });
+    }
+    return [...rows, blankGuidedRow(requirement)];
   }
-  return [...rows, {
+  if (rows.some((row) => row.guidedRequirementKey === requirement.requirementKey)) return rows;
+  const hasMatch = rows.some((row) => rowMatchesRequirement(row, requirement));
+  if (hasMatch) return rows.map((row) => row.guidedRequirementKey || !rowMatchesRequirement(row, requirement) ? row : { ...row, guidedRequirementKey: requirement.requirementKey });
+  return [...rows, blankGuidedRow(requirement)];
+}
+
+function shouldPatchGuidedRow(row, requirement) {
+  if (requirement?.requirementKey === "cabinetry") {
+    return row.guidedRequirementKey === requirement.requirementKey && isCanonicalCabinetryRow(row);
+  }
+  return row.guidedRequirementKey === requirement.requirementKey || rowMatchesRequirement(row, requirement);
+}
+
+function blankGuidedRow(requirement) {
+  const cabinetryIdentity = requirement?.requirementKey === "cabinetry"
+    ? {
+      selectionType: CABINETRY_SELECTION_TYPE,
+      workflowType: CABINETRY_WORKFLOW_TYPE,
+      schemaVersion: CABINETRY_SCHEMA_VERSION,
+    }
+    : {};
+  return {
     id: uid("row"),
     item: requirement.label,
     guidedRequirementKey: requirement.requirementKey,
+    ...cabinetryIdentity,
     description: "",
     brand: "",
     selectedProduct: "",
@@ -5583,11 +14928,30 @@ function rowsWithGuidedRequirement(rows, requirement) {
     upgradeCost: 0,
     included: false,
     status: "pending",
-    options: guidedProductsForRequirement(requirement),
-  }];
+    options: INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey) ? [] : guidedProductsForRequirement(requirement),
+  };
+}
+
+function isCanonicalCabinetryRow(row = {}) {
+  return slug(row.item || "") === "cabinetry"
+    || row.selectionType === CABINETRY_SELECTION_TYPE
+    || row.workflowType === CABINETRY_WORKFLOW_TYPE
+    || row.guidedSelection?.selectionType === CABINETRY_SELECTION_TYPE
+    || row.guidedSelection?.workflowType === CABINETRY_WORKFLOW_TYPE
+    || Boolean(row.guidedSelection?.cabinetrySelection || row.guidedSelection?.selected_details?.cabinetrySelection);
+}
+
+function legacyCabinetryRowsForRoom(room = {}) {
+  const cabinetryReviewAliases = new Set(["cabinet-finish", "cabinet-doors", "handles", "cabinet-handles", "benchtop", "benchtops"]);
+  return (room?.rows || []).filter((row) => {
+    if (isCanonicalCabinetryRow(row)) return false;
+    if (!cabinetryReviewAliases.has(slug(row?.item || ""))) return false;
+    return Boolean(row.selectedProduct || row.productModel || row.guidedSelection);
+  });
 }
 
 function rowMatchesRequirement(row, requirement) {
+  if (INTERNAL_SELECTION_KEYS.includes(requirement.requirementKey)) return internalRequirementMatchesRow(row, requirement.requirementKey);
   const key = slug(row?.item || "");
   const dynamicAliases = [requirement.requirementKey, requirement.familyKey, ...(requirement.projectAliases || [])].map(slug).filter(Boolean);
   const aliases = {
@@ -5636,6 +15000,7 @@ function handleGuidedBack({
   guidedRequirement,
   guidedBrickStep,
   guidedEntryDoorStep,
+  guidedApplianceStep,
   guidedRoofingMode,
   guidedRoofingStep,
   roofingConfiguration,
@@ -5647,8 +15012,14 @@ function handleGuidedBack({
   setGuidedEntryDoorRange,
   setGuidedEntryDoorProductCode,
   setGuidedEntryDoorSize,
+  setGuidedEntryDoorConfiguration,
   setGuidedEntryDoorFinish,
   setGuidedEntryDoorGlazing,
+  setGuidedEntryDoorHardware,
+  setGuidedEntryDoorFurnitureFinish,
+  setGuidedApplianceStep,
+  setGuidedApplianceBrand,
+  setGuidedApplianceProductId,
   setGuidedRoofingMode,
   setGuidedRoofingStep,
   setRoofingConfiguration,
@@ -5658,6 +15029,28 @@ function handleGuidedBack({
   embedded = false,
   onEmbeddedBack = null,
 }) {
+  if (guidedScreen === "appliance-products") {
+    if (guidedApplianceStep === "details") {
+      setGuidedApplianceStep("models");
+      setGuidedApplianceProductId("");
+      return;
+    }
+    if (guidedApplianceStep === "models") {
+      setGuidedApplianceStep("build-your-own");
+      setGuidedApplianceProductId("");
+      return;
+    }
+    if (guidedApplianceStep === "packages" || guidedApplianceStep === "build-your-own") {
+      setGuidedApplianceStep("brand-summary");
+      return;
+    }
+    setGuidedScreen("appliances");
+    setGuidedRequirementKey("");
+    setGuidedApplianceStep("brands");
+    setGuidedApplianceBrand("");
+    setGuidedApplianceProductId("");
+    return;
+  }
   if (guidedScreen === "product") {
     if (guidedRequirement?.requirementKey === "bricks") {
       if (guidedBrickStep === "products") {
@@ -5676,11 +15069,19 @@ function handleGuidedBack({
       return;
     }
     if (guidedRequirement?.requirementKey === "entry-door") {
+      if (guidedEntryDoorStep === "hardware") {
+        setGuidedEntryDoorStep("glazing");
+        return;
+      }
       if (guidedEntryDoorStep === "glazing") {
         setGuidedEntryDoorStep("finish");
         return;
       }
       if (guidedEntryDoorStep === "finish") {
+        setGuidedEntryDoorStep("configuration");
+        return;
+      }
+      if (guidedEntryDoorStep === "configuration") {
         setGuidedEntryDoorStep("size");
         return;
       }
@@ -5692,8 +15093,11 @@ function handleGuidedBack({
         setGuidedEntryDoorStep("range");
         setGuidedEntryDoorProductCode("");
         setGuidedEntryDoorSize("");
+        setGuidedEntryDoorConfiguration("");
         setGuidedEntryDoorFinish("");
         setGuidedEntryDoorGlazing("");
+        setGuidedEntryDoorHardware("");
+        setGuidedEntryDoorFurnitureFinish("");
         return;
       }
       if (guidedEntryDoorStep === "range") {
@@ -5701,16 +15105,22 @@ function handleGuidedBack({
         setGuidedEntryDoorRange("");
         setGuidedEntryDoorProductCode("");
         setGuidedEntryDoorSize("");
+        setGuidedEntryDoorConfiguration("");
         setGuidedEntryDoorFinish("");
         setGuidedEntryDoorGlazing("");
+        setGuidedEntryDoorHardware("");
+        setGuidedEntryDoorFurnitureFinish("");
         return;
       }
       setGuidedEntryDoorSupplier("");
       setGuidedEntryDoorRange("");
       setGuidedEntryDoorProductCode("");
       setGuidedEntryDoorSize("");
+      setGuidedEntryDoorConfiguration("");
       setGuidedEntryDoorFinish("");
       setGuidedEntryDoorGlazing("");
+      setGuidedEntryDoorHardware("");
+      setGuidedEntryDoorFurnitureFinish("");
       setGuidedScreen("exterior");
       setGuidedRequirementKey("");
       return;
@@ -5828,8 +15238,15 @@ function handleGuidedBack({
       setGuidedRequirementKey("");
       return;
     }
+    if (guidedRequirement?.requirementKey === "cabinetry") {
+      const event = new CustomEvent("clientSelections:cabinetryBack", { detail: { handled: false } });
+      window.dispatchEvent(event);
+      if (event.detail.handled) return;
+    }
     if (guidedRequirement?.areaKey === "exterior" || guidedArea === "exterior") {
       setGuidedScreen("exterior");
+    } else if (guidedRequirement?.areaKey === "appliances" || guidedArea === "appliances") {
+      setGuidedScreen("appliances");
     } else if (guidedRequirement?.areaKey === "kitchen" || guidedArea === "kitchen") {
       setGuidedScreen("kitchen");
     } else {
@@ -5840,6 +15257,11 @@ function handleGuidedBack({
   }
   if (guidedScreen === "kitchen") {
     setGuidedScreen("interior");
+    return;
+  }
+  if (guidedScreen === "appliances") {
+    setGuidedScreen("interior");
+    setGuidedArea("interior");
     return;
   }
   if (guidedScreen === "interior" || guidedScreen === "exterior" || guidedScreen === "review") {
@@ -5871,12 +15293,8 @@ const styles = `
   .pages button.active { background: #c99735; color: #071827; }
   .roomTools { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid #244057; }
   .workspace { min-width: 0; padding: 16px 18px 28px; overflow: auto; }
-  .standardBanner { display: grid; grid-template-columns: auto 48px minmax(0, 1fr) minmax(300px, auto); gap: 14px; align-items: center; width: 100%; box-sizing: border-box; margin: 0 0 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+  .standardActions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
   .standardBack { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #172033; cursor: pointer; font-weight: 800; padding: 9px 12px; }
-  .standardIcon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 8px; background: #1f6feb; color: #ffffff; }
-  .standardCopy h1 { margin: 0; font-size: 48px; line-height: 1; letter-spacing: 0; }
-  .standardCopy p { margin: 6px 0 0; color: #58657a; font-size: 18px; }
-  .standardMeta { display: grid; gap: 6px; justify-items: end; color: #64748b; font-size: 13px; font-weight: 700; }
   .bannerActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
   .bannerActions button { background: #ffffff; color: #071827; border: 1px solid #cbd5e1; border-radius: 7px; padding: 8px 10px; font-weight: 850; cursor: pointer; }
   .bannerActions button:first-child { background: #071827; color: #ffffff; }
@@ -5901,13 +15319,26 @@ const styles = `
   .guidedCompletionActions { display: flex; flex-wrap: wrap; gap: 8px; }
   .guidedCompletionActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; font-weight: 900; }
   .guidedCompletionActions button.primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
-  .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-  .guidedImageCard { min-height: 220px; position: relative; overflow: hidden; display: grid; align-content: end; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #071827; color: #ffffff; text-align: left; box-shadow: 0 12px 28px rgba(15,23,42,.12); }
-  .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .78; }
-  .guidedImageCard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,24,39,.05), rgba(7,24,39,.82)); }
-  .guidedImageCard span, .guidedImageCard small { position: relative; z-index: 1; }
-  .guidedImageCard span { font-size: 28px; font-weight: 950; }
-  .guidedImageCard small { color: #e2e8f0; font-size: 14px; font-weight: 750; }
+  .guidedAreaGrid, .guidedCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .guidedImageCard { min-height: clamp(300px, 22vw, 360px); position: relative; overflow: hidden; display: grid; align-content: start; gap: 8px; border: 1px solid #d7deea; border-radius: 8px; padding: 16px; background: #f8fafc; color: #ffffff; text-align: left; box-shadow: 0 14px 30px rgba(15,23,42,.10); cursor: pointer; }
+  .guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1; filter: brightness(1.08) saturate(1.08); transition: transform .22s ease; pointer-events: none; }
+  .guidedImageCard:hover { border-color: #0f766e; box-shadow: 0 18px 38px rgba(15,118,110,.18); }
+  .guidedImageCard:hover img { transform: scale(1.035); }
+  .guidedImageCard:focus-visible { outline: 3px solid #14b8a6; outline-offset: 3px; }
+  .guidedImageCard::after { display: none; }
+  .guidedImageCard.entryDoorCategoryCard { min-height: clamp(360px, 28vw, 420px); background: #f8fafc; color: #ffffff; align-content: end; }
+  .guidedImageCard.entryDoorCategoryCard img { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 42% center; opacity: 1; padding: 0; }
+  .guidedImageCard.entryDoorCategoryCard::after { display: block; }
+  .guidedImageCard.garageDoorCategoryCard img { object-position: center 56%; }
+  .guidedImageCard.externalLightingCategoryCard img { object-position: center 58%; }
+  .guidedImageCard.complete { outline: 3px solid #22c55e; }
+  .guidedImageCard.inProgress { outline: 3px solid #14b8a6; }
+  .guidedImageCard.decisionsRequired { outline: 3px solid #f59e0b; }
+  .guidedImageCard.notStarted { outline: 1px solid rgba(100,116,139,.35); }
+  .guidedImageCard.disabled { cursor: default; }
+  .guidedImageCard.recentlyCompleted { outline: 3px solid #14b8a6; box-shadow: 0 0 0 6px rgba(20,184,166,.2), 0 22px 42px rgba(15,23,42,.18); }
+  .guidedImageCardInfo { position: relative; z-index: 1; display: grid; justify-items: start; width: 100%; pointer-events: none; }
+  .guidedImageCardTitle { justify-self: start; width: fit-content; max-width: min(92%, 360px); border-radius: 8px; background: rgba(15,118,110,.76); color: #ffffff; padding: 8px 11px; font-size: 28px; line-height: 1.05; font-weight: 950; box-shadow: 0 8px 20px rgba(15,23,42,.18); }
   .guidedChecklistHeader { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
   .guidedTotals { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)); gap: 8px; min-width: 460px; }
   .guidedChecklistRows { display: grid; gap: 10px; }
@@ -5927,17 +15358,19 @@ const styles = `
   .guidedStatusDot.green { border-color: #22c55e; background: #dcfce7; color: #15803d; }
   .guidedStatusDot.amber { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
   .guidedStatusDot.red { border-color: #ef4444; background: #fee2e2; color: #b91c1c; }
-  .guidedProductLayout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .guidedProductLayout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
   .guidedProgressMenu { position: sticky; top: 92px; display: grid; gap: 6px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 12px; }
   .guidedProgressMenu h2 { margin: 0 0 6px; font-size: 20px; font-weight: 950; }
   .guidedProgressItem { display: flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 8px; font-weight: 850; }
   .guidedProgressItem.active { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
   .guidedProgressItem:disabled { opacity: .55; cursor: not-allowed; }
-  .guidedProductPanel { display: grid; gap: 12px; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 16px; }
+  .guidedProductPanel { display: grid; gap: 12px; min-width: 0; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 16px; }
   .guidedSectionHeader { display: grid; gap: 5px; }
   .guidedSupplierGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
   .guidedSupplierCard { display: grid; gap: 10px; text-align: left; border: 1px solid #d7deea; background: #ffffff; border-radius: 8px; padding: 0 0 14px; overflow: hidden; color: #071827; cursor: pointer; }
   .guidedSupplierCard img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #e2e8f0; }
+  .entryDoorShowroom .guidedSupplierCard img,
+  .entryDoorShowroom .guidedSupplierCard > .entryDoorImageUnavailable { height: 320px; min-height: 320px; aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
   .guidedSupplierCard span { padding: 0 14px; color: #071827; font-size: 20px; font-weight: 950; }
   .guidedSupplierCard strong { padding: 0 14px; color: #64748b; font-size: 13px; font-weight: 850; }
   .guidedEmptyCatalogue { display: grid; gap: 10px; align-content: center; justify-items: start; min-height: 260px; border: 1px dashed #cbd5e1; background: #f8fafc; border-radius: 8px; padding: 26px; }
@@ -5946,22 +15379,663 @@ const styles = `
   .guidedEmptyCatalogue div { display: flex; gap: 8px; flex-wrap: wrap; }
   .guidedEmptyCatalogue button { width: auto; border: 1px solid #0f766e; background: #0f766e; color: #ffffff; border-radius: 8px; padding: 10px 13px; font-weight: 900; }
   .guidedEmptyCatalogue button + button { background: #ffffff; color: #0f766e; }
+  .applianceNavActions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .applianceNavActions button { width: auto; background: #ffffff; color: #0f172a; border: 1px solid #cbd5e1; }
+  .applianceBrandGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .applianceBrandCard { display: grid; gap: 8px; align-content: start; min-height: 220px; padding: 0 0 12px; overflow: hidden; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; text-align: left; }
+  .applianceBrandCard img, .applianceBrandCard > span { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f1f5f9; color: #475569; display: grid; place-items: center; padding: 14px; box-sizing: border-box; font-size: 12px; font-weight: 900; text-align: center; }
+  .applianceBrandCard strong, .applianceBrandCard em, .applianceBrandCard small { padding: 0 12px; }
+  .applianceBrandCard strong { font-size: 18px; font-weight: 950; }
+  .applianceBrandCard em, .applianceBrandCard small { color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; }
+  .applianceBrandCard button { margin: 2px 12px 0; width: auto; }
+  .applianceBrandLogoText { min-height: 112px; font-size: 28px !important; letter-spacing: 0; }
+  .applianceModeGrid, .applianceTypeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 12px 0; }
+  .applianceModeGrid button, .applianceTypeCard { display: grid; gap: 6px; min-height: 104px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; text-align: left; }
+  .applianceModeGrid button.selected, .applianceTypeCard:hover { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+  .applianceModeGrid strong, .applianceTypeCard strong { font-size: 16px; font-weight: 950; line-height: 1.2; }
+  .applianceModeGrid span, .applianceTypeCard em { color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; line-height: 1.35; }
+  .applianceTypeCard.disabled { opacity: .68; cursor: not-allowed; background: #f8fafc; }
+  .applianceTypeIcon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: #e0f2fe; color: #075985; font-weight: 950; }
+  .applianceBrandSummary, .applianceBuildFlow, .appliancePackageList, .applianceSelectionSummary { display: grid; gap: 12px; }
+  .applianceSelectionSummary { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
+  .applianceSelectionSummary h3 { margin: 0; color: #0f172a; font-size: 20px; }
+  .applianceSummaryRows { display: grid; gap: 8px; }
+  .applianceSummaryRows > div { display: grid; grid-template-columns: minmax(120px, .5fr) minmax(180px, 1.1fr) minmax(96px, .35fr); gap: 10px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; padding: 9px; }
+  .applianceSummaryRows > div.selected { border-color: #99f6e4; background: #f0fdfa; }
+  .applianceSummaryRows strong { color: #0f172a; font-size: 14px; }
+  .applianceSummaryRows span, .applianceSummaryRows em { color: #475569; font-size: 13px; font-style: normal; font-weight: 800; line-height: 1.35; }
+  .appliancePackageCard { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; color: #0f172a; }
+  .appliancePackageHeader { display: grid; grid-template-columns: 126px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .appliancePackageHeader img, .appliancePackageHeader > span, .applianceModelLogo img, .applianceModelLogo span { display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 7; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; box-sizing: border-box; color: #334155; font-size: 13px; font-weight: 950; }
+  .appliancePackageHeader strong { display: block; font-size: 18px; font-weight: 950; line-height: 1.2; }
+  .appliancePackageHeader em { display: block; margin-top: 4px; color: #64748b; font-style: normal; font-size: 13px; font-weight: 850; }
+  .appliancePackageComponents { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .appliancePackageComponents div { display: grid; gap: 4px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; background: #f8fafc; }
+  .appliancePackageComponents img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #ffffff; border-radius: 6px; }
+  .appliancePackageComponents small { display: grid; place-items: center; min-height: 96px; background: #ffffff; color: #64748b; font-weight: 850; text-align: center; }
+  .appliancePackageComponents span, .appliancePackageComponents em { color: #475569; font-size: 12px; font-style: normal; font-weight: 850; line-height: 1.3; }
+  .appliancePackageDetails { display: grid; gap: 10px; border: 1px solid #99f6e4; border-radius: 8px; background: #f0fdfa; padding: 14px; }
+  .appliancePackageDetails > div:first-child span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .appliancePackageDetails > div:first-child strong { display: block; color: #0f172a; font-size: 20px; line-height: 1.2; }
+  .appliancePackageDetails > div:first-child em { color: #475569; font-style: normal; font-weight: 850; }
+  .applianceModelCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.14); }
+  .applianceModelLogo { min-height: 58px; display: flex; align-items: center; }
+  .applianceImageFallback { display: grid; place-items: center; width: 100%; min-height: 180px; aspect-ratio: 16 / 10; padding: 16px; box-sizing: border-box; background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 900; text-align: center; }
+  .applianceImageFallback.large { min-height: 320px; aspect-ratio: auto; }
+  .applianceDetailsPanel { display: grid; gap: 12px; }
+  .applianceDetailsHero { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(320px, 1.1fr); gap: 18px; align-items: start; }
+  .applianceDetailsHero img { width: 100%; min-height: 320px; object-fit: contain; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .applianceDetailsHero h2 { margin: 3px 0 8px; font-size: 28px; }
+  .applianceDetailsHero p { color: #334155; font-weight: 700; line-height: 1.45; }
+  .applianceDetailsHero dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 14px 0; }
+  .applianceDetailsHero dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; background: #f8fafc; }
+  .applianceDetailsHero dt { color: #64748b; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+  .applianceDetailsHero dd { margin: 4px 0 0; color: #0f172a; font-weight: 850; }
+  .applianceEmptyCatalogue { min-height: 160px; }
   .brickContextBar { border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 10px 12px; color: #334155; font-weight: 900; }
   .guidedProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .externalLightingScheduleSummary, .lightingSchedulePanel, .lightingAssignment { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .externalLightingScheduleSummary > div:first-child { display: grid; gap: 4px; }
+  .externalLightingScheduleSummary span, .lightingFilters span, .lightingLocationRow span, .lightingScheduleHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .externalLightingScheduleSummary strong, .lightingScheduleHeader h3 { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
+  .lightingCategoryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .lightingCategoryGrid button { display: grid; gap: 4px; min-height: 72px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; padding: 11px; text-align: left; }
+  .lightingCategoryGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: inset 0 0 0 1px #0f766e; }
+  .lightingCategoryGrid strong { color: #071827; font-size: 15px; line-height: 1.15; }
+  .lightingCategoryGrid span { color: #64748b; font-size: 12px; font-weight: 850; }
+  .lightingFilters { display: grid; grid-template-columns: minmax(220px, 1.1fr) repeat(3, minmax(150px, .7fr)); gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .lightingFilters label, .lightingLocationRow label { display: grid; gap: 5px; min-width: 0; }
+  .lightingFilters input, .lightingFilters select, .lightingLocationRow input, .lightingLocationRow select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 10px; font-weight: 800; }
+  .lightingProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; max-height: 640px; overflow: auto; padding-right: 4px; }
+  .lightingProductCard { display: grid; grid-template-rows: auto minmax(96px, 1fr) auto auto auto; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; color: #071827; }
+  .lightingImageButton { width: 100%; min-height: 0; border: 0; background: #eef2f6; padding: 0; overflow: hidden; }
+  .lightingImageButton img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #eef2f6; }
+  .lightingProductCard strong { display: block; color: #071827; line-height: 1.2; }
+  .lightingProductCard span { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 850; }
+  .lightingProductCard a { color: #0f766e; font-size: 13px; font-weight: 900; }
+  .lightingBadges { display: flex; gap: 6px; flex-wrap: wrap; align-content: start; }
+  .lightingBadges span { margin: 0; border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; color: #334155; padding: 4px 8px; font-size: 11px; line-height: 1; }
+  .lightingSelectedProduct { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .lightingSelectedProduct img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
+  .lightingSelectedProduct dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .lightingSelectedProduct dl div { border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; min-width: 0; }
+  .lightingSelectedProduct dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingSelectedProduct dd { margin: 3px 0 0; color: #071827; font-weight: 900; overflow-wrap: anywhere; }
+  .lightingQuantityPanel { display: grid; grid-template-columns: auto 38px 90px 38px minmax(110px, auto); gap: 8px; align-items: center; justify-content: start; }
+  .lightingQuantityPanel.compact { grid-template-columns: 34px 70px 34px; }
+  .lightingQuantityPanel span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .lightingQuantityPanel button { width: 38px; height: 38px; border: 1px solid #cbd5e1; background: #ffffff; color: #071827; padding: 0; }
+  .lightingQuantityPanel.compact button { width: 34px; height: 34px; }
+  .lightingQuantityPanel input { width: 90px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 9px; text-align: center; font-weight: 900; }
+  .lightingQuantityPanel.compact input { width: 70px; }
+  .lightingQuantityPanel strong { color: #0f766e; }
+  .lightingLocationRows { display: grid; gap: 8px; }
+  .lightingLocationRow { display: grid; grid-template-columns: minmax(90px, .45fr) minmax(150px, .7fr) minmax(160px, 1fr) minmax(160px, 1fr); gap: 8px; align-items: end; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
+  .lightingScheduleHeader { display: grid; gap: 3px; }
+  .lightingScheduleHeader h3 { margin: 0; }
+  .lightingScheduleRows { display: grid; gap: 9px; }
+  .lightingScheduleLine { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto minmax(120px, .25fr) auto; gap: 10px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
+  .lightingScheduleLine > img { width: 82px; aspect-ratio: 4 / 3; object-fit: contain; border-radius: 8px; background: #eef2f6; }
+  .lightingScheduleLine strong { display: block; color: #071827; line-height: 1.2; }
+  .lightingScheduleLine span, .lightingScheduleLine small { display: block; margin-top: 3px; color: #64748b; font-size: 12px; font-weight: 820; overflow-wrap: anywhere; }
+  .lightingLineTotals { display: grid; gap: 3px; justify-items: end; text-align: right; }
+  .lightingLineTotals strong { color: #0f766e; }
+  .lightingLineActions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .lightingLineActions button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; padding: 7px 9px; font-size: 12px; }
+  .exteriorColourSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .exteriorColourSummary > div:first-child { display: grid; gap: 4px; }
+  .exteriorColourSummary span, .exteriorColourSelectorHeader span, .exteriorColourFilters span, .exteriorRecentlyUsed span, .exteriorPopularColours span, .exteriorColourLinkControls span, .exteriorColourNotes span, .exteriorBulkInstructions span, .exteriorBulkActionBar span, .exteriorBulkTip span, .exteriorStagedColour span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .exteriorColourSummary strong { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
+  .exteriorColourSummary p, .exteriorColourDisclaimer { margin: 0; color: #64748b; font-size: 12px; font-weight: 750; }
+  .exteriorColourSummary select { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 9px 10px; font-weight: 850; }
+  .exteriorColourLayout { display: grid; grid-template-columns: minmax(380px, .9fr) minmax(440px, 1.1fr); gap: 14px; align-items: start; }
+  .exteriorColourAreaPanel, .exteriorColourSelector { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; display: grid; gap: 12px; }
+  .exteriorBulkTip, .exteriorBulkInstructions, .exteriorBulkActionBar, .exteriorBulkAreaNames, .exteriorBulkApplyMessage { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 10px; }
+  .exteriorBulkTip { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; border-color: #bfdbfe; background: #eff6ff; }
+  .exteriorBulkTip p { margin: 0; color: #475569; font-size: 12px; font-weight: 780; line-height: 1.35; }
+  .exteriorBulkTip button, .exteriorBulkActionBar button, .exteriorApplyDialogActions button { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 8px 11px; font-weight: 850; cursor: pointer; }
+  .exteriorBulkInstructions { display: grid; gap: 7px; background: #ffffff; }
+  .exteriorBulkInstructions ol { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 0; margin: 0; list-style-position: inside; color: #334155; font-size: 12px; font-weight: 850; }
+  .mobileInstruction { display: none; }
+  .exteriorBulkActionBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #ffffff; }
+  .exteriorBulkActionBar div { min-height: 38px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e2e8f0; border-radius: 7px; background: #f8fafc; padding: 7px 9px; }
+  .exteriorBulkActionBar strong { color: #071827; font-size: 14px; font-weight: 950; }
+  .exteriorBulkActionBar .primary:not(:disabled), .exteriorApplyDialogActions .primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
+  .exteriorBulkAreaNames { display: grid; gap: 6px; background: #ffffff; }
+  .exteriorBulkAreaNames strong { color: #071827; font-size: 13px; font-weight: 950; }
+  .exteriorBulkAreaNames ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .exteriorBulkAreaNames li { border: 1px solid #d7deea; border-radius: 7px; background: #f8fafc; color: #334155; padding: 5px 8px; font-size: 12px; font-weight: 850; }
+  .exteriorBulkApplyMessage { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; font-size: 13px; font-weight: 900; }
+  .exteriorAreaColumnHeader { display: grid; grid-template-columns: 38px minmax(0, 1fr) minmax(120px, auto); gap: 8px; align-items: center; color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .exteriorColourLegend { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .exteriorStatusPill { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: fit-content; border: 1px solid #cbd5e1; border-radius: 999px; background: #f8fafc; color: #475569; padding: 4px 7px; font-size: 10px; font-weight: 950; line-height: 1; text-transform: uppercase; white-space: nowrap; }
+  .exteriorStatusPill i { display: inline-grid; place-items: center; min-width: 14px; height: 14px; border-radius: 999px; background: rgba(15,23,42,.08); font-size: 8px; font-style: normal; }
+  .exteriorStatusPill.blue { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+  .exteriorStatusPill.teal { border-color: #99f6e4; background: #f0fdfa; color: #0f766e; }
+  .exteriorStatusPill.amber { border-color: #fde68a; background: #fffbeb; color: #b45309; }
+  .exteriorStatusPill.green { border-color: #bbf7d0; background: #f0fdf4; color: #047857; }
+  .exteriorStatusPill.red { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+  .exteriorColourGroup { display: grid; gap: 8px; }
+  .exteriorColourGroup h3 { margin: 0; color: #071827; font-size: 15px; font-weight: 950; }
+  .exteriorColourAreaRow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; align-items: center; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 8px; }
+  .exteriorColourAreaRow > input { width: 24px; height: 24px; margin: 0; cursor: pointer; }
+  .exteriorColourAreaRow.active { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15,118,110,.12); }
+  .exteriorColourAreaRow.bulkSelected { border-color: #a78bfa; background: #f5f3ff; box-shadow: inset 4px 0 0 #7c3aed; }
+  .exteriorColourAreaRow > button:first-of-type { display: grid; grid-template-columns: 36px minmax(150px, .7fr) minmax(120px, 1fr) auto; gap: 9px; align-items: center; text-align: left; border: 0; background: transparent; color: #071827; cursor: pointer; min-width: 0; min-height: 48px; }
+  .exteriorColourAreaRow i, .exteriorColourSwatch i, .exteriorRecentlyUsed i { display: block; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.45); }
+  .exteriorColourAreaRow i { width: 34px; height: 34px; }
+  .exteriorColourAreaRow strong, .exteriorColourAreaRow small, .exteriorColourAreaRow span { min-width: 0; overflow-wrap: anywhere; }
+  .exteriorColourAreaRow strong { display: block; color: #071827; font-size: 13px; }
+  .exteriorColourAreaRow b { display: inline-block; width: fit-content; margin-top: 4px; border: 1px solid #c4b5fd; border-radius: 999px; background: #ede9fe; color: #6d28d9; padding: 3px 6px; font-size: 9px; font-weight: 950; text-transform: uppercase; }
+  .exteriorColourAreaRow small, .exteriorColourAreaRow span { color: #64748b; font-size: 12px; font-weight: 780; }
+  .exteriorColourAreaRow em { font-style: normal; }
+  .exteriorColourAreaRow > button:not(:first-of-type) { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; padding: 7px 8px; font-weight: 850; cursor: pointer; }
+  .exteriorColourAreaRow button:hover, .exteriorBulkActionBar button:hover, .exteriorColourApplyActions button:hover:not(:disabled), .exteriorApplyDialogActions button:hover { border-color: #0f766e; }
+  .exteriorColourAreaRow button:focus-visible, .exteriorBulkActionBar button:focus-visible, .exteriorColourApplyActions button:focus-visible, .exteriorColourSwatch:focus-visible, .exteriorBulkTip button:focus-visible { outline: 3px solid rgba(20,184,166,.35); outline-offset: 2px; }
+  .exteriorColourSelectorHeader { display: grid; gap: 3px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+  .exteriorColourSelectorHeader strong { color: #071827; font-size: 22px; line-height: 1.15; }
+  .exteriorColourSelectorHeader small { color: #64748b; font-weight: 800; text-transform: capitalize; }
+  .exteriorColourSpecialActions, .exteriorColourApplyActions, .exteriorRecentlyUsed, .exteriorColourLinkControls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .exteriorColourSpecialActions button, .exteriorColourApplyActions button, .exteriorRecentlyUsed button, .exteriorColourLinkControls button { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 8px 9px; font-weight: 850; cursor: pointer; }
+  .exteriorColourApplyActions button:disabled, .exteriorBulkActionBar button:disabled { opacity: .48; cursor: not-allowed; }
+  .exteriorColourLinkControls button:disabled { opacity: .45; cursor: not-allowed; }
+  .exteriorRecentlyUsed button { display: inline-flex; align-items: center; gap: 6px; }
+  .exteriorRecentlyUsed i { width: 18px; height: 18px; }
+  .exteriorColourPalette { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .exteriorPopularColours { display: grid; gap: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
+  .exteriorPopularColours section { display: grid; gap: 6px; }
+  .exteriorPopularColours small { color: #64748b; font-size: 11px; font-weight: 780; }
+  .exteriorPopularColours section > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+  .exteriorColourSwatch { position: relative; display: grid; grid-template-rows: 64px auto auto auto; gap: 6px; min-height: 170px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 9px; text-align: left; cursor: pointer; }
+  .exteriorColourSwatch.compact { grid-template-rows: 38px auto auto auto; min-height: 126px; }
+  .exteriorColourSwatch.selected { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15,118,110,.14); }
+  .exteriorColourSwatch i { width: 100%; height: 64px; }
+  .exteriorColourSwatch.compact i { height: 38px; }
+  .exteriorColourSwatch strong { color: #071827; line-height: 1.15; }
+  .exteriorColourSwatch span, .exteriorColourSwatch small { color: #64748b; font-size: 12px; font-weight: 780; overflow-wrap: anywhere; }
+  .exteriorColourSwatch b { position: absolute; top: 8px; right: 8px; border-radius: 999px; background: #dcfce7; color: #047857; padding: 4px 7px; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .exteriorStagedColour { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; border: 1px solid #99f6e4; border-radius: 8px; background: #f0fdfa; padding: 10px; }
+  .exteriorStagedColour i { grid-row: 1 / span 2; display: block; width: 42px; height: 42px; border: 1px solid #cbd5e1; border-radius: 7px; }
+  .exteriorStagedColour span { color: #0f766e; font-size: 13px; font-weight: 950; text-transform: none; letter-spacing: 0; }
+  .exteriorStagedColour small { color: #475569; font-size: 12px; font-weight: 780; }
+  .exteriorStagedColour.muted { display: block; border-color: #e2e8f0; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 820; }
+  .exteriorTechnicalSpec { display: grid; gap: 8px; border: 1px solid #bae6fd; border-radius: 8px; background: #f0f9ff; padding: 10px; }
+  .exteriorTechnicalSpec summary { color: #0369a1; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+  .exteriorTechnicalSpec dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .exteriorTechnicalSpec div { border: 1px solid #dbeafe; border-radius: 7px; background: #ffffff; padding: 8px; min-width: 0; }
+  .exteriorTechnicalSpec dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .exteriorTechnicalSpec dd { margin: 3px 0 0; color: #071827; font-size: 12px; font-weight: 850; overflow-wrap: anywhere; }
+  .exteriorColourNotes { display: grid; gap: 6px; }
+  .exteriorColourNotes textarea { min-height: 76px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 7px; padding: 9px 10px; font: inherit; }
+  .exteriorApplyDialog { width: min(520px, 92vw); display: grid; gap: 12px; border-radius: 10px; background: #ffffff; color: #071827; padding: 18px; box-shadow: 0 24px 70px rgba(15,23,42,.25); }
+  .exteriorApplyDialog h3 { margin: 0; font-size: 22px; line-height: 1.2; }
+  .exteriorApplyDialog ul { margin: 0; padding-left: 20px; color: #334155; font-weight: 850; }
+  .exteriorIncompatibleNotice { border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 10px; }
+  .exteriorIncompatibleNotice strong, .exteriorIncompatibleNotice p { display: block; margin: 0; }
+  .exteriorApplyDialogActions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .garageDoorWorkflow .guidedProductPanel { gap: 16px; }
+  .garageSteps { display: flex; gap: 8px; flex-wrap: wrap; }
+  .garageSteps button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 900; }
+  .garageSteps button.active { border-color: #0f766e; background: #ccfbf1; color: #115e59; }
+  .garageChoiceBlock, .garageFormPanel, .garageColourPanel, .garageReview { display: grid; gap: 12px; }
+  .garageChoiceBlock h3, .garageColourGroups h3 { margin: 0; color: #071827; font-size: 20px; font-weight: 950; }
+  .garageChoiceGrid, .garageAccessoryGrid, .garageColourGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .garageChoiceGrid button, .garageAccessoryGrid button, .garageColourGrid button { position: relative; display: grid; gap: 7px; min-height: 120px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 12px; }
+  .garageChoiceGrid button.selected, .garageAccessoryGrid button.selected, .garageColourGrid button.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 1px #0f766e; }
+  .garageChoiceGrid strong, .garageAccessoryGrid strong, .garageColourGrid strong { color: #071827; font-size: 18px; line-height: 1.15; font-weight: 950; }
+  .garageChoiceGrid span, .garageAccessoryGrid span, .garageColourGrid em, .garageColourGrid small, .garageSelectedColour small { color: #64748b; font-style: normal; font-size: 13px; font-weight: 800; }
+  .garageChoiceGrid b, .garageColourGrid b { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 11px; line-height: 1; font-weight: 950; }
+  .garageFormPanel { grid-template-columns: repeat(4, minmax(160px, 1fr)); align-items: end; }
+  .garageFormPanel label, .garageColourToolbar label { display: grid; gap: 5px; }
+  .garageFormPanel label span, .garageColourToolbar span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageFormPanel input, .garageFormPanel select, .garageColourToolbar input, .garageColourToolbar select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 10px; font-weight: 800; }
+  .garageColourToolbar { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(180px, .7fr) auto auto; gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .garageColourToolbar a { color: #0f766e; font-weight: 900; }
+  .garageColourWarning { margin: 0; border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 10px 12px; font-weight: 850; }
+  .garageColourGroups { display: grid; gap: 14px; }
+  .garageSwatch { display: grid; place-items: center; width: 100%; height: 82px; border: 1px solid rgba(15,23,42,.18); border-radius: 8px; color: #ffffff; text-shadow: 0 1px 3px rgba(15,23,42,.55); font-size: 22px; font-weight: 950; }
+  .garageSelectedColour { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid #0f766e; border-radius: 8px; background: #f0fdfa; padding: 12px; }
+  .garageSelectedColour .garageSwatch { height: 70px; }
+  .garageReview { grid-template-columns: minmax(220px, .7fr) minmax(0, 1fr); border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .garageReview img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .garageReview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .garageReview dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .garageReview dd { margin: 3px 0 0; color: #071827; font-weight: 900; }
+  .garageReview .guidedProductActions { grid-column: 1 / -1; }
   .brickProductGrid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .entryDoorFilters { display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(6, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .entryDoorFilters label { display: grid; gap: 5px; min-width: 0; }
+  .entryDoorFilters span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFilters input, .entryDoorFilters select { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 11px; color: #071827; background: #ffffff; font-weight: 800; }
+  .entryDoorResultSummary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-start; margin: 0 0 14px; color: #475569; font-size: 13px; font-weight: 850; }
+  .entryDoorResultSummary strong { color: #071827; font-size: 22px; line-height: 1; }
+  .entryDoorResultSummary button { border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 10px; font-weight: 900; }
+  .entryDoorDesignCard { display: grid; grid-template-rows: auto 1fr auto; text-align: left; }
+  .guidedProductCard.entryDoorDesignCard > img { height: clamp(320px, 42vw, 440px); aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
+  .entryDoorImageUnavailable { display: grid; place-items: center; min-height: 260px; padding: 18px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-weight: 900; }
+  .entryDoorDesignCard small { color: #64748b; font-weight: 850; }
+  .windowsWorkflowPanel .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 13px; font-weight: 800; }
+  .windowScheduleSummary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .windowScheduleSummary > strong,
+  .windowScheduleSummary > button,
+  .windowScheduleList { grid-column: 1 / -1; }
+  .windowScheduleSummary > strong { color: #071827; font-size: 22px; font-weight: 950; }
+  .windowScheduleSummary > div:not(.windowScheduleList),
+  .yourWindowSelection dl div { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; }
+  .windowScheduleSummary span,
+  .yourWindowSelection dt,
+  .windowsExceptions span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .windowScheduleSummary b,
+  .yourWindowSelection dd { display: block; margin-top: 5px; color: #071827; font-weight: 900; }
+  .windowScheduleList { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 220px; overflow: auto; padding: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; }
+  .windowScheduleList span { display: grid; gap: 3px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; text-transform: none; letter-spacing: 0; }
+  .windowsSystemGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .windowsSystemGrid button,
+  .windowsSwatchGrid button,
+  .windowsGlassGrid button,
+  .windowsScopeGrid button { display: grid; gap: 8px; min-height: 132px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; text-align: left; padding: 12px; overflow: hidden; }
+  .windowsSystemGrid button.selected,
+  .windowsSwatchGrid button.selected,
+  .windowsGlassGrid button.selected,
+  .windowsScopeGrid button.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 2px #0f766e; }
+  .windowsSystemGrid img { width: 100%; height: 210px; object-fit: contain; object-position: center; border-radius: 8px; background: #f8fafc; }
+  .windowsSystemGrid strong,
+  .windowsSwatchGrid strong,
+  .windowsGlassGrid strong,
+  .windowsScopeGrid strong { color: #071827; font-size: 19px; line-height: 1.15; font-weight: 950; }
+  .windowsSystemGrid span,
+  .windowsSystemGrid em,
+  .windowsSwatchGrid em,
+  .windowsSwatchGrid small,
+  .windowsGlassGrid em,
+  .windowsGlassGrid small,
+  .windowsScopeGrid span,
+  .windowsScopeGrid em { color: #475569; font-size: 13px; font-style: normal; font-weight: 800; }
+  .windowsImageUnavailable { display: grid; place-items: center; width: 100%; height: 210px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #64748b; text-align: center; font-weight: 900; }
+  .windowsColourPanel { display: grid; gap: 14px; }
+  .windowsColourNotice { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .windowsColourNotice strong { color: #071827; font-size: 18px; font-weight: 950; }
+  .windowsColourNotice span { color: #475569; font-weight: 800; }
+  .windowsColourNotice a { color: #0f766e; font-weight: 900; }
+  .windowsSwatchGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .windowsSwatch { display: grid; place-items: center; width: 100%; height: 112px; border: 1px solid rgba(15,23,42,.2); border-radius: 8px; color: #ffffff; font-size: 30px; font-weight: 950; text-shadow: 0 1px 4px rgba(15,23,42,.75); box-shadow: inset 0 0 0 1px rgba(255,255,255,.45); }
+  .windowsChartPreview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 94px; overflow: hidden; border: 1px solid #d7deea; border-radius: 8px; }
+  .windowsChartPreview span { min-height: 94px; }
+  .windowsGlassGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .windowsGlassSample { display: block; height: 92px; border: 1px solid rgba(15,23,42,.16); border-radius: 8px; }
+  .windowsReviewGrid { display: grid; gap: 14px; }
+  .windowsScopeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .yourWindowSelection { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .yourWindowSelection h3 { margin: 0; color: #071827; font-size: 24px; font-weight: 950; }
+  .yourWindowSelection dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .yourWindowSelection dd { min-width: 0; overflow-wrap: anywhere; margin-left: 0; }
+  .windowsExceptions { display: grid; gap: 6px; }
+  .windowsExceptions textarea { min-height: 96px; resize: vertical; }
   .guidedProductCard { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
-  .guidedProductCard > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
+  .guidedProductCard > img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: #e2e8f0; }
+  .guidedProductCard.applianceModelCard { grid-template-rows: auto 210px minmax(160px, auto) auto auto; }
+  .guidedProductCard.applianceModelCard > img { height: 210px; aspect-ratio: auto; object-fit: contain; background: #f8fafc; padding: 10px; box-sizing: border-box; }
   .guidedProductCard.brickCard > img { aspect-ratio: 4 / 3; }
   .guidedProductCard > div { padding: 0 13px; }
   .guidedProductCard span { color: #64748b; font-size: 13px; font-weight: 850; }
   .guidedProductCard strong { display: block; color: #071827; font-size: 18px; font-weight: 950; margin-top: 3px; }
   .guidedProductCard em { display: block; color: #475569; font-style: normal; font-size: 13px; font-weight: 800; margin-top: 3px; }
   .guidedProductCard p { margin: 8px 0 0; color: #334155; font-size: 14px; font-weight: 700; }
+  .guidedShell[data-testid="guided-driveway-workflow"] { width: 100%; max-width: none; min-width: 0; }
+  .drivewayWorkflow { display: block; width: 100%; max-width: none; min-width: 0; }
+  .drivewayWorkflow .guidedProductPanel { width: 100%; max-width: none; min-width: 0; gap: 18px; box-sizing: border-box; }
+  .cabinetryWorkflow .guidedProductPanel { gap: 16px; }
+  .cabinetryBanner { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .cabinetryBanner > div { display: grid; gap: 6px; min-width: 0; }
+  .cabinetryBanner p { margin: 0; color: #64748b; font-weight: 700; }
+  .cabinetryRoomGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; min-width: 0; }
+  .cabinetryRoomCard { min-height: 148px; display: grid; align-content: space-between; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #172033; padding: 18px; text-align: left; box-shadow: 0 12px 24px rgba(15,23,42,.08); }
+  .cabinetryRoomCard strong { font-size: 20px; font-weight: 950; }
+  .cabinetryRoomCard span { color: #64748b; font-weight: 850; }
+  .cabinetryRoomCard em { justify-self: start; border-radius: 8px; padding: 8px 10px; background: #f1f5f9; color: #0f172a; font-style: normal; font-weight: 950; }
+  .cabinetryRoomCard.complete { border-color: #22c55e; }
+  .cabinetryRoomCard.complete em { background: #dcfce7; color: #166534; }
+  .cabinetryRoomCard.in_progress { border-color: #14b8a6; }
+  .cabinetryRoomCard.in_progress em { background: #ccfbf1; color: #115e59; }
+  .cabinetrySummaryDock { display: grid; gap: 4px; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #475569; }
+  .cabinetrySummaryDock strong { color: #0f172a; font-size: 13px; }
+  .cabinetryLocationGrid,
+  .cabinetryOptionGrid,
+  .cabinetrySwatchGrid,
+  .cabinetryAreaGrid,
+  .cabinetryHandleGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; min-width: 0; }
+  .cabinetryLocationGrid button,
+  .cabinetryOptionGrid button,
+  .cabinetrySwatchGrid button,
+  .cabinetryAreaGrid button,
+  .cabinetryHandleGrid button { display: grid; gap: 6px; text-align: left; border: 1px solid #d7deea; background: #fff; border-radius: 8px; padding: 12px; color: #172033; min-width: 0; }
+  .cabinetryLocationGrid button.selected,
+  .cabinetryOptionGrid button.selected,
+  .cabinetrySwatchGrid button.selected,
+  .cabinetryAreaGrid button.selected,
+  .cabinetryHandleGrid button.selected { border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12); }
+  .cabinetryLocationGrid span,
+  .cabinetryOptionGrid span,
+  .cabinetrySwatchGrid span,
+  .cabinetryAreaGrid span,
+  .cabinetryHandleGrid span,
+  .cabinetryOptionGrid small,
+  .cabinetrySwatchGrid small,
+  .cabinetryHandleGrid small { color: #64748b; overflow-wrap: anywhere; }
+  .cabinetryFilters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cabinetryFilters button { border: 1px solid #334155; background: #f8fafc; color: #0f172a; border-radius: 8px; padding: 9px 12px; font-weight: 800; }
+  .cabinetryFilters button.selected { background: #0f766e; color: #fff; border-color: #0f766e; }
+  .cabinetrySupplierButtons { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cabinetrySupplierButtons button { display: grid; gap: 2px; min-width: 136px; border: 2px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 10px 14px; text-align: left; font-weight: 950; }
+  .cabinetrySupplierButtons button span { color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetrySupplierButtons button strong { color: inherit; font-size: 18px; }
+  .cabinetrySupplierButtons button:hover { border-color: #0f766e; background: #f0fdfa; }
+  .cabinetrySupplierButtons button:focus-visible,
+  .cabinetryColourActions button:focus-visible,
+  .cabinetryColourActions a:focus-visible,
+  .cabinetrySwatchButton:focus-visible,
+  .cabinetryFinishGrid button:focus-visible,
+  .cabinetryCatalogueToolbar button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .cabinetrySupplierButtons button.selected { background: #0f766e; color: #ffffff; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20,184,166,.18); }
+  .cabinetrySupplierButtons button.selected span { color: #ccfbf1; }
+  .cabinetrySupplierWebsite a,
+  .cabinetryLoadMore { display: inline-flex; align-items: center; justify-content: center; justify-self: start; min-height: 42px; border: 1px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 10px 14px; font-weight: 950; text-decoration: none; }
+  .cabinetrySelectionList { display: grid; gap: 12px; min-width: 0; }
+  .cabinetrySelectionRow { display: grid; grid-template-columns: 28px minmax(0, 1fr) minmax(100px, 130px) minmax(180px, 1.1fr) auto; gap: 12px; align-items: center; min-height: 74px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 12px; cursor: pointer; box-shadow: 0 8px 20px rgba(15,23,42,.05); }
+  .cabinetrySelectionRow > input[type="checkbox"] { appearance: none; display: grid; place-items: center; width: 28px; height: 28px; min-width: 28px; min-height: 28px; margin: 0; border: 2px solid #64748b; border-radius: 6px; background: #ffffff; cursor: pointer; }
+  .cabinetrySelectionRow > input[type="checkbox"]:checked { border-color: #0f766e; background: #0f766e; box-shadow: inset 0 0 0 5px #ffffff; }
+  .cabinetrySelectionCheck { display: none; }
+  .cabinetrySelectionRow.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 1px #0f766e, 0 10px 24px rgba(15,118,110,.10); }
+  .cabinetrySelectionRow.disabled { opacity: .7; cursor: not-allowed; }
+  .cabinetrySelectionRow:focus-within { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .cabinetrySelectionMain { display: grid; gap: 4px; min-width: 0; }
+  .cabinetrySelectionMain strong { color: #071827; font-size: 17px; font-weight: 950; overflow-wrap: anywhere; }
+  .cabinetrySelectionMain small { color: #475569; font-weight: 800; line-height: 1.35; }
+  .cabinetrySelectionQuantity,
+  .cabinetrySelectionWidth,
+  .cabinetrySelectionNotes { display: grid; gap: 4px; min-width: 0; color: #475569; font-size: 12px; font-weight: 950; }
+  .cabinetrySelectionQuantity input,
+  .cabinetrySelectionWidth input,
+  .cabinetrySelectionNotes input { min-height: 42px; border: 1px solid #94a3b8; border-radius: 8px; background: #ffffff; color: #071827; padding: 9px 10px; font-weight: 850; min-width: 0; }
+  .cabinetryScheduleGroup { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .cabinetryScheduleGroup h3 { margin: 0; color: #071827; font-size: 15px; font-weight: 950; letter-spacing: .04em; }
+  .cabinetrySelectionReset { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 8px 10px; font-weight: 900; }
+  .cabinetrySelectionMessage { margin: 0; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 10px 12px; font-weight: 900; }
+  .cabinetryCatalogueToolbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .cabinetryCatalogueToolbar label { display: grid; gap: 5px; min-width: 0; }
+  .cabinetryCatalogueToolbar label span { color: #475569; font-size: 12px; font-weight: 950; }
+  .cabinetryCatalogueToolbar input,
+  .cabinetryCatalogueToolbar select { min-height: 40px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: #071827; padding: 9px 10px; font-weight: 800; min-width: 0; }
+  .cabinetryCatalogueToolbar button { min-height: 40px; border: 1px solid #334155; border-radius: 8px; background: #ffffff; color: #0f172a; padding: 9px 10px; font-weight: 950; }
+  .cabinetryCatalogueToolbar > strong { color: #0f172a; font-size: 14px; font-weight: 950; }
+  .cabinetryApplyPanel,
+  .bulkheadFinishPanel,
+  .cabinetryAreaSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .cabinetryWorkflowActions.top { margin: -6px 0 2px; justify-content: flex-start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; }
+  .cabinetryWorkflowActions button:disabled { opacity: .45; cursor: not-allowed; }
+  .cabinetryCopyPantryButton { justify-self: start; min-height: 42px; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: #ffffff; padding: 10px 14px; font-weight: 950; box-shadow: 0 12px 24px rgba(15,118,110,.16); }
+  .cabinetryCopyModal { width: min(760px, 94vw); max-height: 92vh; overflow: auto; display: grid; gap: 14px; border-radius: 8px; background: #ffffff; padding: 18px; box-shadow: 0 24px 80px rgba(15,23,42,.34); }
+  .cabinetryCopyModal h3 { margin: 0; color: #071827; font-size: 22px; font-weight: 950; }
+  .cabinetryCopyModal p { margin: 0; color: #475569; font-weight: 850; }
+  .cabinetryCopyDestination { display: flex; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 11px 12px; color: #071827; font-weight: 900; }
+  .cabinetryCopyMode { display: grid; gap: 8px; border: 1px solid #d7deea; border-radius: 8px; padding: 12px; }
+  .cabinetryCopyMode label { display: flex; gap: 10px; align-items: center; color: #071827; font-weight: 900; }
+  .cabinetryCopyMode input { width: 20px; height: 20px; accent-color: #0f766e; }
+  .cabinetryBackToTop { position: fixed; right: 300px; bottom: 24px; z-index: 9000; display: inline-flex; align-items: center; gap: 7px; min-height: 38px; border: 1px solid #0f766e; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 8px 12px; font-weight: 950; box-shadow: 0 14px 34px rgba(15,23,42,.22); }
+  .cabinetryBackToTop:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+  .bulkheadFinishPanel { background: #f8fafc; }
+  .bulkheadFinishPanel > strong,
+  .cabinetryAreaSummary h3 { margin: 0; color: #071827; font-size: 16px; font-weight: 950; }
+  .cabinetryAreaSummaryTable { display: grid; gap: 0; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; }
+  .cabinetryAreaSummaryTable [role="row"] { display: grid; grid-template-columns: minmax(170px, 1.15fr) minmax(110px, .75fr) minmax(150px, 1fr) minmax(120px, .85fr) auto; gap: 0; align-items: stretch; background: #ffffff; border-top: 1px solid #e2e8f0; }
+  .cabinetryAreaSummaryTable [role="row"]:first-child { border-top: 0; background: #f8fafc; }
+  .cabinetryAreaSummaryTable span,
+  .cabinetryAreaSummaryTable strong { display: flex; align-items: center; min-width: 0; padding: 10px 11px; color: #0f172a; font-size: 13px; font-weight: 850; border-left: 1px solid #e2e8f0; overflow-wrap: anywhere; }
+  .cabinetryAreaSummaryTable span:first-child,
+  .cabinetryAreaSummaryTable strong:first-child { border-left: 0; }
+  .cabinetryAreaSummaryTable strong { color: #475569; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetryAreaSummaryTable button { min-height: 38px; margin: 6px; border: 1px solid #0f766e; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 10px; font-weight: 950; }
+  .cabinetrySummaryActions { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .cabinetrySummaryActions button { margin: 0; font-size: 12px; }
+  .cabinetryModalAreaList { display: grid; gap: 10px; }
+  .cabinetryModalAreaList > strong { color: #071827; font-size: 15px; font-weight: 950; }
+  .cabinetryColourCardGrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 14px; }
+  .cabinetryColourCard { position: relative; display: grid; grid-template-rows: 170px 1fr; min-height: 390px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 14px 28px rgba(15,23,42,.08); }
+  .cabinetryColourCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20,184,166,.18), 0 16px 30px rgba(15,23,42,.10); }
+  .cabinetryColourCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .cabinetryColourCard .cabinetrySwatchButton { display: grid; place-items: center; width: 100%; height: 170px; border: 0; border-radius: 0; background: #e2e8f0; color: #334155; padding: 0; overflow: hidden; text-align: center; font-weight: 900; }
+  .cabinetrySwatchButton img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .cabinetrySwatchFallback { display: grid; place-items: center; width: 100%; height: 100%; min-height: 100px; background: #e2e8f0; color: #334155; text-align: center; font-weight: 950; }
+  .cabinetrySwatchFallback.compact { min-height: 42px; height: 42px; border-radius: 6px; font-size: 11px; }
+  .cabinetryColourCardBody { display: grid; align-content: start; gap: 7px; padding: 13px; min-width: 0; }
+  .cabinetryColourCardBody span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetryColourCardBody strong { color: #071827; font-size: 20px; line-height: 1.15; font-weight: 950; overflow-wrap: anywhere; }
+  .cabinetryColourCardBody small,
+  .cabinetryColourCardBody em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+  .cabinetryColourCardBody i { justify-self: start; border: 1px solid #fde68a; border-radius: 999px; background: #fffbeb; color: #92400e; padding: 5px 8px; font-size: 12px; font-style: normal; font-weight: 950; }
+  .cabinetryColourActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .cabinetryColourActions button,
+  .cabinetryColourActions a { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; border: 1px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 8px 10px; font-size: 13px; font-weight: 950; text-decoration: none; }
+  .cabinetryColourActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
+  .cabinetryRecentStrip { display: flex; flex-wrap: wrap; gap: 9px; align-items: stretch; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; }
+  .cabinetryRecentStrip > strong { flex-basis: 100%; color: #0f172a; font-size: 14px; }
+  .cabinetryRecentStrip button { display: grid; grid-template-columns: 42px minmax(120px, 1fr); gap: 4px 8px; align-items: center; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; color: #0f172a; padding: 7px; text-align: left; font-weight: 850; }
+  .cabinetryRecentStrip img { grid-row: span 2; width: 42px; height: 42px; border-radius: 6px; object-fit: cover; }
+  .cabinetryRecentStrip .cabinetrySwatchFallback { grid-row: span 2; width: 42px; }
+  .cabinetryRecentStrip small { color: #64748b; overflow-wrap: anywhere; }
+  .cabinetrySelectionComposer,
+  .cabinetryAppliedSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .cabinetrySelectionModal { position: relative; grid-template-columns: minmax(190px, 280px) minmax(300px, 1fr); width: min(920px, 96vw); max-height: 92vh; overflow: auto; box-shadow: 0 24px 80px rgba(15,23,42,.34); }
+  .cabinetrySelectionModal > img,
+  .cabinetrySelectionModal > .cabinetrySwatchFallback,
+  .cabinetrySelectionModal > .cabinetrySwatchUnavailable { width: 100%; aspect-ratio: 1 / 1; border: 1px solid #d7deea; border-radius: 8px; object-fit: cover; }
+  .cabinetrySelectionModal > div { display: grid; gap: 12px; min-width: 0; }
+  .cabinetrySelectionModal dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+  .cabinetrySelectionModal dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .cabinetrySelectionModal dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
+  .cabinetrySelectionComposer h3,
+  .cabinetryAppliedSummary h3 { margin: 0; color: #071827; font-size: 21px; font-weight: 950; }
+  .cabinetrySelectionComposer p { margin: 0; color: #475569; font-weight: 800; }
+  .cabinetryFinishGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 9px; }
+  .cabinetryFinishGrid button { display: grid; gap: 4px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #0f172a; padding: 10px; text-align: left; }
+  .cabinetryFinishGrid button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 1px #0f766e; }
+  .cabinetryAppliedSummary dl,
+  .cabinetryInspectModal dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; margin: 0; }
+  .cabinetryAppliedSummary dt,
+  .cabinetryInspectModal dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .cabinetryAppliedSummary dd,
+  .cabinetryInspectModal dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
+  .cabinetryInspectOverlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 20px; background: rgba(15,23,42,.62); }
+  .cabinetryInspectModal { position: relative; display: grid; grid-template-columns: minmax(260px, 420px) minmax(280px, 1fr); gap: 18px; width: min(940px, 96vw); max-height: 92vh; overflow: auto; border-radius: 8px; background: #ffffff; padding: 18px; box-shadow: 0 24px 80px rgba(15,23,42,.34); }
+  .cabinetryInspectModal > img,
+  .cabinetrySwatchUnavailable { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border: 1px solid #d7deea; border-radius: 8px; background: #f1f5f9; color: #334155; display: grid; place-items: center; text-align: center; font-weight: 950; }
+  .cabinetryInspectModal h3 { margin: 2px 0 10px; color: #071827; font-size: 30px; line-height: 1.1; font-weight: 950; }
+  .cabinetryInspectModal p { color: #475569; font-weight: 800; line-height: 1.45; }
+  .cabinetryInspectModal span { color: #0f766e; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .cabinetryInspectClose { position: absolute; top: 10px; right: 10px; border: 1px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 7px 9px; font-weight: 950; }
+  .stoneMaterialChoice { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+  .stoneMaterialChoice button { min-height: 66px; border: 2px solid #334155; border-radius: 8px; background: #fff; color: #0f172a; padding: 12px; text-align: left; }
+  .stoneMaterialChoice button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 1px #0f766e; }
+  .stoneBenchtopSelector { display: grid; gap: 14px; min-width: 0; }
+  .stoneSupplierButtons button { min-width: 170px; }
+  .stoneFilters { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+  .stoneProductGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 285px), 1fr)); gap: 14px; }
+  .stoneProductCard { position: relative; display: grid; grid-template-rows: 190px 1fr; min-height: 455px; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 14px 28px rgba(15,23,42,.08); }
+  .stoneProductCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20,184,166,.18), 0 16px 30px rgba(15,23,42,.10); }
+  .stoneProductCard > b { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #fff; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .stoneProductImageButton,
+  .stoneSwatchUnavailable { display: grid; place-items: center; width: 100%; height: 190px; border: 0; border-radius: 0; background: #e2e8f0; color: #334155; padding: 0; text-align: center; font-weight: 950; overflow: hidden; }
+  .stoneProductImageButton img,
+  .stoneComparison img { width: 100%; height: 100%; object-fit: cover; }
+  .stoneProductBody { display: grid; align-content: start; gap: 8px; padding: 13px; min-width: 0; }
+  .stoneProductBody span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .stoneProductBody strong { color: #071827; font-size: 21px; line-height: 1.15; font-weight: 950; overflow-wrap: anywhere; }
+  .stoneProductBody small,
+  .stoneProductBody em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+  .stoneProductBody i { justify-self: start; border: 1px solid #c7d2fe; border-radius: 999px; background: #eef2ff; color: #3730a3; padding: 5px 8px; font-size: 12px; font-style: normal; font-weight: 950; }
+  .stoneComparison,
+  .stoneSelectionComposer,
+  .stoneAppliedSummary { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #fff; padding: 14px; }
+  .stoneComparison h3,
+  .stoneSelectionComposer h3,
+  .stoneAppliedSummary h3 { margin: 0; color: #071827; font-size: 22px; font-weight: 950; }
+  .stoneComparison > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .stoneComparison article { display: grid; gap: 8px; border: 1px solid #d7deea; border-radius: 8px; padding: 10px; }
+  .stoneComparison article > img,
+  .stoneComparison .stoneSwatchUnavailable { height: 130px; border-radius: 6px; }
+  .stoneComparison dl,
+  .stoneAppliedSummary dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 9px; margin: 0; }
+  .stoneComparison dt,
+  .stoneAppliedSummary dt { color: #64748b; font-size: 12px; font-weight: 950; }
+  .stoneComparison dd,
+  .stoneAppliedSummary dd { margin: 2px 0 0; color: #071827; font-weight: 850; overflow-wrap: anywhere; }
+  .stoneChecklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 9px; }
+  .stoneChecklist label { display: flex; gap: 8px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; color: #0f172a; padding: 9px; font-weight: 850; }
+  .stoneSelectionComposer p { margin: 0; color: #475569; font-weight: 800; line-height: 1.45; }
+  .stoneInspectModal > img,
+  .stoneInspectModal > .stoneSwatchUnavailable { aspect-ratio: 4 / 3; height: auto; }
+  @media (max-width: 760px) {
+    .cabinetryInspectModal { grid-template-columns: 1fr; }
+    .cabinetrySelectionRow { grid-template-columns: 28px minmax(0, 1fr); }
+    .cabinetrySelectionQuantity,
+    .cabinetrySelectionWidth,
+    .cabinetrySelectionNotes,
+    .cabinetrySelectionReset { grid-column: 2; }
+    .cabinetryColourCard { grid-template-rows: 150px 1fr; }
+    .cabinetryColourCard .cabinetrySwatchButton { height: 150px; }
+    .stoneProductCard { grid-template-rows: 150px 1fr; min-height: 0; }
+    .stoneProductImageButton,
+    .stoneSwatchUnavailable { height: 150px; }
+  }
+  .cabinetryHandleGrid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; background: #f1f5f9; }
+  .cabinetryScheduleTable { display: grid; gap: 10px; overflow-x: auto; }
+  .cabinetryScheduleTable table { width: 100%; border-collapse: collapse; min-width: 760px; }
+  .cabinetryScheduleTable th,
+  .cabinetryScheduleTable td { border-bottom: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; font-size: 12px; }
+  .cabinetryReview { display: grid; gap: 12px; min-width: 0; }
+  .drivewayFinishGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 440px)); gap: 18px; align-items: stretch; justify-content: start; width: 100%; }
+  .drivewayFinishCard { position: relative; display: grid; grid-template-rows: 280px 1fr; text-align: left; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #fff; box-shadow: 0 14px 30px rgba(15,23,42,.10); }
+  .drivewayFinishCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20, 184, 166, .18), 0 18px 38px rgba(15,23,42,.12); }
+  .drivewayFinishCard img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; background: #e2e8f0; }
+  .drivewayFinishBody { display: grid; gap: 8px; padding: 14px; align-content: start; min-width: 0; }
+  .drivewayFinishCard span { color: #64748b; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .drivewayFinishCard strong { color: #071827; font-size: 22px; line-height: 1.15; font-weight: 950; }
+  .drivewayFinishCard em { color: #475569; font-style: normal; font-weight: 800; line-height: 1.35; }
+  .drivewayFinishCard small { justify-self: start; border: 1px solid #fde68a; background: #fffbeb; color: #92400e; border-radius: 999px; padding: 5px 8px; font-size: 12px; font-weight: 950; }
+  .drivewayFinishCard b, .drivewayOptionCard b { position: absolute; top: 10px; right: 10px; background: #0f766e; color: #fff; border-radius: 999px; padding: 5px 8px; font-size: 11px; font-weight: 950; }
+  .drivewayFinishActions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
+  .drivewayFinishActions button { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #071827; padding: 9px 11px; font-weight: 900; }
+  .drivewayFinishActions button.primary { border-color: #0f766e; background: #0f766e; color: #fff; }
+  .drivewayAreaInput { display: grid; gap: 6px; min-width: min(100%, 280px); color: #334155; font-weight: 900; }
+  .drivewayAreaInput span, .drivewayAreaInput small { color: #64748b; font-size: 12px; font-weight: 900; }
+  .drivewayAreaInput input, .drivewayFilters input, .drivewayFilters select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-weight: 800; color: #071827; background: #fff; }
+  .drivewayConfigBlock { display: grid; gap: 14px; width: 100%; max-width: none; min-width: 0; margin-top: 4px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 18px; box-sizing: border-box; }
+  .drivewayConfigHeader { display: flex; align-items: start; justify-content: space-between; gap: 18px; flex-wrap: wrap; border-bottom: 1px solid #e2e8f0; padding-bottom: 14px; }
+  .drivewayConfigHeader > div { display: grid; gap: 4px; min-width: min(100%, 320px); }
+  .drivewayConfigHeader span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .drivewayConfigBlock h3, .drivewayConfigBlock h4, .drivewaySelectionSummary h3 { margin: 0; font-size: 22px; color: #071827; font-weight: 950; }
+  .drivewaySegment, .drivewaySupplierRow, .drivewayFilters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .drivewaySegment button, .drivewaySupplierRow button { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; padding: 11px 13px; text-align: left; font-weight: 950; color: #071827; }
+  .drivewaySegment button span, .drivewaySupplierRow button span { display: block; margin-top: 4px; color: #64748b; font-size: 12px; font-weight: 800; }
+  .drivewaySegment button.selected, .drivewaySupplierRow button.selected { border-color: #0f766e; background: #ecfdf5; color: #0f766e; box-shadow: inset 0 0 0 1px #0f766e; }
+  .drivewayNaturalPanel, .drivewaySupplierRangeHeader { display: grid; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; color: #334155; }
+  .drivewayNaturalPanel strong { color: #071827; font-size: 18px; font-weight: 950; }
+  .drivewayNaturalPanel span, .drivewaySupplierRangeHeader span { color: #475569; font-weight: 800; }
+  .drivewayNaturalPanel em { justify-self: start; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 5px 8px; font-style: normal; font-size: 12px; font-weight: 950; }
+  .drivewayFilterToggle { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; padding: 9px 11px; color: #071827; font-weight: 900; }
+  .drivewayFilterToggle input { width: 16px; height: 16px; margin: 0; }
+  .drivewayCompareStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .drivewayOptionGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+  .drivewayOptionGrid.aggregateGrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+  .drivewayOptionCard { position: relative; display: grid; align-content: start; gap: 7px; min-height: 230px; border: 1px solid #d7deea; border-radius: 8px; background: #fff; padding: 10px; text-align: left; cursor: pointer; }
+  .drivewayOptionCard.compact { min-height: 0; }
+  .drivewayOptionCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20, 184, 166, .18); }
+  .drivewayColourSample, .drivewayAggregateSample { display: grid; place-items: center; width: 100%; min-height: 150px; aspect-ratio: 5 / 3; border-radius: 6px; color: #fff; text-shadow: 0 1px 2px rgba(15, 23, 42, .55); font-size: 12px; font-weight: 950; }
+  .drivewayAggregateSample { position: relative; min-height: 190px; aspect-ratio: 4 / 3; overflow: hidden; background: #f8fafc; color: #475569; text-shadow: none; }
+  .drivewayAggregateSample img { width: 100%; height: 100%; object-fit: cover; }
+  .drivewayAggregateSample i { position: absolute; top: 8px; right: 8px; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 4px 8px; font-size: 11px; font-style: normal; font-weight: 950; line-height: 1; }
+  .drivewayOptionCard strong { color: #071827; font-size: 15px; font-weight: 950; }
+  .drivewayOptionCard em, .drivewayOptionCard small { color: #475569; font-style: normal; font-size: 12px; font-weight: 800; }
+  .drivewayOptionCard a { justify-self: start; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #0f766e; padding: 7px 9px; font-size: 12px; font-weight: 950; text-decoration: none; }
+  .drivewaySelectionSummary { display: grid; gap: 12px; border: 1px solid #bbf7d0; border-radius: 8px; background: #f0fdf4; padding: 16px; }
+  .drivewaySelectionSummary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; }
+  .drivewaySelectionSummary dl div { border: 1px solid #d1fae5; border-radius: 8px; background: #ffffff; padding: 10px; min-width: 0; }
+  .drivewaySelectionSummary dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .drivewaySelectionSummary dd { margin: 4px 0 0; color: #071827; font-weight: 900; overflow-wrap: anywhere; }
+  .drivewaySampleNotice { margin: 14px 0 0; color: #475569; font-size: 13px; font-weight: 750; line-height: 1.45; }
   .guidedProductMoney { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
   .guidedProductActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 13px 13px; }
   .guidedProductActions button { border-radius: 8px; background: #ffffff; color: #071827; border: 1px solid #cbd5e1; }
   .guidedProductActions button.primary { background: #0f766e; color: #ffffff; border-color: #0f766e; }
   .guidedProductActions button:disabled { opacity: 0.55; cursor: not-allowed; }
+  .exteriorWallConstruction { display: grid; gap: 12px; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 14px; }
+  .exteriorWallConstruction > div:first-child { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .exteriorWallConstruction span { color: #0f766e; font-size: 12px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .exteriorWallConstruction strong { color: #071827; font-size: 18px; font-weight: 950; }
+  .exteriorWallConstruction p { margin: 0; color: #475569; font-weight: 800; }
+  .exteriorWallConstructionOptions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .exteriorWallConstructionOptions button { display: grid; gap: 5px; min-height: 94px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; color: #071827; padding: 10px; text-align: left; cursor: pointer; }
+  .exteriorWallConstructionOptions button.selected { border-color: #0f766e; background: #ecfdf5; box-shadow: inset 0 0 0 2px rgba(15,118,110,.16); }
+  .exteriorWallConstructionOptions small { color: #475569; font-size: 12px; line-height: 1.3; font-weight: 750; }
+  .entryDoorFurniturePanel { display: grid; gap: 16px; }
+  .entryDoorLayout { grid-template-columns: minmax(0, 1fr); }
+  .entryDoorLayout > .guidedProgressMenu { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+  .entryDoorLayout > .guidedProgressMenu > button { width: auto; flex: 1 1 150px; }
+  .entryDoorSelectionSummary { grid-template-columns: 110px minmax(0, 1fr); }
+  .entryDoorSelectionSummary > img { width: 110px; max-height: 180px; object-fit: contain; }
+  .entryDoorSelectionSummary .roofingSummaryDetails { min-width: 0; }
+  .entryDoorSelectionSummary .roofingSummaryDetails dl { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .entryDoorFurniturePrompt { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 8px; padding: 10px 12px; color: #92400e; font-weight: 850; }
+  .entryDoorFurniturePrompt button { border: 1px solid #f59e0b; background: #ffffff; color: #92400e; border-radius: 7px; padding: 7px 10px; font-weight: 900; }
+  .entryDoorCompatibility { display: grid; gap: 4px; border-radius: 8px; padding: 12px; font-weight: 850; }
+  .entryDoorCompatibility.confirmed { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+  .entryDoorCompatibility.warning { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; }
+  .entryDoorFurnitureGroup { display: grid; gap: 10px; }
+  .entryDoorFurnitureGroup h3 { margin: 0; color: #071827; font-size: 21px; font-weight: 950; }
+  .entryDoorFurnitureGroup p { margin: 0; color: #475569; font-weight: 780; }
+  .guidedProductCard.entryDoorFurnitureCard { position: relative; grid-template-rows: 260px minmax(0, auto) auto; }
+  .guidedProductCard.entryDoorFurnitureCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.16); }
+  .guidedProductCard.entryDoorFurnitureCard.notCompatible { opacity: .64; }
+  .entryDoorFurnitureImageButton { width: 100%; height: 260px; border: 0; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 14px; cursor: zoom-in; }
+  .entryDoorFurnitureImageButton img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+  .entryDoorFurnitureBody { display: grid; gap: 8px; }
+  .entryDoorFurnitureClientSpecs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 4px 0 0; }
+  .entryDoorFurnitureClientSpecs div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px; background: #f8fafc; }
+  .entryDoorFurnitureClientSpecs dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFurnitureClientSpecs dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 850; }
+  .entryDoorFurnitureSpecs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 10px 0 0; }
+  .entryDoorFurnitureSpecs div { border: 1px solid #e2e8f0; border-radius: 6px; padding: 7px; }
+  .entryDoorFurnitureSpecs dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorFurnitureSpecs dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 800; }
+  .entryDoorFurnitureFinishes { display: grid; gap: 10px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .entryDoorGlassNotice { border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; font-size: 13px; font-weight: 850; }
+  .entryDoorGlassEmpty { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; color: #334155; padding: 18px; font-size: 16px; font-weight: 900; }
+  .entryDoorGlassGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 14px; }
+  .entryDoorGlassCard { position: relative; display: grid; grid-template-rows: 280px minmax(0, auto) auto; gap: 0; border: 1px solid #d7deea; border-radius: 8px; overflow: hidden; background: #ffffff; }
+  .entryDoorGlassCard.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.16); }
+  .entryDoorGlassPreview { width: 100%; height: 280px; border: 0; border-bottom: 1px solid #e2e8f0; background: #f8fafc; padding: 12px; cursor: zoom-in; }
+  .entryDoorGlassPreview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .entryDoorGlassBody { display: grid; gap: 8px; padding: 12px; }
+  .entryDoorGlassBody span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGlassBody strong { color: #071827; font-size: 19px; font-weight: 950; }
+  .entryDoorGlassBody em { color: #475569; font-style: normal; font-size: 12px; font-weight: 850; }
+  .entryDoorGlassBody dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; }
+  .entryDoorGlassBody dt { color: #64748b; font-size: 10px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGlassBody dd { margin: 2px 0 0; color: #071827; font-size: 12px; font-weight: 820; }
+  .entryDoorGlassActions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 12px 12px; }
+  .entryDoorGlassActions button, .entryDoorGalleryHeader button, .entryDoorDetailsModal > button { border: 1px solid #cbd5e1; border-radius: 7px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 850; cursor: pointer; }
+  .entryDoorGlassActions .primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
+  .entryDoorSelectedBadge { position: absolute; top: 10px; right: 10px; border-radius: 999px; background: #0f766e; color: #ffffff; padding: 5px 9px; font-size: 12px; font-weight: 950; }
+  .entryDoorSummaryThumb { width: 74px; height: 74px; object-fit: contain; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 5px; margin-right: 8px; }
+  .entryDoorGalleryModal, .entryDoorDetailsModal { width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; background: #ffffff; border-radius: 10px; padding: 16px; box-shadow: 0 18px 60px rgba(15,23,42,.28); display: grid; gap: 14px; }
+  .entryDoorGalleryHeader { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .entryDoorGalleryHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .entryDoorGalleryHeader strong { display: block; color: #071827; font-size: 22px; font-weight: 950; }
+  .entryDoorGalleryGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .entryDoorGalleryGrid figure { margin: 0; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 10px; display: grid; gap: 8px; }
+  .entryDoorGalleryGrid figure.technical { border-color: #fde68a; background: #fffbeb; }
+  .entryDoorGalleryGrid img { width: 100%; height: 320px; object-fit: contain; background: #ffffff; border-radius: 6px; }
+  .entryDoorGalleryGrid figcaption, .entryDoorGalleryModal p { color: #334155; font-size: 13px; font-weight: 850; margin: 0; }
   .roofingLayout .guidedSectionHeader em { color: #64748b; font-style: normal; font-size: 12px; font-weight: 750; }
   .roofingLayout .guidedProgressItem.complete { border-color: #bbf7d0; background: #f0fdf4; color: #166534; }
   .roofingLayout .guidedProgressItem.active { border-color: #67e8f9; background: #ecfeff; color: #0e7490; }
@@ -6007,6 +16081,9 @@ const styles = `
   .roofingFinishSample { display: block; width: 100%; height: 92px; border: 1px solid rgba(15,23,42,.16); border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
   .roofingSelectionSummary { display: grid; grid-template-columns: minmax(190px, .75fr) minmax(0, 1fr); gap: 16px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 14px; }
   .roofingSelectionSummary > img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .entryDoorSelectionSummary { grid-template-columns: minmax(220px, 360px) minmax(0, 1fr); align-items: start; }
+  .entryDoorSelectionSummary > img { height: min(56vh, 520px); aspect-ratio: auto; object-fit: contain; object-position: center; background: #f8fafc; padding: 12px; box-sizing: border-box; }
+  .entryDoorSelectionSummary > .entryDoorImageUnavailable { min-height: 360px; height: min(56vh, 520px); }
   .roofingSelectionSummary button { grid-column: 1 / -1; justify-self: start; align-self: end; white-space: normal; }
   .roofingSummaryDetails { display: grid; gap: 10px; min-width: 0; }
   .roofingSummaryDetails > strong { color: #071827; font-size: 22px; font-weight: 950; }
@@ -6015,11 +16092,78 @@ const styles = `
   .roofingSummaryDetails dt { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
   .roofingSummaryDetails dd { display: flex; gap: 8px; align-items: center; min-height: 24px; margin: 4px 0 0; color: #071827; font-weight: 900; }
   .roofingSummarySwatch { flex: 0 0 36px; width: 36px; height: 24px; border: 1px solid rgba(15,23,42,.18); border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+  .windowSupplierGrid { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 14px; }
+  .windowSupplierGrid button { display: grid; gap: 9px; align-content: start; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; color: #071827; padding: 12px; text-align: left; }
+  .windowSupplierGrid button.selected { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.16); }
+  .windowSupplierGrid img { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #f1f5f9; border-radius: 7px; }
+  .windowSupplierLogo { display: inline-grid; justify-self: start; min-height: 34px; align-items: center; border: 1px solid #d7deea; border-radius: 7px; background: #f8fafc; color: #071827; padding: 6px 10px; font-weight: 950; }
+  .windowStagePanel, .windowScheduleSummary { display: grid; gap: 14px; }
+  .windowDemoBanner { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; border-radius: 8px; padding: 12px; font-weight: 900; }
+  .windowSourceChain { border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-weight: 850; }
+  .windowLegend, .windowBulkBar, .windowCountTiles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .windowBadge { display: inline-flex; align-items: center; min-height: 24px; border-radius: 999px; border: 1px solid #cbd5e1; padding: 3px 9px; font-size: 11px; font-weight: 950; white-space: nowrap; }
+  .windowBadge.blue { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .windowBadge.teal { background: #ccfbf1; border-color: #5eead4; color: #115e59; }
+  .windowBadge.purple { background: #f3e8ff; border-color: #d8b4fe; color: #6b21a8; }
+  .windowBadge.amber { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .windowBadge.green { background: #dcfce7; border-color: #86efac; color: #166534; }
+  .windowBadge.red { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+  .windowBadge.grey { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+  .windowScheduleTableWrap { max-width: 100%; overflow: auto; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; }
+  .windowScheduleTable { width: 100%; border-collapse: collapse; min-width: 980px; font-size: 12px; }
+  .windowScheduleTable th { position: sticky; top: 0; background: #eaf3ff; color: #102033; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .windowScheduleTable th, .windowScheduleTable td { border-bottom: 1px solid #e2e8f0; padding: 9px 10px; vertical-align: middle; }
+  .windowScheduleTable tbody tr:nth-child(even) { background: #f8fafc; }
+  .windowScheduleTable tr.defaultRow { background: #f0fdfa; }
+  .windowScheduleTable tr.overrideRow { background: #faf5ff; }
+  .windowScheduleTable tr.wetAreaRow { background: #fff7ed; }
+  .windowsColourPanel, .windowsReviewGrid, .windowReviewSummary, .yourWindowSelection { display: grid; gap: 14px; }
+  .windowsColourNotice, .windowApplyNotice, .privacyCheck { display: grid; gap: 5px; border: 1px solid #d7deea; background: #f8fafc; border-radius: 8px; padding: 12px; color: #475569; font-weight: 800; }
+  .privacyCheck.needsReview { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+  .privacyCheck.complete { border-color: #86efac; background: #f0fdf4; color: #166534; }
+  .windowCurrentSelectionPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto; gap: 12px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; }
+  .windowCurrentSelectionPanel span, .windowRecentColours span, .windowApplyControls span, .windowColourFilters span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .windowCurrentSelectionPanel strong { display: block; margin-top: 4px; color: #071827; font-size: 22px; font-weight: 950; }
+  .windowCurrentSelectionPanel small { display: block; margin-top: 3px; color: #475569; font-weight: 800; }
+  .windowCurrentColourCard { display: grid; gap: 6px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; text-align: left; }
+  .windowCurrentColourCard.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.14); }
+  .windowRecentColours, .windowApplyControls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+  .windowRecentColours button { border: 1px solid #d7deea; border-radius: 999px; background: #f8fafc; color: #475569; padding: 6px 10px; font-weight: 850; }
+  .windowApplyControls label { display: grid; gap: 5px; min-width: 170px; }
+  .windowApplyControls select, .windowColourFilters input, .windowColourFilters select, .windowEditControls select { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; background: #ffffff; color: #071827; padding: 8px 10px; font-weight: 800; }
+  .windowColourModal { width: min(1120px, 94vw); max-height: 90vh; overflow: auto; display: grid; gap: 14px; border-radius: 10px; background: #ffffff; padding: 18px; color: #071827; box-shadow: 0 24px 80px rgba(15,23,42,.24); }
+  .windowColourModalHeader, .windowColourModalFooter { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .windowColourModalHeader span { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .windowColourModalHeader strong { display: block; color: #071827; font-size: 28px; font-weight: 950; }
+  .windowColourModalHeader small, .windowColourModalFooter span { color: #92400e; font-weight: 900; }
+  .windowColourFilters { display: grid; grid-template-columns: minmax(220px, 1.3fr) minmax(170px, .7fr) minmax(220px, 1fr) auto; gap: 10px; align-items: end; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 12px; }
+  .windowColourFilters label { display: grid; gap: 5px; }
+  .windowColourFilters a { color: #0f766e; font-weight: 950; }
+  .supplierColourGrid { max-height: 54vh; overflow: auto; padding: 2px; }
+  .windowEditControls { display: grid; gap: 6px; min-width: 230px; }
+  .windowsSwatchGrid, .windowDefaultGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .windowsSwatchGrid button, .windowsGlassGrid button, .windowTextOptions button, .windowOptionCard { position: relative; display: grid; gap: 7px; border: 1px solid #d7deea; background: #ffffff; color: #071827; border-radius: 8px; padding: 10px; text-align: left; touch-action: manipulation; pointer-events: auto; }
+  .windowsSwatchGrid button.selected, .windowsGlassGrid button.selected, .windowTextOptions button.selected, .windowOptionCard.selected { border-color: #0f766e; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(15,118,110,.18), inset 0 0 0 1px #0f766e; }
+  .windowOptionCard:focus-visible { outline: 3px solid rgba(20,184,166,.45); outline-offset: 2px; }
+  .windowsSwatch { display: grid; place-items: center; width: 100%; height: 74px; border: 1px solid rgba(15,23,42,.2); border-radius: 8px; color: #ffffff; font-size: 18px; font-weight: 950; text-shadow: 0 1px 3px rgba(15,23,42,.55); }
+  .windowsGlassSample { display: grid !important; place-items: center; color: #0f766e; font-weight: 950; }
+  .windowSelectedBadge { justify-self: start; border: 1px solid #5eead4; border-radius: 999px; background: #ccfbf1; color: #115e59; padding: 3px 8px; font-size: 11px; line-height: 1; font-weight: 950; }
+  .windowApplyResult { border-radius: 8px; padding: 10px 12px; font-weight: 900; }
+  .windowApplyResult.success { border: 1px solid #86efac; background: #f0fdf4; color: #166534; }
+  .windowApplyResult.warning { border: 1px solid #fde68a; background: #fffbeb; color: #92400e; }
+  .windowsGlassGrid, .windowTextOptions { display: grid; gap: 8px; align-content: start; }
+  .windowsGlassSample { display: block; width: 100%; height: 46px; border: 1px solid #cbd5e1; border-radius: 7px; }
+  .windowCountTiles span { display: grid; min-width: 130px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 10px; color: #475569; font-size: 12px; font-weight: 850; }
+  .windowCountTiles b { color: #071827; font-size: 22px; line-height: 1; }
   .guidedDetailsModal { width: min(760px, 94vw); max-height: 90vh; overflow: auto; background: #ffffff; border-radius: 10px; padding: 18px; display: grid; gap: 12px; color: #071827; }
+  .guidedDetailsModal:has(.entryDoorDetailHero) { width: min(1120px, 96vw); grid-template-columns: minmax(320px, .9fr) minmax(340px, 1fr); align-items: start; }
   .guidedDetailsModal > button { justify-self: end; border: 1px solid #cbd5e1; background: #ffffff; border-radius: 8px; padding: 8px 12px; font-weight: 850; }
   .guidedDetailsModal img { width: 100%; max-height: 360px; object-fit: cover; border-radius: 8px; background: #e2e8f0; }
+  .guidedDetailsModal .entryDoorDetailHero { grid-row: 1 / span 8; align-self: start; max-height: none; height: min(76vh, 720px); object-fit: contain; object-position: center; background: #f8fafc; padding: 16px; box-sizing: border-box; cursor: zoom-in; }
+  .guidedDetailsModal .entryDoorImageUnavailable.entryDoorDetailHero { display: grid; place-items: center; min-height: 520px; border: 1px dashed #cbd5e1; color: #64748b; font-weight: 900; cursor: default; }
   .guidedDetailsGallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
   .guidedDetailsGallery img { width: 100%; aspect-ratio: 1; max-height: none; object-fit: cover; border-radius: 6px; }
+  .guidedDetailsModal:has(.entryDoorDetailHero) .guidedDetailsGallery img { object-fit: contain; object-position: center; background: #f8fafc; }
   .guidedDetailsModal h2 { margin: 0; font-size: 28px; line-height: 1.15; }
   .guidedDetailsModal p { margin: 0; color: #475569; font-weight: 700; }
   .guidedDetailsModal dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
@@ -6042,6 +16186,95 @@ const styles = `
   .alert.success { background: #dcfce7; color: #166534; }
   .alert.warning { background: #fef3c7; color: #92400e; }
   .documentWrap { display: grid; justify-content: stretch; justify-items: stretch; gap: 16px; width: 100%; }
+  .contractSchedulePanel { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(280px, 1fr) auto; gap: 14px; align-items: center; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 16px; }
+  .contractSchedulePanel h2 { margin: 2px 0 4px; font-size: 20px; color: #102033; }
+  .contractSchedulePanel p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.45; }
+  .panelKicker { color: #0f766e; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .scheduleReviewStats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .currentSavedSelectionsIndicator { display: inline-flex; width: fit-content; margin-top: 8px; border: 1px solid #99f6e4; border-radius: 999px; background: #f0fdfa; color: #0f766e; padding: 6px 10px; font-size: 12px; font-weight: 950; }
+  .scheduleReviewStats span { border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px; color: #64748b; font-size: 11px; font-weight: 800; text-align: center; }
+  .scheduleReviewStats strong { display: block; color: #102033; font-size: 18px; }
+  .scheduleIssueActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .scheduleReviewList { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+  .scheduleReviewList span { border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; color: #92400e; padding: 7px 9px; font-size: 12px; font-weight: 800; }
+  .scheduleDocumentLink { grid-column: 1 / -1; color: #0f766e; font-weight: 900; text-decoration: none; }
+  .builderPreflight { border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 14px; display: grid; gap: 12px; }
+  .builderPreflight.blocked { border-color: #f59e0b; background: #fffbeb; }
+  .builderPreflight header { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+  .builderPreflight header span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .builderPreflight header strong { display: block; color: #071827; font-size: 18px; line-height: 1.1; margin-top: 3px; }
+  .builderPreflight header p { margin: 0; max-width: 520px; color: #92400e; font-size: 13px; font-weight: 850; line-height: 1.35; }
+  .builderPreflightGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .builderPreflightGrid div { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .builderPreflightGrid h3 { flex-basis: 100%; margin: 0; color: #071827; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .builderPreflightGrid span { border: 1px solid #cbd5e1; border-radius: 999px; background: #ffffff; padding: 5px 8px; color: #334155; font-size: 12px; font-weight: 850; }
+  .builderPreflightGrid span.ok { border-color: #99f6e4; color: #0f766e; }
+  .builderPreflightGrid span.bad { border-color: #fed7aa; color: #9a3412; }
+  .builderPreflightActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .builderPreflightActions button { border: 1px solid #cbd5e1; background: #ffffff; color: #071827; }
+  .builderPreflightActions button.primary { border-color: #0f766e; background: #0f766e; color: #ffffff; }
+  .currentSectionBadge { display: grid; gap: 3px; border: 1px solid #d7deea; border-radius: 8px; background: #f8fafc; padding: 8px 10px; }
+  .currentSectionBadge span { color: #64748b; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+  .currentSectionBadge strong { color: #071827; font-size: 14px; font-weight: 950; }
+  .selectionCardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .scheduleSelectionCard { break-inside: avoid; page-break-inside: avoid; display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 12px; min-height: 190px; border: 1px solid #d7deea; border-radius: 8px; background: #ffffff; padding: 12px; box-shadow: 0 8px 22px rgba(15,23,42,.05); }
+  .scheduleSelectionCard.compact { grid-template-columns: 130px minmax(0, 1fr); min-height: 154px; }
+  .scheduleSelectionCard.missingImage { border-color: #fbbf24; background: #fffbeb; }
+  .scheduleSelectionImage { width: 100%; min-height: 150px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; padding: 6px; overflow: hidden; display: grid; place-items: center; color: #92400e; font-size: 13px; font-weight: 950; text-align: center; }
+  .scheduleSelectionCard.compact .scheduleSelectionImage { min-height: 118px; }
+  .scheduleSelectionImage img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .scheduleSelectionDetails { display: grid; gap: 8px; min-width: 0; align-content: start; }
+  .scheduleSelectionTitle { display: grid; gap: 3px; min-width: 0; }
+  .scheduleSelectionTitle span { color: #0f766e; font-size: 9.5pt; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .scheduleSelectionTitle strong { color: #071827; font-size: 14pt; line-height: 1.12; font-weight: 950; overflow-wrap: anywhere; }
+  .scheduleFieldList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; }
+  .scheduleFieldList div { min-width: 0; }
+  .scheduleFieldList dt { color: #64748b; font-size: 9pt; line-height: 1.15; font-weight: 950; text-transform: uppercase; letter-spacing: .03em; }
+  .scheduleFieldList dd { margin: 2px 0 0; color: #102033; font-size: 10pt; line-height: 1.25; font-weight: 820; overflow-wrap: anywhere; }
+  .scheduleColourSwatch { display: inline-flex; justify-self: start; min-width: 150px; min-height: 34px; align-items: center; justify-content: center; border: 1px solid rgba(15,23,42,.22); border-radius: 7px; padding: 4px 10px; color: #071827; font-size: 10pt; font-weight: 950; box-shadow: inset 0 0 0 1px rgba(255,255,255,.42); }
+  .scheduleBadges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .scheduleBadges span { border: 1px solid #cbd5e1; border-radius: 999px; background: #f8fafc; color: #334155; padding: 4px 8px; font-size: 9pt; line-height: 1; font-weight: 950; }
+  .scheduleSelectionDetails p, .scheduleSelectionDetails em { margin: 0; color: #475569; font-size: 9pt; line-height: 1.35; font-style: normal; font-weight: 760; }
+  .scheduleSelectionDetails em { color: #92400e; font-weight: 950; }
+  .scheduleSectionPage .selectionCardGrid { min-height: 420px; }
+  .scheduleSectionHero p { margin: 6px 0 0; color: #475569; font-size: 12px; line-height: 1.35; font-weight: 760; }
+  .scheduleEmptySection { grid-column: 1 / -1; display: grid; place-items: center; align-content: center; gap: 8px; min-height: 260px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; color: #475569; text-align: center; padding: 24px; }
+  .scheduleEmptySection strong { color: #071827; font-size: 16px; font-weight: 950; }
+  .scheduleEmptySection span { max-width: 520px; font-size: 12px; line-height: 1.4; font-weight: 760; }
+  .scheduleTableHeader { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: 18px; align-items: stretch; background: #071827; color: #ffffff; border-left: 8px solid #c99735; padding: 14px 16px; margin-bottom: 14px; }
+  .scheduleTableHeader span { color: #f8d58a; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .scheduleTableHeader h2 { margin: 2px 0 0; color: #ffffff; font-size: 25px; line-height: 1.02; text-transform: uppercase; }
+  .scheduleTableHeader p { margin: 5px 0 0; color: #dbe5f0; font-size: 11px; line-height: 1.35; font-weight: 760; }
+  .scheduleRowTable { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 9.5px; }
+  .scheduleRowTable th { background: #071827; color: #ffffff; border-right: 1px solid rgba(255,255,255,.18); padding: 7px 6px; text-align: left; text-transform: uppercase; letter-spacing: .04em; font-size: 8px; }
+  .scheduleRowTable td { border: 1px solid #d9e0e8; padding: 6px; vertical-align: middle; color: #102033; line-height: 1.22; overflow-wrap: anywhere; }
+  .scheduleRowTable tr { break-inside: avoid; page-break-inside: avoid; height: 98px; }
+  .scheduleRowTable td strong { display: block; color: #071827; font-weight: 950; line-height: 1.15; }
+  .scheduleRowTable td span { display: block; color: #475569; font-weight: 760; margin-top: 2px; }
+  .scheduleImageColumn { width: 108px; }
+  .scheduleProductColumn { width: 250px; }
+  .scheduleProductCell strong { font-size: 11px; }
+  .scheduleRowImage { width: 96px; height: 68px; border: 1px solid #d9e0e8; border-radius: 4px; background: #f8fafc; display: grid; place-items: center; padding: 3px; cursor: pointer; }
+  .scheduleRowImage.empty { cursor: default; background: #ffffff; }
+  .scheduleRowImage img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .scheduleColourDot { display: inline-block !important; width: 28px; height: 16px; border: 1px solid rgba(15,23,42,.25); border-radius: 3px; margin: 0 0 4px !important; }
+  .scheduleDividerPage, .scheduleOutstandingPage, .scheduleAcknowledgementPage { min-height: 0; aspect-ratio: 297 / 210; padding: 28px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 18px; }
+  .scheduleDividerContent { align-self: center; display: grid; gap: 12px; border-left: 8px solid #c99735; padding-left: 24px; max-width: 760px; }
+  .scheduleDividerContent span { color: #0f766e; font-size: 11pt; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+  .scheduleDividerContent h2 { margin: 0; color: #071827; font-size: 34pt; line-height: 1; font-weight: 950; }
+  .scheduleDividerContent p { margin: 0; color: #475569; font-size: 14pt; line-height: 1.35; font-weight: 750; }
+  .scheduleReviewHero, .acknowledgementCopy { display: grid; gap: 8px; align-content: start; }
+  .scheduleReviewHero span { color: #0f766e; font-size: 10pt; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+  .scheduleReviewHero strong, .acknowledgementCopy h2 { color: #071827; font-size: 24pt; line-height: 1.1; font-weight: 950; margin: 0; }
+  .scheduleReviewHero p, .acknowledgementCopy p { margin: 0; color: #475569; font-size: 11pt; line-height: 1.45; font-weight: 760; }
+  .scheduleOutstandingList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; overflow: hidden; }
+  .scheduleOutstandingList article { display: grid; gap: 4px; border: 1px solid #fde68a; border-radius: 8px; background: #fffbeb; padding: 10px; break-inside: avoid; }
+  .scheduleOutstandingList strong { color: #071827; font-size: 11pt; font-weight: 950; }
+  .scheduleOutstandingList span { color: #92400e; font-size: 10pt; font-weight: 850; }
+  .scheduleOutstandingList em { color: #64748b; font-size: 9pt; font-style: normal; font-weight: 950; text-transform: uppercase; }
+  .acknowledgementGrid { display: grid; grid-template-columns: 1fr 160px; gap: 16px; align-self: center; }
+  .acknowledgementGrid span { min-height: 62px; border-bottom: 2px solid #071827; color: #475569; font-size: 10pt; font-weight: 850; display: flex; align-items: flex-end; padding-bottom: 6px; }
+  .scheduleReviewStats.printed { align-self: end; }
   .documentViewer { --viewer-page-width: calc(100% - 48px); width: 100%; max-width: none; box-sizing: border-box; display: grid; justify-items: center; background: #eef2f7; border: 1px solid #d7deea; border-radius: 8px; padding: 24px; overflow: visible; }
   .documentViewer.fit-width { overflow-x: hidden; }
   .documentViewer.fit-page { overflow-x: hidden; }
@@ -6049,7 +16282,8 @@ const styles = `
   .documentPages { width: 100%; display: grid; justify-items: center; gap: 32px; }
   .documentViewer.single .documentPages { gap: 0; }
   .documentPageFrame { width: var(--viewer-page-width); max-width: none; display: grid; justify-items: stretch; scroll-margin-top: 118px; }
-  .page { width: 100%; min-height: 760px; background: #fff; box-shadow: 0 12px 34px rgba(15, 23, 42, .1); position: relative; overflow: hidden; box-sizing: border-box; }
+  .page { width: 100%; aspect-ratio: 297 / 210; min-height: 0; background: #fff; box-shadow: 0 12px 34px rgba(15, 23, 42, .1); position: relative; overflow: hidden; box-sizing: border-box; }
+  .roomPage { overflow: visible; }
   .page input, .page textarea, .page select { background: #fff !important; color: #071827 !important; border-color: #d8dee8 !important; box-shadow: none !important; }
   .page input:focus, .page textarea:focus, .page select:focus { outline: 2px solid rgba(201,151,53,.22); border-color: #d7a640 !important; }
   .coverPage { width: 100%; aspect-ratio: 297 / 210; height: auto; min-height: 0; box-sizing: border-box; background-size: cover; background-position: center; color: var(--cover-text); padding: clamp(24px, 3.2vw, 42px); display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: clamp(8px, 1.4vw, 14px); }
@@ -6091,7 +16325,7 @@ const styles = `
   .coverSettingsPanel small { color: #64748b; font-weight: 800; }
   .coverSettingsPanel p { margin: 0; color: #64748b; font-size: 13px; font-weight: 750; }
   .coverSettingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .infoPage { max-width: none; width: 100%; padding: 38px; display: grid; gap: 18px; }
+  .infoPage { max-width: none; width: 100%; aspect-ratio: 297 / 210; min-height: 0; padding: 34px; display: grid; gap: 14px; }
   .docHeader { display: grid; grid-template-columns: 150px 1fr auto; gap: 18px; align-items: center; margin-bottom: 28px; }
   .docHeader img { width: 140px; height: 84px; object-fit: contain; }
   .docHeaderLogoFallback { width: 140px; height: 84px; display: grid; place-items: center; border: 1px solid #d8dee8; color: #071827; font-size: 11px; font-weight: 950; text-align: center; padding: 6px; box-sizing: border-box; }
@@ -6106,14 +16340,20 @@ const styles = `
   .infoField span { color: #071827; font-size: 11px; font-weight: 900; text-transform: uppercase; }
   .infoField input, .infoField textarea { width: 100%; box-sizing: border-box; border: 0 !important; background: #fff !important; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; resize: vertical; }
   .infoField textarea { min-height: 74px; }
+  .readonlyInfoGrid { margin: 0; }
+  .readonlyInfoField { grid-template-columns: 142px minmax(0, 1fr); }
+  .readonlyInfoField dt { color: #071827; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; }
+  .readonlyInfoField dd { margin: 0; color: #102033; font-size: 13px; line-height: 1.3; font-weight: 850; overflow-wrap: anywhere; }
   .aboutBox { background: #f8efe5; border-radius: 8px; padding: 16px; margin-bottom: 22px; }
   .aboutBox textarea { min-height: 116px; border: 0; background: transparent; resize: vertical; }
+  .readonlyAboutBox { margin-bottom: 0; }
+  .readonlyAboutBox p { margin: 8px 0 0; color: #334155; font-size: 12px; line-height: 1.45; font-weight: 760; }
   .revisionTable { width: 100%; border-collapse: collapse; }
   .revisionTable th, .revisionTable td { border: 1px solid #dce3ea; padding: 8px; vertical-align: top; }
   .revisionTable th { background: #071827; color: white; font-size: 11px; text-transform: uppercase; }
   .signatureGrid { display: grid; grid-template-columns: 1fr 160px; gap: 18px; margin-top: 14px; }
   .signatureGrid span { border-bottom: 1px solid #94a3b8; padding: 12px 0; }
-  .contractPage { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 42px; min-height: 760px; background: #fff; }
+  .contractPage { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr 38px; aspect-ratio: 297 / 210; min-height: 0; background: #fff; }
   .documentSpine { grid-row: 1 / 3; background: linear-gradient(180deg, #071827 0%, #04111f 100%); color: white; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
   .spineBrand { display: grid; gap: 4px; }
   .spineBrand img { width: 150px; height: 88px; object-fit: contain; background: rgba(255,255,255,.96); padding: 4px; }
@@ -6131,7 +16371,7 @@ const styles = `
   .spineRooms button span { color: #d7a640; font-size: 15px; font-weight: 950; }
   .spineRooms button.active { background: linear-gradient(90deg, rgba(215,166,64,.95), rgba(215,166,64,.16)); color: white; padding-left: 6px; }
   .documentSpine em { color: #d7a640; font-family: Georgia, serif; margin-top: auto; font-size: 15px; }
-  .roomSheet { min-width: 0; padding: 20px 22px 18px; }
+  .roomSheet { min-width: 0; padding: 18px 20px 14px; overflow: hidden; }
   .roomHero { display: grid; grid-template-columns: minmax(420px, 1fr) 280px 112px; gap: 18px; align-items: start; border-bottom: 1px solid #dce3ea; padding-bottom: 14px; margin-bottom: 12px; }
   .roomName { border: 0; font-size: 33px; font-weight: 950; letter-spacing: .01em; text-transform: uppercase; padding: 0; line-height: 1; }
   .roomHero textarea { border: 0; min-height: 44px; color: #475569; resize: none; padding-left: 0; }
@@ -6186,7 +16426,7 @@ const styles = `
   .roomSidePanel h3 { margin: 0 0 9px; color: #071827; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
   .roomSidePanel textarea { min-height: 92px; border: 0 !important; background: transparent !important; padding: 0; resize: vertical; font-size: 11px; line-height: 1.6; color: #071827 !important; }
   .roomSidePanel ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 7px; font-size: 11px; }
-  .roomSidePanel li:before { content: "✓"; color: #16a34a; margin-right: 8px; }
+  .roomSidePanel li:before { content: "\\2713"; color: #16a34a; margin-right: 8px; }
   .roomSidePanel dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; font-size: 11px; }
   .roomSidePanel dt { color: #475569; }
   .roomSidePanel dd { margin: 0; font-weight: 700; }
@@ -6228,31 +16468,58 @@ const styles = `
   .modalProductCard em { color: #0f5132; font-weight: 900; font-style: normal; }
   .imageModal { background: white; border-radius: 10px; padding: 14px; display: grid; gap: 10px; max-width: 88vw; max-height: 90vh; }
   .imageModal img { max-width: 80vw; max-height: 74vh; object-fit: contain; }
-  @page { size: A4 portrait; margin: 0; }
+  @page { size: A4 landscape; margin: 0; }
   @media (max-width: 1180px) {
     .roofingLayout { grid-template-columns: 1fr; }
     .roofingLayout .guidedProgressMenu { position: static; }
     .roofingSwatchGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .roofingSelectionSummary { grid-template-columns: 1fr; }
     .roofingSelectionSummary button { justify-self: start; }
+    .drivewayFinishGrid { grid-template-columns: repeat(2, minmax(300px, 1fr)); }
+    .drivewayFinishCard { grid-template-rows: 250px 1fr; }
   }
   @media (max-width: 980px) {
+    .guidedAreaGrid, .guidedCategoryGrid { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .guidedImageCard { min-height: clamp(240px, 36vw, 300px); }
+    .drivewayFinishGrid,
+    .drivewaySelectionSummary dl,
     .roofingVisualGrid,
-    .roofingProfileGrid { grid-template-columns: 1fr; }
+    .roofingProfileGrid,
+    .garageFormPanel,
+    .garageColourToolbar,
+    .garageSelectedColour,
+    .garageReview,
+    .garageReview dl { grid-template-columns: 1fr; }
     .roofingSwatchGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .roofingSummaryDetails dl { grid-template-columns: 1fr; }
     .roofingVisualImage,
     .roofingProfileGrid img,
     .roofingSelectionSummary > img { aspect-ratio: 4 / 3; }
+    .entryDoorFilters { grid-template-columns: 1fr; }
+    .exteriorColourLayout,
+    .exteriorBulkInstructions,
+    .exteriorColourAreaRow,
+    .exteriorColourAreaRow > button:first-of-type { grid-template-columns: 1fr; }
+    .exteriorBulkActionBar { align-items: flex-start; }
+    .desktopInstruction { display: none; }
+    .mobileInstruction { display: block; }
+    .exteriorAreaColumnHeader { display: none; }
+    .exteriorApplyDialogActions { justify-content: flex-start; }
+    .exteriorColourAreaRow > input { justify-self: start; }
+    .exteriorColourAreaRow > button:not(:first-of-type) { justify-self: start; }
+    .drivewayFinishCard { grid-template-rows: 240px 1fr; }
   }
   @media print {
+    @page { size: A4 landscape; margin: 10mm; }
     .screen { display: block; background: white; }
-    .sidebar, .standardBanner, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
+    .sidebar, .standardActions, .scheduleControls, .alert, .coverSettingsPanel, .coverDebugPanel, .productModal, .modalBackdrop { display: none !important; }
     .workspace { padding: 0; overflow: visible; }
     .documentViewer, .documentPages, .documentPageFrame { display: block; width: auto; max-width: none; padding: 0; border: 0; background: white; }
-    .page { box-shadow: none; page-break-after: always; break-after: page; }
+    .page { box-shadow: none; page-break-after: always; break-after: page; overflow: visible; }
+    .scheduleSelectionCard { break-inside: avoid; page-break-inside: avoid; }
     .coverPage { width: 297mm; height: 210mm; aspect-ratio: auto; padding: 14mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   }
   @media (max-width: 1380px) { .selectionTable { min-width: 1360px; } .scheduleControls { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  @media (max-width: 980px) { .standardBanner, .roomHero, .notesRow, .scheduleControls { grid-template-columns: 1fr; } .standardMeta { justify-items: start; } .bannerActions, .sectionButtons { justify-content: flex-start; } .standardCopy h1 { font-size: 36px; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .documentViewer { padding: 12px; } .selectionTable { min-width: 1120px; } }
+  @media (max-width: 980px) { .roomHero, .notesRow, .scheduleControls, .contractSchedulePanel, .selectionCardGrid, .scheduleOutstandingList { grid-template-columns: 1fr; } .scheduleSelectionCard, .scheduleSelectionCard.compact { grid-template-columns: 1fr; } .standardActions { align-items: flex-start; } .bannerActions, .sectionButtons, .scheduleIssueActions { justify-content: flex-start; } .coverPage, .coverSettingsPanel, .coverDebugPanel { width: 100%; } .coverMeta, .coverSettingsGrid, .coverDebugPanel { grid-template-columns: 1fr; } .contractPage { grid-template-columns: 1fr; } .contractFooter { grid-column: 1; grid-row: auto; } .documentViewer { padding: 12px; } .selectionTable { min-width: 1120px; } .scheduleReviewStats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .exteriorWallConstructionOptions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .guidedAreaGrid, .guidedCategoryGrid { grid-template-columns: 1fr; } .guidedImageCard { min-height: clamp(220px, 64vw, 260px); padding: 14px; } .guidedImageCardTitle { font-size: 24px; } .drivewayFinishCard { grid-template-rows: 220px 1fr; } .drivewayConfigBlock, .drivewaySelectionSummary { padding: 14px; } .exteriorWallConstructionOptions, .entryDoorFurnitureSpecs, .entryDoorFurnitureClientSpecs, .entryDoorGlassBody dl { grid-template-columns: 1fr; } }
 `;

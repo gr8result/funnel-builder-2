@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import ICONS from "../../components/iconMap";
 import PRICING, { BASE_PLAN_INCLUDES, BASE_PLANS } from "../../data/pricing";
+import { useWorkspace } from "../../hooks/useWorkspace";
 
 const getBasePlanModuleKey = (moduleId) => {
   if (moduleId === "website-builder") return "website";
@@ -14,6 +15,7 @@ const getBasePlanModuleKey = (moduleId) => {
 
 export default function Checkout() {
   const router = useRouter();
+  const { workspaceId } = useWorkspace();
   const { selected = "", plan = "", emailPlan = "", smsPlan = "", calendarPlan = "", socialPlan = "", websitePlan = "", annual = "" } = router.query;
   const [loading, setLoading] = useState(false);
 
@@ -83,7 +85,7 @@ export default function Checkout() {
 
       const res = await fetch("/api/billing/create-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(workspaceId ? { "x-workspace-id": workspaceId } : {}) },
         body: JSON.stringify({
           lineItems,
           metadata: {
@@ -95,6 +97,7 @@ export default function Checkout() {
             socialPlan: socialPlanParam,
             websitePlan: websitePlanParam,
             annual: annualParam,
+            workspace_id: workspaceId || "",
           },
         }),
       });

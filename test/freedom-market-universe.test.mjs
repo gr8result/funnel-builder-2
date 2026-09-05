@@ -61,8 +61,8 @@ test("market discovery uses provider reference universe and separates ASX entitl
         previous_close: String(19 + index),
         percent_change: String(2 + index),
         volume: String(2_000_000 + index * 1000),
-        exchange: "NASDAQ",
-        currency: "USD",
+        exchange: symbol.endsWith(":ASX") ? "ASX" : "NASDAQ",
+        currency: symbol.endsWith(":ASX") ? "AUD" : "USD",
         datetime: "2026-08-14",
       }])));
     }
@@ -75,12 +75,49 @@ test("market discovery uses provider reference universe and separates ASX entitl
   assert.equal(discovery.coverage.US.totalSupported, 4);
   assert.equal(discovery.coverage.US.eligibleForScreening, 4);
   assert.equal(discovery.coverage.ASX.totalSupported, 1);
-  assert.equal(discovery.coverage.ASX.eligibleForScreening, 0);
-  assert.equal(discovery.coverage.ASX.unavailableReason, "ASX DATA PROVIDER REQUIRED");
+  assert.equal(discovery.coverage.ASX.eligibleForScreening, 1);
+  assert.equal(discovery.coverage.ASX.unavailableReason, null);
   assert.equal(discovery.broadScreen.requested, 4);
   assert.equal(discovery.broadScreen.eligible, 4);
   assert.equal(discovery.detailedCandidates.length, 2);
   restoreEnv("FREEDOM_MARKET_DATA_PROVIDER", previousProvider);
+});
+
+test("ASX discovery uses Yahoo Finance and rejects mismatched ASX history identity", async () => {
+  const previousKey = process.env.TWELVEDATA_API_KEY;
+  delete process.env.TWELVEDATA_API_KEY;
+  let { buildMarketDiscovery } = await importUniverse("asx-no-key");
+  global.fetch = async () => response({ data: [{ ...stock("ASX1", "ASX One", "ASX", "Australia", "AUD") }] });
+  let discovery = await buildMarketDiscovery({ markets: ["ASX"], minimumDailyVolume: 1_000_000 });
+  assert.equal(discovery.coverage.ASX.eligibleForScreening, 0);
+  assert.equal(discovery.coverage.ASX.unavailableReason, null);
+
+  process.env.TWELVEDATA_API_KEY = previousKey || "unit-test-key";
+  buildMarketDiscovery = (await importUniverse("asx-mismatch")).buildMarketDiscovery;
+  global.fetch = async (url) => {
+    const parsed = new URL(String(url));
+    if (parsed.pathname.endsWith("/api_usage")) return response({ plan_category: "basic", plan_limit: 8, plan_daily_limit: 800 });
+    if (parsed.pathname.endsWith("/stocks")) return response({ data: [{ ...stock("ASX1", "ASX One", "ASX", "Australia", "AUD") }] });
+    if (parsed.hostname.includes("yahoo") && parsed.pathname.includes("/chart/")) {
+      return response({ chart: { result: [{
+        meta: { symbol: "ASX1.AX", exchangeName: "NASDAQ", fullExchangeName: "NASDAQ", currency: "USD" },
+        timestamp: Array.from({ length: 60 }, (_, index) => Date.UTC(2026, 5, 1 + index) / 1000),
+        indicators: { quote: [{
+          open: Array.from({ length: 60 }, (_, index) => 20 + index * 0.02),
+          high: Array.from({ length: 60 }, (_, index) => 20.4 + index * 0.02),
+          low: Array.from({ length: 60 }, (_, index) => 19.8 + index * 0.02),
+          close: Array.from({ length: 60 }, (_, index) => 20.1 + index * 0.02),
+          volume: Array.from({ length: 60 }, () => 2_500_000),
+        }] },
+      }], error: null } });
+    }
+    throw new Error(`Unexpected URL ${url}`);
+  };
+  discovery = await buildMarketDiscovery({ markets: ["ASX"], minimumDailyVolume: 1_000_000 });
+  assert.equal(discovery.coverage.ASX.eligibleForScreening, 1);
+  assert.equal(discovery.broadScreen.eligible, 0);
+  assert.match(discovery.broadScreen.unavailable[0].reason, /expected ASX AUD/i);
+  restoreEnv("TWELVEDATA_API_KEY", previousKey);
 });
 
 function alpacaBars(symbol, volume = 2_000_000, start = 20) {
@@ -132,6 +169,20 @@ test("market discovery combines Finnhub US symbols with Alpaca batched OHLCV pre
         PINK: alpacaBars("PINK", 1000, 1),
       } });
     }
+    if (parsed.hostname.includes("yahoo") && parsed.pathname.includes("/chart/")) {
+      const bars = alpacaBars("ASX1", 2_500_000, 4);
+      return response({ chart: { result: [{
+        meta: { symbol: "ASX1.AX", exchangeName: "ASX", fullExchangeName: "ASX", currency: "AUD", instrumentType: "EQUITY" },
+        timestamp: bars.map((bar) => Date.parse(bar.t) / 1000),
+        indicators: { quote: [{
+          open: bars.map((bar) => bar.o),
+          high: bars.map((bar) => bar.h),
+          low: bars.map((bar) => bar.l),
+          close: bars.map((bar) => bar.c),
+          volume: bars.map((bar) => bar.v),
+        }] },
+      }], error: null } });
+    }
     throw new Error(`Unexpected URL ${url}`);
   };
 
@@ -140,12 +191,12 @@ test("market discovery combines Finnhub US symbols with Alpaca batched OHLCV pre
 
   assert.equal(discovery.coverage.US.totalSupported, 3);
   assert.equal(discovery.coverage.US.eligibleForScreening, 3);
-  assert.equal(discovery.coverage.ASX.unavailableReason, "ASX DATA PROVIDER REQUIRED");
-  assert.equal(discovery.broadScreen.provider, "Alpaca");
-  assert.equal(discovery.broadScreen.requested, 3);
-  assert.equal(discovery.broadScreen.symbolsRequested, 3);
-  assert.equal(discovery.broadScreen.barsReturned, 180);
-  assert.equal(discovery.broadScreen.eligible, 2);
+  assert.equal(discovery.coverage.ASX.unavailableReason, null);
+  assert.equal(discovery.broadScreen.provider, "Alpaca + Yahoo Finance");
+  assert.equal(discovery.broadScreen.requested, 4);
+  assert.equal(discovery.broadScreen.symbolsRequested, 4);
+  assert.equal(discovery.broadScreen.barsReturned, 240);
+  assert.equal(discovery.broadScreen.eligible, 3);
   assert.equal(discovery.detailedCandidates.length, 2);
   assert.equal(alpacaCalls, 1);
   delete process.env.FINNHUB_API_KEY;

@@ -15,6 +15,7 @@
 
 import twilio from "twilio";
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
 
 function pickEnv(...keys) {
   for (const k of keys) {
@@ -58,6 +59,23 @@ async function handler(req, res) {
     if (req.method !== "POST") {
       res.setHeader("Allow", "POST");
       return res.status(405).json({ ok: false, error: "Method not allowed" });
+    }
+
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    if (demoState.isDemo) {
+      const rawTo = req.body?.to ?? "";
+      const to = normalizePhone(rawTo);
+      const simulated = await demoSimulationResult({
+        workspaceId,
+        userId: req.user.id,
+        actionType: "phone-call",
+        provider: "twilio",
+        target: to,
+        payload: { route: "/api/telephony/make-call", to },
+        message: "Demo phone call simulated - no Twilio call created.",
+      });
+      return res.status(200).json({ ...simulated, sid: `demo_call_${Date.now()}`, to, client_to: "demo-browser-user" });
     }
 
     const accountSid = pickEnv("TWILIO_ACCOUNT_SID", "TWILIO_SID");

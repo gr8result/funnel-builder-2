@@ -14,6 +14,7 @@ import {
   resolveProductLibraryImage,
 } from "../lib/product-library/catalogueModel.js";
 import {
+  APPLIANCE_REQUIREMENTS,
   KITCHEN_REQUIREMENTS,
   createSelectionPayloadFromProduct,
   nextIncompleteRequirement,
@@ -23,15 +24,26 @@ import {
 
 const require = createRequire(import.meta.url);
 const kitchenCatalogue = require("../data/product-library/catalogues/kitchen/AU-KITCHEN-PRODUCT-CATALOGUE.json");
+const applianceDashboardImage = new URL("../public/images/client-selections/appliances-kitchen.jpeg", import.meta.url);
 
 const kitchenProducts = kitchenCatalogue.products.map((product) => normalizeMasterProductRecord(product));
 const enablements = ensureDemoBuilderCatalogueEnablements(kitchenProducts, [], DEMO_BUILDER_ORGANISATION_ID);
 const kitchenFamilyKeys = Array.from(new Set(KITCHEN_REQUIREMENTS.map((requirement) => requirement.familyKey)));
+const coreApplianceRequirements = APPLIANCE_REQUIREMENTS.filter((requirement) => !["freestanding-cooker", "appliance-pack"].includes(requirement.requirementKey));
+const applianceFamilyKeys = Array.from(new Set(coreApplianceRequirements.map((requirement) => requirement.familyKey)));
+const kitchenAndApplianceRequirements = [...KITCHEN_REQUIREMENTS, ...coreApplianceRequirements];
 
-assert.equal(kitchenProducts.length, 29, "Kitchen catalogue must expose the seeded master products");
-assert.equal(activeKitchenMasterProducts(kitchenProducts).length, kitchenProducts.length, "Kitchen demo enablement candidates cover the catalogue");
+assert.equal(KITCHEN_REQUIREMENTS.some((requirement) => requirement.requirementKey === "oven"), false, "Oven is no longer part of the Kitchen checklist");
+assert.deepEqual(coreApplianceRequirements.map((requirement) => requirement.requirementKey), ["oven", "cooktop", "rangehood", "dishwasher", "microwave", "fridge"], "Appliances owns the core appliance selection checklist");
+assert.ok(APPLIANCE_REQUIREMENTS.some((requirement) => requirement.requirementKey === "freestanding-cooker"), "Appliances supports Freestanding Cooker when catalogue content is available");
+assert.ok(APPLIANCE_REQUIREMENTS.some((requirement) => requirement.requirementKey === "appliance-pack"), "Appliances supports Appliance Packs when catalogue content is available");
+assert.ok(fs.existsSync(applianceDashboardImage), "Supplied Appliances dashboard image is stored in public assets");
 
-KITCHEN_REQUIREMENTS.forEach((requirement) => {
+assert.equal(kitchenProducts.length, 30, "Kitchen catalogue must expose the seeded master products");
+assert.equal(activeKitchenMasterProducts(kitchenProducts).length, 28, "Kitchen demo enablement candidates exclude generic paint and lighting");
+assert.equal(activeKitchenMasterProducts(kitchenProducts).some((product) => ["paint", "lighting"].includes(product.familyKey)), false, "generic paint and lighting do not appear as active Kitchen candidates");
+
+kitchenAndApplianceRequirements.forEach((requirement) => {
   const products = kitchenProducts.filter((product) => product.familyKey === requirement.familyKey && product.requirementKeys.includes(requirement.requirementKey));
   assert.ok(products.length > 0, `${requirement.label} has Product Library master records`);
   assert.ok(familyByKey(requirement.familyKey), `${requirement.familyKey} is a registered Product Library family`);
@@ -42,13 +54,13 @@ KITCHEN_REQUIREMENTS.forEach((requirement) => {
   assert.notEqual(resolveProductLibraryImage({ familyKey: requirement.familyKey }), FAMILY_IMAGE_FALLBACKS.bedrooms, `${requirement.label} fallback cannot be bedroom imagery`);
 });
 
-["ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "handles"].forEach((familyKey) => {
+["ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "fridges", "handles"].forEach((familyKey) => {
   assert.ok(kitchenProducts.filter((product) => product.familyKey === familyKey).every((product) => product.imageStatus === "verified_exact"), `${familyKey} uses exact product imagery`);
 });
 assert.equal(kitchenProducts.filter((product) => product.familyKey === "ovens").length, 5, "Kitchen includes at least five exact oven products");
 assert.equal(kitchenProducts.filter((product) => product.familyKey === "cooktops").length, 5, "Kitchen includes at least five exact cooktop products");
 
-kitchenFamilyKeys.forEach((familyKey) => {
+[...kitchenFamilyKeys, ...applianceFamilyKeys].forEach((familyKey) => {
   const familyProducts = kitchenProducts.filter((product) => product.familyKey === familyKey);
   const enabledRefs = enablements.filter((item) => (
     item.organisationId === DEMO_BUILDER_ORGANISATION_ID &&
@@ -81,8 +93,8 @@ kitchenFamilyKeys.forEach((familyKey) => {
   assert.equal(editedSelectable.find((item) => item.productCode === product.productCode)?.description, editedDescription, `${familyKey} Product Library edits propagate to Client Selections`);
 });
 
-const ovenRequirement = KITCHEN_REQUIREMENTS.find((requirement) => requirement.requirementKey === "oven");
-const cooktopRequirement = KITCHEN_REQUIREMENTS.find((requirement) => requirement.requirementKey === "cooktop");
+const ovenRequirement = APPLIANCE_REQUIREMENTS.find((requirement) => requirement.requirementKey === "oven");
+const cooktopRequirement = APPLIANCE_REQUIREMENTS.find((requirement) => requirement.requirementKey === "cooktop");
 const ovenProduct = kitchenProducts.find((product) => product.productCode === "OVEN-WESTINGHOUSE-WVE6515SD");
 const ovenPayload = createSelectionPayloadFromProduct({
   workspaceId: DEMO_BUILDER_ORGANISATION_ID,
@@ -95,8 +107,8 @@ assert.equal(ovenPayload.selected_details.officialProductURL, ovenProduct.offici
 assert.equal(ovenPayload.selected_details.selectedPrice, null, "Quote-required Oven selection does not persist fake selected price");
 assert.equal(statusForRequirement(ovenRequirement, ovenPayload), "complete", "Quote-required selected Oven can save and turn green with variation pending");
 
-const selectedMap = selectedByRequirement([ovenPayload], KITCHEN_REQUIREMENTS);
-assert.equal(nextIncompleteRequirement(KITCHEN_REQUIREMENTS, selectedMap, ovenRequirement)?.requirementKey, cooktopRequirement.requirementKey, "Kitchen auto-advance moves from Oven to Cooktop");
+const selectedMap = selectedByRequirement([ovenPayload], APPLIANCE_REQUIREMENTS);
+assert.equal(nextIncompleteRequirement(APPLIANCE_REQUIREMENTS, selectedMap, ovenRequirement)?.requirementKey, cooktopRequirement.requirementKey, "Appliances auto-advance moves from Oven to Cooktop");
 
 const disabledRef = createBuilderProductReference(ovenProduct, {
   organisationId: DEMO_BUILDER_ORGANISATION_ID,
@@ -117,6 +129,8 @@ assert.equal(disabledSelectable.some((product) => product.productCode === ovenPr
 const selectionsSource = fs.readFileSync(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
 assert.match(selectionsSource, /AU-KITCHEN-PRODUCT-CATALOGUE\.json/, "Client Selections imports the Kitchen master catalogue");
 assert.match(selectionsSource, /guided-kitchen-checklist/, "Kitchen opens as a progress checklist");
+assert.match(selectionsSource, /guided-appliances-checklist/, "Appliances opens as its own progress checklist");
+assert.match(selectionsSource, /\/images\/client-selections\/appliances-kitchen\.jpeg/, "Appliances dashboard card uses supplied local image");
 assert.match(selectionsSource, /KITCHEN COMPLETE\. Opening Interior\./, "Kitchen completion announces completion and opens the next Interior area");
 assert.doesNotMatch(selectionsSource, /data\/product-library\/catalogues\/client-selections/i, "Kitchen must not load a client-only catalogue");
 

@@ -1,34 +1,33 @@
-// Guards the shared CDN PDF.js loader extracted from
-// components/estimate-builder/ai-takeoff/pdfPlanRendering.js into
-// lib/pdf/pdfjsLoader.js. The Estimate Builder workbook's PDF import paths
-// (Project Estimate, Standard Inclusions) depend on this module.
+// Guards the shared local PDF.js loader. The Estimate Builder workbook's PDF
+// import paths (Project Estimate, Standard Inclusions) depend on this module.
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 const loader = await import("../lib/pdf/pdfjsLoader.js");
+const packageJson = JSON.parse(fs.readFileSync("node_modules/pdfjs-dist/package.json", "utf8"));
 
 // --- exports -------------------------------------------------------------
 assert.equal(typeof loader.loadPdfJs, "function", "lib/pdf/pdfjsLoader.js must export loadPdfJs.");
 assert.equal(typeof loader.workerSrcForPdfJs, "function", "lib/pdf/pdfjsLoader.js must export workerSrcForPdfJs.");
-assert.equal(loader.PDFJS_VERSION, "3.11.174", "The pinned PDF.js version must stay 3.11.174.");
+assert.equal(loader.PDFJS_VERSION, packageJson.version, "The PDF.js loader must use the installed pdfjs-dist version.");
+assert.equal(loader.PDFJS_WORKER_SRC, "/pdfjs/pdf.worker.min.mjs", "The PDF.js worker must be app-local.");
 
 // --- workerSrcForPdfJs ---------------------------------------------------
-const CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174";
-
 assert.equal(
-  loader.workerSrcForPdfJs({ version: "3.11.174" }),
-  `${CDN}/pdf.worker.min.js`,
-  "The pinned version must resolve to the cdnjs worker build.",
+  loader.workerSrcForPdfJs({ version: packageJson.version }),
+  "/pdfjs/pdf.worker.min.mjs",
+  "The installed version must resolve to the local worker build.",
 );
 assert.equal(
   loader.workerSrcForPdfJs(undefined),
-  `${CDN}/pdf.worker.min.js`,
-  "A missing pdfjsLib must fall back to the pinned cdnjs worker build.",
+  "/pdfjs/pdf.worker.min.mjs",
+  "A missing pdfjsLib must fall back to the installed local worker build.",
 );
-assert.equal(
-  loader.workerSrcForPdfJs({ version: "4.2.67" }),
-  "https://unpkg.com/pdfjs-dist@4.2.67/legacy/build/pdf.worker.min.mjs",
-  "Any other version must resolve to the unpkg legacy worker build.",
+assert.throws(
+  () => loader.workerSrcForPdfJs({ version: "4.2.67" }),
+  /PDF\.js version mismatch/,
+  "Any other version must fail instead of mixing worker versions.",
 );
 
 // --- SSR rejection + memoisation ----------------------------------------

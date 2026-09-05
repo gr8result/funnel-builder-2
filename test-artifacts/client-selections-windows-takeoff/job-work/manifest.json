@@ -1,0 +1,120 @@
+{
+  "formatName": "GR8 Master Job Package",
+  "packageType": "gr8-master-job",
+  "schemaVersion": "gr8job.package.v1",
+  "packageVersion": 3,
+  "projectId": "03-09/123",
+  "generatedAt": "2026-09-02T20:43:31.946Z",
+  "applicationVersion": "gr8-result-estimate-builder",
+  "project": {
+    "id": "03-09/123",
+    "jobName": "New Job 03/09",
+    "projectName": "New Job 03/09",
+    "clientName": "Bill and Mary New",
+    "jobNumber": "03-09/123",
+    "address": "24 Apolace Street Somewhere Qld 4577",
+    "created": "2026-09-02T20:41:11.543Z",
+    "lastSaved": "2026-09-02T20:43:31.946Z"
+  },
+  "includedModuleSections": [
+    "job-details",
+    "estimate",
+    "takeoff",
+    "client-selections",
+    "quotation",
+    "boq",
+    "procurement",
+    "variations",
+    "project-documents",
+    "assets"
+  ],
+  "assetIndex": {
+    "plans": [],
+    "takeoff": [],
+    "selections": [],
+    "images": []
+  },
+  "sectionChecksums": {
+    "job-details": "fnv1a32-767b433f",
+    "estimate": "fnv1a32-d4d203e2",
+    "takeoff": "fnv1a32-79106b33",
+    "client-selections": "fnv1a32-99797709",
+    "quotation": "fnv1a32-fb867354",
+    "boq": "fnv1a32-9345cbc7",
+    "procurement": "fnv1a32-d089d69a",
+    "variations": "fnv1a32-9345cbc7",
+    "project-documents": "fnv1a32-1becf2e9",
+    "assets": "fnv1a32-f98c0250"
+  },
+  "migrationHistory": [
+    {
+      "schemaVersion": "gr8job.package.v1",
+      "migratedAt": "2026-09-02T20:43:31.946Z",
+      "note": "Created or normalised master job package."
+    }
+  ],
+  "sections": {
+    "job-details": {
+      "path": "job-details.json",
+      "present": true,
+      "independent": true
+    },
+    "estimate": {
+      "path": "estimate.json",
+      "present": true,
+      "independent": true
+    },
+    "takeoff": {
+      "path": "takeoff.json",
+      "present": true,
+      "independent": true
+    },
+    "client-selections": {
+      "path": "client-selections.json",
+      "present": true,
+      "independent": true
+    },
+    "quotation": {
+      "path": "quotation.json",
+      "present": true,
+      "independent": true
+    },
+    "boq": {
+      "path": "boq.json",
+      "present": true,
+      "independent": true
+    },
+    "procurement": {
+      "path": "procurement.json",
+      "present": true,
+      "independent": true
+    },
+    "variations": {
+      "path": "variations.json",
+      "present": true,
+      "independent": true
+    },
+    "project-documents": {
+      "path": "project-documents.json",
+      "present": true,
+      "independent": true
+    },
+    "assets": {
+      "path": "assets.json",
+      "present": true,
+      "independent": true
+    }
+  },
+  "safety": {
+    "writeMode": "single-master-file",
+    "compatibilityMirror": "workbook",
+    "moduleSectionsAreIndependent": true
+  },
+  "lastSavedDate": "2026-09-02T20:43:31.946Z",
+  "backupVersions": [
+    {
+      "path": "backups/New Job 03 09 - 2026-09-03 06-43-32.gr8job",
+      "byteLength": 662556
+    }
+  ]
+}

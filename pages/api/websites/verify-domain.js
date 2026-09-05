@@ -1,6 +1,13 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { getAppHost, getCustomDomainTargetHost, normalizeDomain } from "../../../lib/website-builder/publishConfig";
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
+import {
+  assertWebsiteUnlockedForMutation,
+  getWebsiteUnlockTokenFromRequest,
+  markWebsiteMutationCommitted,
+  websiteLockedResponse,
+} from "../../../lib/website-builder/contentLock";
 
 function getBearerToken(req) {
   const header = String(req.headers.authorization || req.headers.Authorization || "").trim();
@@ -31,17 +38,56 @@ async function handler(req, res) {
 
   const publicationId = String(req.body?.id || "").trim();
   if (!publicationId) return res.status(400).json({ ok: false, error: "Publication id is required" });
+  const unlockToken = getWebsiteUnlockTokenFromRequest(req);
+  const workspaceId = requestWorkspaceId(req);
+  const demoState = await getRequestDemoState(req);
 
-  const { data: record, error } = await supabaseAdmin
+  let recordQuery = supabaseAdmin
     .from("published_websites")
-    .select("id, user_id, primary_domain, custom_domain, domain_status")
+    .select("id, user_id, workspace_id, project_id, primary_domain, custom_domain, domain_status")
     .eq("id", publicationId)
     .eq("user_id", userData.user.id)
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  if (workspaceId) {
+    recordQuery = recordQuery.eq("workspace_id", workspaceId);
+  }
+
+  const { data: record, error } = await recordQuery.maybeSingle();
 
   if (error || !record) return res.status(404).json({ ok: false, error: error?.message || "Website not found" });
   if (!record.custom_domain) return res.status(400).json({ ok: false, error: "No custom domain set for this site" });
+  const lock = assertWebsiteUnlockedForMutation({
+    projectId: record.project_id || "",
+    userId: userData.user.id,
+    unlockToken,
+    action: "domain-verify",
+  });
+  if (!lock.ok) return websiteLockedResponse(res, lock);
+
+  if (demoState.isDemo) {
+    const customDomain = normalizeDomain(record.custom_domain);
+    const simulated = await demoSimulationResult({
+      workspaceId,
+      userId: userData.user.id,
+      actionType: "custom-domain-verify",
+      provider: "website-builder",
+      target: customDomain,
+      payload: { publicationId, customDomain },
+      message: "Demo custom domain verification simulated - no DNS lookup or real verification performed.",
+    });
+    markWebsiteMutationCommitted({ projectId: record.project_id || "", unlockToken, action: "save" });
+    return res.status(200).json({
+      ok: true,
+      demo: true,
+      simulated: true,
+      verified: false,
+      status: "demo_simulated",
+      cnameAnswers: [],
+      aAnswers: [],
+      message: simulated.message,
+    });
+  }
 
   const customDomain = normalizeDomain(record.custom_domain);
   const primaryDomain = normalizeDomain(record.primary_domain);
@@ -63,11 +109,18 @@ async function handler(req, res) {
         ? "manual_review_required"
         : "pending_verification";
 
-    await supabaseAdmin
+    let updateQuery = supabaseAdmin
       .from("published_websites")
       .update({ domain_status: nextStatus })
       .eq("id", record.id)
       .eq("user_id", userData.user.id);
+
+    if (workspaceId) {
+      updateQuery = updateQuery.eq("workspace_id", workspaceId);
+    }
+
+    await updateQuery;
+    markWebsiteMutationCommitted({ projectId: record.project_id || "", unlockToken, action: "save" });
 
     return res.status(200).json({
       ok: true,

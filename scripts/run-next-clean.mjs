@@ -51,6 +51,37 @@ function removeLock(expectedPid = null) {
   } catch {}
 }
 
+function writeLock(pid, extra = {}) {
+  fs.writeFileSync(lockFile, JSON.stringify({
+    pid,
+    mode,
+    distDir,
+    startedAt: new Date().toISOString(),
+    ...extra,
+  }, null, 2));
+}
+
+function acquireStartupLock() {
+  try {
+    const fd = fs.openSync(lockFile, "wx");
+    try {
+      fs.writeFileSync(fd, JSON.stringify({
+        pid: process.pid,
+        mode,
+        distDir,
+        status: "starting",
+        startedAt: new Date().toISOString(),
+      }, null, 2));
+    } finally {
+      fs.closeSync(fd);
+    }
+    return true;
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    return false;
+  }
+}
+
 const existingLock = readLock();
 
 // Whether another dev server is really running is decided by the port, not by the
@@ -94,6 +125,17 @@ if (existingLock) {
   removeLock();
 }
 
+if (!acquireStartupLock()) {
+  const current = readLock();
+  const owner = current?.pid ? ` (lock pid ${current.pid})` : "";
+  console.error(
+    `A ${mode} process is already starting or running for this workspace and shares ${distDir}${owner}.\n` +
+    `Starting another one could leave ${distDir} half-written and make Next return HTTP 500.\n` +
+    `Use the running process, or stop it first.`
+  );
+  process.exit(1);
+}
+
 if (cleanDist) {
   try {
     fs.rmSync(nextDir, { recursive: true, force: true });
@@ -115,12 +157,7 @@ const child = spawn(process.execPath, [nextBin, mode], {
 });
 
 try {
-  fs.writeFileSync(lockFile, JSON.stringify({
-    pid: child.pid,
-    mode,
-    distDir,
-    startedAt: new Date().toISOString(),
-  }, null, 2));
+  writeLock(child.pid, { status: "running" });
 } catch (error) {
   console.error(`Failed to create lock file ${lockFile}: ${error?.message || error}`);
   child.kill();

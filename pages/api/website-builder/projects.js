@@ -29,6 +29,13 @@ import {
 } from "../../../lib/website-builder/testimonialImages";
 import { normalizeVideoHeroBlock, normalizeVideoHeroBlocksForPersistence, syncVideoHeroChaiDataBlocks } from "../../../lib/website-builder/videoHero";
 import { collectVideoHeroMedia, normalizeDomain, resolveCanonicalGlobalFooterBlock, resolveProjectSlug, withProjectPublicationIdentity } from "../../../lib/website-builder/publishConfig";
+import {
+  assertWebsiteUnlockedForMutation,
+  getWebsiteUnlockTokenFromRequest,
+  isProtectedWebsiteProject,
+  markWebsiteMutationCommitted,
+  websiteLockedResponse,
+} from "../../../lib/website-builder/contentLock";
 
 const TABLE_NAME = "published_websites";
 const GR8_RESULT_PROJECT_ID = "2208a52a-8175-477e-823c-fc6de7fe4afe";
@@ -535,6 +542,7 @@ async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
   const userId = await requireUserId(req, res);
   if (!userId) return;
+  const unlockToken = getWebsiteUnlockTokenFromRequest(req);
 
   if (req.method === "GET") {
     const projectId = String(req.query?.projectId || "").trim();
@@ -576,6 +584,9 @@ async function handler(req, res) {
 
       if (draftResult.data) {
         const mapped = mapProjectRow(draftResult.data);
+        if (isProtectedWebsiteProject(projectId)) {
+          return res.status(200).json({ ok: true, project: mapped });
+        }
         const migrated = await migrateWebsiteProjectToSplitStorage(userId, mapped, { pageName: requestedPage });
         return res.status(200).json({ ok: true, project: migrated || mapped });
       }
@@ -663,6 +674,13 @@ async function handler(req, res) {
     const requestId = String(req.body?.requestId || project?.__saveRequestId || "").trim();
     const pageVersion = String(req.body?.pageVersion || project?.projectVersion || "").trim();
     const baseUpdatedAt = String(req.body?.baseUpdatedAt || project?.__saveBaseUpdatedAt || "").trim();
+    const lock = assertWebsiteUnlockedForMutation({
+      projectId,
+      userId,
+      unlockToken,
+      action: siteOnly ? "site-save" : "page-save",
+    });
+    if (!lock.ok) return websiteLockedResponse(res, lock);
 
     const normalizedProject = normalizeProjectBlocksForSave(project);
     const now = new Date().toISOString();
@@ -728,7 +746,7 @@ async function handler(req, res) {
     const currentSplitUpdatedAt = currentSplitProject?.updatedAt || currentSplitProject?.savedAt || "";
     const incomingBaseMs = Date.parse(baseUpdatedAt || 0) || 0;
     const currentSplitMs = Date.parse(currentSplitUpdatedAt || 0) || 0;
-    if (baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs) {
+    if (!lock.session && baseUpdatedAt && currentSplitUpdatedAt && incomingBaseMs < currentSplitMs) {
       console.warn("[website-builder save] rejected stale split-storage write before page upsert", {
         projectId,
         pageName: requestedPage || "",
@@ -757,8 +775,16 @@ async function handler(req, res) {
 
     let splitProject = null;
     try {
-      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource });
+      splitProject = await saveSplitWebsiteProject(userId, nextProject, { pageName: requestedPage, siteOnly, backupSource: saveSource, unlockToken });
     } catch (storageError) {
+      if (storageError?.status || storageError?.code === "WEBSITE_LOCKED") {
+        return res.status(Number(storageError.status || 423)).json({
+          ok: false,
+          locked: true,
+          code: storageError.code || "WEBSITE_LOCKED",
+          error: storageError.message || storageError.error || "Website protected - unlock before saving.",
+        });
+      }
       return res.status(500).json({ ok: false, error: toErrorMessage(storageError, "Could not save website page file") });
     }
 
@@ -843,6 +869,14 @@ async function handler(req, res) {
         });
       }
 
+      markWebsiteMutationCommitted({
+        projectId,
+        unlockToken,
+        action: "save",
+        draftRevision: savedProject?.projectVersion || nextProject?.projectVersion || "",
+        draftUpdatedAt: savedProject?.__saveBaseUpdatedAt || savedProject?.updatedAt || savedProject?.savedAt || "",
+        contentHash: savedProject?.contentHash || nextProject?.contentHash || "",
+      });
       return res.status(200).json({
         ok: true,
         project: savedProject,
@@ -872,7 +906,7 @@ async function handler(req, res) {
 
     const currentUpdatedAt = existing.data?.updated_at || existing.data?.site_data?.updatedAt || "";
     const currentMs = Date.parse(currentUpdatedAt || 0) || 0;
-    if (baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs) {
+    if (!lock.session && baseUpdatedAt && currentUpdatedAt && incomingBaseMs < currentMs) {
       console.warn("[website-builder save] rejected stale write", {
         projectId,
         pageName: requestedPage || "",
@@ -1158,6 +1192,14 @@ async function handler(req, res) {
       });
     }
 
+    markWebsiteMutationCommitted({
+      projectId,
+      unlockToken,
+      action: "save",
+      draftRevision: savedProject?.projectVersion || nextProject?.projectVersion || "",
+      draftUpdatedAt: savedProject?.__saveBaseUpdatedAt || savedProject?.updatedAt || savedProject?.savedAt || "",
+      contentHash: savedProject?.contentHash || nextProject?.contentHash || "",
+    });
     return res.status(200).json({
       ok: true,
       project: savedProject,
@@ -1176,6 +1218,13 @@ async function handler(req, res) {
     if (!patchProjectId || !newName) {
       return res.status(400).json({ ok: false, error: "projectId and name are required" });
     }
+    const renameLock = assertWebsiteUnlockedForMutation({
+      projectId: patchProjectId,
+      userId,
+      unlockToken,
+      action: "rename",
+    });
+    if (!renameLock.ok) return websiteLockedResponse(res, renameLock);
 
     const draftId = toDraftProjectId(patchProjectId);
 
@@ -1201,10 +1250,11 @@ async function handler(req, res) {
       const splitId = String(row.project_id || "").replace(/^draft:/, "");
       const splitProject = await loadFullSplitWebsiteProject(userId, splitId);
       if (splitProject) {
-        await saveSplitWebsiteProject(userId, { ...splitProject, name: newName, updatedAt: now }, { siteOnly: true, backupSource: "rename" });
+        await saveSplitWebsiteProject(userId, { ...splitProject, name: newName, updatedAt: now }, { siteOnly: true, backupSource: "rename", unlockToken });
       }
     }
 
+    markWebsiteMutationCommitted({ projectId: patchProjectId, unlockToken, action: "save" });
     return res.status(200).json({ ok: true });
   }
 
@@ -1213,6 +1263,13 @@ async function handler(req, res) {
     if (!projectId) {
       return res.status(400).json({ ok: false, error: "A website project id is required" });
     }
+    const deleteLock = assertWebsiteUnlockedForMutation({
+      projectId,
+      userId,
+      unlockToken,
+      action: "delete",
+    });
+    if (!deleteLock.ok) return websiteLockedResponse(res, deleteLock);
 
     const draftProjectId = toDraftProjectId(projectId);
 
@@ -1224,7 +1281,8 @@ async function handler(req, res) {
       .or(`project_id.eq.${draftProjectId},project_id.eq.${projectId}`)
       .neq("published", true);
 
-    await deleteSplitWebsiteProject(userId, projectId);
+    await deleteSplitWebsiteProject(userId, projectId, { unlockToken });
+    markWebsiteMutationCommitted({ projectId, unlockToken, action: "save" });
 
     if (result.error) {
       if (isMissingDraftProjectsTable(result.error)) {

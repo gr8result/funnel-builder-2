@@ -1,4 +1,5 @@
 import { withAuth } from "../../../lib/withWorkspace";
+import { getRequestDemoState, requestWorkspaceId, demoSimulationResult } from "../../../lib/demoWorkspace";
 // /pages/api/twilio/voice-client.js
 // FULL REPLACEMENT
 //
@@ -72,6 +73,8 @@ async function handler(req, res) {
     const leadId = pickFirst(q.lead_id, b.lead_id, q.leadId, b.leadId);
     const userId = pickFirst(q.user_id, b.user_id, q.userId, b.userId);
     const record = pickFirst(q.record, b.record, "1") === "1";
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
 
     const base = pickFirst(process.env.PUBLIC_BASE_URL, process.env.TWILIO_WEBHOOK_URL);
     const statusCallbackBase = base ? `${base}/api/twilio/callback-status` : "";
@@ -83,6 +86,25 @@ async function handler(req, res) {
         `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say>Missing destination number.</Say>
+</Response>`
+      );
+    }
+
+    if (demoState.isDemo) {
+      await demoSimulationResult({
+        workspaceId,
+        userId: req.user.id,
+        actionType: "phone-call",
+        provider: "twilio",
+        target: to,
+        payload: { route: "/api/twilio/voice-client", to, leadId, userId },
+        message: "Demo phone call simulated - no Twilio dial instruction emitted.",
+      });
+      res.setHeader("Content-Type", "text/xml");
+      return res.status(200).send(
+        `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Demo phone call simulated. No external call was placed.</Say>
 </Response>`
       );
     }

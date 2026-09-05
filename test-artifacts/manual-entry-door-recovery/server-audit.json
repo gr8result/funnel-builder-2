@@ -1,0 +1,421 @@
+{
+  "checkedAt": "2026-09-05T23:06:24.461Z",
+  "books": [
+    {
+      "id": "3485f351-090f-41b1-a2fb-fd9cc707e52d",
+      "project_id": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-09-02T06:38:01.906+10:00",
+      "doors": [
+        {
+          "rowId": "row-1788293679423-25535b7b5186c",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "d0f7a5d4-dda4-4fd7-b155-03c3e49a2039",
+      "project_id": "896be24f-a7fb-4a8e-b652-495fdcaa7fe2",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-09-01T10:30:40.819+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787521147465-185f48c9513db",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "27f7051b-e0fd-4305-8ec1-737198acc80d",
+      "project_id": "896be24f-a7fb-4a8e-b652-495fdcaa7fe2",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-09-01T06:55:23.768+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787521147465-185f48c9513db",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "2d9de446-88ec-49f3-a296-357dcc74aa48",
+      "project_id": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T16:54:51.244+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787895478803-0f4c47d08a0f9",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        },
+        {
+          "rowId": "row-1787899929120-5b5c64082e49e8",
+          "selectedProduct": "Hume Savoy 1200 XS26-1200 entrance door",
+          "productModel": "XS26-1200",
+          "guidedSelection": {
+            "area": "exterior",
+            "room": "Exterior",
+            "size": "Standard Sizes (mm): 2040 x 1200 x 40mm (Approx. 48kg based on a 2040x1200x40mm door)",
+            "brand": "Hume Doors",
+            "model": "XS26-1200",
+            "range": "Savoy 1200",
+            "colour": "Not specified by supplier",
+            "finish": "Not specified by supplier",
+            "source": "guided_client_selections",
+            "glazing": "6 Hume glass options - final glass selection by supplier quote",
+            "profile": "",
+            "texture": "",
+            "variant": {
+              "size": "Standard Sizes (mm): 2040 x 1200 x 40mm (Approx. 48kg based on a 2040x1200x40mm door)",
+              "model": "XS26-1200",
+              "colour": "Not specified by supplier",
+              "finish": "Not specified by supplier",
+              "glazing": "6 Hume glass options - final glass selection by supplier quote"
+            },
+            "quantity": 1,
+            "supplier": "Hume Doors & Timber",
+            "allowance": 0,
+            "familyKey": "entry-doors",
+            "productId": "master-ENTRY-HUME-SAVOY-1200-XS26-1200",
+            "projectId": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+            "updatedAt": "2026-08-28T06:52:09.103Z",
+            "variation": null,
+            "priceState": "Quote Required",
+            "selectedAt": "2026-08-28T06:52:09.103Z",
+            "priceStatus": "Quote Required",
+            "productCode": "ENTRY-HUME-SAVOY-1200-XS26-1200",
+            "productName": "Hume Savoy 1200 XS26-1200 entrance door",
+            "manufacturer": "Hume Doors & Timber",
+            "configuration": "Single door",
+            "selectedPrice": null,
+            "imageReference": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/cf35915013f7c42892afade724cc3ba6e17135b4-706x1200.jpg",
+            "organisationId": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+            "requirementKey": "entry-door",
+            "selectedProduct": "Hume Savoy 1200 XS26-1200 entrance door",
+            "requirementLabel": "Entry Doors",
+            "variationPending": true,
+            "officialProductURL": "https://www.humedoors.com.au/ranges/entrance/savoy-1200?model=XS26-1200",
+            "selectionTimestamp": "2026-08-28T06:52:09.103Z",
+            "linkedQuoteItemCode": "approved-family:entry-doors"
+          }
+        }
+      ]
+    },
+    {
+      "id": "6f5827df-1553-4366-aad9-08ce5b3d2faa",
+      "project_id": "896be24f-a7fb-4a8e-b652-495fdcaa7fe2",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T16:49:38.233+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787880093036-8e3e0a5122857",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "03c66cb9-f4c4-4d3e-9365-ab889784f643",
+      "project_id": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T15:38:03.245709+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787895479627-698de4a0881908",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "f505e279-cbf2-4c91-8ba8-c28a7041cef0",
+      "project_id": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T15:38:02.989618+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787895479206-2057254fe3bec",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "17209a1f-50e5-4c2d-93d8-14d8a09814a3",
+      "project_id": "896be24f-a7fb-4a8e-b652-495fdcaa7fe2",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T11:21:36.550687+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787880090868-76d49cb8f51b58",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "9169f203-3c46-4b2a-9706-6dc454e56714",
+      "project_id": "c4404954-6310-4aaa-bf47-3a988330274f",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T09:56:19.278+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787521147465-185f48c9513db",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "d232d1fc-b105-42ea-9924-a7f34762f597",
+      "project_id": "c4404954-6310-4aaa-bf47-3a988330274f",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-28T02:49:46.138+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787521147465-185f48c9513db",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "8d47695b-917f-44f5-9408-2306aa2b7f3e",
+      "project_id": "c4404954-6310-4aaa-bf47-3a988330274f",
+      "workspace_id": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "updated_at": "2026-08-27T08:31:59.198+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787521147465-185f48c9513db",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "7eadef15-c6f6-4a7b-aa7d-967782592926",
+      "project_id": "9c7054ad-82c0-45b2-94a4-276bbad64ad0",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:31:35.952+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787779835925-80cd2ca9a8b01",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "1808b7b0-2277-4167-a211-9b656ef51f04",
+      "project_id": "9c7054ad-82c0-45b2-94a4-276bbad64ad0",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:31:10.673+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787779835925-80cd2ca9a8b01",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "ffcc6b67-9049-425c-81b5-6690f225dc0d",
+      "project_id": "63cce87d-614b-4826-93f2-8d933ce69290",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:27:48.168+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787779643926-88c53f424be768",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "95e23fe6-ecc0-4627-89e8-1cbe745a0eac",
+      "project_id": "29811df0-b78f-407c-8ab7-f040d36c9605",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:26:29.247+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787779553824-fea478f5cd58f",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "6635ad47-36bb-404d-bc68-154c861ba0ef",
+      "project_id": "dd977d13-dfb2-4a0c-9849-6fd454bf6329",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:25:12.293+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787779477454-035a60d36875a",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "30a3c354-54ca-4d7a-bedd-78d7c7fe48f3",
+      "project_id": "4af44c1d-ae6f-4c51-b552-7e267559930c",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:06:31.996+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787778360052-4afe127becaaf",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "156c8b3f-2b79-4e86-8dc0-86a2465af5d3",
+      "project_id": "02bc535a-01c3-40f2-ab1a-bfdd18b39f62",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T07:01:06.434+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787778035965-c3eaf0d2d94808",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "c964c5f2-8d7e-43ee-b7e0-a79d4b38a1b1",
+      "project_id": "891bd159-95b3-4422-a709-a467a15ba3ee",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T06:59:54.428+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787777963989-292a1de67f5ec",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "cd806a92-03ee-49f6-ae10-746951e8dc1b",
+      "project_id": "bee4bfe0-bf95-4175-a633-3e37f7ecd643",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-27T06:59:03.985+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787777913383-294bae286a856",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "cc46ca6e-62b5-46e6-9720-cf1f86372633",
+      "project_id": "820c93d1-dc51-4dd4-a924-ff82e591cdba",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T21:34:51.184+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787744059328-1e4b846cd8cf9",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "8833c2ee-2158-4316-b973-009d5617975c",
+      "project_id": "362f9d91-b120-4eea-a046-dcb845f0c04e",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:56:41.104+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694974160-aa96d0fbe04108",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "eea15e66-9675-4e7a-8f25-a2831aa09ff3",
+      "project_id": "87179264-7e7e-4eed-bef6-3b07d8c3e2a8",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:54:46.652+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694859603-f9089dee5150d",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "b61ff2dd-140a-4905-a4c7-1405dc84d576",
+      "project_id": "ec6b721d-1c9f-40c0-be0b-dae5231371e2",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:53:32.796+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694784790-da7fe9c16fb3c",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "888801dc-6c73-4f62-8f93-4789fbe319fc",
+      "project_id": "0167163d-0ffd-434c-a43a-56c0b63a636a",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:49:57.362+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694569859-517d3cbdb21a4",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "c232f1a5-f57a-413c-80f4-432fee69033e",
+      "project_id": "79a7e6d7-d3d1-4c55-9e99-bc9db1cf9826",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:47:37.892+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694430564-4f9f05dcb4cda8",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "0c7a3e3a-7ef1-41d7-8ee9-535fdc4b7126",
+      "project_id": "dac96669-42da-4712-8552-248e85467730",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:45:00.542+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694272882-6f01c9677a7cb",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    },
+    {
+      "id": "781e4a8c-fd9f-4d34-8ddf-7aefac73a10d",
+      "project_id": "60d80795-6b8a-400e-88e6-57ee0cdb1f28",
+      "workspace_id": "00000000-0000-4000-8000-000000000001",
+      "updated_at": "2026-08-26T07:41:26.591+10:00",
+      "doors": [
+        {
+          "rowId": "row-1787694059171-30666ee1f2db1",
+          "selectedProduct": "Entry Door Included Selection",
+          "productModel": "Standard"
+        }
+      ]
+    }
+  ],
+  "selections": []
+}

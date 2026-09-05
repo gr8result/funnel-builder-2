@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "errors": [],
+  "steps": [
+    {
+      "name": "readable-review-schedule",
+      "url": "http://localhost:3000/modules/estimate-builder?door=D01&doorStep=design&page=clientSelections&projectId=door-furniture-verification-20260905&room=exterior&roomCategory=entry-doors",
+      "text": "Exterior Door Furniture - Review Schedule\n\nChosen inclusions saved to this job, grouped by exterior entry door.\n\nDoor\tLevel / location\tProduct\tModel / SKU\tFinish / lock\tQuantity\tRate\tSelection status\nED1\tGround / Entry\t\nLockwood Lockwood Paradigm® Pull Handle Lockset - Deadbolt\n\tParadigm Pull Handle Lockset - Deadbolt\tMatt Black / Entrance handle and lock combination\t2\tRate required\tselected"
+    },
+    {
+      "name": "procurement-schedule",
+      "text": "Entry-door furniture - supplier / purchase order schedule\n\nSaved Client Selections, grouped by scheduled door. Obtain supplier rates before ordering.\n\nDoor\tLevel / location\tProduct\tModel / SKU\tFinish / lock\tQuantity\tRate\tSelection status\nED1\tGround / Entry\t\nLockwood Lockwood Paradigm® Pull Handle Lockset - Deadbolt\n\tParadigm Pull Handle Lockset - Deadbolt\tMatt Black / Entrance handle and lock combination\t2\tRate required\tselected"
+    }
+  ]
+}

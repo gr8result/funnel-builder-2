@@ -152,7 +152,12 @@ class BlockPreviewBoundary extends React.Component {
             {this.props.label || "Block preview failed"}
           </strong>
           <span style={styles.blockPreviewErrorText}>
-            {this.props.block?.type ? `${this.props.block.type}: ${message}` : message}
+            {[
+              this.props.pageName ? `Page: ${this.props.pageName}` : "",
+              this.props.block?.id ? `Block ID: ${this.props.block.id}` : "",
+              this.props.block?.type ? `Type: ${this.props.block.type}` : "",
+              message,
+            ].filter(Boolean).join(" | ")}
           </span>
         </div>
       );
@@ -169,7 +174,7 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
     layoutWidth,
     animationPreview: Number(replayToken || 0) > 0,
     isSelected: selected,
-    onChangeBlock: (nextProps) => onChange(index, nextProps),
+    onChangeBlock: typeof onChange === "function" ? (nextProps) => onChange(index, nextProps) : undefined,
     onUploadImage: (key, file) => onUploadImage?.(index, key, file),
     onUploadLayerImage: (layerIndex, file) => onUploadLayerImage?.(index, layerIndex, file),
     onSelectAsset: (key, asset) => onSelectAsset?.(index, key, asset),
@@ -185,9 +190,9 @@ const CanvasBlockPreview = React.memo(function CanvasBlockPreview({ block, index
   && prev.layoutWidth === next.layoutWidth
 ));
 
-const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, pageFullWidth = false, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true }) => {
+const CanvasBlock = ({ block, index, activePage = "", onSelect, onHover, selected, hovered, onDelete, onDuplicate, onEdit, onAnimate, onChange, onResizeHeight, onUploadImage, onUploadLayerImage, onSelectAsset, brandAssets, onBlockDragOver, onBlockDrop, animationReplayToken, onMoveStep, onMoveToTop, onSaveAsGlobal, onSaveBlockDefault, compactPreview, device, pageCanvasWidth, pageFullWidth = false, frameBackground = "transparent", canvasScale = 1, activeDragIndex = null, onBlockDragStart, onBlockDragEnd, onColumnSlotDrop, allowHoverOverlay = true, readOnly = false }) => {
   const def = BlockDefinitions[block.type];
-  const showOverlay = selected || (allowHoverOverlay && hovered);
+  const showOverlay = !readOnly && (selected || (allowHoverOverlay && hovered));
   const resizeStateRef = useRef(null);
   const actionBarRef = useRef(null);
   const [actionBarHeight, setActionBarHeight] = useState(42);
@@ -291,12 +296,17 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
       data-canvas-block-index={index}
       data-builder-block-active={showOverlay ? "true" : "false"}
       data-builder-block-selected={selected ? "true" : "false"}
-      draggable={!isEditingVideoHero}
+      draggable={!readOnly && !isEditingVideoHero}
       onPointerDownCapture={(e) => {
+        if (readOnly) return;
         if (shouldIgnoreSelectionPointer(e.target)) return;
         onSelect(index);
       }}
       onDragStart={(e) => {
+        if (readOnly) {
+          e.preventDefault();
+          return;
+        }
         if (e.target?.closest?.("button,input,select,textarea,label,[data-no-canvas-drag='true']")) {
           e.preventDefault();
           e.stopPropagation();
@@ -312,16 +322,19 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         onBlockDragEnd?.();
       }}
       onClick={(e) => {
+        if (readOnly) return;
         if (shouldIgnoreSelectionPointer(e.target)) return;
         onSelect(index);
       }}
-      onMouseEnter={() => onHover?.(index)}
-      onMouseLeave={() => onHover?.(null)}
+      onMouseEnter={() => { if (!readOnly) onHover?.(index); }}
+      onMouseLeave={() => { if (!readOnly) onHover?.(null); }}
       onDragOver={(e) => {
+        if (readOnly) return;
         if (activeDragIndex !== null) return; // column slot overlay handles this
         onBlockDragOver(e, index);
       }}
       onDrop={(e) => {
+        if (readOnly) return;
         if (activeDragIndex !== null) return;
         onBlockDrop(e, index);
       }}
@@ -492,7 +505,7 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
         </div>
         ) : null}
         <div style={{ ...styles.blockPreview, ...(showOverlay ? { paddingTop: actionBarHeight + 8 } : {}), ...(isStickyNavBlock ? styles.blockPreviewStickyNav : {}), ...(isFullWidthBlock ? styles.blockPreviewFullWidth : {}) }}>
-          <BlockPreviewBoundary block={block} resetKey={animationReplayToken} label="Block preview failed">
+          <BlockPreviewBoundary block={block} pageName={activePage} resetKey={animationReplayToken} label="Block preview failed">
             <CanvasBlockPreview
               key={`${block.id || index}-${animationReplayToken || 0}`}
               block={block}
@@ -502,10 +515,10 @@ const CanvasBlock = ({ block, index, onSelect, onHover, selected, hovered, onDel
               device={device}
               layoutWidth={pageCanvasWidth}
               selected={selected}
-              onChange={onChange}
-              onUploadImage={onUploadImage}
-              onUploadLayerImage={onUploadLayerImage}
-              onSelectAsset={onSelectAsset}
+              onChange={readOnly ? null : onChange}
+              onUploadImage={readOnly ? null : onUploadImage}
+              onUploadLayerImage={readOnly ? null : onUploadLayerImage}
+              onSelectAsset={readOnly ? null : onSelectAsset}
               replayToken={animationReplayToken}
             />
           </BlockPreviewBoundary>

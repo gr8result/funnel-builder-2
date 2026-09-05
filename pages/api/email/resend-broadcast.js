@@ -22,6 +22,7 @@ import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
 import { withAuth } from "../../../lib/withWorkspace";
+import { isDemoWorkspace, recordDemoAction } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -59,12 +60,6 @@ async function handler(req, res) {
   }
 
   try {
-    if (!SENDGRID_KEY) {
-      return res.status(500).json({ success: false, error: "Missing SendGrid key" });
-    }
-
-    sgMail.setApiKey(SENDGRID_KEY);
-
     const { broadcastId } = req.body || {};
     if (!broadcastId) {
       return res.status(400).json({ success: false, error: "Missing broadcastId" });
@@ -80,6 +75,8 @@ async function handler(req, res) {
     if (loadErr || !broadcast) {
       return res.status(404).json({ success: false, error: "Broadcast not found" });
     }
+    const workspaceId = broadcast.workspace_id || req.workspaceId || null;
+    const isDemo = req.isDemoWorkspace || await isDemoWorkspace(workspaceId);
 
     const subject = broadcast.subject;
     const html = broadcast.html_content;
@@ -151,15 +148,23 @@ async function handler(req, res) {
     }
 
     let emailGuard = null;
-    try {
-      emailGuard = await guardEmailSend(broadcast.user_id, recipients.length);
-    } catch (limitErr) {
-      return res.status(429).json({
-        success: false,
-        error: limitErr.message,
-        code: limitErr.code,
-        details: limitErr.details,
-      });
+    if (!isDemo) {
+      try {
+        emailGuard = await guardEmailSend(broadcast.user_id, recipients.length);
+      } catch (limitErr) {
+        return res.status(429).json({
+          success: false,
+          error: limitErr.message,
+          code: limitErr.code,
+          details: limitErr.details,
+        });
+      }
+      if (!SENDGRID_KEY) {
+        return res.status(500).json({ success: false, error: "Missing SendGrid key" });
+      }
+      sgMail.setApiKey(SENDGRID_KEY);
+    } else {
+      emailGuard = { demo: true, allowed: true, requested: recipients.length };
     }
 
     let sentCount = 0;
@@ -170,6 +175,7 @@ async function handler(req, res) {
         .from("email_sends")
         .insert({
           user_id: broadcast.user_id,
+          workspace_id: workspaceId,
           broadcast_id: broadcastId,
           email: to,
           recipient_email: to,
@@ -183,6 +189,29 @@ async function handler(req, res) {
 
       if (insertErr) {
         console.error("Insert failed:", insertErr.message);
+        continue;
+      }
+
+      if (isDemo) {
+        await recordDemoAction({
+          workspaceId,
+          actionType: "broadcast-email-resend",
+          provider: "sendgrid",
+          target: to,
+          payload: { broadcastId, subject },
+          simulatedResult: { ok: true, demo: true, simulated: true, message_id: `demo_email_${row.id}` },
+          userId: broadcast.user_id,
+        });
+        await supabase
+          .from("email_sends")
+          .update({
+            status: "demo_simulated",
+            sent_at: new Date().toISOString(),
+            sendgrid_message_id: `demo_email_${row.id}`,
+            sg_message_id: `demo_email_${row.id}`,
+          })
+          .eq("id", row.id);
+        sentCount++;
         continue;
       }
 

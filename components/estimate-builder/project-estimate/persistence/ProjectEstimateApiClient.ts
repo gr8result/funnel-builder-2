@@ -135,13 +135,28 @@ function stripUndefinedDeep(value: any): any {
   }, {} as Record<string, any>);
 }
 
+function isEmbeddedAssetString(value: any): boolean {
+  return typeof value === "string" && (/^data:/i.test(value) || /;base64,/i.test(value));
+}
+
+function stripEmbeddedAssetPayloads(value: any): any {
+  if (Array.isArray(value)) return value.map(stripEmbeddedAssetPayloads);
+  if (isEmbeddedAssetString(value)) return "";
+  if (!value || typeof value !== "object") return value;
+  return Object.entries(value).reduce((next, [key, entry]) => {
+    if (BINARY_FIELD_PATTERN.test(key)) return next;
+    next[key] = stripEmbeddedAssetPayloads(entry);
+    return next;
+  }, {} as Record<string, any>);
+}
+
 function serializeTemplateBlock(block: any): Record<string, any> {
   const clean = compactObject(block, ALLOWED_BLOCK_KEYS);
   if (Array.isArray(clean.children)) {
     clean.children = clean.children.map(serializeTemplateBlock);
   }
-  if (clean.content) clean.content = { ...safeObject(clean.content) };
-  if (clean.design) clean.design = { ...safeObject(clean.design) };
+  if (clean.content) clean.content = stripEmbeddedAssetPayloads(safeObject(clean.content));
+  if (clean.design) clean.design = stripEmbeddedAssetPayloads(safeObject(clean.design));
   if (clean.binding) clean.binding = { ...safeObject(clean.binding) };
   return stripUndefinedDeep(clean);
 }
@@ -382,12 +397,25 @@ export async function restoreTemplateVersion(workspaceId: string, templateId: st
   return { template: payload.template as ProjectEstimateApiTemplate, pages: payload.pages as ProjectEstimateApiPage[] };
 }
 
-export async function getOrCreateInstance(workspaceId: string, { projectId, templateId }: { projectId?: string; templateId?: string }) {
+export async function getOrCreateInstance(workspaceId: string, {
+  projectId,
+  templateId,
+  createIfMissing = true,
+}: {
+  projectId?: string;
+  templateId?: string;
+  createIfMissing?: boolean;
+}) {
   const params = new URLSearchParams({ workspace_id: workspaceId });
   if (projectId) params.set("projectId", projectId);
   if (templateId) params.set("templateId", templateId);
+  if (!createIfMissing) params.set("create", "false");
   const payload = await request(`/api/project-estimate/instances?${params.toString()}`, { workspaceId });
   return { instance: payload.instance as ProjectEstimateApiInstance, created: !!payload.created };
+}
+
+export async function getExistingInstance(workspaceId: string, { projectId, templateId }: { projectId?: string; templateId?: string }) {
+  return getOrCreateInstance(workspaceId, { projectId, templateId, createIfMissing: false });
 }
 
 export async function saveInstance(workspaceId: string, instanceId: string, input: {
@@ -417,11 +445,21 @@ export async function resetInstanceToTemplate(workspaceId: string, instanceId: s
 
 export function builderPageToApiPage(builderPage: any, index: number, importedDocuments?: Record<string, any>): ProjectEstimateApiPage {
   const pageType = builderPage.page_type || builderPage.id || "";
-  const importedDocument = pageType === "standardInclusions"
+  const importedDocument = builderPage.importedDocument || (pageType === "standardInclusions"
     ? importedDocuments?.inclusions || null
     : pageType === "pricedPlans"
       ? importedDocuments?.pricedPlans || null
-      : null;
+      : null);
+  const isProjectEstimatePdfPage = pageType === "importedPlanPdf" && importedDocument?.sourceType === "project_estimate_pdf";
+  const background = stripEmbeddedAssetPayloads({
+    ...(builderPage.design || {}),
+    hiddenFromPdf: !!builderPage.hiddenFromPdf,
+    source: builderPage.source || undefined,
+  });
+  const cleanImportedDocument = importedDocument ? stripEmbeddedAssetPayloads({
+    ...importedDocument,
+    baseArtwork: isProjectEstimatePdfPage ? "" : importedDocument.baseArtwork,
+  }) : null;
   return {
     pageKey: builderPage.id,
     pageName: builderPage.title || pageType,
@@ -430,9 +468,9 @@ export function builderPageToApiPage(builderPage: any, index: number, importedDo
     width: 794,
     height: 1123,
     orientation: "portrait",
-    background: { ...(builderPage.design || {}), hiddenFromPdf: !!builderPage.hiddenFromPdf, source: builderPage.source || undefined },
-    importedDocument,
-    blocks: Array.isArray(builderPage.blocks) ? builderPage.blocks : null,
+    background,
+    importedDocument: cleanImportedDocument,
+    blocks: Array.isArray(builderPage.blocks) ? builderPage.blocks.map((block) => stripEmbeddedAssetPayloads(block)) : null,
   };
 }
 
@@ -443,6 +481,8 @@ export function apiPageToBuilderPageShell(apiPage: ProjectEstimateApiPage) {
     page_type: apiPage.pageType,
     title: apiPage.pageName,
     design,
+    importedDocument: apiPage.importedDocument || null,
+    importedPageNumber: apiPage.importedDocument?.pageNumber || undefined,
     hiddenFromPdf: !!hiddenFromPdf,
     source: source || undefined,
     blocks: Array.isArray(apiPage.blocks) ? apiPage.blocks : null,

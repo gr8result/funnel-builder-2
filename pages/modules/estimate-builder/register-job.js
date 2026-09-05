@@ -98,7 +98,7 @@ export default function RegisterEstimateJobPage() {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem("estimate-builder-pending-job");
     }
-    router.push("/modules/construction");
+    router.push("/modules/estimate-builder?page=projectDashboard");
   }
 
   return (

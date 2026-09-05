@@ -5,6 +5,22 @@ import { fileURLToPath } from "url";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const nextSwcLoaderPath = require.resolve("next/dist/build/webpack/loaders/next-swc-loader");
+
+function pinNextSwcLoader(rule) {
+  if (!rule || typeof rule !== "object") return;
+  if (rule.loader === "next-swc-loader") {
+    rule.loader = nextSwcLoaderPath;
+  }
+  if (Array.isArray(rule.use)) {
+    rule.use.forEach((entry) => {
+      if (typeof entry === "string") return;
+      pinNextSwcLoader(entry);
+    });
+  }
+  if (Array.isArray(rule.oneOf)) rule.oneOf.forEach(pinNextSwcLoader);
+  if (Array.isArray(rule.rules)) rule.rules.forEach(pinNextSwcLoader);
+}
 
 const nextConfig = {
   reactStrictMode: true,
@@ -57,23 +73,22 @@ const nextConfig = {
     };
 
     config.resolve = config.resolve || {};
+    const pagesDir = path.resolve(__dirname, "pages");
     const aliases = {
       ...(config.resolve.alias || {}),
       immer: require.resolve("immer"),
+      "private-next-pages": pagesDir,
+      "private-next-pages/_app": path.resolve(pagesDir, "_app.js"),
+      "private-next-pages/_app.js": path.resolve(pagesDir, "_app.js"),
+      "private-next-pages/_error": path.resolve(pagesDir, "_error.js"),
+      "private-next-pages/_error.js": path.resolve(pagesDir, "_error.js"),
+      "private-next-pages/_document": path.resolve(pagesDir, "_document.js"),
+      "private-next-pages/_document.js": path.resolve(pagesDir, "_document.js"),
     };
     const loaderAliases = {
       ...(config.resolveLoader?.alias || {}),
-      "next-swc-loader": require.resolve("next/dist/build/webpack/loaders/next-swc-loader"),
+      "next-swc-loader": nextSwcLoaderPath,
     };
-
-    if (dev && nextRuntime !== "edge") {
-      aliases["private-next-pages/_app"] = path.join(__dirname, "pages", "_app.js");
-      aliases["private-next-pages/_app.js"] = path.join(__dirname, "pages", "_app.js");
-      aliases["private-next-pages/_error"] = path.join(__dirname, "pages", "_error.js");
-      aliases["private-next-pages/_error.js"] = path.join(__dirname, "pages", "_error.js");
-      aliases["private-next-pages/_document"] = path.join(__dirname, "pages", "_document.js");
-      aliases["private-next-pages/_document.js"] = path.join(__dirname, "pages", "_document.js");
-    }
 
     config.resolve.alias = {
       ...aliases,
@@ -82,6 +97,7 @@ const nextConfig = {
       ...(config.resolveLoader || {}),
       alias: loaderAliases,
     };
+    config.module?.rules?.forEach(pinNextSwcLoader);
     return config;
   },
 };

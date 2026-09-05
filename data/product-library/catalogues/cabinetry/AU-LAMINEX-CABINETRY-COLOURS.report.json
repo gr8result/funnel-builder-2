@@ -1,0 +1,24 @@
+{
+  "dryRun": false,
+  "sourceUrls": [
+    "https://www.laminex.com.au/browse/product-application/cabinetry-doors-drawers",
+    "https://www.laminex.com.au/brands/laminex/absolutematte-range",
+    "https://www.laminex.com.au/colour-collection"
+  ],
+  "verifiedAt": "2026-08-31",
+  "productListingTileRecords": 38,
+  "absoluteMatteRecords": 15,
+  "activeColours": 38,
+  "activeCombinations": 53,
+  "familyTotals": {
+    "Accents": 15,
+    "Minerals": 4,
+    "Whites & Neutrals": 12,
+    "Woodgrains": 22
+  },
+  "duplicatesDetected": 0,
+  "duplicateIds": [],
+  "inactiveMarked": 0,
+  "imagesStored": 0,
+  "imageFailures": []
+}

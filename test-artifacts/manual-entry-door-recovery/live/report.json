@@ -1,0 +1,241 @@
+{
+  "passed": true,
+  "noTakeoffSchedule": true,
+  "originalRecordsUntouched": true,
+  "steps": [
+    {
+      "name": "01-legacy-door-restored",
+      "url": "http://localhost:3015/modules/estimate-builder?page=clientSelections&selectionArea=exterior"
+    },
+    {
+      "name": "02-furniture-brands",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3Aprimary&doorStep=hardware&mode=client-selection&page=clientSelections&projectId=manual-door-verification-20260906&returnPage=clientSelections&room=exterior&roomCategory=door-furniture&selectionArea=exterior"
+    },
+    {
+      "name": "03-manual-hardware-options",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3Aprimary&doorStep=hardware&mode=client-selection&page=clientSelections&projectId=manual-door-verification-20260906&returnPage=clientSelections&room=exterior&roomCategory=door-furniture&selectionArea=exterior"
+    },
+    {
+      "name": "04-refreshed",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3Aprimary&doorStep=hardware&mode=client-selection&page=clientSelections&projectId=manual-door-verification-20260906&returnPage=clientSelections&room=exterior&roomCategory=door-furniture&selectionArea=exterior"
+    },
+    {
+      "name": "05-reopened-door",
+      "url": "http://localhost:3015/modules/estimate-builder?page=clientSelections&selectionArea=exterior"
+    },
+    {
+      "name": "06-reopened-hardware",
+      "url": "http://localhost:3015/modules/estimate-builder?door=manual-entry-door%3Aprimary&doorStep=hardware&mode=client-selection&page=clientSelections&projectId=manual-door-verification-20260906&returnPage=clientSelections&room=exterior&roomCategory=door-furniture&selectionArea=exterior"
+    }
+  ],
+  "selected": {
+    "area": "exterior",
+    "room": "Exterior",
+    "size": "Standard Sizes (mm): 2040 x 1200 x 40mm (Approx. 48kg based on a 2040x1200x40mm door)",
+    "brand": "Hume Doors",
+    "model": "XS26-1200",
+    "range": "Savoy 1200",
+    "colour": "Not specified by supplier",
+    "finish": "Not specified by supplier",
+    "source": "guided_client_selections",
+    "glazing": "6 Hume glass options - final glass selection by supplier quote",
+    "profile": "",
+    "texture": "",
+    "variant": {
+      "size": "Standard Sizes (mm): 2040 x 1200 x 40mm (Approx. 48kg based on a 2040x1200x40mm door)",
+      "model": "XS26-1200",
+      "colour": "Not specified by supplier",
+      "finish": "Not specified by supplier",
+      "glazing": "6 Hume glass options - final glass selection by supplier quote"
+    },
+    "quantity": 1,
+    "supplier": "Hume Doors & Timber",
+    "allowance": 0,
+    "familyKey": "entry-doors",
+    "productId": "master-ENTRY-HUME-SAVOY-1200-XS26-1200",
+    "projectId": "64fd5367-275f-4264-bc3c-c13b6f3447a0",
+    "updatedAt": "2026-08-28T06:52:09.103Z",
+    "variation": null,
+    "priceState": "Quote Required",
+    "selectedAt": "2026-08-28T06:52:09.103Z",
+    "priceStatus": "Quote Required",
+    "productCode": "ENTRY-HUME-SAVOY-1200-XS26-1200",
+    "productName": "Hume Savoy 1200 XS26-1200 entrance door",
+    "manufacturer": "Hume Doors & Timber",
+    "configuration": "Single door",
+    "selectedPrice": null,
+    "imageReference": "https://cdn.shopify.com/s/files/1/0731/6868/3252/files/cf35915013f7c42892afade724cc3ba6e17135b4-706x1200.jpg",
+    "organisationId": "846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+    "requirementKey": "entry-door",
+    "selectedProduct": "Hume Savoy 1200 XS26-1200 entrance door",
+    "requirementLabel": "Entry Doors",
+    "variationPending": true,
+    "officialProductURL": "https://www.humedoors.com.au/ranges/entrance/savoy-1200?model=XS26-1200",
+    "selectionTimestamp": "2026-08-28T06:52:09.103Z",
+    "linkedQuoteItemCode": "approved-family:entry-doors",
+    "activeEntryDoorId": "manual-entry-door:primary",
+    "entryDoorDrafts": {
+      "manual-entry-door:primary": {
+        "Door": {
+          "id": "manual-entry-door:primary",
+          "doorReference": "Front Entry",
+          "location": "Front Entry",
+          "level": "Ground",
+          "quantity": 2,
+          "source": "manual"
+        },
+        "Step": "hardware"
+      }
+    },
+    "door": {
+      "id": "manual-entry-door:primary",
+      "doorReference": "Front Entry",
+      "location": "Front Entry",
+      "level": "Ground",
+      "quantity": 2,
+      "source": "manual"
+    },
+    "entryDoorFurniture": {
+      "productId": "master-EDF-LEMAAR-22100CP",
+      "productCode": "EDF-LEMAAR-22100CP",
+      "familyKey": "entry-door-furniture",
+      "requirementKeys": [],
+      "categoryKey": "external-door-furniture",
+      "topLevelArea": "exterior",
+      "manufacturer": "Lemaar",
+      "brand": "Lemaar",
+      "supplier": "Lemaar",
+      "range": "Zalla",
+      "collection": "",
+      "productName": "Zalla Entrance Set - Chrome Plate",
+      "model": "22100CP",
+      "sku": "22100CP",
+      "description": "Zalla Entrance Set - Chrome Plate. Entrance set for an entrance-door hardware selection.",
+      "colour": "",
+      "officialColourName": "",
+      "colourGroup": "",
+      "finish": "Chrome Plate , Black, Satin Chrome",
+      "size": "",
+      "dimensions": "65mm",
+      "profile": "",
+      "texture": "",
+      "configuration": "",
+      "material": "Zinc",
+      "variants": [],
+      "colourSwatches": [],
+      "attributes": {
+        "handleUse": "entry-door",
+        "hardwareType": "Entrance set",
+        "choiceType": "Entrance set",
+        "finishOptions": [
+          "Chrome Plate , Black, Satin Chrome"
+        ],
+        "lockingType": "Entrance set",
+        "entryClassification": "keyed",
+        "compatibleDoorThickness": "",
+        "doorCompatibility": "",
+        "material": "Zinc",
+        "coastalSuitability": "",
+        "fireRating": "No",
+        "accessibilityCompliance": "No Documents Installation Template Videos How To Replace Lemaar Entrance Set",
+        "dimensions": "65mm",
+        "handleLength": "",
+        "cylinderConfiguration": "C4 6 Pin Cylinder",
+        "clientExplanation": "Zalla Entrance Set - Chrome Plate. Entrance set for an entrance-door hardware selection.",
+        "gallery": [
+          {
+            "url": "/images/product-library/entry-door-furniture/b889189e2721cb4822c88391.webp",
+            "label": "Zalla Entrance Set - Chrome Plate"
+          }
+        ],
+        "imageSources": [
+          {
+            "url": "/images/product-library/entry-door-furniture/cf5e45e08ca25fd06e801e62.webp",
+            "sourceUrl": "https://lemaar.com.au/assets/Uploads/Zalla-Entrance-Set-Chrome-Plate.jpg"
+          },
+          {
+            "url": "/images/product-library/entry-door-furniture/b889189e2721cb4822c88391.webp",
+            "sourceUrl": "https://lemaar.com.au/assets/Uploads/Chrome_Zalla-Entrance_Thumb.jpg"
+          }
+        ],
+        "verificationStatus": "verified_product",
+        "rateStatus": "Rate required",
+        "colour": "",
+        "officialColourName": "",
+        "colourGroup": "",
+        "finish": "Chrome Plate , Black, Satin Chrome",
+        "size": "",
+        "profile": "",
+        "texture": "",
+        "configuration": ""
+      },
+      "primaryImageUrl": "/images/product-library/entry-door-furniture/cf5e45e08ca25fd06e801e62.webp",
+      "thumbnailUrl": "/images/product-library/entry-door-furniture/cf5e45e08ca25fd06e801e62.webp",
+      "galleryImageUrls": [],
+      "imageSourceUrl": "",
+      "imageSourceType": "",
+      "imageVerifiedAt": "",
+      "imageStatus": "review_required",
+      "imageReviewRequired": true,
+      "officialProductUrl": "https://lemaar.com.au/products/door-entry/entrance-sets/zalla-entrance-set-chrome-plate/",
+      "specificationUrl": "",
+      "brochureUrl": "",
+      "supplierUrl": "",
+      "rrp": null,
+      "clientPrice": null,
+      "currency": "AUD",
+      "gstIncluded": true,
+      "priceUnit": "",
+      "normalizedUnitPrice": null,
+      "priceStatus": "price_pending",
+      "priceSourceUrl": "",
+      "priceVerifiedAt": "",
+      "priceReviewRequired": true,
+      "country": "AU",
+      "regions": [
+        "AU"
+      ],
+      "displayOrder": null,
+      "sortOrder": null,
+      "regionReviewRequired": false,
+      "active": true,
+      "discontinued": false,
+      "archived": false,
+      "sourceType": "",
+      "sourceName": "Lemaar official product page",
+      "sourceUrl": "https://lemaar.com.au/products/door-entry/entrance-sets/zalla-entrance-set-chrome-plate/",
+      "sourceRetrievedAt": "",
+      "sourceVerifiedAt": "",
+      "sourceNotes": "",
+      "sourceScope": "master_catalogue",
+      "enabled": true,
+      "hasOverride": false,
+      "id": "master-EDF-LEMAAR-22100CP",
+      "manufacturerSku": "22100CP",
+      "imageUrl": "/images/product-library/entry-door-furniture/cf5e45e08ca25fd06e801e62.webp",
+      "productUrl": "https://lemaar.com.au/products/door-entry/entrance-sets/zalla-entrance-set-chrome-plate/",
+      "finishOptions": [
+        "Chrome Plate"
+      ],
+      "sizeOptions": [
+        "65mm"
+      ],
+      "lockOptions": [
+        "Entrance set"
+      ],
+      "lockingType": "Entrance set",
+      "clientExplanation": "Zalla Entrance Set - Chrome Plate. Entrance set for an entrance-door hardware selection.",
+      "selectedCost": null
+    },
+    "furnitureFinish": "Chrome Plate",
+    "hardwareOptions": {
+      "finish": "Chrome Plate",
+      "size": "65mm",
+      "lockType": "Entrance set",
+      "quantity": 2,
+      "selectedAt": "2026-09-05T20:12:47.701Z"
+    },
+    "status": "selected"
+  },
+  "errors": []
+}

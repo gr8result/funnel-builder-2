@@ -180,13 +180,15 @@ export default function SmsMarketingPage() {
 
   async function apiPost(path, body) {
     const token = requireToken();
+    const workspaceId = typeof window !== "undefined" ? localStorage.getItem("active_workspace_id") : null;
     const r = await fetch(path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
       },
-      body: JSON.stringify(body || {}),
+      body: JSON.stringify({ ...(body || {}), workspace_id: workspaceId || "" }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok || j?.ok === false) {

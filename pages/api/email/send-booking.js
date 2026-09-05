@@ -11,6 +11,7 @@ import sgMail from "@sendgrid/mail";
 import { createClient } from "@supabase/supabase-js";
 import { guardEmailSend } from "../../../lib/emailValidation";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,14 +42,7 @@ async function handler(req, res) {
     if (req.method !== "POST")
       return res.status(405).json({ success: false });
 
-    if (!SENDGRID_KEY)
-      return res
-        .status(500)
-        .json({ success: false, error: "Missing SendGrid key" });
-
-    sgMail.setApiKey(SENDGRID_KEY);
-
-    const user = await getUserFromBearer(req);
+    const user = (await getUserFromBearer(req)) || req.user;
     if (!user)
       return res
         .status(401)
@@ -70,15 +64,24 @@ async function handler(req, res) {
     const subject = `Booking Confirmed — ${serviceName}`;
 
     let emailGuard = null;
-    try {
-      emailGuard = await guardEmailSend(user.id, 1);
-    } catch (limitErr) {
-      return res.status(429).json({
-        success: false,
-        error: limitErr.message,
-        code: limitErr.code,
-        details: limitErr.details,
-      });
+    if (!req.isDemoWorkspace) {
+      try {
+        emailGuard = await guardEmailSend(user.id, 1);
+      } catch (limitErr) {
+        return res.status(429).json({
+          success: false,
+          error: limitErr.message,
+          code: limitErr.code,
+          details: limitErr.details,
+        });
+      }
+      if (!SENDGRID_KEY)
+        return res
+          .status(500)
+          .json({ success: false, error: "Missing SendGrid key" });
+      sgMail.setApiKey(SENDGRID_KEY);
+    } else {
+      emailGuard = { demo: true, allowed: true, requested: 1 };
     }
 
     const html = `
@@ -95,6 +98,7 @@ async function handler(req, res) {
       .from("email_sends")
       .insert({
         user_id: user.id,
+        workspace_id: req.workspaceId || null,
         email: clientEmail,
         recipient_email: clientEmail,
         email_type: "booking",
@@ -104,6 +108,27 @@ async function handler(req, res) {
       })
       .select("id")
       .single();
+
+    if (req.isDemoWorkspace) {
+      await demoSimulationResult({
+        workspaceId: req.workspaceId,
+        actionType: "booking-email",
+        provider: "sendgrid",
+        target: clientEmail,
+        payload: { clientEmail, serviceName, dateTime },
+        userId: user.id,
+        message: "Demo booking email simulated - no SendGrid message sent.",
+      });
+      await supabaseAdmin
+        .from("email_sends")
+        .update({
+          status: "demo_simulated",
+          sent_at: new Date().toISOString(),
+          sendgrid_message_id: `demo_email_${row.id}`,
+        })
+        .eq("id", row.id);
+      return res.status(200).json({ success: true, demo: true, simulated: true, usage: emailGuard || null });
+    }
 
     const response = await sgMail.send({
       to: clientEmail,

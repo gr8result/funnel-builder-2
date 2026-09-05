@@ -1,0 +1,43 @@
+import fs from "node:fs";
+import path from "node:path";
+import assert from "node:assert/strict";
+import dotenv from "dotenv";
+import { createClient } from "@supabase/supabase-js";
+import puppeteer from "puppeteer";
+dotenv.config({ path: ".env.local", quiet: true });
+dotenv.config({ path: ".env", quiet: true });
+const ownerEmail = process.env.PRODUCT_LIBRARY_TEST_EMAIL || "support@gr8result.com";
+const outDir = path.resolve('test-artifacts/client-selections-safe-navigation');
+fs.mkdirSync(outDir, { recursive: true });
+async function mintSession() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+    throw new Error("Authenticated runtime verification requires Supabase URL, service role key and anon key.");
+  }
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: link, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: ownerEmail });
+  if (error) throw error;
+  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error: verifyError } = await client.auth.verifyOtp({
+    type: "magiclink",
+    token_hash: link.properties.hashed_token,
+  });
+  if (verifyError) throw verifyError;
+  if (!data?.session?.access_token) throw new Error("Supabase did not return an authenticated session.");
+  return { session: data.session, supabaseUrl };
+}
+
+const { session, supabaseUrl } = await mintSession();
+const storageKey = `sb-${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl).hostname.split(".")[0]}-auth-token`;
+
+const browser = await puppeteer.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, protocolTimeout: 300000, defaultViewport: { width: 1500, height: 1000 } });
+const errors = [], steps = [], requests = [];
+try {
+  const page = await browser.newPage();
+  page.setDefaultTimeout(120000);
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error' && /Invariant|hard navigate|Maximum update depth|Unhandled Runtime Error|ReferenceError|TypeError/.test(message.text())) errors.push(message.text()); });
+  page.on('request', request => { if (request.isNavigationRequest() && request.frame() === page.mainFrame()) requests.push(request.url()); });
+  await page.evaluateOnNewDocument(({ key, session }) => {

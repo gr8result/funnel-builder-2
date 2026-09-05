@@ -1,0 +1,335 @@
+{
+  "exactFailingUrl": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+  "passed": true,
+  "steps": [
+    {
+      "label": "01-exact-failing-url",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "02-left-navigation",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "03-kitchen-ovens",
+      "url": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "04-back-to-client-selections",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "pushState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "05-refresh",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "06-browser-back",
+      "url": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "07-browser-forward",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    },
+    {
+      "label": "08-repeat-current-navigation",
+      "url": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+      "history": [
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "after": "http://localhost:3000/modules/estimate-builder?page=productLibrary&room=kitchen&roomCategory=kitchen-ovens",
+          "nextState": true
+        },
+        {
+          "method": "replaceState",
+          "before": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "after": "http://localhost:3000/modules/estimate-builder?page=clientSelections",
+          "nextState": true
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "requests": [
+    "http://localhost:3000/modules/estimate-builder?page=clientSelections&room=kitchen&roomCategory=kitchen-ovens",
+    "http://localhost:3000/modules/estimate-builder?page=clientSelections"
+  ]
+}

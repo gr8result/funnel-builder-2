@@ -38,7 +38,7 @@ function freshStorage(seed = {}) {
 
 const sel = (fam) => svc.getClientSelectableProducts(ORG, fam).length;
 const mas = (fam) => svc.getProductsForFamily(fam).length;
-const ROOFING_MASTER_COUNT = 188;
+const ROOFING_MASTER_COUNT = 197;
 
 console.log("\n=== B4: master counts are immutable base data ===");
 freshStorage();
@@ -164,6 +164,23 @@ const clad0 = svc.getProductsForFamily("cladding")[0].productCode;
 svc.disableProduct(ORG, clad0);
 check("cladding: library still lists disabled product", svc.getBuilderProducts(ORG, "cladding").length, 10);
 check("cladding: selections hides disabled product", svc.getClientSelectableProducts(ORG, "cladding").length, 9);
+
+console.log("\n=== consolidation: effective appliance catalogue uses Product Library owner ===");
+freshStorage();
+const appliances = svc.getEffectiveApplianceCatalogue({ organisationId: ORG });
+check("effective appliance product count", appliances.counts.products, 83);
+check("effective appliance pack count", appliances.counts.packs, 35);
+check("effective appliance relationship count", appliances.counts.relationships, 159);
+check("effective appliance brands", appliances.brands, ["Ariston", "Blanco", "Euromaid", "Omega", "Smeg", "Westinghouse"]);
+check("no builder-private appliance leakage by default", appliances.counts.builderPrivateProducts, 0);
+check("canonical appliance IDs are stable", appliances.records.every((record) => record.productId && record.productCode), true);
+const applianceToDisable = appliances.records[0].productCode;
+svc.disableProduct(ORG, applianceToDisable);
+check("explicit appliance disable hides from same org", svc.getEffectiveApplianceCatalogue({ organisationId: ORG }).counts.products, 82);
+check("explicit appliance disable does not leak to other org", svc.getEffectiveApplianceCatalogue({ organisationId: "other-org-1234" }).counts.products, 83);
+const canonical = svc.getEffectiveProductCatalogue({ organisationId: ORG, familyKey: "ovens" }).canonicalProducts[0];
+check("canonical product contract owner", canonical.catalogueOwner, "product-library");
+check("canonical product contract snapshot policy", canonical.snapshotPolicy, "consumers store immutable selection snapshots; Product Library owns the canonical record");
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"}: ${pass} passed, ${fail} failed\n`);
 process.exit(fail === 0 ? 0 : 1);

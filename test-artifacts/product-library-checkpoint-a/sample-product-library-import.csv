@@ -1,0 +1,2 @@
+product_code,family_key,brand,product_name,model,description,price_status,price_unit,active,applicable_room_slugs,category_slugs
+VISUAL-IMPORT-TEST-001,ovens,Test Brand,Visual Import Test Oven,VIT-600,Preview-only browser verification row,quote_required,each,true,kitchen,kitchen-ovens

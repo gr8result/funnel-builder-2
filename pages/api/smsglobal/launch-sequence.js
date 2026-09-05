@@ -17,6 +17,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { guardSmsSend } from "../../../lib/smsValidation";
+import { getRequestDemoState, requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -194,6 +195,7 @@ function buildInsertVariants({
   step_no,
   to_phone,
   body,
+  workspace_id,
   send_at_iso,
   scheduled_for,
   available_at,
@@ -212,6 +214,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       status,
       available_at,
@@ -225,6 +228,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       status,
       available_at,
@@ -237,6 +241,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       sender_id,
       origin,
@@ -248,6 +253,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       status,
       sender_id,
@@ -260,6 +266,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       status,
       available_at,
@@ -272,6 +279,7 @@ function buildInsertVariants({
       step_no,
       to_phone,
       body,
+      workspace_id,
       scheduled_for,
       origin,
     },
@@ -351,6 +359,15 @@ export default async function handler(req, res) {
   const user = await getUserFromBearer(req, supabaseAnon);
   if (!user) return json(res, 401, { ok: false, error: "Unauthorized" });
 
+  let body = {};
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+  } catch {
+    body = req.body || {};
+  }
+  const workspaceId = requestWorkspaceId({ ...req, body });
+  const demoState = await getRequestDemoState({ ...req, body });
+
   // Fetch user's SMS account info
   // accounts.sender_id = approved sender name (SMS origin)
   // business_name = fallback if origin is missing
@@ -377,7 +394,12 @@ export default async function handler(req, res) {
 
   // ✅ Fall back to main SMSGlobal account if user doesn't have subaccount configured
   if (!smsApiKey || !smsApiSecret) {
-    if (MAIN_SMS_API_KEY && MAIN_SMS_API_SECRET) {
+    if (demoState.isDemo) {
+      smsApiKey = "demo";
+      smsApiSecret = "demo";
+      usingMainAccount = true;
+      console.log(`Demo workspace ${workspaceId} using simulated SMS campaign credentials`);
+    } else if (MAIN_SMS_API_KEY && MAIN_SMS_API_SECRET) {
       smsApiKey = MAIN_SMS_API_KEY;
       smsApiSecret = MAIN_SMS_API_SECRET;
       usingMainAccount = true;
@@ -436,13 +458,6 @@ export default async function handler(req, res) {
   if (finalOrigin === "gr8result" && !originSenderId && !businessName) {
     console.warn("⚠️  FALLBACK ORIGIN USED FOR CAMPAIGN: User has no sender_id set. Campaign will queue with default 'gr8result'. " +
       "User should set their approved sender name in Account → SMS Activation first.");
-  }
-
-  let body = {};
-  try {
-    body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-  } catch {
-    body = req.body || {};
   }
 
   const audience = body.audience || {};
@@ -546,6 +561,7 @@ export default async function handler(req, res) {
     for (const r of recipients) {
       baseRows.push({
         user_id: user.id,
+        workspace_id: workspaceId || null,
         lead_id: r.lead_id,
         step_no: stepIndex + 1,
         to_phone: r.to_phone,
@@ -561,15 +577,19 @@ export default async function handler(req, res) {
 
   // ✅ Check SMS limit before enqueueing
   let smsGuard = null;
-  try {
-    smsGuard = await guardSmsSend(user.id, baseRows.length);
-  } catch (limitErr) {
-    return json(res, 429, {
-      ok: false,
-      error: limitErr.message,
-      code: limitErr.code,
-      details: limitErr.details,
-    });
+  if (!demoState.isDemo) {
+    try {
+      smsGuard = await guardSmsSend(user.id, baseRows.length);
+    } catch (limitErr) {
+      return json(res, 429, {
+        ok: false,
+        error: limitErr.message,
+        code: limitErr.code,
+        details: limitErr.details,
+      });
+    }
+  } else {
+    smsGuard = { demo: true, allowed: true, requested: baseRows.length };
   }
 
   const ins = await insertSmsQueueRows(supabaseAdmin, baseRows);
@@ -605,6 +625,7 @@ export default async function handler(req, res) {
       headers: {
         "Content-Type": "application/json",
         ...(authHeader ? { Authorization: authHeader } : {}),
+        ...(workspaceId ? { "x-workspace-id": workspaceId } : {}),
       },
     });
     

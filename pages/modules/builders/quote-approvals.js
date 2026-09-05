@@ -1,3 +1,4 @@
+import SafeSelectionLink from "../../../components/SafeSelectionLink";
 import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -299,7 +300,7 @@ export default function BuilderQuoteApprovalsPage() {
           </div>
           <div style={styles.heroActions}>
             <Link href="/modules/builders/variations" style={styles.secondaryLink}>Variations</Link>
-            <Link href="/modules/estimate-builder?page=clientSelections" style={styles.secondaryLink}>Selections</Link>
+            <SafeSelectionLink href="/modules/estimate-builder?page=clientSelections" style={styles.secondaryLink}>Selections</SafeSelectionLink>
             <Link href="/modules/builders/budget-vs-actual" style={styles.primaryLink}>Budget vs Actual</Link>
           </div>
         </header>

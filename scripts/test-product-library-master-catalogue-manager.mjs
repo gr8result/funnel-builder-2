@@ -44,7 +44,7 @@ const windowsProducts = masterProducts.filter((product) => product.familyKey ===
 const entryDoorProducts = masterProducts.filter((product) => product.familyKey === "entry-doors");
 const garageDoorProducts = masterProducts.filter((product) => product.familyKey === "garage-doors");
 const exteriorFinishFamilies = ["cladding", "balustrades", "external-lighting", "exterior-paint", "driveway", "decking", "pool", "retaining-walls", "landscaping"];
-const kitchenFamilies = ["cabinetry", "cabinet-finish", "handles", "stone-benchtops", "splashback", "kitchen-sinks", "kitchen-sink-mixers", "ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "flooring", "lighting", "paint"];
+const kitchenFamilies = ["cabinetry", "cabinet-finish", "handles", "stone-benchtops", "splashback", "kitchen-sinks", "kitchen-sink-mixers", "ovens", "cooktops", "rangehoods", "dishwashers", "microwaves", "flooring"];
 
 assert.ok(pghBricks.length > 0, "Product Library master catalogue exposes PGH brick products");
 assert.ok(australBricks.length > 0, "Product Library master catalogue exposes Austral brick products");
@@ -64,6 +64,8 @@ exteriorFinishFamilies.forEach((familyKey) => {
 kitchenFamilies.forEach((familyKey) => {
   assert.ok(masterProducts.some((product) => product.familyKey === familyKey), `Product Library master catalogue exposes Kitchen ${familyKey} products`);
 });
+assert.ok(!masterProducts.some((product) => product.topLevelArea === "kitchen" && product.familyKey === "lighting"), "Product Library must not expose generic Kitchen lighting records");
+assert.ok(!masterProducts.some((product) => product.topLevelArea === "kitchen" && product.familyKey === "paint"), "Product Library must not expose generic Kitchen paint records");
 
 const clientSelectableBricks = queryClientSelectableProducts({
   organisationId: DEMO_BUILDER_ORGANISATION_ID,

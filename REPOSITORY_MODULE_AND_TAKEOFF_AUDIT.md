@@ -9,9 +9,79 @@
 
 ---
 
+---
+
+## 0. STAGE 2 UPDATE — 2026-09-01 (supersedes parts of §7–§11)
+
+The owner has reviewed this audit and confirmed that **all earlier takeoff builds are abandoned**.
+That decision changes the classification below. Read this section first.
+
+### What changed
+
+| Item | Stage 1 classification | Stage 2 classification | Reason |
+|---|---|---|---|
+| **The untracked-engine risk** | Critical, unmitigated | ✅ **RESOLVED** | Checkpoint commit `a50f14b` on branch `safety/pre-takeoff-cleanup-2026-09-01`. All 7 engine files proven recoverable. |
+| `components/estimate-builder/ai-takeoff/` | 16 files A, 4 files C | **20 files A** | `loadPdfJs` relocates in Batch 1; `planCoordinateUtils.js` then has no retained consumer |
+| `components/estimate-builder/takeoff-engine/` | 1 file A, 35 files B | **36 files A** | Owner confirmed the `/dev/takeoff-engine-test` sandbox is abandoned |
+| `modules/takeoff-v2/` (133) | **C — do not delete** | **A** | Owner decision; route exposure is itself legacy. Only outside dependency is `deriveJobId`, relocated in Batch 1 |
+| `modules/takeoff-v3/` (18) | **C — do not delete** | **A** | Owner decision |
+| `pages/api/ai/plan-detect.js` | B | **A** | Owner decision; sole callers are Batch 3 deletions |
+| `pages/dev/plan-import-test.js`, `takeoff-viewer-spike.jsx` | B | **A** | Owner decision (OpenSeadragon + earlier experiments) |
+| `OpeningsModal.jsx`, `wallUtils.js` | **D — unknown** | ✅ **RETAINED new-engine files** | Owner decision: they arrived with the new standalone engine and may serve its next phase. **Never deletion candidates.** |
+| `openseadragon@^6.0.2` | Keep pending B.6 | **Remove** | Every importer is now a deletion |
+
+### Revised counts
+
+| Category | Stage 1 | Stage 2 |
+|---|---|---|
+| **A — proven legacy, cleared for deletion** | 73 | **275** |
+| **B — needs verification** | 40 | **0** |
+| **C — active or shared, must not be deleted** | 169 | **11** |
+| **D — unknown ownership** | 5 | **0** |
+
+**Category C (11 retained):** the 7 new-engine files · `lib/pdf/pdfjsLoader.js` (new, Batch 1) ·
+`deriveJobId` relocated into `lib/jobFile.ts` (Batch 1) ·
+`scripts/test-ai-plan-takeoff-integration.mjs` · `eng.traineddata` (retained by
+`lib/freedom/tradeImport.js`, an active Freedom module). Plus `transcribe-local/` — Python, but audio
+transcription, unrelated to takeoff.
+
+**Category D is now empty.** Every previously unclassifiable file has a decision. The seven open
+items in the execution plan are owner *judgement* calls (documentation fate, external API callers,
+key rotation), not unclassified files.
+
+### Things this audit got wrong or incomplete, now corrected
+
+1. **`modules/takeoff-v2/` contains 22 UNTRACKED files** — deleting them is irreversible with no git
+   recovery. §7 listed the directory as 133 files without flagging that 22 exist only on disk. The
+   execution plan adds a mandatory archive commit before Batch 4.
+2. **`/api/ai/plan-orientation` does not exist.** `ESTIMATE_BUILDER_ARCHITECTURE.md` documents it as a
+   *"working AI endpoint"*; `pages/api/ai/plan-orientation.js` is absent. The architecture doc
+   describes an already partly-deleted system.
+3. **`konva` is not a direct dependency.** `react-konva` needs it as a peer; `konva@9.3.6` is present
+   only transitively. The retained engine's canvas depends on an undeclared package.
+4. **`.env.example` line 122 holds what looks like a live OpenAI key.** It is **not** a repository
+   leak — the file is gitignored (`.gitignore:40`) and untracked, so it was never committed and is
+   not in the checkpoint. Still worth rotating.
+
+### Where to go next
+
+Execution detail now lives in
+**[TAKEOFF_LEGACY_CLEANUP_EXECUTION_PLAN.md](TAKEOFF_LEGACY_CLEANUP_EXECUTION_PLAN.md)** — Batches 0–8,
+exact file lists, relocation targets and the verification protocol. Batch 0 is complete; Batches 1–8
+await approval. **No legacy file has been deleted.**
+
+---
+
 ## 1. Executive summary
 
+> **Superseded in part.** §1–§11 record the Stage 1 evidence exactly as gathered. §0 above carries
+> the current classification. The evidence here remains valid; only the A/B/C/D verdicts moved.
+
 ### The single most important finding
+
+> ✅ **RESOLVED 2026-09-01** by checkpoint commit `a50f14b` on branch
+> `safety/pre-takeoff-cleanup-2026-09-01`. The finding below is preserved as the record of why that
+> checkpoint was needed.
 
 **The new working Takeoff Engine is entirely uncommitted.** Its primary folder,
 `components/construction-estimation/ai-plan-takeoff/`, is 7 **untracked** files (`git ls-files` returns

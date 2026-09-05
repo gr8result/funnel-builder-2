@@ -1,0 +1,61 @@
+{
+  "passed": true,
+  "steps": [
+    {
+      "name": "08-quotation-saved-products",
+      "url": "http://localhost:3016/modules/estimate-builder?page=quotation",
+      "heapUsedMB": 245
+    }
+  ],
+  "rows": [
+    {
+      "id": "internal-selection:internal-doors",
+      "text": "::\t\t\n\t\t\nCorinthian Doors\n\t\nCorinthian Doors\n\t\nADECO 04S\n\t\nDeco White Oak Interior ADECO 04S internal door. Solid - White Oak Veneer; glazing: None.\n\t\t\t\t$2,505.00\tworkbook\t\nAllowance $0.00\nSelected $0.00\n\t\t\nEdit\nInsert below\nDelete",
+      "fields": [
+        "Internal Doors / Deco White Oak Interior ADECO 04S / Up to 2340 x 1020 x 35 / Veneer / None",
+        "3",
+        "EACH",
+        "835",
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "internal-selection:door-hardware",
+      "text": "::\t\t\n\t\t\nGainsborough\n\t\nGainsborough\n\t\n100OMIBC\n\t\nChoice Omis Passage Lever Set in Bright Chrome. Passage function; Bright Chrome.\n\t\t\t\t$0.00\tQuote required\t\nAllowance $0.00\nSelected $0.00\n\t\t\nEdit\nInsert below\nDelete",
+      "fields": [
+        "Internal Door Furniture / Choice Omis Passage Lever Set in Bright Chrome / Bright Chrome / Passage",
+        "4",
+        "EACH",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "internal-selection:skirting",
+      "text": "::\t\t\n\t\t\nPorta\n\t\nPorta\n\t\n200067\n\t\nBullnose profile for skirting and architraves. 41 x 18mm; Meranti; 2.1m.\n\t\t\t\t$0.00\tQuote required\t\nAllowance $0.00\nSelected $0.00\n\t\t\nEdit\nInsert below\nDelete",
+      "fields": [
+        "Skirting / Bullnose 41 x 18mm Meranti 2.1m / 41 x 18mm / 2.1m",
+        "10",
+        "LENGTH",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "id": "internal-selection:architraves",
+      "text": "::\t\t\n\t\t\nPorta\n\t\nPorta\n\t\n200067\n\t\nBullnose profile for skirting and architraves. 41 x 18mm; Meranti; 2.1m.\n\t\t\t\t$0.00\tQuote required\t\nAllowance $0.00\nSelected $0.00\n\t\t\nEdit\nInsert below\nDelete",
+      "fields": [
+        "Architraves / Bullnose 41 x 18mm Meranti 2.1m / 41 x 18mm / 2.1m",
+        "6",
+        "LENGTH",
+        "",
+        "",
+        ""
+      ]
+    }
+  ],
+  "errors": []
+}

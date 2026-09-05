@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Dishwasher image required">
+  <rect width="640" height="420" fill="#eef3f7"/>
+  <rect x="186" y="62" width="268" height="264" rx="16" fill="#ffffff" stroke="#1f3448" stroke-width="12"/>
+  <rect x="214" y="102" width="212" height="54" rx="8" fill="#dbe7ef" stroke="#1f3448" stroke-width="8"/>
+  <path d="M242 224c28-30 56 30 84 0s56 30 84 0" fill="none" stroke="#19a0bd" stroke-width="12" stroke-linecap="round"/>
+  <text x="320" y="370" fill="#1f3448" font-family="Arial, sans-serif" font-size="28" text-anchor="middle">Exact dishwasher image required</text>
+</svg>

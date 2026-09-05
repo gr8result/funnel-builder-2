@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -32,6 +33,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 build-output.log
+build_output.txt
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -57,8 +60,11 @@ node_modules/
 # local scratch and generated helpers
 tmp/
 tmp-thumbs/
+tmp-trade-check/
 .tmp-*
+tmp-public-schema.sql
 .nextignor
+~$*
 
 # website builder local exports, recovery snapshots, and autosave backups
 # Supabase (website_builder_sites / website_builder_pages / website_builder_page_versions) is the
@@ -75,4 +81,4 @@ website-builder-sites/**/*.tmp
 
 # local dev runtime locks
 .next-dev.lock.json
-
+.next-build.lock.json

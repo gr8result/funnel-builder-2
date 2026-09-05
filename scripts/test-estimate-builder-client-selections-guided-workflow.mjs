@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const workbookSource = await readFile(new URL("../components/estimate-builder/EstimateBuilderWorkbook.js", import.meta.url), "utf8");
 const selectionsBookSource = await readFile(new URL("../pages/modules/builders/selections-book.js", import.meta.url), "utf8");
+const clientSelectionsSource = await readFile(new URL("../pages/modules/builders/client-selections.js", import.meta.url), "utf8");
 
 assert.ok(workbookSource.includes('const loadCommercialClientSelectionsPage = () => import("../../pages/modules/builders/selections-book")'), "Estimate Builder Client Selections card must load the selections-book module");
 assert.ok(workbookSource.includes('page: "clientSelections"'), "Estimate Builder dashboard must keep the Client Selections entry point");
@@ -18,6 +19,33 @@ assert.ok(selectionsBookSource.includes("Choose an Area"), "Default Client Selec
 assert.ok(selectionsBookSource.includes("guided-client-selections-home"), "Guided home test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-kitchen-checklist"), "Kitchen checklist test marker must exist");
 assert.ok(selectionsBookSource.includes("guided-left-progress-menu"), "Product page left progress menu marker must exist");
+assert.ok(selectionsBookSource.includes("function GuidedImageCard"), "Guided category cards must use the shared bright status card renderer");
+assert.ok(selectionsBookSource.includes("function GuidedImageCard({ category, status,"), "Guided category cards must receive one explicit status prop");
+assert.ok(selectionsBookSource.includes("status={status}"), "Guided category card call sites must pass the derived status prop");
+assert.ok(selectionsBookSource.includes("const displayStatus = guidedCategoryStatus(status);"), "Guided category cards may derive status classes without rendering visible status text");
+assert.ok(!selectionsBookSource.includes("<em>{displayStatus.label}</em>"), "Guided category image cards must not render visible status text");
+const removedGuidedStatusName = ["guidedCard", "Status"].join("");
+assert.ok(!selectionsBookSource.includes(removedGuidedStatusName), "Guided category cards must not use the removed undefined guided status helper");
+assert.ok(selectionsBookSource.includes(".guidedImageCard { min-height: clamp(300px, 22vw, 360px);"), "Client Selections home cards must use deeper desktop images");
+assert.ok(selectionsBookSource.includes(".guidedImageCard { min-height: clamp(240px, 36vw, 300px);"), "Client Selections home cards must use the requested tablet image range");
+assert.ok(selectionsBookSource.includes(".guidedImageCard { min-height: clamp(220px, 64vw, 260px);"), "Client Selections home cards must use the requested mobile image range");
+assert.ok(selectionsBookSource.includes(".guidedImageCardTitle"), "Client Selections image cards must use a compact translucent title strip");
+assert.ok(selectionsBookSource.includes("rgba(15,118,110,.76)"), "Client Selections image card titles must use the teal translucent strip instead of a black panel");
+assert.ok(!selectionsBookSource.includes(".guidedImageCardFooter"), "Client Selections image cards must not render a footer information panel");
+assert.ok(selectionsBookSource.includes('aria-label={`Open ${category.label} selections`}'), "Client Selections image cards must expose an accessible navigation label");
+assert.ok(selectionsBookSource.includes(".guidedImageCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 1;"), "Client Selections category images must stay bright and not be opacity-dimmed");
+assert.ok(selectionsBookSource.includes(".drivewayWorkflow { display: block; width: 100%; max-width: none; min-width: 0; }"), "Driveway workflow must override the shared two-column product layout");
+assert.ok(selectionsBookSource.includes(".drivewayFinishGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 440px));"), "Driveway landing cards must be large side-by-side desktop cards");
+assert.ok(selectionsBookSource.includes(".drivewayFinishCard { position: relative; display: grid; grid-template-rows: 280px 1fr;"), "Driveway finish images must be materially deeper on desktop");
+assert.ok(selectionsBookSource.includes("drivewayAreaSource(savedDetails, requirement, project)"), "Driveway area must be sourced from project data instead of defaulting to 1m2");
+assert.ok(selectionsBookSource.includes("numberValue(areaM2) > 0 && (canSavePlain || canSaveExposed)"), "Driveway save must remain disabled until an area is entered");
+assert.ok(selectionsBookSource.includes('const areaLocked = areaSourceLabel === "Imported from BOQ"'), "Imported BOQ driveway area must not be unknowingly overwritten");
+assert.ok(!selectionsBookSource.includes("savedDetails.drivewayAreaM2 || savedDetails.approximateAreaM2 || requirement.defaultQuantity || 1"), "Driveway area must not blindly default to 1m2");
+assert.ok(selectionsBookSource.includes("Exposed aggregate supplier range"), "Driveway exposed aggregate flow must keep a supplier range confirmation state");
+assert.ok(selectionsBookSource.includes("${selectedMixRange.supplierDisplayName || selectedMixRange.supplier} - ${selectedMixRange.range} ${selectedMixRange.region || regionLabel} range"), "Verified driveway ranges must be labelled from supplier, range and region data without contradictory unverified text");
+assert.ok(clientSelectionsSource.includes(".categoryCard > img { width: 100%; height: clamp(300px, 22vw, 360px);"), "Standalone Client Selections category cards must use deeper desktop imagery");
+assert.ok(clientSelectionsSource.includes("rgba(11,29,47,.54)"), "Standalone Client Selections area overlay must be lighter and limited to text readability");
+assert.ok(clientSelectionsSource.includes(".categoryCard > img { height: clamp(200px, 64vw, 240px);"), "Standalone Client Selections category cards must have bounded mobile image depth");
 assert.ok(selectionsBookSource.includes("GuidedBrickWorkflow"), "Bricks flow must use a dedicated supplier/range/product workflow");
 assert.ok(selectionsBookSource.includes("guided-brick-empty-catalogue"), "Bricks flow must render a professional empty catalogue state");
 assert.ok(selectionsBookSource.includes("brickSupplierOptions(products)"), "Bricks suppliers must be derived from actual products");
@@ -62,9 +90,9 @@ assert.ok(!selectionsBookSource.includes("approved CSV rows connected"), "Client
 assert.ok(!selectionsBookSource.includes("Site Works") && !selectionsBookSource.includes("Soil Tests"), "Old estimating categories must not be introduced into the guided workflow");
 
 const reviewGateIndex = selectionsBookSource.indexOf('guidedScreen === "review"');
-const tableIndex = selectionsBookSource.indexOf('className="selectionTable"');
-assert.ok(reviewGateIndex > -1 && tableIndex > -1, "Review gate and legacy table must both exist");
-assert.ok(reviewGateIndex < tableIndex, "Legacy schedule table must be downstream of the review gate, not the primary screen");
+const scheduleGridIndex = selectionsBookSource.indexOf('className="selectionCardGrid"');
+assert.ok(reviewGateIndex > -1 && scheduleGridIndex > -1, "Review gate and generated schedule grid must both exist");
+assert.ok(reviewGateIndex < scheduleGridIndex, "Generated schedule grid must be downstream of the review gate, not the primary screen");
 
 const estimateRouteSource = await readFile(new URL("../pages/modules/estimate-builder/index.js", import.meta.url), "utf8");
 assert.ok(estimateRouteSource.includes("router.query.page"), "Estimate Builder route must read explicit page query params");

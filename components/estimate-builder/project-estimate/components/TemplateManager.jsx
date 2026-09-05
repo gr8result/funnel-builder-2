@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import {
   listTemplates,
   updateTemplate,
-  deleteTemplate,
   createTemplate,
   getTemplate,
 } from "../persistence/ProjectEstimateApiClient";
@@ -98,16 +97,11 @@ export default function ProjectEstimateTemplateManager({ workspaceId, currentTem
     });
   };
 
-  const handleDelete = (template) => {
-    if (typeof window === "undefined" || !window.confirm(`Delete "${template.templateName}"? This cannot be undone.`)) return;
-    withBusy(template.id, () => deleteTemplate(workspaceId, template.id));
-  };
-
   return (
     <div style={styles.overlay} onMouseDown={onClose}>
       <div style={styles.dialog} onMouseDown={(event) => event.stopPropagation()}>
         <div style={styles.header}>
-          <strong>Project Estimate Templates</strong>
+          <strong>My Project Estimate Templates</strong>
           <button type="button" style={styles.button} onClick={onClose}>Close</button>
         </div>
         {loading ? <p style={styles.muted}>Loading templates...</p> : null}
@@ -131,17 +125,20 @@ export default function ProjectEstimateTemplateManager({ workspaceId, currentTem
                 disabled={busyId === template.id || template.id === currentTemplateId}
                 onClick={() => onSelectTemplate(template.id)}
               >
-                Use for this estimate
+                Open Template
               </button>
               {!template.isSystemDefault ? (
                 <>
                   <button type="button" style={styles.button} disabled={busyId === template.id} onClick={() => handleRename(template)}>Rename</button>
-                  <button type="button" style={styles.button} disabled={busyId === template.id} onClick={() => handleSetOrgDefault(template)}>Set Org Default</button>
+                  <button type="button" style={styles.button} disabled={busyId === template.id} onClick={() => handleSetOrgDefault(template)}>Use for New Project</button>
                 </>
               ) : null}
+              <button type="button" style={styles.button} disabled>Preview</button>
               <button type="button" style={styles.button} disabled={busyId === template.id} onClick={() => handleDuplicate(template)}>Duplicate</button>
+              <button type="button" style={styles.button} disabled>Update Template</button>
+              <button type="button" style={styles.button} disabled>View Revisions</button>
               {!template.isSystemDefault ? (
-                <button type="button" style={styles.dangerButton} disabled={busyId === template.id} onClick={() => handleDelete(template)}>Delete</button>
+                <button type="button" style={styles.dangerButton} disabled title="Template deletion is disabled during recovery.">Protected</button>
               ) : null}
             </div>
           </div>

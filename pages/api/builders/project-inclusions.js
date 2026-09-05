@@ -2,6 +2,7 @@ import { withWorkspace } from "../../../lib/withWorkspace";
 import {
   assignCurrentStandardInclusionsToProject,
   getAssignedProjectInclusions,
+  NO_ACTIVE_STANDARD_INCLUSIONS_MASTER_CODE,
 } from "../../../lib/builders/projectInclusionsAssignment";
 
 async function handler(req, res) {
@@ -37,7 +38,15 @@ async function handler(req, res) {
 
     return res.status(405).json({ ok: false, error: "Method not allowed" });
   } catch (error) {
-    return res.status(500).json({ ok: false, error: error?.message || "Project inclusions request failed." });
+    const code = error?.code || "";
+    const statusCode = code === NO_ACTIVE_STANDARD_INCLUSIONS_MASTER_CODE
+      ? 409
+      : Number(error?.statusCode || 500);
+    return res.status(statusCode).json({
+      ok: false,
+      error: error?.message || "Project inclusions request failed.",
+      ...(code ? { code } : {}),
+    });
   }
 }
 

@@ -4,6 +4,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -96,6 +97,23 @@ async function handler(req, res) {
         application_fee_amount: platformFee,
         transfer_data: { destination: stripeAccountId },
       };
+    }
+
+    if (req.isDemoWorkspace) {
+      const result = await demoSimulationResult({
+        workspaceId: req.workspaceId,
+        actionType: "booking-checkout",
+        provider: "stripe",
+        target: serviceId,
+        payload: sessionParams.metadata,
+        userId: req.user?.id,
+        message: "Demo booking checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...result,
+        id: `demo_booking_checkout_${Date.now()}`,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/booking-success?demo=1&workspace_id=${encodeURIComponent(req.workspaceId || "")}`,
+      });
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);

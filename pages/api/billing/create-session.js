@@ -4,6 +4,7 @@
 
 import Stripe from "stripe";
 import { BASE_PLANS } from "../../../data/pricing";
+import { getRequestDemoState, demoSimulationResult, requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -14,6 +15,23 @@ export default async function handler(req, res) {
 
   try {
     const { lineItems, metadata = {} } = req.body;
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
+    if (demoState.isDemo) {
+      const simulated = await demoSimulationResult({
+        workspaceId,
+        actionType: "stripe-checkout-session",
+        provider: "stripe",
+        target: metadata?.plan || "subscription",
+        payload: { lineItems, metadata },
+        message: "Demo Stripe Checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...simulated,
+        url: `/checkout/success?demo=1&workspace_id=${encodeURIComponent(workspaceId)}`,
+        id: `demo_checkout_${Date.now()}`,
+      });
+    }
     const basePlan = metadata.plan ? BASE_PLANS[String(metadata.plan)] : null;
     const isAnnual = metadata.annual === "1";
     const introDiscountPercent = !isAnnual ? (basePlan?.introDiscountPercent || 0) : 0;

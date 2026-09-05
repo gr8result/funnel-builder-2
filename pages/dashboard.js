@@ -148,7 +148,7 @@ const CORE_ITEMS = [
     emoji: "🗂️",
     desc: "Job Board and work schedules — suits any industry",
     color: "#f97316",
-    href: "/modules/construction",
+    href: "/modules/estimate-builder?page=projectDashboard",
   },
 ];
 
@@ -729,11 +729,11 @@ export default function Dashboard() {
             { count: automationCount },
             { count: funnelCount },
           ] = await Promise.all([
-            supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", uid),
-            supabase.from("email_sends").select("id", { count: "exact", head: true }).eq("user_id", uid).gte("sent_at", since30d),
-            supabase.from("sms_sent_history").select("id", { count: "exact", head: true }).eq("user_id", uid).gte("created_at", since30d),
-            supabase.from("email_automations").select("id", { count: "exact", head: true }).eq("user_id", uid),
-            supabase.from("funnels").select("id", { count: "exact", head: true }).eq("user_id", uid),
+            supabase.from("leads").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+            supabase.from("email_sends").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).gte("sent_at", since30d),
+            supabase.from("sms_sent_history").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).gte("created_at", since30d),
+            supabase.from("email_automations").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+            supabase.from("funnels").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
           ]);
           setImpactStats({
             contacts:    contactCount    ?? 0,

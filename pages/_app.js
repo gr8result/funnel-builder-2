@@ -10,7 +10,7 @@ import "../styles/marketplace-overhaul.css";
 import Layout from "../components/Layout";
 import { AuthProvider } from "../context/AuthContext";
 import { WorkspaceProvider } from "../hooks/useWorkspace";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 
 function isBenignDevRuntimeNoise(error) {
@@ -83,19 +83,38 @@ function DevRuntimeNoiseGuard() {
 function RouteProgressBar() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
+  const hideTimerRef = useRef(null);
 
   useEffect(() => {
-    const show = () => setVisible(true);
-    const hide = () => setVisible(false);
+    const clearHideTimer = () => {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+    };
+    const show = () => {
+      clearHideTimer();
+      setVisible(true);
+      hideTimerRef.current = window.setTimeout(() => setVisible(false), 12000);
+    };
+    const hide = () => {
+      clearHideTimer();
+      setVisible(false);
+    };
     router.events.on("routeChangeStart", show);
     router.events.on("routeChangeComplete", hide);
     router.events.on("routeChangeError", hide);
     return () => {
+      clearHideTimer();
       router.events.off("routeChangeStart", show);
       router.events.off("routeChangeComplete", hide);
       router.events.off("routeChangeError", hide);
     };
   }, [router]);
+
+  useEffect(() => {
+    setVisible(false);
+  }, [router.asPath]);
 
   if (!visible) return null;
 
@@ -169,9 +188,31 @@ function RouteProgressBar() {
   );
 }
 
+const AppRoot = ({ children }) => (
+  <div style={{ fontSize: 16, lineHeight: 1.4 }}>
+    <style jsx global>{`
+      html,
+      body {
+        font-size: 16px;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+    `}</style>
+    {children}
+  </div>
+);
+
 export default function MyApp({ Component, pageProps }) {
   const router = useRouter();
   const actualPath = String(router.asPath || "").split("?")[0];
+  // Keep recovery outside providers and Layout as well as the workbook.
+  if (router.pathname === "/modules/estimate-builder" && (!router.isReady || router.query.safeMode === "1")) {
+    return <Component {...pageProps} />;
+  }
   const isErrorRoute = router.pathname === "/404" || router.pathname === "/500" || router.pathname === "/_error";
 
   const noLayoutRoutes = [
@@ -180,6 +221,8 @@ export default function MyApp({ Component, pageProps }) {
     "/login",
     "/signup",
     "/verify-email",
+    "/client-portal",
+    "/client-portal/",
     "/legal/vendor-agreement",
     "/reset-password",
     "/u/",
@@ -196,34 +239,19 @@ export default function MyApp({ Component, pageProps }) {
     || noLayoutRoutes.some((path) =>
       router.pathname.startsWith(path) || actualPath.startsWith(path)
     );
+  const showRouteProgress = !Component.disableRouteProgress;
 
-  const Root = ({ children }) => (
-    <div style={{ fontSize: 16, lineHeight: 1.4 }}>
-      <style jsx global>{`
-        html,
-        body {
-          font-size: 16px;
-        }
-        button,
-        input,
-        select,
-        textarea {
-          font-size: 16px;
-        }
-      `}</style>
-      {children}
-    </div>
-  );
+
 
   if (hideLayout) {
     return (
       <AuthProvider>
         <WorkspaceProvider>
           <DevRuntimeNoiseGuard />
-          <RouteProgressBar />
-          <Root>
+          {showRouteProgress && <RouteProgressBar />}
+          <AppRoot>
             <Component {...pageProps} />
-          </Root>
+          </AppRoot>
         </WorkspaceProvider>
       </AuthProvider>
     );
@@ -233,12 +261,12 @@ export default function MyApp({ Component, pageProps }) {
     <AuthProvider>
       <WorkspaceProvider>
         <DevRuntimeNoiseGuard />
-        <RouteProgressBar />
-        <Root>
+        {showRouteProgress && <RouteProgressBar />}
+        <AppRoot>
           <Layout>
             <Component {...pageProps} />
           </Layout>
-        </Root>
+        </AppRoot>
       </WorkspaceProvider>
     </AuthProvider>
   );

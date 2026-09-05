@@ -7,6 +7,7 @@ import SideNav from "./SideNav";
 import ICONS from "./iconMap";
 import { supabase } from "../utils/supabase-client";
 import UsageWarning from "./UsageWarning";
+import { useWorkspace } from "../hooks/useWorkspace";
 
 const DEFAULT_BRAND_NAME = "Gr8 Result Digital Solutions";
 const DEFAULT_BRAND_LOGO = "/logo/gr8result-logo.png";
@@ -177,6 +178,7 @@ async function resolveBrandingAssetUrl(rawValue) {
 
 export default function Layout({ children }) {
   const router = useRouter();
+  const { activeWorkspace, isDemoWorkspace } = useWorkspace();
   const path = router.pathname;
 
   const isAdminRoute = path.startsWith("/admin") || path.startsWith("/dev");
@@ -189,7 +191,8 @@ export default function Layout({ children }) {
   const isQaRoute = isQaAccessibleRoute(path);
   const marketplaceAccessEndpoint = getMarketplaceAccessEndpoint(path);
   const noNavRoutes = ["/login", "/signup", "/pending-approval"];
-  const showNavDefault = !noNavRoutes.includes(path);
+  const noNavRoutePrefixes = ["/client-portal"];
+  const showNavDefault = !noNavRoutes.includes(path) && !noNavRoutePrefixes.some((prefix) => path.startsWith(prefix));
 
   const [account, setAccount] = useState(null);
   const [header, setHeader] = useState({
@@ -453,6 +456,7 @@ export default function Layout({ children }) {
               </span>
             </div>
             {/* ✅ Usage stats */}
+            {isDemoWorkspace && <DemoCompanyBadge workspaceName={activeWorkspace?.name} />}
             <UsageWarning />
             {/* ✅ Getting Started checklist */}
             <GettingStartedMenu />
@@ -464,6 +468,14 @@ export default function Layout({ children }) {
         )}
         <main style={main}>{children}</main>
       </section>
+    </div>
+  );
+}
+
+function DemoCompanyBadge({ workspaceName }) {
+  return (
+    <div style={demoBadge} title={workspaceName || "Demo workspace"}>
+      DEMO COMPANY
     </div>
   );
 }
@@ -860,6 +872,18 @@ const brandName = {
   whiteSpace: "nowrap",
   fontSize: 2.0 + 'rem', // Make brand name text bigger
   fontWeight: 600,
+};
+const demoBadge = {
+  flexShrink: 0,
+  border: "1px solid rgba(250,204,21,0.75)",
+  background: "rgba(250,204,21,0.14)",
+  color: "#fde68a",
+  borderRadius: 999,
+  padding: "8px 14px",
+  fontSize: 14,
+  fontWeight: 800,
+  letterSpacing: "0.08em",
+  whiteSpace: "nowrap",
 };
 
 const pmWrap = { position: "relative" };

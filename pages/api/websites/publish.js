@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../../../lib/supabaseAdmin";
 import { withAuth } from "../../../lib/withWorkspace";
+import { demoSimulationResult, isDemoWorkspace, requestWorkspaceId } from "../../../lib/demoWorkspace";
 import {
   buildDefaultSiteDomain,
   buildWebsitePath,
@@ -48,6 +49,16 @@ function getBearerToken(req) {
 
 function toErrorMessage(error, fallback) {
   return error?.message || fallback;
+}
+
+function resolvePublishWorkspaceId(req) {
+  return String(
+    requestWorkspaceId(req) ||
+      req?.body?.project?.workspace_id ||
+      req?.body?.project?.workspaceId ||
+      req?.body?.project?.workspace?.id ||
+      ""
+  ).trim();
 }
 
 function isMissingPublishedWebsitesTable(error) {
@@ -226,6 +237,40 @@ async function handler(req, res) {
   }
 
   const userId = userData.user.id;
+  const workspaceId = resolvePublishWorkspaceId(req);
+  if (workspaceId && await isDemoWorkspace(workspaceId)) {
+    const project = req.body?.project || {};
+    const slug = slugifyWebsiteValue(req.body?.slug || project?.slug || project?.name || project?.id || "demo-website");
+    const simulated = await demoSimulationResult({
+      workspaceId,
+      actionType: "website-publish",
+      provider: "website-builder",
+      target: slug,
+      payload: {
+        projectId: project?.id || null,
+        slug,
+        customDomain: normalizeDomain(req.body?.customDomain || project?.customDomain || project?.custom_domain || ""),
+      },
+      userId,
+      message: "Demo website publish simulated - no published website row was changed.",
+    });
+    return res.status(200).json({
+      ...simulated,
+      publication: {
+        id: `demo-publication-${slug}`,
+        slug,
+        primary_domain: buildDefaultSiteDomain(slug),
+        custom_domain: null,
+        domain_status: "demo_simulated",
+        published_at: new Date().toISOString(),
+      },
+      verified: { ok: true, demo: true, simulated: true },
+      defaultUrl: buildDefaultSiteDomain(slug) ? `https://${buildDefaultSiteDomain(slug)}` : null,
+      liveUrl: buildDefaultSiteDomain(slug) ? `https://${buildDefaultSiteDomain(slug)}` : null,
+      customDomainInstructions: null,
+    });
+  }
+
   const unlockToken = getWebsiteUnlockTokenFromRequest(req);
   const incomingProject = req.body?.project;
   const splitProjectId = String(incomingProject?.id || "").trim();

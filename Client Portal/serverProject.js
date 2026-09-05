@@ -103,7 +103,7 @@ function mapProgress(tasks = []) {
       stage: task.phase || task.status || "",
       status: task.status || "",
       progress: Number(task.progress_percent || 0),
-      expectedDate: formatDate(task.client_expected_date || task.metadata?.expectedDate || task.updated_at),
+      expectedDate: formatDate(task.client_expected_date || task.metadata?.expectedDate || task.created_at || task.updated_at),
       update: task.client_update || task.metadata?.clientUpdate || "",
     }));
 }
@@ -196,9 +196,9 @@ export default async function clientPortalProjectHandler(req, res) {
       .order("created_at", { ascending: false }),
     supabaseAdmin
       .from("gantt_tasks")
-      .select("id, name, phase, status, progress_percent, client_visible, client_update, client_expected_date, updated_at")
+      .select("id, name, phase, status, progress_percent, client_visible, client_update, client_expected_date, created_at")
       .eq("project_id", project.id)
-      .order("updated_at", { ascending: false }),
+      .order("created_at", { ascending: false }),
     supabaseAdmin
       .from("client_portal_messages")
       .select("id, parent_message_id, sender_user_id, sender_name, sender_role, body, attachments, read_by, created_at")

@@ -1,0 +1,10 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/modules/estimate-builder": "pages/modules/estimate-builder.js",
+  "/[slug]": "pages/[slug].js",
+  "/api/workspaces": "pages/api/workspaces.js",
+  "/api/usage/check-limits": "pages/api/usage/check-limits.js",
+  "/api/product-library/approved-client-selection-catalogue": "pages/api/product-library/approved-client-selection-catalogue.js"
+}

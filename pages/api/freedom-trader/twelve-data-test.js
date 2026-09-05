@@ -1,8 +1,11 @@
 import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
 
 import {
+  fetchTwelveDataApiUsage,
   fetchTwelveDataHistory,
+  fetchTwelveDataQuote,
   fetchTwelveDataSymbolSearch,
+  hasTwelveDataApiKey,
   testTwelveDataWebSocket,
   twelveDataWebSocketStatus,
 } from "../../../lib/freedom-trader/twelveData";
@@ -15,6 +18,10 @@ function summarizeHistory(result) {
     ok: result.ok,
     symbol: result.symbol,
     provider: result.provider || "Twelve Data",
+    endpoint: result.endpoint || "https://api.twelvedata.com/time_series",
+    httpStatus: result.providerStatus || null,
+    providerCode: result.providerCode || null,
+    keySupplied: result.keySupplied ?? hasTwelveDataApiKey(),
     interval: result.interval,
     actualPriceReturned: result.currentPrice ?? null,
     candleCount: result.candleCount || 0,
@@ -27,23 +34,63 @@ function summarizeHistory(result) {
   };
 }
 
+function summarizeQuote(result) {
+  return {
+    ok: result.ok,
+    symbol: result.symbol,
+    provider: result.provider || "Twelve Data",
+    endpoint: result.endpoint || "https://api.twelvedata.com/quote",
+    httpStatus: result.providerStatus || null,
+    providerCode: result.providerCode || null,
+    keySupplied: result.keySupplied ?? hasTwelveDataApiKey(),
+    price: result.price ?? null,
+    previousClose: result.previousClose ?? null,
+    exchange: result.exchange || null,
+    currency: result.currency || null,
+    timestamp: result.timestamp || null,
+    error: result.error || null,
+  };
+}
+
+function parseSymbolList(raw, fallback = []) {
+  if (raw === undefined || raw === null) return fallback;
+  return String(raw)
+    .split(",")
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean);
+}
+
 async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
   }
 
-  const usSymbols = String(req.query.us || US_TEST_SYMBOLS.join(","))
-    .split(",")
-    .map((symbol) => symbol.trim().toUpperCase())
-    .filter(Boolean);
-  const asxSymbols = String(req.query.asx ?? ASX_TEST_SYMBOLS.join(","))
-    .split(",")
-    .map((symbol) => symbol.trim().toUpperCase())
-    .filter(Boolean);
+  const usSymbols = parseSymbolList(req.query.us, US_TEST_SYMBOLS);
+  const asxSymbols = parseSymbolList(req.query.asx, ASX_TEST_SYMBOLS);
   const runWebSocketTest = String(req.query.websocket || "").toLowerCase() === "1";
+  const usage = await fetchTwelveDataApiUsage().catch((error) => ({ ok: false, error: error.message }));
+  const usageDailyExhausted = !usage.ok && /out of api credits|daily/i.test(String(usage.error || ""));
 
   const oneMinute = await Promise.all(usSymbols.map(async (symbol) => {
+    if (usageDailyExhausted) {
+      return {
+        symbol,
+        oneMinuteOhlcv: {
+          ok: false,
+          symbol,
+          provider: "Twelve Data",
+          endpoint: "https://api.twelvedata.com/time_series",
+          httpStatus: usage.status || null,
+          providerCode: usage.providerCode || null,
+          keySupplied: usage.keySupplied ?? hasTwelveDataApiKey(),
+          interval: "1min",
+          actualPriceReturned: null,
+          candleCount: 0,
+          error: usage.error,
+        },
+      };
+    }
     const history = await fetchTwelveDataHistory({ symbol, range: "1d", interval: "1m" });
     return {
       symbol,
@@ -52,12 +99,56 @@ async function handler(req, res) {
   }));
 
   const asxMapping = await Promise.all(asxSymbols.map(async (symbol) => {
-    const history = await fetchTwelveDataHistory({ symbol, exchange: "ASX", range: "1d", interval: "1m" });
+    if (usageDailyExhausted) {
+      return {
+        requestedSymbol: symbol,
+        mappedSymbol: `${symbol}:ASX`,
+        quote: {
+          ok: false,
+          symbol: `${symbol}:ASX`,
+          provider: "Twelve Data",
+          endpoint: "https://api.twelvedata.com/quote",
+          httpStatus: usage.status || null,
+          providerCode: usage.providerCode || null,
+          keySupplied: usage.keySupplied ?? hasTwelveDataApiKey(),
+          price: null,
+          previousClose: null,
+          exchange: null,
+          currency: null,
+          timestamp: null,
+          error: usage.error,
+        },
+        dailyOhlcv: {
+          ok: false,
+          symbol: `${symbol}:ASX`,
+          provider: "Twelve Data",
+          endpoint: "https://api.twelvedata.com/time_series",
+          httpStatus: usage.status || null,
+          providerCode: usage.providerCode || null,
+          keySupplied: usage.keySupplied ?? hasTwelveDataApiKey(),
+          interval: "1day",
+          actualPriceReturned: null,
+          candleCount: 0,
+          firstTimestamp: null,
+          latestTimestamp: null,
+          liveOrDelayedStatus: "Unavailable",
+          exchange: null,
+          currency: null,
+          error: usage.error,
+        },
+        searchOk: false,
+        matches: [],
+        error: usage.error,
+      };
+    }
+    const quote = await fetchTwelveDataQuote({ symbol, exchange: "ASX" });
+    const history = await fetchTwelveDataHistory({ symbol, exchange: "ASX", range: "1y", interval: "1day" });
     const search = await fetchTwelveDataSymbolSearch({ symbol, exchange: "ASX" });
     return {
       requestedSymbol: symbol,
       mappedSymbol: history.symbol,
-      oneMinuteOhlcv: summarizeHistory(history),
+      quote: summarizeQuote(quote),
+      dailyOhlcv: summarizeHistory(history),
       searchOk: search.ok,
       matches: search.matches.slice(0, 5).map((match) => ({
         symbol: match.symbol,
@@ -67,7 +158,7 @@ async function handler(req, res) {
         country: match.country,
         type: match.type,
       })),
-      error: history.error || search.error || null,
+      error: quote.error || history.error || search.error || null,
     };
   }));
 
@@ -75,13 +166,27 @@ async function handler(req, res) {
     ...oneMinute.flatMap((item) => [
       item.oneMinuteOhlcv.ok ? null : `${item.symbol} 1-minute OHLCV failed: ${item.oneMinuteOhlcv.error}`,
     ]),
-    ...asxMapping.map((item) => (item.oneMinuteOhlcv.ok || item.searchOk ? null : `${item.requestedSymbol}:ASX mapping failed: ${item.error}`)),
+    ...asxMapping.map((item) => (item.quote.ok && item.dailyOhlcv.ok ? null : `${item.requestedSymbol}:ASX quote/history failed: ${item.error}`)),
   ].filter(Boolean);
   const websocketProbe = runWebSocketTest ? await testTwelveDataWebSocket(usSymbols[0] || "MSFT") : null;
 
   return res.status(200).json({
     ok: failures.length === 0,
     provider: "Twelve Data",
+    apiUsage: {
+      ok: usage.ok,
+      endpoint: usage.endpoint || "https://api.twelvedata.com/api_usage",
+      httpStatus: usage.status || null,
+      providerCode: usage.providerCode || null,
+      providerStatus: usage.providerStatus || null,
+      keySupplied: usage.keySupplied ?? hasTwelveDataApiKey(),
+      planCategory: usage.plan_category || null,
+      planLimit: usage.plan_limit || null,
+      planDailyLimit: usage.plan_daily_limit || null,
+      creditsUsed: usage.headers?.creditsUsed || usage.creditsUsed || null,
+      creditsLeft: usage.headers?.creditsLeft || usage.creditsLeft || null,
+      error: usage.error || null,
+    },
     freeTrialSupportsRequiredData: failures.length === 0 ? "yes" : "not confirmed",
     note: failures.length
       ? "Provider test did not pass. Freedom Trader chart routing should not be changed until these failures are resolved."

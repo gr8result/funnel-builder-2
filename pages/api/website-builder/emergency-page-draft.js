@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { assertWebsiteUnlockedForMutation, getWebsiteUnlockTokenFromRequest, websiteLockedResponse } from "../../../lib/website-builder/contentLock";
 
 export const config = {
   api: {
@@ -80,6 +81,13 @@ export default async function handler(req, res) {
   }
 
   if (method === "POST") {
+    const lock = assertWebsiteUnlockedForMutation({
+      projectId,
+      userId: "",
+      unlockToken: getWebsiteUnlockTokenFromRequest(req),
+      action: "emergency-draft",
+    });
+    if (!lock.ok) return websiteLockedResponse(res, lock);
     const blocks = Array.isArray(req.body?.blocks) ? req.body.blocks : [];
     if (IS_PRODUCTION_RUNTIME) {
       return res.status(200).json({ ok: true, skipped: true, blocks: blocks.length });

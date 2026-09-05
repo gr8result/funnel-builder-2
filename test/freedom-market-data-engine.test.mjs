@@ -222,3 +222,109 @@ test("market snapshot rejects malformed OHLCV rows instead of analysing corrupte
   assert.equal(snapshot.candles.daily.length, 0);
   assert.match(snapshot.error, /malformed OHLCV/i);
 });
+
+test("ASX snapshot requests use exchange-qualified symbols and reject USD history", async () => {
+  const requested = [];
+  global.fetch = async (url) => {
+    const parsed = new URL(String(url));
+    requested.push(parsed.hostname === "query1.finance.yahoo.com" ? parsed.pathname : parsed.searchParams.get("symbol"));
+    return makeResponse({
+      chart: {
+        result: [{
+          meta: { symbol: "ALK.AX", exchangeName: "NASDAQ", fullExchangeName: "NASDAQ", currency: "USD" },
+          timestamp: Array.from({ length: 240 }, (_, index) => Date.UTC(2025, 8, 1 + index) / 1000),
+          indicators: { quote: [{
+            open: Array.from({ length: 240 }, (_, index) => 1 + index * 0.01),
+            high: Array.from({ length: 240 }, (_, index) => 1.1 + index * 0.01),
+            low: Array.from({ length: 240 }, (_, index) => 0.9 + index * 0.01),
+            close: Array.from({ length: 240 }, (_, index) => 1.05 + index * 0.01),
+            volume: Array.from({ length: 240 }, () => 2_000_000),
+          }] },
+        }],
+        error: null,
+      },
+    });
+  };
+
+  const service = await importMarketDataService("asx-qualified");
+  const snapshots = await service.getMarketSnapshotBatch([
+    { symbol: "ALK", providerSymbol: "ALK:ASX", exchange: "ASX", currency: "AUD" },
+  ], { range: "1y", interval: "1day" });
+  const snapshot = snapshots.get("ALK");
+
+  assert.deepEqual(requested, ["/v8/finance/chart/ALK.AX"]);
+  assert.equal(snapshot.dataQuality, "unavailable");
+  assert.equal(snapshot.statusCode, "DATA_INVALID");
+  assert.match(snapshot.error, /Expected ASX AUD/i);
+});
+
+test("ASX unavailable history keeps requested exchange and currency in diagnostics", async () => {
+  const service = await importMarketDataService("asx-unavailable-metadata");
+  const snapshot = service.snapshotFromHistory("CBA", {
+    ok: false,
+    symbol: "CBA:ASX",
+    provider: "Twelve Data",
+    candles: [],
+    error: "This symbol is available starting with the Pro or Venture plan.",
+  }, null, { exchange: "ASX", currency: "AUD" });
+
+  assert.equal(snapshot.dataQuality, "unavailable");
+  assert.equal(snapshot.exchange, "ASX");
+  assert.equal(snapshot.currency, "AUD");
+  assert.equal(snapshot.quote.price, null);
+  assert.match(snapshot.error, /Pro or Venture/i);
+});
+
+test("ASX history uses Yahoo Finance daily candles", async () => {
+  const requested = [];
+  global.fetch = async (url) => {
+    const parsed = new URL(String(url));
+    requested.push(parsed.toString().replace(/apikey=[^&]+/, "apikey=REDACTED"));
+    const count = 240;
+    return makeResponse({
+      chart: {
+        result: [{
+          meta: {
+            symbol: "CBA.AX",
+            exchangeName: "ASX",
+            fullExchangeName: "ASX",
+            currency: "AUD",
+            instrumentType: "EQUITY",
+            regularMarketPrice: 159.9,
+            chartPreviousClose: 158.2,
+            timezone: "AEST",
+          },
+          timestamp: Array.from({ length: count }, (_, index) => Date.UTC(2025, 8, 1 + index) / 1000),
+          indicators: {
+            quote: [{
+              open: Array.from({ length: count }, (_, index) => 100 + index * 0.2),
+              high: Array.from({ length: count }, (_, index) => 101 + index * 0.2),
+              low: Array.from({ length: count }, (_, index) => 99 + index * 0.2),
+              close: Array.from({ length: count }, (_, index) => 100.5 + index * 0.2),
+              volume: Array.from({ length: count }, (_, index) => 2_000_000 + index * 1000),
+            }],
+          },
+        }],
+        error: null,
+      },
+    });
+  };
+
+  const service = await importMarketDataService("asx-yahoo-fallback");
+  service.resetMarketDataMetrics();
+  const snapshots = await service.getMarketSnapshotBatch([
+    { symbol: "CBA", providerSymbol: "CBA:ASX", exchange: "ASX", currency: "AUD" },
+  ], { range: "1y", interval: "1day" });
+  const snapshot = snapshots.get("CBA");
+  const metrics = service.getMarketDataMetrics();
+
+  assert.equal(snapshot.dataQuality, "daily-only");
+  assert.equal(snapshot.source, "Yahoo Finance");
+  assert.equal(snapshot.exchange, "ASX");
+  assert.equal(snapshot.currency, "AUD");
+  assert.equal(snapshot.candleCount, 240);
+  assert.deepEqual(requested.map((item) => new URL(item).hostname), ["query1.finance.yahoo.com"]);
+  assert.equal(metrics.yahooProviderCalls, 1);
+  assert.equal(metrics.indicatorProviderCalls, 0);
+  assert.equal(metrics.quoteProviderCalls, 0);
+});

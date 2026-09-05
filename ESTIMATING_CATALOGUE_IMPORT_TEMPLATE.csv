@@ -1,0 +1,2 @@
+category_id,subcategory_id,resource_type,trade,code,name,description,unit,cost_rate,sell_rate,gst_treatment,default_markup,supplier_or_subcontractor,region,effective_from,active
+category:electrical,subcategory:labour,labour,electrician,ELEC-LABOUR-HR,Electrician labour,Example non-client-selectable estimating rate.,HOUR,95.00,125.00,GST exclusive,20,Preferred electrical subcontractor,QLD,2026-09-02,true

@@ -823,7 +823,7 @@ function testimonialVariantStyles(variant, compact, props) {
 
   const fullWidth = props.fullWidthBackground !== false;
   const shellRadius = fullWidth ? 0 : (compact ? 16 : 28);
-  const matchHeight = !compact && !!props.equalCardHeight;
+  const matchHeight = !compact && (variant === "cards" || !!props.equalCardHeight);
   const boundedGrid = {
     display: "grid",
     gridTemplateColumns: compact ? "1fr" : `repeat(${gridColumns}, minmax(0, 1fr))`,
@@ -933,7 +933,8 @@ function testimonialVariantStyles(variant, compact, props) {
       borderRadius: compact ? 14 : 20,
       padding: compact ? "18px" : "26px 28px",
       boxShadow: PREMIUM_SHADOW,
-      display: "grid",
+      display: "flex",
+      flexDirection: "column",
       gap: 12,
       minWidth: 0,
       overflowWrap: "anywhere",

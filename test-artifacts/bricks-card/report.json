@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "baseline": {
+    "text": "Bricks\n147 active products\nBrand / Range / Colour / Price",
+    "width": 257.421875,
+    "height": 150,
+    "src": null,
+    "fit": "fill",
+    "background": "none",
+    "loaded": false
+  },
+  "after": {
+    "text": "Bricks\n147 active products\nBrand / Range / Colour / Price",
+    "width": 257.421875,
+    "height": 150,
+    "src": "/images/catalogues/product-library/categories/exterior-brickwork.webp",
+    "fit": "cover",
+    "background": "none",
+    "loaded": true,
+    "naturalWidth": 1200
+  },
+  "link": "http://localhost:3012/modules/estimate-builder?page=productLibrary&room=exterior&roomCategory=bricks",
+  "imageUsedOnlyOnBricks": true,
+  "refreshVerified": true
+}

@@ -1,0 +1,44 @@
+{
+  "ok": true,
+  "fixturePath": "recovery/emergency-2026-09-05T00-42-37-307Z/0001-job_03-09_123_snapshot_2026-09-04T21_10_42.804Z.raw.json",
+  "fixtureBytes": 1969654,
+  "storage": "IndexedDB estimate-builder-template-db / jobs",
+  "jobId": "03-09/123",
+  "key": "job:03-09/123",
+  "backupKey": "job:03-09/123:snapshot:recovery-original",
+  "originalUnchanged": true,
+  "driveway": "60",
+  "salesCommissions": "4",
+  "fullReloadAndReopen": true,
+  "results": [
+    {
+      "step": "open protected source automatically creates working revision",
+      "revision": 1,
+      "backupKey": "job:03-09/123:snapshot:recovery-original"
+    },
+    {
+      "step": "normal Save",
+      "revision": 5,
+      "status": "Saved at 07:29:06"
+    },
+    {
+      "step": "display name change",
+      "name": "New Job 03/09/123",
+      "key": "job:03-09/123",
+      "jobId": "03-09/123"
+    },
+    {
+      "step": "display name change",
+      "name": "New Job 03-09",
+      "key": "job:03-09/123",
+      "jobId": "03-09/123"
+    },
+    {
+      "step": "display name change",
+      "name": "New Job 03/09",
+      "key": "job:03-09/123",
+      "jobId": "03-09/123"
+    }
+  ],
+  "errors": []
+}

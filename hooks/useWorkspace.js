@@ -109,6 +109,7 @@ export function WorkspaceProvider({ children }) {
     workspaceId: activeWorkspace?.id || null,
     plan: activeWorkspace?.plan || "starter",
     role: activeWorkspace?.role || null,
+    isDemoWorkspace: activeWorkspace?.is_demo === true,
     loading,
     switchWorkspace,
     /** Check if the active workspace can use a feature */

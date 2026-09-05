@@ -1,0 +1,56 @@
+# Local dependencies and build output
+node_modules/
+.next/
+.next-dev/
+.next-build/
+.next-dev.lock.json
+.next-build.lock.json
+out/
+build/
+coverage/
+
+# Local environment and Vercel project state
+.env
+.env.*
+.vercel/
+
+# Logs and one-off build/audit output
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+build_output.txt
+build-output.log
+tmp-public-schema.sql
+
+# Local editor and OS artifacts
+.history/
+.vscode/
+.claude/
+.DS_Store
+~$*
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Test, diagnostic, and screenshot output
+test-results/
+tmp/
+tmp-thumbs/
+tmp-trade-check/
+diagnostics/
+
+# Local recovery/scratch folders that are not runtime source of truth
+recovery/
+website-builder-sites/_emergency-drafts/
+website-builder-sites-backup-*/
+website-builder-sites-*-backup-*/
+website-builder-backups/
+2208a52a-8175-477e-823c-fc6de7fe4afe/
+
+# Generated website-builder local snapshots
+website-builder-sites/**/full-project.json
+website-builder-sites/**/metadata.json
+website-builder-sites/**/*.tmp

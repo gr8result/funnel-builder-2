@@ -13,11 +13,13 @@ import {
   normaliseProjectEstimateInclusionsDocument,
   renderFinalInclusionsScheduleHtml,
   renderProductCardHtml,
+  reviewScheduleReadiness,
 } from "../lib/builders/finalInclusionsSchedule.js";
 import {
   FinalInclusionsPdfError,
   createLocalFinalInclusionsStorage,
   generateAndStoreFinalInclusionsPdf,
+  generateAndStoreStandaloneFinalInclusionsPdf,
   mergeFinalInclusionsPdfBinaries,
   readPdfFile,
   renderDynamicFinalInclusionsPdf,
@@ -50,6 +52,7 @@ const PRODUCT_IMAGES = {
   sink: productImage("Sink", "#527d8c"),
   tapware: productImage("Tapware", "#d6a23a"),
   brick: productImage("Bricks", "#a85032"),
+  entryDoor: productImage("Entry Door", "#1f4f46"),
   generic: productImage("Generic", "#6d5f9a"),
 };
 
@@ -85,6 +88,39 @@ const selections = [
     builder_cost: 990,
     markup_percent: 25,
     updated_at: "2026-08-12T01:00:00.000Z",
+  },
+  {
+    id: "sel-entry-door",
+    session_id: "session-1",
+    snapshot_id: "estimate-1",
+    category: "Exterior",
+    subcategory: "Entry Doors",
+    room: "Front Entry",
+    selected_product_name: "Corinthian Blonde Oak AWO 5G",
+    selected_supplier_name: "Corinthian Doors",
+    selected_colour: "Blonde Oak",
+    selected_finish: "Stained",
+    brand: "Corinthian",
+    model_number: "AWO 5G",
+    image_url: PRODUCT_IMAGES.entryDoor,
+    included_allowance: 1450,
+    client_selection_price: 1450,
+    variation_amount: 0,
+    selection_status: "approved",
+    is_active: true,
+    selected_details: {
+      productCode: "COR-AWO-5G-820",
+      range: "Blonde Oak",
+      size: "820 x 2040 x 40mm",
+      configuration: "Single hinged entry door",
+      materialConstruction: "Engineered timber veneer",
+      glazing: "5G clear glazed panel",
+      handing: "Right hand in-swing",
+      hardwareCompatibility: "Tri-lock compatible",
+      location: "Front entry",
+      clientNote: "Match sidelight stain sample.",
+    },
+    updated_at: "2026-08-12T01:00:20.000Z",
   },
   {
     id: "sel-cooktop",
@@ -168,8 +204,44 @@ const selections = [
     selection_status: "approved",
     is_active: true,
     metadata: { client_selectable: true },
-    selected_details: { clientPrice: 0, allowance: 0 },
+    selected_details: { clientPrice: 0, allowance: 0, selectionScope: "client_choice", displayInSelectionsSchedule: true },
     updated_at: "2026-08-12T01:01:00.000Z",
+  },
+  {
+    id: "sel-wall-wrap",
+    session_id: "session-1",
+    snapshot_id: "estimate-1",
+    category: "Exterior",
+    subcategory: "Wall Wrap",
+    room: "Facade",
+    selected_product_name: "Wall wrap sarking technical inclusion",
+    selected_supplier_name: "Builder Standard",
+    included_allowance: 0,
+    client_selection_price: 0,
+    variation_amount: 0,
+    selection_status: "approved",
+    is_active: true,
+    metadata: { selectionScope: "technical_inclusion", displayInSelectionsSchedule: false },
+    selected_details: { selectionScope: "technical_inclusion", displayInSelectionsSchedule: false },
+    updated_at: "2026-08-12T01:01:05.000Z",
+  },
+  {
+    id: "sel-generic-included",
+    session_id: "session-1",
+    snapshot_id: "estimate-1",
+    category: "Exterior",
+    subcategory: "Included Selection",
+    room: "Facade",
+    selected_product_name: "Builder Included Selection",
+    selected_supplier_name: "Builder Standard",
+    included_allowance: 0,
+    client_selection_price: 0,
+    variation_amount: 0,
+    selection_status: "approved",
+    is_active: true,
+    metadata: { selectionScope: "informational" },
+    selected_details: { selectionScope: "informational" },
+    updated_at: "2026-08-12T01:01:08.000Z",
   },
   {
     id: "sel-generic-family",
@@ -250,10 +322,19 @@ const selections = [
   },
 ];
 
+const scopedSelections = selections.map((selection) => {
+  if (["sel-wall-wrap", "sel-generic-included", "sel-internal", "sel-replaced"].includes(selection.id)) return selection;
+  return {
+    ...selection,
+    metadata: { ...(selection.metadata || {}), selectionScope: "client_choice", displayInSelectionsSchedule: true },
+    selected_details: { ...(selection.selected_details || {}), selectionScope: "client_choice", displayInSelectionsSchedule: true },
+  };
+});
+
 const snapshot = createProjectInclusionsSnapshot({
   project,
   workspaceId: "workspace-1",
-  selections,
+  selections: scopedSelections,
   session,
   estimateSnapshot: { id: "estimate-1", snapshot_number: 3, source_quote_number: "Q-1001", final_quote_total: 650000 },
   generatedBy: "test-user",
@@ -265,8 +346,10 @@ const snapshot = createProjectInclusionsSnapshot({
 
 assert.equal(Object.isFrozen(snapshot), true, "snapshot root is immutable");
 assert.equal(Object.isFrozen(snapshot.selections), true, "selection array is immutable");
-assert.equal(snapshot.selections.length, 8, "internal and replaced rows are excluded");
-assert.equal(snapshot.summary.productCount, 8, "client-facing product count is captured");
+assert.equal(snapshot.selections.length, 9, "internal, replaced, technical and generic informational rows are excluded");
+assert.equal(snapshot.summary.productCount, 9, "client-facing product count is captured");
+assert.equal(snapshot.summary.sourceSelectionCount, 12, "source selection count captures current rows before schedule filtering");
+assert.equal(snapshot.summary.excludedSelectionCount, 3, "technical/non-client rows are counted as excluded");
 assert.equal(snapshot.summary.dynamicPageCount >= 8, true, "dynamic pages are deterministic");
 assert.equal(snapshot.summary.totalPageCount, 10 + snapshot.summary.dynamicPageCount + 1, "master, dynamic and closing pages are counted by the snapshot model");
 assert.equal(snapshot.summary.currentNetSelectionVariation, 540, "approved variation total uses existing selection values");
@@ -274,18 +357,28 @@ assert.equal(snapshot.selections.some((selection) => JSON.stringify(selection).i
 assert.equal(snapshot.selections.some((selection) => JSON.stringify(selection).includes("markup")), false, "internal cost fields are removed");
 
 const groups = groupSnapshotSelections(snapshot);
-assert.deepEqual(groups.map((group) => group.area), ["Exterior", "Interior", "Kitchen"], "areas are grouped deterministically");
-assert.equal(groups.find((group) => group.area === "Interior").rooms.some((room) => room.room === "Bedrooms"), true, "bedrooms are collapsed into one room group");
+assert.deepEqual(groups.map((group) => group.area), ["Bricks, Render and Cladding", "Windows and External Doors", "Interior", "Kitchen", "Bathrooms", "Bedrooms"], "sections are grouped in client-decision schedule order");
+assert.equal(groups.find((group) => group.area === "Bedrooms").rooms.some((room) => room.room === "Bedrooms"), true, "bedrooms are collapsed into one room group");
 
 const ovenCard = renderProductCardHtml(snapshot.selections.find((selection) => selection.id === "sel-oven"), { currency: "AUD" });
 assert.match(ovenCard, /Serie 6 Built-In Oven/, "product card renders product name");
 assert.match(ovenCard, /data:image\/svg\+xml/, "product card uses Product Library image URL");
 assert.doesNotMatch(ovenCard, /builderCost|internalNotes|\$0\.00/, "product card hides internal and empty fields");
+const doorCard = renderProductCardHtml(snapshot.selections.find((selection) => selection.id === "sel-entry-door"), { currency: "AUD" });
+assert.match(doorCard, /COR-AWO-5G-820/, "entry door product code is rendered");
+assert.match(doorCard, /Single hinged entry door/, "entry door configuration is rendered");
+assert.match(doorCard, /5G clear glazed panel/, "entry door glazing is rendered");
+assert.match(doorCard, /Tri-lock compatible/, "entry door hardware is rendered");
 
 const html = renderFinalInclusionsScheduleHtml(snapshot);
-assert.match(html, /Final Inclusions Schedule/, "HTML document has schedule title");
+assert.match(html, /Inclusions and Selections Schedule/, "HTML document has schedule title");
+assert.match(html, /DRAFT/, "draft HTML carries a draft watermark");
+assert.match(html, /Document Information/, "HTML includes document information page");
+assert.match(html, /Approval and Signing/, "HTML includes approval page");
 assert.match(html, /Grant Client/, "HTML document has client-facing project data");
-assert.doesNotMatch(html, /undefined|null|Internal Cost Adjustment/, "HTML document collapses missing/internal values");
+assert.doesNotMatch(html, /undefined|null|Internal Cost Adjustment|Wall wrap|Builder Included Selection|Motor \/ Operator|Supplier & Procurement RFQ Schedule|Electrical Contractor Installation Schedule/, "HTML document collapses missing/internal/technical values");
+const readiness = reviewScheduleReadiness(snapshot);
+assert.equal(readiness.canIssueFinal, false, "missing supplier and image rows are blocked from final issue");
 
 const documentV1 = createFinalInclusionsDocumentVersion({
   snapshot,
@@ -294,8 +387,9 @@ const documentV1 = createFinalInclusionsDocumentVersion({
 });
 assert.equal(documentV1.document_type, "selection", "existing project document type is reused");
 assert.equal(documentV1.version, 1, "first generated document is version 1");
+assert.equal(documentV1.metadata.documentStatus, "draft", "first generated document defaults to draft");
 assert.equal(documentV1.metadata.finalInclusionsSchedule, true, "document metadata identifies final inclusions schedule");
-assert.equal(documentV1.storagePath, "builder-projects/project-1/final-inclusions/estimate-1/final-inclusions-schedule-v1.pdf", "generated PDF path is deterministic");
+assert.equal(documentV1.storagePath, "builder-projects/project-1/final-inclusions/estimate-1/inclusions-and-selections-schedule-draft-schedule-1.pdf", "generated PDF path is deterministic");
 
 const documentV2 = createFinalInclusionsDocumentVersion({
   snapshot,
@@ -303,12 +397,12 @@ const documentV2 = createFinalInclusionsDocumentVersion({
   generatedAt: "2026-08-12T03:05:00.000Z",
 });
 assert.equal(documentV2.version, 2, "regeneration creates the next document version");
-assert.equal(isFinalInclusionsDocumentOutOfDate(documentV2, selections), false, "matching document is current");
-assert.equal(isFinalInclusionsDocumentOutOfDate(documentV2, selections.map((selection) => selection.id === "sel-oven" ? { ...selection, variation_amount: 600 } : selection)), true, "changed selections mark the document out of date");
+assert.equal(isFinalInclusionsDocumentOutOfDate(documentV2, scopedSelections), false, "matching document is current");
+assert.equal(isFinalInclusionsDocumentOutOfDate(documentV2, scopedSelections.map((selection) => selection.id === "sel-oven" ? { ...selection, variation_amount: 600 } : selection)), true, "changed selections mark the document out of date");
 
 const estimateDocument = normaliseProjectEstimateInclusionsDocument(documentV2);
 assert.equal(estimateDocument.sourceType, "final_inclusions_schedule", "Project Estimate document slot source is marked");
-assert.equal(estimateDocument.fileName, "final-inclusions-schedule-v2.pdf", "Project Estimate receives the latest generated PDF reference");
+assert.equal(estimateDocument.fileName, "inclusions-and-selections-schedule-draft-schedule-2.pdf", "Project Estimate receives the latest generated PDF reference");
 
 const sequence = buildProjectEstimateDocumentSequence({
   introPages: ["cover", "summary"],
@@ -348,6 +442,7 @@ assert.equal(closingValidation.pages.every((page) => page.orientation === "portr
 const dynamicPdf = await renderDynamicFinalInclusionsPdf(snapshot);
 assert.equal(dynamicPdf.validation.startsWithPdf, true, "dynamic PDF has valid PDF magic bytes");
 assert.equal(dynamicPdf.warnings.length, 0, "product images render without warnings");
+assert.equal(dynamicPdf.validation.pages.every((page) => page.orientation === "landscape"), true, "dynamic generated schedule pages are landscape A4");
 
 const mergedDirect = await mergeFinalInclusionsPdfBinaries({
   masterPdfBytes,
@@ -361,15 +456,17 @@ const mergedDirect = await mergeFinalInclusionsPdfBinaries({
 });
 assert.equal(mergedDirect.pageCounts.total, 10 + dynamicPdf.validation.pageCount + 2, "merged page count equals master + dynamic + closing");
 assert.equal(mergedDirect.validation.startsWithPdf, true, "merged PDF has valid magic bytes");
+assert.equal(mergedDirect.validation.pages.every((page) => page.orientation === "landscape"), true, "merged PDF pages are normalised to landscape A4");
 
 const textContent = await extractPdfText(mergedDirect.bytes);
-assert.match(textContent, /Final Inclusions Schedule/, "final PDF can be reopened and text read");
+assert.match(textContent, /Inclusions and Selections Schedule/, "final PDF can be reopened and text read");
 assert.match(textContent.replace(/\s+/g, " "), /\+\$540\.00/, "final PDF contains the exact +$540.00 variation");
 assert.match(textContent, /Serie 6 Built-In Oven/, "final PDF contains the oven product");
 assert.match(textContent, /Gas Cooktop/, "final PDF contains the cooktop product");
 assert.match(textContent, /Undermount Basin/, "final PDF contains the sink product");
 assert.match(textContent, /Gooseneck Mixer/, "final PDF contains the tapware product");
 assert.match(textContent, /La Paloma Face Brick/, "final PDF contains the brick product");
+assert.match(textContent, /Corinthian Blonde Oak AWO 5G/, "final PDF contains the entry door product");
 assert.match(textContent, /Approved Family Product/, "final PDF contains the generic family product");
 
 const storage = createLocalFinalInclusionsStorage({ rootDir: outputRoot });
@@ -394,7 +491,27 @@ assert.equal(storedV1.projectEstimateDocument.sourceType, "final_inclusions_sche
 const v1File = await readPdfFile(storedV1.document.localPath, { expectedPageCount: storedV1.merged.pageCounts.total, label: "stored v1" });
 assert.equal(v1File.validation.fileSizeBytes, storedV1.document.fileSizeBytes, "stored v1 file size is registered");
 
-const changedSelections = selections.map((selection) => selection.id === "sel-oven" ? { ...selection, selected_colour: "Graphite", updated_at: "2026-08-12T04:00:00.000Z" } : selection);
+const standaloneStorage = createLocalFinalInclusionsStorage({ rootDir: path.join(outputRoot, "standalone") });
+const standalone = await generateAndStoreStandaloneFinalInclusionsPdf({
+  snapshot: {
+    ...snapshot,
+    masterPdfRef: null,
+    closingPdfRef: null,
+    masterTemplate: { id: "client-selections-schedule", version: "standalone", pageCount: 0 },
+  },
+  previousDocuments: [],
+  storage: standaloneStorage,
+  generatedAt: "2026-08-12T03:30:00.000Z",
+});
+assert.equal(standalone.merged.pageCounts.master, 0, "standalone schedule has no Standard Inclusions master PDF");
+assert.equal(standalone.merged.pageCounts.closing, 0, "standalone schedule has no closing PDF");
+assert.equal(standalone.merged.pageCounts.total, standalone.dynamic.validation.pageCount, "standalone page count is the generated schedule only");
+assert.equal(standalone.document.metadata.standaloneClientSelectionsSchedule, true, "standalone document is marked as a Client Selections schedule");
+assert.equal(standalone.document.metadata.masterPageCount, 0, "standalone metadata records zero master pages");
+assert.equal(standalone.document.metadata.closingPageCount, 0, "standalone metadata records zero closing pages");
+assert.equal(standalone.dynamic.validation.pages.every((page) => page.orientation === "landscape"), true, "standalone pages render as landscape A4");
+
+const changedSelections = scopedSelections.map((selection) => selection.id === "sel-oven" ? { ...selection, selected_colour: "Graphite", updated_at: "2026-08-12T04:00:00.000Z" } : selection);
 assert.equal(isFinalInclusionsDocumentOutOfDate(storedV1.document, changedSelections), true, "stored v1 becomes outdated after selection snapshot changes");
 const snapshotV2 = createProjectInclusionsSnapshot({
   project,
@@ -423,6 +540,55 @@ assert.notEqual(storedV1.document.metadata.selectionSnapshot.selectionFingerprin
 assert.equal((await readFile(storedV1.document.localPath)).length > 0, true, "v1 remains available after v2 generation");
 assert.equal(storage.latestDocument().id, storedV2.document.id, "latest-version resolver returns v2");
 assert.equal(normaliseProjectEstimateInclusionsDocument(storage.latestDocument()).storagePath, storedV2.document.storagePath, "Project Estimate resolves latest valid v2 PDF storage reference");
+
+const contractReadySelections = changedSelections
+  .filter((selection) => selection.id !== "sel-internal" && selection.id !== "sel-replaced")
+  .map((selection) => ({
+    ...selection,
+    selected_supplier_name: selection.selected_supplier_name || "Builder Confirmed Supplier",
+    image_url: selection.image_url || PRODUCT_IMAGES.generic,
+    client_selection_price: selection.client_selection_price ?? selection.calculated_client_selection_price ?? 0,
+    calculated_client_selection_price: selection.calculated_client_selection_price ?? selection.client_selection_price ?? 0,
+    variation_amount: selection.variation_amount ?? 0,
+    selection_status: "approved",
+    is_active: true,
+  }));
+const contractSnapshot = createProjectInclusionsSnapshot({
+  project,
+  workspaceId: "workspace-1",
+  selections: contractReadySelections,
+  session,
+  estimateSnapshot: { id: "estimate-1", snapshot_number: 3, source_quote_number: "Q-1001", final_quote_total: 650000 },
+  generatedBy: "test-user",
+  createdAt: "2026-08-12T05:00:00.000Z",
+  documentStatus: "contract",
+  previousDocuments: [storedV1.document, storedV2.document],
+  builderProfile: { name: "GR8 Builder", licenceNumber: "QBCC 123456" },
+  approval: { clientName: "Grant Client", builderName: "GR8 Builder", approvedAt: "2026-08-12T04:55:00.000Z" },
+  masterTemplate: { id: "premier-master", version: "2026.08", pageCount: 10 },
+  masterPdfRef: { localPath: masterPdfPath, storagePath: masterPdfPath, pageCount: 10 },
+  closingPdfRef: { localPath: closingPdfPath, storagePath: closingPdfPath, pageCount: 2 },
+});
+assert.equal(contractSnapshot.readiness.canIssueFinal, true, "complete approved selections can issue a final contract schedule");
+const contractHtml = renderFinalInclusionsScheduleHtml(contractSnapshot);
+assert.match(contractHtml, /FINAL CONTRACT SCHEDULE/, "final contract HTML carries the final contract state");
+assert.doesNotMatch(contractHtml, /watermark">DRAFT/, "final contract HTML does not carry draft watermark");
+const storedContractV1 = await generateAndStoreFinalInclusionsPdf({
+  snapshot: contractSnapshot,
+  previousDocuments: [storedV1.document, storedV2.document],
+  masterPdfBytes,
+  closingPdfBytes,
+  storage,
+  generatedAt: "2026-08-12T05:05:00.000Z",
+});
+assert.equal(storedContractV1.document.metadata.immutable, true, "issued contract schedule is immutable");
+assert.equal(storedContractV1.document.metadata.documentStatus, "contract", "issued contract schedule is marked as contract");
+const mutatedLiveSelections = contractReadySelections.map((selection) => selection.id === "sel-entry-door"
+  ? { ...selection, selected_product_name: "Changed Live Catalogue Door", selected_colour: "Changed Colour", updated_at: "2026-08-12T06:00:00.000Z" }
+  : selection);
+assert.match(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Corinthian Blonde Oak AWO 5G/, "stored contract snapshot keeps original product name after live data changes");
+assert.doesNotMatch(renderFinalInclusionsScheduleHtml(storedContractV1.document.metadata.selectionSnapshot), /Changed Live Catalogue Door/, "stored contract snapshot is not rewritten by live catalogue changes");
+assert.equal(isFinalInclusionsDocumentOutOfDate(storedContractV1.document, mutatedLiveSelections), true, "changed live selections require a new contract version instead of modifying the issued PDF");
 
 let rollbackError = null;
 const failedStorage = createLocalFinalInclusionsStorage({ rootDir: path.join(outputRoot, "failed") });

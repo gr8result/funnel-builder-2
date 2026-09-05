@@ -1,0 +1,1744 @@
+{
+  "updatedAt": "2026-09-04",
+  "products": [
+    {
+      "productId": "product:appliances:cooktops:ariston:nio-844-do-b-aus",
+      "model": "NIO 844 DO B AUS",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://ariston.com.au/inventory/nio844dob/",
+          "error": "This operation was aborted"
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/NIO844DOBAUS",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/NIO%20844%20DO%20B%20AUS",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=NIO%20844%20DO%20B%20AUS",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:ariston:pc640ntx",
+      "model": "PC640NTX",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://ariston.com.au/inventory/pc640ntx/",
+          "error": "This operation was aborted"
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PC640NTX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=PC640NTX",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:ariston:pf604ix",
+      "model": "PF604IX",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PF604IX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=PF604IX",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:ariston:pkq-755-d-gh-aus",
+      "model": "PKQ 755 D GH AUS",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PKQ755DGHAUS",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PKQ%20755%20D%20GH%20AUS",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=PKQ%20755%20D%20GH%20AUS",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:blanco:bcc604t",
+      "model": "BCC604T",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bcc604t.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BCC604T",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BCC604T",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCC604T",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCC604T",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:blanco:bcg604wx",
+      "model": "BCG604WX",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bcg604wx.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG604WX",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BCG604WX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG604WX",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG604WX",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:blanco:bcg905wx",
+      "model": "BCG905WX",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bcg905wx.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG905WX",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BCG905WX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG905WX",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BCG905WX",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:blanco:bic90x",
+      "model": "BIC90X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bic90x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BIC90X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BIC90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BIC90X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BIC90X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:ecck900",
+      "model": "ECCK900",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ECCK900",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=ECCK900",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=ECCK900",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=ECCK900",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:gc90s",
+      "model": "GC90S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/GC90S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GC90S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GC90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GC90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:kcs4",
+      "model": "KCS4",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/KCS4",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=KCS4",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=KCS4",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=KCS4",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:euromaid:wk60s",
+      "model": "WK60S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/WK60S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=WK60S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=WK60S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=WK60S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:omega:ocg604x",
+      "model": "OCG604X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/ocg604x.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=OCG604X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/OCG604X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=OCG604X",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:omega:oci64z",
+      "model": "OCI64Z",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/oci64z.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=OCI64Z",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/OCI64Z",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=OCI64Z",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:omega:oi90z",
+      "model": "OI90Z",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/oi90z.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=OI90Z",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/OI90Z",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=OI90Z",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:smeg:pga64",
+      "model": "PGA64",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/pga64.jpg"
+    },
+    {
+      "productId": "product:appliances:cooktops:smeg:pga95",
+      "model": "PGA95",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PGA95",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.smeg.com/au/products/PGA95",
+          "error": "404 Not Found"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:smeg:sai4954d",
+      "model": "SAI4954D",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/sai4954d.jpg"
+    },
+    {
+      "productId": "product:appliances:cooktops:smeg:si2641d",
+      "model": "SI2641D",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/SI2641D",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.smeg.com/au/products/SI2641D",
+          "error": "404 Not Found"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:cooktops:westinghouse:whc642bc",
+      "model": "WHC642BC",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/whc642bc.png"
+    },
+    {
+      "productId": "product:appliances:cooktops:westinghouse:whg644sc",
+      "model": "WHG644SC",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/whg644sc.png"
+    },
+    {
+      "productId": "product:appliances:cooktops:westinghouse:whg958sc",
+      "model": "WHG958SC",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/whg958sc.png"
+    },
+    {
+      "productId": "product:appliances:cooktops:westinghouse:whi955bd",
+      "model": "WHI955BD",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/whi955bd.png"
+    },
+    {
+      "productId": "product:appliances:dishwashers:ariston:lfo3c23wf",
+      "model": "LFO3C23WF",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/LFO3C23WF",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=LFO3C23WF",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:dishwashers:blanco:bdw146x",
+      "model": "BDW146X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bdw146x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BDW146X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BDW146X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BDW146X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BDW146X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:dishwashers:euromaid:edw14s",
+      "model": "EDW14S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/EDW14S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=EDW14S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=EDW14S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=EDW14S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:dishwashers:omega:odw702xb",
+      "model": "ODW702XB",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/odw702xb.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ODW702XB",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ODW702XB",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ODW702XB",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:dishwashers:smeg:dwau6315x3",
+      "model": "DWAU6315X3",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/dwau6315x3.jpg"
+    },
+    {
+      "productId": "product:appliances:dishwashers:westinghouse:wsf6606x",
+      "model": "WSF6606X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/WSF6606X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.westinghouse.com.au/search/?q=WSF6606X",
+          "title": "Search | Westinghouse Australia ",
+          "exactModelOnPage": false,
+          "images": []
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:ariston:cp059mdx",
+      "model": "CP059MDX",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://ariston.com.au/inventory/freestanding-cooker-cp059mdx-2/",
+          "error": "This operation was aborted"
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/CP059MDX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=CP059MDX",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:blanco:bfs90wx",
+      "model": "BFS90WX",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bfs90wx.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BFS90WX",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BFS90WX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BFS90WX",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BFS90WX",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:euromaid:gg90s",
+      "model": "GG90S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/GG90S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GG90S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GG90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=GG90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:omega:of916fx",
+      "model": "OF916FX",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/of916fx.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=OF916FX",
+      "attempts": [
+        {
+          "pageUrl": "https://omegaappliances.com.au/product/90cm-9-function-freestanding-oven-of916fx/",
+          "error": "404 Not Found"
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/OF916FX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=OF916FX",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:smeg:fs9606as-1",
+      "model": "FS9606AS-1",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/fs9606as-1.jpg"
+    },
+    {
+      "productId": "product:appliances:freestanding-cookers:westinghouse:wfe9515sd",
+      "model": "WFE9515SD",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wfe9515sd.png"
+    },
+    {
+      "productId": "product:appliances:ovens:ariston:fa5834hixaaus",
+      "model": "FA5834HIXAAUS",
+      "status": "verified-authorised-supplier-local",
+      "productPageUrl": "https://www.lazada.co.id/products/oven-ariston-built-in-electric-oven-fa5834hixaaus-i1257608344.html",
+      "imageSourceUrl": "https://img.lazcdn.com/g/p/af06a9456e00d143f7800eb5f591d280.png_720x720q80.png_.webp",
+      "localPrimaryImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus-thumb.webp",
+      "imageSourceType": "authorised-international-retailer-local",
+      "imageAttribution": "Product image sourced from Lazada Indonesia product listing for Ariston FA5834HIXAAUS.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact FA5834HIXAAUS listing and product image. Australian official/manufacturer page was not found during this pass.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/ariston/ariston-fa5834hixaaus-thumb.webp",
+        "importedContentType": "image/webp",
+        "sourceDimensions": {
+          "width": 475,
+          "height": 514
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 475,
+            "height": 514
+          },
+          "thumbnail": {
+            "width": 296,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:ariston:fi9-891-sp-ix-a-aus",
+      "model": "FI9 891 SP IX A AUS",
+      "status": "unresolved",
+      "attempts": [
+        "https://ariston.com.au/inventory/built-in-oven-fi7-891-sp-ix-aus/",
+        "https://www.notice-facile.com/en/manual/1325647/ariston%2Bthermo%2Bfi7-891-sp-ix-a-aus",
+        "https://manuals.plus/hotpoint/hotpoint-fi9-891-sp-ix-ha-multifunction-oven-quick-start-guide"
+      ],
+      "note": "No exact FI9 891 SP IX A AUS product image located. Research found Ariston FI7 891 SP IX A AUS Australian official/manual pages and Hotpoint FI9 891 SP IX HA, but neither is the exact catalogue model.",
+      "imageVerifiedAt": "2026-09-04"
+    },
+    {
+      "productId": "product:appliances:ovens:blanco:bose65xm",
+      "model": "BOSE65XM",
+      "status": "verified-authorised-supplier-local",
+      "productPageUrl": "https://www.appliancesonline.com.au/product/blanco-bose65xm-electric-oven/",
+      "imageSourceUrl": "https://www.appliancesonline.com.au/ak/2/f/0/f/2f0fd57cf60c85082b2189a60c9d4db94c4a9346_Blanco_BOSE65XM_Electric_Oven_Hero_Image_high-high.jpeg?width=814",
+      "localPrimaryImage": "/images/catalogues/appliances/products/blanco/blanco-bose65xm.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/blanco/blanco-bose65xm-thumb.webp",
+      "imageSourceType": "authorised-australian-retailer-local",
+      "imageAttribution": "Product image sourced from Appliances Online Australia listing for Blanco BOSE65XM.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact BOSE65XM listing, image and specifications verified from Appliances Online Australia.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/blanco/blanco-bose65xm.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/blanco/blanco-bose65xm-thumb.webp",
+        "importedContentType": "image/avif",
+        "sourceDimensions": {
+          "width": 814,
+          "height": 796
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 814,
+            "height": 796
+          },
+          "thumbnail": {
+            "width": 327,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:blanco:bose90x",
+      "model": "BOSE90X",
+      "status": "unresolved",
+      "attempts": [
+        "https://www.appliancesonline.com.au/product/900mm90cm-blanco-electric-oven-bose902x/",
+        "https://www.electsales.com.au/blanco/blanco-bose900x",
+        "https://spares.bigwarehouse.com.au/product_info.php?cPath=69520_80395_86986&products_id=1618625"
+      ],
+      "note": "No exact BOSE90X product image located. Research found BOSE902X and BOSE900X product images plus BOSE90X spare-part compatibility pages; similar Blanco 90 cm models were not imported as exact BOSE90X.",
+      "imageVerifiedAt": "2026-09-04"
+    },
+    {
+      "productId": "product:appliances:ovens:euromaid:eo605dtb",
+      "model": "EO605DTB",
+      "status": "verified-authorised-supplier-local",
+      "image": "/images/catalogues/appliances/products/euromaid/eo605dtb.jpg",
+      "imageUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo605dtb_euromaid_web.jpg",
+      "pageUrl": "https://harveynormancommercial.com.au/products/EO605DTB",
+      "attempts": [
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless",
+          "title": "60cm 5 Function Built-in Oven, Dark Stainless | Euromaid",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/60cm-5-function-built-in-oven-dark-stainless",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        },
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/EO605DTB",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo605dtb_euromaid_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo605dtb_euromaid_tech.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:ovens:euromaid:eo916astb",
+      "model": "EO916ASTB",
+      "status": "verified-authorised-supplier-local",
+      "image": "/images/catalogues/appliances/products/euromaid/eo916astb.jpg",
+      "imageUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo916astb_euromaid_web.jpg",
+      "pageUrl": "https://harveynormancommercial.com.au/products/EO916ASTB",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/EO916ASTB",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo916astb_euromaid_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo916astb_euromaid_tech.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/e/o/eo916astb_euromaid_insitu1.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:ovens:omega:obo660x",
+      "model": "OBO660X",
+      "status": "verified-official-local",
+      "productPageUrl": "https://omegaappliances.com.au/archive/p/60cm-4-function-oven-obo660x",
+      "imageSourceUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1683087380633-JURF0XYNHNGBLANHR4G9/omega_product_web_OBO660X.jpg?format=1500w",
+      "localPrimaryImage": "/images/catalogues/appliances/products/omega/omega-obo660x.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/omega/omega-obo660x-thumb.webp",
+      "imageSourceType": "official-australian-manufacturer-archive-local",
+      "imageAttribution": "Product image sourced from Omega Appliances Australia archive page for OBO660X.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact OBO660X image verified from the official Omega Appliances Australia archive.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/omega/omega-obo660x.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/omega/omega-obo660x-thumb.webp",
+        "importedContentType": "image/webp",
+        "sourceDimensions": {
+          "width": 1500,
+          "height": 1500
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 900,
+            "height": 900
+          },
+          "thumbnail": {
+            "width": 320,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:omega:obo960x1",
+      "model": "OBO960X1",
+      "status": "verified-official-local",
+      "productPageUrl": "https://omegaappliances.com.au/archive/p/90cm-9-function-electric-wall-oven-stainless-steel-obo960x1",
+      "imageSourceUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1721953159335-FWZWR19POGWVZENHUK52/OBO960XTGG%2BFeature%2B2.jpg?format=1500w",
+      "localPrimaryImage": "/images/catalogues/appliances/products/omega/omega-obo960x1.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/omega/omega-obo960x1-thumb.webp",
+      "imageSourceType": "official-australian-manufacturer-archive-local",
+      "imageAttribution": "Product image sourced from Omega Appliances Australia archive page for OBO960X1.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact OBO960X1 page verified from Omega archive. The official page references image files named OBO960XTGG for the shared visual variant.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/omega/omega-obo960x1.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/omega/omega-obo960x1-thumb.webp",
+        "importedContentType": "image/webp",
+        "sourceDimensions": {
+          "width": 1500,
+          "height": 1500
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 900,
+            "height": 900
+          },
+          "thumbnail": {
+            "width": 320,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:smeg:sf64m3tvx",
+      "model": "SF64M3TVX",
+      "status": "verified-official-local",
+      "productPageUrl": "https://www.smeg.com/products/SF64M3TVX",
+      "imageSourceUrl": "https://assets.4flow.cloud/SF64M3TVX.png?pEFs=cVY2M1MyN1ZOMFFadEQ5ZlVOMzhVNkxMdFJxVHNhT3ZEeXo3MkhDNWcvcVVKQzRRaHFkWG9vQmJtWTNWWDBCY0FmTDJLczhjMnJmNHgvVzdjWEVQazk1ak8wSGJQektVbDJuV3kraG94ZUlvRzBhY0lxaGZ0SXliQ3V0aUludmxMbTN2K1hGczB4R1MzeXRxWTNsNDJmd0E0WTJISVZYS0d3Wk9zaS9nWm00PQ",
+      "localPrimaryImage": "/images/catalogues/appliances/products/smeg/smeg-sf64m3tvx.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/smeg/smeg-sf64m3tvx-thumb.webp",
+      "imageSourceType": "official-manufacturer-local",
+      "imageAttribution": "Product image sourced from Smeg official product page for SF64M3TVX.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact SF64M3TVX product code and official media asset verified from Smeg.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/smeg/smeg-sf64m3tvx.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/smeg/smeg-sf64m3tvx-thumb.webp",
+        "importedContentType": "image/png",
+        "sourceDimensions": {
+          "width": 1500,
+          "height": 1199
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 1126,
+            "height": 900
+          },
+          "thumbnail": {
+            "width": 400,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:smeg:sfpa9395x1",
+      "model": "SFPA9395X1",
+      "status": "verified-authorised-supplier-local",
+      "productPageUrl": "https://www.appliancesonline.com.au/product/smeg-sfp9395x1-90cm-classic-aesthetic-pyrolytic-built-in-oven/",
+      "imageSourceUrl": "https://www.appliancesonline.com.au/ak/e/8/3/5/e835a632dc13edc3dd219d4750ae61acd62be286_SFP9395X1_Hero_Image_high-high.jpeg?width=814",
+      "localPrimaryImage": "/images/catalogues/appliances/products/smeg/smeg-sfpa9395x1.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/smeg/smeg-sfpa9395x1-thumb.webp",
+      "imageSourceType": "authorised-australian-retailer-local",
+      "imageAttribution": "Product image sourced from Appliances Online Australia listing for Smeg SFP9395X1/SFPA9395X1.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Catalogue model SFPA9395X1 is represented by the Appliances Online exact listing slug/title SFP9395X1 and model number SFP9395X1; manual review retained for the A/non-A suffix discrepancy.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/smeg/smeg-sfpa9395x1.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/smeg/smeg-sfpa9395x1-thumb.webp",
+        "importedContentType": "image/avif",
+        "sourceDimensions": {
+          "width": 814,
+          "height": 559
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 814,
+            "height": 559
+          },
+          "thumbnail": {
+            "width": 420,
+            "height": 288
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:ovens:westinghouse:wve6314dd",
+      "model": "WVE6314DD",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wve6314dd.png"
+    },
+    {
+      "productId": "product:appliances:ovens:westinghouse:wve916sc",
+      "model": "WVE916SC",
+      "status": "verified-authorised-supplier-local",
+      "productPageUrl": "https://electronicscentre.com.au/product/westinghouse-90cm-electric-built-in-oven-wve916sc/",
+      "imageSourceUrl": "https://electronicscentre.com.au/wp-content/uploads/2025/05/45.jpg",
+      "localPrimaryImage": "/images/catalogues/appliances/products/westinghouse/westinghouse-wve916sc.webp",
+      "localThumbnailImage": "/images/catalogues/appliances/products/westinghouse/westinghouse-wve916sc-thumb.webp",
+      "imageSourceType": "authorised-australian-retailer-local",
+      "imageAttribution": "Product image sourced from Electronics Centre listing for Westinghouse WVE916SC.",
+      "imageVerifiedAt": "2026-09-04",
+      "note": "Exact WVE916SC listing and images verified from Australian retailer page.",
+      "validation": {
+        "primaryImage": "/images/catalogues/appliances/products/westinghouse/westinghouse-wve916sc.webp",
+        "thumbnailImage": "/images/catalogues/appliances/products/westinghouse/westinghouse-wve916sc-thumb.webp",
+        "importedContentType": "image/jpeg",
+        "sourceDimensions": {
+          "width": 800,
+          "height": 800
+        },
+        "localDimensions": {
+          "detail": {
+            "width": 800,
+            "height": 800
+          },
+          "thumbnail": {
+            "width": 320,
+            "height": 320
+          }
+        }
+      }
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:arhc60x",
+      "model": "ARHC60X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARHC60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARHC60X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:arhc90x",
+      "model": "ARHC90X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARHC90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARHC90X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:arhs60x",
+      "model": "ARHS60X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARHS60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARHS60X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:arhs90x",
+      "model": "ARHS90X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARHS90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARHS90X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:aru60x",
+      "model": "ARU60X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARU60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARU60X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:ariston:aru90x",
+      "model": "ARU90X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ARU90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://ariston.com.au/?s=ARU90X",
+          "error": "This operation was aborted"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:brc60x",
+      "model": "BRC60X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/brc60x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC60X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRC60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC60X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC60X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:brc90x",
+      "model": "BRC90X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/brc90x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC90X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRC90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC90X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRC90X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:bru53x",
+      "model": "BRU53X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bru53x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU53X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRU53X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU53X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU53X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:bru60x",
+      "model": "BRU60X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bru60x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU60X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRU60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU60X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU60X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:bru90ux",
+      "model": "BRU90UX",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bru90ux.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90UX",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRU90UX",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90UX",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90UX",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:blanco:bru90x",
+      "model": "BRU90X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/blanco/bru90x.webp",
+      "imageUrl": "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp",
+      "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/BRU90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90X",
+          "title": "Kitchen Sinks &amp; Taps | BLANCO | BLANCO",
+          "exactModelOnPage": false,
+          "images": [
+            "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg",
+            "https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/unit-communication/unit-emea-claron-700.webp"
+          ]
+        },
+        {
+          "pageUrl": "https://www.blanco.com/au-en/search/?query=BRU90X",
+          "imageError": "https://www.blanco.com/https://blancoprod-media.e-spirit.cloud/24c2ae8c-75cc-4712-b924-dfea283b1e34/images/produkte/sinks/etagon-2/etagon-6-blackedition-sgp-black-526339-u-03_image_1280w_720h.jpg: not an image: text/html;charset=utf-8"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:cpt6s",
+      "model": "CPT6S",
+      "status": "verified-authorised-supplier-local",
+      "image": "/images/catalogues/appliances/products/euromaid/cpt6s.jpg",
+      "imageUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt6s_euromaid_web.jpg",
+      "pageUrl": "https://harveynormancommercial.com.au/products/CPT6S",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/CPT6S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt6s_euromaid_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt6s_euromaid_tech.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:cpt9mb",
+      "model": "CPT9MB",
+      "status": "verified-authorised-supplier-local",
+      "image": "/images/catalogues/appliances/products/euromaid/cpt9mb.jpg",
+      "imageUrl": "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt9mb_euromaid_web.jpg",
+      "pageUrl": "https://harveynormancommercial.com.au/products/CPT9MB",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/CPT9MB",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": [
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt9mb_euromaid_web.jpg",
+            "https://backend.harveynormancommercial.com.au/media/catalog/product/c/p/cpt9mb_euromaid_tech.jpg"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:cs60s",
+      "model": "CS60S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/CS60S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=CS60S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=CS60S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=CS60S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:fs90s",
+      "model": "FS90S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/FS90S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=FS90S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=FS90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=FS90S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:rs6s",
+      "model": "RS6S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/RS6S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS6S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS6S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS6S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:euromaid:rs9s",
+      "model": "RS9S",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/RS9S",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS9S",
+          "title": "| Euromaid",
+          "exactModelOnPage": true,
+          "images": [
+            "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg",
+            "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg"
+          ]
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS9S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Instagram-Icon.svg: image too small: 1738"
+        },
+        {
+          "pageUrl": "https://www.euromaid.com/en-au/search?search=RS9S",
+          "imageError": "https://www.euromaid.com/themes/custom/euromaid/images/Facebook-Icon.svg: image too small: 558"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:orc60x",
+      "model": "ORC60X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/orc60x.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORC60X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORC60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORC60X",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:orc90x",
+      "model": "ORC90X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/orc90x.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORC90X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORC90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORC90X",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:orf60x",
+      "model": "ORF60X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/orf60x.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORF60X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORF60X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORF60X",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:orf90x",
+      "model": "ORF90X",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/orf90x.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORF90X",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORF90X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORF90X",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:ort6wba",
+      "model": "ORT6WBA",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/ort6wba.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORT6WBA",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORT6WBA",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORT6WBA",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:omega:ort9wxa",
+      "model": "ORT9WXA",
+      "status": "review-required-local",
+      "image": "/images/catalogues/appliances/products/omega/ort9wxa.webp",
+      "imageUrl": "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+      "pageUrl": "https://omegaappliances.com.au/?s=ORT9WXA",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/ORT9WXA",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://omegaappliances.com.au/?s=ORT9WXA",
+          "title": "Omega Appliances",
+          "exactModelOnPage": false,
+          "images": [
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/1136c961-88a8-4658-91dd-2e7b1f124e15/Omega_Family-in-Kitchen.png",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/57e7d785-f240-4e4b-aaaf-4fc8b2671771/DSCF0352_2.jpg",
+            "https://images.squarespace-cdn.com/content/v1/6434bb26a48593544005e14d/6abd20d2-6c99-4bcc-aa3e-bae6899219c0/Omega_EnjoyingWine-3.png"
+          ]
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:pum601x",
+      "model": "PUM601X",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/pum601x.jpg"
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:pum901x",
+      "model": "PUM901X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/PUM901X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.smeg.com/au/products/PUM901X",
+          "error": "404 Not Found"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:shw610x1",
+      "model": "SHW610X1",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/shw610x1.jpg"
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:shw910x2",
+      "model": "SHW910X2",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/smeg/shw910x2.jpg"
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:sth600x",
+      "model": "STH600X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/STH600X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.smeg.com/au/products/STH600X",
+          "error": "404 Not Found"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:smeg:sth900x",
+      "model": "STH900X",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/STH900X",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.smeg.com/au/products/STH900X",
+          "error": "404 Not Found"
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wrc614sd",
+      "model": "WRC614SD",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wrc614sd.png"
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wrc914sd",
+      "model": "WRC914SD",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wrc914sd.png"
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wrf610wa",
+      "model": "WRF610WA",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wrf610wa.png"
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wrf910wa",
+      "model": "WRF910WA",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wrf910wa.png"
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wri930sb",
+      "model": "WRI930SB",
+      "status": "unresolved",
+      "attempts": [
+        {
+          "pageUrl": "https://harveynormancommercial.com.au/products/WRI930SB",
+          "title": "Harvey Norman Commercial Division",
+          "exactModelOnPage": true,
+          "images": []
+        },
+        {
+          "pageUrl": "https://www.westinghouse.com.au/search/?q=WRI930SB",
+          "title": "Search | Westinghouse Australia ",
+          "exactModelOnPage": false,
+          "images": []
+        }
+      ]
+    },
+    {
+      "productId": "product:appliances:rangehoods:westinghouse:wrr614sb",
+      "model": "WRR614SB",
+      "status": "already-local",
+      "image": "/images/catalogues/appliances/products/westinghouse/wrr614sb.png"
+    }
+  ]
+}

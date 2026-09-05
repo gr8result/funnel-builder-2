@@ -1,0 +1,130 @@
+[
+  {
+    "file": "C:\\Users\\grant\\Downloads\\Johnson 123.gr8job",
+    "projectId": "03-09/123",
+    "books": [
+      {
+        "path": "client-selections.json.book",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.clientSelectionsBook",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.selectionSchedule",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.selectionSchedules",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      }
+    ],
+    "sourceModified": false,
+    "takeoffOpened": false
+  },
+  {
+    "file": "C:\\Users\\grant\\Downloads\\New Job 03 09.gr8job",
+    "projectId": "03-09/123",
+    "books": [
+      {
+        "path": "client-selections.json.book",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.clientSelectionsBook",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.selectionSchedule",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      },
+      {
+        "path": "client-selections.json.selectionSchedules",
+        "revision": "client-selections:2026-09-04T22:31:52.251Z",
+        "doors": [
+          {
+            "rowId": "row-1788556469891-9f6809f1d9b188",
+            "selectedProduct": "Entry Door Included Selection",
+            "model": "Standard",
+            "productCode": null,
+            "entryDoors": null,
+            "drafts": null
+          }
+        ]
+      }
+    ],
+    "sourceModified": false,
+    "takeoffOpened": false
+  }
+]

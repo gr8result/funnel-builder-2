@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "storage": "IndexedDB estimate-builder-template-db / jobs",
+  "jobId": "8c67469d-441e-4d17-bf6c-e44de65a8cf8",
+  "results": [
+    {
+      "page": "Data Input",
+      "revision": 4,
+      "bytes": 3796580
+    },
+    {
+      "page": "Calculations",
+      "revision": 6,
+      "formula": "123+7"
+    },
+    {
+      "page": "Quote Sheet",
+      "revision": 15,
+      "editedId": "quote-4",
+      "insertedId": "PRELIMINARIES-custom-1788641025411",
+      "deletedId": "quote-5"
+    },
+    {
+      "test": "actual persistence rejects partial payload in native IndexedDB transaction",
+      "rejected": true,
+      "reason": "Incomplete job: missing saved section productLibrary.",
+      "previousRevisionPreserved": 16
+    }
+  ],
+  "checksum": "5315fe0646230f25c595510ad76a12150fca75a0cc7ddae5e21611c721768ea3",
+  "bytes": 3797566,
+  "otherJobUnchanged": true,
+  "fullUnmountAndReopen": true,
+  "errors": []
+}

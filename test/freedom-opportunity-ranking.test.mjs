@@ -104,6 +104,44 @@ test("highest raw technical score is not automatically best executable trade", (
   assert.equal(ranking.bestCurrentTrade.symbol, "NOW");
 });
 
+test("ranking prefers usable volatility over extreme movement when other inputs are comparable", () => {
+  const controlled = row("CTRL", {
+    currentPrice: 100.2,
+    entry: 100,
+    volatility20: 2.4,
+    volatilityScore: undefined,
+  });
+  controlled.volatility = {
+    rating: "MODERATE",
+    averageDailyMovementPercent: 2.4,
+    atr: 2.35,
+    atrPercent: 2.35,
+    suitabilityScore: 99,
+    assessment: "Moderate volatility: regular movement with manageable risk.",
+  };
+  delete controlled.scoreExplanation.volatilitySuitability;
+
+  const extreme = row("WILD", {
+    currentPrice: 100.2,
+    entry: 100,
+    volatility20: 10.5,
+    volatilityScore: undefined,
+  });
+  extreme.volatility = {
+    rating: "EXTREME",
+    averageDailyMovementPercent: 10.5,
+    atr: 10.1,
+    atrPercent: 10.1,
+    suitabilityScore: 28,
+    assessment: "Extreme volatility: price movement is erratic and may be unsuitable.",
+  };
+  delete extreme.scoreExplanation.volatilitySuitability;
+
+  const ranking = rankMarketOpportunities([extreme, controlled], { ...settings, maximumVolatility: 12 }, { now: "2026-08-09T00:00:00Z" });
+  assert.equal(ranking.topFive[0].symbol, "CTRL");
+  assert.equal(ranking.ranked.find((item) => item.symbol === "WILD").status, "SKIP");
+});
+
 test("READY outranks distant WAIT where appropriate", () => {
   const wait = row("WAIT", { currentPrice: 104, entry: 100, tradingScore: 94, overextended: true });
   const ready = row("READY", { currentPrice: 100.4, entry: 100, tradingScore: 86 });

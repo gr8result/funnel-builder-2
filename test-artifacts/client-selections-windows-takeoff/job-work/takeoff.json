@@ -1,0 +1,113 @@
+﻿{
+    "aiPlanTakeoffJob":  {
+                             "takeoffName":  "Window Schedule Test",
+                             "takeoffSchedule":  {
+                                                     "currentSheet":  {
+                                                                          "windows":  [
+                                                                                          {
+                                                                                              "glassType":  "Clear low-e",
+                                                                                              "unit":  "count",
+                                                                                              "windowStyle":  "Sliding Window",
+                                                                                              "category":  "Window",
+                                                                                              "widthMm":  1200,
+                                                                                              "section":  "Windows",
+                                                                                              "itemId":  "window_schedule_1",
+                                                                                              "quantity":  3,
+                                                                                              "floor":  "Ground Floor",
+                                                                                              "mark":  "W1",
+                                                                                              "notes":  "Three matching living windows",
+                                                                                              "location":  "Living",
+                                                                                              "heightMm":  1200
+                                                                                          },
+                                                                                          {
+                                                                                              "glassType":  "Clear low-e",
+                                                                                              "unit":  "count",
+                                                                                              "windowStyle":  "Sliding Window",
+                                                                                              "category":  "Window",
+                                                                                              "widthMm":  1800,
+                                                                                              "section":  "Windows",
+                                                                                              "itemId":  "window_schedule_2",
+                                                                                              "quantity":  1,
+                                                                                              "floor":  "Ground Floor",
+                                                                                              "mark":  "W2",
+                                                                                              "notes":  "Kitchen feature window",
+                                                                                              "location":  "Kitchen",
+                                                                                              "heightMm":  1200
+                                                                                          },
+                                                                                          {
+                                                                                              "obscureGlassRequired":  true,
+                                                                                              "glassType":  "Obscure",
+                                                                                              "unit":  "count",
+                                                                                              "windowStyle":  "Awning Window",
+                                                                                              "category":  "Window",
+                                                                                              "widthMm":  600,
+                                                                                              "section":  "Windows",
+                                                                                              "itemId":  "window_schedule_3",
+                                                                                              "quantity":  2,
+                                                                                              "floor":  "Ground Floor",
+                                                                                              "mark":  "W3",
+                                                                                              "notes":  "Bathroom privacy glazing",
+                                                                                              "location":  "Bathroom",
+                                                                                              "heightMm":  900
+                                                                                          }
+                                                                                      ]
+                                                                      },
+                                                     "project":  {
+                                                                     "clientName":  "Codex Verification",
+                                                                     "projectName":  "Window Schedule Test",
+                                                                     "siteAddress":  "2 ASTREET"
+                                                                 },
+                                                     "generatedAt":  "2026-09-05T00:00:00.000Z",
+                                                     "projectTotals":  {
+                                                                           "windows":  [
+                                                                                           {
+                                                                                               "glassType":  "Clear low-e",
+                                                                                               "unit":  "count",
+                                                                                               "windowStyle":  "Sliding Window",
+                                                                                               "category":  "Window",
+                                                                                               "widthMm":  1200,
+                                                                                               "section":  "Windows",
+                                                                                               "itemId":  "window_schedule_1",
+                                                                                               "quantity":  3,
+                                                                                               "floor":  "Ground Floor",
+                                                                                               "mark":  "W1",
+                                                                                               "notes":  "Three matching living windows",
+                                                                                               "location":  "Living",
+                                                                                               "heightMm":  1200
+                                                                                           },
+                                                                                           {
+                                                                                               "glassType":  "Clear low-e",
+                                                                                               "unit":  "count",
+                                                                                               "windowStyle":  "Sliding Window",
+                                                                                               "category":  "Window",
+                                                                                               "widthMm":  1800,
+                                                                                               "section":  "Windows",
+                                                                                               "itemId":  "window_schedule_2",
+                                                                                               "quantity":  1,
+                                                                                               "floor":  "Ground Floor",
+                                                                                               "mark":  "W2",
+                                                                                               "notes":  "Kitchen feature window",
+                                                                                               "location":  "Kitchen",
+                                                                                               "heightMm":  1200
+                                                                                           },
+                                                                                           {
+                                                                                               "obscureGlassRequired":  true,
+                                                                                               "glassType":  "Obscure",
+                                                                                               "unit":  "count",
+                                                                                               "windowStyle":  "Awning Window",
+                                                                                               "category":  "Window",
+                                                                                               "widthMm":  600,
+                                                                                               "section":  "Windows",
+                                                                                               "itemId":  "window_schedule_3",
+                                                                                               "quantity":  2,
+                                                                                               "floor":  "Ground Floor",
+                                                                                               "mark":  "W3",
+                                                                                               "notes":  "Bathroom privacy glazing",
+                                                                                               "location":  "Bathroom",
+                                                                                               "heightMm":  900
+                                                                                           }
+                                                                                       ]
+                                                                       }
+                                                 }
+                         }
+}

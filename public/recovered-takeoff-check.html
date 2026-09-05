@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Takeoff Safe Mode</title></head><body><h1>Takeoff Safe Mode</h1><p id="status">Checking the main record in an isolated worker…</p><script>
+const worker = new Worker('/recovered-takeoff-check-worker.js');
+worker.onmessage = async ({data}) => {
+ worker.terminate();
+ document.querySelector('#status').textContent = data.pages ? 'Plan pages found.' : 'The main record has no saved plan pages. The original and its exact disk export are preserved.';
+ const endpoint = new URL(location.href).searchParams.get('bridge');
+ if(endpoint) await fetch(endpoint, {method:'POST',body:JSON.stringify(data)});
+};
+worker.postMessage({});
+</script></body></html>

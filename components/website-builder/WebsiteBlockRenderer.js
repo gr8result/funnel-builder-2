@@ -2770,13 +2770,13 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
               }}
               dangerouslySetInnerHTML={{ __html: asRichHtml(item.text || (editor ? "Click to edit quote…" : "")) }}
             />
-            <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined }}>
+            <div style={{ ...sharedStyles.authorRow, justifyContent: isSpotlight ? "center" : undefined, marginTop: "auto", paddingTop: 16, background: "transparent" }}>
               {avatarSrcItem
                 ? <img src={avatarSrcItem} alt={item.author || ""} style={{ ...asStyleObject(sharedStyles.avatar), ...testimonialAvatarStyle, objectFit: "cover", objectPosition: item.avatarObjectPosition || "center center", flexShrink: 0, display: "block" }} />
                 : editor
                   ? <div style={{ width: testimonialAvatarStyle.width || 44, height: testimonialAvatarStyle.height || 44, borderRadius: 999, background: "rgba(148,163,184,0.28)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: "#94a3b8", flexShrink: 0, fontWeight: 600 }}>Photo</div>
                   : null}
-              <div>
+              <div style={{ minWidth: 0, background: "transparent" }}>
                 <p
                   data-website-inline-editor="true"
                   data-text-prop={`items.${idx}.author`}
@@ -2794,6 +2794,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     borderRadius: 6,
                     padding: editor ? "2px 4px" : 0,
                     margin: 0,
+                    background: "transparent",
+                    boxShadow: "none",
                   }}
                   dangerouslySetInnerHTML={{ __html: asRichHtml(item.author || (editor ? "Author Name" : "")) }}
                 />
@@ -2814,6 +2816,8 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
                     borderRadius: 6,
                     padding: editor ? "2px 4px" : 0,
                     margin: "4px 0 0",
+                    background: "transparent",
+                    boxShadow: "none",
                   }}
                   dangerouslySetInnerHTML={{ __html: asRichHtml(item.role || (editor ? "Title / Company" : "")) }}
                 />

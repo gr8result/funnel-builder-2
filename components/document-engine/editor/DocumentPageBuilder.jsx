@@ -6,6 +6,7 @@ import { createObject, duplicateObject, moveObject, resizeObject } from "../core
 import { clearSelection, selectObject } from "../core/selectionEngine.js";
 import { PageRenderer } from "../renderer/pageRenderer.jsx";
 import { createPdfHybridPageModel } from "../../../lib/standard-inclusions/pdfPageImportModel.js";
+import { TextEditingToolbar as WebsiteBuilderTextEditingToolbar } from "../../website-builder/page-builder/pbPropertiesPanels.js";
 
 const DEFAULT_IMAGE = "/assets/builders/standard-inclusions-hero.jpg";
 const DEFAULT_LOGO = "/assets/builders/goodbuild-logo.png";
@@ -575,7 +576,13 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
                   </button>
                 ))}
               </div>
-              <TextFormattingToolbar object={selectedObject} readonly={readonly} onPatchStyle={patchSelectedTextStyle} onPatchText={(text) => commitTextEdit(selectedObject?.id, text)} />
+              <WebsiteBuilderTextEditorAdapter
+                object={selectedObject}
+                readonly={readonly}
+                onPatchStyle={patchSelectedTextStyle}
+                onPatchText={(text) => commitTextEdit(selectedObject?.id, text)}
+                fallback={<TextFormattingToolbar object={selectedObject} readonly={readonly} onPatchStyle={patchSelectedTextStyle} onPatchText={(text) => commitTextEdit(selectedObject?.id, text)} />}
+              />
               <button
                 type="button"
                 style={showOriginal ? styles.primaryButton : styles.secondaryButton}
@@ -688,6 +695,102 @@ export default function DocumentPageBuilder({ document, workbook = null, readonl
   );
 }
 
+class WebsiteBuilderTextEditorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) return this.props.fallback || null;
+    return this.props.children;
+  }
+}
+
+function WebsiteBuilderTextEditorAdapter({ object, readonly, onPatchStyle, onPatchText, fallback }) {
+  if (!object || !["text", "dynamicField"].includes(object.type)) return null;
+  const block = documentTextObjectToWebsiteBuilderBlock(object);
+  const applyBlockPatch = (patch = {}) => {
+    const nextContent = patch.content || patch.data || {};
+    const nextDesign = patch.design || patch.style || {};
+    if (Object.prototype.hasOwnProperty.call(nextContent, "text")) onPatchText(nextContent.text);
+    if (Object.keys(nextDesign).length) onPatchStyle(websiteBuilderDesignToDocumentStyle(nextDesign));
+  };
+  const updateBlock = (_blockId, patch = {}) => applyBlockPatch(patch);
+  const updateBlockContent = (_blockId, content = {}) => applyBlockPatch({ content });
+  const updateBlockDesign = (_blockId, design = {}) => applyBlockPatch({ design });
+  const updateSelectedBlockDesign = (design = {}) => applyBlockPatch({ design });
+  return (
+    <WebsiteBuilderTextEditorBoundary fallback={fallback}>
+      <WebsiteBuilderTextEditingToolbar
+        block={block}
+        selectedBlock={block}
+        selectedObject={block}
+        content={block.content}
+        design={block.design}
+        text={block.content.text}
+        value={block.content.text}
+        disabled={readonly}
+        readonly={readonly}
+        onChange={(value) => onPatchText(typeof value === "string" ? value : value?.target?.value || block.content.text)}
+        onPatchStyle={(style) => onPatchStyle(websiteBuilderDesignToDocumentStyle(style))}
+        onPatchText={onPatchText}
+        onUpdate={applyBlockPatch}
+        onUpdateBlock={updateBlock}
+        updateBlock={updateBlock}
+        updateBlockContent={updateBlockContent}
+        updateBlockDesign={updateBlockDesign}
+        updateSelectedBlockDesign={updateSelectedBlockDesign}
+      />
+    </WebsiteBuilderTextEditorBoundary>
+  );
+}
+
+function documentTextObjectToWebsiteBuilderBlock(object = {}) {
+  const style = object.style || {};
+  return {
+    id: object.id,
+    type: "text",
+    content: {
+      text: object.data?.text || "",
+      html: object.data?.html || object.data?.text || "",
+    },
+    design: {
+      fontFamily: style.fontFamily || "Arial",
+      fontSize: style.fontSize || 16,
+      fontWeight: style.fontWeight || "400",
+      fontStyle: style.fontStyle || "normal",
+      textDecoration: style.textDecoration || "none",
+      color: style.color || "#0b2545",
+      backgroundColor: style.backgroundColor || "transparent",
+      textAlign: style.textAlign || "left",
+      lineHeight: style.lineHeight || 1.2,
+      letterSpacing: style.letterSpacing || "0px",
+      textTransform: style.textTransform || "none",
+    },
+  };
+}
+
+function websiteBuilderDesignToDocumentStyle(style = {}) {
+  return {
+    ...(style.fontFamily ? { fontFamily: style.fontFamily } : {}),
+    ...(style.fontSize ? { fontSize: Number(style.fontSize) || 16 } : {}),
+    ...(style.fontWeight ? { fontWeight: style.fontWeight } : {}),
+    ...(style.fontStyle ? { fontStyle: style.fontStyle } : {}),
+    ...(style.textDecoration ? { textDecoration: style.textDecoration } : {}),
+    ...(style.color ? { color: style.color } : {}),
+    ...(style.backgroundColor ? { backgroundColor: style.backgroundColor } : {}),
+    ...(style.textAlign ? { textAlign: style.textAlign } : {}),
+    ...(style.lineHeight ? { lineHeight: Number(style.lineHeight) || 1.2 } : {}),
+    ...(style.letterSpacing ? { letterSpacing: style.letterSpacing } : {}),
+    ...(style.textTransform ? { textTransform: style.textTransform } : {}),
+  };
+}
+
 function TextFormattingToolbar({ object, readonly, onPatchStyle, onPatchText }) {
   if (!object || !["text", "dynamicField"].includes(object.type)) return null;
   const style = object.style || {};
@@ -730,16 +833,24 @@ function ObjectProperties({ object, readonly, onPatch, onGeometry, onDuplicate, 
         </div>
       ) : null}
       {(object.type === "text" || object.type === "dynamicField") ? (
-        <>
-          <label style={styles.field}>Text<textarea disabled={readonly} style={styles.textarea} value={object.data?.text || ""} onChange={(event) => onPatch({ data: { text: event.target.value, edited: true } })} /></label>
-          <label style={styles.field}>Font size<input disabled={readonly} type="number" style={styles.input} value={object.style?.fontSize || 16} onChange={(event) => onPatch({ style: { fontSize: Number(event.target.value) || 16 } })} /></label>
-          <label style={styles.field}>Colour<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.color, "#0b2545")} onChange={(event) => onPatch({ style: { color: event.target.value } })} /></label>
-          <label style={styles.field}>Alignment<select disabled={readonly} style={styles.input} value={object.style?.textAlign || "left"} onChange={(event) => onPatch({ style: { textAlign: event.target.value } })}>
-            <option value="left">Left</option>
-            <option value="center">Centre</option>
-            <option value="right">Right</option>
-          </select></label>
-        </>
+        <WebsiteBuilderTextEditorAdapter
+          object={object}
+          readonly={readonly}
+          onPatchStyle={(style) => onPatch({ style })}
+          onPatchText={(text) => onPatch({ data: { text, edited: true, acceptedEdit: object.data?.acceptedEdit } })}
+          fallback={(
+            <>
+              <label style={styles.field}>Text<textarea disabled={readonly} style={styles.textarea} value={object.data?.text || ""} onChange={(event) => onPatch({ data: { text: event.target.value, edited: true } })} /></label>
+              <label style={styles.field}>Font size<input disabled={readonly} type="number" style={styles.input} value={object.style?.fontSize || 16} onChange={(event) => onPatch({ style: { fontSize: Number(event.target.value) || 16 } })} /></label>
+              <label style={styles.field}>Colour<input disabled={readonly} type="color" style={styles.color} value={safeHex(object.style?.color, "#0b2545")} onChange={(event) => onPatch({ style: { color: event.target.value } })} /></label>
+              <label style={styles.field}>Alignment<select disabled={readonly} style={styles.input} value={object.style?.textAlign || "left"} onChange={(event) => onPatch({ style: { textAlign: event.target.value } })}>
+                <option value="left">Left</option>
+                <option value="center">Centre</option>
+                <option value="right">Right</option>
+              </select></label>
+            </>
+          )}
+        />
       ) : null}
       {(object.type === "image" || object.type === "logo") ? (
         <>

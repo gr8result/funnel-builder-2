@@ -69,7 +69,8 @@ const NAV_ITEMS = [
 const MODULE_ITEMS = [
   { href: "/modules/email",                    label: "Email Marketing",       icon: ICONS.email,          color: "u10", roles: MKT_UP,   emoji: "📧" },
   { href: "/modules/email/crm",                label: "CRM",                   icon: ICONS.account,        color: "u22", roles: CRM_ROLES, emoji: "🗂️" },
-  { href: "/modules/construction",               label: "Projects Hub",          icon: ICONS.funnels,        color: "u09", roles: MGMT,     emoji: "🗂️" },
+  { href: "/modules/estimate-builder?page=projectDashboard", label: "Project Workspace",          icon: ICONS.funnels,        color: "u09", roles: MGMT,     emoji: "🗂️" },
+  { href: "/client-portal", label: "Client Portal",          icon: ICONS.communities,    color: "u17", roles: MGMT },
   { href: "/modules/email/crm/sms-dashboard",  label: "SMS Marketing",         icon: ICONS.sms,            color: "u33", roles: MKT_UP,   emoji: "💬" },
   { href: "/modules/social_media/dashboard",   label: "Social Media",          icon: ICONS.social,         color: "u25", roles: MKT_UP,   emoji: "📱" },
   { href: "/modules/calendar/dashboard",       label: "Booking Calendar",      icon: ICONS.calendar,       color: "u15", roles: SALES_UP, emoji: "📅" },

@@ -125,12 +125,19 @@ assert.equal(kitchenStoneQuery.area, "kitchen", "family selection query must sta
 assert.throws(() => selectionQueryForFamily({ areaKey: "exterior", familyKey: "stone-20mm-tops" }), /does not belong/, "wrong-area queries must fail");
 assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
   "product_code",
+  "stable_product_id",
+  "applicable_room_ids",
+  "applicable_room_slugs",
+  "category_ids",
+  "category_slugs",
+  "subcategory",
   "family_key",
   "requirement_keys",
   "category_key",
   "top_level_area",
   "manufacturer",
   "brand",
+  "brand_logo_url",
   "supplier",
   "range",
   "collection",
@@ -148,6 +155,9 @@ assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
   "texture",
   "configuration",
   "material",
+  "wels_rating",
+  "wels_registration",
+  "warranty",
   "primary_image_url",
   "thumbnail_url",
   "gallery_image_urls",
@@ -168,6 +178,11 @@ assert.deepEqual(PRODUCT_LIBRARY_IMPORT_COLUMNS, [
   "price_status",
   "price_source_url",
   "price_verified_at",
+  "package_id",
+  "package_name",
+  "package_price",
+  "package_component_ids",
+  "package_component_models",
   "country",
   "regions",
   "region_review_required",
@@ -300,10 +315,11 @@ const unchangedPreview = previewProductImportRows([{
 assert.equal(unchangedPreview[0].action, "skip-unchanged", "unchanged import rows must be skipped");
 
 const pageSource = fs.readFileSync(new URL("../pages/modules/builders/product-library.js", import.meta.url), "utf8");
-assert.match(pageSource, /data-area-key=\{area\.key\}/, "normal Product Library must render area cards");
-assert.match(pageSource, /data-category-key=\{categoryItem\.key\}/, "normal Product Library must render category cards");
-assert.match(pageSource, /openCategory\(categoryItem\.key\)/, "category cards must route to the exact selected category");
-assert.match(pageSource, /setSelectedCategoryKey\(""\)/, "Back navigation must step from category back to area");
+assert.match(pageSource, /data-testid="product-library-room-landing"/, "normal Product Library must render the room-first landing");
+assert.match(pageSource, /data-room-key=\{roomItem\.key\}/, "normal Product Library must render room cards");
+assert.match(pageSource, /data-room-category=\{categoryItem\.key\}/, "normal Product Library must render room category cards");
+assert.match(pageSource, /openRoomCategory\(categoryItem\.key\)/, "room category cards must route to the exact selected category");
+assert.match(pageSource, /openRoom\(selectedRoom\.key\)/, "Back navigation must step from room category back to room");
 assert.match(pageSource, /router\.push\("\/modules\/builders"\)/, "root Back must use a logical Builders route");
 assert.match(pageSource, /No products have been added for this category yet\./, "empty category state must be explicit");
 assert.match(pageSource, /> Add Product</, "empty state must expose Add Product");

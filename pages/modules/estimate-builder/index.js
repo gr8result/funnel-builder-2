@@ -1,6 +1,9 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import EstimateBuilderWorkbook from "../../../components/estimate-builder/EstimateBuilderWorkbook";
+import dynamic from "next/dynamic";
+import TakeoffRecoveryPanel from "../../../components/construction-estimation/ai-plan-takeoff/TakeoffRecoveryPanel";
+const EstimateBuilderWorkbook = dynamic(() => import("../../../components/estimate-builder/EstimateBuilderWorkbook"), { ssr: false });
+import ClientPortalRouteBridge from "../../../Client Portal/RouteBridge";
 
 function routePageFromRouter(router) {
   const queryPage = typeof router.query.page === "string" ? router.query.page : "";
@@ -13,15 +16,33 @@ function routePageFromRouter(router) {
 export default function EstimateBuilderPage() {
   const router = useRouter();
   const previewMode = router.query.mode === "preview";
-  const mode = typeof router.query.mode === "string" ? router.query.mode : "";
+  const mode = typeof router.query.mode === "string" && router.query.mode !== "client-selection" ? router.query.mode : "";
   const recentId = typeof router.query.recentId === "string" ? router.query.recentId : "";
   const organisationId = typeof router.query.organisationId === "string" ? router.query.organisationId : "";
   const initialPage = routePageFromRouter(router);
+
+  // Recovery is an explicit route option, never the default Takeoff interface.
+  if (!router.isReady) return <p>Preparing Estimate Builder…</p>;
+  if (router.query.safeMode === "1") {
+    return <TakeoffRecoveryPanel />;
+  }
+
+  if (initialPage === "clientPortal") {
+    return (
+      <>
+        <Head><title>Client Portal</title></Head>
+        <ClientPortalRouteBridge />
+      </>
+    );
+  }
 
   return (
     <>
       <Head><title>{previewMode ? "Estimate Builder Preview" : "Estimate Builder"}</title></Head>
       <main style={styles.page}>
+        {initialPage === "aiPlanTakeoff" && (
+          <a href="/modules/estimate-builder?page=aiPlanTakeoff&safeMode=1" style={{ display: "inline-block", marginBottom: 12 }}>Recover Takeoff</a>
+        )}
         <EstimateBuilderWorkbook previewMode={previewMode} mode={mode} recentId={recentId} organisationId={organisationId} initialPage={initialPage} />
       </main>
     </>

@@ -1,0 +1,95 @@
+{
+  "updatedAt": "2026-09-04",
+  "roomCards": {
+    "kitchen": {
+      "localPath": "/images/catalogues/product-library/rooms/kitchen-cabinetry-appliances.jpg",
+      "sourceUrl": "https://unsplash.com/photos/bff31c812dba",
+      "attribution": "Unsplash kitchen cabinetry/appliance image, stored locally for Product Library room browsing."
+    },
+    "butlers-pantry": {
+      "localPath": "/images/catalogues/product-library/rooms/butlers-pantry-cabinetry-shelving.jpg",
+      "sourceUrl": "https://www.gjgardner.com.au/learn/design-and-inspiration/butlers-pantry-vs-walk-in-pantr/",
+      "attribution": "G.J. Gardner Homes butler's pantry image, stored locally for Product Library room browsing."
+    },
+    "bathroom": {
+      "localPath": "/images/catalogues/product-library/rooms/bathroom-vanity-basin-mirror.jpg",
+      "sourceUrl": "https://unsplash.com/photos/996317b8d101",
+      "attribution": "Unsplash bathroom vanity, basin and bath image, stored locally for Product Library room browsing."
+    },
+    "ensuite": {
+      "localPath": "/images/catalogues/product-library/rooms/ensuite-shower-vanity.jpg",
+      "sourceUrl": "https://www.dreamridgehomes.com/marda-loop-available",
+      "attribution": "Dream Ridge Homes ensuite bathroom image, stored locally for Product Library room browsing."
+    },
+    "powder-room": {
+      "localPath": "/images/catalogues/product-library/rooms/powder-room-vanity-mirror.jpg",
+      "sourceUrl": "https://www.houzz.com/photos/modern-powder-room-ideas-phbr1-bp~t_713~s_2105",
+      "attribution": "Houzz powder room vanity/mirror image, stored locally for Product Library room browsing."
+    },
+    "laundry": {
+      "localPath": "/images/catalogues/product-library/rooms/laundry-cabinetry-appliances.jpg",
+      "sourceUrl": "https://washtower.co.uk/en_GB/blog/side-by-side-washing-machine-and-dryer/",
+      "attribution": "Washtower laundry cabinetry/appliances image, stored locally for Product Library room browsing."
+    },
+    "living-areas": {
+      "localPath": "/images/catalogues/product-library/rooms/living-lounge-room.jpg",
+      "sourceUrl": "https://unsplash.com/photos/dd6b41faaea6",
+      "attribution": "Unsplash living/lounge room image, stored locally for Product Library room browsing."
+    },
+    "bedrooms": {
+      "localPath": "/images/catalogues/product-library/rooms/bedroom-wardrobe-interior.jpg",
+      "sourceUrl": "https://unsplash.com/photos/A4Kf_chf5dU",
+      "attribution": "Unsplash bedroom image, stored locally for Product Library room browsing."
+    },
+    "internal-areas": {
+      "localPath": "/images/catalogues/product-library/rooms/internal-hallway-interior.jpg",
+      "sourceUrl": "https://brunch.co.kr/@kairos-el/8",
+      "attribution": "Interior hallway image, stored locally for Product Library room browsing."
+    },
+    "exterior": {
+      "localPath": "/images/catalogues/product-library/rooms/exterior-house-facade.jpg",
+      "sourceUrl": "https://unsplash.com/photos/a5bfcd646154",
+      "attribution": "Unsplash house exterior image, stored locally for Product Library room browsing."
+    },
+    "garage": {
+      "localPath": "/images/catalogues/product-library/rooms/garage-door-interior.jpg",
+      "sourceUrl": "https://unsplash.com/photos/g56E31TXwsk",
+      "attribution": "Unsplash garage/workshop image, stored locally for Product Library room browsing."
+    },
+    "alfresco-outdoor": {
+      "localPath": "/images/catalogues/product-library/rooms/alfresco-outdoor-entertaining.jpg",
+      "sourceUrl": "https://www.henley.com.au/home-builder-guide/celebrate-the-outdoors-with-an-alfresco",
+      "attribution": "Henley Homes alfresco entertaining image, stored locally for Product Library room browsing."
+    }
+  },
+  "categoryCards": {
+    "cabinet-doors-panels": {
+      "localPath": "/images/catalogues/product-library/categories/cabinet-doors-panels-standard-base-cupboards.jpg",
+      "sourceUrl": "https://unsplash.com/photos/3bb406ef7e77",
+      "attribution": "Cabinetry category card only. Not used as a product swatch."
+    },
+    "cabinet-handles": {
+      "localPath": "/images/catalogues/product-library/categories/cabinet-handles-handle-house-c3.jpg",
+      "sourceUrl": "https://handlehouse.com.au/products/c3-post-and-rail-cabinet-handles",
+      "attribution": "Handle House C3 Post and Rail product image."
+    }
+  },
+  "brandLogos": {
+    "Laminex": {
+      "localPath": "/images/catalogues/product-library/brands/laminex-logo.jpg",
+      "sourceUrl": "https://brandfetch.com/laminex.com.au",
+      "officialUrl": "https://www.laminex.com.au/"
+    },
+    "Polytec": {
+      "localPath": "/images/catalogues/product-library/brands/polytec-logo.jpg",
+      "sourceUrl": "https://brandfetch.com/polytec.com.au",
+      "officialUrl": "https://www.polytec.com.au/"
+    }
+  },
+  "rejectedImages": [
+    {
+      "url": "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1200&q=80",
+      "reason": "Cosmetics/hand-cream image was assigned by broad cabinet-finish fallback text and is unrelated to cabinetry doors or panels."
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "sstableFilesRead": 22,
+  "errors": [],
+  "records": [
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001clientSelections.exteriorColours.bulkTipDismissed",
+      "sequence": 532665,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 5
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001freedom.marketSelection",
+      "sequence": 528685,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 4
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:client-selections:guided-cabinetry-draft",
+      "sequence": 575019,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 231632
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:embedded-selections-book:846885cd-25b9-4eca-b9f9-3fd02f5882d8:c4404954-6310-4aaa-bf47-3a988330274f",
+      "sequence": 533892,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 818456,
+      "projectId": "c4404954-6310-4aaa-bf47-3a988330274f",
+      "savedAt": "2026-08-28T01:17:00.511Z",
+      "doors": []
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:embedded-selections-book:846885cd-25b9-4eca-b9f9-3fd02f5882d8:embedded:no-saved-estimate-open",
+      "sequence": 572488,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 758189,
+      "projectId": "embedded:no-saved-estimate-open",
+      "savedAt": "2026-09-01T01:48:37.623Z",
+      "doors": []
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:embedded-selections-book:846885cd-25b9-4eca-b9f9-3fd02f5882d8:embedded:not-entered",
+      "sequence": 518640,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 754985,
+      "projectId": "embedded:not-entered",
+      "savedAt": "2026-08-26T19:02:21.951Z",
+      "doors": []
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:embedded-selections-book:846885cd-25b9-4eca-b9f9-3fd02f5882d8:latest",
+      "sequence": 572489,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 758189,
+      "projectId": "embedded:no-saved-estimate-open",
+      "savedAt": "2026-09-01T01:48:37.623Z",
+      "doors": []
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:active-local-file",
+      "sequence": 318335,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 230
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:active-project-context:846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "sequence": 336714,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 376
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:active-project-context:org_demo_inclusions",
+      "sequence": 294374,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 351
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:approval-history:org_demo:project_demo",
+      "sequence": 262220,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 1494
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:approval-history:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298614,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 348
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:approval-records:org_demo:project_demo",
+      "sequence": 262221,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 3
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:approval-records:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298615,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 3
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:area-register:846885cd-25b9-4eca-b9f9-3fd02f5882d8:project_846885cd-25b9-4eca-b9f9-3fd02f5882d8_gr8-job",
+      "sequence": 336721,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 14291
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:area-register:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298616,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 12128
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:project-file-index:846885cd-25b9-4eca-b9f9-3fd02f5882d8",
+      "sequence": 336715,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 1160
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:project-file-index:org_demo_inclusions",
+      "sequence": 294378,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 353
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:project-requirements:846885cd-25b9-4eca-b9f9-3fd02f5882d8:project_846885cd-25b9-4eca-b9f9-3fd02f5882d8_gr8-job",
+      "sequence": 318356,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 209119
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:project-requirements:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298617,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 175350
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:review-audit-events:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298618,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 363
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:review-state:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298619,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 266
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:template-configuration:846885cd-25b9-4eca-b9f9-3fd02f5882d8:project_846885cd-25b9-4eca-b9f9-3fd02f5882d8_gr8-job",
+      "sequence": 321839,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 417
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:template-configuration:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298620,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 1885
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:workspace-attachments:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298621,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 4084
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:workspace-draft:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298622,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 250
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:workspace-locations:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298623,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 24186
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:workspace-notes:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298624,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 5291
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:inclusions-selections:workspace-selections:org_demo_inclusions:project_johnson_residence",
+      "sequence": 298625,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 28744
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:selectionsBook:detailsPanelCollapsed",
+      "sequence": 243803,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 2
+    },
+    {
+      "profile": "Profile 6",
+      "key": "_http://localhost:3000\u0000\u0001gr8:selectionsBook:sidebarCollapsed",
+      "sequence": 249978,
+      "deleted": false,
+      "file": "C:\\Users\\grant\\AppData\\Local\\Google\\Chrome\\User Data\\Profile 6\\Local Storage\\leveldb\\038426.ldb",
+      "bytes": 2
+    }
+  ]
+}

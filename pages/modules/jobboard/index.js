@@ -889,7 +889,7 @@ export default function JobBoard() {
             </p>
           </div>
         </div>
-        <Link href="/modules/construction">
+        <Link href="/modules/estimate-builder?page=projectDashboard">
           <button style={P.backBtn}>← Back</button>
         </Link>
       </div>

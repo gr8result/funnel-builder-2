@@ -1,8 +1,10 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { externalizeTakeoffRecoverySnapshot } from './planBlobStorage.js';
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Text, Rect, Group } from 'react-konva';
-import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload } from 'lucide-react';
+import { RotateCw, Ruler, ChevronLeft, ChevronRight, DoorOpen, Square, Layers, Trash2, Home, Compass, Download, Upload, MousePointer2 } from 'lucide-react';
 import { calculatePolygonAreaM2, findFloorplanCornerSnapPoint, resolveFloorplanFreePoint } from './floorplanGeometry';
-import { createJobData, createPortableTakeoffExport, getEmbeddedPlanPages, getSavedFloorCoveringAreas, resolvePortableTakeoffImport } from './jobPersistence';
+import { AI_PLAN_TAKEOFF_EXTENSION, filenameWithoutKnownGr8Extension } from '../../../lib/gr8FileTypes.js';
+import { createJobData, createPortableTakeoffExport, createTakeoffContentChecksum, getEmbeddedPlanPages, getSavedFloorCoveringAreas, getTakeoffCounts, rememberRecentTakeoffJob, resolvePortableTakeoffImport } from './jobPersistence';
 import {
   applyQuotePreviewRows,
   createJobSetupPayload,
@@ -14,13 +16,24 @@ import {
   getScheduleSignature
 } from './takeoffSchedule';
 
-import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+const PDFJS_WORKER_SRC = '/pdfjs/pdf.worker.min.mjs';
+const PDFJS_INIT_ERROR_MESSAGE = 'The local PDF engine could not start. Your takeoff has not been changed.';
+const SAVE_VERIFICATION_FAILED_MESSAGE = 'SAVE FAILED – DO NOT CLOSE THIS TAKEOFF';
+pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
 
 const MEASURE_LABEL_FONT_SIZE = 24;
 const MEASURE_LABEL_OFFSET = 30;
 const EAVE_WIDTH_OPTIONS = ['450', '600', '900', 'Special'];
 const EAVE_LEVEL_OPTIONS = ['Ground Floor', 'Second Level', 'Third Level'];
+const OPENING_CLASS_OPTIONS = ['Window', 'Internal Door', 'External Door', 'Garage Door', 'Large Glazed/Stacker/Sliding Door', 'Other Opening'];
+const EXTERIOR_WALL_CLASS_OPTIONS = ['Brick Veneer', 'Lightweight Cladding', 'Rendered Masonry', 'Other'];
+const EXTERIOR_WALL_CLASS_COLOURS = {
+  'Brick Veneer': 'rgba(178, 34, 34, 0.45)',
+  'Lightweight Cladding': 'rgba(30, 136, 229, 0.45)',
+  'Rendered Masonry': 'rgba(124, 77, 255, 0.45)',
+  Other: 'rgba(117, 117, 117, 0.45)'
+};
 
 function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
@@ -32,8 +45,170 @@ function loadImageFromDataUrl(dataUrl) {
 }
 
 function sanitizeJobFileName(name) {
-  const cleaned = (name || '').trim().replace(/[^a-z0-9-_ ]/gi, '').replace(/\s+/g, '_');
+  const cleaned = (name || '').trim().replace(/[^a-z0-9-_. ]/gi, '').replace(/\s+/g, '_');
   return cleaned || `takeoff_job_${Date.now()}`;
+}
+
+function sanitizeDownloadFileName(name) {
+  const cleaned = (name || '').trim().replace(/[^a-z0-9-_. ]/gi, '').replace(/\s+/g, ' ').slice(0, 120);
+  return cleaned || `takeoff job ${Date.now()}`;
+}
+
+async function storeEmergencyTakeoffSnapshot(snapshot) {
+  if (typeof window === 'undefined' || !window.indexedDB) return Promise.resolve(false);
+  snapshot = await externalizeTakeoffRecoverySnapshot(snapshot);
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.open('gr8-ai-plan-takeoff-recovery-db', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('snapshots')) {
+        const store = db.createObjectStore('snapshots', { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+    };
+    request.onerror = () => reject(request.error || new Error('Unable to open takeoff recovery database'));
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('snapshots', 'readwrite');
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        const error = transaction.error || new Error('Unable to store takeoff recovery snapshot');
+        db.close();
+        reject(error);
+      };
+      transaction.objectStore('snapshots').put(snapshot);
+    };
+  });
+}
+
+function normaliseRecoveredWallRun(run = {}, index = 0) {
+  const wallType = String(run.wallType || run.type || run.category || '').toLowerCase();
+  const category = run.category || (wallType.includes('external') || wallType.includes('exterior') ? 'exterior' : 'interior');
+  return {
+    ...run,
+    id: run.id || `recovered-wall-${index + 1}`,
+    page: Number(run.page || run.pageId || run.sourcePage || 1),
+    nodes: Array.isArray(run.nodes) ? run.nodes : (Array.isArray(run.points) ? run.points : []),
+    category,
+    thicknessMm: Number(run.thicknessMm || run.wallThicknessMm || getDefaultWallThickness(wallType.includes('external') ? 'exterior' : 'interior')),
+    alignment: run.alignment || 'outer',
+    exteriorType: category === 'exterior' ? (run.exteriorType || 'Other') : '',
+    linedFaces: Number(run.linedFaces || 2) === 1 ? 1 : 2,
+    openingDeductionsEnabled: run.openingDeductionsEnabled !== false,
+    wallHeightM: Number(run.wallHeightM || run.heightM || 0) || null
+  };
+}
+
+function normaliseRecoveredOpening(opening = {}, index = 0) {
+  const firstPoint = opening.nodes?.[0] || opening.points?.[0] || { x: opening.x, y: opening.y };
+  const openingType = String(opening.type || opening.openingType || '').toLowerCase().includes('window') ? 'window' : 'door';
+  const label = opening.itemTag || opening.label || `${openingType === 'window' ? 'W' : 'D'}${index + 1}`;
+  return {
+    ...opening,
+    id: opening.id || `recovered-opening-${index + 1}`,
+    page: Number(opening.page || opening.pageId || opening.sourcePage || 1),
+    x: Number(opening.x ?? firstPoint?.x ?? 0),
+    y: Number(opening.y ?? firstPoint?.y ?? 0),
+    type: openingType,
+    openingType,
+    itemTag: label,
+    widthMm: Number(opening.widthMm || opening.width || 0),
+    heightMm: Number(opening.heightMm || opening.height || 0),
+    openingClass: classifyOpeningValue(opening),
+    hostWallId: opening.hostWallId || '',
+    frameMaterial: opening.frameMaterial || '',
+    frameColour: opening.frameColour || '',
+    sillType: opening.sillType || '',
+    brickSillRequired: Boolean(opening.brickSillRequired),
+    location: opening.location || '',
+    frameJambDetails: opening.frameJambDetails || ''
+  };
+}
+
+function normaliseRecoveredFloorplan(floorplan = {}, index = 0) {
+  return {
+    ...floorplan,
+    id: floorplan.id || `recovered-floorplan-${index + 1}`,
+    page: Number(floorplan.page || floorplan.pageId || floorplan.sourcePage || 1),
+    nodes: Array.isArray(floorplan.nodes) ? floorplan.nodes : (Array.isArray(floorplan.points) ? floorplan.points : []),
+    label: floorplan.label || floorplan.roomName || floorplan.type || `Recovered area ${index + 1}`,
+    type: floorplan.type || 'Room',
+    color: floorplan.color || 'rgba(14, 165, 233, 0.12)',
+    stroke: floorplan.stroke || '#0284c7'
+  };
+}
+
+function normaliseRecoveredPlanPage(page = {}) {
+  const naturalWidth = Number(page.naturalWidth || page.width || page.logicalWidth || 0);
+  const naturalHeight = Number(page.naturalHeight || page.height || page.logicalHeight || 0);
+  return {
+    ...page,
+    width: Number(page.width || naturalWidth),
+    height: Number(page.height || naturalHeight),
+    logicalWidth: Number(page.logicalWidth || naturalWidth),
+    logicalHeight: Number(page.logicalHeight || naturalHeight),
+    renderScale: Number(page.renderScale || 1)
+  };
+}
+
+function normaliseRecoveredPlanPages(pages = []) {
+  return Array.isArray(pages) ? pages.map(normaliseRecoveredPlanPage) : [];
+}
+
+function buildTakeoffContentSnapshot({
+  rotation = 0,
+  pixelsPerMm = null,
+  planPages = [],
+  completedWallRuns = [],
+  placedOpenings = [],
+  completedAreas = [],
+  completedFloorplans = [],
+  completedMeasurements = [],
+  completedEaves = [],
+}) {
+  return {
+    rotation,
+    pixelsPerMm,
+    plan: {
+      type: 'embedded-pages',
+      totalPages: Array.isArray(planPages) ? planPages.length : 0,
+      pages: Array.isArray(planPages) ? planPages : [],
+    },
+    completedWallRuns: Array.isArray(completedWallRuns) ? completedWallRuns : [],
+    placedOpenings: Array.isArray(placedOpenings) ? placedOpenings : [],
+    completedAreas: Array.isArray(completedAreas) ? completedAreas : [],
+    completedFloorplans: Array.isArray(completedFloorplans) ? completedFloorplans : [],
+    completedMeasurements: Array.isArray(completedMeasurements) ? completedMeasurements : [],
+    completedEaves: Array.isArray(completedEaves) ? completedEaves : [],
+  };
+}
+
+function checksumForTakeoffContent(content = {}) {
+  return createTakeoffContentChecksum(buildTakeoffContentSnapshot(content));
+}
+
+function classifyOpeningValue(opening = {}) {
+  const explicit = String(opening.openingClass || '').trim();
+  if (OPENING_CLASS_OPTIONS.includes(explicit)) return explicit;
+  const type = String(opening.type || '').toLowerCase();
+  const subtype = String(opening.subType || '').toLowerCase();
+  if (type === 'window') return 'Window';
+  if (subtype.includes('garage') || subtype.includes('panel') || subtype.includes('roller')) return 'Garage Door';
+  if (subtype.includes('stacker') || subtype.includes('sliding') || subtype.includes('gsd') || subtype.includes('glazed')) return 'Large Glazed/Stacker/Sliding Door';
+  if (subtype.includes('internal')) return 'Internal Door';
+  if (type === 'door') return 'External Door';
+  return 'Other Opening';
+}
+
+function floorFromPage(page = 1) {
+  const pageNumber = Number(page) || 1;
+  if (pageNumber === 1) return { key: 'lower', label: 'Ground Floor' };
+  if (pageNumber === 2) return { key: 'upper', label: 'Second Level' };
+  if (pageNumber === 3) return { key: 'third', label: 'Third Level' };
+  return { key: `sheet${pageNumber}`, label: `Sheet ${pageNumber}` };
 }
 
 function snapToStandardThickness(mm) {
@@ -152,7 +327,10 @@ export default function AIPlanTakeoffStandalone({
   onSaveToPlatform = null,
   onJobSetupUpdate = null,
   onQuoteSheetUpdate = null,
-  onBackToDashboard = null
+  onBackToDashboard = null,
+  openTakeoffJobRequest = null,
+  onRecentTakeoffJobsChange = null,
+  onAttachToProject = null
 }) {
   const initialProjectInfo = {
     projectName: platformContext.projectName || '',
@@ -164,7 +342,7 @@ export default function AIPlanTakeoffStandalone({
   const [rotation, setRotation] = useState(0);
   const [stageScale, setStageScale] = useState(1);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
-  const [jobName, setJobName] = useState(platformContext.projectName || '');
+  const [jobName, setJobName] = useState('');
   const [jobFileHandle, setJobFileHandle] = useState(null);
   const [planPages, setPlanPages] = useState([]);
   const [planFilename, setPlanFilename] = useState(platformContext.fileName || '');
@@ -173,7 +351,12 @@ export default function AIPlanTakeoffStandalone({
   const [lastSuccessfulSaveAt, setLastSuccessfulSaveAt] = useState(initialJob?.updatedAt || '');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [importedTakeoffFileName, setImportedTakeoffFileName] = useState(initialJob?.sourceFileName || '');
+  const [attachDialogOpen, setAttachDialogOpen] = useState(false);
+  const [attachProjectName, setAttachProjectName] = useState('Johnson 123');
+  const [attachSaving, setAttachSaving] = useState(false);
+  const [attachError, setAttachError] = useState('');
   const suppressUnsavedChangeRef = useRef(true);
+  const [autosaveRequest, setAutosaveRequest] = useState(null);
   const [projectInfo, setProjectInfo] = useState(initialProjectInfo);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleMappings, setScheduleMappings] = useState({});
@@ -190,6 +373,11 @@ export default function AIPlanTakeoffStandalone({
   const [jobSetupPayload, setJobSetupPayload] = useState(null);
   const [lastQuoteSyncSignature, setLastQuoteSyncSignature] = useState('');
   const [platformSaveMessage, setPlatformSaveMessage] = useState('');
+  const [pdfEngineError, setPdfEngineError] = useState('');
+  const [openedTakeoffJob, setOpenedTakeoffJob] = useState(null);
+  const [recoveryPreviewMode, setRecoveryPreviewMode] = useState(false);
+  const [recoveryPreviewCounts, setRecoveryPreviewCounts] = useState(null);
+  const isRecoveryPreview = Boolean(recoveryPreviewMode);
 
   const [pdfDoc, setPdfDoc] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -216,9 +404,11 @@ export default function AIPlanTakeoffStandalone({
   const [openingType, setOpeningType] = useState('window'); 
   const [windowSubtype, setWindowSubtype] = useState('standard'); 
   const [doorSubtype, setDoorSubtype] = useState('Entry'); 
+  const [openingClass, setOpeningClass] = useState('Window');
   const [glassType, setGlassType] = useState('Standard Clear');
   const [placedOpenings, setPlacedOpenings] = useState([]);
   const [selectedOpeningId, setSelectedOpeningId] = useState(null);
+  const [selectedMeasurementId, setSelectedMeasurementId] = useState(null);
 
   // Area & Floorcoverings state
   const [floorcoveringOption, setFloorcoveringOption] = useState('Tiles');
@@ -259,9 +449,86 @@ export default function AIPlanTakeoffStandalone({
   const layerRef = useRef(null);
   const canvasHostRef = useRef(null);
   const rawCanvasRef = useRef(document.createElement('canvas'));
+
+  // Cleanup canvas and memory on component unmount or job change
+  useEffect(() => {
+    return () => {
+      const canvas = rawCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      // Release object URLs from dataUrl strings to prevent memory leaks
+      if (Array.isArray(planPages)) {
+        planPages.forEach((page) => {
+          if (page?.dataUrl && page.dataUrl.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(page.dataUrl);
+            } catch (e) {
+              // Ignore errors from already-revoked URLs
+            }
+          }
+        });
+      }
+    };
+  }, []);
   const renderTaskRef = useRef(null);
   const loadedInitialJobRef = useRef(false);
+  const sheetViewStateRef = useRef({});
+  const fittedSheetViewKeyRef = useRef('');
+  const autosaveInFlightRef = useRef(false);
+  const autosaveTimerRef = useRef(null);
+  const queuedAutosaveChecksumRef = useRef('');
+  const lastSavedContentChecksumRef = useRef('');
+  const lastSeenContentChecksumRef = useRef('');
+  const pendingLoadedContentChecksumRef = useRef('');
+  const suppressAutosaveFromLoadRef = useRef(true);
+  const latestBuildJobDataRef = useRef(null);
+  const latestAutosaveBasisRef = useRef({
+    checksum: '',
+    reason: '',
+    editVersion: 0,
+    requestedAt: 0,
+  });
+  const contentEditVersionRef = useRef(0);
+  const lastSavedEditVersionRef = useRef(0);
+  const redundantAutosaveCountRef = useRef(0);
+  const manualSaveInFlightRef = useRef(false);
+  const pointerEditInProgressRef = useRef(false);
+  const pendingDragChecksumRef = useRef('');
+  const stageContentPanRef = useRef(null);
+  const suppressNextStageClickRef = useRef(false);
+  const mouseHoverFrameRef = useRef(null);
+  const pendingMouseHoverRef = useRef(null);
+  const canvasViewLockedRef = useRef(false);
+  const pendingCanvasResizeRef = useRef(false);
+  const updateCanvasSizeRef = useRef(null);
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 800 });
+
+  const markTakeoffItemCompleted = useCallback((reason = 'item-completed') => {
+    if (isRecoveryPreview) return;
+    setHasUnsavedChanges(true);
+    latestAutosaveBasisRef.current = {
+      ...latestAutosaveBasisRef.current,
+      reason,
+    };
+  }, [isRecoveryPreview]);
+
+  const takeoffContentChecksum = useMemo(() => checksumForTakeoffContent({
+    rotation,
+    pixelsPerMm,
+    planPages,
+    completedWallRuns,
+    placedOpenings,
+    completedAreas,
+    completedFloorplans,
+    completedMeasurements,
+    completedEaves,
+  }), [rotation, pixelsPerMm, planPages, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves]);
 
   const FLOORCOVERING_CONFIGS = {
     'Tiles': { fill: 'rgba(76, 175, 80, 0.35)', stroke: '#2e7d32', text: '#1b5e20' },
@@ -285,12 +552,21 @@ export default function AIPlanTakeoffStandalone({
 
   useEffect(() => {
     const updateCanvasSize = () => {
+      if (canvasViewLockedRef.current) {
+        pendingCanvasResizeRef.current = true;
+        return;
+      }
       const rect = canvasHostRef.current?.getBoundingClientRect?.();
-      setCanvasSize({
+      const nextSize = {
         width: Math.max(640, Math.floor(rect?.width || (typeof window !== 'undefined' ? window.innerWidth - 420 : 1200))),
         height: Math.max(480, Math.floor(rect?.height || (typeof window !== 'undefined' ? window.innerHeight : 800)))
+      };
+      setCanvasSize((current) => {
+        if (current.width === nextSize.width && current.height === nextSize.height) return current;
+        return nextSize;
       });
     };
+    updateCanvasSizeRef.current = updateCanvasSize;
     updateCanvasSize();
     if (typeof ResizeObserver !== 'undefined' && canvasHostRef.current) {
       const observer = new ResizeObserver(updateCanvasSize);
@@ -301,9 +577,29 @@ export default function AIPlanTakeoffStandalone({
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, []);
 
+  useEffect(() => {
+    const locked = Boolean(
+      activePolyline.length
+      || activeAreaPolyline.length
+      || measurePoints.length
+      || eavePoints.length
+      || draggingVertex
+      || draggingItem
+      || draggingMeasureId
+      || draggingEaveId
+      || stageContentPanRef.current?.active
+    );
+    const wasLocked = canvasViewLockedRef.current;
+    canvasViewLockedRef.current = locked;
+    if (wasLocked && !locked && pendingCanvasResizeRef.current) {
+      pendingCanvasResizeRef.current = false;
+      window.requestAnimationFrame(() => updateCanvasSizeRef.current?.());
+    }
+  }, [activePolyline.length, activeAreaPolyline.length, measurePoints.length, eavePoints.length, draggingVertex, draggingItem, draggingMeasureId, draggingEaveId]);
+
   // Save / Load Job functionality
   const buildJobData = (name) => {
-    return createJobData({
+    const jobData = createJobData({
       name,
       currentPage,
       totalPages,
@@ -319,10 +615,15 @@ export default function AIPlanTakeoffStandalone({
       projectInfo,
       planFilename,
       sourceFileName: importedTakeoffFileName || planFilename || '',
+      takeoffId: openedTakeoffJob?.takeoffId || '',
+      associatedProjectId: openedTakeoffJob?.detached ? '' : (openedTakeoffJob?.associatedProjectId || platformContext.projectId || ''),
+      associatedProjectName: openedTakeoffJob?.detached ? '' : (openedTakeoffJob?.associatedProjectName || platformContext.projectName || ''),
+      openedWithoutAttaching: Boolean(openedTakeoffJob?.detached),
       revision: savedRevision,
       baseRevision: savedRevision,
-      platformProject: {
+      platformProject: openedTakeoffJob?.detached ? {} : {
         projectId: platformContext.projectId || '',
+        projectName: platformContext.projectName || '',
         jobNumber: platformContext.jobNumber || '',
         builder: platformContext.builder || '',
         workspaceId: platformContext.workspaceId || '',
@@ -336,16 +637,37 @@ export default function AIPlanTakeoffStandalone({
         lastQuoteSyncSignature
       }
     });
+    const contentChecksum = checksumForTakeoffContent({
+      rotation,
+      pixelsPerMm,
+      planPages,
+      completedWallRuns,
+      placedOpenings,
+      completedAreas,
+      completedFloorplans,
+      completedMeasurements,
+      completedEaves,
+    });
+    return {
+      ...jobData,
+      contentChecksum,
+      takeoffCounts: getTakeoffCounts(jobData),
+    };
   };
+
+  useEffect(() => {
+    latestBuildJobDataRef.current = buildJobData;
+  });
 
   const downloadJobFile = (name) => {
     const safeName = sanitizeJobFileName(name);
     const jobData = buildJobData(name);
-    const blob = new Blob([JSON.stringify(jobData, null, 2)], { type: 'application/json' });
+    const portable = createPortableTakeoffExport(jobData, { takeoffName: name });
+    const blob = new Blob([JSON.stringify(portable, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${safeName}.json`;
+    a.download = `${safeName}.takeoff${AI_PLAN_TAKEOFF_EXTENSION}`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -372,14 +694,17 @@ export default function AIPlanTakeoffStandalone({
   const loadJobData = async (data, fallbackName = '') => {
     const imported = resolvePortableTakeoffImport(data);
     const takeoffJobData = imported.ok ? imported.job : data;
-    const embeddedPages = getEmbeddedPlanPages(takeoffJobData);
+    const embeddedPages = normaliseRecoveredPlanPages(getEmbeddedPlanPages(takeoffJobData));
+    const isRecoveryPreviewJob = Boolean(takeoffJobData.recoveryPreviewMode);
 
+    sheetViewStateRef.current = {};
+    fittedSheetViewKeyRef.current = '';
     setPdfDoc(null);
     setPlanPages(embeddedPages);
-    setCompletedWallRuns(takeoffJobData.completedWallRuns || []);
-    setPlacedOpenings(takeoffJobData.placedOpenings || []);
+    setCompletedWallRuns((takeoffJobData.completedWallRuns || []).map(normaliseRecoveredWallRun));
+    setPlacedOpenings((takeoffJobData.placedOpenings || []).map(normaliseRecoveredOpening));
     setCompletedAreas(getSavedFloorCoveringAreas(takeoffJobData, takeoffJobData.pixelsPerMm || pixelsPerMm));
-    setCompletedFloorplans(takeoffJobData.completedFloorplans || []);
+    setCompletedFloorplans((takeoffJobData.completedFloorplans || []).map(normaliseRecoveredFloorplan));
     setCompletedMeasurements(takeoffJobData.completedMeasurements || []);
     setCompletedEaves(takeoffJobData.completedEaves || []);
     setProjectInfo(takeoffJobData.projectInfo || initialProjectInfo || { projectName: takeoffJobData.jobName || '', clientName: '', siteAddress: '', storeyOrLevelName: '' });
@@ -405,11 +730,40 @@ export default function AIPlanTakeoffStandalone({
     setSelectedAreaId(null);
     setSelectedOpeningId(null);
     setSelectedEaveId(null);
+    setSelectedMeasurementId(null);
+    setRecoveryPreviewMode(isRecoveryPreviewJob);
+    setRecoveryPreviewCounts(isRecoveryPreviewJob ? getTakeoffCounts(takeoffJobData) : null);
 
     setPlanMissingFromSavedJob(embeddedPages.length === 0 && Boolean(takeoffJobData?.jobName || fallbackName));
     setSavedRevision(Number(takeoffJobData.revision || 0));
     setLastSuccessfulSaveAt(takeoffJobData.updatedAt || '');
+    setOpenedTakeoffJob({
+      takeoffId: takeoffJobData.takeoffId || takeoffJobData.id || `takeoff-${Date.now()}`,
+      associatedProjectId: isRecoveryPreviewJob ? '' : (takeoffJobData.associatedProjectId || takeoffJobData.projectId || takeoffJobData.platformProject?.projectId || ''),
+      associatedProjectName: isRecoveryPreviewJob ? '' : (takeoffJobData.associatedProjectName || takeoffJobData.platformProject?.projectName || takeoffJobData.projectInfo?.projectName || ''),
+      detached: Boolean(takeoffJobData.openedWithoutAttaching || isRecoveryPreviewJob)
+    });
+    const loadedChecksum = checksumForTakeoffContent({
+      rotation: takeoffJobData.rotation || 0,
+      pixelsPerMm: takeoffJobData.pixelsPerMm || null,
+      planPages: embeddedPages,
+      completedWallRuns: takeoffJobData.completedWallRuns || [],
+      placedOpenings: takeoffJobData.placedOpenings || [],
+      completedAreas: getSavedFloorCoveringAreas(takeoffJobData, takeoffJobData.pixelsPerMm || pixelsPerMm),
+      completedFloorplans: takeoffJobData.completedFloorplans || [],
+      completedMeasurements: takeoffJobData.completedMeasurements || [],
+      completedEaves: takeoffJobData.completedEaves || [],
+    });
+    pendingLoadedContentChecksumRef.current = loadedChecksum;
+    lastSeenContentChecksumRef.current = loadedChecksum;
+    lastSavedContentChecksumRef.current = loadedChecksum;
+    suppressAutosaveFromLoadRef.current = true;
+    queuedAutosaveChecksumRef.current = '';
+    contentEditVersionRef.current = 0;
+    lastSavedEditVersionRef.current = 0;
+    redundantAutosaveCountRef.current = 0;
     setHasUnsavedChanges(false);
+    setAutosaveRequest(null);
     suppressUnsavedChangeRef.current = true;
 
     if (embeddedPages.length > 0) {
@@ -419,36 +773,102 @@ export default function AIPlanTakeoffStandalone({
       setVectorSegments([]);
     }
 
-    setJobName(takeoffJobData.jobName || fallbackName);
+    setJobName(takeoffJobData.takeoffName || takeoffJobData.jobName || fallbackName);
   };
 
   useEffect(() => {
-    if (loadedInitialJobRef.current || !initialJob) return;
-    loadedInitialJobRef.current = true;
-    loadJobData(initialJob, initialJob.jobName || platformContext.projectName || '').catch((error) => {
-      console.error("Failed to restore platform takeoff job:", error);
-    });
+    // Emergency interlock: initialJob must never hydrate automatically.
   }, [initialJob, platformContext.projectName]);
+
+  useEffect(() => {
+    if (!openTakeoffJobRequest?.jobData) return;
+    const incomingJob = openTakeoffJobRequest.jobData;
+    const incomingChecksum = checksumForTakeoffContent({
+      rotation: incomingJob.rotation || 0,
+      pixelsPerMm: incomingJob.pixelsPerMm || null,
+      planPages: normaliseRecoveredPlanPages(getEmbeddedPlanPages(incomingJob)),
+      completedWallRuns: incomingJob.completedWallRuns || [],
+      placedOpenings: incomingJob.placedOpenings || [],
+      completedAreas: getSavedFloorCoveringAreas(incomingJob, incomingJob.pixelsPerMm || null),
+      completedFloorplans: incomingJob.completedFloorplans || [],
+      completedMeasurements: incomingJob.completedMeasurements || [],
+      completedEaves: incomingJob.completedEaves || [],
+    });
+    const incomingTakeoffId = String(incomingJob.takeoffId || incomingJob.id || '');
+    const currentTakeoffId = String(openedTakeoffJob?.takeoffId || '');
+    if (incomingTakeoffId && currentTakeoffId && incomingTakeoffId === currentTakeoffId && incomingChecksum === lastSeenContentChecksumRef.current) {
+      return;
+    }
+    loadJobData(openTakeoffJobRequest.jobData, openTakeoffJobRequest.displayName || openTakeoffJobRequest.jobData.takeoffName || '').catch((error) => {
+      console.error("Failed to open recent takeoff job:", error);
+      alert("Could not open the selected takeoff job.");
+    });
+  }, [openTakeoffJobRequest, openedTakeoffJob?.takeoffId]);
+
+  useEffect(() => {
+    const handler = (event) => {
+      const jobData = event?.detail?.jobData;
+      if (!jobData) return;
+      loadJobData(jobData, event.detail.displayName || jobData.takeoffName || '').catch((error) => {
+        console.error("Failed to open recent takeoff job:", error);
+        alert("Could not open the selected takeoff job.");
+      });
+    };
+    window.addEventListener('gr8:ai-plan-takeoff:open-recent', handler);
+    return () => window.removeEventListener('gr8:ai-plan-takeoff:open-recent', handler);
+  }, []);
 
   useEffect(() => {
     if (suppressUnsavedChangeRef.current) {
       suppressUnsavedChangeRef.current = false;
+      lastSeenContentChecksumRef.current = takeoffContentChecksum;
+      if (!lastSavedContentChecksumRef.current) {
+        lastSavedContentChecksumRef.current = takeoffContentChecksum;
+      }
+      if (suppressAutosaveFromLoadRef.current && (!pendingLoadedContentChecksumRef.current || pendingLoadedContentChecksumRef.current === takeoffContentChecksum)) {
+        suppressAutosaveFromLoadRef.current = false;
+        pendingLoadedContentChecksumRef.current = '';
+      }
       return;
     }
+    if (suppressAutosaveFromLoadRef.current) {
+      if (pendingLoadedContentChecksumRef.current && takeoffContentChecksum !== pendingLoadedContentChecksumRef.current) {
+        return;
+      }
+      suppressAutosaveFromLoadRef.current = false;
+      pendingLoadedContentChecksumRef.current = '';
+      lastSeenContentChecksumRef.current = takeoffContentChecksum;
+      if (!lastSavedContentChecksumRef.current) {
+        lastSavedContentChecksumRef.current = takeoffContentChecksum;
+      }
+      return;
+    }
+    if (draggingVertex || draggingItem || draggingMeasureId || draggingEaveId) {
+      pendingDragChecksumRef.current = takeoffContentChecksum;
+      setHasUnsavedChanges(true);
+      return;
+    }
+    if (takeoffContentChecksum === lastSeenContentChecksumRef.current) return;
+    lastSeenContentChecksumRef.current = takeoffContentChecksum;
+    contentEditVersionRef.current += 1;
+    const editReason = latestAutosaveBasisRef.current.reason || 'content-change';
+    latestAutosaveBasisRef.current = {
+      ...latestAutosaveBasisRef.current,
+      reason: '',
+    };
     setHasUnsavedChanges(true);
+    setAutosaveRequest({
+      reason: editReason,
+      requestedAt: Date.now(),
+      checksum: takeoffContentChecksum,
+      editVersion: contentEditVersionRef.current,
+    });
   }, [
-    currentPage,
-    totalPages,
-    rotation,
-    pixelsPerMm,
-    planPages,
-    completedWallRuns,
-    placedOpenings,
-    completedAreas,
-    completedFloorplans,
-    completedMeasurements,
-    completedEaves,
-    scheduleMappings
+    takeoffContentChecksum,
+    draggingVertex,
+    draggingItem,
+    draggingMeasureId,
+    draggingEaveId,
   ]);
 
   useEffect(() => {
@@ -458,7 +878,6 @@ export default function AIPlanTakeoffStandalone({
       siteAddress: prev.siteAddress || platformContext.siteAddress || platformContext.projectAddress || '',
       storeyOrLevelName: prev.storeyOrLevelName || platformContext.storeyOrLevelName || ''
     }));
-    setJobName((current) => current || platformContext.projectName || '');
   }, [platformContext.projectName, platformContext.clientName, platformContext.siteAddress, platformContext.projectAddress, platformContext.storeyOrLevelName]);
 
   useEffect(() => {
@@ -467,28 +886,390 @@ export default function AIPlanTakeoffStandalone({
     }
   }, [initialQuoteRows]);
 
-  const currentProjectLabel = platformContext.projectName || platformContext.jobNumber || projectInfo.projectName || jobName || 'Current Project';
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__gr8AiPlanTakeoffState = {
+      activeTool,
+      currentPage,
+      totalPages,
+      stageScale,
+      stagePos,
+      activePolylinePoints: activePolyline.length,
+      activeAreaPolylinePoints: activeAreaPolyline.length,
+      wallRuns: completedWallRuns.length,
+      wallSegments: completedWallRuns.reduce((sum, wall) => sum + Math.max(0, (wall.nodes || []).length - 1), 0),
+      openings: placedOpenings.length,
+      floorCoverings: completedAreas.length,
+      floorplans: completedFloorplans.length,
+      hasCalibration: Boolean(pixelsPerMm)
+    };
+  }, [activeTool, currentPage, totalPages, stageScale, stagePos, activePolyline, activeAreaPolyline, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, pixelsPerMm]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'production') return;
+    window.__gr8CreateJohnsonSmallTakeoff = () => {
+      if (!planPages.length) throw new Error('Import the five-page plan before creating the small test takeoff.');
+      const scale = pixelsPerMm || 0.024;
+      const now = Date.now();
+      const footprint = {
+        id: `johnson-test-footprint-${now}`,
+        page: currentPage,
+        type: 'Footprint',
+        label: 'Outer Footprint',
+        color: 'rgba(33, 150, 243, 0.25)',
+        stroke: '#1565c0',
+        nodes: [
+          { x: 210, y: 250 },
+          { x: 430, y: 220 },
+          { x: 520, y: 370 },
+          { x: 260, y: 430 }
+        ]
+      };
+      const floorCovering = {
+        id: `johnson-test-floorcovering-${now}`,
+        page: currentPage,
+        category: 'Tiles',
+        nodes: [
+          { x: 240, y: 470 },
+          { x: 430, y: 470 },
+          { x: 430, y: 610 },
+          { x: 240, y: 610 }
+        ],
+        exclusions: []
+      };
+      const wallNodes = [
+        { x: 220, y: 680 },
+        { x: 420, y: 680 },
+        { x: 560, y: 780 }
+      ];
+      const wallLengthMm = wallNodes.reduce((sum, node, index, nodes) => {
+        if (index === 0) return 0;
+        return sum + (Math.hypot(node.x - nodes[index - 1].x, node.y - nodes[index - 1].y) / scale);
+      }, 0);
+      const wallRun = {
+        id: `johnson-test-wall-${now}`,
+        page: currentPage,
+        category: 'exterior',
+        nodes: wallNodes,
+        thicknessMm: 230,
+        alignment: 'outer',
+        lengthMm: wallLengthMm
+      };
+      const openings = [
+        {
+          id: `johnson-test-window-${now}`,
+          page: currentPage,
+          type: 'window',
+          itemTag: 'W1: 1812',
+          heightMm: 1800,
+          widthMm: 1200,
+          subType: 'standard',
+          glassType: 'Standard Clear',
+          x: 320,
+          y: 680
+        },
+        {
+          id: `johnson-test-door-${now}`,
+          page: currentPage,
+          type: 'door',
+          itemTag: 'D1: 2082-ENTRY',
+          heightMm: 2040,
+          widthMm: 820,
+          subType: 'Entry',
+          glassType: 'Standard Clear',
+          x: 490,
+          y: 730
+        }
+      ];
+      setPixelsPerMm(scale);
+      setCompletedFloorplans([footprint]);
+      setCompletedAreas([floorCovering]);
+      setCompletedWallRuns([wallRun]);
+      setSelectedWallId(wallRun.id);
+      setPlacedOpenings(openings);
+      setActivePolyline([]);
+      setActiveAreaPolyline([]);
+      setMeasurePoints([]);
+      setCalibPoints([]);
+      markTakeoffItemCompleted('johnson-small-acceptance-test');
+      return { pageCount: planPages.length, floorplans: 1, floorCoverings: 1, wallSegments: 2, openings: 2, hasCalibration: true };
+    };
+    return () => {
+      delete window.__gr8CreateJohnsonSmallTakeoff;
+    };
+  }, [planPages.length, pixelsPerMm, currentPage, markTakeoffItemCompleted]);
+
+  const hasOpenTakeoffJob = Boolean(jobName || openedTakeoffJob || planPages.length);
+  const attachedProjectId = openedTakeoffJob?.detached ? '' : (openedTakeoffJob?.associatedProjectId || platformContext.projectId || '');
+  const attachedProjectName = openedTakeoffJob?.detached ? '' : (openedTakeoffJob?.associatedProjectName || platformContext.projectName || '');
+  const hasAttachedProject = Boolean(attachedProjectId);
+  const currentProjectLabel = isRecoveryPreview
+    ? 'Recovery preview only'
+    : hasOpenTakeoffJob
+      ? (attachedProjectName || attachedProjectId || 'No platform project attached')
+      : 'No takeoff job attached';
+
+  const createRecoverySnapshot = useCallback((jobData, reason = 'save-verification-failed') => {
+    if (typeof window === 'undefined') return;
+    try {
+      const createdAt = new Date().toISOString();
+      const snapshotId = `takeoff-recovery-${Date.now()}`;
+      const takeoffName = jobData?.takeoffName || jobData?.jobName || '';
+      const sourceFileName = jobData?.sourceFileName || jobData?.planFilename || '';
+      const snapshot = {
+        id: snapshotId,
+        createdAt,
+        reason,
+        takeoffId: jobData?.takeoffId || '',
+        takeoffName,
+        revision: Number(jobData?.revision || 0),
+        sourceFileName,
+        counts: getTakeoffCounts(jobData),
+        planPageCount: getEmbeddedPlanPages(jobData).length
+      };
+      const portableSnapshot = {
+        ...snapshot,
+        fileName: `${sanitizeJobFileName(takeoffName || sourceFileName || 'unsaved_takeoff')}-EMERGENCY-${Date.now()}.${AI_PLAN_TAKEOFF_EXTENSION}`,
+        portableTakeoff: createPortableTakeoffExport(jobData, {
+          takeoffName,
+          projectId: jobData?.projectId || jobData?.platformProject?.projectId || '',
+          projectName: jobData?.platformProject?.projectName || jobData?.projectInfo?.projectName || ''
+        })
+      };
+      storeEmergencyTakeoffSnapshot(portableSnapshot).catch((error) => {
+        console.error('Failed to store full AI Plan Takeoff recovery snapshot:', error);
+      });
+      try {
+        window.localStorage.setItem(`gr8:ai-plan-takeoff:recovery:${Date.now()}`, JSON.stringify(snapshot));
+      } catch (error) {
+        console.warn('AI Plan Takeoff recovery breadcrumb could not be stored in localStorage:', error);
+      }
+    } catch (error) {
+      console.error('Failed to create AI Plan Takeoff recovery snapshot:', error);
+    }
+  }, []);
+
+  const requireVerifiedSave = useCallback((result, jobData) => {
+    const verification = result?.verification;
+    if (!result?.ok || !verification?.ok) {
+      createRecoverySnapshot(jobData);
+      return {
+        ok: false,
+        message: SAVE_VERIFICATION_FAILED_MESSAGE,
+        verification
+      };
+    }
+    return {
+      ok: true,
+      revision: Number(result.revision || verification.revision || jobData.revision || 0),
+      savedAt: result.savedAt || verification.updatedAt || new Date().toISOString(),
+      message: result.message || `Saved - Revision ${verification.revision || result.revision || 0}`,
+      verification
+    };
+  }, [createRecoverySnapshot]);
+
+  const clearTakeoffWorkspace = useCallback(() => {
+    sheetViewStateRef.current = {};
+    fittedSheetViewKeyRef.current = '';
+    setImage(null);
+    setPdfDoc(null);
+    setPlanPages([]);
+    setPlanFilename('');
+    setImportedTakeoffFileName('');
+    setCurrentPage(1);
+    setTotalPages(1);
+    setRotation(0);
+    setStageScale(1);
+    setStagePos({ x: 0, y: 0 });
+    setPixelsPerMm(null);
+    setCalibrationMode(false);
+    setCalibPoints([]);
+    setMeasurePoints([]);
+    setActivePolyline([]);
+    setEavePoints([]);
+    setActiveAreaPolyline([]);
+    setBoxStartPoint(null);
+    setCompletedWallRuns([]);
+    setPlacedOpenings([]);
+    setCompletedAreas([]);
+    setCompletedFloorplans([]);
+    setCompletedMeasurements([]);
+    setCompletedEaves([]);
+    setSelectedWallId(null);
+    setSelectedOpeningId(null);
+    setSelectedAreaId(null);
+    setSelectedFloorplanId(null);
+    setSelectedEaveId(null);
+    setSelectedAreaForExclusion(null);
+    setDraggingVertex(null);
+    setDraggingItem(null);
+    setDraggingMeasureId(null);
+    setDraggingEaveId(null);
+    setPlanMissingFromSavedJob(false);
+    setRecoveryPreviewMode(false);
+    setRecoveryPreviewCounts(null);
+  }, []);
+
+  const createNewTakeoffJob = () => {
+    if (isRecoveryPreview) return;
+    const defaultName = 'Untitled takeoff';
+    const nextName = window.prompt('Takeoff job name', defaultName) || '';
+    if (!nextName.trim()) return;
+    clearTakeoffWorkspace();
+    setJobName(nextName.trim());
+    setOpenedTakeoffJob({
+      takeoffId: `takeoff-${Date.now()}`,
+      associatedProjectId: '',
+      associatedProjectName: ''
+    });
+    setPlatformSaveMessage('New takeoff job created. Import a plan to begin measuring.');
+    setHasUnsavedChanges(false);
+  };
+
+  const stampSavedContentBaseline = useCallback((jobData = {}, editVersion = contentEditVersionRef.current) => {
+    const checksum = String(jobData?.contentChecksum || takeoffContentChecksum || '').trim();
+    if (!checksum) return;
+    lastSavedContentChecksumRef.current = checksum;
+    lastSeenContentChecksumRef.current = checksum;
+    lastSavedEditVersionRef.current = Number(editVersion || contentEditVersionRef.current || 0);
+    queuedAutosaveChecksumRef.current = '';
+    suppressAutosaveFromLoadRef.current = false;
+    pendingLoadedContentChecksumRef.current = '';
+  }, [takeoffContentChecksum]);
+
+  const saveAttachedJobData = async (jobData) => {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    manualSaveInFlightRef.current = true;
+    try {
+      const result = await Promise.resolve(onSaveToPlatform(jobData));
+      const verifiedSave = requireVerifiedSave(result, jobData);
+      if (!verifiedSave.ok) {
+        setHasUnsavedChanges(true);
+        setPlatformSaveMessage(verifiedSave.message);
+        alert(verifiedSave.message);
+        return verifiedSave;
+      }
+      setJobName(jobData.takeoffName || jobData.jobName);
+      setSavedRevision(verifiedSave.revision);
+      setLastSuccessfulSaveAt(verifiedSave.savedAt);
+      setHasUnsavedChanges(false);
+      setAutosaveRequest(null);
+      stampSavedContentBaseline(jobData);
+      setPlatformSaveMessage(verifiedSave.message);
+      const savedJob = { ...jobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
+      const recent = rememberRecentTakeoffJob(savedJob);
+      onRecentTakeoffJobsChange?.(recent);
+      return verifiedSave;
+    } finally {
+      manualSaveInFlightRef.current = false;
+    }
+  };
+
+  const buildAttachedJobData = (project, name) => {
+    const projectName = String(name || project?.projectName || 'Johnson 123').trim();
+    const projectId = String(project?.projectId || project?.id || projectName).trim();
+    const takeoffName = projectName;
+    const jobData = buildJobData(takeoffName);
+    return {
+      ...jobData,
+      jobName: takeoffName,
+      takeoffName,
+      associatedProjectId: projectId,
+      associatedProjectName: projectName,
+      openedWithoutAttaching: false,
+      sourceFileName: importedTakeoffFileName || planFilename || jobData.sourceFileName || '',
+      planFilename: planFilename || jobData.planFilename || '',
+      platformProject: {
+        ...(jobData.platformProject || {}),
+        ...(project || {}),
+        projectId,
+        projectName,
+        jobNumber: project?.jobNumber || projectName,
+        workspaceId: project?.workspaceId || platformContext.workspaceId || '',
+        organisationId: project?.organisationId || platformContext.organisationId || ''
+      }
+    };
+  };
+
+  const attachCurrentDraftToProject = async (requestedProjectName = attachProjectName) => {
+    const requestedName = String(requestedProjectName || '').trim();
+    if (!requestedName) {
+      setAttachError('Enter a project name.');
+      return { ok: false, message: 'Enter a project name.' };
+    }
+    if (!hasOpenTakeoffJob || !planPages.length) {
+      const message = 'The current five-page browser draft is not available to attach.';
+      setAttachError(message);
+      return { ok: false, message };
+    }
+    const project = onAttachToProject
+      ? await Promise.resolve(onAttachToProject({ projectName: requestedName, sourceFileName: importedTakeoffFileName || planFilename || '' }, { skipSave: true }))
+      : { projectId: requestedName, projectName: requestedName, jobNumber: requestedName };
+    const jobData = buildAttachedJobData(project, requestedName);
+    const verification = await saveAttachedJobData(jobData);
+    if (!verification.ok) return { ok: false, verification };
+    setOpenedTakeoffJob({
+      takeoffId: jobData.takeoffId,
+      associatedProjectId: jobData.associatedProjectId,
+      associatedProjectName: jobData.associatedProjectName,
+      detached: false
+    });
+    setProjectInfo((prev) => ({
+      ...prev,
+      projectName: jobData.associatedProjectName || prev.projectName,
+      clientName: prev.clientName || project?.clientName || '',
+      siteAddress: prev.siteAddress || project?.siteAddress || project?.projectAddress || ''
+    }));
+    return {
+      ok: true,
+      projectId: jobData.associatedProjectId,
+      projectName: jobData.associatedProjectName,
+      takeoffId: jobData.takeoffId,
+      revision: verification.revision,
+      pageCount: getEmbeddedPlanPages(jobData).length,
+      verification: verification.verification
+    };
+  };
+
+  const handleAttachProjectSave = async () => {
+    if (isRecoveryPreview || attachSaving) return;
+    setAttachSaving(true);
+    setAttachError('');
+    try {
+      const result = await attachCurrentDraftToProject(attachProjectName);
+      if (result?.ok) setAttachDialogOpen(false);
+    } catch (error) {
+      const message = error?.message || 'Could not attach this takeoff to the project.';
+      setAttachError(message);
+      setPlatformSaveMessage(SAVE_VERIFICATION_FAILED_MESSAGE);
+      createRecoverySnapshot(buildJobData(jobName || planFilename || 'AI Plan Takeoff'), 'attach-to-project-failed');
+    } finally {
+      setAttachSaving(false);
+    }
+  };
 
   const handleSaveJob = async () => {
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only and is not attached to Johnson.");
+      return;
+    }
     if (embedded && onSaveToPlatform) {
-      if (!platformContext.projectId && !platformContext.jobNumber && !platformContext.projectName) {
-        alert("Open or create a platform job before saving AI Plan Takeoff to the platform.");
+      if (!hasOpenTakeoffJob) {
+        alert("No takeoff job is open.");
         return;
       }
-      const nextName = jobName || platformContext.projectName || 'AI Plan Takeoff';
+      if (!hasAttachedProject) {
+        setAttachProjectName('Johnson 123');
+        setAttachError('');
+        setAttachDialogOpen(true);
+        return;
+      }
+      const nextName = attachedProjectName || platformContext.projectName || jobName || importedTakeoffFileName || planFilename || 'AI Plan Takeoff';
       const jobData = buildJobData(nextName);
-      const result = await Promise.resolve(onSaveToPlatform(jobData));
-      if (!result?.ok) {
-        const message = result?.message || "Save failed - latest plan changes were not stored";
-        setPlatformSaveMessage(message);
-        alert(message);
-        return;
-      }
-      setJobName(nextName);
-      setSavedRevision(Number(result.revision || jobData.revision || 0));
-      setLastSuccessfulSaveAt(result.savedAt || new Date().toISOString());
-      setHasUnsavedChanges(false);
-      setPlatformSaveMessage(result.message || `Saved - Revision ${result.revision}`);
+      await saveAttachedJobData(jobData);
       return;
     }
 
@@ -510,82 +1291,304 @@ export default function AIPlanTakeoffStandalone({
     downloadJobFile(jobName);
   };
 
+  const handleSaveJobAs = async () => {
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only and cannot be saved as a new takeoff.");
+      return;
+    }
+    if (!hasOpenTakeoffJob) {
+      alert("No takeoff job is open.");
+      return;
+    }
+    if (embedded && onSaveToPlatform) {
+      setAttachProjectName(attachedProjectName || 'Johnson 123');
+      setAttachError('');
+      setAttachDialogOpen(true);
+      return;
+    }
+    const nextName = window.prompt('Save takeoff job as', jobName || 'Untitled takeoff') || '';
+    if (!nextName.trim()) return;
+    const nextTakeoff = {
+      takeoffId: `takeoff-${Date.now()}`,
+      associatedProjectId: openedTakeoffJob?.associatedProjectId || '',
+      associatedProjectName: openedTakeoffJob?.associatedProjectName || ''
+    };
+    const jobData = {
+      ...buildJobData(nextName.trim()),
+      takeoffId: nextTakeoff.takeoffId,
+      takeoffName: nextName.trim(),
+      jobName: nextName.trim()
+    };
+    setJobName(nextName.trim());
+    setOpenedTakeoffJob(nextTakeoff);
+    if (embedded && onSaveToPlatform) {
+      const result = await Promise.resolve(onSaveToPlatform(jobData));
+      const verifiedSave = requireVerifiedSave(result, jobData);
+      if (!verifiedSave.ok) {
+        setHasUnsavedChanges(true);
+        setPlatformSaveMessage(verifiedSave.message);
+        alert(verifiedSave.message);
+        return;
+      }
+      const savedJob = { ...jobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
+      const recent = rememberRecentTakeoffJob(savedJob);
+      onRecentTakeoffJobsChange?.(recent);
+      setSavedRevision(verifiedSave.revision);
+      setLastSuccessfulSaveAt(verifiedSave.savedAt);
+      setHasUnsavedChanges(false);
+      stampSavedContentBaseline(jobData);
+      setPlatformSaveMessage(verifiedSave.message);
+      return;
+    }
+    downloadJobFile(nextName.trim());
+  };
+
   const handleExportTakeoffFile = async () => {
-    const exportName = currentProjectLabel;
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only. The recovered file on disk was not changed.");
+      return;
+    }
+    if (!hasOpenTakeoffJob) {
+      alert("No takeoff job is open.");
+      return;
+    }
+    const exportName = attachedProjectName || jobName || 'Untitled takeoff';
     const jobData = buildJobData(jobName || exportName);
     const portable = createPortableTakeoffExport(jobData, {
-      projectId: platformContext.projectId || '',
-      projectName: exportName,
-      takeoffName: jobName || importedTakeoffFileName || exportName,
+      projectId: attachedProjectId || '',
+      projectName: attachedProjectName || '',
+      takeoffName: attachedProjectName || jobName || importedTakeoffFileName || exportName,
       sourceFileName: importedTakeoffFileName || planFilename || ''
     });
-    const filename = `${sanitizeJobFileName(`${exportName}-takeoff-rev-${portable.revision || savedRevision || 0}`)}.json`;
+    if (!resolvePortableTakeoffImport(portable).ok) {
+      alert("Takeoff backup was not downloaded because the generated file could not be verified.");
+      return;
+    }
+    const filename = `${sanitizeDownloadFileName(exportName)}${AI_PLAN_TAKEOFF_EXTENSION}`;
     const blob = new Blob([JSON.stringify(portable, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.__gr8AiPlanTakeoffRecovery = {
+      inspectCurrentDraft: () => {
+        const jobData = buildJobData(jobName || planFilename || importedTakeoffFileName || 'AI Plan Takeoff');
+        return {
+          jobName,
+          planFilename,
+          importedTakeoffFileName,
+          platformProject: currentProjectLabel,
+          attachedProjectId,
+          attachedProjectName,
+          savedRevision,
+          lastSuccessfulSaveAt,
+          hasUnsavedChanges,
+          counts: getTakeoffCounts(jobData),
+          pageCount: getEmbeddedPlanPages(jobData).length,
+          checksum: takeoffContentChecksum
+        };
+      },
+      attachToJohnson123: () => attachCurrentDraftToProject('Johnson 123')
+    };
+    return () => {
+      if (window.__gr8AiPlanTakeoffRecovery?.attachToJohnson123) delete window.__gr8AiPlanTakeoffRecovery;
+    };
+  }, [attachedProjectId, attachedProjectName, currentProjectLabel, savedRevision, lastSuccessfulSaveAt, hasUnsavedChanges, jobName, planFilename, importedTakeoffFileName, buildJobData, attachCurrentDraftToProject, takeoffContentChecksum]);
+
+  useEffect(() => {
+    if (!autosaveRequest || !embedded || !onSaveToPlatform || isRecoveryPreview || !hasOpenTakeoffJob || !hasAttachedProject || !planPages.length) return;
+    const requestChecksum = autosaveRequest.checksum || takeoffContentChecksum;
+    if (!requestChecksum || requestChecksum === lastSavedContentChecksumRef.current) {
+      setAutosaveRequest(null);
+      return;
+    }
+    latestAutosaveBasisRef.current = {
+      checksum: requestChecksum,
+      reason: autosaveRequest.reason || latestAutosaveBasisRef.current.reason || 'content-change',
+      editVersion: autosaveRequest.editVersion || contentEditVersionRef.current,
+      requestedAt: autosaveRequest.requestedAt || Date.now(),
+    };
+    if (manualSaveInFlightRef.current || autosaveInFlightRef.current) {
+      queuedAutosaveChecksumRef.current = requestChecksum;
+      return;
+    }
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(async () => {
+      const basis = latestAutosaveBasisRef.current;
+      const nextChecksum = basis.checksum || takeoffContentChecksum;
+      if (!nextChecksum || nextChecksum === lastSavedContentChecksumRef.current) {
+        setAutosaveRequest(null);
+        return;
+      }
+      if (manualSaveInFlightRef.current || autosaveInFlightRef.current) {
+        queuedAutosaveChecksumRef.current = nextChecksum;
+        return;
+      }
+      autosaveInFlightRef.current = true;
+      const nextName = attachedProjectName || platformContext.projectName || jobName || importedTakeoffFileName || planFilename || 'AI Plan Takeoff';
+      const buildCurrentJobData = latestBuildJobDataRef.current;
+      const jobData = typeof buildCurrentJobData === 'function' ? buildCurrentJobData(nextName) : buildJobData(nextName);
+      const jobWithChecksum = {
+        ...jobData,
+        contentChecksum: nextChecksum,
+      };
+      setPlatformSaveMessage('Autosaving changes...');
+      try {
+        const result = await Promise.resolve(onSaveToPlatform(jobWithChecksum));
+        const verifiedSave = requireVerifiedSave(result, jobWithChecksum);
+        if (!verifiedSave.ok) {
+          setHasUnsavedChanges(true);
+          setPlatformSaveMessage(verifiedSave.message);
+          setAutosaveRequest(null);
+          return;
+        }
+        const alreadySavedSameChecksum = nextChecksum === lastSavedContentChecksumRef.current;
+        const sameEditVersion = Number(basis.editVersion || 0) > 0 && Number(basis.editVersion || 0) === Number(lastSavedEditVersionRef.current || 0);
+        if (alreadySavedSameChecksum || sameEditVersion) {
+          redundantAutosaveCountRef.current += 1;
+          if (process.env.NODE_ENV !== 'production' && redundantAutosaveCountRef.current > 1) {
+            console.error('[AI Plan Takeoff] Redundant autosave detected without content edit', {
+              revision: verifiedSave.revision,
+              checksum: nextChecksum,
+              editVersion: basis.editVersion,
+            });
+          }
+        } else {
+          redundantAutosaveCountRef.current = 0;
+          lastSavedContentChecksumRef.current = nextChecksum;
+          lastSavedEditVersionRef.current = basis.editVersion || contentEditVersionRef.current;
+        }
+        setJobName(nextName);
+        setSavedRevision(verifiedSave.revision);
+        setLastSuccessfulSaveAt(verifiedSave.savedAt);
+        setHasUnsavedChanges(false);
+        setPlatformSaveMessage(verifiedSave.message);
+        setAutosaveRequest(null);
+        const recent = rememberRecentTakeoffJob({ ...jobWithChecksum, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' });
+        onRecentTakeoffJobsChange?.(recent);
+      } catch (error) {
+        console.error('AI Plan Takeoff autosave failed:', error);
+        createRecoverySnapshot(jobWithChecksum, 'autosave-error');
+        setHasUnsavedChanges(true);
+        setPlatformSaveMessage(SAVE_VERIFICATION_FAILED_MESSAGE);
+      } finally {
+        autosaveInFlightRef.current = false;
+        const queuedChecksum = queuedAutosaveChecksumRef.current;
+        queuedAutosaveChecksumRef.current = '';
+        if (queuedChecksum && queuedChecksum !== lastSavedContentChecksumRef.current) {
+          setAutosaveRequest({
+            reason: 'queued-content-change',
+            requestedAt: Date.now(),
+            checksum: queuedChecksum,
+            editVersion: contentEditVersionRef.current,
+          });
+        }
+      }
+    }, 600);
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [autosaveRequest, embedded, onSaveToPlatform, isRecoveryPreview, hasOpenTakeoffJob, hasAttachedProject, planPages.length, attachedProjectName, jobName, platformContext.projectName, importedTakeoffFileName, planFilename, takeoffContentChecksum, onRecentTakeoffJobsChange, requireVerifiedSave, createRecoverySnapshot]);
 
   const confirmImportedTakeoff = (imported, fileName) => {
     const counts = imported.summary.counts || {};
     const message = [
-      `Import takeoff file into ${currentProjectLabel}?`,
+      `Filename: ${fileName}`,
       '',
       `Detected takeoff: ${imported.summary.takeoffName || fileName}`,
       `Pages: ${imported.summary.pageCount}`,
       `Revision: ${imported.summary.revision || 0}`,
+      `Associated platform project: ${imported.summary.projectName || 'None recorded'}`,
       `Floor coverings: ${counts.floorCoverings || 0}`,
       `Floor areas: ${counts.floorplans || 0}`,
       `Walls: ${counts.walls || 0}`,
       `Openings: ${counts.openings || 0}`,
-      `Eaves: ${counts.eaves || 0}`
+      `Eaves: ${counts.eaves || 0}`,
+      '',
+      'Type "attach" to attach to the current platform project and open, "open" to open without attaching, or leave blank to cancel.'
     ].join('\n');
-    return window.confirm(message);
+    const choice = window.prompt(message, platformContext.projectId ? 'attach' : 'open');
+    if (!choice) return 'cancel';
+    const normalised = choice.trim().toLowerCase();
+    if (normalised.startsWith('attach')) return 'attach';
+    if (normalised.startsWith('open')) return 'open';
+    return 'cancel';
   };
 
   const handleOpenJob = async () => {
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only. Close the preview before opening another takeoff.");
+      return;
+    }
     if (!window.showOpenFilePicker) {
       document.getElementById('legacy-job-loader')?.click();
       return;
     }
     try {
       const [fileHandle] = await window.showOpenFilePicker({
-        types: [{ description: 'Takeoff Job', accept: { 'application/json': ['.json'] } }],
+        types: [{ description: 'Takeoff Job', accept: { 'application/json': [AI_PLAN_TAKEOFF_EXTENSION, '.json'] } }],
         multiple: false
       });
       const file = await fileHandle.getFile();
+      if (!/\.(gr8takeoff|json)$/i.test(file.name)) {
+        alert("Choose a .gr8takeoff file or a legacy standalone takeoff .json file.");
+        return;
+      }
+      if (!file.size) {
+        alert(`${file.name} is empty and cannot be imported.`);
+        return;
+      }
       const data = JSON.parse(await file.text());
       const imported = resolvePortableTakeoffImport(data);
       if (!imported.ok) {
         alert(imported.message);
         return;
       }
-      if (!confirmImportedTakeoff(imported, file.name)) return;
+      const importChoice = confirmImportedTakeoff(imported, file.name);
+      if (importChoice === 'cancel') return;
       const takeoffJobData = { ...imported.job, sourceFileName: file.name };
+      if (importChoice === 'open') {
+        takeoffJobData.associatedProjectId = '';
+        takeoffJobData.associatedProjectName = '';
+        takeoffJobData.platformProject = {};
+        takeoffJobData.openedWithoutAttaching = true;
+      }
       setJobFileHandle(null);
-      await loadJobData(takeoffJobData, file.name.replace(/\.json$/i, ''));
+      await loadJobData(takeoffJobData, filenameWithoutKnownGr8Extension(file.name));
       setImportedTakeoffFileName(file.name);
-      if (embedded && onSaveToPlatform) {
-        const result = await Promise.resolve(onSaveToPlatform({
+      if (embedded && onSaveToPlatform && importChoice === 'attach') {
+        const submittedJob = {
           ...takeoffJobData,
           takeoffName: takeoffJobData.takeoffName || takeoffJobData.jobName || file.name.replace(/\.json$/i, ''),
           sourceFileName: file.name,
           baseRevision: savedRevision,
           platformProject: buildJobData(takeoffJobData.jobName || file.name).platformProject
-        }));
-        if (!result?.ok) {
-          const message = result?.message || "Save failed - latest plan changes were not stored";
-          setPlatformSaveMessage(message);
-          alert(message);
+        };
+        const result = await Promise.resolve(onSaveToPlatform(submittedJob));
+        const verifiedSave = requireVerifiedSave(result, submittedJob);
+        if (!verifiedSave.ok) {
+          setHasUnsavedChanges(true);
+          setPlatformSaveMessage(verifiedSave.message);
+          alert(verifiedSave.message);
           return;
         }
-        setSavedRevision(Number(result.revision || 0));
-        setLastSuccessfulSaveAt(result.savedAt || new Date().toISOString());
+        setSavedRevision(verifiedSave.revision);
+        setLastSuccessfulSaveAt(verifiedSave.savedAt);
         setHasUnsavedChanges(false);
-        setPlatformSaveMessage(`Imported ${file.name} into ${currentProjectLabel}. ${result.message || `Saved - Revision ${result.revision}`}`);
+        stampSavedContentBaseline(submittedJob);
+        const savedJob = { ...takeoffJobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
+        const recent = rememberRecentTakeoffJob(savedJob);
+        onRecentTakeoffJobsChange?.(recent);
+        setPlatformSaveMessage(`Imported ${file.name} and attached it to ${currentProjectLabel}. ${verifiedSave.message}`);
       } else {
         setHasUnsavedChanges(true);
         setPlatformSaveMessage(`Imported takeoff file ${file.name}.`);
@@ -598,8 +1601,23 @@ export default function AIPlanTakeoffStandalone({
   };
 
   const handleLoadJob = (e) => {
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only. Close the preview before importing another takeoff.");
+      e.target.value = '';
+      return;
+    }
     const file = e.target.files[0];
     if (!file) return;
+    if (!/\.(gr8takeoff|json)$/i.test(file.name)) {
+      alert("Choose a .gr8takeoff file or a legacy standalone takeoff .json file.");
+      e.target.value = '';
+      return;
+    }
+    if (!file.size) {
+      alert(`${file.name} is empty and cannot be imported.`);
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -609,29 +1627,42 @@ export default function AIPlanTakeoffStandalone({
           alert(imported.message);
           return;
         }
-        if (!confirmImportedTakeoff(imported, file.name)) return;
+        const importChoice = confirmImportedTakeoff(imported, file.name);
+        if (importChoice === 'cancel') return;
         const takeoffJobData = { ...imported.job, sourceFileName: file.name };
+        if (importChoice === 'open') {
+          takeoffJobData.associatedProjectId = '';
+          takeoffJobData.associatedProjectName = '';
+          takeoffJobData.platformProject = {};
+          takeoffJobData.openedWithoutAttaching = true;
+        }
         setJobFileHandle(null);
-        await loadJobData(takeoffJobData, file.name.replace(/\.json$/i, ''));
+        await loadJobData(takeoffJobData, filenameWithoutKnownGr8Extension(file.name));
         setImportedTakeoffFileName(file.name);
-        if (embedded && onSaveToPlatform) {
-          const result = await Promise.resolve(onSaveToPlatform({
+        if (embedded && onSaveToPlatform && importChoice === 'attach') {
+          const submittedJob = {
             ...takeoffJobData,
             takeoffName: takeoffJobData.takeoffName || takeoffJobData.jobName || file.name.replace(/\.json$/i, ''),
             sourceFileName: file.name,
             baseRevision: savedRevision,
             platformProject: buildJobData(takeoffJobData.jobName || file.name).platformProject
-          }));
-          if (!result?.ok) {
-            const message = result?.message || "Save failed - latest plan changes were not stored";
-            setPlatformSaveMessage(message);
-            alert(message);
+          };
+          const result = await Promise.resolve(onSaveToPlatform(submittedJob));
+          const verifiedSave = requireVerifiedSave(result, submittedJob);
+          if (!verifiedSave.ok) {
+            setHasUnsavedChanges(true);
+            setPlatformSaveMessage(verifiedSave.message);
+            alert(verifiedSave.message);
             return;
           }
-          setSavedRevision(Number(result.revision || 0));
-          setLastSuccessfulSaveAt(result.savedAt || new Date().toISOString());
+          setSavedRevision(verifiedSave.revision);
+          setLastSuccessfulSaveAt(verifiedSave.savedAt);
           setHasUnsavedChanges(false);
-          setPlatformSaveMessage(`Imported ${file.name} into ${currentProjectLabel}. ${result.message || `Saved - Revision ${result.revision}`}`);
+          stampSavedContentBaseline(submittedJob);
+          const savedJob = { ...takeoffJobData, revision: verifiedSave.revision, updatedAt: verifiedSave.savedAt, storageRecordKey: verifiedSave.key || '' };
+          const recent = rememberRecentTakeoffJob(savedJob);
+          onRecentTakeoffJobsChange?.(recent);
+          setPlatformSaveMessage(`Imported ${file.name} and attached it to ${currentProjectLabel}. ${verifiedSave.message}`);
         } else {
           setHasUnsavedChanges(true);
           setPlatformSaveMessage(`Imported takeoff file ${file.name}.`);
@@ -712,13 +1743,18 @@ export default function AIPlanTakeoffStandalone({
       nodes: [...activePolyline],
       thicknessMm: snapToStandardThickness(detectedWallThicknessMm),
       alignment,
-      lengthMm
+      lengthMm,
+      exteriorType: wallCategory === 'exterior' ? 'Other' : '',
+      linedFaces: 2,
+      openingDeductionsEnabled: true,
+      wallHeightM: null
     };
 
     setCompletedWallRuns((prev) => [...prev, newRun]);
     setSelectedWallId(newRun.id);
     setActivePolyline([]);
-  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, detectedWallThicknessMm, alignment, getWallRunLengthMm]);
+    markTakeoffItemCompleted('wall-run');
+  }, [activePolyline, pixelsPerMm, currentPage, wallCategory, detectedWallThicknessMm, alignment, getWallRunLengthMm, markTakeoffItemCompleted]);
 
   const finalizeCurrentEaveRun = useCallback(() => {
     if (eavePoints.length < 2 || !pixelsPerMm) {
@@ -741,19 +1777,14 @@ export default function AIPlanTakeoffStandalone({
     setCompletedEaves((prev) => [...prev, newEave]);
     setSelectedEaveId(newEave.id);
     setEavePoints([]);
-  }, [eavePoints, pixelsPerMm, currentPage, eaveWidthOption, specialEaveWidthMm, eaveLevel, eaveAlignment, getWallRunLengthMm]);
+    markTakeoffItemCompleted('eave-run');
+  }, [eavePoints, pixelsPerMm, currentPage, eaveWidthOption, specialEaveWidthMm, eaveLevel, eaveAlignment, getWallRunLengthMm, markTakeoffItemCompleted]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (activePolyline.length >= 2) {
-          finalizeCurrentWallRun();
-        } else if (eavePoints.length >= 2) {
-          finalizeCurrentEaveRun();
-        } else {
-          setActivePolyline([]);
-          setEavePoints([]);
-        }
+        setActivePolyline([]);
+        setEavePoints([]);
         setActiveAreaPolyline([]);
         setBoxStartPoint(null);
         setCalibrationMode(false);
@@ -765,25 +1796,50 @@ export default function AIPlanTakeoffStandalone({
         setSelectedAreaId(null);
         setSelectedOpeningId(null);
         setSelectedEaveId(null);
+        setSelectedMeasurementId(null);
         setDraggingVertex(null);
         setDraggingItem(null);
         setDraggingMeasureId(null);
         setDraggingEaveId(null);
+        return;
       }
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (isRecoveryPreview) return;
+      let target = null;
+      if (selectedWallId) target = { type: 'wall', id: selectedWallId };
+      else if (selectedAreaId) target = { type: 'area', id: selectedAreaId };
+      else if (selectedOpeningId) target = { type: 'opening', id: selectedOpeningId };
+      else if (selectedFloorplanId) target = { type: 'floorplan', id: selectedFloorplanId };
+      else if (selectedMeasurementId) target = { type: 'measure', id: selectedMeasurementId };
+      else if (selectedEaveId) target = { type: 'eaves', id: selectedEaveId };
+      if (!target) return;
+      const ok = window.confirm('Delete selected item?');
+      if (!ok) return;
+      e.preventDefault();
+      deleteMarkupItem(target.type, target.id);
+      markTakeoffItemCompleted('delete-selected-item');
+      setSelectedMeasurementId(null);
+      setSelectedFloorplanId(null);
+      setSelectedWallId(null);
+      setSelectedAreaId(null);
+      setSelectedOpeningId(null);
+      setSelectedEaveId(null);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activePolyline, activeAreaPolyline, eavePoints, finalizeCurrentWallRun, finalizeCurrentEaveRun]);
+  }, [deleteMarkupItem, isRecoveryPreview, markTakeoffItemCompleted, selectedAreaId, selectedEaveId, selectedFloorplanId, selectedMeasurementId, selectedOpeningId, selectedWallId]);
 
   useEffect(() => {
     if (openingType === 'door') {
       setOpeningHeightMm(2040);
       setOpeningWidthMm(820);
       setSizeCodeInput('2082');
+      setOpeningClass('External Door');
     } else {
       setOpeningHeightMm(1800);
       setOpeningWidthMm(1200);
       setSizeCodeInput('1812');
+      setOpeningClass('Window');
     }
   }, [openingType]);
 
@@ -908,6 +1964,58 @@ export default function AIPlanTakeoffStandalone({
     if (!file) return;
     const preserveTakeoffs = Boolean(options.preserveTakeoffs);
 
+    setPdfEngineError('');
+
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
+        const arrayBuffer = await file.arrayBuffer();
+        const loadedPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const embeddedPages = [];
+        for (let pageNumber = 1; pageNumber <= loadedPdf.numPages; pageNumber++) {
+          embeddedPages.push(await renderPdfPageForJob(loadedPdf, pageNumber));
+        }
+
+        sheetViewStateRef.current = {};
+        fittedSheetViewKeyRef.current = '';
+        setPlanFilename(file.name);
+        setProjectInfo((prev) => ({ ...prev, projectName: prev.projectName || jobName || file.name.replace(/\.[^.]+$/, '') }));
+        setCalibPoints([]);
+        setMeasurePoints([]);
+        setEavePoints([]);
+        if (!preserveTakeoffs) {
+          setCompletedMeasurements([]);
+          setCompletedEaves([]);
+          setCompletedWallRuns([]);
+          setPlacedOpenings([]);
+          setCompletedAreas([]);
+          setCompletedFloorplans([]);
+        }
+        setActivePolyline([]);
+        setActiveAreaPolyline([]);
+        setBoxStartPoint(null);
+        setSelectedFloorplanId(null);
+        setSelectedWallId(null);
+        setSelectedAreaId(null);
+        setSelectedOpeningId(null);
+        setSelectedEaveId(null);
+        setPlanPages(embeddedPages);
+        setPdfDoc(null);
+        setTotalPages(loadedPdf.numPages);
+        setCurrentPage(1);
+        setPlanMissingFromSavedJob(false);
+        await showPlanPage(embeddedPages, 1);
+      } catch (error) {
+        console.error('AI Plan Takeoff PDF engine failed:', error);
+        setPdfEngineError(PDFJS_INIT_ERROR_MESSAGE);
+      } finally {
+        e.target.value = '';
+      }
+      return;
+    }
+
+    sheetViewStateRef.current = {};
+    fittedSheetViewKeyRef.current = '';
     setPlanFilename(file.name);
     setProjectInfo((prev) => ({ ...prev, projectName: prev.projectName || jobName || file.name.replace(/\.[^.]+$/, '') }));
     setCalibPoints([]);
@@ -931,65 +2039,98 @@ export default function AIPlanTakeoffStandalone({
     setSelectedEaveId(null);
     setPlanPages([]);
 
-    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      const arrayBuffer = await file.arrayBuffer();
-      const loadedPdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const embeddedPages = [];
-      for (let pageNumber = 1; pageNumber <= loadedPdf.numPages; pageNumber++) {
-        embeddedPages.push(await renderPdfPageForJob(loadedPdf, pageNumber));
-      }
-      setPdfDoc(null);
-      setPlanPages(embeddedPages);
-      setTotalPages(loadedPdf.numPages);
+    setPdfDoc(null);
+    const img = new window.Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = rawCanvasRef.current;
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL('image/png');
+      setPlanPages([{
+        pageNumber: 1,
+        dataUrl,
+        width: canvas.width,
+        height: canvas.height,
+        logicalWidth: canvas.width,
+        logicalHeight: canvas.height,
+        renderScale: 1,
+        vectorSegments: []
+      }]);
+      setTotalPages(1);
       setCurrentPage(1);
       setPlanMissingFromSavedJob(false);
-      await showPlanPage(embeddedPages, 1);
-    } else {
-      setPdfDoc(null);
-      const img = new window.Image();
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        const canvas = rawCanvasRef.current;
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL('image/png');
-        setPlanPages([{
-          pageNumber: 1,
-          dataUrl,
-          width: canvas.width,
-          height: canvas.height,
-          logicalWidth: canvas.width,
-          logicalHeight: canvas.height,
-          renderScale: 1,
-          vectorSegments: []
-        }]);
-        setTotalPages(1);
-        setCurrentPage(1);
-        setPlanMissingFromSavedJob(false);
-        setVectorSegments([]);
-        setImage(img);
-      };
-    }
+      setVectorSegments([]);
+      setImage(img);
+    };
   };
 
-  const getCanvasPointerPos = () => {
+  const getCanvasPointerPos = (event = null) => {
     const stage = stageRef.current;
     if (!stage) return null;
-    const point = stage.getPointerPosition();
+    const nativeEvent = event?.evt || event?.nativeEvent || event;
+    const hostRect = canvasHostRef.current?.getBoundingClientRect?.();
+    const point = nativeEvent
+      && hostRect
+      && Number.isFinite(nativeEvent.clientX)
+      && Number.isFinite(nativeEvent.clientY)
+      ? {
+          x: nativeEvent.clientX - hostRect.left,
+          y: nativeEvent.clientY - hostRect.top
+        }
+      : stage.getPointerPosition();
     if (!point) return null;
 
+    const stageScaleValue = Number(stage.scaleX?.() || stageScale || 1);
+    const stageLocalPoint = {
+      x: (point.x - Number(stage.x?.() || 0)) / stageScaleValue,
+      y: (point.y - Number(stage.y?.() || 0)) / stageScaleValue
+    };
+
     if (layerRef.current) {
-      const transform = layerRef.current.getAbsoluteTransform().copy().invert();
-      return transform.point(point);
+      const transform = layerRef.current.getTransform().copy().invert();
+      return transform.point(stageLocalPoint);
     }
 
-    const transform = stage.getAbsoluteTransform().copy().invert();
-    return transform.point(point);
+    return stageLocalPoint;
   };
+
+  const scheduleMouseHoverPos = useCallback((nextHoverPos) => {
+    pendingMouseHoverRef.current = nextHoverPos;
+    if (mouseHoverFrameRef.current) return;
+    mouseHoverFrameRef.current = window.requestAnimationFrame(() => {
+      mouseHoverFrameRef.current = null;
+      setMouseHoverPos(pendingMouseHoverRef.current);
+    });
+  }, []);
+
+  useEffect(() => () => {
+    if (mouseHoverFrameRef.current) window.cancelAnimationFrame(mouseHoverFrameRef.current);
+  }, []);
+
+  const rememberCurrentSheetView = useCallback((view = null) => {
+    const stage = stageRef.current;
+    const nextView = view || {
+      scale: Number(stage?.scaleX?.() || stageScale || 1),
+      pos: {
+        x: Number(stage?.x?.() ?? stagePos.x ?? 0),
+        y: Number(stage?.y?.() ?? stagePos.y ?? 0)
+      }
+    };
+    sheetViewStateRef.current[currentPage] = nextView;
+  }, [currentPage, stagePos.x, stagePos.y, stageScale]);
+
+  const goToSheet = useCallback((nextPageOrUpdater) => {
+    rememberCurrentSheetView();
+    setCurrentPage((current) => {
+      const rawNext = typeof nextPageOrUpdater === 'function' ? nextPageOrUpdater(current) : nextPageOrUpdater;
+      return Math.min(Math.max(Number(rawNext) || current, 1), totalPages || 1);
+    });
+  }, [rememberCurrentSheetView, totalPages]);
 
   const getStrictWallSnapPoint = (rawX, rawY) => {
     const nodeSnapRadius = 120 / stageScale;
@@ -1096,10 +2237,54 @@ export default function AIPlanTakeoffStandalone({
     return Math.max(0, baseArea - exclusionAreaTotal);
   };
 
+  const nearestPointOnNodes = (nodes = [], rawX = 0, rawY = 0) => {
+    let best = null;
+    let minDistance = Infinity;
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      const a = nodes[index];
+      const b = nodes[index + 1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const lenSq = dx * dx + dy * dy;
+      if (!lenSq) continue;
+      const t = Math.max(0, Math.min(1, ((rawX - a.x) * dx + (rawY - a.y) * dy) / lenSq));
+      const x = a.x + t * dx;
+      const y = a.y + t * dy;
+      const distance = Math.hypot(x - rawX, y - rawY);
+      if (distance < minDistance) {
+        minDistance = distance;
+        best = { x, y, nearestSegment: { x1: a.x, y1: a.y, x2: b.x, y2: b.y }, snapped: true };
+      }
+    }
+    return best;
+  };
+
+  const nearestWallSnapOnPage = (rawX = 0, rawY = 0, page = currentPage) => {
+    let best = null;
+    let bestDist = Infinity;
+    activePageWalls.forEach((wall) => {
+      const snap = nearestPointOnNodes(wall.nodes || [], rawX, rawY);
+      if (!snap) return;
+      const dist = Math.hypot(snap.x - rawX, snap.y - rawY);
+      if (dist < bestDist) {
+        best = { ...snap, wallId: wall.id, page };
+        bestDist = dist;
+      }
+    });
+    return best;
+  };
+
   const handleStageClick = (e) => {
+    if (suppressNextStageClickRef.current) {
+      suppressNextStageClickRef.current = false;
+      return;
+    }
     if (draggingVertex || draggingItem || draggingMeasureId || draggingEaveId) return;
-    const pos = getCanvasPointerPos();
+    const pos = getCanvasPointerPos(e);
     if (!pos) return;
+    if (typeof window !== 'undefined') {
+      window.__gr8LastAiPlanTakeoffClick = { activeTool, page: currentPage, x: pos.x, y: pos.y, at: new Date().toISOString() };
+    }
     const shiftKey = !!e?.evt?.shiftKey;
 
     if (calibrationMode) {
@@ -1122,6 +2307,7 @@ export default function AIPlanTakeoffStandalone({
           if (realMm && parseFloat(realMm) > 0) {
             const ratio = distPx / parseFloat(realMm);
             setPixelsPerMm(ratio);
+            markTakeoffItemCompleted('calibration');
             alert(`Scale calibrated: ${ratio.toFixed(4)} px/mm`);
           }
           setCalibrationMode(false);
@@ -1151,6 +2337,7 @@ export default function AIPlanTakeoffStandalone({
 
         setCompletedMeasurements((prev) => [...prev, newMeasurement]);
         setMeasurePoints([]);
+        markTakeoffItemCompleted('measurement');
       }
       return;
     }
@@ -1174,7 +2361,9 @@ export default function AIPlanTakeoffStandalone({
       let pY = snap.y;
       setEavePoints((prev) => [...prev, { x: pX, y: pY }]);
     } else if (activeTool === 'opening') {
-      const snap = getGeneralSnapPoint(pos.x, pos.y);
+      const targetWall = completedWallRuns.find((wall) => wall.id === selectedWallId && Number(wall.page || 1) === Number(currentPage));
+      const wallSnap = targetWall ? nearestPointOnNodes(targetWall.nodes || [], pos.x, pos.y) : nearestWallSnapOnPage(pos.x, pos.y, currentPage);
+      const snap = wallSnap || getGeneralSnapPoint(pos.x, pos.y);
       if (snap.nearestSegment) {
         autoDetectOpeningDimensions(snap.x, snap.y, snap.nearestSegment);
       }
@@ -1211,16 +2400,25 @@ export default function AIPlanTakeoffStandalone({
         id: Date.now() + Math.random(),
         page: currentPage,
         type: openingType,
+        openingClass,
         itemTag: autoLabel,
         heightMm: openingHeightMm,
         widthMm: openingWidthMm,
         subType: openingType === 'window' ? windowSubtype : doorSubtype,
         glassType: glassType,
+        hostWallId: targetWall?.id || wallSnap?.wallId || '',
+        frameMaterial: '',
+        frameColour: '',
+        sillType: '',
+        brickSillRequired: false,
+        location: '',
+        frameJambDetails: '',
         x: snap.x,
         y: snap.y
       };
 
       setPlacedOpenings((prev) => [...prev, newOpening]);
+      markTakeoffItemCompleted(openingType);
     } else if (activeTool === 'floorplan') {
       const snap = getFloorplanCornerSnapPoint(pos.x, pos.y);
       if (activeAreaPolyline.length >= 3 && Math.hypot(snap.x - activeAreaPolyline[0].x, snap.y - activeAreaPolyline[0].y) <= 12 / stageScale) {
@@ -1259,6 +2457,7 @@ export default function AIPlanTakeoffStandalone({
           setCompletedAreas((prev) => [...prev, newCovering]);
           setSelectedAreaId(newCovering.id);
           setBoxStartPoint(null);
+          markTakeoffItemCompleted('floorcovering-box');
         }
       } else if (areaDrawMode === 'exclusion') {
         if (!selectedAreaForExclusion) {
@@ -1272,6 +2471,18 @@ export default function AIPlanTakeoffStandalone({
         setActiveAreaPolyline((prev) => [...prev, { x: snap.x, y: snap.y }]);
       }
     }
+  };
+
+  const handleDrawableSurfaceClick = (e) => {
+    e.cancelBubble = true;
+    handleStageClick(e);
+  };
+
+  const handleDrawableSurfaceDblClick = (e) => {
+    e.cancelBubble = true;
+    if (activeTool === 'wall') finalizeCurrentWallRun();
+    else if (activeTool === 'eaves') finalizeCurrentEaveRun();
+    else if (activeTool === 'floorplan' || activeTool === 'floorcoverings') finalizeCurrentArea();
   };
 
   const finalizeCurrentArea = () => {
@@ -1294,6 +2505,7 @@ export default function AIPlanTakeoffStandalone({
       setCompletedFloorplans((prev) => [...prev, newFloorplan]);
       setSelectedFloorplanId(newFloorplan.id);
       setActiveAreaPolyline([]);
+      markTakeoffItemCompleted('floorplan-area');
       return;
     }
 
@@ -1308,6 +2520,7 @@ export default function AIPlanTakeoffStandalone({
         return area;
       }));
       setActiveAreaPolyline([]);
+      markTakeoffItemCompleted('floorcovering-exclusion');
     } else {
       const newCovering = {
         id: Date.now() + Math.random(),
@@ -1320,11 +2533,14 @@ export default function AIPlanTakeoffStandalone({
       setCompletedAreas((prev) => [...prev, newCovering]);
       setSelectedAreaId(newCovering.id);
       setActiveAreaPolyline([]);
+      markTakeoffItemCompleted('floorcovering-area');
     }
   };
 
   const handleMouseMove = (e) => {
-    const pos = getCanvasPointerPos();
+    if (stageContentPanRef.current?.active) return;
+    if (stageRef.current?.isDragging?.()) return;
+    const pos = getCanvasPointerPos(e);
     if (!pos) return;
     const shiftKey = !!e?.evt?.shiftKey;
 
@@ -1363,10 +2579,13 @@ export default function AIPlanTakeoffStandalone({
       if (type === 'opening') {
         setPlacedOpenings((prev) => prev.map((op) => {
           if (op.id === id) {
-            return { ...op, x: pos.x, y: pos.y };
+            const hostWall = activePageWalls.find((wall) => wall.id === op.hostWallId);
+            const constrained = hostWall ? nearestPointOnNodes(hostWall.nodes || [], pos.x, pos.y) : nearestWallSnapOnPage(pos.x, pos.y, op.page || currentPage);
+            return { ...op, x: constrained?.x ?? pos.x, y: constrained?.y ?? pos.y, hostWallId: constrained?.wallId || op.hostWallId || '' };
           }
           return op;
         }));
+        pointerEditInProgressRef.current = true;
       }
       return;
     }
@@ -1384,6 +2603,7 @@ export default function AIPlanTakeoffStandalone({
           }
           return fp;
         }));
+        pointerEditInProgressRef.current = true;
       } else if (type === 'area') {
         setCompletedAreas((prev) => prev.map((area) => {
           if (area.id === id) {
@@ -1393,6 +2613,7 @@ export default function AIPlanTakeoffStandalone({
           }
           return area;
         }));
+        pointerEditInProgressRef.current = true;
       } else if (type === 'wall') {
         setCompletedWallRuns((prev) => prev.map((wall) => {
           if (wall.id === id) {
@@ -1403,6 +2624,7 @@ export default function AIPlanTakeoffStandalone({
           }
           return wall;
         }));
+        pointerEditInProgressRef.current = true;
       } else if (type === 'eaves') {
         setCompletedEaves((prev) => prev.map((eave) => {
           if (eave.id === id) {
@@ -1413,6 +2635,7 @@ export default function AIPlanTakeoffStandalone({
           }
           return eave;
         }));
+        pointerEditInProgressRef.current = true;
       }
       return;
     }
@@ -1430,40 +2653,57 @@ export default function AIPlanTakeoffStandalone({
       const dy = Math.abs(snap.y - firstPt.y);
 
       if (dx >= dy) {
-        setMouseHoverPos({ x: snap.x, y: firstPt.y, snapped: snap.snapped });
+        scheduleMouseHoverPos({ x: snap.x, y: firstPt.y, snapped: snap.snapped });
       } else {
-        setMouseHoverPos({ x: firstPt.x, y: snap.y, snapped: snap.snapped });
+        scheduleMouseHoverPos({ x: firstPt.x, y: snap.y, snapped: snap.snapped });
       }
     } else if (activeTool === 'measure' && measurePoints.length === 1) {
       const firstPt = measurePoints[0];
       const dx = Math.abs(snap.x - firstPt.x);
       const dy = Math.abs(snap.y - firstPt.y);
       if (dx >= dy) {
-        setMouseHoverPos({ x: snap.x, y: firstPt.y, snapped: snap.snapped });
+        scheduleMouseHoverPos({ x: snap.x, y: firstPt.y, snapped: snap.snapped });
       } else {
-        setMouseHoverPos({ x: firstPt.x, y: snap.y, snapped: snap.snapped });
+        scheduleMouseHoverPos({ x: firstPt.x, y: snap.y, snapped: snap.snapped });
       }
     } else if (activeTool === 'eaves' && eavePoints.length > 0) {
-      setMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
+      scheduleMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
     } else if (activeTool === 'wall' && activePolyline.length > 0) {
-      setMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
+      scheduleMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
     } else if (activeTool === 'floorplan' && activeAreaPolyline.length > 0) {
       const previousPoint = activeAreaPolyline[activeAreaPolyline.length - 1];
       const nextPoint = resolveFloorplanFreePoint(pos, previousPoint, shiftKey);
-      setMouseHoverPos({ ...nextPoint, snapped: false });
+      scheduleMouseHoverPos({ ...nextPoint, snapped: false });
     } else if (activeTool === 'floorcoverings' && activeAreaPolyline.length > 0) {
       // Free movement without axis locking for area preview
-      setMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
+      scheduleMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
     } else {
-      setMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
+      scheduleMouseHoverPos({ x: snap.x, y: snap.y, snapped: snap.snapped });
     }
   };
 
   const handleMouseUp = () => {
+    const completedDragEdit = Boolean(draggingVertex || draggingItem || draggingMeasureId || draggingEaveId);
     setDraggingVertex(null);
     setDraggingItem(null);
     setDraggingMeasureId(null);
     setDraggingEaveId(null);
+    if (completedDragEdit && pointerEditInProgressRef.current) {
+      pointerEditInProgressRef.current = false;
+      markTakeoffItemCompleted('edit-completed');
+      const dragChecksum = String(pendingDragChecksumRef.current || '').trim();
+      if (dragChecksum) {
+        pendingDragChecksumRef.current = '';
+        lastSeenContentChecksumRef.current = dragChecksum;
+        contentEditVersionRef.current += 1;
+        setAutosaveRequest({
+          reason: 'drag-edit-completed',
+          requestedAt: Date.now(),
+          checksum: dragChecksum,
+          editVersion: contentEditVersionRef.current,
+        });
+      }
+    }
   };
 
   const addVertexToPolygon = (type, id, vertexIndex) => {
@@ -1599,7 +2839,8 @@ export default function AIPlanTakeoffStandalone({
     }));
   };
 
-  const deleteMarkupItem = (type, id) => {
+  function deleteMarkupItem(type, id) {
+    if (isRecoveryPreview) return;
     if (type === 'wall') {
       setCompletedWallRuns((prev) => prev.filter((w) => w.id !== id));
       if (selectedWallId === id) setSelectedWallId(null);
@@ -1618,19 +2859,20 @@ export default function AIPlanTakeoffStandalone({
     }
     if (type === 'measure') {
       setCompletedMeasurements((prev) => prev.filter((m) => m.id !== id));
+      if (selectedMeasurementId === id) setSelectedMeasurementId(null);
     }
     if (type === 'eaves') {
       setCompletedEaves((prev) => prev.filter((e) => e.id !== id));
       if (selectedEaveId === id) setSelectedEaveId(null);
     }
-  };
+  }
 
-  const activePageWalls = completedWallRuns.filter((w) => w.page === currentPage);
-  const activePageAreas = completedAreas.filter((a) => a.page === currentPage);
-  const activePageOpenings = placedOpenings.filter((o) => o.page === currentPage);
-  const activePageFloorplans = completedFloorplans.filter((f) => f.page === currentPage);
-  const activePageMeasurements = completedMeasurements.filter((m) => m.page === currentPage);
-  const activePageEaves = completedEaves.filter((e) => e.page === currentPage);
+  const activePageWalls = React.useMemo(() => completedWallRuns.filter((w) => Number(w.page || w.pageId || 1) === Number(currentPage)), [completedWallRuns, currentPage]);
+  const activePageAreas = React.useMemo(() => completedAreas.filter((a) => Number(a.page || a.pageId || 1) === Number(currentPage)), [completedAreas, currentPage]);
+  const activePageOpenings = React.useMemo(() => placedOpenings.filter((o) => Number(o.page || o.pageId || 1) === Number(currentPage)), [placedOpenings, currentPage]);
+  const activePageFloorplans = React.useMemo(() => completedFloorplans.filter((f) => Number(f.page || f.pageId || 1) === Number(currentPage)), [completedFloorplans, currentPage]);
+  const activePageMeasurements = React.useMemo(() => completedMeasurements.filter((m) => Number(m.page || m.pageId || 1) === Number(currentPage)), [completedMeasurements, currentPage]);
+  const activePageEaves = React.useMemo(() => completedEaves.filter((e) => Number(e.page || e.pageId || 1) === Number(currentPage)), [completedEaves, currentPage]);
 
   const pageFootprintArea = activePageFloorplans
     .filter((f) => f.type === 'Footprint')
@@ -1666,6 +2908,22 @@ export default function AIPlanTakeoffStandalone({
     return acc;
   }, {});
   const totalEavesLengthMm = activePageEaves.reduce((sum, eave) => sum + getEaveLengthMm(eave, pixelsPerMm), 0);
+  const exteriorWallClassificationTotals = useMemo(() => {
+    const result = {
+      all: { 'Brick Veneer': 0, 'Lightweight Cladding': 0, 'Rendered Masonry': 0, Other: 0 },
+      byFloor: {}
+    };
+    completedWallRuns.forEach((wall) => {
+      if (String(wall.category || '').toLowerCase() !== 'exterior') return;
+      const floor = floorFromPage(wall.page).label;
+      const className = EXTERIOR_WALL_CLASS_OPTIONS.includes(wall.exteriorType) ? wall.exteriorType : 'Other';
+      const lengthM = (Number(wall.lengthMm) || 0) / 1000;
+      if (!result.byFloor[floor]) result.byFloor[floor] = { 'Brick Veneer': 0, 'Lightweight Cladding': 0, 'Rendered Masonry': 0, Other: 0 };
+      result.byFloor[floor][className] += lengthM;
+      result.all[className] += lengthM;
+    });
+    return result;
+  }, [completedWallRuns]);
 
   const baseScale = 6.0;
   const dpr = window.devicePixelRatio || 1;
@@ -1677,10 +2935,116 @@ export default function AIPlanTakeoffStandalone({
     ? currentPlanPage?.logicalHeight || image.height / (currentPlanPage?.renderScale || baseScale * dpr)
     : 0;
 
+  const getFittedSheetView = useCallback(() => {
+    if (!logicalImageWidth || !logicalImageHeight || !canvasSize.width || !canvasSize.height) {
+      return { scale: stageScale || 1, pos: stagePos || { x: 0, y: 0 } };
+    }
+    const normalizedRotation = ((Number(rotation) % 360) + 360) % 360;
+    const rotatedQuarterTurn = normalizedRotation === 90 || normalizedRotation === 270;
+    const displayWidth = rotatedQuarterTurn ? logicalImageHeight : logicalImageWidth;
+    const displayHeight = rotatedQuarterTurn ? logicalImageWidth : logicalImageHeight;
+    const fitScale = Math.min(
+      canvasSize.width / displayWidth,
+      canvasSize.height / displayHeight,
+      1
+    ) * 0.94;
+    const rotationOffsetX = rotatedQuarterTurn ? ((logicalImageWidth - logicalImageHeight) / 2) * fitScale : 0;
+    const rotationOffsetY = rotatedQuarterTurn ? ((logicalImageHeight - logicalImageWidth) / 2) * fitScale : 0;
+    return {
+      scale: fitScale,
+      pos: {
+        x: ((canvasSize.width - displayWidth * fitScale) / 2) + rotationOffsetX,
+        y: ((canvasSize.height - displayHeight * fitScale) / 2) + rotationOffsetY
+      }
+    };
+  }, [canvasSize.height, canvasSize.width, logicalImageHeight, logicalImageWidth, rotation]);
+
+  useEffect(() => {
+    if (!image || !logicalImageWidth || !logicalImageHeight || !canvasSize.width || !canvasSize.height) return;
+    const savedView = sheetViewStateRef.current[currentPage];
+    const fitKey = [
+      currentPage,
+      rotation,
+      logicalImageWidth,
+      logicalImageHeight,
+      planPages.length,
+      planFilename
+    ].join(':');
+    if (fittedSheetViewKeyRef.current === fitKey) return;
+    const nextView = savedView || getFittedSheetView();
+    setStageScale(nextView.scale);
+    setStagePos(nextView.pos);
+    fittedSheetViewKeyRef.current = fitKey;
+    if (!savedView) {
+      sheetViewStateRef.current[currentPage] = nextView;
+    }
+  }, [image, logicalImageWidth, logicalImageHeight, canvasSize.width, canvasSize.height, currentPage, rotation, planPages.length, planFilename, getFittedSheetView]);
+
   const selectedFp = activePageFloorplans.find(f => f.id === selectedFloorplanId);
   const selectedWall = activePageWalls.find(w => w.id === selectedWallId);
+  const selectModeActive = activeTool === 'select';
+  const markupListening = !isRecoveryPreview;
+
+  const canStartStagePan = () => (
+    !isRecoveryPreview
+    && !calibrationMode
+    && !draggingVertex
+    && !draggingItem
+    && !draggingMeasureId
+    && !draggingEaveId
+    && activeTool !== 'measure'
+    && activeTool !== 'eaves'
+    && activePolyline.length === 0
+    && activeAreaPolyline.length === 0
+    && measurePoints.length === 0
+    && eavePoints.length === 0
+  );
+
+  const handleStageContentPointerDown = (event) => {
+    if (event.button !== 0 || !canStartStagePan()) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const pointerId = event.pointerId ?? 'mouse';
+    stageContentPanRef.current = {
+      active: true,
+      moved: false,
+      pointerId,
+      startClient: { x: event.clientX, y: event.clientY },
+      startStagePos: { x: stage.x(), y: stage.y() },
+      latestPos: { x: stage.x(), y: stage.y() }
+    };
+  };
+
+  const handleStageContentPointerMove = (event) => {
+    const panDrag = stageContentPanRef.current;
+    const pointerId = event.pointerId ?? 'mouse';
+    if (!panDrag?.active || panDrag.pointerId !== pointerId) return;
+    const stage = stageRef.current;
+    if (!stage) return;
+    const dx = event.clientX - panDrag.startClient.x;
+    const dy = event.clientY - panDrag.startClient.y;
+    if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) return;
+    event.preventDefault();
+    const nextPos = { x: panDrag.startStagePos.x + dx, y: panDrag.startStagePos.y + dy };
+    stageContentPanRef.current = { ...panDrag, moved: true, latestPos: nextPos };
+    stage.position(nextPos);
+    stage.batchDraw();
+  };
+
+  const handleStageContentPointerUp = (event) => {
+    const panDrag = stageContentPanRef.current;
+    const pointerId = event.pointerId ?? 'mouse';
+    if (!panDrag?.active || panDrag.pointerId !== pointerId) return;
+    const stage = stageRef.current;
+    const nextPos = panDrag.latestPos || (stage ? { x: stage.x(), y: stage.y() } : panDrag.startStagePos);
+    if (panDrag.moved) suppressNextStageClickRef.current = true;
+    stageContentPanRef.current = null;
+    if (!stage || !panDrag.moved) return;
+    setStagePos(nextPos);
+    rememberCurrentSheetView({ scale: stage.scaleX?.() || stageScale, pos: nextPos });
+  };
   const selectedEave = activePageEaves.find(e => e.id === selectedEaveId);
-  const takeoffSchedule = createTakeoffSchedule({
+  const takeoffSchedule = React.useMemo(() => createTakeoffSchedule({
     projectInfo,
     planFilename,
     totalPages,
@@ -1691,9 +3055,10 @@ export default function AIPlanTakeoffStandalone({
     completedAreas,
     completedFloorplans,
     completedMeasurements,
-    completedEaves
-  });
-  const scheduleSignature = getScheduleSignature(takeoffSchedule);
+    completedEaves,
+    jobSetupRows: platformContext.jobSetupRows || {}
+  }), [projectInfo, planFilename, totalPages, currentPage, pixelsPerMm, completedWallRuns, placedOpenings, completedAreas, completedFloorplans, completedMeasurements, completedEaves, platformContext.jobSetupRows]);
+  const scheduleSignature = React.useMemo(() => getScheduleSignature(takeoffSchedule), [takeoffSchedule]);
   const quoteSheetOutOfDate = !!lastQuoteSyncSignature && lastQuoteSyncSignature !== scheduleSignature;
 
   const downloadTextFile = (filename, content, type) => {
@@ -1740,11 +3105,42 @@ export default function AIPlanTakeoffStandalone({
   };
 
   const handleSendToJobSetup = () => {
-    const payload = createJobSetupPayload(takeoffSchedule);
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only and cannot transfer data to Job Setup.");
+      return;
+    }
+    if (!hasAttachedProject) {
+      setAttachProjectName('Johnson 123');
+      setAttachError('Attach this takeoff to a master project before exporting to Job Setup.');
+      setAttachDialogOpen(true);
+      return;
+    }
+    const payload = createJobSetupPayload(takeoffSchedule, {
+      takeoffId: openedTakeoffJob?.takeoffId || '',
+      revision: savedRevision,
+    });
     setJobSetupPayload(payload);
+    const previewRows = Array.isArray(payload.mappingPreview) ? payload.mappingPreview : [];
+    const missingRows = previewRows.filter((row) => row.status === 'missing');
+    const previewText = [
+      `Project: ${payload.projectName || '(unnamed)'}`,
+      `Takeoff: ${openedTakeoffJob?.takeoffId || 'unknown'} Revision ${savedRevision || 0}`,
+      `Fields prepared: ${previewRows.length}`,
+      `Missing or blank fields: ${missingRows.length}`,
+      '',
+      ...previewRows.slice(0, 20).map((row) => `${row.destinationKey}: ${row.value ?? ''}`),
+      ...(previewRows.length > 20 ? ['...'] : []),
+      '',
+      ...(payload.warnings || []).map((warning) => `Warning: ${warning}`),
+      '',
+      'Confirm export to Job Setup?'
+    ].join('\n');
+    const confirmed = window.confirm(previewText);
+    if (!confirmed) return;
     if (onJobSetupUpdate) {
       Promise.resolve(onJobSetupUpdate(payload)).then(() => {
-        setPlatformSaveMessage("Sent takeoff project details to Job Setup.");
+        const updatedFields = previewRows.filter((row) => row.status === 'ready').map((row) => row.destinationKey);
+        setPlatformSaveMessage(`Exported Takeoff to Job Setup (${updatedFields.length} fields updated).`);
       });
     }
   };
@@ -1760,6 +3156,10 @@ export default function AIPlanTakeoffStandalone({
   };
 
   const handleApplyQuotePreview = () => {
+    if (isRecoveryPreview) {
+      alert("Recovery Preview is read-only and cannot transfer quantities to the Quote Sheet.");
+      return;
+    }
     const mappedRows = quotePreviewRows.filter((row) => row.destinationRowId);
     const nextQuoteRows = applyQuotePreviewRows(quoteSheetRows, mappedRows);
     setQuoteSheetRows(nextQuoteRows);
@@ -1779,7 +3179,7 @@ export default function AIPlanTakeoffStandalone({
 
   const handleScheduleItemClick = (row) => {
     const page = row.planSheet || row.page;
-    if (page) setCurrentPage(page);
+    if (page) goToSheet(page);
     setSelectedFloorplanId(null);
     setSelectedWallId(null);
     setSelectedAreaId(null);
@@ -1790,11 +3190,13 @@ export default function AIPlanTakeoffStandalone({
     const area = completedAreas.find((item) => item.id === row.itemId);
     const opening = placedOpenings.find((item) => item.id === row.itemId);
     const eave = completedEaves.find((item) => item.id === row.itemId);
+    const measurement = completedMeasurements.find((item) => item.id === row.itemId);
     if (wall) setSelectedWallId(wall.id);
     if (floorplan) setSelectedFloorplanId(floorplan.id);
     if (area) setSelectedAreaId(area.id);
     if (opening) setSelectedOpeningId(opening.id);
     if (eave) setSelectedEaveId(eave.id);
+    if (measurement) setSelectedMeasurementId(measurement.id);
   };
 
   const renderScheduleRows = (title, rows, quantityLabel = 'Quantity') => (
@@ -1843,20 +3245,6 @@ export default function AIPlanTakeoffStandalone({
     );
   }
 
-  if (embedded && platformContext.noJobOpen) {
-    return (
-      <div style={{ padding: '24px', minHeight: '520px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: '560px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '24px', boxShadow: '0 16px 36px rgba(15,23,42,0.08)' }}>
-          <h2 style={{ margin: '0 0 8px', fontSize: '22px', color: '#0f172a' }}>No project open</h2>
-          <p style={{ margin: '0 0 16px', color: '#475569', lineHeight: 1.5 }}>Open or create a Project Workspace job before using AI Plan Takeoff. The takeoff will be saved against that project ID.</p>
-          <button type="button" onClick={onBackToDashboard} style={{ padding: '10px 14px', background: '#111827', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-            Back to Project Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', height: embedded ? 'calc(100vh - 180px)' : '100vh', minHeight: embedded ? '680px' : undefined, fontFamily: 'sans-serif', position: 'relative', overflow: 'hidden' }}>
       {/* Left Sidebar */}
@@ -1869,52 +3257,161 @@ export default function AIPlanTakeoffStandalone({
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-          <label style={{ padding: '8px', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          <button
+            id="ai-plan-takeoff-new-job-button"
+            type="button"
+            onClick={createNewTakeoffJob}
+            disabled={isRecoveryPreview}
+            style={{ display: 'none' }}
+          />
+          <button
+            id="ai-plan-takeoff-save-as-button"
+            type="button"
+            onClick={handleSaveJobAs}
+            disabled={isRecoveryPreview}
+            style={{ display: 'none' }}
+          />
+          <label style={{ padding: '8px', background: isRecoveryPreview ? '#e5e7eb' : '#fff', border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <Upload size={16} /> Open Plan
-            <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} style={{ display: 'none' }} />
+            <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} disabled={isRecoveryPreview} style={{ display: 'none' }} />
           </label>
           <label style={{ display: 'none' }}>
             Relink Original Plan
             <input id="relink-original-plan-loader" type="file" accept="image/*,.pdf" onChange={(event) => handleFileUpload(event, { preserveTakeoffs: true })} />
           </label>
           <button
+            id="ai-plan-takeoff-download-backup-button"
+            type="button"
             onClick={handleExportTakeoffFile}
-            style={{ padding: '8px', background: '#455a64', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            disabled={!hasOpenTakeoffJob || isRecoveryPreview}
+            style={{ padding: '8px', background: hasOpenTakeoffJob && !isRecoveryPreview ? '#455a64' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: hasOpenTakeoffJob && !isRecoveryPreview ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             title="Download a complete portable takeoff backup"
           >
-            <Download size={16} /> Export Takeoff File
+            <Download size={16} /> Download Backup
           </button>
           <button
+            id="ai-plan-takeoff-save-button"
+            type="button"
             onClick={handleSaveJob}
-            style={{ padding: '8px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            disabled={!hasOpenTakeoffJob || isRecoveryPreview}
+            style={{ padding: '8px', background: hasOpenTakeoffJob && !isRecoveryPreview ? '#1976d2' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '4px', cursor: hasOpenTakeoffJob && !isRecoveryPreview ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             title="Save complete progress to the active platform project"
           >
             <Download size={16} /> Save Progress
           </button>
           <button
+            type="button"
             onClick={handleOpenJob}
-            style={{ padding: '8px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+            disabled={isRecoveryPreview}
+            style={{ padding: '8px', background: isRecoveryPreview ? '#94a3b8' : '#4caf50', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
             title="Import a previously exported takeoff backup into this project"
           >
-            <Upload size={16} /> Import Takeoff File
+            <Upload size={16} /> Import Backup From Computer
           </button>
-          <input id="legacy-job-loader" type="file" accept=".json" onChange={handleLoadJob} style={{ display: 'none' }} />
+          <input id="legacy-job-loader" type="file" accept=".gr8takeoff,.json" onChange={handleLoadJob} style={{ display: 'none' }} />
         </div>
 
+        {isRecoveryPreview && (
+          <div
+            data-johnson-recovery-preview-banner
+            style={{ background: '#7f1d1d', border: '2px solid #fecaca', borderRadius: '6px', padding: '12px', color: '#fff', display: 'grid', gap: '6px', boxShadow: '0 8px 22px rgba(127,29,29,0.18)' }}
+          >
+            <strong style={{ fontSize: '16px', letterSpacing: '0.02em' }}>ARCHIVED RECOVERY PREVIEW - NOT ATTACHED</strong>
+            <span style={{ fontSize: '12px', lineHeight: 1.4 }}>
+              Read-only archived recovery evidence. Saves, transfers, imports and editing are disabled.
+            </span>
+            {recoveryPreviewCounts && (
+              <span data-johnson-recovery-preview-counts style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                Pages {recoveryPreviewCounts.renderablePlanPages || recoveryPreviewCounts.planPages}; floor coverings {recoveryPreviewCounts.floorCoverings}; footprint/room areas {recoveryPreviewCounts.floorplans}; walls {recoveryPreviewCounts.walls}; openings {recoveryPreviewCounts.openings}
+              </span>
+            )}
+          </div>
+        )}
+
         <div style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '4px', padding: '6px 8px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-          <span style={{ color: '#555' }}>Current Project:</span>
+          <span style={{ color: '#555' }}>Platform project:</span>
           <strong style={{ color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentProjectLabel}</strong>
         </div>
+        <div style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '4px', padding: '6px 8px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+          <span style={{ color: '#555' }}>Takeoff job:</span>
+          <strong style={{ color: hasOpenTakeoffJob ? '#111' : '#b45309', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hasOpenTakeoffJob ? jobName : 'None open'}</strong>
+        </div>
+        {!hasOpenTakeoffJob && (
+          <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '6px', padding: '12px', color: '#9a3412', fontSize: '13px', display: 'grid', gap: '10px' }}>
+            <strong style={{ color: '#7c2d12', fontSize: '15px' }}>No takeoff job open</strong>
+            <button type="button" onClick={handleOpenJob} style={{ padding: '9px', background: '#4caf50', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Import Backup From Computer</button>
+            <button type="button" onClick={() => document.getElementById('legacy-job-loader')?.click()} style={{ padding: '9px', background: '#fff', color: '#111827', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Import Takeoff Backup From Computer</button>
+            <button type="button" onClick={createNewTakeoffJob} style={{ padding: '9px', background: '#111827', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Create New Takeoff Job</button>
+          </div>
+        )}
         {importedTakeoffFileName && (
           <div style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '4px', padding: '6px 8px', fontSize: '12px', color: '#475569' }}>
             Imported takeoff: <strong>{importedTakeoffFileName}</strong>
           </div>
         )}
         {platformSaveMessage && (
-          <div style={{ background: '#ecfdf5', border: '1px solid #86efac', borderRadius: '4px', padding: '6px 8px', color: '#166534', fontSize: '12px', fontWeight: 'bold' }}>{platformSaveMessage}</div>
+          <div style={{ background: platformSaveMessage.includes('SAVE FAILED') ? '#fef2f2' : '#ecfdf5', border: `1px solid ${platformSaveMessage.includes('SAVE FAILED') ? '#fca5a5' : '#86efac'}`, borderRadius: '4px', padding: '6px 8px', color: platformSaveMessage.includes('SAVE FAILED') ? '#991b1b' : '#166534', fontSize: '12px', fontWeight: 'bold' }}>{platformSaveMessage}</div>
+        )}
+        {attachDialogOpen && (
+          <div
+            onClick={() => !attachSaving && setAttachDialogOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.55)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Save As / Attach to Project"
+              onClick={(event) => event.stopPropagation()}
+              style={{ width: 'min(520px, 100%)', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', boxShadow: '0 24px 70px rgba(15,23,42,0.28)', padding: '18px', display: 'grid', gap: '14px', color: '#0f172a' }}
+            >
+              <div>
+                <h3 style={{ margin: '0 0 6px', fontSize: '20px' }}>Save As / Attach to Project</h3>
+                <p style={{ margin: 0, color: '#475569', fontSize: '13px', lineHeight: 1.45 }}>
+                  Save the currently open five-page takeoff under the master project. The source document remains {importedTakeoffFileName || planFilename || 'the imported PDF'}.
+                </p>
+              </div>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 'bold' }}>
+                Master project
+                <select
+                  value={attachProjectName}
+                  onChange={(event) => setAttachProjectName(event.target.value)}
+                  disabled={attachSaving}
+                  style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                >
+                  <option value="Johnson 123">Johnson 123</option>
+                </select>
+              </label>
+              <label style={{ display: 'grid', gap: '6px', fontSize: '13px', fontWeight: 'bold' }}>
+                Project name
+                <input
+                  value={attachProjectName}
+                  onChange={(event) => setAttachProjectName(event.target.value)}
+                  disabled={attachSaving}
+                  style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px' }}
+                />
+              </label>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', fontSize: '12px', color: '#334155', display: 'grid', gap: '4px' }}>
+                <div><strong>Visible plan pages:</strong> {planPages.length}</div>
+                <div><strong>Source document:</strong> {importedTakeoffFileName || planFilename || 'Not recorded'}</div>
+                <div><strong>Takeoff name after save:</strong> {attachProjectName || 'Johnson 123'}</div>
+              </div>
+              {attachError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', padding: '10px', color: '#991b1b', fontSize: '12px', fontWeight: 'bold' }}>{attachError}</div>
+              )}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setAttachDialogOpen(false)} disabled={attachSaving} style={{ padding: '9px 12px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: attachSaving ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>Cancel</button>
+                <button type="button" onClick={handleAttachProjectSave} disabled={attachSaving || !planPages.length} style={{ padding: '9px 12px', background: attachSaving || !planPages.length ? '#94a3b8' : '#1976d2', color: '#fff', border: 'none', borderRadius: '6px', cursor: attachSaving || !planPages.length ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
+                  {attachSaving ? 'Saving...' : 'Attach and Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {pdfEngineError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '4px', padding: '8px', color: '#991b1b', fontSize: '12px', fontWeight: 'bold' }}>{pdfEngineError}</div>
         )}
         <div style={{ background: hasUnsavedChanges ? '#fff7ed' : '#f8fafc', border: `1px solid ${hasUnsavedChanges ? '#fdba74' : '#cbd5e1'}`, borderRadius: '4px', padding: '6px 8px', color: hasUnsavedChanges ? '#9a3412' : '#334155', fontSize: '12px', fontWeight: 'bold' }}>
-          {hasUnsavedChanges ? 'Unsaved changes' : `Saved revision ${savedRevision || 0}`}
+          {!hasOpenTakeoffJob ? 'No takeoff job open' : hasUnsavedChanges ? 'Unsaved changes' : `Saved revision ${savedRevision || 0}`}
           {lastSuccessfulSaveAt ? ` - ${new Date(lastSuccessfulSaveAt).toLocaleString()}` : ''}
         </div>
 
@@ -1928,28 +3425,31 @@ export default function AIPlanTakeoffStandalone({
 
         {totalPages > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ddd' }}>
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage((c) => c - 1)} style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}><ChevronLeft size={20} /></button>
+            <button id="ai-plan-takeoff-prev-sheet-button" disabled={currentPage === 1} onClick={() => goToSheet((c) => c - 1)} style={{ cursor: currentPage === 1 ? 'not-allowed' : 'pointer', border: 'none', background: 'transparent' }}><ChevronLeft size={20} /></button>
             <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Sheet {currentPage} of {totalPages}</span>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((c) => c + 1)} style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}><ChevronRight size={20} /></button>
+            <button id="ai-plan-takeoff-next-sheet-button" disabled={currentPage === totalPages} onClick={() => goToSheet((c) => c + 1)} style={{ cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', border: 'none', background: 'transparent' }}><ChevronRight size={20} /></button>
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setRotation((r) => (r + 90) % 360)}
-            style={{ flex: 1, padding: '10px', cursor: 'pointer', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '15px', fontWeight: '600' }}
+            disabled={isRecoveryPreview}
+            style={{ flex: 1, padding: '10px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', background: isRecoveryPreview ? '#e5e7eb' : '#fff', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '15px', fontWeight: '600' }}
           >
-            <RotateCw size={18} /> Rotate 90°
+            <RotateCw size={18} /> Rotate 90Â°
           </button>
           <button
             onClick={() => { setCalibrationMode(!calibrationMode); setCalibPoints([]); setActivePolyline([]); setActiveAreaPolyline([]); }}
-            style={{ flex: 1, padding: '10px', cursor: 'pointer', background: calibrationMode ? '#ffc107' : '#fff', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '15px', fontWeight: '600' }}
+            disabled={isRecoveryPreview}
+            style={{ flex: 1, padding: '10px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', background: isRecoveryPreview ? '#e5e7eb' : (calibrationMode ? '#ffc107' : '#fff'), border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '15px', fontWeight: '600' }}
           >
             <Ruler size={18} /> {calibrationMode ? 'Cancel' : 'Calibrate'}
           </button>
           <button
             onClick={() => { setActiveTool('measure'); setMeasurePoints([]); setEavePoints([]); }}
-            style={{ padding: '10px 14px', cursor: 'pointer', background: activeTool === 'measure' ? '#4caf50' : '#fff', color: activeTool === 'measure' ? '#fff' : '#333', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '14px', fontWeight: '600' }}
+            disabled={isRecoveryPreview}
+            style={{ padding: '10px 14px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', background: isRecoveryPreview ? '#e5e7eb' : (activeTool === 'measure' ? '#4caf50' : '#fff'), color: activeTool === 'measure' && !isRecoveryPreview ? '#fff' : '#333', border: '1px solid #ccc', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '14px', fontWeight: '600' }}
             title="Measure any dimension on the plan with fixed axis and offset drag"
           >
             <Ruler size={16} /> Measure
@@ -1964,6 +3464,12 @@ export default function AIPlanTakeoffStandalone({
         )}
 
         <div style={{ display: 'flex', background: '#e0e0e0', borderRadius: '6px', padding: '4px' }}>
+          <button
+            onClick={() => { setActiveTool('select'); setActivePolyline([]); setActiveAreaPolyline([]); setMeasurePoints([]); setEavePoints([]); }}
+            style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'select' ? '#fff' : 'transparent', color: activeTool === 'select' ? '#1976d2' : '#555' }}
+          >
+            <MousePointer2 size={14} style={{ verticalAlign: 'middle', marginRight: '2px' }} /> Select
+          </button>
           <button
             onClick={() => { setActiveTool('wall'); setActiveAreaPolyline([]); setEavePoints([]); }}
             style={{ flex: 1, padding: '8px', fontSize: '12px', fontWeight: 'bold', border: 'none', borderRadius: '4px', cursor: 'pointer', background: activeTool === 'wall' ? '#fff' : 'transparent', color: activeTool === 'wall' ? '#1976d2' : '#555' }}
@@ -2177,6 +3683,17 @@ export default function AIPlanTakeoffStandalone({
             )}
 
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <label style={{ fontSize: '14px', color: '#333', fontWeight: 'bold', flex: 1 }}>Opening Class:</label>
+              <select
+                value={openingClass}
+                onChange={(e) => setOpeningClass(e.target.value)}
+                style={{ flex: 1, padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontWeight: 'bold' }}
+              >
+                {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <label style={{ fontSize: '14px', color: '#333', fontWeight: 'bold', flex: 1 }}>Glass Type:</label>
               <select
                 value={glassType}
@@ -2190,6 +3707,94 @@ export default function AIPlanTakeoffStandalone({
                 <option value="Other">Other</option>
               </select>
             </div>
+          </div>
+        )}
+
+        {activeTool === 'select' && (
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #0f172a', display: 'grid', gap: '10px' }}>
+            <strong style={{ fontSize: '14px', color: '#0f172a' }}>Select / Edit</strong>
+            <span style={{ fontSize: '12px', color: '#475569' }}>Click to select walls, openings, measurements and areas. Drag handles to edit. Press Delete/Backspace to remove selected item.</span>
+            {selectedWall && (
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px', display: 'grid', gap: '6px' }}>
+                <strong style={{ fontSize: '12px' }}>Selected wall</strong>
+                <label style={{ fontSize: '12px' }}>Category
+                  <select value={selectedWall.category || 'exterior'} onChange={(e) => { updateWallRunCategory(selectedWall.id, e.target.value); markTakeoffItemCompleted('wall-category-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                    <option value="exterior">Exterior</option>
+                    <option value="interior">Interior</option>
+                  </select>
+                </label>
+                {selectedWall.category === 'exterior' && (
+                  <label style={{ fontSize: '12px' }}>Construction class
+                    <select value={selectedWall.exteriorType || 'Other'} onChange={(e) => { updateWallRun(selectedWall.id, { exteriorType: e.target.value }); markTakeoffItemCompleted('wall-construction-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                      {EXTERIOR_WALL_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </label>
+                )}
+                {selectedWall.category === 'interior' && (
+                  <>
+                    <label style={{ fontSize: '12px' }}>Wall height override (m)
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={selectedWall.wallHeightM || ''}
+                        onChange={(e) => updateWallRun(selectedWall.id, { wallHeightM: Number(e.target.value) || null })}
+                        onBlur={() => markTakeoffItemCompleted('wall-height-override-edit')}
+                        style={{ width: '100%', padding: '6px', marginTop: '4px' }}
+                      />
+                    </label>
+                    <label style={{ fontSize: '12px' }}>Lined faces
+                      <select value={Number(selectedWall.linedFaces || 2) === 1 ? '1' : '2'} onChange={(e) => { updateWallRun(selectedWall.id, { linedFaces: Number(e.target.value) || 2 }); markTakeoffItemCompleted('wall-lined-faces-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                        <option value="1">1 face</option>
+                        <option value="2">2 faces</option>
+                      </select>
+                    </label>
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input type="checkbox" checked={selectedWall.openingDeductionsEnabled !== false} onChange={(e) => { updateWallRun(selectedWall.id, { openingDeductionsEnabled: e.target.checked }); markTakeoffItemCompleted('wall-deduction-toggle'); }} />
+                      Deduct linked openings from net area
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
+            {activePageOpenings.find((item) => item.id === selectedOpeningId) && (
+              <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px', display: 'grid', gap: '6px' }}>
+                <strong style={{ fontSize: '12px' }}>Selected opening</strong>
+                {(() => {
+                  const opening = activePageOpenings.find((item) => item.id === selectedOpeningId);
+                  return (
+                    <>
+                      <label style={{ fontSize: '12px' }}>Opening class
+                        <select value={opening?.openingClass || classifyOpeningValue(opening)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, openingClass: e.target.value } : item)); markTakeoffItemCompleted('opening-class-edit'); }} style={{ width: '100%', padding: '6px', marginTop: '4px' }}>
+                          {OPENING_CLASS_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                        </select>
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Location / room
+                        <input value={opening?.location || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, location: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-location-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Glass type
+                        <input value={opening?.glassType || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, glassType: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-glass-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Frame/Jamb details
+                        <input value={opening?.frameJambDetails || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameJambDetails: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-jamb-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Frame material
+                        <input value={opening?.frameMaterial || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameMaterial: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-frame-material-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Frame colour
+                        <input value={opening?.frameColour || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, frameColour: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-frame-colour-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px' }}>Sill type
+                        <input value={opening?.sillType || ''} onChange={(e) => setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, sillType: e.target.value } : item))} onBlur={() => markTakeoffItemCompleted('opening-sill-edit')} style={{ width: '100%', padding: '6px', marginTop: '4px' }} />
+                      </label>
+                      <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input type="checkbox" checked={Boolean(opening?.brickSillRequired)} onChange={(e) => { setPlacedOpenings((prev) => prev.map((item) => item.id === opening.id ? { ...item, brickSillRequired: e.target.checked } : item)); markTakeoffItemCompleted('opening-brick-sill-toggle'); }} />
+                        Brick sill required
+                      </label>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
 
@@ -2390,13 +3995,13 @@ export default function AIPlanTakeoffStandalone({
                   <span style={{ width: '12px', height: '12px', background: cfg.stroke, display: 'inline-block', borderRadius: '2px' }}></span>
                   Total {cat}:
                 </span>
-                <strong>{catTotal.toFixed(2)} m²</strong>
+                <strong>{catTotal.toFixed(2)} mÂ²</strong>
               </div>
             );
           })}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', borderTop: '1px dashed #ccc', paddingTop: '6px', color: '#1b5e20' }}>
             <span>Total Floor Area:</span>
-            <span>{totalFloorAreaM2.toFixed(2)} m²</span>
+            <span>{totalFloorAreaM2.toFixed(2)} mÂ²</span>
           </div>
         </div>
 
@@ -2407,17 +4012,17 @@ export default function AIPlanTakeoffStandalone({
           </h4>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
             <span>Gross Footprint Area:</span>
-            <strong>{pageFootprintArea.toFixed(2)} m²</strong>
+            <strong>{pageFootprintArea.toFixed(2)} mÂ²</strong>
           </div>
           {activePageFloorplans.filter(f => f.type !== 'Footprint').map((fp) => (
             <div key={fp.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingLeft: '8px', color: '#555' }}>
               <span>Less {fp.label}:</span>
-              <span>- {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
+              <span>- {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²</span>
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 'bold', borderTop: '1px dashed #ccc', paddingTop: '6px', color: '#0d47a1' }}>
             <span>Total Living Area:</span>
-            <span>{pageTotalLivingArea.toFixed(2)} m²</span>
+            <span>{pageTotalLivingArea.toFixed(2)} mÂ²</span>
           </div>
         </div>
 
@@ -2469,7 +4074,7 @@ export default function AIPlanTakeoffStandalone({
                 onClick={() => setSelectedFloorplanId(fp.id)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: fp.id === selectedFloorplanId ? '#bbdefb' : '#e3f2fd', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: fp.id === selectedFloorplanId ? '1px solid #1976d2' : 'none' }}
               >
-                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²</span>
+                <span><strong>[Plan] {fp.label}:</strong> {calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²</span>
                 <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('floorplan', fp.id); }} />
               </div>
             ))}
@@ -2483,7 +4088,7 @@ export default function AIPlanTakeoffStandalone({
                   onClick={() => setSelectedAreaId(areaItem.id)}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', background: isSelected ? '#c8e6c9' : '#f1f8e9', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', borderLeft: `4px solid ${cfg.stroke}`, border: isSelected ? '1px solid #2e7d32' : 'none' }}
                 >
-                  <span><strong>{areaItem.category}:</strong> {getNetFloorcoveringAreaM2(areaItem, pixelsPerMm).toFixed(2)} m²</span>
+                  <span><strong>{areaItem.category}:</strong> {getNetFloorcoveringAreaM2(areaItem, pixelsPerMm).toFixed(2)} mÂ²</span>
                   <Trash2 size={16} style={{ cursor: 'pointer', color: '#d32f2f' }} onClick={(e) => { e.stopPropagation(); deleteMarkupItem('area', areaItem.id); }} />
                 </div>
               );
@@ -2560,8 +4165,34 @@ export default function AIPlanTakeoffStandalone({
           </div>
         </div>
 
+        <div style={{ background: '#fff', padding: '12px', borderRadius: '6px', border: '2px solid #334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <h4 style={{ margin: 0, fontSize: '15px', color: '#0f172a', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
+            Exterior Wall Classifications
+          </h4>
+          {EXTERIOR_WALL_CLASS_OPTIONS.map((className) => (
+            <div key={`legend-${className}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '12px', height: '12px', background: EXTERIOR_WALL_CLASS_COLOURS[className] || EXTERIOR_WALL_CLASS_COLOURS.Other, borderRadius: '2px' }} />
+                {className}
+              </span>
+              <strong>{(exteriorWallClassificationTotals.all[className] || 0).toFixed(2)} m</strong>
+            </div>
+          ))}
+          {Object.entries(exteriorWallClassificationTotals.byFloor).map(([floor, totals]) => (
+            <div key={`floor-${floor}`} style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '6px' }}>
+              <strong style={{ fontSize: '12px', color: '#334155' }}>{floor}</strong>
+              {EXTERIOR_WALL_CLASS_OPTIONS.map((className) => (
+                <div key={`${floor}-${className}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
+                  <span>{className}</span>
+                  <span>{(totals[className] || 0).toFixed(2)} m</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
         <div style={{ background: '#212121', color: '#fff', padding: '14px', borderRadius: '6px', fontSize: '15px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div><strong>Total Floorcoverings Area:</strong> {totalFloorAreaM2.toFixed(2)} m²</div>
+          <div><strong>Total Floorcoverings Area:</strong> {totalFloorAreaM2.toFixed(2)} mÂ²</div>
           <div><strong>Net Exterior Walls:</strong> {(netExteriorWallLengthMm / 1000).toFixed(2)} m</div>
           <div><strong>Interior Walls:</strong> {(rawInteriorWallLengthMm / 1000).toFixed(2)} m</div>
           <div><strong>Eaves:</strong> {(totalEavesLengthMm / 1000).toFixed(2)} m</div>
@@ -2587,8 +4218,8 @@ export default function AIPlanTakeoffStandalone({
             <button onClick={handleExportExcel} style={{ padding: '8px 10px', background: '#0f766e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export Excel</button>
             <button onClick={handleExportCsv} style={{ padding: '8px 10px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export CSV</button>
             <button onClick={handleExportPdfSchedule} style={{ padding: '8px 10px', background: '#7c2d12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Export PDF Schedule</button>
-            <button onClick={handleSendToJobSetup} style={{ padding: '8px 10px', background: '#4b5563', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Send to Job Setup</button>
-            <button onClick={handlePrepareQuotePreview} style={{ padding: '8px 10px', background: quoteSheetOutOfDate ? '#f57c00' : '#111827', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+            <button disabled={isRecoveryPreview} onClick={handleSendToJobSetup} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : '#4b5563', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>Export Takeoff to Job Setup</button>
+            <button disabled={isRecoveryPreview} onClick={handlePrepareQuotePreview} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : (quoteSheetOutOfDate ? '#f57c00' : '#111827'), color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
               {quoteSheetOutOfDate ? 'Update from Takeoff' : 'Send to Quote Sheet'}
             </button>
           </div>
@@ -2606,8 +4237,10 @@ export default function AIPlanTakeoffStandalone({
               </div>
               <h4 style={{ margin: 0 }}>Current Sheet {currentPage}</h4>
               {renderScheduleRows('Floor Areas', takeoffSchedule.currentSheet.floorAreas)}
-              {renderScheduleRows('Walls', takeoffSchedule.currentSheet.walls, 'Length')}
-              {renderScheduleRows('Openings', takeoffSchedule.currentSheet.openings, 'Count')}
+              {renderScheduleRows('Exterior Walls', takeoffSchedule.currentSheet.exteriorWalls, 'Length')}
+              {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.currentSheet.interiorWallsAndPlasterboard, 'Length')}
+              {renderScheduleRows('Windows', takeoffSchedule.currentSheet.windows, 'Count')}
+              {renderScheduleRows('Doors', takeoffSchedule.currentSheet.doors, 'Count')}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.currentSheet.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.currentSheet.floorFinishes)}
             </div>
@@ -2615,9 +4248,11 @@ export default function AIPlanTakeoffStandalone({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <h4 style={{ margin: 0 }}>Combined Project Totals</h4>
               {renderScheduleRows('Floor Areas', takeoffSchedule.projectTotals.floorAreas)}
-              {renderScheduleRows('Walls', takeoffSchedule.projectTotals.walls, 'Length')}
+              {renderScheduleRows('Exterior Walls', takeoffSchedule.projectTotals.exteriorWalls, 'Length')}
+              {renderScheduleRows('Interior Walls and Plasterboard', takeoffSchedule.projectTotals.interiorWallsAndPlasterboard, 'Length')}
               {renderScheduleRows('Individual Wall Records', takeoffSchedule.projectTotals.wallRecords, 'Length')}
-              {renderScheduleRows('Openings', takeoffSchedule.projectTotals.openings, 'Count')}
+              {renderScheduleRows('Windows', takeoffSchedule.projectTotals.windows, 'Count')}
+              {renderScheduleRows('Doors', takeoffSchedule.projectTotals.doors, 'Count')}
               {renderScheduleRows('Roof and Eaves', takeoffSchedule.projectTotals.roofAndEaves)}
               {renderScheduleRows('Floor Finishes', takeoffSchedule.projectTotals.floorFinishes)}
               {renderScheduleRows('Rooms and Measurements', takeoffSchedule.projectTotals.rooms)}
@@ -2635,7 +4270,7 @@ export default function AIPlanTakeoffStandalone({
               <div style={{ gridColumn: '1 / -1', background: '#fff', border: '1px solid #d1d5db', borderRadius: '6px', padding: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <strong>Quote Sheet Preview and Mapping</strong>
-                  <button onClick={handleApplyQuotePreview} style={{ padding: '8px 10px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Apply Mapped Quantities</button>
+                  <button disabled={isRecoveryPreview} onClick={handleApplyQuotePreview} style={{ padding: '8px 10px', background: isRecoveryPreview ? '#94a3b8' : '#16a34a', color: '#fff', border: 'none', borderRadius: '4px', cursor: isRecoveryPreview ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>Apply Mapped Quantities</button>
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
@@ -2675,7 +4310,17 @@ export default function AIPlanTakeoffStandalone({
       )}
 
       {/* Main Canvas Area */}
-      <div ref={canvasHostRef} style={{ flex: 1, position: 'relative', background: '#e5e5e5', minWidth: 0 }}>
+      <div
+        ref={canvasHostRef}
+        onPointerDownCapture={isRecoveryPreview ? undefined : handleStageContentPointerDown}
+        onPointerMoveCapture={isRecoveryPreview ? undefined : handleStageContentPointerMove}
+        onPointerUpCapture={isRecoveryPreview ? undefined : handleStageContentPointerUp}
+        onPointerCancelCapture={isRecoveryPreview ? undefined : handleStageContentPointerUp}
+        onMouseDownCapture={isRecoveryPreview ? undefined : handleStageContentPointerDown}
+        onMouseMoveCapture={isRecoveryPreview ? undefined : handleStageContentPointerMove}
+        onMouseUpCapture={isRecoveryPreview ? undefined : handleStageContentPointerUp}
+        style={{ flex: 1, position: 'relative', background: '#e5e5e5', minWidth: 0, touchAction: 'none' }}
+      >
         {planMissingFromSavedJob && !image && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
             <div style={{ background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '24px', maxWidth: '420px', textAlign: 'center', boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)' }}>
@@ -2695,23 +4340,27 @@ export default function AIPlanTakeoffStandalone({
             e.evt.preventDefault();
             const scaleBy = 1.1;
             const stage = stageRef.current;
+            if (!stage) return;
             const oldScale = stage.scaleX();
             const pointer = stage.getPointerPosition();
+            if (!pointer) return;
             const mousePointTo = { x: (pointer.x - stage.x()) / oldScale, y: (pointer.y - stage.y()) / oldScale };
-            const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+            const newScale = Math.max(0.05, Math.min(20, e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy));
+            const nextPos = { x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale };
 
             setStageScale(newScale);
-            setStagePos({ x: pointer.x - mousePointTo.x * newScale, y: pointer.y - mousePointTo.y * newScale });
+            setStagePos(nextPos);
+            rememberCurrentSheetView({ scale: newScale, pos: nextPos });
           }}
-          onClick={handleStageClick}
-          onDblClick={() => {
+          onClick={isRecoveryPreview ? undefined : handleStageClick}
+          onDblClick={isRecoveryPreview ? undefined : () => {
             if (activeTool === 'wall') finalizeCurrentWallRun();
             else if (activeTool === 'eaves') finalizeCurrentEaveRun();
             else if (activeTool === 'floorplan' || activeTool === 'floorcoverings') finalizeCurrentArea();
           }}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          draggable={!calibrationMode && !draggingVertex && !draggingItem && !draggingMeasureId && !draggingEaveId && activeTool !== 'measure' && activeTool !== 'eaves' && activePolyline.length === 0 && activeAreaPolyline.length === 0 && eavePoints.length === 0}
+          onMouseMove={isRecoveryPreview ? undefined : handleMouseMove}
+          onMouseUp={isRecoveryPreview ? undefined : handleMouseUp}
+          draggable={false}
           scaleX={stageScale}
           scaleY={stageScale}
           x={stagePos.x}
@@ -2720,12 +4369,21 @@ export default function AIPlanTakeoffStandalone({
         >
           <Layer
             ref={layerRef}
+            listening={!isRecoveryPreview}
             rotation={rotation}
             x={logicalImageWidth / 2}
             y={logicalImageHeight / 2}
             offsetX={logicalImageWidth / 2}
             offsetY={logicalImageHeight / 2}
           >
+            <Rect
+              x={0}
+              y={0}
+              width={logicalImageWidth || currentPlanPage?.logicalWidth || 0}
+              height={logicalImageHeight || currentPlanPage?.logicalHeight || 0}
+              fill="rgba(0,0,0,0)"
+              listening={!isRecoveryPreview}
+            />
             {image && (
               <KonvaImage
                 image={image}
@@ -2748,8 +4406,10 @@ export default function AIPlanTakeoffStandalone({
                     stroke={isSelected ? '#d32f2f' : fp.stroke}
                     strokeWidth={(isSelected ? 3 : 2) / stageScale}
                     closed
-                    listening={activeTool !== 'floorplan'}
+                    listening={markupListening}
+                    hitStrokeWidth={18 / stageScale}
                     onClick={(e) => {
+                      if (!selectModeActive) return;
                       e.cancelBubble = true;
                       setSelectedFloorplanId(fp.id);
                       setSelectedWallId(null);
@@ -2761,7 +4421,7 @@ export default function AIPlanTakeoffStandalone({
                   <Text
                     x={fp.nodes[0].x}
                     y={fp.nodes[0].y}
-                    text={`${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} m²`}
+                    text={`${fp.label}: ${calculatePolygonAreaM2(fp.nodes, pixelsPerMm).toFixed(2)} mÂ²`}
                     fontSize={13 / stageScale}
                     fill={fp.stroke}
                     fontStyle="bold"
@@ -2782,8 +4442,8 @@ export default function AIPlanTakeoffStandalone({
                           fill="#d32f2f"
                           stroke="#fff"
                           strokeWidth={1.5 / stageScale}
-                          listening={activeTool !== 'floorplan'}
-                          draggable
+                          listening={markupListening}
+                          draggable={selectModeActive}
                           onDragStart={() => setDraggingVertex({ type: 'floorplan', id: fp.id, vertexIndex: idx })}
                           onClick={(e) => {
                             e.cancelBubble = true;
@@ -2798,7 +4458,7 @@ export default function AIPlanTakeoffStandalone({
                           stroke="#fff"
                           strokeWidth={1 / stageScale}
                           opacity={0.7}
-                          listening={activeTool !== 'floorplan'}
+                          listening={markupListening}
                           onClick={(e) => {
                             e.cancelBubble = true;
                             addVertexToPolygon('floorplan', fp.id, idx);
@@ -2823,9 +4483,11 @@ export default function AIPlanTakeoffStandalone({
                     stroke={isSelected ? "#e65100" : cfg.stroke}
                     strokeWidth={(isSelected ? 3 : 2) / stageScale}
                     closed
-                    listening={activeTool !== 'floorplan'}
+                    listening={markupListening}
+                    hitStrokeWidth={18 / stageScale}
                     onClick={(e) => {
                       e.cancelBubble = true;
+                      if (!selectModeActive && areaDrawMode !== 'exclusion') return;
                       if (areaDrawMode === 'exclusion') {
                         setSelectedAreaForExclusion(area.id);
                       } else {
@@ -2845,13 +4507,13 @@ export default function AIPlanTakeoffStandalone({
                       stroke="#d32f2f"
                       strokeWidth={1.5 / stageScale}
                       closed
-                      listening={activeTool !== 'floorplan'}
+                      listening={markupListening}
                     />
                   ))}
                   <Text
                     x={area.nodes[0].x}
                     y={area.nodes[0].y}
-                    text={`${area.category}: ${getNetFloorcoveringAreaM2(area, pixelsPerMm).toFixed(2)} m²`}
+                    text={`${area.category}: ${getNetFloorcoveringAreaM2(area, pixelsPerMm).toFixed(2)} mÂ²`}
                     fontSize={13 / stageScale}
                     fill={cfg.text}
                     fontStyle="bold"
@@ -2872,8 +4534,8 @@ export default function AIPlanTakeoffStandalone({
                           fill="#d32f2f"
                           stroke="#fff"
                           strokeWidth={1.5 / stageScale}
-                          listening={activeTool !== 'floorplan'}
-                          draggable
+                          listening={markupListening}
+                          draggable={selectModeActive}
                           onDragStart={() => setDraggingVertex({ type: 'area', id: area.id, vertexIndex: idx })}
                           onClick={(e) => {
                             e.cancelBubble = true;
@@ -2888,7 +4550,7 @@ export default function AIPlanTakeoffStandalone({
                           stroke="#fff"
                           strokeWidth={1 / stageScale}
                           opacity={0.7}
-                          listening={activeTool !== 'floorplan'}
+                          listening={markupListening}
                           onClick={(e) => {
                             e.cancelBubble = true;
                             addVertexToPolygon('area', area.id, idx);
@@ -2910,12 +4572,14 @@ export default function AIPlanTakeoffStandalone({
                   {polyPoints.length > 0 && (
                     <Line
                       points={polyPoints.flatMap((p) => [p.x, p.y])}
-                      fill={run.category === 'exterior' ? "rgba(0, 85, 255, 0.4)" : "rgba(171, 71, 188, 0.4)"}
+                      fill={run.category === 'exterior' ? (EXTERIOR_WALL_CLASS_COLOURS[run.exteriorType || 'Other'] || EXTERIOR_WALL_CLASS_COLOURS.Other) : "rgba(171, 71, 188, 0.4)"}
                       stroke={isSelected ? "#d32f2f" : (run.category === 'exterior' ? "#0033aa" : "#7b1fa2")}
                       strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
                       closed
-                      listening={activeTool !== 'floorplan'}
+                      listening={markupListening}
+                      hitStrokeWidth={20 / stageScale}
                       onClick={(e) => {
+                        if (!selectModeActive) return;
                         e.cancelBubble = true;
                         setSelectedWallId(run.id);
                         setSelectedFloorplanId(null);
@@ -2930,8 +4594,10 @@ export default function AIPlanTakeoffStandalone({
                     stroke={isSelected ? "#d32f2f" : "#111"}
                     strokeWidth={(isSelected ? 2 : 1) / stageScale}
                     dash={[3 / stageScale, 3 / stageScale]}
-                    listening={activeTool !== 'floorplan'}
+                    listening={markupListening}
+                    hitStrokeWidth={24 / stageScale}
                     onClick={(e) => {
+                      if (!selectModeActive) return;
                       e.cancelBubble = true;
                       setSelectedWallId(run.id);
                       setSelectedFloorplanId(null);
@@ -2945,24 +4611,23 @@ export default function AIPlanTakeoffStandalone({
                     const nextNode = run.nodes[idx + 1];
                     const midX = nextNode ? (node.x + nextNode.x) / 2 : null;
                     const midY = nextNode ? (node.y + nextNode.y) / 2 : null;
+                    const isEndpoint = idx === 0 || idx === run.nodes.length - 1;
 
                     return (
                       <React.Fragment key={`wall-handles-${idx}`}>
-                        <Circle
-                          x={node.x}
-                          y={node.y}
-                          radius={6 / stageScale}
-                          fill="#d32f2f"
-                          stroke="#fff"
-                          strokeWidth={1.5 / stageScale}
-                          listening={activeTool !== 'floorplan'}
-                          draggable
-                          onDragStart={() => setDraggingVertex({ type: 'wall', id: run.id, vertexIndex: idx })}
-                          onClick={(e) => {
-                            e.cancelBubble = true;
-                            if (run.nodes.length > 2) deleteVertexFromPolygon('wall', run.id, idx);
-                          }}
-                        />
+                        {isEndpoint ? (
+                          <Circle
+                            x={node.x}
+                            y={node.y}
+                            radius={6.5 / stageScale}
+                            fill="#d32f2f"
+                            stroke="#fff"
+                            strokeWidth={1.5 / stageScale}
+                            listening={markupListening}
+                            draggable={selectModeActive}
+                            onDragStart={() => setDraggingVertex({ type: 'wall', id: run.id, vertexIndex: idx })}
+                          />
+                        ) : null}
                         {midX !== null && midY !== null && (
                           <Circle
                             x={midX}
@@ -2972,7 +4637,8 @@ export default function AIPlanTakeoffStandalone({
                             stroke="#fff"
                             strokeWidth={1 / stageScale}
                             opacity={0.7}
-                            listening={activeTool !== 'floorplan'}
+                            listening={markupListening}
+                            visible={selectModeActive}
                             onClick={(e) => {
                               e.cancelBubble = true;
                               addVertexToPolygon('wall', run.id, idx);
@@ -2989,16 +4655,19 @@ export default function AIPlanTakeoffStandalone({
             {/* Openings (Doors/Windows) with draggable capability */}
             {activePageOpenings.map((op, idx) => {
               const tagPrefix = op.type === 'window' ? 'W' : 'D';
-              const dynamicTag = `${tagPrefix}${idx + 1}: ${op.itemTag.split(': ')[1] || op.itemTag}`;
+              const itemTag = String(op.itemTag || op.label || `${tagPrefix}${idx + 1}`);
+              const dynamicTag = `${tagPrefix}${idx + 1}: ${itemTag.includes(': ') ? itemTag.split(': ')[1] : itemTag}`;
               const isSelected = op.id === selectedOpeningId;
+              const openingWidthPx = Math.max((Number(op.widthMm) || 0) * (pixelsPerMm || 1), 22 / stageScale);
               return (
                 <Group
                   key={op.id}
                   x={op.x}
                   y={op.y}
-                  listening={activeTool !== 'floorplan'}
-                  draggable
+                  listening={markupListening}
+                  draggable={!isRecoveryPreview && selectModeActive}
                   onDragStart={() => {
+                    if (!selectModeActive) return;
                     setSelectedOpeningId(op.id);
                     setSelectedFloorplanId(null);
                     setSelectedWallId(null);
@@ -3007,21 +4676,22 @@ export default function AIPlanTakeoffStandalone({
                     setDraggingItem({ type: 'opening', id: op.id });
                   }}
                   onClick={(e) => {
+                    if (!selectModeActive) return;
                     e.cancelBubble = true;
                     setSelectedOpeningId(op.id);
                   }}
                 >
                   <Rect
-                    x={-((op.widthMm * (pixelsPerMm || 1)) / 2)}
+                    x={-(openingWidthPx / 2)}
                     y={-10 / stageScale}
-                    width={op.widthMm * (pixelsPerMm || 1)}
+                    width={openingWidthPx}
                     height={20 / stageScale}
                     fill={isSelected ? '#ffa726' : (op.type === 'window' ? '#ffe0b2' : '#ffcdd2')}
                     stroke={isSelected ? '#e65100' : (op.type === 'window' ? '#e65100' : '#c62828')}
                     strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
                   />
                   <Text
-                    x={-((op.widthMm * (pixelsPerMm || 1)) / 2)}
+                    x={-(openingWidthPx / 2)}
                     y={-24 / stageScale}
                     text={dynamicTag}
                     fontSize={11 / stageScale}
@@ -3104,6 +4774,7 @@ export default function AIPlanTakeoffStandalone({
               const distPx = Math.hypot(p2.x - p1.x, p2.y - p1.y);
               const distMm = pixelsPerMm ? distPx / pixelsPerMm : 0;
 
+              const isSelected = meas.id === selectedMeasurementId;
               return (
                 <Group key={meas.id}>
                   {(off.x !== 0 || off.y !== 0) && (
@@ -3114,10 +4785,21 @@ export default function AIPlanTakeoffStandalone({
                   )}
                   <Line
                     points={[offP1.x, offP1.y, offP2.x, offP2.y]}
-                    stroke="#2e7d32"
-                    strokeWidth={2 / stageScale}
-                    draggable
-                    onDragStart={() => setDraggingMeasureId(meas.id)}
+                    stroke={isSelected ? '#0d47a1' : '#2e7d32'}
+                    strokeWidth={(isSelected ? 2.8 : 2) / stageScale}
+                    draggable={selectModeActive}
+                    hitStrokeWidth={24 / stageScale}
+                    onDragStart={() => {
+                      if (!selectModeActive) return;
+                      setSelectedMeasurementId(meas.id);
+                      setDraggingMeasureId(meas.id);
+                      pointerEditInProgressRef.current = true;
+                    }}
+                    onClick={(e) => {
+                      if (!selectModeActive) return;
+                      e.cancelBubble = true;
+                      setSelectedMeasurementId(meas.id);
+                    }}
                   />
                   <Circle x={offP1.x} y={offP1.y} radius={3.5 / stageScale} fill="#2e7d32" />
                   <Circle x={offP2.x} y={offP2.y} radius={3.5 / stageScale} fill="#2e7d32" />
@@ -3127,10 +4809,20 @@ export default function AIPlanTakeoffStandalone({
                     y={midY - MEASURE_LABEL_OFFSET / stageScale}
                     text={pixelsPerMm ? `${distMm.toFixed(0)} mm` : `${distPx.toFixed(1)} px`}
                     fontSize={MEASURE_LABEL_FONT_SIZE / stageScale}
-                    fill="#1b5e20"
+                    fill={isSelected ? '#0d47a1' : '#1b5e20'}
                     fontStyle="bold"
-                    draggable
-                    onDragStart={() => setDraggingMeasureId(meas.id)}
+                    draggable={selectModeActive}
+                    onDragStart={() => {
+                      if (!selectModeActive) return;
+                      setSelectedMeasurementId(meas.id);
+                      setDraggingMeasureId(meas.id);
+                      pointerEditInProgressRef.current = true;
+                    }}
+                    onClick={(e) => {
+                      if (!selectModeActive) return;
+                      e.cancelBubble = true;
+                      setSelectedMeasurementId(meas.id);
+                    }}
                   />
                 </Group>
               );
@@ -3153,7 +4845,7 @@ export default function AIPlanTakeoffStandalone({
                       stroke={isSelected ? "#006064" : "#00838f"}
                       strokeWidth={(isSelected ? 2.5 : 1.5) / stageScale}
                       closed
-                      listening={activeTool !== 'floorplan'}
+                      listening={markupListening}
                       onClick={(e) => {
                         e.cancelBubble = true;
                         setSelectedEaveId(eave.id);
@@ -3169,7 +4861,7 @@ export default function AIPlanTakeoffStandalone({
                     stroke={isSelected ? "#004d40" : "#006064"}
                     strokeWidth={(isSelected ? 2 : 1.5) / stageScale}
                     dash={[3 / stageScale, 3 / stageScale]}
-                    listening={activeTool !== 'floorplan'}
+                    listening={markupListening}
                     onClick={(e) => {
                       e.cancelBubble = true;
                       setSelectedEaveId(eave.id);
@@ -3203,7 +4895,7 @@ export default function AIPlanTakeoffStandalone({
                           fill="#d32f2f"
                           stroke="#fff"
                           strokeWidth={1.5 / stageScale}
-                          listening={activeTool !== 'floorplan'}
+                          listening={markupListening}
                           draggable
                           onDragStart={() => setDraggingVertex({ type: 'eaves', id: eave.id, vertexIndex: idx })}
                           onClick={(e) => {
@@ -3220,7 +4912,7 @@ export default function AIPlanTakeoffStandalone({
                             stroke="#fff"
                             strokeWidth={1 / stageScale}
                             opacity={0.75}
-                            listening={activeTool !== 'floorplan'}
+                            listening={markupListening}
                             onClick={(e) => {
                               e.cancelBubble = true;
                               addVertexToPolygon('eaves', eave.id, idx);

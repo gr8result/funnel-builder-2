@@ -1,0 +1,215 @@
+function GuidedEntryDoorWorkflow({
+  requirement,
+  products,
+  masterProductCount = 0,
+  enabledProductCount = 0,
+  runningTotals,
+  entryDoorStep,
+  entryDoorSupplier,
+  entryDoorRange,
+  entryDoorProductCode,
+  entryDoorSize,
+  entryDoorFinish,
+  entryDoorGlazing,
+  onEntryDoorStepChange,
+  onEntryDoorSupplierChange,
+  onEntryDoorRangeChange,
+  onEntryDoorProductCodeChange,
+  onEntryDoorSizeChange,
+  onEntryDoorFinishChange,
+  onEntryDoorGlazingChange,
+  onSelectProduct,
+}) {
+  const suppliers = entryDoorSupplierOptions(products);
+  const ranges = entryDoorRangeOptions(products, entryDoorSupplier);
+  const designs = entryDoorDesignOptions(products, entryDoorSupplier, entryDoorRange);
+  const selectedProduct = products.find((product) => entryDoorProductCodeFor(product) === entryDoorProductCode) || null;
+  const sizes = entryDoorAttributeOptions(selectedProduct, "sizes", selectedProduct?.size);
+  const finishes = entryDoorAttributeOptions(selectedProduct, "finishOptions", selectedProduct?.finish || selectedProduct?.colour);
+  const glazings = entryDoorAttributeOptions(selectedProduct, "glazingOptions", "");
+  const currentStep = entryDoorStep || "supplier";
+  const progressSteps = [
+    ["supplier", "Supplier", entryDoorSupplier],
+    ["range", "Range", entryDoorRange],
+    ["design", "Door / Design", entryDoorProductCode],
+    ["size", "Size", entryDoorSize],
+    ["finish", "Colour / Finish", entryDoorFinish],
+    ...(glazings.length ? [["glazing", "Glass", entryDoorGlazing]] : []),
+  ];
+  const resetAfterSupplier = () => {
+    onEntryDoorRangeChange("");
+    onEntryDoorProductCodeChange("");
+    onEntryDoorSizeChange("");
+    onEntryDoorFinishChange("");
+    onEntryDoorGlazingChange("");
+  };
+  const resetAfterRange = () => {
+    onEntryDoorProductCodeChange("");
+    onEntryDoorSizeChange("");
+    onEntryDoorFinishChange("");
+    onEntryDoorGlazingChange("");
+  };
+  const nextAfterDesign = (product) => {
+    const nextSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const nextFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
+    const nextGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
+    if (nextSizes.length) return "size";
+    if (nextFinishes.length) return "finish";
+    if (nextGlazings.length) return "glazing";
+    return "finish";
+  };
+  const saveSelection = (patch = {}) => {
+    const product = patch.product || selectedProduct;
+    if (!product) return;
+    const nextSize = patch.size ?? entryDoorSize;
+    const nextFinish = patch.finish ?? entryDoorFinish;
+    const nextGlazing = patch.glazing ?? entryDoorGlazing;
+    const requiredSizes = entryDoorAttributeOptions(product, "sizes", product?.size);
+    const requiredFinishes = entryDoorAttributeOptions(product, "finishOptions", product?.finish || product?.colour);
+    const requiredGlazings = entryDoorAttributeOptions(product, "glazingOptions", "");
+    if ((requiredSizes.length && !nextSize) || (requiredFinishes.length && !nextFinish) || (requiredGlazings.length && !nextGlazing)) return;
+    const entity = product.metadata?.productEntity || product;
+    const patchedEntity = {
+      ...entity,
+      size: nextSize,
+      finish: nextFinish,
+      colour: nextFinish,
+      glazing: nextGlazing,
+      attributes: {
+        ...(entity.attributes || {}),
+        selectedSize: nextSize,
+        selectedFinish: nextFinish,
+        selectedGlazing: nextGlazing,
+      },
+    };
+    onSelectProduct(requirement, {
+      ...product,
+      size: nextSize,
+      finish: nextFinish,
+      colour: nextFinish,
+      glazing: nextGlazing,
+      metadata: {
+        ...(product.metadata || {}),
+        productEntity: patchedEntity,
+      },
+    });
+  };
+
+  return (
+    <section className="guidedShell" data-testid="guided-entry-door-workflow" data-entry-door-flow="supplier-range-design-size-finish-glazing-save">
+      <GuidedBudgetDock totals={runningTotals} />
+      <div className="guidedProductLayout entryDoorLayout">
+        <aside className="guidedProgressMenu" data-testid="guided-entry-door-hierarchy">
+          <h2>Entry Doors</h2>
+          {progressSteps.map(([step, label, value]) => (
+            <button
+              key={step}
+              type="button"
+              className={`guidedProgressItem ${currentStep === step ? "active" : ""} ${value ? "complete" : ""}`}
+              disabled={(step === "range" && !entryDoorSupplier) || (step === "design" && !entryDoorRange) || (["size", "finish", "glazing"].includes(step) && !selectedProduct)}
+              onClick={() => onEntryDoorStepChange(step)}
+            >
+              <GuidedStatusDot status={value ? "complete" : "not_started"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </aside>
+        <main className="guidedProductPanel entryDoorShowroom">
+          <div className="guidedSectionHeader">
+            <span>Exterior / Entry Doors</span>
+            <strong>{entryDoorHeaderForStep(currentStep)}</strong>
+            <em>{products.length ? `${products.length} enabled exterior entry door design${products.length === 1 ? "" : "s"}` : "Import real Hume and Corinthian entry door products before client selection."}</em>
+          </div>
+          {!products.length ? (
+            <GuidedEntryDoorEmptyCatalogue masterProductCount={masterProductCount} enabledProductCount={enabledProductCount} />
+          ) : currentStep === "supplier" ? (
+            <div className="guidedSupplierGrid" data-testid="entry-door-supplier-step">
+              {suppliers.map((supplier) => (
+                <button key={supplier.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onEntryDoorSupplierChange(supplier.label);
+                  resetAfterSupplier();
+                  onEntryDoorStepChange("range");
+                }}>
+                  <img src={supplier.image} alt="" />
+                  <span>{supplier.label}</span>
+                  <strong>{supplier.count} design{supplier.count === 1 ? "" : "s"}</strong>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "range" ? (
+            <div className="guidedSupplierGrid" data-testid="entry-door-range-step">
+              {ranges.map((range) => (
+                <button key={range.key} type="button" className="guidedSupplierCard" onClick={() => {
+                  onEntryDoorRangeChange(range.label);
+                  resetAfterRange();
+                  onEntryDoorStepChange("design");
+                }}>
+                  <img src={range.image} alt="" />
+                  <span>{range.label}</span>
+                  <strong>{range.count} door design{range.count === 1 ? "" : "s"}</strong>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "design" ? (
+            <div className="guidedProductGrid" data-testid="entry-door-design-step">
+              {designs.map((product) => (
+                <button key={product.id} type="button" className="guidedProductCard entryDoorDesignCard" onClick={() => {
+                  onEntryDoorProductCodeChange(entryDoorProductCodeFor(product));
+                  onEntryDoorSizeChange("");
+                  onEntryDoorFinishChange("");
+                  onEntryDoorGlazingChange("");
+                  onEntryDoorStepChange(nextAfterDesign(product));
+                }}>
+                  <img src={product.imageUrl || requirementImage(requirement)} alt={product.productName} />
+                  <div>
+                    <span>{product.range || product.supplier}</span>
+                    <strong>{product.productName}</strong>
+                    <em>Model {product.model || "not recorded"}</em>
+                    <p>{product.description || "Exterior entry door design."}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : currentStep === "size" ? (
+            <EntryDoorOptionStep
+              testId="entry-door-size-step"
+              product={selectedProduct}
+              options={sizes}
+              selectedValue={entryDoorSize}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorSizeChange(value);
+                onEntryDoorStepChange(finishes.length ? "finish" : glazings.length ? "glazing" : "finish");
+              }}
+            />
+          ) : currentStep === "finish" ? (
+            <EntryDoorOptionStep
+              testId="entry-door-finish-step"
+              product={selectedProduct}
+              options={finishes}
+              selectedValue={entryDoorFinish}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorFinishChange(value);
+                if (glazings.length) onEntryDoorStepChange("glazing");
+                else saveSelection({ finish: value });
+              }}
+            />
+          ) : (
+            <EntryDoorOptionStep
+              testId="entry-door-glazing-step"
+              product={selectedProduct}
+              options={glazings}
+              selectedValue={entryDoorGlazing}
+              labelFor={(value) => value}
+              onSelect={(value) => {
+                onEntryDoorGlazingChange(value);
+                saveSelection({ glazing: value });
+              }}
+            />
+          )}
+        </main>
+      </div>
+    </section>
+  );
+}

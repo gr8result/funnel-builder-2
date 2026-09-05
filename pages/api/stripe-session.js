@@ -4,6 +4,7 @@
 import Stripe from 'stripe';
 import { MODULES, DISCOUNT_TIERS } from '../../lib/modules-catalog';
 import { withAuth } from "../../lib/withWorkspace";
+import { demoSimulationResult } from "../../lib/demoWorkspace";
 
 async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
@@ -14,6 +15,22 @@ async function handler(req, res) {
 
     // ===== READ AFFILIATE REF =====
     const affiliate_ref = req.body?.affiliate_ref || null;
+    if (req.isDemoWorkspace) {
+      const result = await demoSimulationResult({
+        workspaceId: req.workspaceId,
+        actionType: "stripe-session",
+        provider: "stripe",
+        target: req.body?.product?.id || (Array.isArray(req.body?.module_ids) ? req.body.module_ids.join(",") : "module_checkout"),
+        payload: req.body || {},
+        userId: req.user?.id,
+        message: "Demo Stripe session simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...result,
+        id: `demo_checkout_${Date.now()}`,
+        url: `${origin}/checkout/success?demo=1&workspace_id=${encodeURIComponent(req.workspaceId || "")}`,
+      });
+    }
 
     // Dynamic product checkout
     if (req.body?.product) {

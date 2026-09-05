@@ -20,12 +20,14 @@
 //      authentication plus entitlement does NOT give tenant isolation: every
 //      Freedom row is currently global. Rather than serve global financial rows
 //      to everyone holding a freedom entitlement, data routes FAIL CLOSED unless
-//      the platform can prove a single owner holds the entitlement. See
-//      resolveSoleFreedomOwner below.
+//      the platform can prove a single owner holds the entitlement. Verified
+//      platform administrators use the existing adminUsers policy instead.
+//      See resolveSoleFreedomOwner below for customer data access.
 //
 // Dependencies are injected so this is testable without a database.
 
 import { resolveEntitlements } from "../subscription-entitlements/resolveEntitlements.js";
+import { isDeveloperEmail } from "../../lib/adminUsers.js";
 
 export const FREEDOM_MODULE_CODE = "freedom";
 
@@ -56,7 +58,7 @@ async function defaultDeps() {
     async getUserFromToken(token) {
       const { data, error } = await supabaseAdmin.auth.getUser(token);
       if (error || !data?.user?.id) return null;
-      return { id: data.user.id };
+      return { id: data.user.id, email: data.user.email, emailConfirmedAt: data.user.email_confirmed_at };
     },
     async listWorkspaceIdsForUser(userId) {
       const { data } = await supabaseAdmin
@@ -148,6 +150,12 @@ export async function authoriseFreedomRequest(req, { touchesData = true, deps } 
   const user = await d.getUserFromToken(token);
   if (!user?.id) return { ok: false, ...DENY.BAD_TOKEN };
 
+  // Use the same platform-admin policy as the authenticated demo-company APIs.
+  // Only Supabase's verified identity is consulted; request emails/roles are ignored.
+  if (user.emailConfirmedAt && isDeveloperEmail(user.email)) {
+    return { ok: true, auth: { userId: user.id, workspaceIds: [], ownerVerified: true, platformAdmin: true } };
+  }
+
   // Identity comes from the token, never from the request payload.
   const workspaceIds = (await d.listWorkspaceIdsForUser(user.id)) || [];
 
@@ -180,11 +188,15 @@ export async function authoriseFreedomRequest(req, { touchesData = true, deps } 
  */
 export function withFreedomApi(handler, options = {}) {
   return async function guardedFreedomHandler(req, res) {
-    const result = await authoriseFreedomRequest(req, options);
-    if (!result.ok) {
-      return res.status(result.status).json({ ok: false, error: result.error });
+    try {
+      const result = await authoriseFreedomRequest(req, options);
+      if (!result.ok) {
+        return res.status(result.status).json({ ok: false, error: result.error });
+      }
+      req.freedomAuth = result.auth;
+      return await handler(req, res);
+    } catch {
+      return res.status(500).json({ ok: false, error: "Freedom could not complete the request. Please retry." });
     }
-    req.freedomAuth = result.auth;
-    return handler(req, res);
   };
 }

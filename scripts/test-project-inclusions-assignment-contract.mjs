@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { shapeProjectInclusionsDocument } from "../lib/builders/projectInclusionsAssignment.js";
+
+const assignmentSource = readFileSync(new URL("../lib/builders/projectInclusionsAssignment.js", import.meta.url), "utf8");
+const shapeStart = assignmentSource.indexOf("export function shapeProjectInclusionsDocument");
+const shapeEnd = assignmentSource.indexOf("\nexport async function getAssignedProjectInclusions", shapeStart);
+assert.ok(shapeStart >= 0 && shapeEnd > shapeStart, "shapeProjectInclusionsDocument source is present.");
+const shapeProjectInclusionsDocument = new Function(
+  `${assignmentSource.slice(shapeStart, shapeEnd).replace("export function", "function")}; return shapeProjectInclusionsDocument;`,
+)();
 
 const standard = shapeProjectInclusionsDocument({
   id: "doc-standard-v1",
@@ -60,5 +67,17 @@ const orderMatch = registrySource.match(/PROJECT_ESTIMATE_EXPORT_ORDER[\s\S]*?=\
 assert.ok(orderMatch, "Project Estimate export order is defined.");
 const order = Array.from(orderMatch[1].matchAll(/pageId:\s*"([^"]+)"|slotId:\s*"([^"]+)"/g)).map((match) => match[1] || match[2]);
 assert.deepEqual(order, ["cover", "estimateSummary", "about", "inclusions", "plans", "pricingSummary", "importantEstimateNotice", "acceptance"]);
+
+assert.ok(assignmentSource.includes('NO_ACTIVE_STANDARD_INCLUSIONS_MASTER_CODE = "NO_ACTIVE_STANDARD_INCLUSIONS_MASTER"'), "Missing-master error code is defined.");
+assert.ok(assignmentSource.includes("error.code = NO_ACTIVE_STANDARD_INCLUSIONS_MASTER_CODE"), "Missing-master assignment error should carry a code.");
+assert.ok(assignmentSource.includes("error.statusCode = 409"), "Missing-master assignment error should carry a conflict status.");
+
+const apiSource = readFileSync(new URL("../pages/api/builders/project-inclusions.js", import.meta.url), "utf8");
+assert.ok(apiSource.includes("NO_ACTIVE_STANDARD_INCLUSIONS_MASTER_CODE"), "Project inclusions API should expose missing master as a typed response.");
+assert.ok(apiSource.includes("? 409"), "Missing active Standard Inclusions master should not be returned as a generic server error.");
+
+const workbookSource = readFileSync(new URL("../components/estimate-builder/EstimateBuilderWorkbook.js", import.meta.url), "utf8");
+assert.ok(workbookSource.includes('payload.code === "NO_ACTIVE_STANDARD_INCLUSIONS_MASTER"'), "Estimate Builder should handle missing Standard Inclusions master without throwing through the dev overlay.");
+assert.ok(workbookSource.includes("Upload or export a Standard Inclusions master PDF before assigning it to this project."), "Estimate Builder should show actionable missing-master guidance.");
 
 console.log("Project inclusions assignment contract passed.");

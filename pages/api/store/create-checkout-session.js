@@ -6,6 +6,7 @@
 
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { demoSimulationResult, getRequestDemoState, requestWorkspaceId } from "../../../lib/demoWorkspace";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2023-10-16",
@@ -23,6 +24,8 @@ export default async function handler(req, res) {
 
   try {
     const { product_id, user_id, contact_id, quantity = 1 } = req.body;
+    const workspaceId = requestWorkspaceId(req);
+    const demoState = await getRequestDemoState(req);
 
     // For this simple test, product_id is optional – we won't look it up in Supabase yet
     if (!user_id || !contact_id) {
@@ -66,6 +69,23 @@ export default async function handler(req, res) {
       return res
         .status(500)
         .json({ error: "Failed to create checkout session" });
+    }
+
+    if (demoState.isDemo) {
+      const result = await demoSimulationResult({
+        workspaceId,
+        actionType: "store-checkout",
+        provider: "stripe",
+        target: product_id || "test-product",
+        payload: { product_id, user_id, contact_id, quantity, app_checkout_session_id: sessionRow.id },
+        userId: user_id,
+        message: "Demo store checkout simulated - no Stripe session created.",
+      });
+      return res.status(200).json({
+        ...result,
+        id: `demo_store_checkout_${sessionRow.id}`,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout/success?demo=1&workspace_id=${encodeURIComponent(workspaceId)}`,
+      });
     }
 
     // 2) Create Stripe Checkout Session (hosted Stripe page)

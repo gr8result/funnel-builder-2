@@ -1,0 +1,1888 @@
+[
+  "$",
+  "$L1e",
+  null,
+  {
+    "productData": {
+      "_id": "PR_AS",
+      "attributeFilters": [
+        {
+          "_key": "filter-material",
+          "attribute": {
+            "_ref": "material",
+            "name": "Material"
+          },
+          "displayText": "Material",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-species",
+          "attribute": {
+            "_ref": "species",
+            "name": "Species"
+          },
+          "displayText": "Species",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-size",
+          "attribute": {
+            "_ref": "size",
+            "name": "Size"
+          },
+          "displayText": "Size",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-length",
+          "attribute": {
+            "_ref": "length",
+            "name": "Length"
+          },
+          "displayText": "Length",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-pack-size",
+          "attribute": {
+            "_ref": "pack-size",
+            "name": "Pack Size"
+          },
+          "displayText": "Pack Size",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-material",
+          "attribute": {
+            "_ref": "material",
+            "name": "Material"
+          },
+          "displayText": "Material",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-species",
+          "attribute": {
+            "_ref": "species",
+            "name": "Species"
+          },
+          "displayText": "Species",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-size",
+          "attribute": {
+            "_ref": "size",
+            "name": "Size"
+          },
+          "displayText": "Size",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-length",
+          "attribute": {
+            "_ref": "length",
+            "name": "Length"
+          },
+          "displayText": "Length",
+          "displayType": "selection"
+        },
+        {
+          "_key": "filter-pack-size",
+          "attribute": {
+            "_ref": "pack-size",
+            "name": "Pack Size"
+          },
+          "displayText": "Pack Size",
+          "displayType": "selection"
+        }
+      ],
+      "buttons": null,
+      "category": {
+        "_ref": "57a18636-2c99-48dc-8ef8-5866c30c1b13",
+        "name": "Mouldings"
+      },
+      "customSeo": {
+        "additionalMetaTags": null,
+        "metaDescription": "Porta’s Pencil round architraves and skirting feature a smooth, rounded edge for a simple, modern finish around doors, windows and walls.",
+        "metaImage": {
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+          "height": 800,
+          "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine",
+          "width": 800
+        },
+        "metaTitle": "Pencil Round | Architraves & Skirting | Timber and MDF",
+        "nofollowAttributes": null,
+        "openGraph": {
+          "description": "Porta’s Pencil round architraves and skirting feature a smooth, rounded edge for a simple, modern finish around doors, windows and walls.",
+          "image": {
+            "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+            "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+          },
+          "siteName": null,
+          "title": "Pencil Round | Architraves & Skirting | Timber and MDF",
+          "url": null
+        },
+        "seoKeywords": [
+          "Architraves & Skirtings",
+          "Porta Skirtings",
+          "Porta Architraves",
+          "Pencil Round",
+          "Round Edge Moulding",
+          "General Purpose Mouldings"
+        ]
+      },
+      "description": [
+        {
+          "_key": "HL2IVjEQ",
+          "_type": "block",
+          "children": [
+            {
+              "_key": "h2m21xJg",
+              "_type": "span",
+              "text": "A smooth, rounded-edge profile in timber and MDF, designed for a clean, understated finish around doors, windows and skirting."
+            }
+          ],
+          "markDefs": null,
+          "style": "normal"
+        }
+      ],
+      "documentBlock": {
+        "_type": "documentBlock",
+        "backgroundColor": "bg-accent",
+        "bynderImage": {
+          "__typename": "Image",
+          "_type": "bynder.asset",
+          "aspectRatio": 0.9993337774816788,
+          "createdAt": "2026-05-12T08:27:45Z",
+          "datUrl": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+          "databaseId": "8996AD6C-0AA6-4C21-A0D08C372F0A9860",
+          "derivatives": {
+            "thumbnail": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/thul-Porta-Global-Timber-Mouldings-Brochure",
+            "webImage": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/webimage-Porta-Global-Timber-Mouldings-Brochure"
+          },
+          "description": "",
+          "extensions": [
+            "jpg"
+          ],
+          "files": {
+            "mini": {
+              "fileSize": null,
+              "height": 80,
+              "url": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/mini-Porta-Global-Timber-Mouldings-Brochure",
+              "width": 80
+            },
+            "thumbnail": {
+              "fileSize": null,
+              "height": 250,
+              "url": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/thul-Porta-Global-Timber-Mouldings-Brochure",
+              "width": 250
+            },
+            "transformBaseUrl": {
+              "fileSize": null,
+              "height": null,
+              "url": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+              "width": null
+            },
+            "webImage": {
+              "fileSize": null,
+              "height": 799,
+              "url": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/webimage-Porta-Global-Timber-Mouldings-Brochure",
+              "width": 800
+            }
+          },
+          "height": 799,
+          "id": "KEFzc2V0X2lkIDg5OTZBRDZDLTBBQTYtNEMyMS1BMEQwOEMzNzJGMEE5ODYwKQ==",
+          "name": "Porta Global Timber Mouldings Brochure",
+          "originalUrl": null,
+          "previewImg": "https://borg.bynder.com/asset/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/thumbnail/webimage-Porta-Global-Timber-Mouldings-Brochure",
+          "previewUrl": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+          "publishedAt": null,
+          "selectedUrl": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+          "tags": [],
+          "textMetaproperties": [
+            {
+              "_key": "8996AD6C-0AA6-4C21-A0D08C372F0A9860-alt-text",
+              "name": "Alt_text",
+              "value": "Porta timber mouldings brochure cover"
+            }
+          ],
+          "type": "IMAGE",
+          "updatedAt": "2026-05-12T08:27:45Z",
+          "url": "https://borg.bynder.com/media/?mediaId=8996AD6C-0AA6-4C21-A0D08C372F0A9860",
+          "videoUrl": null,
+          "width": 800
+        },
+        "documentSections": [
+          {
+            "_key": "kQheBwXE",
+            "_type": "documentSection",
+            "documentItems": [
+              {
+                "_key": "uFwBSBNp",
+                "_type": "documentItem",
+                "bynderDocument": {
+                  "__typename": "Document",
+                  "_type": "bynder.asset",
+                  "aspectRatio": 1.4166666666666667,
+                  "createdAt": "2026-05-11T05:13:58Z",
+                  "datUrl": "https://borg.bynder.com/transform/70679e74-af3d-44ef-a384-365654e0adf2/por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                  "databaseId": "70679E74-AF3D-44EF-A384365654E0ADF2",
+                  "derivatives": {
+                    "thumbnail": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/thumbnail/thul-por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                    "webImage": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/thumbnail/webimage-por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital"
+                  },
+                  "description": "Competition assets",
+                  "extensions": [
+                    "pdf"
+                  ],
+                  "files": {
+                    "original": {
+                      "fileSize": 3059587,
+                      "height": 595,
+                      "url": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital.pdf",
+                      "width": 420
+                    },
+                    "thumbnail": {
+                      "fileSize": null,
+                      "height": null,
+                      "url": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/thumbnail/thul-por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                      "width": null
+                    },
+                    "webImage": {
+                      "fileSize": null,
+                      "height": null,
+                      "url": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/thumbnail/webimage-por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                      "width": null
+                    }
+                  },
+                  "height": 595,
+                  "id": "KEFzc2V0X2lkIDcwNjc5RTc0LUFGM0QtNDRFRi1BMzg0MzY1NjU0RTBBREYyKQ==",
+                  "name": "por.04.1_A5 Timber Mouldings Range Brochure 01 2026 24pp V11 Digital",
+                  "originalUrl": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital.pdf",
+                  "previewImg": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/thumbnail/webimage-por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                  "previewUrl": "https://borg.bynder.com/transform/70679e74-af3d-44ef-a384-365654e0adf2/por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital",
+                  "publishedAt": "2026-04-29T02:14:34Z",
+                  "selectedUrl": "https://borg.bynder.com/asset/70679e74-af3d-44ef-a384-365654e0adf2/por-04-1_A5-Timber-Mouldings-Range-Brochure-01-2026-24pp-V11-Digital.pdf",
+                  "tags": [],
+                  "textMetaproperties": [],
+                  "type": "DOCUMENT",
+                  "updatedAt": "2026-05-11T08:31:24Z",
+                  "url": "https://borg.bynder.com/media/?mediaId=70679E74-AF3D-44EF-A384365654E0ADF2",
+                  "videoUrl": null,
+                  "width": 420
+                },
+                "file": {
+                  "_ref": "23f365b4-c98d-43fb-9b9e-522ff383a4e2",
+                  "_type": "reference"
+                },
+                "label": "Timber Mouldings Range Brochure",
+                "linkType": "file"
+              },
+              {
+                "_key": "GKJAzaKB",
+                "_type": "documentItem",
+                "bynderDocument": {
+                  "__typename": "Document",
+                  "_type": "bynder.asset",
+                  "aspectRatio": 1.4134453781512606,
+                  "createdAt": "2026-05-11T05:13:59Z",
+                  "datUrl": "https://borg.bynder.com/transform/3e468124-299a-4a8c-b194-4c4ecd4d7a92/por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                  "databaseId": "3E468124-299A-4A8C-B1944C4ECD4D7A92",
+                  "derivatives": {
+                    "thumbnail": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/thumbnail/thul-por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                    "webImage": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/thumbnail/webimage-por-04-1-Primed-MDF-Mouldings-Range-A4-V16"
+                  },
+                  "description": "Competition assets",
+                  "extensions": [
+                    "pdf"
+                  ],
+                  "files": {
+                    "original": {
+                      "fileSize": 4798231,
+                      "height": 841,
+                      "url": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/por-04-1-Primed-MDF-Mouldings-Range-A4-V16.pdf",
+                      "width": 595
+                    },
+                    "thumbnail": {
+                      "fileSize": null,
+                      "height": null,
+                      "url": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/thumbnail/thul-por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                      "width": null
+                    },
+                    "webImage": {
+                      "fileSize": null,
+                      "height": null,
+                      "url": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/thumbnail/webimage-por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                      "width": null
+                    }
+                  },
+                  "height": 841,
+                  "id": "KEFzc2V0X2lkIDNFNDY4MTI0LTI5OUEtNEE4Qy1CMTk0NEM0RUNENEQ3QTkyKQ==",
+                  "name": "por-04.1-Primed MDF Mouldings Range A4 V16",
+                  "originalUrl": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/por-04-1-Primed-MDF-Mouldings-Range-A4-V16.pdf",
+                  "previewImg": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/thumbnail/webimage-por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                  "previewUrl": "https://borg.bynder.com/transform/3e468124-299a-4a8c-b194-4c4ecd4d7a92/por-04-1-Primed-MDF-Mouldings-Range-A4-V16",
+                  "publishedAt": "2026-04-24T04:20:11Z",
+                  "selectedUrl": "https://borg.bynder.com/asset/3e468124-299a-4a8c-b194-4c4ecd4d7a92/por-04-1-Primed-MDF-Mouldings-Range-A4-V16.pdf",
+                  "tags": [],
+                  "textMetaproperties": [],
+                  "type": "DOCUMENT",
+                  "updatedAt": "2026-05-11T08:31:12Z",
+                  "url": "https://borg.bynder.com/media/?mediaId=3E468124-299A-4A8C-B1944C4ECD4D7A92",
+                  "videoUrl": null,
+                  "width": 595
+                },
+                "file": {
+                  "_ref": "daebc254-65d7-44eb-a19a-22a2db0a5fef",
+                  "_type": "reference"
+                },
+                "label": "Pre-primed MDF Mouldings Range Brochure",
+                "linkType": "file"
+              }
+            ],
+            "heading": "Brochure",
+            "isVisible": true
+          }
+        ],
+        "image": {
+          "_type": "image",
+          "alt": "Porta timber mouldings brochure cover",
+          "asset": {
+            "_id": "KEFzc2V0X2lkIDg5OTZBRDZDLTBBQTYtNEMyMS1BMEQwOEMzNzJGMEE5ODYwKQ==",
+            "_type": "reference",
+            "metadata": {
+              "dimensions": {
+                "aspectRatio": 0.9993337774816788,
+                "height": 799,
+                "width": 800
+              }
+            },
+            "url": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "Porta timber mouldings brochure cover",
+            "aspectRatio": 0.9993337774816788,
+            "description": "",
+            "height": 799,
+            "id": "KEFzc2V0X2lkIDg5OTZBRDZDLTBBQTYtNEMyMS1BMEQwOEMzNzJGMEE5ODYwKQ==",
+            "isSvg": false,
+            "name": "Porta Global Timber Mouldings Brochure",
+            "selectedUrl": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+            "url": "https://borg.bynder.com/media/?mediaId=8996AD6C-0AA6-4C21-A0D08C372F0A9860",
+            "width": 800
+          },
+          "height": 799,
+          "title": "Porta Global Timber Mouldings Brochure",
+          "url": "https://borg.bynder.com/transform/8996ad6c-0aa6-4c21-a0d0-8c372f0a9860/Porta-Global-Timber-Mouldings-Brochure",
+          "width": 800
+        },
+        "imagePosition": "left",
+        "isEnabled": true
+      },
+      "headline": null,
+      "headlineTitle": null,
+      "isIncludedContactSupport": true,
+      "name": "Pencil Round",
+      "primaryImage": {
+        "_key": "primary",
+        "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+        "asset": {
+          "_ref": null,
+          "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+        },
+        "bynderImage": {
+          "_type": "bynder.asset",
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+          "aspectRatio": 1,
+          "description": "",
+          "height": 800,
+          "id": "KEFzc2V0X2lkIEUzNjIxMzkwLUJFNUUtNDdGMy05RUU5Q0ZDNDcwMkQzRDQ3KQ==",
+          "isSvg": false,
+          "name": "Pencil Round Architrave 42 x 11mm Primed FJ Pine",
+          "selectedUrl": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine",
+          "url": "https://borg.bynder.com/media/?mediaId=E3621390-BE5E-47F3-9EE9CFC4702D3D47",
+          "width": 800
+        },
+        "crop": null,
+        "hotspot": null,
+        "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+      },
+      "productDescription": [
+        {
+          "_key": "HL2IVjEQ",
+          "_type": "block",
+          "children": [
+            {
+              "_key": "h2m21xJg",
+              "_type": "span",
+              "text": "A smooth, rounded-edge profile in timber and MDF, designed for a clean, understated finish around doors, windows and skirting."
+            }
+          ],
+          "style": "normal"
+        }
+      ],
+      "productHeadlines": null,
+      "productImages": [
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEUzNjIxMzkwLUJFNUUtNDdGMy05RUU5Q0ZDNDcwMkQzRDQ3KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 42 x 11mm Primed FJ Pine",
+            "selectedUrl": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine",
+            "url": "https://borg.bynder.com/media/?mediaId=E3621390-BE5E-47F3-9EE9CFC4702D3D47",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDg5MDE4QTQ3LTEyMTYtNDNCRi05RkE3ODFGRUU2MEQ1QjAzKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 42 x 18mm Primed FJ Pine",
+            "selectedUrl": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine",
+            "url": "https://borg.bynder.com/media/?mediaId=89018A47-1216-43BF-9FA781FEE60D5B03",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 11mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 11mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEI2NUQ1RDk3LURGMDQtNEJCMy1BRjNDOTJDQjRBMEUyRTdGKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 11mm Primed FJ Pine",
+            "selectedUrl": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine",
+            "url": "https://borg.bynder.com/media/?mediaId=B65D5D97-DF04-4BB3-AF3C92CB4A0E2E7F",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDRCOTkxNDZBLTA5RTQtNEFEQi1BMzBEN0JFQURDQzgzNUEwKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 18mm Primed FJ Pine",
+            "selectedUrl": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine",
+            "url": "https://borg.bynder.com/media/?mediaId=4B99146A-09E4-4ADB-A30D7BEADCC835A0",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDE2RTdFNUZELTIwREYtNDJGRi1BNUM4OTBDMzIxQ0I1QzYzKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 41 x 12mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=16E7E5FD-20DF-42FF-A5C890C321CB5C63",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDE2RTdFNUZELTIwREYtNDJGRi1BNUM4OTBDMzIxQ0I1QzYzKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 41 x 12mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=16E7E5FD-20DF-42FF-A5C890C321CB5C63",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDNFRjYxRTkxLTE5RTAtNDEzQi05Nzg0MkZDMDgyQjg1MkU3KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 41 x 18mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=3EF61E91-19E0-413B-97842FC082B852E7",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDNFRjYxRTkxLTE5RTAtNDEzQi05Nzg0MkZDMDgyQjg1MkU3KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 41 x 18mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=3EF61E91-19E0-413B-97842FC082B852E7",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDgwNjEyNTIwLTM1Q0QtNEU2MC1CQ0MyQjQzOUU4Mzc1RUZDKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 12mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=80612520-35CD-4E60-BCC2B439E8375EFC",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIDgwNjEyNTIwLTM1Q0QtNEU2MC1CQ0MyQjQzOUU4Mzc1RUZDKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 12mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=80612520-35CD-4E60-BCC2B439E8375EFC",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEY4NjQxMDlFLTkwNDUtNDQ4MC1BOTEwQzQ0RDU5RDFENDVCKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 18mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=F864109E-9045-4480-A910C44D59D1D45B",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEY4NjQxMDlFLTkwNDUtNDQ4MC1BOTEwQzQ0RDU5RDFENDVCKQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 66 x 18mm Meranti",
+            "selectedUrl": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti",
+            "url": "https://borg.bynder.com/media/?mediaId=F864109E-9045-4480-A910C44D59D1D45B",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge MDF profile in 42 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge MDF profile in 42 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEQxNTE3QUE5LTg0OTktNENFQS1CQkVGMEE0OUQzMEE4RTY4KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 42 x 12mm MDF",
+            "selectedUrl": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF",
+            "url": "https://borg.bynder.com/media/?mediaId=D1517AA9-8499-4CEA-BBEF0A49D30A8E68",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEY0NDVGOTNDLUY2RDgtNDM0QS1CNUUwM0U4ODQ3N0I5NTA2KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 67 x 18mm MDF",
+            "selectedUrl": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF",
+            "url": "https://borg.bynder.com/media/?mediaId=F445F93C-F6D8-434A-B5E03E88477B9506",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+        },
+        {
+          "_key": null,
+          "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+          "asset": {
+            "_ref": null,
+            "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+          },
+          "bynderImage": {
+            "_type": "bynder.asset",
+            "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+            "aspectRatio": 1,
+            "description": "",
+            "height": 800,
+            "id": "KEFzc2V0X2lkIEY0NDVGOTNDLUY2RDgtNDM0QS1CNUUwM0U4ODQ3N0I5NTA2KQ==",
+            "isSvg": false,
+            "name": "Pencil Round Architrave 67 x 18mm MDF",
+            "selectedUrl": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF",
+            "url": "https://borg.bynder.com/media/?mediaId=F445F93C-F6D8-434A-B5E03E88477B9506",
+            "width": 800
+          },
+          "crop": null,
+          "hotspot": null,
+          "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+        }
+      ],
+      "productVariants": [
+        {
+          "_key": "kWHGv5Rt",
+          "attributeValues": [
+            {
+              "_key": "DFyoFjPV",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "mJhTbFEl",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Primed FJ Pine"
+            },
+            {
+              "_key": "kkFhVwjx",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "42 x 11mm"
+            },
+            {
+              "_key": "wBrShgcC",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "g865pJUJ",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "10"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201885",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 11mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEUzNjIxMzkwLUJFNUUtNDdGMy05RUU5Q0ZDNDcwMkQzRDQ3KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 42 x 11mm Primed FJ Pine",
+                "selectedUrl": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine",
+                "url": "https://borg.bynder.com/media/?mediaId=E3621390-BE5E-47F3-9EE9CFC4702D3D47",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/e3621390-be5e-47f3-9ee9-cfc4702d3d47/Pencil-Round-Architrave-42-x-11mm-Primed-FJ-Pine"
+            }
+          ],
+          "variantName": "Pencil Round 42 x 11mm Primed FJ Pine 2.7m"
+        },
+        {
+          "_key": "2pc8sjUx",
+          "attributeValues": [
+            {
+              "_key": "p9RJQXdW",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "3YkBohgl",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Primed FJ Pine"
+            },
+            {
+              "_key": "gCpX6RhI",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "42 x 18mm"
+            },
+            {
+              "_key": "sRQJuziv",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "aNPUFvHr",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "12"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201886",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 42 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDg5MDE4QTQ3LTEyMTYtNDNCRi05RkE3ODFGRUU2MEQ1QjAzKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 42 x 18mm Primed FJ Pine",
+                "selectedUrl": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine",
+                "url": "https://borg.bynder.com/media/?mediaId=89018A47-1216-43BF-9FA781FEE60D5B03",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/89018a47-1216-43bf-9fa7-81fee60d5b03/Pencil-Round-Architrave-42-x-18mm-Primed-FJ-Pine"
+            }
+          ],
+          "variantName": "Pencil Round 42 x 18mm Primed FJ Pine 2.7m"
+        },
+        {
+          "_key": "krXpRoyF",
+          "attributeValues": [
+            {
+              "_key": "asDjE21s",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "4fkem9XQ",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Primed FJ Pine"
+            },
+            {
+              "_key": "kM3p9wYw",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 11mm"
+            },
+            {
+              "_key": "RFW70jW0",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "ihJCCgLq",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "10"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201887",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 11mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 11mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEI2NUQ1RDk3LURGMDQtNEJCMy1BRjNDOTJDQjRBMEUyRTdGKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 11mm Primed FJ Pine",
+                "selectedUrl": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine",
+                "url": "https://borg.bynder.com/media/?mediaId=B65D5D97-DF04-4BB3-AF3C92CB4A0E2E7F",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/b65d5d97-df04-4bb3-af3c-92cb4a0e2e7f/Pencil-Round-Architrave-66-x-11mm-Primed-FJ-Pine"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 11mm Primed FJ Pine 2.7m"
+        },
+        {
+          "_key": "x5vVlMWM",
+          "attributeValues": [
+            {
+              "_key": "OP8pe3RN",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "d5BgK2Hh",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Primed FJ Pine"
+            },
+            {
+              "_key": "XVQakCbM",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 18mm"
+            },
+            {
+              "_key": "HWOgszLL",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "i4PgqFe0",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "6"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201893",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Primed FJ Pine 66 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDRCOTkxNDZBLTA5RTQtNEFEQi1BMzBEN0JFQURDQzgzNUEwKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 18mm Primed FJ Pine",
+                "selectedUrl": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine",
+                "url": "https://borg.bynder.com/media/?mediaId=4B99146A-09E4-4ADB-A30D7BEADCC835A0",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/4b99146a-09e4-4adb-a30d-7beadcc835a0/Pencil-Round-Architrave-66-x-18mm-Primed-FJ-Pine"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 18mm Primed FJ Pine 2.7m"
+        },
+        {
+          "_key": "CJRHaxy8",
+          "attributeValues": [
+            {
+              "_key": "ddfrXQcB",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "ybYPpN2S",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "3V2qSqPC",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "41 x 12mm"
+            },
+            {
+              "_key": "Xk1Pc2Rk",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.1m"
+            },
+            {
+              "_key": "HpOrCMeA",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201880",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDE2RTdFNUZELTIwREYtNDJGRi1BNUM4OTBDMzIxQ0I1QzYzKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 41 x 12mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=16E7E5FD-20DF-42FF-A5C890C321CB5C63",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 41 x 12mm Meranti 2.1m"
+        },
+        {
+          "_key": "9TJQRdSy",
+          "attributeValues": [
+            {
+              "_key": "OD5ygsMw",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "IZO0OKHW",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "IraMjARF",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "41 x 12mm"
+            },
+            {
+              "_key": "FqRrDbmF",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "QZ0Gufdl",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201881",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDE2RTdFNUZELTIwREYtNDJGRi1BNUM4OTBDMzIxQ0I1QzYzKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 41 x 12mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=16E7E5FD-20DF-42FF-A5C890C321CB5C63",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/16e7e5fd-20df-42ff-a5c8-90c321cb5c63/Pencil-Round-Architrave-41-x-12mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 41 x 12mm Meranti 2.7m"
+        },
+        {
+          "_key": "CtPfF4Lg",
+          "attributeValues": [
+            {
+              "_key": "ZRQEz0mJ",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "ZSrvCepd",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "ToHy57j8",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "41 x 18mm"
+            },
+            {
+              "_key": "CNfe5AB5",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.1m"
+            },
+            {
+              "_key": "RsaCLIlo",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201882",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDNFRjYxRTkxLTE5RTAtNDEzQi05Nzg0MkZDMDgyQjg1MkU3KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 41 x 18mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=3EF61E91-19E0-413B-97842FC082B852E7",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 41 x 18mm Meranti 2.1m"
+        },
+        {
+          "_key": "rUwdQlGa",
+          "attributeValues": [
+            {
+              "_key": "jLL1MU92",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "z80cOWsr",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "oOrwcgtR",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "41 x 18mm"
+            },
+            {
+              "_key": "ghxJhBxD",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "orFAd987",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201883",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 41 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDNFRjYxRTkxLTE5RTAtNDEzQi05Nzg0MkZDMDgyQjg1MkU3KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 41 x 18mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=3EF61E91-19E0-413B-97842FC082B852E7",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/3ef61e91-19e0-413b-9784-2fc082b852e7/Pencil-Round-Architrave-41-x-18mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 41 x 18mm Meranti 2.7m"
+        },
+        {
+          "_key": "UW7jY63l",
+          "attributeValues": [
+            {
+              "_key": "dpGr2qr6",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "2HLIab2s",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "ILMLdcOo",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 12mm"
+            },
+            {
+              "_key": "PsD9Dptc",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.1m"
+            },
+            {
+              "_key": "JcGHiY8K",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201888",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDgwNjEyNTIwLTM1Q0QtNEU2MC1CQ0MyQjQzOUU4Mzc1RUZDKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 12mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=80612520-35CD-4E60-BCC2B439E8375EFC",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 12mm Meranti 2.1m"
+        },
+        {
+          "_key": "L79LkoAE",
+          "attributeValues": [
+            {
+              "_key": "78UDZ77r",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "VSBm1Zh0",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "LBHzogKJ",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 12mm"
+            },
+            {
+              "_key": "2uuCPZ9q",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "Mev3k28Y",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201889",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIDgwNjEyNTIwLTM1Q0QtNEU2MC1CQ0MyQjQzOUU4Mzc1RUZDKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 12mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=80612520-35CD-4E60-BCC2B439E8375EFC",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/80612520-35cd-4e60-bcc2-b439e8375efc/Pencil-Round-Architrave-66-x-12mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 12mm Meranti 2.7m"
+        },
+        {
+          "_key": "w5hp9D3y",
+          "attributeValues": [
+            {
+              "_key": "KVsv1OdY",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "uahhsx5g",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "uRVfD9fQ",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 18mm"
+            },
+            {
+              "_key": "LLdzpDAi",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.1m"
+            },
+            {
+              "_key": "X53VofsZ",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201891",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEY4NjQxMDlFLTkwNDUtNDQ4MC1BOTEwQzQ0RDU5RDFENDVCKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 18mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=F864109E-9045-4480-A910C44D59D1D45B",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 18mm Meranti 2.1m"
+        },
+        {
+          "_key": "8Bmdei7x",
+          "attributeValues": [
+            {
+              "_key": "U2YH4bdt",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "Timber"
+            },
+            {
+              "_key": "rxA2eFCn",
+              "attribute": {
+                "_ref": "species",
+                "name": "Species"
+              },
+              "value": "Meranti"
+            },
+            {
+              "_key": "BRpxr7cn",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "66 x 18mm"
+            },
+            {
+              "_key": "3MHbHEhg",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "2.7m"
+            },
+            {
+              "_key": "BxzONNrb",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "4"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "201892",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge Timber profile in Meranti 66 x 18mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEY4NjQxMDlFLTkwNDUtNDQ4MC1BOTEwQzQ0RDU5RDFENDVCKQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 66 x 18mm Meranti",
+                "selectedUrl": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti",
+                "url": "https://borg.bynder.com/media/?mediaId=F864109E-9045-4480-A910C44D59D1D45B",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/f864109e-9045-4480-a910-c44d59d1d45b/Pencil-Round-Architrave-66-x-18mm-Meranti"
+            }
+          ],
+          "variantName": "Pencil Round 66 x 18mm Meranti 2.7m"
+        },
+        {
+          "_key": "Wox8RJaz",
+          "attributeValues": [
+            {
+              "_key": "xaCMUbR0",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "MDF"
+            },
+            {
+              "_key": "JT0A5SLt",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "42 x 12mm"
+            },
+            {
+              "_key": "Km99wO5p",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "5.4m"
+            },
+            {
+              "_key": "Wlq4ABOy",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "420"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "413240",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge MDF profile in 42 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge MDF profile in 42 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEQxNTE3QUE5LTg0OTktNENFQS1CQkVGMEE0OUQzMEE4RTY4KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 42 x 12mm MDF",
+                "selectedUrl": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF",
+                "url": "https://borg.bynder.com/media/?mediaId=D1517AA9-8499-4CEA-BBEF0A49D30A8E68",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/d1517aa9-8499-4cea-bbef-0a49d30a8e68/Pencil-Round-Architrave-42-x-12mm-MDF"
+            }
+          ],
+          "variantName": "Pencil Round  MDF 42 x 12mm 5.4m"
+        },
+        {
+          "_key": "bNoatjG0",
+          "attributeValues": [
+            {
+              "_key": "LkcV8cfR",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "MDF"
+            },
+            {
+              "_key": "GR4KqMXf",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "67 x 12mm"
+            },
+            {
+              "_key": "AGlevHTA",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "5.4m"
+            },
+            {
+              "_key": "MsGxcHqD",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "256"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "413237",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEY0NDVGOTNDLUY2RDgtNDM0QS1CNUUwM0U4ODQ3N0I5NTA2KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 67 x 18mm MDF",
+                "selectedUrl": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF",
+                "url": "https://borg.bynder.com/media/?mediaId=F445F93C-F6D8-434A-B5E03E88477B9506",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+            }
+          ],
+          "variantName": "Pencil Round  MDF 67 x 12mm 5.4m"
+        },
+        {
+          "_key": "665e4oSz",
+          "attributeValues": [
+            {
+              "_key": "gIQ5GrNP",
+              "attribute": {
+                "_ref": "material",
+                "name": "Material"
+              },
+              "value": "MDF"
+            },
+            {
+              "_key": "Iu5hF9k7",
+              "attribute": {
+                "_ref": "size",
+                "name": "Size"
+              },
+              "value": "67 x 18mm"
+            },
+            {
+              "_key": "YeDM0xot",
+              "attribute": {
+                "_ref": "length",
+                "name": "Length"
+              },
+              "value": "5.4m"
+            },
+            {
+              "_key": "WQHASK86",
+              "attribute": {
+                "_ref": "pack-size",
+                "name": "Pack Size"
+              },
+              "value": "192"
+            }
+          ],
+          "isPrimary": false,
+          "sku": "422147",
+          "variantImages": [
+            {
+              "_key": null,
+              "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+              "asset": {
+                "_ref": null,
+                "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+              },
+              "bynderImage": {
+                "_type": "bynder.asset",
+                "alt": "A smooth, rounded top edge MDF profile in 67 x 12mm",
+                "aspectRatio": 1,
+                "description": "",
+                "height": 800,
+                "id": "KEFzc2V0X2lkIEY0NDVGOTNDLUY2RDgtNDM0QS1CNUUwM0U4ODQ3N0I5NTA2KQ==",
+                "isSvg": false,
+                "name": "Pencil Round Architrave 67 x 18mm MDF",
+                "selectedUrl": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF",
+                "url": "https://borg.bynder.com/media/?mediaId=F445F93C-F6D8-434A-B5E03E88477B9506",
+                "width": 800
+              },
+              "crop": null,
+              "hotspot": null,
+              "url": "https://borg.bynder.com/transform/f445f93c-f6d8-434a-b5e0-3e88477b9506/Pencil-Round-Architrave-67-x-18mm-MDF"
+            }
+          ],
+          "variantName": "Pencil Round  MDF 67 x 18mm 5.4m"
+        }
+      ],
+      "seo": null,
+      "slug": {
+        "_type": "slug",
+        "current": "pencil-round"
+      },
+      "subcategory": {
+        "_ref": "fa33373c-dbbc-42cf-a2c7-d42a3c2e37ef",
+        "name": "Architraves & Skirtings"
+      }
+    }
+  }
+]

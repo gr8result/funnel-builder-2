@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   createJobData,
+  createPortableTakeoffExport,
   getSavedFloorCoveringAreas,
   hasRecoverablePlanPages,
   prepareAiPlanTakeoffJobForSave,
+  resolvePortableTakeoffImport,
   resolveAiPlanTakeoffJobData,
   verifyAiPlanTakeoffSavedJob,
 } from "../components/construction-estimation/ai-plan-takeoff/jobPersistence.js";
@@ -21,9 +23,19 @@ assert.match(workbookSource, /<WorkspaceNavGroup pages=\{DASHBOARD_PROJECT_WORKF
 assert.match(workbookSource, /<AIPlanTakeoffPage \{\.\.\.takeoffEngineContext\} \/>/, "aiPlanTakeoff page must mount integrated page entry");
 assert.match(workbookSource, /platformContext:\s*\{[\s\S]*projectId:/, "Takeoff page must receive current project identity");
 assert.match(workbookSource, /saveAiPlanTakeoffJob/, "Save Job must persist to the platform workbook");
-assert.match(workbookSource, /initialJob:\s*selectAiPlanTakeoffJob\(sheet\.workbook\)/, "Takeoff page must choose the persisted takeoff job through the platform selector");
+assert.match(workbookSource, /initialJob:\s*null/, "AI Plan Takeoff must open empty instead of auto-loading the platform workbook takeoff");
 assert.match(workbookSource, /hasRecoverablePlanPages/, "Platform selector must prefer a takeoff job with recoverable embedded plan pages");
 assert.match(workbookSource, /prepareAiPlanTakeoffJobForSave/, "Platform Save Job must create a revisioned atomic takeoff snapshot");
+assert.match(workbookSource, /RECENT TAKEOFF JOBS/, "AI Plan Takeoff File menu must show takeoff-only recent records");
+
+const takeoffStandaloneSource = readFileSync("components/construction-estimation/ai-plan-takeoff/AIPlanTakeoffStandalone.jsx", "utf8");
+assert.match(takeoffStandaloneSource, /pdfjs-dist\/legacy\/build\/pdf\.mjs/, "Standalone AI Plan Takeoff must use the legacy PDF.js module build.");
+assert.match(takeoffStandaloneSource, /PDFJS_WORKER_SRC = '\/pdfjs\/pdf\.worker\.min\.mjs'/, "Standalone AI Plan Takeoff must use the local PDF.js worker.");
+assert.doesNotMatch(takeoffStandaloneSource, /cdnjs|jsdelivr|unpkg\.com\/pdfjs-dist/, "Standalone AI Plan Takeoff must not hard-code a PDF worker CDN.");
+assert.match(takeoffStandaloneSource, /The local PDF engine could not start\. Your takeoff has not been changed\./, "PDF import failure must surface the safe local-engine failure.");
+assert.match(takeoffStandaloneSource, /SAVE FAILED – DO NOT CLOSE THIS TAKEOFF/, "Failed save verification must show the required warning.");
+assert.match(takeoffStandaloneSource, /gr8:ai-plan-takeoff:recovery:/, "Failed save verification must create a recovery snapshot.");
+assert.match(takeoffStandaloneSource, /requireVerifiedSave/, "Standalone save UI must gate Saved status on read-back verification.");
 
 const schedule = createTakeoffSchedule({
   projectInfo: { projectName: "Johnson", clientName: "Grant", siteAddress: "1 Build St" },
@@ -151,6 +163,14 @@ const floorCoveringSavedJob = createJobData({
 });
 
 const reopenedPortableJob = JSON.parse(JSON.stringify(floorCoveringSavedJob));
+const gr8TakeoffFile = createPortableTakeoffExport(floorCoveringSavedJob, {
+  projectId: "project-123",
+  projectName: "Johnson 123",
+  takeoffName: "Johnson",
+});
+assert.equal(gr8TakeoffFile.gr8FileType, "ai-plan-takeoff", "Portable takeoff backup uses the .gr8takeoff file type marker");
+assert.equal(gr8TakeoffFile.schemaVersion, 1, "Portable takeoff backup uses the versioned Gr8 takeoff schema");
+assert.equal(resolvePortableTakeoffImport(gr8TakeoffFile).ok, true, "Portable .gr8takeoff backup imports successfully");
 const restoredPortableFloorCoverings = getSavedFloorCoveringAreas(reopenedPortableJob);
 assert.equal(reopenedPortableJob.plan.pages.length, 5, "Portable Save As job keeps all five embedded plan pages");
 assert.equal(restoredPortableFloorCoverings.length, lowerFloorCoverings.length, "Portable Open Job restores every floor-covering polygon");
@@ -255,6 +275,108 @@ assert.equal(verifyAiPlanTakeoffSavedJob(atomicSecondSave, JSON.parse(JSON.strin
 const staleWrite = prepareAiPlanTakeoffJobForSave(atomicSecondSave, { ...partialSecondSave, baseRevision: 1 }, "project-123");
 assert.equal(staleWrite.ok, false, "Older base revision cannot overwrite a newer saved takeoff job");
 assert.equal(staleWrite.conflict, true, "Stale write returns an explicit conflict");
+
+const staleSameTakeoffWithPlan = prepareAiPlanTakeoffJobForSave(
+  atomicSecondSave,
+  {
+    ...atomicSecondSave,
+    baseRevision: 1,
+    completedMeasurements: [
+      ...(atomicSecondSave.completedMeasurements || []),
+      { id: "stale-ui-measurement", page: 1, label: "Verified stale UI save", lengthMm: 1200, nodes: [{ x: 0, y: 0 }, { x: 1200, y: 0 }] },
+    ],
+  },
+  "project-123"
+);
+assert.equal(staleSameTakeoffWithPlan.ok, true, "Same takeoff with recoverable plan pages can save forward from a stale UI base revision");
+assert.equal(staleSameTakeoffWithPlan.job.revision, 3, "Stale same-takeoff save advances from the durable revision");
+
+const staleDifferentTakeoffWithPlan = prepareAiPlanTakeoffJobForSave(
+  atomicSecondSave,
+  {
+    ...atomicSecondSave,
+    takeoffId: "different-takeoff-id",
+    baseRevision: 1,
+  },
+  "project-123"
+);
+assert.equal(staleDifferentTakeoffWithPlan.ok, false, "Stale save from a different takeoff ID remains blocked");
+
+const mandatoryTemporaryTakeoff = createJobData({
+  name: "Codex temporary save verification",
+  currentPage: 1,
+  totalPages: 5,
+  pixelsPerMm: 1,
+  planPages: fivePagePlan,
+  completedFloorplans: [
+    {
+      id: "temporary-angled-area",
+      page: 1,
+      type: "Footprint",
+      nodes: [
+        { x: 100, y: 100 },
+        { x: 460, y: 80 },
+        { x: 560, y: 280 },
+        { x: 210, y: 340 },
+      ],
+    },
+  ],
+  completedAreas: [
+    {
+      id: "temporary-floor-covering",
+      page: 1,
+      category: "Tiles",
+      nodes: [
+        { x: 140, y: 380 },
+        { x: 420, y: 380 },
+        { x: 420, y: 560 },
+        { x: 140, y: 560 },
+      ],
+    },
+  ],
+  completedWallRuns: [
+    { id: "temporary-wall-1", page: 1, category: "exterior", nodes: [{ x: 100, y: 650 }, { x: 420, y: 650 }], lengthMm: 320, thicknessMm: 230 },
+    { id: "temporary-wall-2", page: 1, category: "interior", nodes: [{ x: 420, y: 650 }, { x: 620, y: 760 }], lengthMm: 228, thicknessMm: 90 },
+  ],
+  placedOpenings: [
+    { id: "temporary-window-1", page: 1, type: "window", openingType: "window", widthMm: 1200, heightMm: 1200, x: 260, y: 650 },
+    { id: "temporary-door-1", page: 1, type: "door", openingType: "door", widthMm: 820, heightMm: 2040, x: 520, y: 705 },
+  ],
+  completedMeasurements: [],
+  completedEaves: [],
+  projectInfo: { projectName: "Johnson temporary test", clientName: "Grant", siteAddress: "1 Build St" },
+  planFilename: "SAMPLE PLANS.pdf",
+  platformProject: { projectId: "project-123", jobNumber: "J-TEMP" },
+});
+const preparedTemporary = prepareAiPlanTakeoffJobForSave(null, mandatoryTemporaryTakeoff, "project-123");
+assert.equal(preparedTemporary.ok, true, "Temporary mandatory takeoff save prepares successfully");
+const readBackTemporary = JSON.parse(JSON.stringify(preparedTemporary.job));
+const temporaryVerification = verifyAiPlanTakeoffSavedJob(preparedTemporary.job, readBackTemporary);
+assert.equal(temporaryVerification.ok, true, "Temporary mandatory takeoff read-back verification passes");
+assert.equal(temporaryVerification.revisionMatches, true, "Temporary save verification matches revision");
+assert.equal(temporaryVerification.planPageCountMatches, true, "Temporary save verification requires all five plan pages");
+assert.equal(temporaryVerification.countsMatch, true, "Temporary save verification matches takeoff counts");
+assert.equal(temporaryVerification.checksumMatches, true, "Temporary save verification matches checksum");
+assert.equal(readBackTemporary.completedFloorplans.length, 1, "Temporary read-back keeps one angled area");
+assert.equal(readBackTemporary.completedAreas.length, 1, "Temporary read-back keeps one floor-covering polygon");
+assert.equal(readBackTemporary.completedWallRuns.length, 2, "Temporary read-back keeps two walls");
+assert.equal(readBackTemporary.placedOpenings.filter((opening) => opening.type === "window" || opening.openingType === "window").length, 1, "Temporary read-back keeps one window");
+assert.equal(readBackTemporary.placedOpenings.filter((opening) => opening.type === "door" || opening.openingType === "door").length, 1, "Temporary read-back keeps one door");
+assert.equal(Boolean(readBackTemporary.pixelsPerMm), true, "Temporary read-back keeps calibration");
+const temporaryBackup = createPortableTakeoffExport(readBackTemporary, {
+  projectId: "project-123",
+  projectName: "Johnson temporary test",
+  takeoffName: "Codex temporary save verification",
+});
+const temporaryBackupText = JSON.stringify(temporaryBackup);
+assert.ok(temporaryBackupText.length > 0, "Temporary .gr8takeoff backup is non-zero");
+const independentlyImportedTemporary = resolvePortableTakeoffImport(JSON.parse(temporaryBackupText));
+assert.equal(independentlyImportedTemporary.ok, true, "Temporary .gr8takeoff backup imports independently");
+assert.equal(independentlyImportedTemporary.job.plan.pages.length, 5, "Temporary imported backup restores all five plan pages");
+assert.equal(independentlyImportedTemporary.job.completedFloorplans.length, 1, "Temporary imported backup restores the angled area");
+assert.equal(independentlyImportedTemporary.job.completedAreas.length, 1, "Temporary imported backup restores the floor-covering polygon");
+assert.equal(independentlyImportedTemporary.job.completedWallRuns.length, 2, "Temporary imported backup restores both walls");
+assert.equal(independentlyImportedTemporary.job.placedOpenings.length, 2, "Temporary imported backup restores the window and door");
 
 const reopenedAfterRuntimeClear = JSON.parse(JSON.stringify(atomicSecondSave));
 delete reopenedAfterRuntimeClear.objectUrl;
