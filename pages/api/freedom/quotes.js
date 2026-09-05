@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 const COMPANY_META = {
   MSFT: { companyName: "Microsoft", sector: "Software", qualityScore: 96 },
   NVDA: { companyName: "NVIDIA", sector: "Semiconductors", qualityScore: 94 },
@@ -78,12 +80,11 @@ function friendlyCandleError(status, data) {
   return "Finnhub candle request failed.";
 }
 
-function logFinnhubRequest(symbol, apiKey, response) {
+// Never log the API key or anything derived from it - not its length, prefix,
+// suffix or presence. Server logs are retained and widely readable, and key
+// length plus four leading and four trailing characters is a material leak.
+function logFinnhubRequest(symbol, response) {
   console.log("Finnhub symbol:", symbol);
-  console.log("Finnhub key exists:", Boolean(apiKey));
-  console.log("Finnhub key length:", apiKey?.length || 0);
-  console.log("Finnhub key starts:", apiKey?.slice(0, 4));
-  console.log("Finnhub key ends:", apiKey?.slice(-4));
   console.log("Finnhub response status:", response.status);
 }
 
@@ -103,7 +104,7 @@ async function fetchFinnhubQuote(symbol) {
 
   try {
     const response = await fetch(url);
-    logFinnhubRequest(symbol, apiKey, response);
+    logFinnhubRequest(symbol, response);
     const data = await response.json().catch(() => null);
 
     return {
@@ -299,7 +300,7 @@ async function buildQuote(symbol) {
   };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -353,3 +354,7 @@ export default async function handler(req, res) {
     updatedAt: new Date().toISOString(),
   });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+// External market-data proxy: no stored Freedom rows, so no owner-isolation gate.
+export default withFreedomApi(handler, { touchesData: false });

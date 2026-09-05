@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin.js";
 import { fetchTradeQuote } from "../../../lib/freedom-trader/marketData.js";
 import { loadLocalPaperSnapshot } from "../../../lib/freedom-trader/localPaperStore.js";
@@ -112,7 +114,7 @@ export async function loadPaperAccount(req) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
@@ -126,3 +128,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ...(await loadLocalPaperSnapshot(fetchTradeQuote)), databaseUnavailable: true, error: "Supabase unavailable. Using local development paper-trading storage." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

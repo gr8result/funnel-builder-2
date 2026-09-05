@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { supabaseAdmin } from "../../../../lib/freedom-terminal/core";
 
 const JOBS = {
@@ -92,7 +94,7 @@ async function runWatchEngine() {
   return { createdAlerts: created.length };
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed." });
@@ -121,3 +123,6 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin";
 
 function getSupabase() {
@@ -321,10 +323,13 @@ async function updatePosition(req, res) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === "GET") return listPositions(req, res);
   if (req.method === "POST") return createPosition(req, res);
   if (req.method === "PATCH") return updatePosition(req, res);
   res.setHeader("Allow", "GET, POST, PATCH");
   return res.status(405).json({ ok: false, error: "Method not allowed." });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

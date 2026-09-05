@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { fetchTwelveDataHistory, normalizeTwelveDataInterval } from "../../../lib/freedom-trader/twelveData.js";
 
 const CACHE_TTL_MS = 60 * 1000;
@@ -194,7 +196,7 @@ export async function fetchTraderHistory(symbol, range = "1y", requestedInterval
   return request;
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ ok: false, error: "Method not allowed." });
@@ -211,3 +213,6 @@ export default async function handler(req, res) {
   const result = await fetchTraderHistory(symbol, range, interval);
   return res.status(200).json({ ...result, updatedAt: new Date().toISOString() });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

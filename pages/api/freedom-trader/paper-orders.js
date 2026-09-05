@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin.js";
 import { fetchTradeQuote, marketMeta } from "../../../lib/freedom-trader/marketData.js";
 import { submitLocalPaperOrder } from "../../../lib/freedom-trader/localPaperStore.js";
@@ -262,7 +264,7 @@ export function tradesToCsv(trades) {
   return [headers.join(","), ...(trades || []).map((trade) => headers.map((key) => csvEscape(trade[key])).join(","))].join("\n");
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const snapshot = await loadPaperAccount(req);
@@ -277,3 +279,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Paper order failed." });
   }
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);

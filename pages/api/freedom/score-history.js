@@ -1,3 +1,5 @@
+import { withFreedomApi } from "../../../platform-core/api-guards/freedomApiGuard.js";
+
 import { buildCalibrationSummary, DEFAULT_CALIBRATION } from "../../../lib/freedom-terminal/adaptiveBuyScore";
 import { createSupabaseAdmin } from "../../../lib/supabaseAdmin";
 
@@ -164,10 +166,13 @@ async function handlePut(req, res) {
   }
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === "GET") return handleGet(req, res);
   if (req.method === "POST") return handlePost(req, res);
   if (req.method === "PUT") return handlePut(req, res);
   res.setHeader("Allow", "GET, POST, PUT");
   return res.status(405).json({ ok: false, error: "Method not allowed." });
 }
+
+// M2.1: authentication + freedom entitlement enforced before this handler.
+export default withFreedomApi(handler);
