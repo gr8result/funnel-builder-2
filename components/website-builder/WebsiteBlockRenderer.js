@@ -4910,6 +4910,149 @@ export function renderWebsiteBlock(block, { compact = false, device, assets, edi
       );
     }
 
+    case "shape": {
+      const shapeType = String(props.shapeType || "rectangle").toLowerCase();
+      const usageType = String(props.usageType || "color").toLowerCase();
+      const fillColor = props.fillColor || props.backgroundColor || "#3b82f6";
+      const borderColor = props.borderColor || "transparent";
+      const borderWidth = Math.max(0, Number(props.borderWidth ?? 0));
+      const borderRadius = props.borderRadius !== undefined ? props.borderRadius : (shapeType === "circle" ? "50%" : 8);
+      const width = props.width || (shapeType === "line" ? "100%" : shapeType === "circle" ? "160px" : "240px");
+      const height = props.height || (shapeType === "line" ? "4px" : shapeType === "circle" ? "160px" : "160px");
+      const alignment = ["left", "center", "right"].includes(String(props.alignment)) ? String(props.alignment) : "center";
+      const justifyContent = alignment === "left" ? "flex-start" : alignment === "right" ? "flex-end" : "center";
+      const text = String(props.text || "").trim();
+      const textColor = props.textColor || "#ffffff";
+      const textSize = props.textSize || "18px";
+      const imageUrl = String(props.imageUrl || props.src || "").trim();
+
+      const openImagePicker = () => {
+        if (!editor || typeof onSelectAsset !== "function") return;
+        openSharedMediaPicker({
+          onPick: (asset) => {
+            if (asset?.src && typeof onChangeBlock === "function") {
+              onChangeBlock({ ...block, props: { ...props, imageUrl: asset.src } });
+            }
+          },
+        });
+      };
+
+      const containerStyle = {
+        padding: "16px 24px",
+        display: "flex",
+        justifyContent,
+        alignItems: "center",
+        boxSizing: "border-box",
+        ...fullWidthStyle(props, compact, editor),
+      };
+
+      if (shapeType === "line") {
+        return (
+          <div style={containerStyle}>
+            <div
+              style={{
+                width: width,
+                height: height,
+                backgroundColor: fillColor,
+                border: borderWidth ? `${borderWidth}px solid ${borderColor}` : "none",
+                borderRadius: typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius,
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {usageType === "text" && text ? (
+                <span style={{ color: textColor, fontSize: textSize, fontWeight: 600, padding: "0 8px", background: "#ffffff", borderRadius: 4 }}>{text}</span>
+              ) : null}
+            </div>
+          </div>
+        );
+      }
+
+      if (shapeType === "triangle") {
+        return (
+          <div style={containerStyle}>
+            <div
+              style={{
+                width: width,
+                height: height,
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: usageType === "image" && editor ? "pointer" : "default",
+              }}
+              onClick={usageType === "image" && editor ? openImagePicker : undefined}
+            >
+              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}>
+                {usageType === "image" && imageUrl ? (
+                  <defs>
+                    <pattern id={`tri-img-${block?.id || "shape"}`} patternUnits="userSpaceOnUse" width="100" height="100">
+                      <image href={imageUrl} x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid slice" />
+                    </pattern>
+                  </defs>
+                ) : null}
+                <polygon
+                  points="50,0 100,100 0,100"
+                  fill={usageType === "image" && imageUrl ? `url(#tri-img-${block?.id || "shape"})` : fillColor}
+                  stroke={borderWidth ? borderColor : "none"}
+                  strokeWidth={borderWidth}
+                />
+              </svg>
+              {usageType === "text" ? (
+                <div style={{ position: "relative", zIndex: 2, color: textColor, fontSize: textSize, fontWeight: 700, textAlign: "center", paddingTop: "25%", paddingLeft: "10%", paddingRight: "10%" }}>
+                  {text || "Triangle Text"}
+                </div>
+              ) : usageType === "image" && !imageUrl && editor ? (
+                <div style={{ position: "relative", zIndex: 2, color: textColor, fontSize: 13, fontWeight: 600, textAlign: "center", paddingTop: "30%" }}>
+                  📷 Click to add image
+                </div>
+              ) : null}
+            </div>
+          </div>
+        );
+      }
+
+      const isCircle = shapeType === "circle";
+      const shapeBoxStyle = {
+        width,
+        height,
+        borderRadius: isCircle ? "50%" : (typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius),
+        backgroundColor: usageType === "image" && imageUrl ? "transparent" : fillColor,
+        border: borderWidth ? `${borderWidth}px solid ${borderColor}` : "none",
+        backgroundImage: usageType === "image" && imageUrl ? `url(${JSON.stringify(imageUrl)})` : "none",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        cursor: usageType === "image" && editor ? "pointer" : "default",
+      };
+
+      return (
+        <div style={containerStyle}>
+          <div
+            style={shapeBoxStyle}
+            onClick={usageType === "image" && editor ? openImagePicker : undefined}
+          >
+            {usageType === "text" ? (
+              <span style={{ color: textColor, fontSize: textSize, fontWeight: 700, textAlign: "center", padding: "8px 12px" }}>
+                {text || "Shape Text"}
+              </span>
+            ) : usageType === "image" && !imageUrl && editor ? (
+              <div style={{ color: "#64748b", fontSize: 13, fontWeight: 600, textAlign: "center", padding: 8 }}>
+                📷 Click to add image
+              </div>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     case "video-embed":
       return (
         <section style={{ ...sharedStyles.cardSection(compact, props), ...sectionAnimationStyle }}>
