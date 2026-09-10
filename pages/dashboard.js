@@ -235,6 +235,18 @@ const MODULE_ITEMS = [
     activityLabel: "automation",
   },
   {
+    // Freedom: long-term investments and short-term trades. Entitled only by an
+    // explicit add-on row (no plan tier includes it), and every Freedom API route
+    // re-checks the entitlement server-side via withFreedomApi, so this card
+    // opening the module is not an access decision on its own.
+    id: "freedom",
+    title: "Freedom",
+    emoji: "📈",
+    desc: "Long-term investments and short-term trades",
+    color: "#14b8a6",
+    href: "/freedom",
+  },
+  {
     id: "evergreen_webinars",
     title: "Evergreen Webinars",
     emoji: "🎥",
