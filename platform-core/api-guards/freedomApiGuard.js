@@ -16,18 +16,29 @@
 //      caller's workspaces are resolved from workspace_members using the id
 //      inside their validated token.
 //
-//   3. Freedom tables have no workspace_id column and no RLS yet (M5A). So
-//      authentication plus entitlement does NOT give tenant isolation: every
-//      Freedom row is currently global. Rather than serve global financial rows
-//      to everyone holding a freedom entitlement, data routes FAIL CLOSED unless
-//      the platform can prove a single owner holds the entitlement. Verified
-//      platform administrators use the existing adminUsers policy instead.
-//      See resolveSoleFreedomOwner below for customer data access.
+//   3. Tenant isolation depends on which storage backend is live, so this guard
+//      applies a different rule to each (Stage 3):
+//
+//      SUPABASE backend - freedom_positions and friends carry workspace_id and
+//      user_id, with RLS enforcing workspace membership. Isolation is real, so a
+//      data route requires the caller to resolve to exactly one workspace and
+//      operates inside it. See resolveFreedomWorkspaceId.
+//
+//      JSON backend - rows are still a single global file with no owner. So the
+//      original emergency rule stands unchanged: data routes FAIL CLOSED unless
+//      the platform can prove a single owner holds the entitlement, because
+//      serving global rows to every entitled caller would show one customer's
+//      financial data to another. See resolveSoleFreedomOwner.
+//
+//      The rule is gated on the backend rather than deleted, so rolling back to
+//      the JSON store also rolls back to the protection that store requires.
+//      Verified platform administrators use the existing adminUsers policy.
 //
 // Dependencies are injected so this is testable without a database.
 
 import { resolveEntitlements } from "../subscription-entitlements/resolveEntitlements.js";
 import { isDeveloperEmail } from "../../lib/adminUsers.js";
+import { isSupabaseBackend } from "../../lib/freedom/freedomStoreBackend.js";
 
 export const FREEDOM_MODULE_CODE = "freedom";
 
@@ -156,14 +167,27 @@ export async function authoriseFreedomRequest(req, { touchesData = true, deps } 
   const user = await d.getUserFromToken(token);
   if (!user?.id) return { ok: false, ...DENY.BAD_TOKEN };
 
+  // Identity comes from the token, never from the request payload. This is now
+  // resolved for platform admins too: Freedom rows are workspace-scoped once the
+  // Supabase backend is active, so even an admin request needs a workspace to
+  // operate in. It is a lookup, not a permission - the admin check below is
+  // unchanged.
+  const workspaceIds = (await d.listWorkspaceIdsForUser(user.id)) || [];
+
   // Use the same platform-admin policy as the authenticated demo-company APIs.
   // Only Supabase's verified identity is consulted; request emails/roles are ignored.
   if (user.emailConfirmedAt && isDeveloperEmail(user.email)) {
-    return { ok: true, auth: { userId: user.id, workspaceIds: [], ownerVerified: true, platformAdmin: true } };
+    return {
+      ok: true,
+      auth: {
+        userId: user.id,
+        workspaceIds,
+        freedomWorkspaceId: resolveFreedomWorkspaceId({ workspaceIds, platformAdmin: true }),
+        ownerVerified: true,
+        platformAdmin: true,
+      },
+    };
   }
-
-  // Identity comes from the token, never from the request payload.
-  const workspaceIds = (await d.listWorkspaceIdsForUser(user.id)) || [];
 
   const [userCodes, workspaceCodes] = await Promise.all([
     d.listModuleCodesForUser(user.id),
@@ -180,12 +204,56 @@ export async function authoriseFreedomRequest(req, { touchesData = true, deps } 
     return { ok: true, auth: { userId: user.id, workspaceIds, ownerVerified: false } };
   }
 
+  const freedomWorkspaceId = resolveFreedomWorkspaceId({ workspaceIds, platformAdmin: false });
+
+  // Once Freedom rows carry workspace_id and RLS (Stage 3), tenancy is real and
+  // the global fail-closed below is no longer what protects one customer's
+  // financial data from another - the workspace scope is. Membership of a
+  // resolvable workspace becomes the requirement instead.
+  //
+  // On the JSON backend nothing has changed: rows are still global and shared,
+  // so the original sole-owner rule stays exactly as it was. This is gated on the
+  // storage backend rather than removed, because removing it while the JSON store
+  // is still live would expose global rows to every entitled caller.
+  if (isSupabaseBackend()) {
+    if (!freedomWorkspaceId) {
+      return { ok: false, ...DENY.NO_WORKSPACE, reason: "unresolved-workspace" };
+    }
+    return { ok: true, auth: { userId: user.id, workspaceIds, freedomWorkspaceId, ownerVerified: true } };
+  }
+
   const owner = await resolveSoleFreedomOwner(d, { userId: user.id, workspaceIds });
   if (!owner.allowed) {
     return { ok: false, ...DENY.NO_PROVABLE_OWNER, reason: owner.reason };
   }
 
-  return { ok: true, auth: { userId: user.id, workspaceIds, ownerVerified: true } };
+  return { ok: true, auth: { userId: user.id, workspaceIds, freedomWorkspaceId, ownerVerified: true } };
+}
+
+/**
+ * The single workspace a Freedom request operates in.
+ *
+ * Freedom stores one portfolio per workspace, so a request needs exactly one
+ * workspace id, while a user may belong to several. Resolution order:
+ *
+ *   1. FREEDOM_WORKSPACE_ID, when the caller is actually a member of it. The
+ *      membership check is what stops the variable becoming a way to reach
+ *      someone else's data; a platform admin is exempt, matching the admin
+ *      policy already applied above.
+ *   2. The caller's only workspace, when they have exactly one.
+ *   3. null - ambiguous. The caller belongs to several workspaces and none was
+ *      nominated, so there is no safe way to guess which portfolio they mean.
+ *      Callers treat null as a denial rather than picking one.
+ *
+ * Never read from the request. Query, body and headers are ignored entirely.
+ */
+export function resolveFreedomWorkspaceId({ workspaceIds = [], platformAdmin = false } = {}) {
+  const configured = String(process.env.FREEDOM_WORKSPACE_ID || "").trim();
+  if (configured) {
+    if (platformAdmin || workspaceIds.includes(configured)) return configured;
+    return null;
+  }
+  return workspaceIds.length === 1 ? workspaceIds[0] : null;
 }
 
 /**
@@ -200,6 +268,23 @@ export function withFreedomApi(handler, options = {}) {
         return res.status(result.status).json({ ok: false, code: result.code || "denied", error: result.error });
       }
       req.freedomAuth = result.auth;
+
+      // Bind storage tenancy here rather than in each route, so a handler cannot
+      // forget it and end up reading with no workspace scope. The ids come from
+      // the validated token via result.auth - never from the request.
+      if (isSupabaseBackend() && options.touchesData !== false) {
+        const { setFreedomStoreContext } = await import("../../lib/freedom/freedomStoreSupabase.js");
+        const restore = setFreedomStoreContext({
+          workspaceId: result.auth.freedomWorkspaceId,
+          userId: result.auth.userId,
+        });
+        try {
+          return await handler(req, res);
+        } finally {
+          restore();
+        }
+      }
+
       return await handler(req, res);
     } catch {
       return res.status(500).json({ ok: false, error: "Freedom could not complete the request. Please retry." });

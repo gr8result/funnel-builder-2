@@ -119,14 +119,31 @@ test("EDIT -> save -> new request -> the edit persists", { skip: SKIP }, async (
   const trade = sampleTrade();
   await tradeStore.addShortTermTrade(trade);
 
-  const updated = await tradeStore.updateShortTermTrade(trade.id, { takeSomeProfit: 175 });
+  // Stays below finalExit (130): the store rejects an incoherent price plan, and
+  // this test is about persistence, not about defeating that rule.
+  const updated = await tradeStore.updateShortTermTrade(trade.id, { takeSomeProfit: 115 });
   assert.equal(updated.ok, true, `update should succeed: ${JSON.stringify(updated.errors)}`);
 
   await newRequestContext();
 
   const found = (await tradeStore.listShortTermTrades()).find((row) => row.id === trade.id);
   assert.ok(found, "edited record must still exist");
-  assert.equal(found.takeSomeProfit, 175, "the edited value must survive the reload");
+  assert.equal(found.takeSomeProfit, 115, "the edited value must survive the reload");
+});
+
+test("an incoherent edit is still rejected on the Supabase backend", { skip: SKIP }, async () => {
+  const trade = sampleTrade();
+  await tradeStore.addShortTermTrade(trade);
+
+  // finalExit is 130, so a take-profit above it is not a coherent plan.
+  const rejected = await tradeStore.updateShortTermTrade(trade.id, { takeSomeProfit: 175 });
+  assert.equal(rejected.ok, false, "validation must still apply when storage is Supabase");
+  assert.match(rejected.errors.join(" "), /Final Exit must be at or above Take Some Profit/);
+
+  await newRequestContext();
+
+  const found = (await tradeStore.listShortTermTrades()).find((row) => row.id === trade.id);
+  assert.equal(found.takeSomeProfit, 110, "a rejected edit must not have been persisted");
 });
 
 test("DELETE -> new request -> the record is gone", { skip: SKIP }, async () => {

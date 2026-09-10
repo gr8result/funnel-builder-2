@@ -80,14 +80,18 @@ async function main() {
     console.error(`\nERROR: source not found: ${sourcePath}\n`);
     process.exit(1);
   }
-  const raw = fs.readFileSync(sourcePath, "utf8");
+  // Hash the raw bytes, not a decoded string: the byte count and the character
+  // count differ here (the file carries multi-byte characters), and a migration
+  // audit trail should record the same number `md5sum` would.
+  const bytes = fs.readFileSync(sourcePath);
+  const raw = bytes.toString("utf8");
   const store = JSON.parse(raw);
   const { createHash } = await import("node:crypto");
-  const md5 = createHash("md5").update(raw).digest("hex");
-  const sha256 = createHash("sha256").update(raw).digest("hex");
+  const md5 = createHash("md5").update(bytes).digest("hex");
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
 
   console.log(`\nSOURCE      ${sourcePath}`);
-  console.log(`  bytes     ${raw.length}`);
+  console.log(`  bytes     ${bytes.length}  (${raw.length} characters)`);
   console.log(`  MD5       ${md5}`);
   console.log(`  SHA-256   ${sha256}`);
 
@@ -260,7 +264,7 @@ async function main() {
   console.log(`  NULL entry_price rows      ${(nullCheck.data || []).length} (expected ${nulls.length}): ${(nullCheck.data || []).map(r => r.symbol).sort().join(", ") || "-"}`);
   if ((nullCheck.data || []).length !== nulls.length) allOk = false;
 
-  console.log(`\nSOURCE UNCHANGED: ${createHash("md5").update(fs.readFileSync(sourcePath, "utf8")).digest("hex") === md5 ? "YES" : "*** NO ***"}`);
+  console.log(`\nSOURCE UNCHANGED: ${createHash("md5").update(fs.readFileSync(sourcePath)).digest("hex") === md5 ? "YES" : "*** NO ***"}`);
 
   line();
   console.log(allOk ? "MIGRATION COMPLETE - all counts verified." : "MIGRATION FINISHED WITH MISMATCHES - investigate before switching backend.");
