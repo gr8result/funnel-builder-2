@@ -7,6 +7,8 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { JSDOM } from "jsdom";
 import * as client from "../lib/freedom/portfolioClient.js";
+import { brokerHoldingValuation, reconcileBrokerHoldings } from "../lib/freedom/brokerHoldingsSnapshot.js";
+import { importNativeBrokerPosition } from "../lib/freedom/importNativeBrokerPosition.js";
 
 const require = createRequire(import.meta.url);
 const { transformSync } = require("next/dist/build/swc");
@@ -51,6 +53,121 @@ async function click(button) { assert.ok(button); await act(async () => button.c
 test.afterEach(async () => { if (root) await act(async () => root.unmount()); root = null; });
 test.after(() => dom.window.close());
 const response = (body, status = 200) => ({ status, ok: status === 200, json: async () => body });
+
+test("Tiger USD position does not change CMC AUD totals or fabricate missing costs", async () => {
+  const snapshot = JSON.parse(fs.readFileSync("data/freedom/tiger-tjgc-2026-09-06.json", "utf8"));
+  const tiger = brokerHoldingValuation(importNativeBrokerPosition({ shortTermTrades: [], longTermHoldings: [] }, snapshot, "now").shortTermTrades[0]);
+  const cmc = JSON.parse(fs.readFileSync("data/freedom/cmc-holdings-2026-09-06.json", "utf8"));
+  const holdings = cmc.holdings.map(item => brokerHoldingValuation({ id: item.recordId, symbol: item.symbol, quantity: item.quantity, status: "open", brokerHoldingSnapshot: item }));
+  globalThis.fetch = async url => response(url.includes("long-term") ? { holdings } : { trades: url.includes("ACTIVE_HOLDING") ? [tiger] : [] });
+  await mount();
+  const summary = document.querySelector('.fdPortfolioSummary').textContent;
+  assert.match(summary, /31017\.64/);
+  assert.match(summary, /31482\.05/);
+  assert.ok(!summary.includes('42680.32'));
+  const card = document.querySelector('[data-symbol="TJGC"]');
+  assert.match(card.textContent, /FIFO Price \(rounded\) \(USD\)/);
+  assert.match(card.textContent, /Not supplied/);
+  assert.ok(!card.textContent.includes('AUD buy line'));
+  assert.equal(card.querySelector('[data-entry-price]').getAttribute('data-entry-price'), '10.05');
+});
+
+function latestCmcPortfolio() {
+  const previous = JSON.parse(fs.readFileSync("data/freedom/cmc-holdings-2026-09-06.json", "utf8"));
+  const snapshot = JSON.parse(fs.readFileSync("data/freedom/cmc-holdings-2026-09-09.json", "utf8"));
+  const rows = previous.holdings.map(item => ({
+    id: item.recordId, symbol: item.symbol, quantity: item.quantity, status: "open",
+    kind: item.termClassification || "long-term", currency: "AUD",
+    exchange: item.nativeCurrency === "USD" ? "US" : "ASX",
+    brokerHoldingSnapshot: { ...item, id: previous.id },
+  }));
+  rows.find(row => row.symbol === "CLSK").pendingSellOrders = [{
+    id: "retained-sell-order", quantity: 320, targetPrice: 18, orderType: "Conditional Sell",
+    status: "Active", cmcSnapshot: { currency: "USD" },
+  }];
+  const store = reconcileBrokerHoldings({
+    longTermHoldings: rows.filter(row => row.kind === "long-term"),
+    shortTermTrades: rows.filter(row => row.kind === "short-term"),
+    brokerPortfolioSnapshot: previous,
+  }, snapshot, "2026-09-09T03:00:00.000Z");
+  const tigerSnapshot = JSON.parse(fs.readFileSync("data/freedom/tiger-tjgc-2026-09-06.json", "utf8"));
+  const tiger = importNativeBrokerPosition({ shortTermTrades: [], longTermHoldings: [] }, tigerSnapshot, "now").shortTermTrades[0];
+  return {
+    holdings: store.longTermHoldings.map(brokerHoldingValuation),
+    shortHoldings: [...store.shortTermTrades, tiger].map(brokerHoldingValuation),
+    archivedHoldings: store.archivedHoldings,
+    brokerPortfolioSnapshot: store.brokerPortfolioSnapshot,
+  };
+}
+
+const summaryValues = () => Object.fromEntries([...document.querySelectorAll(".fdSummaryCard")].map(card => [
+  card.querySelector(".fdSummaryLabel").textContent, card.querySelector(".fdSummaryValue").textContent,
+]));
+const holdingValues = card => Object.fromEntries([...card.querySelectorAll(".fdStat")].map(stat => [
+  stat.querySelector("dt").textContent, stat.querySelector("dd").textContent,
+]));
+
+test("latest CMC stock holdings show account totals, supplied FX and pending sells without a false JBLU loss", async () => {
+  const portfolio = latestCmcPortfolio();
+  globalThis.fetch = async url => response(url.includes("long-term") ? portfolio
+    : { trades: url.includes("ACTIVE_HOLDING") ? portfolio.shortHoldings : [] });
+  await mount();
+  assert.deepEqual(summaryValues(), {
+    "Active CMC Holdings": "4", "Total Holdings (AUD)": "19152.07", "Cash (AUD)": "13256.45",
+    "Total Portfolio (AUD)": "32408.52", "Total P&L (AUD)": "576.26", Return: "2.89",
+    "Daily P&L (AUD)": "134.56", "Holdings Table Value (AUD)": "19005.36",
+  });
+  const cards = [...document.querySelectorAll(".fdHoldingCard")];
+  assert.deepEqual(cards.map(card => card.dataset.symbol), ["CBA", "CLSK", "IVV", "JBLU", "TJGC"]);
+  for (const [symbol, quantity, price, fx, change] of [
+    ["CBA", "45", "A$155.160", "1.000", "-A$3.530"],
+    ["CLSK", "320", "US$13.480", "0.727", "+US$0.790"],
+    ["IVV", "86", "A$70.800", "1.000", "-A$0.200"],
+    ["JBLU", "240", "US$4.520", "0.727", "-US$0.110"],
+  ]) {
+    const card = cards.find(item => item.dataset.symbol === symbol);
+    const values = holdingValues(card);
+    const nativeCurrency = ["CLSK", "JBLU"].includes(symbol) ? "USD" : "AUD";
+    assert.equal(values["Quantity Owned"], quantity);
+    assert.equal(values[`Current Price (${nativeCurrency})`], price);
+    assert.equal(values[`Price Change (${nativeCurrency})`], change);
+    assert.equal(values["CMC FX Rate"], fx);
+    assert.match(card.textContent, /retained from the earlier CMC snapshot/);
+    assert.match(card.textContent, /Per-holding P&L and return were not supplied/);
+    assert.equal(card.querySelector(".fdHoldingPL"), null);
+    assert.ok(!card.textContent.includes("FX rate were not supplied"));
+  }
+  const jblu = cards.find(card => card.dataset.symbol === "JBLU");
+  const jbluValues = holdingValues(jblu);
+  assert.equal(jbluValues["CMC Table Value (AUD)"], "0");
+  assert.equal(jbluValues["Open Sells"], "240");
+  assert.equal(jbluValues["Available to Sell"], "0");
+  assert.match(jblu.textContent, /SELL PENDING/);
+  assert.match(jblu.textContent, /still hold 240 shares; execution is not confirmed/);
+  assert.equal(jblu.querySelectorAll(".fdSellOrder").length, 0, "No sell limit price is invented from an open-sell quantity");
+  assert.ok(!jblu.textContent.includes("-100"));
+  const clsk = cards.find(card => card.dataset.symbol === "CLSK");
+  assert.equal(holdingValues(clsk)["Conditional Orders"], "-320");
+  assert.equal(holdingValues(clsk)["Available to Sell"], "320");
+  assert.match(clsk.querySelector(".fdSellOrder").textContent, /Target Price18/);
+  assert.match(document.querySelector(".fdArchivedSection").textContent, /NWH/);
+  assert.match(document.querySelector(".fdSummaryTotals").textContent, /Shares Held691/);
+  assert.match(document.querySelector(".fdSummaryTotals").textContent, /Available to Sell451/);
+});
+
+test("missing account metadata does not turn the zero CMC table value into aggregate P&L", async () => {
+  const portfolio = latestCmcPortfolio();
+  globalThis.fetch = async url => response(url.includes("long-term")
+    ? { ...portfolio, brokerPortfolioSnapshot: null }
+    : { trades: url.includes("ACTIVE_HOLDING") ? portfolio.shortHoldings : [] });
+  await mount();
+  const summary = summaryValues();
+  assert.equal(summary["Holdings Table Value (AUD)"], "19005.36");
+  assert.equal(summary["P&L"], "Not supplied");
+  assert.equal(summary.Return, "Not supplied");
+  assert.ok(!("Best Performer" in summary));
+  assert.ok(!("Worst Performer" in summary));
+});
 
 for (const failure of [401, 403, 500, "network"]) {
   test(`rendered page: ${failure} shows only load error, no false empty state; Retry recovers`, async () => {

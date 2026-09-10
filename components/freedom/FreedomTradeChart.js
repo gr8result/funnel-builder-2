@@ -37,6 +37,7 @@ function niceBounds(values) {
 export default function FreedomTradeChart({
   candles = [],
   entryPrice = null,
+  entryLabel = "Entry",
   currentPrice = null,
   safetyExit = null,
   targets = [],
@@ -93,7 +94,7 @@ export default function FreedomTradeChart({
 
   const markerLines = [
     { value: safetyExit, colour: TONE_COLOURS.safety, label: "Safety Exit", dash: "6 4" },
-    { value: entryPrice, colour: TONE_COLOURS.entry, label: "Entry", dash: "6 4" },
+    { value: entryPrice, colour: TONE_COLOURS.entry, label: entryLabel, dash: "6 4" },
     ...(targets || []).filter(isKnownPrice).map((value, index) => ({
       value, colour: TONE_COLOURS.target, label: "Target " + (index + 1), dash: "4 4",
     })),

@@ -64,13 +64,17 @@ async function respondWithTrades(res, extra = {}, filterType = null) {
 
   const priced = enriched.filter((row) => row.dataAvailable);
   const open = enriched.filter((row) => row.effectiveStatus === "open");
+  const audOpen = open.filter(row => (row.valuationCurrency || row.currency) === "AUD");
   const totals = {
+    currency: "AUD",
+    holdingsWithoutAudValuation: open.length - audOpen.length,
     trades: enriched.length,
     pending: enriched.filter((row) => row.effectiveStatus === "pending").length,
     open: open.length,
     unavailable: enriched.length - priced.length,
-    amountInvested: round(open.reduce((total, row) => total + (row.amountInvested || 0), 0)),
-    profitLoss: round(open.reduce((total, row) => total + (row.profitLoss || 0), 0)),
+    amountInvested: round(audOpen.reduce((total, row) => total + (row.amountInvested || 0), 0)),
+    profitLoss: audOpen.some(row => row.profitLoss == null)
+      ? null : round(audOpen.reduce((total, row) => total + row.profitLoss, 0)),
   };
 
   return res.status(200).json({

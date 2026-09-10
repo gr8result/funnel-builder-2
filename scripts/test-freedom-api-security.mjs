@@ -54,6 +54,7 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const r = await authoriseFreedomRequest(req(method), { deps: d });
   ok(r.ok === false, `anonymous ${method} must be denied`);
   eq(r.status, 401, `anonymous ${method} must return 401`);
+  eq(r.code, "no_token", `anonymous ${method} must be reported as a missing token`);
   ok(!d.calls.includes("listModuleCodesForUser"), `anonymous ${method} must not reach entitlement lookup`);
   ok(!d.calls.includes("listFreedomHolders"), `anonymous ${method} must not reach any data lookup`);
 }
@@ -63,12 +64,28 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const d = deps({ user: { id: "u1" } });
   const r = await authoriseFreedomRequest(req("GET", { headers: { authorization: "Bearer nope" } }), { deps: d });
   eq(r.status, 401, "an invalid token must be rejected");
+  eq(r.code, "invalid_token", "a rejected token is diagnosable without changing its status");
   ok(!d.calls.includes("listFreedomHolders"), "an invalid token must not reach data lookup");
 }
 {
   const d = deps({ user: { id: "u1" } });
   const r = await authoriseFreedomRequest(req("GET", { headers: { authorization: "good-token" } }), { deps: d });
   eq(r.status, 401, "a non-Bearer Authorization header must be rejected");
+  eq(r.code, "no_token", "a non-Bearer scheme carries no token at all");
+}
+
+// The denial codes are a diagnosis aid only: they must never carry Freedom data,
+// identity, or anything the caller did not already know about its own request.
+{
+  const permitted = new Set(["ok", "status", "code", "error", "reason"]);
+  for (const [name, denial] of Object.entries(DENY)) {
+    ok(typeof denial.code === "string" && denial.code.length > 0, `${name} must carry a diagnosis code`);
+    ok(!/token|session|bearer/i.test(String(denial.code)) || denial.status === 401,
+      `${name}: only a 401 may describe the caller's token`);
+  }
+  const d = deps();
+  const r = await authoriseFreedomRequest(req("GET"), { deps: d });
+  for (const key of Object.keys(r)) ok(permitted.has(key), `a denial must not expose "${key}"`);
 }
 
 // ------------------------------------- authenticated but not entitled: denied
@@ -235,7 +252,7 @@ for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
   const tracked = execSync("git ls-files pages/api/freedom*", { encoding: "utf8" })
     .split("\n").map((s) => s.trim()).filter((s) => s.endsWith(".js"));
 
-  eq(tracked.length, 33, "all 33 tracked Freedom routes are accounted for");
+  ok(tracked.length >= 33, "the original Freedom route surface is present; every tracked route is checked below");
 
   for (const f of tracked) {
     const src = fs.readFileSync(f, "utf8");

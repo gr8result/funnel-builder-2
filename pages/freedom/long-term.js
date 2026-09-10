@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
-import { portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
+import { authenticatedHeaders } from "../../lib/freedom/portfolioClient.js";
 import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 
@@ -44,7 +44,8 @@ function HoldingCard({ holding, onDelete }) {
 
       <FreedomTradeChart
         candles={holding.candles}
-        entryPrice={holding.brokerHoldingSnapshot && nativeCurrency !== "AUD" ? null : holding.purchasePrice}
+        entryPrice={holding.brokerHoldingSnapshot && nativeCurrency !== holding.purchasePriceCurrency ? null : holding.purchasePrice}
+        entryLabel={holding.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO (rounded)" : "Entry"}
         currentPrice={holding.currentPrice}
         targets={[...(holding.pendingSellOrders || []).map(row => row.targetPrice), holding.targetPrice].filter(value => value != null)}
         height={180}
@@ -52,9 +53,9 @@ function HoldingCard({ holding, onDelete }) {
       />
 
       <dl className="fdHoldingFacts">
-        <div><dt>Average buy price ({holding.purchasePriceCurrency || currency})</dt><dd>{holding.purchasePrice == null ? "Not recorded" : `${holding.purchasePriceCurrency || currency} ${Number(holding.purchasePrice).toFixed(3)}`}</dd></div>
+        <div><dt>{holding.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO price (rounded)" : "Average buy price"} ({holding.purchasePriceCurrency || currency})</dt><dd>{holding.purchasePrice == null ? "Not recorded" : `${holding.purchasePriceCurrency || currency} ${Number(holding.purchasePrice).toFixed(3)}`}</dd></div>
         <div><dt>Quantity</dt><dd>{holding.quantity}</dd></div>
-        <div><dt>Amount invested</dt><dd>{formatMoney(holding.amountInvested, currency)}</dd></div>
+        <div><dt>Amount invested</dt><dd>{holding.amountInvested == null ? "Not supplied" : formatMoney(holding.amountInvested, currency)}</dd></div>
         <div><dt>Current price</dt><dd>{holding.dataAvailable ? formatMoney(holding.currentPrice, nativeCurrency) : "No data"}</dd></div>
         <div>
           <dt>Profit / loss</dt>
@@ -165,7 +166,7 @@ export default function LongTermPortfolio() {
     setLoading(true);
     setLoadError(null);
     try {
-      const response = await fetch("/api/freedom/long-term", { headers: await portfolioHeaders(supabase.auth), cache: "no-store" });
+      const response = await fetch("/api/freedom/long-term", { headers: await authenticatedHeaders(supabase.auth), cache: "no-store" });
       const payload = await response.json();
       if (!response.ok || !payload.ok || !Array.isArray(payload.holdings)) throw new Error(payload.error || payload.errors?.[0] || "Could not load the portfolio.");
       setData(payload);
@@ -176,7 +177,20 @@ export default function LongTermPortfolio() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // The session may hydrate after first paint, and it can be refreshed or replaced
+  // while the page is open. Loading only on mount left the page stuck on the
+  // guard's 401 until a manual reload.
+  useEffect(() => {
+    let mounted = true;
+    load();
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      queueMicrotask(() => { if (mounted) load(); });
+    });
+    return () => {
+      mounted = false;
+      data?.subscription?.unsubscribe();
+    };
+  }, [load]);
 
   const submit = useCallback(async (event) => {
     event.preventDefault();
@@ -185,7 +199,7 @@ export default function LongTermPortfolio() {
     try {
       const response = await fetch("/api/freedom/long-term", {
         method: "POST",
-        headers: await portfolioHeaders(supabase.auth, true),
+        headers: await authenticatedHeaders(supabase.auth, true),
         body: JSON.stringify(form),
       });
       const payload = await response.json();
@@ -205,7 +219,7 @@ export default function LongTermPortfolio() {
 
   const remove = useCallback(async (holding) => {
     try {
-      const response = await fetch("/api/freedom/long-term?id=" + encodeURIComponent(holding.id), { method: "DELETE", headers: await portfolioHeaders(supabase.auth) });
+      const response = await fetch("/api/freedom/long-term?id=" + encodeURIComponent(holding.id), { method: "DELETE", headers: await authenticatedHeaders(supabase.auth) });
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.error || payload.errors?.[0] || "Could not delete holding.");
       setData(payload);
@@ -292,14 +306,15 @@ export default function LongTermPortfolio() {
 
         {totals && holdings.length ? (
           <section className="fdTotals" aria-label="Portfolio totals">
+            <p>AUD valuations only; holdings without AUD conversion are excluded.</p>
             <div><span>Holdings</span><strong>{totals.holdings}</strong></div>
             <div><span>Amount invested</span><strong>{formatMoney(totals.amountInvested, "AUD")}</strong></div>
             <div><span>Current value</span><strong>{formatMoney(totals.currentValue, "AUD")}</strong></div>
             <div className={totals.profitLoss >= 0 ? "fdTone-green" : "fdTone-red"}>
-              <span>Profit / loss</span><strong>{formatSignedMoney(totals.profitLoss, "AUD")}</strong>
+              <span>Profit / loss</span><strong>{totals.profitLoss == null ? "Not supplied" : formatSignedMoney(totals.profitLoss, "AUD")}</strong>
             </div>
             <div className={totals.profitLoss >= 0 ? "fdTone-green" : "fdTone-red"}>
-              <span>Return</span><strong>{formatPercent(totals.profitLossPercent)}</strong>
+              <span>Return</span><strong>{totals.profitLossPercent == null ? "Not supplied" : formatPercent(totals.profitLossPercent)}</strong>
             </div>
             {totals.unpricedHoldings ? (
               <div className="fdTone-grey"><span>No market data</span><strong>{totals.unpricedHoldings}</strong></div>

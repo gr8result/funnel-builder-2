@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
-import { portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
+import { SIGNED_OUT_MESSAGE, authenticatedHeaders, portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
 ﻿import { useCallback, useEffect, useState } from "react";
 import Head from "next/head";
 import { useRef } from "react";
@@ -189,7 +189,7 @@ function CmcImportPanel({ rows, setRows, onAnalyse, universeSelection }) {
     setMessage("Reading CMC candidates...");
     const response = await fetch("/api/freedom/cmc-market-import", {
       method: "POST",
-      headers: await portfolioHeaders(supabase.auth, true),
+      headers: await authenticatedHeaders(supabase.auth, true),
       body: JSON.stringify({ sourceType, text, csv: sourceType === "csv" ? text : "" }),
     });
     const payload = await response.json();
@@ -216,7 +216,7 @@ function CmcImportPanel({ rows, setRows, onAnalyse, universeSelection }) {
       setMessage("Reading screenshot text...");
       const response = await fetch("/api/freedom/cmc-market-import", {
         method: "POST",
-        headers: await portfolioHeaders(supabase.auth, true),
+        headers: await authenticatedHeaders(supabase.auth, true),
         body: JSON.stringify({ sourceType: "image", image: { name: file.name, type: file.type, dataUrl } }),
       });
       const payload = await response.json();
@@ -804,20 +804,26 @@ export default function TodaysOpportunities() {
         body.importedCandidates = cmcRows;
         body.symbols = cmcRows.map((row) => row.symbol).filter(Boolean);
       }
+      const headers = await portfolioHeaders(supabase.auth, true);
+      if (!headers.Authorization) {
+        setData({ outcome: "authentication-required", message: SIGNED_OUT_MESSAGE + " Your saved portfolio has not been changed." });
+        return;
+      }
       const response = await fetch("/api/freedom/opportunities", {
         method: "POST",
-        headers: await portfolioHeaders(supabase.auth, true),
+        headers,
         body: JSON.stringify(body),
       });
       const payload = await response.json();
+      if (response.status === 401 || response.status === 403) {
+        setData({ outcome: response.status === 401 ? "authentication-required" : "access-denied",
+          message: response.status === 401 ? "Your session has expired. Sign in again to load Freedom." : (payload.error || "Your account does not have access to Freedom.") });
+        return;
+      }
       if (!response.ok) throw new Error(payload.error || "Freedom request failed.");
       setData(payload);
       setSessions(payload?.scan?.sessions || marketSessionSnapshot());
-    })();
-    scanInFlightRef.current = { key: scanKey, promise };
-    try {
-      await promise;
-    } catch (fetchError) {
+    })().catch((fetchError) => {
       // A transport failure is a market-data failure, never "no trades found".
       setData({
         ok: false,
@@ -829,14 +835,30 @@ export default function TodaysOpportunities() {
         scan: { sessions: marketSessionSnapshot(), marketSelection, requestedMarkets: marketsForSelection(marketSelection) },
       });
       setSessions(marketSessionSnapshot());
-    } finally {
+    }).finally(() => {
       if (scanInFlightRef.current?.promise === promise) scanInFlightRef.current = null;
       setLoading(false);
-    }
+    });
+    // Share the handled promise: Strict Mode and repeated scans must not receive
+    // the raw rejecting request and produce an unhandled runtime overlay.
+    scanInFlightRef.current = { key: scanKey, promise };
+    return promise;
   }, [marketSelection, universeSelection, cmcRows]);
 
   useEffect(() => {
+    let active = true;
     runScan(false);
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (["INITIAL_SESSION", "SIGNED_IN", "TOKEN_REFRESHED", "SIGNED_OUT"].includes(event)) {
+        // Do not await Supabase auth work inside its auth callback.
+        setTimeout(() => {
+          Promise.resolve(scanInFlightRef.current?.promise).then(() => {
+            if (active) return runScan(false);
+          });
+        }, 0);
+      }
+    });
+    return () => { active = false; subscription.subscription.unsubscribe(); };
   }, [runScan]);
 
   /** Hand the opportunity to My Trades with the plan pre-filled. */
@@ -885,6 +907,13 @@ export default function TodaysOpportunities() {
 
         {loading && !data ? (
           <FreedomNotice tone="blue" title="Scanning the market" message="Freedom is checking the configured universe with live market data. This can take a minute." />
+        ) : null}
+
+        {["authentication-required", "access-denied"].includes(data?.outcome) ? (
+          <FreedomNotice tone="red" title={data.outcome === "authentication-required" ? "Sign in required" : "Unable to access Freedom"} message={data.message}>
+            {data.outcome === "authentication-required" && <a className="fdButton" href="/login?redirect=%2Ffreedom">Sign in</a>}
+            <button type="button" className="fdButton secondary" onClick={() => runScan(true)}>Retry</button>
+          </FreedomNotice>
         ) : null}
 
         {data?.outcome === "market-data-failure" ? (

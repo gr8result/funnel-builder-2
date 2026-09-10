@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { loadPortfolio, portfolioHeaders } from "../lib/freedom/portfolioClient.js";
+import { FreedomAuthError, SESSION_REJECTED_MESSAGE, SIGNED_OUT_MESSAGE, authenticatedHeaders, loadPortfolio, portfolioHeaders } from "../lib/freedom/portfolioClient.js";
 
 const auth = { getSession: async () => ({ data: { session: { access_token: "test-session" } } }) };
 const holding = { id: "holding-original", kind: "long-term", symbol: "TEST", quantity: 5,
@@ -29,6 +29,16 @@ test("populated response preserves stable IDs, original fields and attached sell
 test("only successful, genuinely empty collections load as empty", async () => {
   const result = await loadPortfolio({ auth, fetcher: async () => reply({ holdings: [], trades: [] }) });
   assert.ok(Object.values(result).every(c => c.status === "success" && c.data.length === 0));
+});
+
+test("account header and holdings table totals survive loading as independent snapshot values", async () => {
+  const snapshot = JSON.parse(await readFile(new URL("../data/freedom/cmc-holdings-2026-09-09.json", import.meta.url)));
+  const result = await loadPortfolio({ auth, fetcher: async url => reply(url.includes("long-term")
+    ? { holdings: [holding], brokerPortfolioSnapshot: snapshot } : { trades: [] }) });
+  assert.deepEqual(result.holdings.brokerPortfolioSnapshot, snapshot);
+  assert.equal(result.holdings.brokerPortfolioSnapshot.accountSummary.totalHoldingsAud, 19152.07);
+  assert.equal(result.holdings.brokerPortfolioSnapshot.totals.marketValueAud, 19005.36);
+  assert.equal(result.shortTermHoldings.brokerPortfolioSnapshot, null);
 });
 for (const status of [401, 403, 500]) {
   test(`${status} is handled locally without discarding successful collections`, async () => {
@@ -59,6 +69,62 @@ test("session failures are handled and authenticated mutation headers are consis
   const result = await loadPortfolio({ auth: { getSession: async () => ({ error: Error("expired session") }) } });
   assert.ok(Object.values(result).every(c => c.status === "error" && c.error.message === "expired session"));
 });
+// The authentication contract with the M2.1 guard. A Freedom request without a
+// bearer token can only ever be a 401, so it must not be sent, and the failure
+// must name the real cause rather than echoing the guard.
+const signedOut = { getSession: async () => ({ data: { session: null } }) };
+
+test("a signed-out browser never sends a Freedom request", async () => {
+  let sent = 0;
+  const result = await loadPortfolio({ auth: signedOut, fetcher: async () => { sent += 1; return reply({}); } });
+  assert.equal(sent, 0, "no request may leave the browser without a token");
+  assert.ok(Object.values(result).every(c =>
+    c.status === "error" && c.error.code === "no_token" && c.error.message === SIGNED_OUT_MESSAGE));
+});
+
+test("authenticatedHeaders refuses to build headers without a session", async () => {
+  await assert.rejects(() => authenticatedHeaders(signedOut), (error) =>
+    error instanceof FreedomAuthError && error.code === "no_token" && error.status === 401);
+  assert.deepEqual(await portfolioHeaders(signedOut, true), { "Content-Type": "application/json" });
+});
+
+test("a rejected token is refreshed once for the whole load, then retried once", async () => {
+  let refreshes = 0;
+  let token = "stale";
+  const refreshing = {
+    getSession: async () => ({ data: { session: { access_token: token } } }),
+    refreshSession: async () => { refreshes += 1; token = "fresh"; return { error: null }; },
+  };
+  const seenTokens = [];
+  const result = await loadPortfolio({ auth: refreshing, fetcher: async (url, options) => {
+    const bearer = options.headers.Authorization;
+    seenTokens.push(bearer);
+    if (bearer === "Bearer stale") return reply({ ok: false, code: "invalid_token", error: "Your session is no longer valid." }, 401);
+    return url.includes("long-term") ? reply({ ok: true, holdings: [holding] }) : reply({ ok: true, trades: orders });
+  }});
+  assert.equal(refreshes, 1, "three collections must share a single refresh");
+  assert.ok(Object.values(result).every(c => c.status === "success"));
+  assert.ok(seenTokens.includes("Bearer fresh"));
+});
+
+test("a failed refresh reports a rejected session, and no_token is never retried", async () => {
+  let refreshes = 0;
+  const auth401 = {
+    getSession: async () => ({ data: { session: { access_token: "revoked" } } }),
+    refreshSession: async () => { refreshes += 1; return { error: Error("refresh_token_not_found") }; },
+  };
+  const result = await loadPortfolio({ auth: auth401,
+    fetcher: async () => reply({ ok: false, code: "invalid_token", error: "rejected" }, 401) });
+  assert.equal(refreshes, 1);
+  assert.ok(Object.values(result).every(c => c.status === "error" && c.error.message === SESSION_REJECTED_MESSAGE));
+
+  // A 401 without the invalid_token code (or any 403/500) must not trigger a refresh.
+  let retries = 0;
+  await loadPortfolio({ auth: auth401, fetcher: async () => { retries += 1; return reply({ ok: false, code: "no_token", error: "x" }, 401); } });
+  assert.equal(refreshes, 1, "only a rejected token may be refreshed");
+  assert.equal(retries, 3, "each collection is attempted exactly once");
+});
+
 test("collections are delivered as each finishes without waiting for a slow sibling", async () => {
   let release;
   const seen = [];
@@ -76,6 +142,17 @@ const storeFile = path.join(directory, "portfolio.json");
 process.env.FREEDOM_TRADE_STORE_PATH = storeFile;
 const store = await import("../lib/freedom/tradeStore.js");
 test.after(async () => { await rm(directory, { recursive: true, force: true }); });
+
+test("stored account snapshot reloads intact and unknown broker P&L stays unknown in portfolio totals", async () => {
+  const snapshot = JSON.parse(await readFile(new URL("../data/freedom/cmc-holdings-2026-09-09.json", import.meta.url)));
+  await writeFile(storeFile, JSON.stringify({ longTermHoldings: [], shortTermTrades: [], brokerPortfolioSnapshot: snapshot }));
+  assert.deepEqual(await store.getBrokerPortfolioSnapshot(), snapshot);
+  const totals = store.longTermTotals([{ dataAvailable: true, currentValue: 0, amountInvested: 1683.94,
+    profitLoss: null, brokerHoldingSnapshot: { type: "stock-holdings" } }]);
+  assert.equal(totals.currentValue, 0);
+  assert.equal(totals.profitLoss, null);
+  assert.equal(totals.profitLossPercent, null);
+});
 
 test("mixed holdings and pending orders persist across fresh loads without writes or P&L", async () => {
   const original = JSON.stringify({ version: 1, longTermHoldings: [holding], shortTermTrades: orders, tradeImports: [], updatedAt: "2026-09-01" });

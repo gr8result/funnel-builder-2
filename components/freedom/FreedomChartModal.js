@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
-import { portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
+import { authenticatedHeaders } from "../../lib/freedom/portfolioClient.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -111,7 +111,7 @@ export default function FreedomChartModal({ opportunity, onClose }) {
       currency: opportunity?.currency || "",
       companyName: opportunity?.companyName || "",
     });
-    portfolioHeaders(supabase.auth)
+    authenticatedHeaders(supabase.auth)
       .then(headers => fetch("/api/freedom/chart?" + params.toString(), { headers }))
       .then((response) => response.json())
       .then((payload) => { if (!cancelled) setData(payload); })

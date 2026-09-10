@@ -1,0 +1,22 @@
+{
+  "id": "cmc-user-supplied-holdings-2026-09-09",
+  "type": "stock-holdings",
+  "broker": "CMC",
+  "source": "User-supplied CMC Invest Stock Holdings screenshot; received 2026-09-09; quote and FX timestamps not supplied",
+  "holdings": [
+    { "recordId": "lt_CBA_159.174_45", "symbol": "CBA", "quantity": 45, "nativeCurrency": "AUD", "nativeCurrentPrice": 155.160, "nativePriceChange": -3.530, "priceChangePercent": -2.22, "fxRate": 1.000, "recentBuys": 0, "recentSells": 0, "openSells": 0, "conditionalOrders": 0, "availableToSell": 45, "marketValueAud": 6982.20 },
+    { "recordId": "legacy_market_watch_watch_1787308148465_n9xq4o4c", "symbol": "CLSK", "quantity": 320, "nativeCurrency": "USD", "nativeCurrentPrice": 13.480, "nativePriceChange": 0.790, "priceChangePercent": 6.23, "fxRate": 0.727, "recentBuys": 0, "recentSells": 0, "openSells": 0, "conditionalOrders": -320, "availableToSell": 320, "marketValueAud": 5934.36, "termClassification": "short-term" },
+    { "recordId": "st_ivv_pb_mtjr2gyn", "symbol": "IVV", "quantity": 86, "nativeCurrency": "AUD", "nativeCurrentPrice": 70.800, "nativePriceChange": -0.200, "priceChangePercent": -0.28, "fxRate": 1.000, "recentBuys": 0, "recentSells": 0, "openSells": 0, "conditionalOrders": 0, "availableToSell": 86, "marketValueAud": 6088.80, "termClassification": "long-term" },
+    { "recordId": "lt_JBLU_7.016_240", "symbol": "JBLU", "quantity": 240, "nativeCurrency": "USD", "nativeCurrentPrice": 4.520, "nativePriceChange": -0.110, "priceChangePercent": -2.38, "fxRate": 0.727, "recentBuys": 0, "recentSells": 0, "openSells": 240, "conditionalOrders": 0, "availableToSell": 0, "marketValueAud": 0.00 }
+  ],
+  "archiveIds": ["lt_NWH_real_1436"],
+  "totals": { "marketValueAud": 19005.36, "quantity": 691, "recentBuys": 0, "recentSells": 0, "openSells": 240, "conditionalOrders": -320, "availableToSell": 451 },
+  "accountSummary": { "totalHoldingsAud": 19152.07, "cashAud": 13256.45, "totalPortfolioAud": 32408.52, "profitLossAud": 576.26, "profitLossPercent": 2.89, "dailyProfitLossAud": 134.56 },
+  "notes": [
+    "The CMC account header and Stock Holdings table show different holdings values. Both are retained exactly as displayed; the screenshot does not explain the difference.",
+    "JBLU remains an owned holding of 240 shares with 240 open sells, zero available to sell and a displayed Value AUD of zero. This is not confirmation of a completed sale or a total loss.",
+    "Average purchase costs and per-holding P&L are not provided in this screenshot. Prior purchase costs remain historical; current per-holding P&L and daily P&L are unknown.",
+    "NWH is absent from this CMC holdings table. Archive the previous CMC holding with sale details unconfirmed, retaining its record and order history.",
+    "The Tiger Brokers TJGC position and existing pending buy orders are outside this CMC holdings snapshot."
+  ]
+}

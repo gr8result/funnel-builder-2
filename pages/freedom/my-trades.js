@@ -10,7 +10,7 @@ import FreedomShell, {
   formatTimestamp,
 } from "../../components/freedom/FreedomShell.js";
 import FreedomTradeChart from "../../components/freedom/FreedomTradeChart.js";
-import { loadPortfolio, portfolioHeaders } from "../../lib/freedom/portfolioClient.js";
+import { authenticatedHeaders, loadPortfolio } from "../../lib/freedom/portfolioClient.js";
 
 /**
  * My Trades - Holdings Dashboard with CMC Orders
@@ -89,7 +89,7 @@ function validatedChartCandles(candles = []) {
 }
 
 function chartEntryPrice(record = {}) {
-  if (record.brokerHoldingSnapshot) return record.nativeCurrency === "AUD" ? record.purchasePrice : null;
+  if (record.brokerHoldingSnapshot) return record.nativeCurrency === (record.purchasePriceCurrency || "AUD") ? record.purchasePrice : null;
   // A broker's AUD cost basis cannot be plotted on a USD market-price chart.
   if (record.currency && record.currency.toUpperCase() !== chartIdentity(record).currency) return null;
   return numberOrNull(record.averageFilledPrice) ?? numberOrNull(record.purchasePrice) ?? numberOrNull(record.entryPrice);
@@ -189,7 +189,7 @@ function ChartModal({ record, isOpen, onClose }) {
       try {
         if (!identity.symbol) throw new Error("Chart data cannot load because this record has no ticker.");
         
-        const headers = await portfolioHeaders(supabase.auth);
+        const headers = await authenticatedHeaders(supabase.auth);
         
         const params = new URLSearchParams({
           symbol: identity.symbol,
@@ -275,6 +275,7 @@ function ChartModal({ record, isOpen, onClose }) {
             <FreedomTradeChart
               candles={chartData.candles}
               entryPrice={chartEntryPrice(record)}
+              entryLabel={record.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO (rounded)" : "Entry"}
               currentPrice={currentPrice}
               safetyExit={record.safetyExit}
               targets={targets}
@@ -284,11 +285,11 @@ function ChartModal({ record, isOpen, onClose }) {
           )}
         </div>
 
-        {record.brokerHoldingSnapshot && record.nativeCurrency !== "AUD" && <p>Average buy {holdingPrice(record.purchasePrice, "AUD")}; native execution price not supplied.</p>}
+        {record.brokerHoldingSnapshot && record.nativeCurrency !== record.purchasePriceCurrency && <p>Average buy {holdingPrice(record.purchasePrice, record.purchasePriceCurrency)}; native execution price not supplied.</p>}
         <div className="fdChartLegend">
           <div className="fdLegendItem">
             <span className="fdLegendColor fdColorBlue" />
-            <span>Entry/Buy Price</span>
+            <span>{record.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO Price (rounded)" : "Entry/Buy Price"}</span>
           </div>
           <div className="fdLegendItem">
             <span className="fdLegendColor fdColorBlack" />
@@ -470,7 +471,7 @@ function EditModal({ record, isOpen, onClose, onSave, recordType }) {
         return;
       }
       
-      const headers = await portfolioHeaders(supabase.auth, true);
+      const headers = await authenticatedHeaders(supabase.auth, true);
       
       const endpoint = recordType === "holding" ? "/api/freedom/long-term" : "/api/freedom/trades";
       const res = await fetch(endpoint, {
@@ -554,7 +555,7 @@ function EditModal({ record, isOpen, onClose, onSave, recordType }) {
           {(recordType === "holding" || recordType === "shortHolding") ? (
             <>
               <div className="fdFormGroup">
-                <label htmlFor="purchasePrice">Average Buy Price ({record.purchasePriceCurrency || record.currency})</label>
+                <label htmlFor="purchasePrice">{record.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO Price (rounded)" : "Average Buy Price"} ({record.purchasePriceCurrency || record.currency})</label>
                 <input
                   id="purchasePrice"
                   type="number"
@@ -1000,6 +1001,9 @@ function SellOrderDisplay({ sellOrder, holdingCurrency }) {
 function HoldingCard({ holding, onSetTarget, onSetSafetyExit, onViewChart, onEdit }) {
   const currency = holding.valuationCurrency || holding.currency || "AUD";
   const nativeCurrency = holding.nativeCurrency || holding.currency || "AUD";
+  const snapshot = holding.brokerHoldingSnapshot;
+  const isStockHoldings = snapshot?.type === "stock-holdings";
+  const priceChange = numberOrNull(snapshot?.nativePriceChange);
   
   return (
     <article className={"fdHoldingCard fdTone-" + holding.tone} data-record-id={holding.id} data-symbol={holding.symbol}>
@@ -1008,14 +1012,15 @@ function HoldingCard({ holding, onSetTarget, onSetSafetyExit, onViewChart, onEdi
           <h2>{holding.symbol}{holding.exchange === "US" ? ":US" : ""} <small>{holding.exchange}</small></h2>
           <p>{holding.companyName || holding.exchange || "Holding"}</p>
         </div>
-        <span className="fdHoldingBadge">ACTIVE HOLDING</span>
+        <span className="fdHoldingBadge">{isStockHoldings && snapshot.openSells > 0 ? "SELL PENDING" : "ACTIVE HOLDING"}</span>
       </header>
 
       <div className="fdHoldingChart">
         <FreedomTradeChart
           candles={holding.candles || []}
           entryPrice={chartEntryPrice(holding)}
-          currentPrice={holding.currentPrice}
+          entryLabel={holding.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO (rounded)" : "Entry"}
+          currentPrice={chartCurrentPrice(holding)}
           safetyExit={holding.safetyExit}
           targets={chartTargets(holding)}
           height={200}
@@ -1023,29 +1028,31 @@ function HoldingCard({ holding, onSetTarget, onSetSafetyExit, onViewChart, onEdi
         />
       </div>
 
-      {holding.brokerHoldingSnapshot && nativeCurrency !== "AUD" && (
-        <p className="fdHoldingStamp">Average buy {holdingPrice(holding.purchasePrice, "AUD")}. USD execution price and FX rate not supplied; no AUD buy line is plotted on the USD chart.</p>
+      {holding.brokerHoldingSnapshot && nativeCurrency !== holding.purchasePriceCurrency && (
+        <p className="fdHoldingStamp">Average buy {holdingPrice(holding.purchasePrice, holding.purchasePriceCurrency || "AUD")}. Native execution price{snapshot.fxRate == null ? " and FX rate were" : " was"} not supplied; the average buy price is not plotted on the {nativeCurrency} chart.</p>
       )}
+      {snapshot?.costBasisSourceSnapshotId && <p className="fdHoldingStamp">Average buy price and total cost are retained from the earlier CMC snapshot.</p>}
+      {holding.brokerHoldingSnapshot?.fifoPrice != null && <p className="fdHoldingStamp">Tiger Brokers position. FIFO is rounded; exact cost, execution details and AUD conversion were not supplied. Excluded from the CMC AUD summary.</p>}
       <dl className="fdHoldingStats">
         <div className="fdStat">
           <dt>Quantity Owned</dt>
           <dd>{holding.quantity}</dd>
         </div>
         <div className="fdStat">
-          <dt>Average Buy Price ({holding.purchasePriceCurrency || currency})</dt>
+          <dt>{holding.brokerHoldingSnapshot?.fifoPrice != null ? "FIFO Price (rounded)" : "Average Buy Price"} ({holding.purchasePriceCurrency || currency})</dt>
           <dd>{holdingPrice(holding.purchasePrice, holding.purchasePriceCurrency || currency)}</dd>
         </div>
         <div className="fdStat">
           <dt>Total Cost</dt>
-          <dd>{holding.amountInvested ? formatMoney(holding.amountInvested, currency) : "--"}</dd>
+          <dd>{holding.amountInvested == null ? "Not supplied" : marketMoney(holding.amountInvested, currency)}</dd>
         </div>
         <div className="fdStat">
           <dt>Current Price ({nativeCurrency})</dt>
           <dd>{holding.dataAvailable ? holdingPrice(holding.currentPrice, nativeCurrency) : "No data"}</dd>
         </div>
         <div className="fdStat">
-          <dt>Market Value</dt>
-          <dd>{holding.dataAvailable ? formatMoney(holding.currentValue, currency) : "--"}</dd>
+          <dt>{isStockHoldings ? "CMC Table Value (AUD)" : "Market Value"}</dt>
+          <dd>{holding.dataAvailable ? marketMoney(holding.currentValue, currency) : "--"}</dd>
         </div>
         <div className="fdStat">
           <dt>Market Status</dt>
@@ -1053,18 +1060,44 @@ function HoldingCard({ holding, onSetTarget, onSetSafetyExit, onViewChart, onEdi
         </div>
       </dl>
 
-      {holding.dataAvailable && holding.profitLoss !== null && (
+      {isStockHoldings && <>
+        <dl className="fdHoldingStats">
+          <div className="fdStat">
+            <dt>Price Change ({nativeCurrency})</dt>
+            <dd>{priceChange == null ? "Not supplied" : `${priceChange > 0 ? "+" : priceChange < 0 ? "-" : ""}${holdingPrice(Math.abs(priceChange), nativeCurrency)}`}</dd>
+          </div>
+          <div className="fdStat">
+            <dt>Price Change %</dt>
+            <dd>{snapshot.priceChangePercent == null ? "Not supplied" : formatPercent(snapshot.priceChangePercent)}</dd>
+          </div>
+          <div className="fdStat">
+            <dt>CMC FX Rate</dt>
+            <dd>{snapshot.fxRate == null ? "Not supplied" : Number(snapshot.fxRate).toFixed(3)}</dd>
+          </div>
+          {[["Recent Buys", "recentBuys"], ["Recent Sells", "recentSells"], ["Open Sells", "openSells"], ["Conditional Orders", "conditionalOrders"], ["Available to Sell", "availableToSell"]].map(([label, key]) => (
+            <div className="fdStat" key={key}>
+              <dt>{label}</dt>
+              <dd>{snapshot[key] ?? "Not supplied"}</dd>
+            </div>
+          ))}
+        </dl>
+        {snapshot.marketValueAud === 0 && snapshot.openSells > 0 && <p className="fdHoldingStamp">CMC shows a zero table value with {snapshot.openSells} shares on open sell orders. You still hold {holding.quantity} shares; execution is not confirmed.</p>}
+        {snapshot.conditionalOrders !== 0 && snapshot.conditionalOrders != null && <p className="fdHoldingStamp">Conditional orders do not reduce the available-to-sell quantity until triggered.</p>}
+        {holding.profitLoss == null && <p className="fdHoldingStamp">Per-holding P&amp;L and return were not supplied in this stock holdings snapshot.</p>}
+      </>}
+
+      {holding.dataAvailable && holding.profitLoss != null && (
         <div className="fdHoldingPL">
           <div>
             <span className="fdLabel">Profit/Loss</span>
             <strong className="fdAmount">
-              {formatSignedMoney(holding.profitLoss, currency)}
+              {currency === "USD" ? formatSignedMoney(holding.profitLoss, currency).replace("$", "US$") : formatSignedMoney(holding.profitLoss, currency)}
             </strong>
           </div>
           <div>
             <span className="fdLabel">Return</span>
             <strong className="fdPercent">
-              {formatPercent(holding.profitLossPercent)}
+              {holding.profitLossPercent == null ? "Not supplied" : formatPercent(holding.profitLossPercent)}
             </strong>
           </div>
         </div>
@@ -1107,7 +1140,7 @@ function HoldingCard({ holding, onSetTarget, onSetSafetyExit, onViewChart, onEdi
 
       <p className="fdHoldingStamp">
         {holding.brokerHoldingSnapshot
-          ? `CMC snapshot - quote time not supplied - imported ${formatTimestamp(holding.brokerHoldingSnapshot.importedAt)}`
+          ? `${holding.brokerHoldingSnapshot.broker || "CMC"} snapshot - quote time not supplied - imported ${formatTimestamp(holding.brokerHoldingSnapshot.importedAt)}`
           : holding.dataAvailable && holding.dataTimestamp ? `Price as at ${formatTimestamp(holding.dataTimestamp)}` : "Market data unavailable"}
       </p>
 
@@ -1541,68 +1574,73 @@ function PendingBuyOrderCard({ order, onViewChart, onEdit }) {
 /**
  * Portfolio Summary - Shows overview of active holdings
  */
-function PortfolioSummary({ holdings }) {
+function PortfolioSummary({ holdings, brokerPortfolioSnapshot }) {
+  const stockSnapshot = brokerPortfolioSnapshot?.type === "stock-holdings" ? brokerPortfolioSnapshot : null;
+  const account = stockSnapshot?.accountSummary;
+  const hasStockHoldings = Boolean(stockSnapshot) || holdings.some(h => h.brokerHoldingSnapshot?.type === "stock-holdings");
   const activePriced = holdings.filter(h => h.dataAvailable);
-  const activeCount = holdings.length;
-  const totalCost = holdings.reduce((sum, h) => sum + (h.amountInvested || 0), 0);
+  const activeCount = account && Array.isArray(stockSnapshot.holdings) ? stockSnapshot.holdings.length : holdings.length;
+  const totalCost = holdings.every(h => h.amountInvested != null) ? holdings.reduce((sum, h) => sum + h.amountInvested, 0) : null;
   const totalValue = activePriced.reduce((sum, h) => sum + h.currentValue, 0);
-  const totalPL = totalValue - totalCost;
-  const totalPLPercent = totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+  const totalPL = !hasStockHoldings && totalCost != null && holdings.every(h => h.dataAvailable && h.profitLoss != null) ? totalValue - totalCost : null;
+  const totalPLPercent = totalPL == null ? null : totalCost > 0 ? (totalPL / totalCost) * 100 : 0;
+  const performers = hasStockHoldings ? [] : activePriced.filter(h => h.profitLossPercent != null);
   
-  const bestPerformer = activePriced.reduce((best, h) => {
-    const hPercent = h.profitLossPercent || -Infinity;
-    const bPercent = best?.profitLossPercent || -Infinity;
+  const bestPerformer = performers.reduce((best, h) => {
+    const hPercent = h.profitLossPercent;
+    const bPercent = best?.profitLossPercent ?? -Infinity;
     return hPercent > bPercent ? h : best;
   }, null);
   
-  const worstPerformer = activePriced.reduce((worst, h) => {
-    const hPercent = h.profitLossPercent || Infinity;
-    const wPercent = worst?.profitLossPercent || Infinity;
+  const worstPerformer = performers.reduce((worst, h) => {
+    const hPercent = h.profitLossPercent;
+    const wPercent = worst?.profitLossPercent ?? Infinity;
     return hPercent < wPercent ? h : worst;
   }, null);
 
+  const moneyValue = value => value == null ? "Not supplied" : formatMoney(value, "AUD");
+  const signedValue = value => value == null ? "Not supplied" : formatSignedMoney(value, "AUD");
+  const percentValue = value => value == null ? "Not supplied" : formatPercent(value);
+  const summaryCards = account ? [
+    { label: "Active CMC Holdings", value: activeCount },
+    { label: "Total Holdings (AUD)", value: moneyValue(account.totalHoldingsAud) },
+    { label: "Cash (AUD)", value: moneyValue(account.cashAud) },
+    { label: "Total Portfolio (AUD)", value: moneyValue(account.totalPortfolioAud) },
+    { label: "Total P&L (AUD)", value: signedValue(account.profitLossAud), signed: account.profitLossAud },
+    { label: "Return", value: percentValue(account.profitLossPercent), signed: account.profitLossPercent },
+    { label: "Daily P&L (AUD)", value: signedValue(account.dailyProfitLossAud), signed: account.dailyProfitLossAud },
+    { label: "Holdings Table Value (AUD)", value: moneyValue(stockSnapshot.totals?.marketValueAud) },
+  ] : [
+    { label: "Active Holdings", value: activeCount },
+    { label: hasStockHoldings ? "Earlier Total Cost" : "Total Cost", value: moneyValue(totalCost) },
+    { label: hasStockHoldings ? "Holdings Table Value (AUD)" : "Market Value", value: moneyValue(totalValue) },
+    { label: "P&L", value: signedValue(totalPL), signed: totalPL },
+    { label: "Return", value: percentValue(totalPLPercent), signed: totalPLPercent },
+    ...(!hasStockHoldings && holdings.some(row => row.dailyProfitLoss != null) ? [{
+      label: "Daily P&L", value: signedValue(holdings.reduce((sum, row) => sum + (row.dailyProfitLoss || 0), 0)),
+    }] : []),
+    ...(bestPerformer ? [{ label: "Best Performer", value: `${bestPerformer.symbol} ${formatPercent(bestPerformer.profitLossPercent)}`, signed: bestPerformer.profitLossPercent }] : []),
+    ...(worstPerformer ? [{ label: "Worst Performer", value: `${worstPerformer.symbol} ${formatPercent(worstPerformer.profitLossPercent)}`, signed: worstPerformer.profitLossPercent }] : []),
+  ];
+
   return (
     <section className="fdPortfolioSummary">
-      <h2>Portfolio Summary</h2>
-      {holdings.some(row => row.brokerHoldingSnapshot) && <p>CMC holdings snapshot - values in AUD</p>}
+      <h2>{account ? "CMC Portfolio Summary" : "Portfolio Summary"}</h2>
+      {holdings.some(row => row.brokerHoldingSnapshot) && <p className="fdSummaryNote">CMC holdings snapshot - values in AUD</p>}
       <div className="fdSummaryGrid">
-        <div className="fdSummaryCard">
-          <span className="fdSummaryLabel">Active Holdings</span>
-          <strong className="fdSummaryValue">{activeCount}</strong>
-        </div>
-        <div className="fdSummaryCard">
-          <span className="fdSummaryLabel">Total Cost</span>
-          <strong className="fdSummaryValue">{formatMoney(totalCost, "AUD")}</strong>
-        </div>
-        <div className="fdSummaryCard">
-          <span className="fdSummaryLabel">Market Value</span>
-          <strong className="fdSummaryValue">{formatMoney(totalValue, "AUD")}</strong>
-        </div>
-        <div className={`fdSummaryCard ${totalPL >= 0 ? 'fdPositiveSummary' : 'fdNegativeSummary'}`}>
-          <span className="fdSummaryLabel">P&L</span>
-          <strong className="fdSummaryValue">{formatSignedMoney(totalPL, 'AUD')}</strong>
-        </div>
-        <div className={`fdSummaryCard ${totalPLPercent >= 0 ? 'fdPositiveSummary' : 'fdNegativeSummary'}`}>
-          <span className="fdSummaryLabel">Return</span>
-          <strong className="fdSummaryValue">{formatPercent(totalPLPercent)}</strong>
-        </div>
-        {holdings.some(row => row.dailyProfitLoss != null) && <div className="fdSummaryCard">
-          <span className="fdSummaryLabel">Daily P&L</span>
-          <strong className="fdSummaryValue">{formatSignedMoney(holdings.reduce((sum, row) => sum + (row.dailyProfitLoss || 0), 0), "AUD")}</strong>
-        </div>}
-        {bestPerformer && (
-          <div className="fdSummaryCard fdPositiveSummary">
-            <span className="fdSummaryLabel">Best Performer</span>
-            <strong className="fdSummaryValue">{bestPerformer.symbol} {formatPercent(bestPerformer.profitLossPercent)}</strong>
+        {summaryCards.map(card => (
+          <div key={card.label} className={`fdSummaryCard${card.signed == null ? "" : card.signed >= 0 ? " fdPositiveSummary" : " fdNegativeSummary"}`}>
+            <span className="fdSummaryLabel">{card.label}</span>
+            <strong className="fdSummaryValue">{card.value}</strong>
           </div>
-        )}
-        {worstPerformer && (
-          <div className="fdSummaryCard fdNegativeSummary">
-            <span className="fdSummaryLabel">Worst Performer</span>
-            <strong className="fdSummaryValue">{worstPerformer.symbol} {formatPercent(worstPerformer.profitLossPercent)}</strong>
-          </div>
-        )}
+        ))}
       </div>
+      {account && <p className="fdSummaryNote">Account figures and the holdings table are preserved separately as displayed by CMC.</p>}
+      {stockSnapshot?.totals && <dl className="fdSummaryTotals">
+        {[["Shares Held", "quantity"], ["Recent Buys", "recentBuys"], ["Recent Sells", "recentSells"], ["Open Sells", "openSells"], ["Conditional Orders", "conditionalOrders"], ["Available to Sell", "availableToSell"]].map(([label, key]) => (
+          <div key={key}><dt>{label}</dt><dd>{stockSnapshot.totals[key] ?? "Not supplied"}</dd></div>
+        ))}
+      </dl>}
 
       <style jsx>{`
         .fdPortfolioSummary {
@@ -1617,6 +1655,26 @@ function PortfolioSummary({ holdings }) {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+        .fdSummaryNote {
+          color: var(--fd-ink-dim);
+          font-size: 12px;
+          margin: 10px 0;
+        }
+        .fdSummaryTotals {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px 24px;
+          margin: 14px 0 0;
+        }
+        .fdSummaryTotals dt {
+          color: var(--fd-ink-dim);
+          font-size: 11px;
+        }
+        .fdSummaryTotals dd {
+          font-size: 14px;
+          font-weight: 800;
+          margin: 4px 0 0;
         }
         .fdSummaryCard {
           background: var(--fd-panel);
@@ -1726,7 +1784,7 @@ export default function MyTradesDashboard() {
     }
 
     try {
-      const headers = await portfolioHeaders(supabase.auth, true);
+      const headers = await authenticatedHeaders(supabase.auth, true);
       
       const res = await fetch(holding.kind === "short-term" ? "/api/freedom/trades" : "/api/freedom/long-term", {
         method: "PATCH",
@@ -1751,7 +1809,7 @@ export default function MyTradesDashboard() {
     }
 
     try {
-      const headers = await portfolioHeaders(supabase.auth, true);
+      const headers = await authenticatedHeaders(supabase.auth, true);
       
       const res = await fetch(holding.kind === "short-term" ? "/api/freedom/trades" : "/api/freedom/long-term", {
         method: "PATCH",
@@ -1816,8 +1874,11 @@ export default function MyTradesDashboard() {
       </Head>
 
       {/* Portfolio Summary */}
-      {activeHoldings.length > 0 && (
-        <PortfolioSummary holdings={activeHoldings} />
+      {activeHoldings.some(row => (row.valuationCurrency || row.currency || "AUD") === "AUD") && (
+        <PortfolioSummary
+          holdings={activeHoldings.filter(row => (row.valuationCurrency || row.currency || "AUD") === "AUD")}
+          brokerPortfolioSnapshot={collections.holdings.brokerPortfolioSnapshot}
+        />
       )}
 
       {/* Pending Buy Orders Section */}

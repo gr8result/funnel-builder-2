@@ -31,13 +31,19 @@ import { isDeveloperEmail } from "../../lib/adminUsers.js";
 
 export const FREEDOM_MODULE_CODE = "freedom";
 
+// Every denial carries a machine-readable `code`. This is a diagnosis aid, not a
+// relaxation: the status codes are unchanged, and a code only describes the state
+// of the caller's OWN request. It exists because "no token was sent" and "the token
+// was rejected" are different failures with different fixes, and collapsing both
+// into one opaque 401 made a signed-out browser look like a broken guard.
 export const DENY = Object.freeze({
-  NO_TOKEN: { status: 401, error: "Authentication required." },
-  BAD_TOKEN: { status: 401, error: "Authentication required." },
-  NO_WORKSPACE: { status: 403, error: "No workspace membership." },
-  NOT_ENTITLED: { status: 403, error: "The Freedom module is not included in your subscription." },
+  NO_TOKEN: { status: 401, code: "no_token", error: "Not signed in. Sign in to continue." },
+  BAD_TOKEN: { status: 401, code: "invalid_token", error: "Your session is no longer valid. Sign in again." },
+  NO_WORKSPACE: { status: 403, code: "no_workspace", error: "No workspace membership." },
+  NOT_ENTITLED: { status: 403, code: "not_entitled", error: "The Freedom module is not included in your subscription." },
   NO_PROVABLE_OWNER: {
     status: 503,
+    code: "no_provable_owner",
     error:
       "Freedom data is temporarily unavailable. Per-workspace isolation is not yet in place, " +
       "so access is withheld until the tenancy migration completes.",
@@ -191,7 +197,7 @@ export function withFreedomApi(handler, options = {}) {
     try {
       const result = await authoriseFreedomRequest(req, options);
       if (!result.ok) {
-        return res.status(result.status).json({ ok: false, error: result.error });
+        return res.status(result.status).json({ ok: false, code: result.code || "denied", error: result.error });
       }
       req.freedomAuth = result.auth;
       return await handler(req, res);
