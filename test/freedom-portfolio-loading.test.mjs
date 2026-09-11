@@ -122,7 +122,7 @@ test("a failed refresh reports a rejected session, and no_token is never retried
   let retries = 0;
   await loadPortfolio({ auth: auth401, fetcher: async () => { retries += 1; return reply({ ok: false, code: "no_token", error: "x" }, 401); } });
   assert.equal(refreshes, 1, "only a rejected token may be refreshed");
-  assert.equal(retries, 3, "each collection is attempted exactly once");
+  assert.equal(retries, 5, "each collection is attempted exactly once");
 });
 
 test("collections are delivered as each finishes without waiting for a slow sibling", async () => {
@@ -131,7 +131,7 @@ test("collections are delivered as each finishes without waiting for a slow sibl
   const pending = loadPortfolio({auth, onCollection: name => seen.push(name), fetcher: async url =>
     url.includes("long-term") ? new Promise(resolve => { release = resolve; }) : reply({ trades: orders }) });
   await new Promise(resolve => setTimeout(resolve, 0));
-  assert.deepEqual(seen.sort(), ["pendingBuyOrders", "shortTermHoldings"]);
+  assert.deepEqual(seen.sort(), ["closedShortTermTrades", "pendingBuyOrders", "pendingSellOrders", "shortTermHoldings"]);
   release(reply({holdings: [holding]}));
   await pending;
   assert.ok(seen.includes("holdings"));

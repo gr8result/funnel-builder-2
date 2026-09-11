@@ -30,6 +30,8 @@ async function respondWithTrades(res, extra = {}, filterType = null) {
   // Filter by order classification if specified
   const filtered = filterType === "ACTIVE_HOLDING"
     ? trades.filter(t => t.status === "open")
+    : filterType === "CLOSED"
+    ? trades.filter(t => t.status === "closed")
     : filterType ? trades.filter(t => t.orderClassification === filterType) : trades;
   
   let quotes = new Map();

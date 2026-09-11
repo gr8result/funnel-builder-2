@@ -37,6 +37,7 @@ vm.runInNewContext(compiled, {
     if (name.includes("FreedomTradeChart")) return { __esModule: true, default: props => React.createElement("div", { "data-entry-price": props.entryPrice }, "Test chart") };
     return require(name);
   }, console: { ...console, error() {} }, AbortController, queueMicrotask, URLSearchParams,
+  setInterval, clearInterval,
   window: dom.window, document: dom.window.document, fetch: (...args) => globalThis.fetch(...args),
 });
 const Page = exports.default;
@@ -176,7 +177,7 @@ for (const failure of [401, 403, 500, "network"]) {
       return response({ error: "Original error" }, failure);
     };
     await mount();
-    assert.equal(document.querySelectorAll('[role="alert"]').length, 3);
+    assert.equal(document.querySelectorAll('[role="alert"]').length, 5);
     assert.ok(!text().includes("No active holdings or pending orders"));
     assert.equal(document.querySelectorAll("article").length, 0);
     globalThis.fetch = async () => response({ holdings: [], trades: [] });
@@ -207,7 +208,9 @@ test("real page keeps populated records separate, survives remount, and opens Ed
       { date: "2026-09-01", open: 10, high: 12, low: 9, close: 11 },
       { date: "2026-09-02", open: 11, high: 13, low: 10, close: 12 },
     ] });
-    return response(url.includes("long-term") ? { holdings } : { trades: url.includes("ACTIVE_HOLDING") ? [] : trades });
+    if (url.includes("long-term")) return response({ holdings });
+    if (url.includes("ACTIVE_HOLDING") || url.includes("PENDING_SELL_ORDER") || url.includes("type=CLOSED")) return response({ trades: [] });
+    return response({ trades });
   };
   await mount();
   for (let i = 0; i < 3; i++) {
@@ -235,10 +238,12 @@ test("real page keeps populated records separate, survives remount, and opens Ed
 });
 
 test("a failed long-term request leaves short-term holdings and pending orders visible without an overlay", async () => {
-  globalThis.fetch = async url => url.includes("long-term") ? response({error: "Not entitled"},403)
-    : response({ trades: url.includes("ACTIVE_HOLDING")
-      ? [{id:"owned-short", symbol:"OWNED", kind:"short-term", status:"open", quantity:2, entryPrice:10}]
-      : [{id:"pending-long", symbol:"PENDING", status:"pending", termClassification:"long-term", orderClassification:"PENDING_BUY_ORDER", quantity:3, entryPrice:15}] });
+  globalThis.fetch = async url => {
+    if (url.includes("long-term")) return response({error: "Not entitled"},403);
+    if (url.includes("ACTIVE_HOLDING")) return response({ trades: [{id:"owned-short", symbol:"OWNED", kind:"short-term", status:"open", quantity:2, entryPrice:10}] });
+    if (url.includes("PENDING_SELL_ORDER") || url.includes("type=CLOSED")) return response({ trades: [] });
+    return response({ trades: [{id:"pending-long", symbol:"PENDING", status:"pending", termClassification:"long-term", orderClassification:"PENDING_BUY_ORDER", quantity:3, entryPrice:15}] });
+  };
   await mount();
   assert.equal(document.querySelectorAll("article").length,2);
   assert.ok(text().includes("OWNED") && text().includes("PENDING"));
