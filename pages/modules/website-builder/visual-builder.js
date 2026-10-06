@@ -1992,11 +1992,42 @@ export default function VisualBuilderPage() {
     setRenameValue(pageName);
   }
 
-  // Expose page-add helper for testing / automation
+  function handleMovePage(name, direction) {
+    const pageName = pageNameFromValue(name);
+    if (!pageName || !Array.isArray(project?.pages)) return;
+    const pages = [...project.pages];
+    const index = pages.findIndex((p) => p.name === pageName || p.id === pageName);
+    if (index === -1) return;
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= pages.length) return;
+
+    const temp = pages[index];
+    pages[index] = pages[targetIndex];
+    pages[targetIndex] = temp;
+
+    const updatedPages = pages.map((page, idx) => ({
+      ...page,
+      order: idx,
+      navigationOrder: idx,
+    }));
+
+    saveProjectPatch(
+      { pages: updatedPages },
+      `Moved ${pageName} ${direction}`,
+      { siteOnly: true, saveSource: "manual-save" }
+    );
+  }
+
+  // Expose page-add and move helpers for testing / automation
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     window.__addBuilderPage = (name) => handleAddPage(name);
-    return () => { delete window.__addBuilderPage; };
+    window.__moveBuilderPage = (name, dir) => handleMovePage(name, dir);
+    return () => {
+      delete window.__addBuilderPage;
+      delete window.__moveBuilderPage;
+    };
   });
 
   async function saveChaiPage(data, successMessage = `Saved ${activePage}`, options = {}) {
@@ -3422,6 +3453,8 @@ export default function VisualBuilderPage() {
                     onSaveTemplateSite={canSaveTemplates ? saveTemplateSiteToServer : null}
                     canSaveTemplates={canSaveTemplates}
                     onUpdateGlobalBlock={updateGlobalBlock}
+                    onAddPage={handleAddPage}
+                    onMovePage={handleMovePage}
                     onUpdatePageSettings={(patch, options = {}) => updateActivePageSettings(patch, { ...options, pageName: activeProjectPageName })}
                     onUpdateSiteSettings={(patch, options = {}) => saveProjectPatch(patch, "Updated site settings", { siteOnly: true, saveSource: options?.saveSource || "autosave" })}
                     onOpenMediaLibrary={openMediaLibrary}

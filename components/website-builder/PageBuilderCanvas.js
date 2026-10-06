@@ -57,6 +57,7 @@ import {
   TextEditingToolbar, BlockAnimationPopover,
   formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
   BlockLibraryPanel, PageSectionsPanel,
+  ShapePropertiesPanel, PageBackgroundPanel,
 } from "./page-builder/pbPropertiesPanels";
 import { styles } from "./page-builder/pbStyles";
 import {
@@ -363,7 +364,7 @@ function UniversalDesignPanel({ block, index, onChange, onUploadImage, onSelectA
   );
 }
 
-export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false }) {
+export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [], activePage = "", currentObjective = "", onSave, onForceSave, onUploadImage, onSelectAsset, onSaveAsGlobal, onSaveBlockDefault, onSaveTemplatePage, onSaveTemplateSite, onUpdateGlobalBlock, onUpdatePageSettings, onUpdateSiteSettings, onRefreshAssetLibrary, onRegisterPreviewActions, blockDefaults = {}, showHeader = true, canSaveTemplates = false, onAddPage, onMovePage }) {
   const [blocks, setBlocks] = useState(pageBlocks);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [selectedGlobalRole, setSelectedGlobalRole] = useState(null);
@@ -375,6 +376,9 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const [rightPanelMode, setRightPanelMode] = useState("block");
   const [showCanvasGrid, setShowCanvasGrid] = useState(true);
   const [previewMode, setPreviewMode] = useState("desktop");
+  const [showShapesPicker, setShowShapesPicker] = useState(false);
+  const [shapeType, setShapeType] = useState("rectangle");
+  const [shapeUsage, setShapeUsage] = useState("color");
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [showTextToolbar, setShowTextToolbar] = useState(false);
   const [textToolbarState, setTextToolbarState] = useState({
@@ -1689,8 +1693,11 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   const previewIsCompact = previewMode !== "desktop";
   const pageCanvasWidth = Math.max(720, Number(pickGlobalStyleValue(blocks, ["baseLayoutWidth"], 1500)) || 1500);
   const responsiveCanvasLayoutWidth = resolveResponsiveLayoutWidth(pageCanvasWidth, previewMode);
-  const pageCanvasBackground = pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const activePageEntry = resolvePreviewPageEntry(project, activePage);
+  const activePageBgColor = activePageEntry?.backgroundColor || activePageEntry?.pageBackground;
+  const activePageBgImage = activePageEntry?.backgroundImage || activePageEntry?.pageBackgroundImage;
+  const activePageBgSize = activePageEntry?.backgroundSize || "cover";
+  const pageCanvasBackground = activePageBgColor || pickGlobalStyleValue(blocks, ["pageBackground"], "#ffffff");
   const pageWidthMode = resolvePageWidthMode(project, activePageEntry?.slug || activePageEntry?.name || activePage);
   const pageIsFullWidth = pageWidthMode === "full";
   const resolveCanvasBlockBackground = (block) => String(block?.props?.backgroundColor || block?.props?.seamlessBackgroundColor || "").trim();
@@ -3342,6 +3349,29 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
   };
   handleSaveRef.current = handleSave;
 
+  const handleAddShape = (type = "rectangle", usage = "color") => {
+    const defaultProps = BlockDefinitions[BlockTypes.SHAPE]?.defaultProps || {};
+    const newBlock = {
+      id: `shape_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      type: BlockTypes.SHAPE,
+      props: {
+        ...defaultProps,
+        shapeType: type,
+        usage,
+        usageType: usage,
+        backgroundColor: usage === "color" ? "#38bdf8" : "#1e293b",
+        text: usage === "text" ? "Shape Text" : (defaultProps.text || "Shape Text"),
+      },
+    };
+    const nextBlocks = [...blocks, newBlock];
+    setBlocks(nextBlocks);
+    setSelectedIndex(nextBlocks.length - 1);
+    setShowProperties(true);
+    setRightPanelMode("block");
+    setShowShapesPicker(false);
+    pendingLocalBlocksRef.current = true;
+  };
+
   const handleSaveCurrentPageAsTemplate = async () => {
     if (!canSaveTemplates || !onSaveTemplatePage) return;
     showSavePopup("Saving template page...", "info");
@@ -3479,6 +3509,23 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               }}
             >
               {rightPanelMode === "sections" ? "Block Editor" : "Page Sections"}
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, ...(rightPanelMode === "page" ? styles.panelToggleBtnActive : {}) }}
+              onClick={() => {
+                setShowProperties(true);
+                setRightPanelMode((value) => value === "page" ? "block" : "page");
+              }}
+            >
+              {rightPanelMode === "page" ? "Block Editor" : "Page Background"}
+            </button>
+            <button
+              type="button"
+              style={{ ...styles.panelToggleBtn, borderColor: "#38bdf8", color: "#38bdf8" }}
+              onClick={() => setShowShapesPicker(true)}
+            >
+              🔷 Shapes
             </button>
             <button
               type="button"
@@ -3676,6 +3723,12 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
             ...styles.canvas,
             ...(showCanvasGrid ? styles.canvasGridBg : {}),
             backgroundColor: pageCanvasBackground,
+            ...(activePageBgImage ? {
+              backgroundImage: `url("${activePageBgImage}")`,
+              backgroundSize: activePageBgSize,
+              backgroundPosition: "center center",
+              backgroundRepeat: "no-repeat",
+            } : {}),
           }}
           onPointerDown={(event) => {
             if (event.target?.closest?.("[data-canvas-block-index], [data-global-block-preview='true']")) return;
@@ -3820,6 +3873,15 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
               <GlobalStylePanel blocks={blocks} pageWidthMode={pageWidthMode} onApplyGlobal={applyGlobalStyles} />
             ) : rightPanelMode === "sections" ? (
               <PageSectionsPanel blocks={blocks} selectedIndex={selectedIndex} onSelect={selectCanvasBlock} onMove={moveBlockByStep} />
+            ) : rightPanelMode === "page" ? (
+              <PageBackgroundPanel
+                activePage={activePage}
+                pageEntry={activePageEntry}
+                onUpdatePageSettings={onUpdatePageSettings}
+                onMovePage={onMovePage}
+                onAddPage={onAddPage}
+                onUploadImage={onUploadImage}
+              />
             ) : (
               <PropertiesPanel
                 block={selectedGlobalBlock || blocks[selectedIndex] || null}
@@ -3852,6 +3914,161 @@ export default function PageBuilderCanvas({ project, brandAssets, pageBlocks = [
           </div>
         ) : null}
       </div>
+
+      {showShapesPicker && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.75)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowShapesPicker(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              background: "#0f172a",
+              border: "1px solid #334155",
+              borderRadius: 16,
+              padding: 24,
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              color: "#f8fafc",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#38bdf8", display: "flex", alignItems: "center", gap: 8 }}>
+                <span>🔷</span> Insert Shape
+              </h3>
+              <button
+                type="button"
+                style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 24, cursor: "pointer", padding: "0 4px" }}
+                onClick={() => setShowShapesPicker(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gap: 20 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#cbd5e1", marginBottom: 8 }}>
+                  1. Select Shape Type
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                  {[
+                    { type: "rectangle", label: "Rectangle", icon: "▭" },
+                    { type: "circle", label: "Circle", icon: "◯" },
+                    { type: "line", label: "Line", icon: "―" },
+                    { type: "triangle", label: "Triangle", icon: "△" },
+                  ].map((s) => (
+                    <button
+                      key={s.type}
+                      type="button"
+                      style={{
+                        padding: "14px 8px",
+                        borderRadius: 10,
+                        border: shapeType === s.type ? "2px solid #38bdf8" : "1px solid #334155",
+                        background: shapeType === s.type ? "#1e293b" : "#020617",
+                        color: "#f8fafc",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 6,
+                        transition: "all 0.15s ease",
+                      }}
+                      onClick={() => setShapeType(s.type)}
+                    >
+                      <span style={{ fontSize: 26, lineHeight: 1 }}>{s.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: shapeType === s.type ? 600 : 400 }}>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#cbd5e1", marginBottom: 8 }}>
+                  2. Select Purpose / Usage
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {[
+                    { usage: "color", label: "Color Shape", desc: "Solid/gradient filled shape" },
+                    { usage: "image", label: "Image Placeholder", desc: "Shape frame with image" },
+                    { usage: "text", label: "Text Placeholder", desc: "Shape container for text" },
+                  ].map((u) => (
+                    <button
+                      key={u.usage}
+                      type="button"
+                      style={{
+                        padding: 12,
+                        borderRadius: 10,
+                        border: shapeUsage === u.usage ? "2px solid #38bdf8" : "1px solid #334155",
+                        background: shapeUsage === u.usage ? "#1e293b" : "#020617",
+                        color: "#f8fafc",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.15s ease",
+                      }}
+                      onClick={() => setShapeUsage(u.usage)}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: 13, color: shapeUsage === u.usage ? "#38bdf8" : "#f8fafc" }}>
+                        {u.label}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, lineHeight: 1.3 }}>{u.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: 8,
+                    border: "1px solid #334155",
+                    background: "#1e293b",
+                    color: "#cbd5e1",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowShapesPicker(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: 8,
+                    border: "none",
+                    background: "linear-gradient(135deg, #38bdf8, #0284c7)",
+                    color: "#0f172a",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(56, 189, 248, 0.25)",
+                  }}
+                  onClick={() => handleAddShape(shapeType, shapeUsage)}
+                >
+                  Insert {shapeType.charAt(0).toUpperCase() + shapeType.slice(1)}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

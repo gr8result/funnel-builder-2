@@ -34,7 +34,7 @@ import {
   normalizeStatItem, StatsItemsEditor,
   normalizeTestimonialItemForEditor, normalizeTrustBadgeItem, TrustBadgesEditor,
   CustomHtmlPropertiesPanel, TrustBadgesPropertiesPanel,
-  DividerPropertiesPanel,
+  DividerPropertiesPanel, ShapePropertiesPanel, PageBackgroundPanel,
   TestimonialItemsEditor, TestimonialPropertiesPanel,
   NewsletterPropertiesPanel, FooterPropertiesPanel,
   TextPropertiesPanel, StatsPropertiesPanel,
@@ -4051,6 +4051,10 @@ const PropertiesPanel = ({ block, index, onChange, brandAssets, onUploadImage, o
 
   if (block.type === BlockTypes.DIVIDER) {
     return withResponsiveLayout(<DividerPropertiesPanel block={block} index={index} onChange={onChange} />);
+  }
+
+  if (block.type === BlockTypes.SHAPE) {
+    return withResponsiveLayout(<ShapePropertiesPanel block={block} index={index} onChange={onChange} onUploadImage={onUploadImage} />);
   }
 
   if (block.type === BlockTypes.SPACE) {

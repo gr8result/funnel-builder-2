@@ -7018,6 +7018,287 @@ function ScrollStackPropertiesPanel({ block, index, onChange, onUploadImage, dev
   );
 }
 
+function ShapePropertiesPanel({ block, index, onChange, onUploadImage }) {
+  const props = block?.props || {};
+  const update = (patch) => onChange(index, { ...props, ...patch });
+  const shapeType = String(props.shapeType || "rectangle").toLowerCase();
+  const usageType = String(props.usageType || "color").toLowerCase();
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🔷 Edit: Shape Widget</h3>
+
+      <div style={styles.sectionCard}>
+        <label style={styles.propertyLabel}>Shape Type</label>
+        <select
+          value={shapeType}
+          onChange={(e) => update({ shapeType: e.target.value })}
+          style={styles.propertyInput}
+        >
+          <option value="rectangle">Rectangle / Box</option>
+          <option value="circle">Circle / Round</option>
+          <option value="line">Line / Divider</option>
+          <option value="triangle">Triangle</option>
+        </select>
+
+        <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Usage Mode</label>
+        <select
+          value={usageType}
+          onChange={(e) => update({ usageType: e.target.value })}
+          style={styles.propertyInput}
+        >
+          <option value="color">Color Shape</option>
+          <option value="image">Image Placeholder</option>
+          <option value="text">Text Placeholder</option>
+        </select>
+
+        <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Alignment</label>
+        <select
+          value={String(props.alignment || "center")}
+          onChange={(e) => update({ alignment: e.target.value })}
+          style={styles.propertyInput}
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+
+      {(usageType === "color" || usageType === "text" || shapeType === "triangle") && (
+        <div style={styles.sectionCard}>
+          <CompactColorField
+            label="Fill Color"
+            value={props.fillColor || props.backgroundColor || "#3b82f6"}
+            onChange={(color) => update({ fillColor: color, backgroundColor: color })}
+          />
+        </div>
+      )}
+
+      {usageType === "text" && (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Text Content</label>
+          <input
+            type="text"
+            value={String(props.text || "")}
+            onChange={(e) => update({ text: e.target.value })}
+            placeholder="Shape Text"
+            style={styles.propertyInput}
+          />
+          <CompactColorField
+            label="Text Color"
+            value={props.textColor || "#ffffff"}
+            onChange={(color) => update({ textColor: color })}
+          />
+          <label style={{ ...styles.propertyLabel, marginTop: 12 }}>Text Size</label>
+          <input
+            type="text"
+            value={String(props.textSize || "18px")}
+            onChange={(e) => update({ textSize: e.target.value })}
+            placeholder="18px"
+            style={styles.propertyInput}
+          />
+        </div>
+      )}
+
+      {usageType === "image" && (
+        <div style={styles.sectionCard}>
+          <label style={styles.propertyLabel}>Image URL</label>
+          <input
+            type="text"
+            value={String(props.imageUrl || "")}
+            onChange={(e) => update({ imageUrl: e.target.value })}
+            placeholder="https://..."
+            style={styles.propertyInput}
+          />
+          {typeof onUploadImage === "function" ? (
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const uploaded = await Promise.resolve(onUploadImage(index, "imageUrl", file));
+                  if (uploaded?.src) update({ imageUrl: uploaded.src });
+                }
+              }}
+              style={{ marginTop: 8 }}
+            />
+          ) : null}
+        </div>
+      )}
+
+      <div style={styles.sectionCard}>
+        <label style={styles.propertyLabel}>Width</label>
+        <input
+          type="text"
+          value={String(props.width || (shapeType === "line" ? "100%" : "240px"))}
+          onChange={(e) => update({ width: e.target.value })}
+          style={styles.propertyInput}
+        />
+        <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Height</label>
+        <input
+          type="text"
+          value={String(props.height || (shapeType === "line" ? "4px" : "160px"))}
+          onChange={(e) => update({ height: e.target.value })}
+          style={styles.propertyInput}
+        />
+        {shapeType !== "circle" && shapeType !== "triangle" && (
+          <>
+            <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Border Radius (px)</label>
+            <input
+              type="number"
+              value={Number(props.borderRadius ?? 8)}
+              onChange={(e) => update({ borderRadius: Number(e.target.value) })}
+              style={styles.propertyInput}
+            />
+          </>
+        )}
+        <CompactColorField
+          label="Border Color"
+          value={props.borderColor || "transparent"}
+          onChange={(color) => update({ borderColor: color })}
+        />
+        <label style={{ ...styles.propertyLabel, marginTop: 8 }}>Border Width (px)</label>
+        <input
+          type="number"
+          value={Number(props.borderWidth ?? 0)}
+          onChange={(e) => update({ borderWidth: Number(e.target.value) })}
+          style={styles.propertyInput}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PageBackgroundPanel({ activePage, pageEntry, onUpdatePageSettings, onMovePage, onAddPage, onUploadImage }) {
+  const [bgColor, setBgColor] = useState(pageEntry?.backgroundColor || pageEntry?.pageBackground || "#ffffff");
+  const [bgImage, setBgImage] = useState(pageEntry?.backgroundImage || pageEntry?.pageBackgroundImage || "");
+  const [bgSize, setBgSize] = useState(pageEntry?.backgroundSize || "cover");
+
+  useEffect(() => {
+    setBgColor(pageEntry?.backgroundColor || pageEntry?.pageBackground || "#ffffff");
+    setBgImage(pageEntry?.backgroundImage || pageEntry?.pageBackgroundImage || "");
+    setBgSize(pageEntry?.backgroundSize || "cover");
+  }, [pageEntry, activePage]);
+
+  const applyPatch = (patch) => {
+    onUpdatePageSettings?.(patch);
+  };
+
+  return (
+    <div style={styles.properties}>
+      <h3 style={styles.propertiesTitle}>🎨 Page Background &amp; Settings</h3>
+
+      <div style={styles.sectionCard}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "#f8fafc", marginBottom: 8 }}>
+          Selected Page: <span style={{ color: "#38bdf8" }}>{activePage || pageEntry?.name || "Home"}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            style={styles.secondaryBtn}
+            onClick={() => onMovePage?.(activePage, "up")}
+            title="Move page position up"
+          >
+            ▲ Move Up
+          </button>
+          <button
+            type="button"
+            style={styles.secondaryBtn}
+            onClick={() => onMovePage?.(activePage, "down")}
+            title="Move page position down"
+          >
+            ▼ Move Down
+          </button>
+          <button
+            type="button"
+            style={{ ...styles.secondaryBtn, borderColor: "#22c55e", color: "#4ade80" }}
+            onClick={() => onAddPage?.()}
+            title="Add new website page"
+          >
+            + Add Page
+          </button>
+        </div>
+      </div>
+
+      <div style={styles.sectionCard}>
+        <CompactColorField
+          label="Background Color"
+          value={bgColor}
+          onChange={(color) => {
+            setBgColor(color);
+            applyPatch({ backgroundColor: color, pageBackground: color });
+          }}
+        />
+
+        <label style={{ ...styles.propertyLabel, marginTop: 16 }}>Background Image URL</label>
+        <input
+          type="text"
+          value={bgImage}
+          onChange={(e) => {
+            const url = e.target.value;
+            setBgImage(url);
+            applyPatch({ backgroundImage: url, pageBackgroundImage: url });
+          }}
+          placeholder="https://example.com/bg.jpg"
+          style={styles.propertyInput}
+        />
+
+        {typeof onUploadImage === "function" ? (
+          <div style={{ marginTop: 8 }}>
+            <label style={{ ...styles.propertyLabel, fontSize: 12 }}>Or Upload Image File:</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const uploaded = await Promise.resolve(onUploadImage("page-bg", "backgroundImage", file));
+                  if (uploaded?.src) {
+                    setBgImage(uploaded.src);
+                    applyPatch({ backgroundImage: uploaded.src, pageBackgroundImage: uploaded.src });
+                  }
+                }
+              }}
+              style={{ fontSize: 12, marginTop: 4 }}
+            />
+          </div>
+        ) : null}
+
+        {bgImage ? (
+          <div style={{ marginTop: 12 }}>
+            <label style={styles.propertyLabel}>Background Image Display</label>
+            <select
+              value={bgSize}
+              onChange={(e) => {
+                const size = e.target.value;
+                setBgSize(size);
+                applyPatch({ backgroundSize: size });
+              }}
+              style={styles.propertyInput}
+            >
+              <option value="cover">Cover (Fill Page)</option>
+              <option value="contain">Contain (Fit Whole Image)</option>
+              <option value="auto">Original Size</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setBgImage("");
+                applyPatch({ backgroundImage: "", pageBackgroundImage: "" });
+              }}
+              style={{ ...styles.secondaryBtn, marginTop: 8, color: "#f87171", borderColor: "#f87171" }}
+            >
+              Clear Background Image
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // --- exports ---
 export {
   BlockPresetPicker, NavbarPresetPicker, NavbarLinksEditor,
@@ -7052,4 +7333,5 @@ export {
   TextEditingToolbar, BlockAnimationPopover,
   formatSavedAgo, pickGlobalStyleValue, GlobalStylePanel,
   BlockLibraryPanel, PageSectionsPanel,
+  ShapePropertiesPanel, PageBackgroundPanel,
 };
