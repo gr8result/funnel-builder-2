@@ -16,7 +16,7 @@ import { getPublishedWebsiteByDomain, getPublishedWebsiteBySlug } from "../../li
 import { buildWebsitePath, getPlatformAppUrl, normalizePublishedGlobalFooterBlock, normalizePublishedWebsiteBlocks, normalizeVideoHeroBlocks } from "../../lib/website-builder/publishConfig";
 import { globalFooterToFooterBlock } from "../../lib/website-builder/footerNavigation";
 import { isFullWidthPage, resolvePageWidthMode } from "../../lib/website-builder/pageLayout";
-import { isMobileUserAgent, useResponsiveDevice } from "../../lib/website-builder/responsiveViewport";
+import { isMobileUserAgent } from "../../lib/website-builder/responsiveViewport";
 import { isBlockVisibleOnDevice } from "../../lib/website-builder/responsiveValue";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -411,12 +411,12 @@ export function PublishedWebsiteRenderer({ publication, siteDataHash = "", reque
   // Visit tracking is handled by IconCounterNumber itself (POST on first load, sessionStorage dedup).
   // No page-level POST needed here.
 
-  // The renderer's existing compact-mode rules were never activating for real visitors because
-  // this was hardcoded to false. Best-guess from the request's User-Agent on the server (avoids
-  // a layout flash for the common case), corrected to the real viewport width after hydration.
-  // `device` additionally distinguishes tablet from mobile (see lib/website-builder/responsiveValue.js)
-  // so per-device prop overrides (logo size, section height, ...) resolve correctly for real visitors.
-  const device = useResponsiveDevice(initialCompact ? "mobile" : "desktop");
+  // Resolve a safe device value for published rendering.
+  // SSR starts from the request User-Agent. In the browser we refine from the current viewport
+  // without depending on the responsive hook that was throwing "device is not defined" in production.
+  const device = typeof window === "undefined"
+    ? (initialCompact ? "mobile" : "desktop")
+    : (window.innerWidth < 768 ? "mobile" : window.innerWidth < 1024 ? "tablet" : "desktop");
   const compact = device !== "desktop";
 
   const project = publication?.site_data || {};
